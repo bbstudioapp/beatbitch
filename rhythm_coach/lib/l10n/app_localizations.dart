@@ -1606,6 +1606,36 @@ abstract class AppLocalizations {
   /// **'Vide-Couilles'**
   String get badgeNameVideCouilles;
 
+  /// No description provided for @badgeNameBouchePleine.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bouche pleine'**
+  String get badgeNameBouchePleine;
+
+  /// No description provided for @badgeNameRepeinte.
+  ///
+  /// In fr, this message translates to:
+  /// **'Repeinte'**
+  String get badgeNameRepeinte;
+
+  /// No description provided for @badgeNameGobeuse.
+  ///
+  /// In fr, this message translates to:
+  /// **'Gobeuse'**
+  String get badgeNameGobeuse;
+
+  /// No description provided for @badgeNameNettoyeuse.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nettoyeuse'**
+  String get badgeNameNettoyeuse;
+
+  /// No description provided for @badgeNameSuppliante.
+  ///
+  /// In fr, this message translates to:
+  /// **'Suppliante'**
+  String get badgeNameSuppliante;
+
   /// No description provided for @badgeUnitMarathonien.
   ///
   /// In fr, this message translates to:
@@ -1653,6 +1683,36 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'sessions bâclées terminées'**
   String get badgeUnitVideCouilles;
+
+  /// No description provided for @badgeUnitBouchePleine.
+  ///
+  /// In fr, this message translates to:
+  /// **'finals dans la bouche'**
+  String get badgeUnitBouchePleine;
+
+  /// No description provided for @badgeUnitRepeinte.
+  ///
+  /// In fr, this message translates to:
+  /// **'finals sur le visage'**
+  String get badgeUnitRepeinte;
+
+  /// No description provided for @badgeUnitGobeuse.
+  ///
+  /// In fr, this message translates to:
+  /// **'finals sur la langue'**
+  String get badgeUnitGobeuse;
+
+  /// No description provided for @badgeUnitNettoyeuse.
+  ///
+  /// In fr, this message translates to:
+  /// **'post-finals à lécher'**
+  String get badgeUnitNettoyeuse;
+
+  /// No description provided for @badgeUnitSuppliante.
+  ///
+  /// In fr, this message translates to:
+  /// **'suppliques post-orgasme'**
+  String get badgeUnitSuppliante;
 
   /// No description provided for @careerLevelTitleDebutante.
   ///

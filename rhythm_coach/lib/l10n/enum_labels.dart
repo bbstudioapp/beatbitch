@@ -60,6 +60,11 @@ extension BadgeFamilyL10n on BadgeFamily {
       BadgeFamily.reguliere => t.badgeNameReguliere,
       BadgeFamily.jamaisRassasiee => t.badgeNameJamaisRassasiee,
       BadgeFamily.videCouilles => t.badgeNameVideCouilles,
+      BadgeFamily.bouchePleine => t.badgeNameBouchePleine,
+      BadgeFamily.repeinte => t.badgeNameRepeinte,
+      BadgeFamily.gobeuse => t.badgeNameGobeuse,
+      BadgeFamily.nettoyeuse => t.badgeNameNettoyeuse,
+      BadgeFamily.suppliante => t.badgeNameSuppliante,
     };
   }
 
@@ -74,6 +79,11 @@ extension BadgeFamilyL10n on BadgeFamily {
       BadgeFamily.reguliere => t.badgeUnitReguliere,
       BadgeFamily.jamaisRassasiee => t.badgeUnitJamaisRassasiee,
       BadgeFamily.videCouilles => t.badgeUnitVideCouilles,
+      BadgeFamily.bouchePleine => t.badgeUnitBouchePleine,
+      BadgeFamily.repeinte => t.badgeUnitRepeinte,
+      BadgeFamily.gobeuse => t.badgeUnitGobeuse,
+      BadgeFamily.nettoyeuse => t.badgeUnitNettoyeuse,
+      BadgeFamily.suppliante => t.badgeUnitSuppliante,
     };
   }
 }

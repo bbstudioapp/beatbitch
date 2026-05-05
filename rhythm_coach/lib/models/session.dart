@@ -104,6 +104,16 @@ class Session {
   /// (sessions hors carrière).
   final int? silentFinishStartTime;
 
+  /// Temps (en secondes depuis le début) où démarre le step final (= step
+  /// qui porte la phrase d'action « ouvre ta bouche / sors ta langue / avale
+  /// tout » et qui déclenche le `finale_chime` pendant son exécution). Le
+  /// `SessionController` compare le `time` du step appliqué à cette valeur
+  /// pour identifier le step final et déclencher le chime fire-and-forget
+  /// après le speak du texte. Null = pas de step final dédié (sessions hors
+  /// carrière), le contrôleur retombe sur l'ancien comportement (chime joué
+  /// dans `_finish`).
+  final int? finalStepTime;
+
   const Session({
     required this.id,
     required this.name,
@@ -121,6 +131,7 @@ class Session {
     this.finalMilestoneDurationSeconds,
     this.finalCategory,
     this.silentFinishStartTime,
+    this.finalStepTime,
   });
 
   Duration get duration => Duration(seconds: durationSeconds);

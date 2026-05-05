@@ -52,6 +52,11 @@ class BadgeService {
         BadgeFamily.reguliere => snap.dailyStreak,
         BadgeFamily.jamaisRassasiee => snap.encoresAsked,
         BadgeFamily.videCouilles => snap.quickiesCompleted,
+        BadgeFamily.bouchePleine => snap.finalsBouchePleine,
+        BadgeFamily.repeinte => snap.finalsRepeinte,
+        BadgeFamily.gobeuse => snap.finalsGobeuse,
+        BadgeFamily.nettoyeuse => snap.postFinalsNettoyeuse,
+        BadgeFamily.suppliante => snap.postFinalsSuppliante,
       };
 
   /// Efface l'état persisté des paliers — utilisé par le reset profil.

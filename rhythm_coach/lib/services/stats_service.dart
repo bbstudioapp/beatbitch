@@ -24,6 +24,14 @@ class StatsService {
   static const String _kHumiliationLevel = 'stats.humiliation_level';
   static const String _kObedienceLevel = 'stats.obedience_level';
 
+  // Compteurs des badges de fin de séance (final / post-final). Incrémentés
+  // par `SessionController._finish` quand la session se termine sans fail.
+  static const String _kFinalsBouchePleine = 'stats.finals_bouche_pleine';
+  static const String _kFinalsRepeinte = 'stats.finals_repeinte';
+  static const String _kFinalsGobeuse = 'stats.finals_gobeuse';
+  static const String _kPostFinalsNettoyeuse = 'stats.post_finals_nettoyeuse';
+  static const String _kPostFinalsSuppliante = 'stats.post_finals_suppliante';
+
   /// Incrément de résistance par appui sur « J'en veux encore ». Plus la
   /// résistance est haute, plus tous les apports d'excitation sont
   /// atténués (multiplicateur `1/(1+R)`).
@@ -47,6 +55,11 @@ class StatsService {
       resistanceLevel: prefs.getDouble(_kResistanceLevel) ?? 0.0,
       humiliationLevel: prefs.getDouble(_kHumiliationLevel) ?? 0.0,
       obedienceLevel: prefs.getDouble(_kObedienceLevel) ?? 0.0,
+      finalsBouchePleine: prefs.getInt(_kFinalsBouchePleine) ?? 0,
+      finalsRepeinte: prefs.getInt(_kFinalsRepeinte) ?? 0,
+      finalsGobeuse: prefs.getInt(_kFinalsGobeuse) ?? 0,
+      postFinalsNettoyeuse: prefs.getInt(_kPostFinalsNettoyeuse) ?? 0,
+      postFinalsSuppliante: prefs.getInt(_kPostFinalsSuppliante) ?? 0,
     );
   }
 
@@ -113,6 +126,38 @@ class StatsService {
       _kHumiliationLevel,
       currentH + HumiliationEngine.bumpEncore,
     );
+  }
+
+  /// Comptabilise un final de séance selon son mode. Incrémente le compteur
+  /// de la famille de badge correspondante (Bouche pleine / Repeinte /
+  /// Gobeuse). À appeler dans `_finish`, uniquement sur les sessions
+  /// menées à terme sans fail. Modes hors {`hold`, `biffle`, `lick`} →
+  /// no-op (les autres finals sont possibles mais ne sont pas badgés).
+  Future<void> recordFinalMode(SessionMode mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = switch (mode) {
+      SessionMode.hold => _kFinalsBouchePleine,
+      SessionMode.biffle => _kFinalsRepeinte,
+      SessionMode.lick => _kFinalsGobeuse,
+      _ => null,
+    };
+    if (key == null) return;
+    await prefs.setInt(key, (prefs.getInt(key) ?? 0) + 1);
+  }
+
+  /// Comptabilise un post-final de séance selon son mode. Incrémente le
+  /// compteur de la famille de badge correspondante (Nettoyeuse pour
+  /// `lick`, Suppliante pour `beg`). Mêmes contraintes que [recordFinalMode] :
+  /// session terminée sans fail, modes hors {`lick`, `beg`} = no-op.
+  Future<void> recordPostFinalMode(SessionMode mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = switch (mode) {
+      SessionMode.lick => _kPostFinalsNettoyeuse,
+      SessionMode.beg => _kPostFinalsSuppliante,
+      _ => null,
+    };
+    if (key == null) return;
+    await prefs.setInt(key, (prefs.getInt(key) ?? 0) + 1);
   }
 
   /// Comptabilise une session bâclée menée à terme (toggle "Session bâclée"
@@ -255,6 +300,11 @@ class StatsService {
       _kResistanceLevel,
       _kHumiliationLevel,
       _kObedienceLevel,
+      _kFinalsBouchePleine,
+      _kFinalsRepeinte,
+      _kFinalsGobeuse,
+      _kPostFinalsNettoyeuse,
+      _kPostFinalsSuppliante,
     ];
     for (final k in keys) {
       await prefs.remove(k);
@@ -279,6 +329,11 @@ class StatsSnapshot {
   final double resistanceLevel;
   final double humiliationLevel;
   final double obedienceLevel;
+  final int finalsBouchePleine;
+  final int finalsRepeinte;
+  final int finalsGobeuse;
+  final int postFinalsNettoyeuse;
+  final int postFinalsSuppliante;
 
   const StatsSnapshot({
     required this.totalSeconds,
@@ -296,6 +351,11 @@ class StatsSnapshot {
     required this.resistanceLevel,
     required this.humiliationLevel,
     required this.obedienceLevel,
+    this.finalsBouchePleine = 0,
+    this.finalsRepeinte = 0,
+    this.finalsGobeuse = 0,
+    this.postFinalsNettoyeuse = 0,
+    this.postFinalsSuppliante = 0,
   });
 
   bool isModeUsed(SessionMode mode) => (modesUsedMask & (1 << mode.index)) != 0;

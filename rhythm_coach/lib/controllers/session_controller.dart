@@ -109,6 +109,13 @@ class SessionController extends ChangeNotifier {
   /// Sert à restaurer le loop courant après un fail.
   SessionStep? _lastConfigStep;
 
+  /// True dès que le `finale_chime` a été déclenché (par `_checkSteps` au
+  /// passage du step final si `Session.finalStepTime` est défini, sinon par
+  /// `_finish` en fallback). Évite le double déclenchement et permet à
+  /// `_finish` de skipper la phrase finale + chime quand ils ont déjà été
+  /// joués pendant le step final.
+  bool _finalChimePlayed = false;
+
   // ─── État du flow fail ─────────────────────────────────────────────────
 
   FailPhase? _failPhase;
@@ -447,6 +454,7 @@ class SessionController extends ChangeNotifier {
       _lastConfigStep = null;
       _configApplied = false;
       _hadFailThisSession = false;
+      _finalChimePlayed = false;
       _sessionBadgeUnlocks = const [];
       _currentHoldFullDuration = 0;
       _lastHoldTickAtSecond = -1;
@@ -696,6 +704,20 @@ class SessionController extends ChangeNotifier {
         _speakScripted(step.text);
       }
 
+      // Step final identifié via `Session.finalStepTime` : on déclenche le
+      // `finale_chime` PENDANT le step (pas après, comme historiquement
+      // dans `_finish`). La phrase d'action portée par `step.text` (« ouvre
+      // ta bouche », « avale tout »…) vient d'être speakée juste au-dessus ;
+      // on enchaîne le chime dès qu'elle est terminée. Fire-and-forget pour
+      // ne pas bloquer le tick — `awaitSpeakCompletion(true)` côté TTS
+      // garantit que le `await speak` du helper retourne après la fin de
+      // la phrase, donc le chime ne chevauche pas la voix.
+      final finalT = session.finalStepTime;
+      if (finalT != null && step.time == finalT && !_finalChimePlayed) {
+        _finalChimePlayed = true;
+        unawaited(_playFinalChimeAfterAction(step.text));
+      }
+
       _nextStepIndex++;
     }
     // Si un step de config a été appliqué, le mode courant a potentiellement
@@ -727,6 +749,30 @@ class SessionController extends ChangeNotifier {
     }
   }
 
+  /// Attend la fin du speak de la phrase d'action du step final puis joue
+  /// le `finale_chime`. Lancé en fire-and-forget depuis `_checkSteps` quand
+  /// le step final est appliqué — le chime retentit ainsi PENDANT le step
+  /// (sur l'action en cours), pas après comme historiquement dans `_finish`.
+  ///
+  /// Le polling sur `_tts.isSpeaking` est nécessaire parce que `_speakScripted`
+  /// est lui-même non-await : on ne peut pas chaîner directement après son
+  /// retour. Petit warmup de 80 ms avant le poll pour laisser le start
+  /// handler mettre `_speaking` à `true` (sinon on sort tout de suite).
+  /// Deadline de sécurité à 8 s pour ne jamais bloquer si le TTS échoue.
+  Future<void> _playFinalChimeAfterAction(String text) async {
+    if (text.isNotEmpty) {
+      await Future.delayed(const Duration(milliseconds: 80));
+      final deadline = DateTime.now().add(const Duration(seconds: 8));
+      while (_tts.isSpeaking &&
+          DateTime.now().isBefore(deadline) &&
+          !_released) {
+        await Future.delayed(const Duration(milliseconds: 50));
+      }
+    }
+    if (_released) return;
+    await _beep.playFinaleChime(category: session.finalCategory);
+  }
+
   Future<void> _finish() async {
     _stopwatch.stop();
     _ticker?.cancel();
@@ -740,6 +786,20 @@ class SessionController extends ChangeNotifier {
     if (!_hadFailThisSession) {
       _humiliation.onSessionCleanFinish();
       _obedience.onSessionCleanFinish();
+      // Compteurs des badges de fin de séance (Bouche pleine / Repeinte /
+      // Gobeuse / Nettoyeuse / Suppliante). On crédite uniquement sur
+      // sessions sans fail : si elle s'est plantée en cours de route, le
+      // final qu'elle « aurait » joué ne compte pas pour la collection.
+      final finalStep = _findFinalStep();
+      final finalMode = finalStep?.mode;
+      if (finalMode != null) {
+        await _stats.recordFinalMode(finalMode);
+      }
+      final postFinalStep = _findPostFinalStep();
+      final postFinalMode = postFinalStep?.mode;
+      if (postFinalMode != null) {
+        await _stats.recordPostFinalMode(postFinalMode);
+      }
     }
     // Les scores d'humiliation et d'obédiance sont cumulés entre sessions
     // (thermomètres persistants). On persiste les scores finaux atteints.
@@ -787,25 +847,19 @@ class SessionController extends ChangeNotifier {
     final unlocks = await _badges.reconcileAndDetectUnlocks(snap);
     _pendingBadgeUnlocks = unlocks;
 
-    // Apothéose AVANT le bascule en `finished` : phrase finale (« continue
-    // je viens », « voilà je jouis ») PUIS immédiatement le son d'orgasme
-    // (`finale_chime`). On joue avant que le panel de fin n'apparaisse pour
-    // que l'utilisatrice perçoive l'enchaînement « phrase → orgasme → fin
-    // de séance » au lieu d'entendre le chime sur le panel déjà ouvert.
+    // Apothéose AVANT le bascule en `finished`. Deux cas :
     //
-    // La phrase est piochée dans le pool `finale` du mode du step de
-    // clôture (avant-dernier step, le dernier étant le congrats text-only
-    // poussé par le générateur). Pas de phrase pour les sessions sans
-    // PhraseBank ou si le pool est vide → seulement le chime.
+    // 1. **Step final dédié (carrière)** : `_finalChimePlayed` est déjà à
+    //    true parce que `_checkSteps` a déclenché le chime PENDANT le step
+    //    final (avec sa phrase d'action « ouvre ta bouche / avale tout »).
+    //    On skippe ce bloc — le post-final qui a suivi a déjà refermé la
+    //    séance avec son compliment doux.
     //
-    // `await speak` bloque pendant la durée de la phrase ; on accepte
-    // le délai sur le rendu du finished panel — c'est l'effet recherché.
-    // `playFinaleChime` est lui aussi awaité (durée ~1.4s) pour que le
-    // chime soit entièrement joué AVANT le bascule en `finished`. Sans
-    // ça, le panel de fin apparaît pendant le chime et l'utilisatrice
-    // perçoit le son comme joué « sur l'écran séance terminée » au lieu
-    // de l'enchaînement « phrase de la step finale → orgasme → fin ».
-    if (!_hadFailThisSession && !_released) {
+    // 2. **Sessions hors carrière** (ou carrière sans `finalStepTime`) :
+    //    fallback historique — phrase `finale` (« voilà je jouis ») +
+    //    chime joués ici, avant le bascule. Bloque le rendu du panel le
+    //    temps de l'apothéose.
+    if (!_hadFailThisSession && !_released && !_finalChimePlayed) {
       final finalStep = _findFinalStep();
       final mode = finalStep?.mode;
       final bank = _phraseBank;
@@ -817,6 +871,7 @@ class SessionController extends ChangeNotifier {
       }
       if (!_released) {
         await _beep.playFinaleChime(category: session.finalCategory);
+        _finalChimePlayed = true;
       }
     }
 
@@ -833,13 +888,35 @@ class SessionController extends ChangeNotifier {
     }
   }
 
-  /// Retourne le dernier step de config (non text-only) de la session
-  /// = le step final / apothéose. Le congrats text-only poussé par le
-  /// générateur après le finisher est skippé. Renvoie null si aucun.
+  /// Retourne le step final / apothéose. Identifié via
+  /// `Session.finalStepTime` (= moment où le `finale_chime` retentit) si
+  /// renseigné. Sinon (sessions hors carrière), fallback sur le dernier
+  /// step de config — comportement historique.
   SessionStep? _findFinalStep() {
+    final finalT = session.finalStepTime;
+    if (finalT != null) {
+      for (final s in session.steps) {
+        if (!s.isTextOnly && s.time == finalT) return s;
+      }
+    }
     for (var i = session.steps.length - 1; i >= 0; i--) {
       final s = session.steps[i];
       if (!s.isTextOnly) return s;
+    }
+    return null;
+  }
+
+  /// Retourne le step de **post-final** = action douce qui suit l'orgasme.
+  /// Recherché comme le premier step de config dont `time > finalStepTime`.
+  /// Renvoie null si pas de step final défini ou si aucun step de config
+  /// ne suit (sessions hors carrière, ou final milestone qui n'a pas de
+  /// post-final dédié).
+  SessionStep? _findPostFinalStep() {
+    final finalT = session.finalStepTime;
+    if (finalT == null) return null;
+    for (final s in session.steps) {
+      if (s.isTextOnly) continue;
+      if (s.time > finalT) return s;
     }
     return null;
   }

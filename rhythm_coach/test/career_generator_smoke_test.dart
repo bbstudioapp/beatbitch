@@ -248,9 +248,17 @@ void main() {
     );
     expect(result.session.finalMilestoneId, isNull,
         reason: 'pas de milestone-final → finalMilestoneId doit être null');
-    final configSteps =
-        result.session.steps.where((s) => !s.isTextOnly).toList();
-    final finisher = configSteps.last;
+    // Le step final est désormais identifié par `Session.finalStepTime`
+    // (= moment où `_finale_chime` se déclenche). Avant cette refacto, le
+    // dernier step de config était le step final ; depuis l'ajout du step
+    // de post-final (action douce après l'orgasme), on doit cibler le step
+    // dont `time == finalStepTime` pour vérifier l'apothéose elle-même.
+    final finalT = result.session.finalStepTime;
+    expect(finalT, isNotNull,
+        reason: 'le générateur doit annoter `finalStepTime`');
+    final finisher = result.session.steps.firstWhere(
+      (s) => !s.isTextOnly && s.time == finalT,
+    );
     expect(finisher.mode, SessionMode.hand,
         reason:
             '_pickFinal classique avec humil=0 doit retomber sur hand '

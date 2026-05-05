@@ -95,6 +95,28 @@ class PhraseBankLoader {
       });
     }
 
+    final finalActions = <String, List<String>>{};
+    final finalActionNode = data['final_action'];
+    if (finalActionNode is Map<String, dynamic>) {
+      finalActionNode.forEach((key, phrases) {
+        if (phrases is! List) return;
+        finalActions[key] = phrases
+            .map((p) => p.toString())
+            .where((s) => s.trim().isNotEmpty)
+            .toList();
+      });
+    }
+
+    final postFinal = (data['post_final'] as List<dynamic>? ?? const [])
+        .map((p) => p.toString())
+        .where((s) => s.trim().isNotEmpty)
+        .toList();
+
+    final postFinalBeg = (data['post_final_beg'] as List<dynamic>? ?? const [])
+        .map((p) => p.toString())
+        .where((s) => s.trim().isNotEmpty)
+        .toList();
+
     return PhraseBank(
       byMode: byMode,
       congrats: congrats,
@@ -104,6 +126,9 @@ class PhraseBankLoader {
       transitions: transitions,
       finishOrgasm: finishOrgasm,
       finalAnnouncements: finalAnnouncements,
+      finalActions: finalActions,
+      postFinal: postFinal,
+      postFinalBeg: postFinalBeg,
     );
   }
 }
