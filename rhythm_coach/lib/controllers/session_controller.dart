@@ -1,0 +1,1388 @@
+import 'dart:async';
+import 'dart:math';
+
+import 'package:flutter/foundation.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
+
+import '../career/models/phrase_bank.dart';
+import '../career/models/specialization.dart';
+import '../main.dart' show milestoneService;
+import '../models/punishment.dart';
+import '../models/session.dart';
+import '../models/session_step.dart';
+import '../services/ambience_engine.dart';
+import '../services/badge_service.dart';
+import '../services/beep_engine.dart';
+import '../services/excitation_engine.dart';
+import '../services/hold_verifier.dart';
+import '../services/humiliation_engine.dart';
+import '../services/obedience_engine.dart';
+import '../services/punishment_loader.dart';
+import '../services/random_comments_loader.dart';
+import '../services/stamina_engine.dart';
+import '../services/stats_service.dart';
+import '../services/tts_service.dart';
+
+enum SessionState { idle, running, paused, finished, failing }
+
+/// Sous-état pendant le flow fail. Permet à l'UI d'afficher
+/// précisément où on en est (« Punition en cours », « Respiration »…).
+enum FailPhase { phrase, breath, punishment }
+
+class SessionController extends ChangeNotifier {
+  static const Duration _tickInterval = Duration(milliseconds: 200);
+
+  /// Référence mutable de la session : peut être remplacée à chaud par
+  /// [requestUpgrade] (action « Supplier » du mode Carrière) sans détruire
+  /// le controller. Lue via le getter [session].
+  Session _session;
+  final TtsService _tts;
+  final BeepEngine _beep;
+  final AmbienceEngine _ambience;
+  final PunishmentBundle _punishmentBundle;
+  final RandomCommentsBundle _randomComments;
+  final StatsService _stats;
+  final BadgeService _badges;
+  final ExcitationEngine _excitation = ExcitationEngine();
+  ExcitationEngine get excitation => _excitation;
+  final HumiliationEngine _humiliation = HumiliationEngine();
+  HumiliationEngine get humiliation => _humiliation;
+  final ObedienceEngine _obedience = ObedienceEngine();
+  ObedienceEngine get obedience => _obedience;
+
+  /// Endurance live : descend à chaque beat consommateur, regen en breath/
+  /// freestyle/idle. Distincte du `_staminaProfile` projeté par le générateur
+  /// (qui sert de filigrane « cible théorique »). La barre d'endurance UI
+  /// est branchée sur ce live engine.
+  final StaminaEngine _stamina = StaminaEngine();
+  StaminaEngine get stamina => _stamina;
+
+  /// Vérifie pendant les holds que la position attendue est tenue (caméra +
+  /// rappel vocal). `null` = vérification désactivée, le SessionController
+  /// fonctionne exactement comme avant.
+  final HoldVerifier? _holdVerifier;
+
+  /// Cap de la jauge d'excitation pour cette session. Configuré par le
+  /// constructeur (mode « encore » → cap > 100). Reset() préserve le cap.
+  final double _excitationMax;
+
+  /// Banque de phrases optionnelle, fournie pour les sessions carrière.
+  /// Sert à tirer les commentaires TTS aux franchissements de seuils
+  /// d'excitation. `null` pour les sessions statiques (le déclenchement
+  /// est alors un no-op).
+  final PhraseBank? _phraseBank;
+
+  /// Profil d'endurance projeté seconde par seconde, fourni par le
+  /// générateur procédural (mode Carrière). Sert au flow fail pour
+  /// décider de sauter la phase de respiration quand l'utilisatrice
+  /// n'est pas censée être épuisée. `null` pour les sessions statiques.
+  List<double>? _staminaProfile;
+
+  /// Seuil au-dessus duquel on considère qu'un breath de récupération
+  /// post-fail est inutile.
+  static const double _breathSkipStaminaThreshold = 60.0;
+
+  final Stopwatch _stopwatch = Stopwatch();
+
+  /// Offset cumulatif ajouté à `_stopwatch.elapsed` pour calculer le temps
+  /// effectif de la séance. Permet de « sauter » dans la timeline (ex:
+  /// reprendre à la section suivante après un fail) sans avoir à recréer
+  /// la Stopwatch (qui ne peut pas être avancée arbitrairement).
+  Duration _timelineOffset = Duration.zero;
+
+  final Random _random = Random();
+  Timer? _ticker;
+
+  SessionState _state = SessionState.idle;
+  int _nextStepIndex = 0;
+  SessionStep? _lastSpoken;
+
+  /// Version **résolue** (placeholders `{name}` substitués) du dernier texte
+  /// scripté envoyé au TTS. Sert à l'affichage : on veut que ce qui est
+  /// montré à l'écran corresponde exactement à ce qui est lu, pas la version
+  /// brute avec le placeholder. Mémorisée au moment du speak pour rester
+  /// stable entre rebuilds (le resolver tire un surnom différent à chaque
+  /// appel).
+  String? _lastSpokenResolvedText;
+
+  /// Dernière étape avec configuration de bip qui a été appliquée.
+  /// Sert à restaurer le loop courant après un fail.
+  SessionStep? _lastConfigStep;
+
+  // ─── État du flow fail ─────────────────────────────────────────────────
+
+  FailPhase? _failPhase;
+  String? _currentFailPhrase;
+  Punishment? _currentPunishment;
+
+  /// True tant que le flow fail est en cours.
+  /// Mis à false par stop() pour interrompre proprement les phases async.
+  bool _failActive = false;
+
+  Timer? _punishmentTicker;
+
+  /// Permet à `abandonPunishment()` (déclenché par un appui sur FAIL pendant
+  /// la phase punishment) de débloquer le `await` de `_runPunishment` sans
+  /// passer par `_failActive` (qui couperait tout le flow fail).
+  Completer<void>? _punishmentCompleter;
+  bool _punishmentAbandoned = false;
+
+  // ─── Commentaires aléatoires ───────────────────────────────────────────
+
+  Timer? _randomCommentTimer;
+
+  /// Horodatage du dernier `_tts.speak()` déclenché par une étape scriptée
+  /// (session ou punition). Sert de cooldown : si on est trop près, on
+  /// reporte le commentaire aléatoire pour éviter le chevauchement.
+  DateTime _lastScriptedSpeakAt = DateTime.fromMillisecondsSinceEpoch(0);
+
+  /// True quand le controller a été détaché des services audio partagés
+  /// (cf. [detachAudio]). Empêche `dispose()` de relancer un `tts.stop()`
+  /// ou `beep.stop()` qui couperait le démarrage d'une nouvelle session
+  /// en train de prendre la main (race observée sur le bouton « encore »).
+  bool _released = false;
+
+  /// Callback déclenché par `triggerFail` quand l'utilisatrice rate dans
+  /// la fenêtre milestone et qu'un retry est encore disponible. Retourne
+  /// `true` si le retry a été pris en charge (le contrôleur saute alors
+  /// le flow fail standard). Set depuis `SessionScreen`.
+  Future<bool> Function(SessionController controller)? onMilestoneRetry;
+
+  /// Allocation de spécialisation courante. Quand la branche `resilience`
+  /// est investie, le tick déclenche une mini-punition inopinée environ
+  /// `0.05 × pts(resilience)` fois par minute (ex: 25 %/min à 5 pts).
+  /// Null = pas de spé connue (sessions hors carrière) → jamais de mini.
+  SpecializationAllocation? _specialization;
+
+  /// Compteur en secondes pour cadencer le tirage de mini-punition résilience
+  /// (1 tirage par minute).
+  int _resilienceTickAccumulator = 0;
+
+  /// RNG dédié aux mini-punitions. Injectable en test via
+  /// [debugSetResilienceRng] pour forcer le tirage.
+  Random _resilienceRng = Random();
+
+  /// Compteur de mini-punitions effectivement déclenchées dans la session
+  /// courante. Non persisté — observé par les tests.
+  int _miniPunishmentsTriggered = 0;
+  @visibleForTesting
+  int get miniPunishmentsTriggered => _miniPunishmentsTriggered;
+
+  /// Configure l'allocation de spé consommée par le tick résilience.
+  /// Appelé par `SessionScreen` au démarrage et après chaque
+  /// `requestUpgrade` côté carrière.
+  void setSpecialization(SpecializationAllocation? alloc) {
+    _specialization = alloc;
+  }
+
+  @visibleForTesting
+  void debugSetResilienceRng(Random rng) {
+    _resilienceRng = rng;
+  }
+
+  /// Décide si le tick résilience doit déclencher une mini-punition cette
+  /// minute. Pure : pas de side-effect, pas de lecture d'état controller.
+  /// Exposée pour le test unitaire.
+  @visibleForTesting
+  static bool computeMiniPunishmentTrigger({
+    required SpecializationAllocation? specialization,
+    required double rngValue,
+  }) {
+    final pts =
+        specialization?.pointsIn(SpecializationBranch.resilience) ?? 0;
+    if (pts <= 0) return false;
+    final probability = 0.05 * pts;
+    return rngValue < probability;
+  }
+
+  SessionController({
+    required Session session,
+    required TtsService tts,
+    required BeepEngine beep,
+    required AmbienceEngine ambience,
+    required PunishmentBundle punishmentBundle,
+    required RandomCommentsBundle randomComments,
+    StatsService? stats,
+    BadgeService? badges,
+    PhraseBank? phraseBank,
+    List<double>? staminaProfile,
+    HoldVerifier? holdVerifier,
+    double excitationMax = ExcitationEngine.defaultMax,
+    SpecializationAllocation? specialization,
+  })  : _session = session,
+        _tts = tts,
+        _beep = beep,
+        _ambience = ambience,
+        _punishmentBundle = punishmentBundle,
+        _randomComments = randomComments,
+        _stats = stats ?? StatsService(),
+        _badges = badges ?? BadgeService(),
+        _phraseBank = phraseBank,
+        _staminaProfile = staminaProfile,
+        _holdVerifier = holdVerifier,
+        _excitationMax = excitationMax,
+        _specialization = specialization {
+    _beep.onBeat = _handleBeat;
+    _excitation.setMax(excitationMax);
+    _excitation.onThresholdCrossed = _handleExcitationThreshold;
+  }
+
+  void _handleExcitationThreshold(int threshold) {
+    final bank = _phraseBank;
+    if (bank == null) return;
+    final phrase = bank.pickExcitation(threshold, _random);
+    if (phrase == null || phrase.isEmpty) return;
+    // On parle « hors-script » : pas de _lastScriptedSpeakAt mis à jour, le
+    // cooldown des commentaires aléatoires reste sur les vrais scriptés.
+    if (_tts.isSpeaking) {
+      // Ne pas couper une phrase scriptée en cours pour annoncer un seuil.
+      // Le seuil est déjà marqué franchi côté ExcitationEngine — on rate
+      // juste l'annonce. Acceptable : un nouveau bip attendra naturellement.
+      return;
+    }
+    _tts.speak(phrase);
+  }
+
+  /// Détecte un changement de paramètre entre [previous] et [current] et
+  /// déclenche une phrase de transition (« plus vite », « plus profond »,
+  /// etc.). Ne joue que si :
+  /// - même mode résolu (sinon le changement de mode parle pour lui-même)
+  /// - delta significatif sur BPM (>10%) ou sur profondeur (`to` ou `from`)
+  /// - le TTS n'est pas en train de parler
+  /// - une phrase scriptée n'a pas démarré il y a moins de 2 secondes
+  /// - la PhraseBank a une phrase pour ce TransitionKind
+  void _maybeFireTransitionPhrase(SessionStep previous, SessionStep current) {
+    final bank = _phraseBank;
+    if (bank == null) return;
+    final prevMode = previous.mode ?? session.defaultMode;
+    final currMode = current.mode ?? session.defaultMode;
+    if (prevMode != currMode) return;
+
+    // Détection de la transition la plus saillante. Priorité depth > speed.
+    final kind = _detectTransitionKind(previous, current);
+    if (kind == null) return;
+
+    if (_tts.isSpeaking) return;
+    final since = DateTime.now().difference(_lastScriptedSpeakAt).inSeconds;
+    if (since < 2) return;
+
+    final phrase = bank.pickTransition(kind, _random);
+    if (phrase == null || phrase.isEmpty) return;
+    _tts.speak(phrase);
+  }
+
+  TransitionKind? _detectTransitionKind(
+    SessionStep previous,
+    SessionStep current,
+  ) {
+    // Profondeur : on regarde la position la plus profonde atteinte par le
+    // step (to si présent, sinon from). Pour hold/beg, on a renommé en `to`,
+    // donc current.to porte la cible.
+    final prevDepth = previous.to ?? previous.from;
+    final currDepth = current.to ?? current.from;
+    if (prevDepth != null && currDepth != null) {
+      if (currDepth.index > prevDepth.index) return TransitionKind.depthUp;
+      if (currDepth.index < prevDepth.index) return TransitionKind.depthDown;
+    }
+    // Vitesse : delta BPM > 10% du précédent.
+    final prevBpm = previous.bpm;
+    final currBpm = current.bpm;
+    if (prevBpm != null && currBpm != null && prevBpm > 0) {
+      final delta = (currBpm - prevBpm) / prevBpm;
+      if (delta >= 0.10) return TransitionKind.speedUp;
+      if (delta <= -0.10) return TransitionKind.speedDown;
+    }
+    return null;
+  }
+
+  void _handleBeat(BeatEvent e) {
+    _stats.recordBeat(mode: e.mode, to: e.to, from: e.from);
+    _stats.markModeUsed(e.mode);
+    _excitation.onBeat(
+      mode: e.mode,
+      to: e.to,
+      from: e.from,
+      bpm: _beep.currentBpm,
+    );
+    _stamina.onBeat(e);
+  }
+
+  /// Vrai si l'utilisatrice a cliqué au moins une fois sur FAIL pendant
+  /// cette session.
+  bool _hadFailThisSession = false;
+
+  /// Lecture publique : la SessionScreen carrière en a besoin pour décider
+  /// d'un éventuel level-up à la complétion (level-up = niveau max +
+  /// pas bâclé + sans fail).
+  bool get hadFailThisSession => _hadFailThisSession;
+
+  /// Badges débloqués pendant cette séance, ordonnés par catalogue. Vide
+  /// tant que [_finish] n'a pas terminé sa réconciliation. Consommé par
+  /// l'écran de fin pour afficher les nouveaux paliers.
+  List<BadgeUnlock> _sessionBadgeUnlocks = const [];
+  List<BadgeUnlock> get sessionBadgeUnlocks => _sessionBadgeUnlocks;
+
+  /// Compteur interne de la durée passée dans la position courante (s)
+  /// quand on est en mode hold throat/full. Sert à crediter chaque
+  /// seconde au StatsService et à mémoriser le hold full le plus long
+  /// mené à terme (badge Iron Lungs).
+  int _currentHoldFullDuration = 0;
+
+  int _lastHoldTickAtSecond = -1;
+
+  /// Met à jour le profil d'endurance (utilisé après requestUpgrade qui
+  /// remplace la timeline restante par une nouvelle suite générée).
+  void updateStaminaProfile(List<double>? profile) {
+    _staminaProfile = profile;
+  }
+
+  /// True si on est dans les 60 dernières secondes de la session. Sert
+  /// à amplifier les pénalités fail (« on ruine la session »).
+  bool _isInLastMinute() {
+    return remaining.inSeconds <= 60 && remaining.inSeconds >= 0;
+  }
+
+  /// True si la position courante est à l'intérieur de la fenêtre milestone
+  /// de la session. Utilisé pour offrir un retry plutôt que le flow fail
+  /// standard quand l'utilisatrice rate pendant l'apprentissage.
+  bool _isInMilestoneWindow() {
+    final start = _session.milestoneStartTime;
+    final dur = _session.milestoneDurationSeconds;
+    if (start == null || dur == null) return false;
+    final t = elapsedSeconds;
+    return t >= start && t < start + dur;
+  }
+
+  /// Endurance projetée à la seconde courante, ou `null` si pas de
+  /// profil disponible (sessions statiques).
+  double? _staminaAtNow() {
+    final profile = _staminaProfile;
+    if (profile == null || profile.isEmpty) return null;
+    final idx = elapsedSeconds.clamp(0, profile.length - 1);
+    return profile[idx];
+  }
+
+  // ─── Getters d'état ────────────────────────────────────────────────────
+
+  Session get session => _session;
+  SessionState get state => _state;
+  Duration get elapsed => _stopwatch.elapsed + _timelineOffset;
+  int get elapsedSeconds => elapsed.inSeconds;
+  Duration get remaining {
+    final r = session.duration - elapsed;
+    return r.isNegative ? Duration.zero : r;
+  }
+
+  SessionStep? get lastSpoken => _lastSpoken;
+
+  /// Texte à afficher dans le panneau « instruction courante » : version
+  /// résolue (`{name}` substitué) de la dernière phrase parlée, ou de la
+  /// phrase de fail courante si on est en train d'en jouer une. Reste
+  /// stable tant qu'aucune nouvelle phrase n'est lue.
+  String? get currentDisplayText {
+    if (_state == SessionState.failing && _currentFailPhrase != null) {
+      return _currentFailPhrase;
+    }
+    return _lastSpokenResolvedText;
+  }
+
+  bool _configApplied = false;
+  bool get hasConfig => _configApplied;
+
+  SessionMode get currentMode => _beep.currentMode;
+  Position get currentFrom => _beep.currentFrom;
+  Position? get currentTo => _beep.currentTo;
+  int get currentBpm => _beep.currentBpm;
+
+  double get progress {
+    if (session.durationSeconds == 0) return 0;
+    final p = elapsed.inMilliseconds / (session.durationSeconds * 1000);
+    return p.clamp(0.0, 1.0);
+  }
+
+  bool get isRunning => _state == SessionState.running;
+  bool get isPaused => _state == SessionState.paused;
+  bool get isFinished => _state == SessionState.finished;
+  bool get isIdle => _state == SessionState.idle;
+  bool get isFailing => _state == SessionState.failing;
+
+  FailPhase? get failPhase => _failPhase;
+  String? get currentFailPhrase => _currentFailPhrase;
+  Punishment? get currentPunishment => _currentPunishment;
+
+  /// True si le bouton FAIL doit être actif. Actif aussi pendant la phase
+  /// punishment d'un fail en cours pour permettre d'abandonner la punition.
+  bool get canTriggerFail =>
+      (_state == SessionState.running &&
+              _punishmentBundle.isEmpty == false) ||
+          (_state == SessionState.failing &&
+              _failPhase == FailPhase.punishment);
+
+  // ─── Ambiance ──────────────────────────────────────────────────────────
+
+  double get ambienceVolume => _ambience.volume;
+
+  Future<void> setAmbienceVolume(double v) async {
+    await _ambience.setVolume(v);
+    notifyListeners();
+  }
+
+  /// Aligne l'ambiance lue sur le mode courant du BeepEngine d'après le
+  /// pack actif (porté par AmbienceEngine). Appelé après chaque step de config.
+  Future<void> _syncAmbienceToCurrentMode() async {
+    await _ambience.playForMode(_beep.currentMode);
+  }
+
+  // ─── Cycle principal ───────────────────────────────────────────────────
+
+  Future<void> start() async {
+    if (_state == SessionState.running) return;
+
+    if (_state == SessionState.idle || _state == SessionState.finished) {
+      _stopwatch.reset();
+      _timelineOffset = Duration.zero;
+      _nextStepIndex = 0;
+      _lastSpoken = null;
+      _lastSpokenResolvedText = null;
+      _lastConfigStep = null;
+      _configApplied = false;
+      _hadFailThisSession = false;
+      _sessionBadgeUnlocks = const [];
+      _currentHoldFullDuration = 0;
+      _lastHoldTickAtSecond = -1;
+      _resilienceTickAccumulator = 0;
+      _miniPunishmentsTriggered = 0;
+      _excitation.reset();
+      _excitation.setMax(_excitationMax);
+      _humiliation.seed(0);
+      _obedience.seed(0);
+      _stamina.reset();
+      // Lectures async tolérées : si pas finies au premier beat, on est
+      // juste à valeur neutre (résistance 0, humiliation 0, obédiance 0).
+      // Pas critique — les bumps en cours de session s'appliqueront aux
+      // valeurs neutres puis seront remplacés à la première lecture async.
+      _stats.getResistanceLevel().then((r) => _excitation.setResistance(r));
+      _stats.getHumiliationLevel().then((h) => _humiliation.seed(h));
+      _stats.getObedienceLevel().then((o) => _obedience.seed(o));
+    }
+
+    await _tts.init();
+    await _beep.init();
+    await WakelockPlus.enable();
+
+    _stopwatch.start();
+    _state = SessionState.running;
+    _startTicker();
+    _startRandomComments();
+    notifyListeners();
+    _checkSteps();
+  }
+
+  Future<void> pause() async {
+    if (_state != SessionState.running) return;
+    _stopwatch.stop();
+    _ticker?.cancel();
+    _ticker = null;
+    _stopRandomComments();
+    _disarmHoldVerifier();
+    await _tts.stop();
+    await _beep.pause();
+    await _ambience.pause();
+    _state = SessionState.paused;
+    notifyListeners();
+  }
+
+  Future<void> resume() async {
+    if (_state != SessionState.paused) return;
+    _stopwatch.start();
+    _state = SessionState.running;
+    _startTicker();
+    _startRandomComments();
+    await _beep.resume();
+    await _ambience.resume();
+    notifyListeners();
+  }
+
+  Future<void> stop() async {
+    // Signale au flow fail (s'il est en cours) qu'il doit s'arrêter.
+    _failActive = false;
+    _punishmentTicker?.cancel();
+    _punishmentTicker = null;
+    _stopRandomComments();
+    _disarmHoldVerifier();
+
+    _stopwatch.stop();
+    _stopwatch.reset();
+    _timelineOffset = Duration.zero;
+    _ticker?.cancel();
+    _ticker = null;
+    await _tts.stop();
+    await _beep.stop();
+    await _ambience.stop();
+    await WakelockPlus.disable();
+
+    _state = SessionState.idle;
+    _nextStepIndex = 0;
+    _lastSpoken = null;
+    _lastSpokenResolvedText = null;
+    _lastConfigStep = null;
+    _configApplied = false;
+    _failPhase = null;
+    _currentFailPhrase = null;
+    _currentPunishment = null;
+    _hadFailThisSession = false;
+    _currentHoldFullDuration = 0;
+    _lastHoldTickAtSecond = -1;
+    notifyListeners();
+  }
+
+  void _startTicker() {
+    _ticker?.cancel();
+    _ticker = Timer.periodic(_tickInterval, (_) => _onTick());
+  }
+
+  void _onTick() {
+    _checkSteps();
+    _accrueHoldSecond();
+    if (elapsedSeconds >= session.durationSeconds) {
+      _finish();
+      return;
+    }
+    notifyListeners();
+  }
+
+  /// Crédite une seconde au compteur hold throat/full quand on est dans
+  /// ce mode. Utilise [elapsedSeconds] pour ne créditer qu'une fois par
+  /// seconde (le ticker tourne à 200 ms). Pousse aussi le passif de la
+  /// jauge d'excitation pour cette seconde.
+  void _accrueHoldSecond() {
+    final now = elapsedSeconds;
+    if (now == _lastHoldTickAtSecond) return;
+    _lastHoldTickAtSecond = now;
+    // Tick excitation : applique le passif du mode courant pour 1 s.
+    // Note : `setCurrentMode` ne réapplique pas le spike initial s'il a
+    // déjà été déclenché par `_checkSteps` pour ce step (déduplication
+    // via `_lastSpikeMode`/`_lastSpikeFrom` côté engine).
+    _excitation.setCurrentMode(
+      mode: _beep.currentMode,
+      from: _beep.currentFrom,
+      to: _beep.currentTo,
+    );
+    _excitation.onTickSecond();
+    _obedience.onTickSecond();
+    // L'humil tick est accéléré par l'obédiance courante : plus elle obéit
+    // bien, plus on accepte qu'elle ait droit à plus d'humiliation par
+    // unité de temps.
+    _humiliation.onTickSecond(obedienceLevel: _obedience.score);
+    _stamina.setCurrentMode(
+      _beep.currentMode,
+      from: _beep.currentFrom,
+      bpm: _beep.currentBpm,
+    );
+    _stamina.onTickSecond();
+    _accrueResilienceTick();
+    if (_beep.currentMode != SessionMode.hold) return;
+    final pos = _beep.currentFrom;
+    if (pos == Position.throat || pos == Position.full) {
+      _stats.recordHoldSecond(pos);
+      if (pos == Position.full) {
+        _currentHoldFullDuration++;
+      }
+    }
+  }
+
+  /// À appeler quand le mode change ou que la session se termine : si on
+  /// vient de finir un hold full, on enregistre sa durée pour Iron Lungs.
+  void _flushHoldFull() {
+    if (_currentHoldFullDuration > 0) {
+      _stats.recordHoldFullCompleted(_currentHoldFullDuration);
+      _currentHoldFullDuration = 0;
+    }
+  }
+
+  /// Arme la vérif caméra si le step est un hold sur une position connue.
+  /// Pour les autres modes (rhythm/lick/biffle/breath/beg/freestyle/hand) on
+  /// ne fait rien — la cible est mouvante, pas pertinent en V1.
+  void _armHoldVerifierIfHoldStep(SessionStep step) {
+    final verifier = _holdVerifier;
+    if (verifier == null) return;
+    final mode = step.mode ?? session.defaultMode;
+    if (mode != SessionMode.hold) return;
+    // Pour le mode hold, la position cible est portée par `step.to`
+    // (sémantique « tenir jusqu'à »). Le `BeepEngine.applyStep` qui précède
+    // a déjà reflété `to` dans son état interne `currentFrom`, donc on peut
+    // s'y rabattre en cas d'absence d'override sur le step (text-only ne
+    // ré-arme pas, donc rare).
+    final expected = step.to ?? _beep.currentFrom;
+    verifier.arm(expected);
+  }
+
+  /// Désarme la vérif et logue le rapport (V1 : juste un debugPrint).
+  void _disarmHoldVerifier() {
+    final verifier = _holdVerifier;
+    if (verifier == null || !verifier.isArmed) return;
+    final report = verifier.disarm();
+    if (kDebugMode && report.armedWithDetection) {
+      debugPrint(
+        '[HoldVerifier] accuracy=${(report.accuracy * 100).toStringAsFixed(0)}%'
+        ' total=${report.total.inMilliseconds}ms'
+        ' maxDrift=${report.maxDrift.inMilliseconds}ms'
+        ' nudges=${report.nudges}',
+      );
+    }
+  }
+
+  void _checkSteps() {
+    final s = elapsedSeconds;
+    var modeChanged = false;
+    while (_nextStepIndex < session.steps.length &&
+        session.steps[_nextStepIndex].time <= s) {
+      final step = session.steps[_nextStepIndex];
+
+      // Anti-coupure des phrases random : si une phrase TTS est en cours
+      // et que ce step a son propre texte, on diffère le step entier au
+      // tick suivant en reculant l'horloge logique de l'épaisseur d'un
+      // tick. Le step s'enclenchera dès que `_tts.isSpeaking` repasse à
+      // false. Acceptable pour quelques centaines de ms (la phrase random
+      // fait typiquement 2-4 s) ; au-delà la session se prolonge un peu,
+      // ce que l'utilisatrice a explicitement validé.
+      //
+      // On défère pour TOUT step ayant du texte (incluant text-only) :
+      // sinon le seul cas effectivement utile (un text-only random qui
+      // arrive sur une phrase coach random) ne serait pas couvert.
+      // Steps sans texte → on ne diffère jamais : la bascule de mode/bip
+      // doit suivre le tempo logique, pas un commentaire vocal.
+      if (step.text.isNotEmpty && _tts.isSpeaking) {
+        _timelineOffset -= _tickInterval;
+        break;
+      }
+
+      if (!step.isTextOnly) {
+        // Avant de changer de mode : si on quittait un hold full, on crédite
+        // sa durée pour le badge Iron Lungs (uniquement quand le hold est
+        // mené à terme — un fail interrompt avant ce flush).
+        _flushHoldFull();
+        // Désarme la vérif caméra du hold précédent. On rearme juste après
+        // si le nouveau step est lui-même un hold.
+        _disarmHoldVerifier();
+        // On garde le step précédent pour détecter les transitions
+        // (changement de BPM ou de profondeur dans le même mode).
+        final previousConfig = _lastConfigStep;
+        _beep.applyStep(step, session.defaultMode);
+        final resolvedMode = step.mode ?? session.defaultMode;
+        _stats.markModeUsed(resolvedMode);
+        _configApplied = true;
+        _lastConfigStep = step;
+        modeChanged = true;
+        _armHoldVerifierIfHoldStep(step);
+        // Notifie l'excitation du nouveau mode/from/to : déclenche le spike
+        // initial pour hold / beg-non-libre, mémorise pour le tick passif.
+        _excitation.setCurrentMode(
+          mode: resolvedMode,
+          from: step.from ?? _beep.currentFrom,
+          to: step.to,
+        );
+        // Si la step n'a pas son propre texte scripté, on tente une phrase
+        // de transition (« plus vite », « plus profond »…). Ça ne joue
+        // que si on est resté dans le même mode et qu'un paramètre clé a
+        // bougé suffisamment, et seulement si le TTS n'est pas occupé.
+        if (step.text.isEmpty && previousConfig != null) {
+          _maybeFireTransitionPhrase(previousConfig, step);
+        }
+      }
+
+      if (step.text.isNotEmpty) {
+        _lastSpoken = step;
+        _speakScripted(step.text);
+      }
+
+      _nextStepIndex++;
+    }
+    // Si un step de config a été appliqué, le mode courant a potentiellement
+    // changé → on ré-aligne l'ambiance. Le AmbienceEngine no-op si l'asset
+    // n'a pas changé, donc pas de coupure inutile entre 2 steps même mode.
+    if (modeChanged) {
+      _syncAmbienceToCurrentMode();
+    }
+  }
+
+  /// Wrapper autour de `_tts.speak` qui marque le dernier instant scripté,
+  /// pour permettre au scheduler de commentaires aléatoires de respecter
+  /// son cooldown. Coupe explicitement un éventuel random en cours avant
+  /// de parler, sinon flutter_tts peut conserver l'audio précédent et le
+  /// scripted n'est jamais entendu (race observée sur Android).
+  ///
+  /// On résout `{name}` AVANT le speak et on stocke le résultat dans
+  /// [_lastSpokenResolvedText] : ainsi l'UI peut afficher exactement ce
+  /// qui a été prononcé (le resolver re-tirerait un surnom différent si
+  /// on l'appelait depuis le widget).
+  void _speakScripted(String text) {
+    _lastScriptedSpeakAt = DateTime.now();
+    final resolved = _tts.resolveText(text);
+    _lastSpokenResolvedText = resolved;
+    if (_tts.isSpeaking) {
+      _tts.stop().then((_) => _tts.speak(resolved));
+    } else {
+      _tts.speak(resolved);
+    }
+  }
+
+  Future<void> _finish() async {
+    _stopwatch.stop();
+    _ticker?.cancel();
+    _ticker = null;
+    await _beep.stop();
+    await WakelockPlus.disable();
+    _flushHoldFull();
+    _disarmHoldVerifier();
+    await _stats.addElapsedSeconds(elapsedSeconds);
+    await _stats.recordSessionCompleted(hadFail: _hadFailThisSession);
+    if (!_hadFailThisSession) {
+      _humiliation.onSessionCleanFinish();
+      _obedience.onSessionCleanFinish();
+    }
+    // Les scores d'humiliation et d'obédiance sont cumulés entre sessions
+    // (thermomètres persistants). On persiste les scores finaux atteints.
+    await _stats.setHumiliationLevel(_humiliation.score);
+    await _stats.setObedienceLevel(_obedience.score);
+
+    // Acquittement milestone AVANT le bascule en `finished` : sans ça,
+    // `_recordCareerCompletion` côté SessionScreen (déclenché par le
+    // notifyListeners de l'isFinished) appelle `recordSessionCompleted`
+    // sur un `canLevelUp` qui retourne false (la milestone du niveau
+    // courant est encore pending) → le niveau ne s'incrémente jamais.
+    // Le bonus humiliation +2 d'unlock est appliqué ici, mais l'annonce
+    // TTS est déplacée APRÈS le bascule (sinon notifyListeners attend la
+    // fin de l'announce).
+    String? milestoneAnnouncement;
+    // Body milestone (insertion en milieu de séance) et final milestone
+    // (placement `finalApotheose`, en remplacement de la phase finish)
+    // sont acquittées indépendamment. Une seule annonce TTS est jouée
+    // pour ne pas tasser deux phrases d'unlock en fin de séance — on
+    // privilégie celle de la final si présente (= compétence terminale,
+    // plus marquante dramaturgiquement).
+    Future<void> markIfPresent(String? id, {required bool isFinal}) async {
+      if (id == null) return;
+      final wasAlreadyCompleted = milestoneService.isCompleted(id);
+      await milestoneService.markCompleted(id, hadFail: _hadFailThisSession);
+      if (!_hadFailThisSession && !wasAlreadyCompleted && !_released) {
+        final announce = milestoneService.getUnlockAnnouncement(id);
+        if (announce != null &&
+            (isFinal || milestoneAnnouncement == null)) {
+          milestoneAnnouncement = announce;
+        }
+        _humiliation.onMilestoneAcquired();
+        await _stats.setHumiliationLevel(_humiliation.score);
+      }
+    }
+    await markIfPresent(session.milestoneId, isFinal: false);
+    await markIfPresent(session.finalMilestoneId, isFinal: true);
+
+    // Réconciliation badges AVANT le bascule en `finished` : `_FinishedPanel`
+    // initialise son `_badgesHidden` à partir de `hasPendingBadges` au
+    // premier rendu. Si `_pendingBadgeUnlocks` est encore vide à ce
+    // moment-là, le panel skippe l'étape MERCI et les badges ne sont
+    // jamais révélés. On résout la liste avant le notifyListeners.
+    final snap = await _stats.snapshot();
+    final unlocks = await _badges.reconcileAndDetectUnlocks(snap);
+    _pendingBadgeUnlocks = unlocks;
+
+    // Apothéose AVANT le bascule en `finished` : phrase finale (« continue
+    // je viens », « voilà je jouis ») PUIS immédiatement le son d'orgasme
+    // (`finale_chime`). On joue avant que le panel de fin n'apparaisse pour
+    // que l'utilisatrice perçoive l'enchaînement « phrase → orgasme → fin
+    // de séance » au lieu d'entendre le chime sur le panel déjà ouvert.
+    //
+    // La phrase est piochée dans le pool `finale` du mode du step de
+    // clôture (avant-dernier step, le dernier étant le congrats text-only
+    // poussé par le générateur). Pas de phrase pour les sessions sans
+    // PhraseBank ou si le pool est vide → seulement le chime.
+    //
+    // `await speak` bloque pendant la durée de la phrase ; on accepte
+    // le délai sur le rendu du finished panel — c'est l'effet recherché.
+    // `playFinaleChime` est lui aussi awaité (durée ~1.4s) pour que le
+    // chime soit entièrement joué AVANT le bascule en `finished`. Sans
+    // ça, le panel de fin apparaît pendant le chime et l'utilisatrice
+    // perçoit le son comme joué « sur l'écran séance terminée » au lieu
+    // de l'enchaînement « phrase de la step finale → orgasme → fin ».
+    if (!_hadFailThisSession && !_released) {
+      final finalStep = _findFinalStep();
+      final mode = finalStep?.mode;
+      final bank = _phraseBank;
+      if (mode != null && bank != null) {
+        final phrase = bank.pickFor(mode, 'finale', _random);
+        if (phrase.isNotEmpty) {
+          await _tts.speak(phrase);
+        }
+      }
+      if (!_released) {
+        await _beep.playFinaleChime(category: session.finalCategory);
+      }
+    }
+
+    _state = SessionState.finished;
+    notifyListeners();
+
+    // Annonce TTS d'unlock milestone (post-bascule pour ne pas bloquer
+    // le rendu du finished panel sur l'await). Joue après le chime :
+    // phrase finale → son d'orgasme → panel de fin → annonce de la
+    // compétence acquise.
+    final announce = milestoneAnnouncement;
+    if (announce != null && announce.isNotEmpty) {
+      await _tts.speak(announce);
+    }
+  }
+
+  /// Retourne le dernier step de config (non text-only) de la session
+  /// = le step final / apothéose. Le congrats text-only poussé par le
+  /// générateur après le finisher est skippé. Renvoie null si aucun.
+  SessionStep? _findFinalStep() {
+    for (var i = session.steps.length - 1; i >= 0; i--) {
+      final s = session.steps[i];
+      if (!s.isTextOnly) return s;
+    }
+    return null;
+  }
+
+  /// Liste des paliers nouvellement franchis, calculée par `_finish` mais
+  /// gardée en attente jusqu'à `revealBadgeUnlocks()`. On préserve la
+  /// même API publique (`sessionBadgeUnlocks`) une fois la révélation
+  /// faite, pour que l'UI continue de pouvoir consommer la liste.
+  List<BadgeUnlock> _pendingBadgeUnlocks = const [];
+
+  /// True si des badges ont été détectés à la complétion mais pas encore
+  /// révélés (l'utilisateur n'a pas tapé MERCI). Permet à l'UI d'afficher
+  /// le bouton MERCI avant la grille de badges.
+  bool get hasPendingBadges => _pendingBadgeUnlocks.isNotEmpty;
+
+  /// Révèle les paliers de badges atteints pendant la séance : déplace la
+  /// liste pending vers `sessionBadgeUnlocks`, lance les annonces TTS, et
+  /// notifie l'UI. À appeler depuis le bouton MERCI de l'écran de fin.
+  Future<void> revealBadgeUnlocks() async {
+    if (_pendingBadgeUnlocks.isEmpty) return;
+    final unlocks = _pendingBadgeUnlocks;
+    _pendingBadgeUnlocks = const [];
+    _sessionBadgeUnlocks = unlocks;
+    notifyListeners();
+    for (final u in unlocks) {
+      if (_released) break;
+      await _tts.speak(u.announcement());
+    }
+  }
+
+  // ─── Action « Supplier » (mode Carrière) ───────────────────────────────
+
+  /// Coupe la timeline restante et la remplace par : un beg insistant
+  /// immédiat (à `elapsedSeconds`), suivi des [upcomingSteps] rebased
+  /// pour démarrer juste après le beg. Utilisé par le bouton « SUPPLIER »
+  /// du mode Carrière, qui régénère une suite à un niveau supérieur
+  /// pendant que l'utilisateur supplie.
+  ///
+  /// Les `upcomingSteps` doivent avoir leur `time` exprimé relativement
+  /// à zéro (le générateur produit toujours un `time` croissant à partir
+  /// de 0) — la méthode rebase elle-même.
+  Future<void> requestUpgrade({
+    required SessionStep insistentBeg,
+    required List<SessionStep> upcomingSteps,
+    required int upcomingDurationSeconds,
+  }) async {
+    if (_state != SessionState.running) return;
+
+    final start = elapsedSeconds;
+    final begDuration = insistentBeg.duration ?? 12;
+    final offset = start + begDuration;
+
+    final newSteps = <SessionStep>[
+      SessionStep(
+        time: start,
+        text: insistentBeg.text,
+        mode: insistentBeg.mode,
+        from: insistentBeg.from,
+        to: insistentBeg.to,
+        bpm: insistentBeg.bpm,
+        duration: begDuration,
+      ),
+      ...upcomingSteps.map(
+        (s) => SessionStep(
+          time: s.time + offset,
+          text: s.text,
+          mode: s.mode,
+          from: s.from,
+          to: s.to,
+          bpm: s.bpm,
+          duration: s.duration,
+        ),
+      ),
+    ];
+
+    _session = Session(
+      id: '${_session.id}:upgraded',
+      name: _session.name,
+      description: _session.description,
+      durationSeconds: offset + upcomingDurationSeconds,
+      defaultMode: _session.defaultMode,
+      steps: newSteps,
+    );
+
+    // Coupe le TTS en cours pour ne pas garder une phrase orpheline
+    // de l'ancien step. Le beg insistant va parler tout de suite.
+    await _tts.stop();
+
+    _nextStepIndex = 0;
+    _lastConfigStep = null;
+
+    // Force le déclenchement immédiat du beg (time = start ≤ elapsedSeconds).
+    _checkSteps();
+    notifyListeners();
+  }
+
+  // ─── Flow FAIL ─────────────────────────────────────────────────────────
+
+  /// Déclenche la séquence : pause → phrase fail → respiration → punition →
+  /// reprise du loop session là où il était.
+  ///
+  /// Le bouton appelant doit vérifier [canTriggerFail] pour ne pas appeler
+  /// cette méthode hors d'un état running.
+  Future<void> triggerFail() async {
+    if (!canTriggerFail) return;
+
+    // Retry milestone : si on rate dans la fenêtre pédagogique, on tente
+    // d'abord de proposer une nouvelle tentative via le callback (qui
+    // regénère + appelle requestUpgrade). Si le callback prend la main,
+    // on saute entièrement le flow fail standard — pas de pénalités, pas
+    // de phrase fail, pas de punition. La milestone est juste rejouée.
+    if (_isInMilestoneWindow() && onMilestoneRetry != null) {
+      final handled = await onMilestoneRetry!(this);
+      if (handled) return;
+    }
+
+    // Cas particulier : on est déjà dans le flow fail, en pleine punition
+    // → on abandonne la punition (malus obéissance, pas de re-punition).
+    if (_state == SessionState.failing &&
+        _failPhase == FailPhase.punishment) {
+      _abandonPunishment();
+      return;
+    }
+
+    _failActive = true;
+    _hadFailThisSession = true;
+    _excitation.onFail();
+    _stamina.onFail();
+    // Pénalités amplifiées si on craque dans la dernière minute (la
+    // session est presque terminée — c'est ruiné).
+    final lastMinuteMul = _isInLastMinute() ? 2.0 : 1.0;
+    _obedience.onFail(multiplier: lastMinuteMul);
+    _humiliation.onFail(multiplier: lastMinuteMul);
+    _punishmentAbandoned = false;
+    // Le hold full en cours est interrompu : pas de crédit Iron Lungs.
+    _currentHoldFullDuration = 0;
+    // Le hold éventuellement en cours est interrompu — disarm la caméra
+    // pour ne pas spammer de rappels pendant la phrase de fail / breath.
+    _disarmHoldVerifier();
+
+    // 1) Mise en pause du timing principal et du loop courant.
+    _stopwatch.stop();
+    _ticker?.cancel();
+    _ticker = null;
+    _stopRandomComments();
+    await _tts.stop();
+    await _beep.pause();
+
+    _state = SessionState.failing;
+
+    try {
+      // 2) Phrase de fail.
+      _failPhase = FailPhase.phrase;
+      // On résout immédiatement : le contenu stocké dans `_currentFailPhrase`
+      // est la version affichable (sans `{name}`). Le speak qui suit est
+      // alors un pass-through pour le placeholder déjà absent.
+      final raw = _pickRandom(_punishmentBundle.failPhrases);
+      _currentFailPhrase = raw == null ? null : _tts.resolveText(raw);
+      notifyListeners();
+      if (_currentFailPhrase != null) {
+        // awaitSpeakCompletion(true) → ce await retourne quand la phrase
+        // est entièrement prononcée.
+        _lastScriptedSpeakAt = DateTime.now();
+        await _tts.speak(_currentFailPhrase!);
+      }
+      if (!_failActive) return;
+
+      // 3) Respiration : toujours présente comme phase de transition,
+      //    mais raccourcie quand l'endurance projetée à l'instant t est
+      //    confortable (pas besoin d'imposer une longue récup à
+      //    quelqu'une qui n'en a pas besoin).
+      _failPhase = FailPhase.breath;
+      notifyListeners();
+      final stamina = _staminaAtNow();
+      final isFresh =
+          stamina != null && stamina > _breathSkipStaminaThreshold;
+      final breathSeconds =
+          isFresh ? (3 + _random.nextInt(3)) : (8 + _random.nextInt(8));
+      await _beep.applyStep(
+        SessionStep(
+          time: 0,
+          mode: SessionMode.breath,
+          duration: breathSeconds,
+        ),
+        session.defaultMode,
+      );
+      await _syncAmbienceToCurrentMode();
+      await _waitInterruptible(Duration(seconds: breathSeconds));
+      if (!_failActive) return;
+
+      // 4) Punition aléatoire.
+      _currentPunishment = _pickRandom(_punishmentBundle.punishments);
+      _failPhase = FailPhase.punishment;
+      notifyListeners();
+      if (_currentPunishment != null) {
+        await _runPunishment(_currentPunishment!);
+        // Bonus seulement si la punition a été menée à terme (ni stop()
+        // global, ni abandon volontaire via le bouton FAIL).
+        if (_failActive && !_punishmentAbandoned) {
+          _humiliation.onPunishmentCompleted();
+          _obedience.onPunishmentCompleted();
+        }
+      }
+      if (!_failActive) return;
+
+      // 5) Saut à la section suivante : on cherche le prochain step de
+      //    config et on avance la timeline jusqu'à son `time`. Tous les
+      //    steps text-only intermédiaires sont consommés silencieusement.
+      //    Si aucune section suivante n'existe, on restaure le loop d'avant
+      //    le fail pour ne pas laisser la séance sans audio.
+      final jumped = _skipToNextSection();
+      if (!jumped) {
+        await _restorePreviousLoop();
+      }
+
+      _stopwatch.start();
+      _startTicker();
+      _startRandomComments();
+      _state = SessionState.running;
+      // Coup de pouce immédiat : si on a sauté pile sur le `time` du
+      // prochain step, on le déclenche tout de suite plutôt que d'attendre
+      // le prochain tick (200 ms d'écart audible sinon).
+      _checkSteps();
+    } finally {
+      _failPhase = null;
+      _currentFailPhrase = null;
+      _currentPunishment = null;
+      _failActive = false;
+      notifyListeners();
+    }
+  }
+
+  /// Joue toutes les étapes d'une punition selon leur `time` relatif,
+  /// jusqu'à atteindre [Punishment.durationSeconds]. Interruptible via
+  /// `_abandonPunishment()` (qui complète `_punishmentCompleter`).
+  Future<void> _runPunishment(Punishment p) async {
+    final completer = Completer<void>();
+    _punishmentCompleter = completer;
+    final stopwatch = Stopwatch()..start();
+    var nextIdx = 0;
+
+    void tick() {
+      if (!_failActive) {
+        if (!completer.isCompleted) completer.complete();
+        return;
+      }
+
+      final s = stopwatch.elapsed.inSeconds;
+      var modeChanged = false;
+      while (nextIdx < p.steps.length && p.steps[nextIdx].time <= s) {
+        final step = p.steps[nextIdx];
+        if (!step.isTextOnly) {
+          _beep.applyStep(step, session.defaultMode);
+          modeChanged = true;
+        }
+        if (step.text.isNotEmpty) {
+          // fire-and-forget — flutter_tts file les phrases consécutives
+          _speakScripted(step.text);
+        }
+        nextIdx++;
+      }
+      if (modeChanged) {
+        _syncAmbienceToCurrentMode();
+      }
+
+      if (s >= p.durationSeconds) {
+        _punishmentTicker?.cancel();
+        _punishmentTicker = null;
+        stopwatch.stop();
+        if (!completer.isCompleted) completer.complete();
+      }
+    }
+
+    tick(); // déclenche le step à t=0 sans attendre
+    _punishmentTicker = Timer.periodic(_tickInterval, (_) => tick());
+
+    await completer.future;
+    _punishmentCompleter = null;
+    await _beep.stop(); // coupe les bips de la punition avant de continuer
+  }
+
+  /// Interrompt la punition en cours (déclenché par un appui sur FAIL
+  /// pendant la phase punishment). Pénalité d'obéissance, pas de
+  /// re-punition pour éviter la spirale.
+  void _abandonPunishment() {
+    _punishmentAbandoned = true;
+    final mul = _isInLastMinute() ? 2.0 : 1.0;
+    _obedience.onPunishmentAbandoned(multiplier: mul);
+    _humiliation.onPunishmentAbandoned(multiplier: mul);
+    _punishmentTicker?.cancel();
+    _punishmentTicker = null;
+    final c = _punishmentCompleter;
+    if (c != null && !c.isCompleted) {
+      c.complete();
+    }
+  }
+
+  /// Tick résilience : 1 tirage par minute. Si la branche `resilience`
+  /// est investie et que l'état autorise une mini-punition (pas en
+  /// milestone, pas dernière minute, pas en finish), tente de déclencher
+  /// `_runMiniPunishmentFlow`. Pas de garde sur `_state == running` ici
+  /// — `_accrueHoldSecond` ne s'appelle que sous le ticker, qui ne tourne
+  /// que pendant `running`.
+  void _accrueResilienceTick() {
+    _resilienceTickAccumulator++;
+    if (_resilienceTickAccumulator < 60) return;
+    _resilienceTickAccumulator = 0;
+    if (_specialization == null) return;
+    if (_isInMilestoneWindow()) return;
+    if (_isInLastMinute()) return;
+    final shouldFire = computeMiniPunishmentTrigger(
+      specialization: _specialization,
+      rngValue: _resilienceRng.nextDouble(),
+    );
+    if (!shouldFire) return;
+    final shortPool = _punishmentBundle.punishments
+        .where((p) => p.durationSeconds < 20)
+        .toList();
+    if (shortPool.isEmpty) return;
+    final p = shortPool[_resilienceRng.nextInt(shortPool.length)];
+    _miniPunishmentsTriggered++;
+    // Fire-and-forget : on ne bloque pas le ticker.
+    unawaited(_runMiniPunishmentFlow(p));
+  }
+
+  /// Joue une mini-punition inopinée déclenchée par le tick résilience.
+  /// Variante allégée du flow fail : pas de phrase fail, pas de breath de
+  /// récup, pas de saut de section. On enchaîne directement la punition
+  /// puis on restaure le loop précédent.
+  Future<void> _runMiniPunishmentFlow(Punishment p) async {
+    if (_state != SessionState.running) return;
+
+    _failActive = true;
+    _disarmHoldVerifier();
+    _stopwatch.stop();
+    _ticker?.cancel();
+    _ticker = null;
+    _stopRandomComments();
+    await _tts.stop();
+    await _beep.pause();
+
+    _state = SessionState.failing;
+    _failPhase = FailPhase.punishment;
+    _currentPunishment = p;
+    notifyListeners();
+
+    try {
+      await _runPunishment(p);
+      if (_failActive && !_punishmentAbandoned) {
+        _humiliation.onPunishmentCompleted();
+        _obedience.onPunishmentCompleted();
+      }
+      if (!_failActive) return;
+      await _restorePreviousLoop();
+      _stopwatch.start();
+      _startTicker();
+      _startRandomComments();
+      _state = SessionState.running;
+      _checkSteps();
+    } finally {
+      _failPhase = null;
+      _currentPunishment = null;
+      _punishmentAbandoned = false;
+      _failActive = false;
+      notifyListeners();
+    }
+  }
+
+  /// Restaure le loop de bips qui tournait avant le fail (ou no-op
+  /// si aucune étape de config n'avait encore été appliquée).
+  Future<void> _restorePreviousLoop() async {
+    final last = _lastConfigStep;
+    if (last == null) return;
+    await _beep.applyStep(last, session.defaultMode);
+    await _syncAmbienceToCurrentMode();
+  }
+
+  /// Cherche la prochaine étape avec configuration de bip (i.e. le début
+  /// d'une nouvelle « section ») strictement après [elapsedSeconds]. Si
+  /// trouvée, avance [_timelineOffset] pour faire correspondre l'horloge
+  /// effective à son `time`, et place [_nextStepIndex] dessus. Les éventuels
+  /// steps text-only entre la position courante et la nouvelle section
+  /// sont sautés silencieusement.
+  ///
+  /// Retourne true si un saut a eu lieu, false si on est déjà dans la
+  /// dernière section (pas de saut effectué).
+  bool _skipToNextSection() {
+    final currentSec = elapsedSeconds;
+    for (var i = _nextStepIndex; i < session.steps.length; i++) {
+      final step = session.steps[i];
+      if (!step.isTextOnly && step.time > currentSec) {
+        final delta = step.time - currentSec;
+        _timelineOffset += Duration(seconds: delta);
+        _nextStepIndex = i;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// Délai annulable : si [_failActive] passe à false pendant l'attente,
+  /// on retourne immédiatement.
+  Future<void> _waitInterruptible(Duration total) async {
+    final elapsed = Stopwatch()..start();
+    while (elapsed.elapsed < total) {
+      if (!_failActive) return;
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+  }
+
+  T? _pickRandom<T>(List<T> items) {
+    if (items.isEmpty) return null;
+    return items[_random.nextInt(items.length)];
+  }
+
+  // ─── Scheduler des commentaires aléatoires ─────────────────────────────
+
+  /// Programme le prochain commentaire aléatoire dans [min, max] secondes.
+  /// Idempotent : annule un éventuel timer existant avant d'en poser un nouveau.
+  void _startRandomComments() {
+    _randomCommentTimer?.cancel();
+    if (_randomComments.isEmpty) return;
+    _randomCommentTimer = Timer(_nextRandomDelay(), _fireRandomComment);
+  }
+
+  void _stopRandomComments() {
+    _randomCommentTimer?.cancel();
+    _randomCommentTimer = null;
+  }
+
+  Duration _nextRandomDelay() {
+    final min = _randomComments.minIntervalSeconds;
+    final max = _randomComments.maxIntervalSeconds;
+    final spread = (max - min).clamp(0, 3600);
+    final seconds = min + (spread > 0 ? _random.nextInt(spread + 1) : 0);
+    return Duration(seconds: seconds);
+  }
+
+  /// Joue un commentaire aléatoire si l'état le permet, puis reprogramme
+  /// le suivant. On reporte le commentaire si :
+  /// - le TTS est déjà en train de parler (sinon le nouveau speak()
+  ///   interrompt la phrase scriptée en cours via QUEUE_FLUSH) ;
+  /// - une phrase scriptée vient juste d'être dite (cooldown de courtoisie).
+  void _fireRandomComment() {
+    if (_state != SessionState.running) return;
+    if (_randomComments.isEmpty) return;
+
+    // Pas de random pendant la fenêtre finish (boosts + final + chime) :
+    // les phrases scriptées de cette phase (« continue je viens », phrase
+    // finale, annonce milestone) ne doivent pas être chevauchées par un
+    // commentaire random. La fenêtre est ouverte par le générateur via
+    // `Session.silentFinishStartTime`. On stoppe carrément le scheduler
+    // au lieu de re-Timer : plus rien ne joue jusqu'au _finish.
+    final silentStart = session.silentFinishStartTime;
+    if (silentStart != null && elapsedSeconds >= silentStart) {
+      _stopRandomComments();
+      return;
+    }
+
+    // Pas de random pendant beg / breath : ces modes sont vocaux ou
+    // respiratoires, l'utilisatrice doit pouvoir se concentrer sur la
+    // consigne scriptée sans qu'un commentaire random vienne par-dessus.
+    final mode = _beep.currentMode;
+    if (mode == SessionMode.beg || mode == SessionMode.breath) {
+      _randomCommentTimer =
+          Timer(const Duration(seconds: 3), _fireRandomComment);
+      return;
+    }
+
+    if (_tts.isSpeaking) {
+      // TTS occupé : on retentera dans 2s pour ne pas couper la phrase
+      // en cours.
+      _randomCommentTimer =
+          Timer(const Duration(seconds: 2), _fireRandomComment);
+      return;
+    }
+
+    final since = DateTime.now().difference(_lastScriptedSpeakAt).inSeconds;
+    final cooldown = _randomComments.scriptedCooldownSeconds;
+    if (since < cooldown) {
+      _randomCommentTimer = Timer(
+        Duration(seconds: cooldown - since + 1),
+        _fireRandomComment,
+      );
+      return;
+    }
+
+    // Tirage contextualisé : on filtre sur le mode/BPM/profondeur courants.
+    // Si aucune phrase ne match le contexte, fallback sur les phrases
+    // applicables partout (sans filtre).
+    final phrase = _randomComments.pickFor(
+      mode: _beep.currentMode,
+      bpm: _beep.currentBpm,
+      depth: _beep.currentTo ?? _beep.currentFrom,
+      rng: _random,
+    );
+    if (phrase != null) _tts.speak(phrase);
+
+    _randomCommentTimer = Timer(_nextRandomDelay(), _fireRandomComment);
+  }
+
+  // ─── Disposal ──────────────────────────────────────────────────────────
+
+  /// Détache le controller des services audio partagés (TTS, BeepEngine,
+  /// AmbienceEngine). À appeler avant qu'une *autre* SessionScreen prenne
+  /// la main (typiquement le bouton « J'en veux encore »).
+  ///
+  /// Sans ça, le `dispose()` de l'ancien controller — déclenché par le
+  /// `pushReplacement` — fait un `_tts.stop()` / `_beep.stop()` en
+  /// fire-and-forget qui résout APRÈS le `start()` du nouveau controller,
+  /// et coupe la première phrase TTS + le loop de bips qui viennent juste
+  /// d'être lancés (race condition observée sur le bouton encore).
+  ///
+  /// Cette méthode :
+  ///  1. Coupe les timers locaux (ticker, fail, random comments).
+  ///  2. Awaité le `_tts.stop()` pour interrompre proprement une éventuelle
+  ///     annonce de badge en cours, AVANT que le nouveau controller parle.
+  ///  3. Marque le controller comme « released » pour que `dispose()`
+  ///     (qui partira ensuite, hors de notre contrôle) ne re-stoppe pas
+  ///     les services partagés.
+  Future<void> detachAudio() async {
+    _released = true;
+    _failActive = false;
+    _punishmentTicker?.cancel();
+    _randomCommentTimer?.cancel();
+    _ticker?.cancel();
+    _stopwatch.stop();
+    await _tts.stop();
+  }
+
+  @override
+  void dispose() {
+    _failActive = false;
+    _punishmentTicker?.cancel();
+    _randomCommentTimer?.cancel();
+    _ticker?.cancel();
+    _stopwatch.stop();
+    if (!_released) {
+      _tts.stop();
+      _beep.stop();
+      _ambience.stop();
+      WakelockPlus.disable();
+    }
+    super.dispose();
+  }
+}

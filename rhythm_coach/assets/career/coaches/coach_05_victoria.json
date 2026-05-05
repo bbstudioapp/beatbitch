@@ -1,0 +1,20 @@
+{
+  "id": "coach_05_victoria",
+  "name": "Victoria",
+  "archetype": "hautain",
+  "specialties": [
+    "obeissance",
+    "resilience"
+  ],
+  "tier": 5,
+  "isPrincipal": true,
+  "requirements": {
+    "minPlayerLevel": 25
+  },
+  "modeWeights": {
+    "beg": 1.6,
+    "hold": 1.2,
+    "lick": 0.7,
+    "freestyle": 0.5
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "lang": "fr",
+  "id": "coach_04_morgan",
+  "title": "Coach implacable",
+  "publicBio": "Direct, frontal, sans détour. Travaille les pics longs et la profondeur sans concession.",
+  "phrases": {
+    "rhythm": {
+      "hard": [
+        "Défonce ta gorge {name}.",
+        "Plus profond, trou à bite.",
+        "Avale tout sans te plaindre."
+      ]
+    },
+    "hold": {
+      "hard": [
+        "Reste au fond. Suffoque dessus {name}.",
+        "Nez contre les couilles. Tiens."
+      ],
+      "finale": [
+        "Reste plantée jusqu’au bout {name}."
+      ]
+    }
+  },
+  "intros": [
+    "Je suis Morgan. Je ne serai pas doux avec toi {name}.",
+    "Prépare ta gorge. Je vais te briser aujourd’hui."
+  ],
+  "congrats": [
+    "Tu as tenu. Pas mal pour un trou.",
+    "Correct {name}. Tu commences à servir à quelque chose."
+  ],
+  "nicknames": {
+    "pool": [
+      "trou à bite",
+      "trou à sperme",
+      "salope",
+      "pute"
+    ],
+    "use_user_prenom": false,
+    "use_user_nicknames": true
+  },
+  "coachNicknames": [
+    "Morgan",
+    "maîtresse"
+  ]
+}

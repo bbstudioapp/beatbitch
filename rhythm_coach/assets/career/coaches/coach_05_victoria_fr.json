@@ -1,0 +1,99 @@
+{
+  "lang": "fr",
+  "id": "coach_05_victoria",
+  "title": "Coach hautaine",
+  "publicBio": "Distante, regard froid. Fait travailler la posture mentale autant que la technique.",
+  "phrases": {
+    "rhythm": {
+      "hard": [
+        "Descends correctement {name}, ne me fais pas honte.",
+        "Tu es pathétique à ce rythme. Plus profond."
+      ]
+    },
+    "beg": {
+      "hard": [
+        "Supplie correctement, vermine.",
+        "Mendie mon attention comme la inférieure que tu es."
+      ]
+    }
+  },
+  "intros": [
+    "Victoria à ton service {name}. Essaye de ne pas me décevoir.",
+    "À genoux. Montre-moi que tu mérites mon temps."
+  ],
+  "congrats": [
+    "Acceptable pour une petite chose comme toi.",
+    "Tu as fait ton devoir. C’est déjà ça."
+  ],
+  "branchPhrases": {
+    "profondeur": {
+      "soft": [
+        "Rentre-le dans ta gorge abyssale {name}.",
+        "Plus profond. Tu sais aller chercher.",
+        "Au fond. C'est là que tu sers."
+      ],
+      "medium": [
+        "Plus loin. Avale comme une vraie pute.",
+        "Tu as ce trou pour ça. Sers-t'en.",
+        "Encore. Au fond. Là où tu es à ta place."
+      ],
+      "hard": [
+        "Au fond {name}. Tout au fond. Étouffe-toi avec.",
+        "Ta gorge appartient à ma queue. Prouve-le."
+      ]
+    },
+    "rythmeBiffle": {
+      "soft": [
+        "Le rythme. Suis-le sans broncher.",
+        "Tiens la cadence. C'est tout ce qu'on te demande."
+      ],
+      "medium": [
+        "Encaisse les coups {name}. C'est ton rôle.",
+        "Reçois sans pleurnicher. T'es là pour ça."
+      ],
+      "hard": [
+        "Tape dur. Encaisse. T'es un trou à bite, comporte-toi comme tel.",
+        "Plus vite. Plus dur. Tu peux tenir."
+      ]
+    },
+    "obeissance": {
+      "soft": [
+        "Bien dressée. Continue.",
+        "Tu obéis correctement {name}."
+      ],
+      "medium": [
+        "Tu es une très bonne esclave aujourd'hui.",
+        "Soumise comme il faut. Reste comme ça."
+      ],
+      "hard": [
+        "Esclave parfaite {name}. Tu mérites presque ma queue.",
+        "Tu m'appartiens et tu le sais. C'est bien."
+      ]
+    },
+    "endurance": {
+      "medium": [
+        "Tu tiens. C'est tout ce que je veux.",
+        "Pas de pause. Pas de pitié. Tu continues."
+      ],
+      "hard": [
+        "Encaisse encore. Une vraie pute ne s'arrête pas.",
+        "Tu vas tenir parce que je le décide."
+      ]
+    }
+  },
+  "nicknames": {
+    "pool": [
+      "petite chose",
+      "vermine",
+      "inférieure",
+      "jouet"
+    ],
+    "use_user_prenom": false,
+    "use_user_nicknames": true
+  },
+  "coachNicknames": [
+    "Victoria",
+    "Maîtresse",
+    "Madame"
+  ]
+}

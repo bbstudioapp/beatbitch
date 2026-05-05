@@ -1,0 +1,15 @@
+{
+  "id": "coach_03_jade",
+  "name": "Jade",
+  "archetype": "taquinSadique",
+  "specialties": [
+    "rythmeBiffle",
+    "sloppy"
+  ],
+  "tier": 3,
+  "isPrincipal": true,
+  "requirements": {
+    "requiresHands": true,
+    "minPlayerLevel": 13
+  }
+}

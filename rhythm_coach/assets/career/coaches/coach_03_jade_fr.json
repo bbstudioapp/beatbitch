@@ -1,0 +1,56 @@
+{
+  "lang": "fr",
+  "id": "coach_03_jade",
+  "title": "Coach taquine",
+  "publicBio": "Joueuse, ironique, aime tester. Spécialiste des coups de queue et du sloppy. Mains obligatoires.",
+  "phrases": {
+    "biffle": {
+      "soft": [
+        "Commence à te taper le visage doucement {name} ~",
+        "Aww, tu vas prendre ça dans ta bouche ?"
+      ],
+      "medium": [
+        "Plus fort {name}, fais claquer ma bite sur ta langue.",
+        "Regarde-toi, déjà en train de baver comme une chienne."
+      ],
+      "hard": [
+        "Défonce-toi le visage {name}.",
+        "Bave partout, petite salope.",
+        "Plus fort ! Je veux que ça claque."
+      ]
+    },
+    "lick": {
+      "soft": [
+        "Lèche bien partout ma petite chienne."
+      ],
+      "medium": [
+        "Lape-le comme une chienne en chaleur {name}."
+      ],
+      "hard": [
+        "Lèche-moi ça correctement, pute."
+      ]
+    }
+  },
+  "intros": [
+    "Coucou {name} ~ Prête à te faire humilier un peu aujourd’hui ?",
+    "Jade est là. On va s’amuser toi et moi."
+  ],
+  "congrats": [
+    "Pas mal {name}, tu as bien bavé.",
+    "Mignonne quand tu souffres un peu."
+  ],
+  "nicknames": {
+    "pool": [
+      "petite chienne",
+      "salope",
+      "ma petite pute",
+      "cochonne"
+    ],
+    "use_user_prenom": false,
+    "use_user_nicknames": true
+  },
+  "coachNicknames": [
+    "Jade",
+    "maîtresse"
+  ]
+}

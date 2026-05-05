@@ -1,0 +1,115 @@
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// Flags de debug visibles dans l'écran SONS. Persiste entre lancements.
+class DebugSettingsService {
+  static const String _kShowStaminaBar = 'debug.show_stamina_bar';
+  static const String _kShowTimer = 'debug.show_timer';
+  static const String _kShowExcitationBar = 'debug.show_excitation_bar';
+  static const String _kShowHumiliationBar = 'debug.show_humiliation_bar';
+  static const String _kShowObedienceBar = 'debug.show_obedience_bar';
+  static const String _kShowSessionControls = 'debug.show_session_controls';
+  static const String _kShowModeBadge = 'debug.show_mode_badge';
+  static const String _kCameraHoldCheck = 'debug.camera_hold_check';
+
+  Future<bool> getShowStaminaBar() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_kShowStaminaBar) ?? false;
+  }
+
+  Future<void> setShowStaminaBar(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kShowStaminaBar, value);
+  }
+
+  /// Quand true, l'écran de session affiche le timer mm:ss à la place
+  /// de l'animation des mouvements. Réservé au debug : par défaut, le
+  /// téléphone est posé sur le côté et l'utilisatrice n'a pas à lire
+  /// le temps qui s'écoule.
+  Future<bool> getShowTimer() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_kShowTimer) ?? false;
+  }
+
+  Future<void> setShowTimer(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kShowTimer, value);
+  }
+
+  /// Quand true, l'écran de session affiche la jauge d'excitation 0–100
+  /// (debug). En production le feedback se fait via les commentaires TTS
+  /// déclenchés à certains seuils.
+  Future<bool> getShowExcitationBar() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_kShowExcitationBar) ?? false;
+  }
+
+  Future<void> setShowExcitationBar(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kShowExcitationBar, value);
+  }
+
+  Future<bool> getShowHumiliationBar() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_kShowHumiliationBar) ?? false;
+  }
+
+  Future<void> setShowHumiliationBar(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kShowHumiliationBar, value);
+  }
+
+  Future<bool> getShowObedienceBar() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_kShowObedienceBar) ?? false;
+  }
+
+  Future<void> setShowObedienceBar(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kShowObedienceBar, value);
+  }
+
+  /// Quand true, l'écran de session affiche les boutons play/pause et stop.
+  /// Réservé au debug : en prod, la séance se déroule de bout en bout sans
+  /// interaction (téléphone posé sur le côté), seul le bouton FAIL reste
+  /// utile.
+  Future<bool> getShowSessionControls() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_kShowSessionControls) ?? false;
+  }
+
+  Future<void> setShowSessionControls(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kShowSessionControls, value);
+  }
+
+  /// Quand true, l'écran de session affiche le badge mode + BPM + position
+  /// au-dessus de l'animation. Réservé au debug : en prod l'animation des
+  /// mouvements suffit à indiquer ce qui se passe, le téléphone est posé
+  /// sur le côté donc ces infos textuelles ne sont pas lues.
+  Future<bool> getShowModeBadge() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_kShowModeBadge) ?? false;
+  }
+
+  Future<void> setShowModeBadge(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kShowModeBadge, value);
+  }
+
+  /// Quand true, la caméra avant vérifie pendant les holds que la position
+  /// attendue est tenue. Le coach lance un rappel vocal court si l'utilisateur
+  /// dérive plus de ~1.5 s. Pas d'auto-fail à ce niveau.
+  ///
+  /// Off par défaut : la fonctionnalité demande une calibration préalable et
+  /// reste expérimentale tant que le tracking n'a pas été éprouvé en
+  /// conditions réelles.
+  Future<bool> getCameraHoldCheck() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_kCameraHoldCheck) ?? false;
+  }
+
+  Future<void> setCameraHoldCheck(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kCameraHoldCheck, value);
+  }
+}

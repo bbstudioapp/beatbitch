@@ -1,0 +1,42 @@
+{
+  "lang": "fr",
+  "id": "coach_06_nyx",
+  "title": "Coach sans pitié",
+  "publicBio": "Le palier final. N'arrête pas, ne félicite pas. Pour celles qui ont déjà tout encaissé.",
+  "phrases": {
+    "rhythm": {
+      "hard": [
+        "Défonce-toi la gorge {name}, tu n’es rien d’autre qu’un trou.",
+        "Pleure, bave, étouffe-toi. Je m’en fous."
+      ]
+    },
+    "hold": {
+      "finale": [
+        "Reste au fond jusqu’à ce que tu t’étouffes {name}."
+      ]
+    }
+  },
+  "intros": [
+    "Nyx est là. Ta gorge va souffrir aujourd’hui.",
+    "Tu vas regretter d’avoir ouvert la bouche {name}."
+  ],
+  "congrats": [
+    "Tu as survécu. Dommage.",
+    "Pas mal pour un simple vide-couilles."
+  ],
+  "nicknames": {
+    "pool": [
+      "trou à bite",
+      "vide-couilles",
+      "déchet",
+      "pute à gorge",
+      "objet"
+    ],
+    "use_user_prenom": false,
+    "use_user_nicknames": true
+  },
+  "coachNicknames": [
+    "Nyx",
+    "Maîtresse"
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "lang": "fr",
+  "id": "advanced_demo",
+  "name": "Démo Bips Avancés",
+  "description": "Démonstration complète : tous les modes, toutes les positions, transitions, holds et breaths.",
+  "duration_seconds": 540,
+  "mode": "rhythm",
+  "intro": "Salut. C'est une démo : tu vas entendre tous les modes — rythme, lick, biffle, hold, respiration — sur toutes les positions. Sers-toi de cette session pour bien identifier chaque son et chaque profondeur. Pose ton téléphone, écoute attentivement, et appuie quand tu es prête à dérouler.",
+  "steps": [
+    {"time": 0,   "text": "Position de départ. On commence sur la tête, tempo lent.",
+                  "from": "head", "to": "head", "bpm": 60,  "duration": 30},
+    {"time": 15,  "text": "Garde le tempo. Concentre-toi sur la régularité."},
+
+    {"time": 30,  "text": "On élargit. De la tête au milieu.",
+                  "from": "head", "to": "mid",  "bpm": 60,  "duration": 45},
+    {"time": 50,  "text": "Tiens cette amplitude."},
+
+    {"time": 75,  "text": "Plus vite, même amplitude.",
+                  "from": "head", "to": "mid",  "bpm": 80,  "duration": 30},
+    {"time": 90,  "text": "Bien."},
+
+    {"time": 105, "text": "Passage en lick. Plus léger sur la pointe.",
+                  "mode": "lick", "from": "tip", "to": "head", "bpm": 90, "duration": 40},
+    {"time": 130, "text": "Continue, garde la légèreté."},
+
+    {"time": 145, "text": "Retour rythme, plus profond.",
+                  "mode": "rhythm", "from": "mid", "to": "throat", "bpm": 70, "duration": 60},
+    {"time": 175, "text": "Tiens ce rythme une minute pleine."},
+    {"time": 195, "text": "Continue."},
+
+    {"time": 205, "text": "Hold en gorge. Reste immobile.",
+                  "mode": "hold", "to": "throat", "duration": 8},
+    {"time": 215, "text": "Relâche, respire profondément.",
+                  "mode": "breath", "duration": 5},
+
+    {"time": 220, "text": "Reprends. De la gorge au full.",
+                  "mode": "rhythm", "from": "throat", "to": "full", "bpm": 75, "duration": 60},
+    {"time": 250, "text": "Donne tout."},
+
+    {"time": 280, "text": "Bascule en biffle. Cadence rapide.",
+                  "mode": "biffle", "bpm": 110, "duration": 30},
+    {"time": 295, "text": "Garde cette cadence."},
+
+    {"time": 310, "text": "Hold full. Tiens dix secondes.",
+                  "mode": "hold", "to": "full", "duration": 10},
+    {"time": 320, "text": "Relâche.",
+                  "mode": "breath", "duration": 5},
+
+    {"time": 325, "text": "Sprint final. Tête au full, tempo soutenu.",
+                  "mode": "rhythm", "from": "head", "to": "full", "bpm": 100, "duration": 90},
+    {"time": 360, "text": "Encore deux minutes."},
+    {"time": 400, "text": "Plus fort. Ne lâche pas."},
+    {"time": 440, "text": "Tiens jusqu'au bout."},
+
+    {"time": 480, "text": "Hold final, quinze secondes.",
+                  "mode": "hold", "to": "full", "duration": 15},
+    {"time": 495, "text": "Relâche tout. Respire profondément.",
+                  "mode": "breath", "duration": 10},
+
+    {"time": 510, "text": "Récupération."},
+    {"time": 535, "text": "Terminé. Bien joué."}
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "coach_06_nyx",
+  "name": "Nyx",
+  "archetype": "sansPitie",
+  "specialties": [
+    "endurance",
+    "profondeur",
+    "rythmeBiffle",
+    "obeissance",
+    "sloppy",
+    "resilience"
+  ],
+  "tier": 6,
+  "isPrincipal": true,
+  "requirements": {
+    "minPlayerLevel": 31
+  }
+}

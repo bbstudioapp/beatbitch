@@ -1,0 +1,526 @@
+{
+  "@@locale": "fr",
+
+  "appTitle": "Rhythm Coach",
+  "@appTitle": {
+    "description": "Nom de l'application affiché par le système Android."
+  },
+
+  "modeSelectionAppBarTitle": "RHYTHM COACH",
+  "modeSelectionProfileTooltip": "Profil & badges",
+  "modeSelectionSoundsTooltip": "Apprendre les sons",
+  "modeSelectionHeaderTitle": "Choisis ton mode",
+  "modeSelectionHeaderSubtitle": "Pose ton téléphone, écoute, exécute.",
+  "modeSelectionScenarioTitle": "SCÉNARIO",
+  "modeSelectionScenarioSubtitle": "Sessions écrites à l'avance.",
+  "modeSelectionCareerTitle": "CARRIÈRE",
+  "modeSelectionCareerSubtitle": "Sessions générées. Termine pour débloquer le niveau suivant.",
+
+  "homeAppBarTitle": "SCÉNARIO",
+  "homeCameraTestTooltip": "Test caméra (holds)",
+  "homeDeleteSessionTitle": "Supprimer cette séance ?",
+  "homeDeleteSessionContent": "« {sessionName} » sera retirée de tes scénarios.",
+  "@homeDeleteSessionContent": {
+    "placeholders": {
+      "sessionName": { "type": "String" }
+    }
+  },
+  "commonCancel": "Annuler",
+  "commonDelete": "Supprimer",
+  "commonContinue": "Continuer",
+  "commonAdd": "Ajouter",
+  "homeLoadError": "Erreur de chargement des sessions :\n{error}",
+  "@homeLoadError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "homeEmpty": "Aucune session disponible.",
+  "homeMySessions": "Mes séances",
+  "homeBuiltinSessions": "Séances intégrées",
+  "homeHeaderTitle": "Choisis ta séance",
+  "homeHeaderSubtitle": "Pose ton téléphone, écoute, exécute.",
+
+  "sessionStopTitle": "Arrêter la séance ?",
+  "sessionStopContent": "La progression sera perdue.",
+  "sessionStopConfirm": "Arrêter",
+  "sessionVoiceLabel": "Voix",
+  "sessionAmbienceLabel": "Ambiance",
+  "sessionBegRequestLabel": "DEMANDÉ",
+  "sessionBegSupplicateLabel": "SUPPLIER",
+  "sessionStateIdle": "PRÊT",
+  "sessionStateRunning": "EN COURS",
+  "sessionStatePaused": "PAUSE",
+  "sessionStateFinished": "TERMINÉ",
+  "sessionStateFailing": "FAIL",
+  "sessionFailPhasePhrase": "Phrase de fail",
+  "sessionFailPhaseBreath": "Respiration",
+  "sessionFailPhasePunishment": "Punition",
+  "sessionStartPrompt": "Démarre la séance pour entendre les instructions.",
+  "sessionFailButton": "JE PEUX PAS",
+  "sessionIntroBriefing": "BRIEFING",
+  "sessionIntroReplay": "Réécouter",
+  "sessionIntroReady": "JE SUIS PRÊTE",
+  "sessionPrepInPlace": "EN PLACE",
+  "sessionPrepInstruction": "Pose ton téléphone, mets-toi en position.",
+  "sessionFinishedTitle": "SÉANCE TERMINÉE",
+  "sessionFinishedDefaultEnd": "Merci !",
+  "sessionFinishedBadgesTitle": "Nouveaux paliers de badges",
+  "sessionFinishedNoNewBadges": "Pas de nouveau palier cette fois — la prochaine sera la bonne.",
+  "sessionFinishedEncore": "J'EN VEUX ENCORE…",
+  "sessionFinishedSaved": "ENREGISTRÉE",
+  "sessionFinishedSaving": "ENREGISTREMENT…",
+  "sessionFinishedSaveButton": "ENREGISTRER CETTE SÉANCE",
+  "sessionFinishedSavedSnack": "« {name} » enregistrée dans tes scénarios.",
+  "@sessionFinishedSavedSnack": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "sessionSaveDefaultName": "Ma séance {day}/{month}",
+  "@sessionSaveDefaultName": {
+    "placeholders": {
+      "day": { "type": "int" },
+      "month": { "type": "int" }
+    }
+  },
+  "sessionSaveDialogTitle": "Enregistrer la séance",
+  "sessionSaveDialogContent": "Donne-lui un nom — elle apparaîtra dans la liste SCÉNARIO.",
+  "sessionSaveDialogHint": "Nom de la séance",
+  "sessionSaveDialogConfirm": "Enregistrer",
+  "cameraTestEndButton": "Retour",
+
+  "profileAppBarTitle": "PROFIL",
+  "profileLoadError": "Erreur :\n{error}",
+  "@profileLoadError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "profileStatsSection": "STATISTIQUES",
+  "profileBadgesSection": "BADGES",
+  "profileLevel": "Niveau {level}",
+  "@profileLevel": {
+    "placeholders": {
+      "level": { "type": "int" }
+    }
+  },
+  "profileReputationUnit": "pts de réputation",
+  "profileStatSessionsCompleted": "Sessions terminées",
+  "profileStatNoFailStreak": "Streak sans fail",
+  "profileStatDailyStreak": "Streak quotidien",
+  "profileStatTotalTime": "Temps cumulé",
+  "profileStatThroatfucks": "Throatfucks",
+  "profileStatBiffles": "Biffles",
+  "profileStatHoldFullMax": "Hold full max",
+  "profileStatHoldThroatTotal": "Hold throat (cumul)",
+  "profileStatHoldFullTotal": "Hold full (cumul)",
+  "profileStatEncores": "Encores demandés",
+  "profileStatQuickies": "Sessions bâclées",
+  "profileStatModesUsed": "Modes utilisés",
+  "profileResetSection": "ZONE DANGER",
+  "profileResetButton": "Tout remettre à zéro",
+  "profileResetDialogTitle": "Tout remettre à zéro ?",
+  "profileResetDialogMessage": "Cette action efface toutes tes statistiques, badges, progression carrière et points de spécialisation. Irréversible.",
+  "profileResetCancel": "Annuler",
+  "profileResetConfirm": "Tout effacer",
+  "profileResetDoneSnackbar": "Profil remis à zéro.",
+
+  "careerAppBarTitle": "CARRIÈRE",
+  "careerSpecializationTooltip": "Spécialisation",
+  "careerLoadError": "Erreur de chargement :\n{error}",
+  "@careerLoadError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "careerHeaderTitle": "Génération procédurale",
+  "careerInstruction": "Choisis un niveau. La durée et la difficulté en découlent.",
+  "careerLevelSection": "Niveau",
+  "careerMaxLevel": "max {level}",
+  "@careerMaxLevel": {
+    "placeholders": {
+      "level": { "type": "int" }
+    }
+  },
+  "careerQuickieToggle": "Session bâclée",
+  "careerQuickieSubtitle": "6 min — intense",
+  "careerQuickieDescription": "6 min, intense tout du long. Pour quand t'as pas le temps.",
+  "careerQuickieLockedSubtitle": "Verrouillé jusqu'au niveau {level} — il faut maîtriser les bases avant de bâcler.",
+  "@careerQuickieLockedSubtitle": {
+    "placeholders": {
+      "level": { "type": "int" }
+    }
+  },
+  "careerIncludeHandToggle": "Inclure la stimulation à la main",
+  "careerIncludeHandSubtitle": "Désactive aussi les coups de queue (biffle) — les deux nécessitent la main.",
+  "careerIncludeHandLockedSubtitle": "Verrouillé jusqu'au niveau {level} — sans la main, le finish bas niveau devient trop dur.",
+  "@careerIncludeHandLockedSubtitle": {
+    "placeholders": {
+      "level": { "type": "int" }
+    }
+  },
+  "careerIncludeHandMilestoneLocked": "Verrouillé pour cette séance — le milestone d'apprentissage utilise la main.",
+  "specPointsBannerTitle": "{count, plural, =1{1 point libre} other{{count} points libres}}",
+  "@specPointsBannerTitle": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "specPointsBannerSubtitle": "Tu as gagné des points de spécialisation. Investis-les avant de démarrer.",
+  "specPointsBannerCta": "ALLOUER",
+  "careerStartButton": "DÉMARRER",
+  "careerCompletedSessions": "Sessions complétées : {count}",
+  "@careerCompletedSessions": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "careerLevelLockedHint": "Niveau 1 (termine une séance pour débloquer le suivant)",
+
+  "careerMilestonesPendingTitle": "Apprentissages en attente",
+  "careerMilestonesNextBadge": "PROCHAIN",
+  "careerMilestonesBranchesPrefix": "Branche : ",
+  "careerMilestonesBranchesPrefixPlural": "Branches : ",
+
+  "cameraTestAppBarTitle": "TEST CAMÉRA",
+  "cameraPreviewUnavailable": "Aperçu indisponible",
+  "cameraStartSession": "Lancer la session",
+  "cameraPermissionDenied": "Permission caméra refusée ou init impossible. Active la caméra dans les réglages Android.",
+  "cameraUnknownError": "Erreur inconnue.",
+  "cameraInitializing": "Initialisation caméra…",
+  "cameraRecalibrate": "Recalibrer",
+  "cameraCalibrate": "Calibrer (10 s)",
+  "cameraAxisLabel": "Axe : {axis}",
+  "@cameraAxisLabel": {
+    "placeholders": { "axis": { "type": "String" } }
+  },
+  "cameraAxisHorizontal": "horizontal",
+  "cameraAxisVertical": "vertical",
+  "cameraLivePositionLabel": "Position live : {position}",
+  "@cameraLivePositionLabel": {
+    "placeholders": { "position": { "type": "String" } }
+  },
+  "cameraCalibrationTitle": "Calibration",
+  "cameraCalibrationInstructions": "Pendant 10 secondes, fais 3 ou 4 mouvements lents et amples — de la position la plus haute (tip) à la plus basse (full). L'app en déduira l'axe et les bornes des 5 niveaux.",
+  "cameraCalibratingMessage": "Calibration en cours… fais des mouvements lents et profonds.",
+  "cameraCalibratedTitle": "Calibration OK",
+  "cameraCalibrationSummary": "Axe : {axis} — range {range} ({samples} échantillons)",
+  "@cameraCalibrationSummary": {
+    "placeholders": {
+      "axis": { "type": "String" },
+      "range": { "type": "String" },
+      "samples": { "type": "int" }
+    }
+  },
+  "cameraCalibratedHint": "Tu peux lancer la session. Si la polarité est inversée (tip ↔ full), recalibre dans le bon sens.",
+  "cameraCalibrationFailedRange": "Range trop faible ({range}). Refais des mouvements plus amples.",
+  "@cameraCalibrationFailedRange": {
+    "placeholders": { "range": { "type": "String" } }
+  },
+  "cameraCalibrationFailed": "Calibration échouée : {error}",
+  "@cameraCalibrationFailed": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "cameraReturnButton": "Retour",
+
+  "specAppBarTitle": "SPÉCIALISATION",
+  "specLoadError": "Erreur :\n{error}",
+  "@specLoadError": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "specNotEnoughPoints": "Pas assez de points disponibles.",
+  "specRespecConfirmTitle": "Recommencer la spé ?",
+  "specRespecConfirmContent": "Tous les points de spécialisation seront remis à zéro, tu perdras 1 niveau global et tu ne pourras pas respec à nouveau pendant 3 jours.",
+  "specRespecConfirmAction": "Respec",
+  "specIntro": "Investis tes points pour signaler au moteur ce que tu aimes. Plus tu investis dans une branche, plus le générateur te proposera ce style — sans déséquilibrer tes stats.",
+  "specPointsAvailableLabel": "points disponibles",
+  "specLevelLabel": "Niveau {level}",
+  "@specLevelLabel": {
+    "placeholders": { "level": { "type": "int" } }
+  },
+  "specSpentLabel": "{spent} / {cap} dépensés",
+  "@specSpentLabel": {
+    "placeholders": {
+      "spent": { "type": "int" },
+      "cap": { "type": "int" }
+    }
+  },
+  "specPointsUnit": "pts",
+  "specRespecActiveLabel": "Recommencer la spécialisation (-1 niveau)",
+  "specRespecCooldownLabel": "Respec dans {hours}h",
+  "@specRespecCooldownLabel": {
+    "placeholders": { "hours": { "type": "int" } }
+  },
+
+  "formatDurationSeconds": "{s} s",
+  "@formatDurationSeconds": {
+    "placeholders": { "s": { "type": "int" } }
+  },
+  "formatDurationMinutes": "{m} min",
+  "@formatDurationMinutes": {
+    "placeholders": { "m": { "type": "int" } }
+  },
+  "formatDurationMinutesSeconds": "{m} min {s} s",
+  "@formatDurationMinutesSeconds": {
+    "placeholders": {
+      "m": { "type": "int" },
+      "s": { "type": "int" }
+    }
+  },
+  "formatDurationHours": "{h} h",
+  "@formatDurationHours": {
+    "placeholders": { "h": { "type": "int" } }
+  },
+  "formatDurationHoursMinutes": "{h} h {mm}",
+  "@formatDurationHoursMinutes": {
+    "placeholders": {
+      "h": { "type": "int" },
+      "mm": { "type": "String" }
+    }
+  },
+
+  "settingsAppBarTitle": "RÉGLAGES",
+  "settingsLanguageSection": "Langue",
+  "settingsLanguageSubtitle": "Langue de l'interface, des phrases coach et du contenu éditorial.",
+  "settingsLanguageSystem": "Suivre le système",
+  "settingsLanguageFrench": "Français",
+  "settingsLanguageEnglish": "English",
+
+  "soundsAppBarTitle": "SONS",
+  "soundsStopLoopTooltip": "Stop loop",
+  "soundsIdentitySection": "Identité",
+  "soundsIdentitySubtitle": "Le placeholder « {token} » dans les phrases est remplacé par un tirage aléatoire entre ton prénom (si saisi) et la liste de surnoms ci-dessous.",
+  "@soundsIdentitySubtitle": {
+    "placeholders": {
+      "token": { "type": "String" }
+    }
+  },
+  "soundsFirstNameLabel": "Prénom (optionnel)",
+  "soundsFirstNameHelper": "Vide = pas de prénom dans le pool. Les voix réseau prononcent inégalement les prénoms.",
+  "soundsTestSubstitution": "Tester la substitution",
+  "soundsDefaultNicknames": "Surnoms par défaut",
+  "soundsCustomNicknames": "Surnoms personnalisés",
+  "soundsNoCustomNicknames": "Aucun surnom personnalisé pour l'instant.",
+  "soundsAddNicknameLabel": "Ajouter un surnom",
+  "soundsRemoveNicknameTooltip": "Supprimer",
+  "soundsVoiceSection": "Voix",
+  "soundsVoiceSubtitle": "Choisis la voix française et la vitesse. Le bouton « Tester » prononce une phrase d'exemple.",
+  "soundsRateLabel": "Vitesse",
+  "soundsTestVoice": "Tester la voix",
+  "soundsNoVoiceDetected": "Aucune voix française détectée sur cet appareil.",
+  "soundsAmbienceSection": "Ambiance",
+  "soundsAmbienceSubtitle": "Pack d'arrière-plan appliqué pendant les séances. Sélection partagée avec l'écran de jeu. Touche un mode pour écouter.",
+  "soundsPackLabel": "Pack",
+  "soundsModeLabel": "Mode {name}",
+  "@soundsModeLabel": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "soundsNoTrack": "pas de track pour ce mode",
+  "soundsRhythmPositionsSection": "Positions (rhythm)",
+  "soundsRhythmPositionsSubtitle": "Tonalité du bip selon la profondeur. Du plus aigu au plus grave.",
+  "soundsLickPositionsSection": "Positions (lick)",
+  "soundsLickPositionsSubtitle": "Mêmes positions, volume réduit pour le ressenti « plus léger ».",
+  "soundsLickPositionLabel": "{name} · lick",
+  "@soundsLickPositionLabel": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "soundsLickPositionSubtitle": "Position {name} en mode lick",
+  "@soundsLickPositionSubtitle": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "soundsHoldSection": "Hold (position + couche overlay)",
+  "soundsHoldSubtitle": "Bip de la position joué simultanément avec la couche hold (plus épaisse).",
+  "soundsHoldButton": "Hold {position}",
+  "@soundsHoldButton": {
+    "placeholders": {
+      "position": { "type": "String" }
+    }
+  },
+  "soundsHoldPositionSubtitle": "{name} + hold layer",
+  "@soundsHoldPositionSubtitle": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "soundsSpecificSounds": "Sons spécifiques",
+  "soundsBiffleOneShot": "Biffle (one-shot)",
+  "soundsBiffleOneShotSubtitle": "Son court et percutant. Au loop, suit le BPM.",
+  "soundsBreath": "Breath",
+  "soundsBreathSubtitle": "Tonalité grave et longue, effet « libérateur ».",
+  "soundsLoopsDemoSection": "Loops démos",
+  "soundsLoopsDemoSubtitle": "Ajuste le BPM, lance le loop, écoute, stoppe.",
+  "soundsBpmLabel": "BPM",
+  "soundsLoopActive": "EN COURS",
+  "soundsLoopRhythmHeadMid": "Rhythm head→mid",
+  "soundsLoopRhythmThroatFull": "Rhythm throat→full",
+  "soundsLoopLickTipHead": "Lick tip→head",
+  "soundsLoopBiffle": "Biffle",
+  "soundsPosDescTip": "Très aigu, léger",
+  "soundsPosDescHead": "Aigu",
+  "soundsPosDescMid": "Médium",
+  "soundsPosDescThroat": "Grave",
+  "soundsPosDescFull": "Très grave, lourd",
+  "soundsDebugSection": "Debug",
+  "soundsDebugSubtitle": "Options techniques pour le développement.",
+  "soundsDebugShowTimer": "Afficher le timer",
+  "soundsDebugShowTimerSubtitle": "Remplace l'animation des mouvements par le compteur mm:ss pendant la séance.",
+  "soundsDebugShowStaminaBar": "Afficher la barre d'endurance",
+  "soundsDebugShowStaminaBarSubtitle": "Affiche le profil d'endurance projeté pendant une séance Carrière.",
+  "soundsDebugShowExcitationBar": "Afficher la jauge d'excitation",
+  "soundsDebugShowExcitationBarSubtitle": "Affiche la jauge 0–100 calculée pendant la séance.",
+  "soundsDebugShowHumiliationBar": "Afficher la jauge d'humiliation",
+  "soundsDebugShowHumiliationBarSubtitle": "Affiche le score d'humiliation cumulé pendant la séance.",
+  "soundsDebugShowObedienceBar": "Afficher le score d'obéissance",
+  "soundsDebugShowObedienceBarSubtitle": "Affiche le score 0–100 d'obéissance (baisse à chaque fail, remonte avec les punitions).",
+  "soundsDebugShowSessionControls": "Afficher pause / stop",
+  "soundsDebugShowSessionControlsSubtitle": "Réservé au debug : en prod la séance se déroule sans interaction (téléphone posé), seul le bouton FAIL reste utile.",
+  "soundsDebugShowModeBadge": "Afficher mode / BPM / position",
+  "soundsDebugShowModeBadgeSubtitle": "Réservé au debug : en prod l'animation suffit à indiquer ce qui se passe.",
+  "debugBarLabelExcitation": "EXCIT.",
+  "debugBarLabelHumiliation": "HUMIL.",
+  "debugBarLabelObedience": "OBÉI.",
+  "soundsDebugCameraHoldCheck": "Vérif caméra des holds",
+  "soundsDebugCameraHoldCheckSubtitle": "Pendant les holds, la caméra avant vérifie que la position est tenue. Le coach lance un rappel court si tu dérives. Nécessite d'avoir calibré la caméra (icône caméra de l'écran SCÉNARIO).",
+
+  "positionTip": "Bout",
+  "positionHead": "Gland",
+  "positionMid": "Milieu",
+  "positionThroat": "Gorge",
+  "positionFull": "Au fond",
+
+  "modeShortRhythm": "RYTHME",
+  "modeShortHold": "HOLD",
+  "modeShortLick": "LICK",
+  "modeShortBiffle": "BIFFLE",
+  "modeShortBreath": "BREATH",
+  "modeShortBeg": "BEG",
+  "modeShortFreestyle": "FREESTYLE",
+  "modeShortHand": "HAND",
+
+  "badgeTierBronze": "Bronze",
+  "badgeTierSilver": "Argent",
+  "badgeTierGold": "Or",
+  "badgeTierPlatinium": "Platine",
+
+  "badgeNameMarathonien": "Marathonienne",
+  "badgeNameThroatQueen": "Throat Queen",
+  "badgeNameIronLungs": "Iron Lungs",
+  "badgeNameToutTerrain": "Tout-terrain",
+  "badgeNameSansBroncher": "Sans broncher",
+  "badgeNameReguliere": "Régulière",
+  "badgeNameJamaisRassasiee": "Jamais rassasiée",
+  "badgeNameVideCouilles": "Vide-Couilles",
+
+  "badgeUnitMarathonien": "minutes cumulées",
+  "badgeUnitThroatQueen": "throatfucks cumulés",
+  "badgeUnitIronLungs": "secondes du plus long hold full",
+  "badgeUnitToutTerrain": "modes différents utilisés",
+  "badgeUnitSansBroncher": "séances complètes consécutives sans fail",
+  "badgeUnitReguliere": "jours consécutifs avec séance",
+  "badgeUnitJamaisRassasiee": "fois où tu as redemandé \"encore\"",
+  "badgeUnitVideCouilles": "sessions bâclées terminées",
+
+  "careerLevelTitleDebutante": "Débutante",
+  "careerLevelTitleApprentieSuceuse": "Apprentie Suceuse",
+  "careerLevelTitlePetiteSalopeConfirmee": "Petite Salope Confirmée",
+  "careerLevelTitleBoucheAPipe": "Bouche à Pipe",
+  "careerLevelTitleAvaleuse": "Avaleuse",
+  "careerLevelTitleThroatQueen": "Throat Queen",
+  "careerLevelTitleReineDuSloppy": "Reine du Sloppy",
+  "careerLevelTitleTrouABiteOfficiel": "Trou à Bite Officiel",
+  "careerLevelTitleVideCouillesPro": "Vide-Couilles Pro",
+  "careerLevelTitleReineDesPutes": "Reine des Putes",
+
+  "specBranchEnduranceLabel": "Endurance",
+  "specBranchEnduranceDesc": "Tenir longtemps. Plus de holds, durées rallongées.",
+  "specBranchProfondeurLabel": "Profondeur",
+  "specBranchProfondeurDesc": "Aller chercher loin. Biais throat / full.",
+  "specBranchRythmeBiffleLabel": "Rythme & Biffle",
+  "specBranchRythmeBiffleDesc": "BPM élevés, coups de queue plus fréquents.",
+  "specBranchObeissanceLabel": "Obéissance",
+  "specBranchObeissanceDesc": "Beg insistants, supplique soutenue.",
+  "specBranchSloppyLabel": "Sloppy",
+  "specBranchSloppyDesc": "Lick humide, biffle bas, plus de bave.",
+  "specBranchResilienceLabel": "Résilience",
+  "specBranchResilienceDesc": "Encaisser les fails. Punitions plus dures.",
+
+  "coachPickerTitle": "Choisir un coach",
+  "coachPickerSection": "COACH",
+  "coachPickerTierLabel": "PALIER {tier}",
+  "@coachPickerTierLabel": {
+    "placeholders": { "tier": { "type": "int" } }
+  },
+  "coachBadgePrincipal": "PRINCIPAL",
+  "coachBadgePalierAcquis": "PALIER ACQUIS",
+  "coachBadgeFreeTraining": "ENTRAÎNEMENT LIBRE",
+  "coachBadgeLocked": "VERROUILLÉ",
+  "coachRequiresHands": "Mains obligatoires",
+  "coachSummaryPrincipal": "{title} · Principal palier {tier}",
+  "@coachSummaryPrincipal": {
+    "placeholders": {
+      "title": { "type": "String" },
+      "tier": { "type": "int" }
+    }
+  },
+  "coachSummaryFree": "{title} · entraînement libre",
+  "@coachSummaryFree": {
+    "placeholders": { "title": { "type": "String" } }
+  },
+
+  "coachFreeTrainingDialogTitle": "Entraînement libre",
+  "coachFreeTrainingDialogBody": "Tu vas t'entraîner avec {coachName}. Tu progresseras sur tes compétences, mais ta jauge de palier n'avancera pas.",
+  "@coachFreeTrainingDialogBody": {
+    "placeholders": { "coachName": { "type": "String" } }
+  },
+  "coachFreeTrainingDialogHint": "Pour avancer dans ton palier, choisis {principalName}.",
+  "@coachFreeTrainingDialogHint": {
+    "placeholders": { "principalName": { "type": "String" } }
+  },
+  "coachFreeTrainingDialogChoosePrincipal": "Choisir {principalName}",
+  "@coachFreeTrainingDialogChoosePrincipal": {
+    "placeholders": { "principalName": { "type": "String" } }
+  },
+  "coachFreeTrainingDialogContinueAnyway": "Continuer quand même",
+
+  "coachFreeTrainingBannerTitle": "Session libre avec {coachName}",
+  "@coachFreeTrainingBannerTitle": {
+    "placeholders": { "coachName": { "type": "String" } }
+  },
+  "coachFreeTrainingBannerBodyWithPrincipal": "Tu progresses sur tes compétences. Ton palier n'avance pas — pour ça, choisis {principalName}.",
+  "@coachFreeTrainingBannerBodyWithPrincipal": {
+    "placeholders": { "principalName": { "type": "String" } }
+  },
+  "coachFreeTrainingBannerBodyNoPrincipal": "Tu progresses sur tes compétences. Ton palier n'avance pas.",
+  "coachFreeTrainingBannerSwitchAction": "CHANGER",
+
+  "coachErrorLockedTier": "Ce coach est encore verrouillé — atteins le palier {tier} pour le débloquer.",
+  "@coachErrorLockedTier": {
+    "placeholders": { "tier": { "type": "int" } }
+  },
+  "coachErrorRequiresHands": "{coachName} a besoin que tu actives la main dans les options.",
+  "@coachErrorRequiresHands": {
+    "placeholders": { "coachName": { "type": "String" } }
+  },
+  "coachErrorMinLevel": "{coachName} demande le niveau {minLevel} minimum.",
+  "@coachErrorMinLevel": {
+    "placeholders": {
+      "coachName": { "type": "String" },
+      "minLevel": { "type": "int" }
+    }
+  },
+  "coachErrorMissingSpecialization": "Ce coach demande au moins 1 point dans une spécialisation que tu n'as pas investie.",
+  "coachErrorInsufficientBranchPoints": "{coachName} demande : {requirements}. Investis tes points de spécialisation.",
+  "@coachErrorInsufficientBranchPoints": {
+    "placeholders": {
+      "coachName": { "type": "String" },
+      "requirements": { "type": "String" }
+    }
+  }
+}
