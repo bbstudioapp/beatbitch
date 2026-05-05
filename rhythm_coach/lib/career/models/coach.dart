@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import '../../models/session.dart';
+import '../../models/session_step.dart';
 import '../../services/random_comments_loader.dart';
 import 'phrase_bank.dart';
 import 'specialization.dart';
@@ -839,5 +840,34 @@ class _CoachComposedPhraseBank extends PhraseBank {
       finalMode: finalMode,
       rng: rng,
     );
+  }
+
+  @override
+  String? pickFinalAction({
+    required SessionMode mode,
+    Position? holdPosition,
+    required Random rng,
+  }) {
+    // Délégation au pool global : les phrases impératives du step final
+    // (« ouvre ta bouche », « avale tout ») sont communes à tous les coachs.
+    return fallback.pickFinalAction(
+      mode: mode,
+      holdPosition: holdPosition,
+      rng: rng,
+    );
+  }
+
+  @override
+  String? pickPostFinal(Random rng) {
+    // Délégation au pool global : compliments de post-final non encore
+    // déclinés par coach.
+    return fallback.pickPostFinal(rng);
+  }
+
+  @override
+  String? pickPostFinalBeg(Random rng) {
+    // Délégation au pool global : suppliques post-final non encore
+    // déclinées par coach.
+    return fallback.pickPostFinalBeg(rng);
   }
 }

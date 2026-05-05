@@ -876,6 +876,21 @@ class AppLocalizationsFr extends AppLocalizations {
   String get badgeNameVideCouilles => 'Vide-Couilles';
 
   @override
+  String get badgeNameBouchePleine => 'Bouche pleine';
+
+  @override
+  String get badgeNameRepeinte => 'Repeinte';
+
+  @override
+  String get badgeNameGobeuse => 'Gobeuse';
+
+  @override
+  String get badgeNameNettoyeuse => 'Nettoyeuse';
+
+  @override
+  String get badgeNameSuppliante => 'Suppliante';
+
+  @override
   String get badgeUnitMarathonien => 'minutes cumulées';
 
   @override
@@ -899,6 +914,21 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get badgeUnitVideCouilles => 'sessions bâclées terminées';
+
+  @override
+  String get badgeUnitBouchePleine => 'finals dans la bouche';
+
+  @override
+  String get badgeUnitRepeinte => 'finals sur le visage';
+
+  @override
+  String get badgeUnitGobeuse => 'finals sur la langue';
+
+  @override
+  String get badgeUnitNettoyeuse => 'post-finals à lécher';
+
+  @override
+  String get badgeUnitSuppliante => 'suppliques post-orgasme';
 
   @override
   String get careerLevelTitleDebutante => 'Débutante';

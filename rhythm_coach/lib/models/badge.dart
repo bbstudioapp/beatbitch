@@ -9,6 +9,19 @@ enum BadgeFamily {
   reguliere,
   jamaisRassasiee,
   videCouilles,
+  // Badges sur la dramaturgie de fin de séance (final + post-final).
+  // Comptés dans `SessionController._finish` quand la session se termine
+  // sans fail, en lisant le mode du step final et du step post-final.
+  /// Final mode `hold` (toutes profondeurs) — la sauce reste dans la bouche.
+  bouchePleine,
+  /// Final mode `biffle` — la sauce gicle sur le visage.
+  repeinte,
+  /// Final mode `lick` — langue dehors, la coach jouit dessus.
+  gobeuse,
+  /// Post-final mode `lick` — nettoyer après, lécher le sperme qui coule.
+  nettoyeuse,
+  /// Post-final mode `beg` — supplique imposée après l'orgasme.
+  suppliante,
 }
 
 /// Paliers d'un badge. Order = niveau croissant. `none` = pas encore
@@ -118,6 +131,36 @@ class BadgeDefinition {
       displayName: 'Vide-Couilles',
       unitLabel: 'sessions bâclées terminées',
       thresholds: [3, 10, 30, 100],
+    ),
+    BadgeDefinition(
+      family: BadgeFamily.bouchePleine,
+      displayName: 'Bouche pleine',
+      unitLabel: 'finals dans la bouche',
+      thresholds: [3, 15, 50, 150],
+    ),
+    BadgeDefinition(
+      family: BadgeFamily.repeinte,
+      displayName: 'Repeinte',
+      unitLabel: 'finals sur le visage',
+      thresholds: [3, 15, 50, 150],
+    ),
+    BadgeDefinition(
+      family: BadgeFamily.gobeuse,
+      displayName: 'Gobeuse',
+      unitLabel: 'finals sur la langue',
+      thresholds: [3, 15, 50, 150],
+    ),
+    BadgeDefinition(
+      family: BadgeFamily.nettoyeuse,
+      displayName: 'Nettoyeuse',
+      unitLabel: 'post-finals à lécher',
+      thresholds: [3, 15, 50, 150],
+    ),
+    BadgeDefinition(
+      family: BadgeFamily.suppliante,
+      displayName: 'Suppliante',
+      unitLabel: 'suppliques post-orgasme',
+      thresholds: [3, 15, 50, 150],
     ),
   ];
 

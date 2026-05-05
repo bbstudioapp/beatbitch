@@ -514,6 +514,14 @@ class CareerSessionGenerator {
       final lastDraft = _stepToDraft(lastConfigStep, SessionMode.rhythm);
       final finalCategory = _categorizeFinal(lastDraft);
 
+      // Marque l'instant où le dernier step de config de la milestone
+      // démarre (= moment où le chime doit retentir). `time` (avant ce
+      // bloc) a déjà été incrémenté de finalMilestone.durationSeconds, on
+      // recule donc à `finalMilestoneStartTime + lastConfigStep.time` pour
+      // pointer le bon instant absolu.
+      final finalStepStartTime =
+          finalMilestoneStartTime + lastConfigStep.time;
+
       steps.add(SessionStep(
         time: time,
         text: bank.pickCongrats(_rng),
@@ -547,6 +555,7 @@ class CareerSessionGenerator {
           finalMilestoneDurationSeconds: finalMilestone.durationSeconds,
           finalCategory: finalCategory,
           silentFinishStartTime: silentFinishStartTime,
+          finalStepTime: finalStepStartTime,
         ),
         staminaProfile: trimmedProfile,
         excitationProfile: trimmedExcit,
@@ -635,21 +644,36 @@ class CareerSessionGenerator {
     // le `text` par une annonce du final (ex: hand → lick → "sors ta langue,
     // j'arrive") quand le mode change pour le finisher.
     int? lastBoostIndex;
+    // Monotonie ascendante : la phase finish ne doit JAMAIS ralentir. Chaque
+    // boost démarre sur un BPM ≥ au précédent (idem pour la profondeur `to`).
+    // Sans ces planchers, le shift aléatoire ±15 et le tirage `boostMaxToIdx
+    // -1` pouvaient créer un palier descendant audible — l'utilisateur a
+    // explicitement noté ce ralentissement.
+    int prevBoostBpm = 0;
+    int prevBoostToIdx = 0;
     while (boostsAdded < minBoosts ||
         (excitation < resolvedMinFinal - 1.0 && boostsAdded < 5)) {
       // Durée variable : 12 à 16 s pour casser la régularité.
       final boostDur = 12 + _rng.nextInt(5);
       final deficit = (resolvedMinFinal - excitation).clamp(0.0, 30.0);
       final baseBpm = (bpmCap - 30 + deficit.round()).clamp(bpmFloor, bpmCap);
-      // Décalage aléatoire ±15 BPM : sur 5 boosts hand 148, on peut tomber
-      // à 138, 158, etc. Variabilité audible.
-      final shift = _rng.nextInt(31) - 15;
-      final bpm = (baseBpm + shift).clamp(bpmFloor, bpmCap);
-      // `to` alterne entre maxToIdx et maxToIdx-1 si possible : finish
-      // peut atteindre pleine profondeur ET descendre d'un cran pour
-      // varier l'amplitude visible. Bas niveau (maxToIdx=2) → toujours mid.
+      // Variabilité contrôlée : on tire +0..+15 BPM par-dessus le base, jamais
+      // de décalage négatif. Combiné au plancher `prevBoostBpm`, ça garantit
+      // un BPM strictement non-décroissant tout en gardant un peu de hasard.
+      final shift = _rng.nextInt(16);
+      final bpmRaw = (baseBpm + shift).clamp(bpmFloor, bpmCap);
+      // Plancher monotone : on ne descend jamais sous le BPM du boost précédent.
+      // Si bpmRaw < prevBoostBpm, on relève à prevBoostBpm (et un cran +5 si
+      // possible pour entendre la montée), tronqué par bpmCap.
+      final bpm = bpmRaw <= prevBoostBpm
+          ? min(prevBoostBpm + 5, bpmCap)
+          : bpmRaw;
+      // `to` ne redescend jamais sous le `to` précédent. Pour la variété, on
+      // peut atteindre boostMaxToIdx ou rester à boostMaxToIdx-1 — mais une
+      // fois atteint un niveau de profondeur, on ne revient pas en arrière.
+      final toIdxFloor = max(prevBoostToIdx, boostMaxToIdx - 1);
       final toIdx = boostMaxToIdx >= 3 && _rng.nextBool()
-          ? boostMaxToIdx - 1
+          ? max(toIdxFloor, boostMaxToIdx - 1)
           : boostMaxToIdx;
       final boostTo = Position.values[toIdx];
       // `from` : 2 crans au-dessus si possible (pour amplitude max), sinon
@@ -690,6 +714,12 @@ class CareerSessionGenerator {
       _fillProfile(excitProfile, time, boostDur, excitation);
       time += boostDur;
       boostsAdded++;
+      // Mémorise BPM/profondeur retenus (post-dégradation humil) pour que le
+      // boost suivant ne puisse pas redescendre sous ce palier.
+      prevBoostBpm = boostDraft.bpm ?? prevBoostBpm;
+      if (boostDraft.to != null) {
+        prevBoostToIdx = max(prevBoostToIdx, boostDraft.to!.index);
+      }
     }
 
     // Final : action longue tenue qui clôture la séance. Distinct de la
@@ -736,15 +766,24 @@ class CareerSessionGenerator {
       }
     }
 
-    // **Pas de phrase sur le step final** : c'est le moment où la coach
-    // jouit, l'action s'enchaîne sans parole. Le seul son qui suit est le
-    // `finale_chime` joué par `SessionController._finish` (orgasme du
-    // coach). Toute phrase ici cassait l'effet — `boost` sur les bursts
-    // précédents a déjà annoncé « continue, je viens », inutile d'en
-    // ajouter une au moment du step final.
-    final finisherStep = _draftToStep(finisherDraft, time: time, text: '');
+    // **Phrase d'action sur le step final** : impératif court à exécuter
+    // immédiatement (« ouvre ta bouche », « sors ta langue », « avale
+    // tout »…). Indexée par mode, et pour `hold` qualifiée par profondeur
+    // (bouche / lèvres / gorge). Le `SessionController` joue cette phrase
+    // au démarrage du step puis enchaîne le `finale_chime` PENDANT le step
+    // (cf. `Session.finalStepTime`) — ainsi l'orgasme retentit sur l'action
+    // en cours, pas après. Fallback `congrats` si la banque ne fournit pas
+    // de `final_action` pour ce mode.
+    final finalActionPhrase = bank.pickFinalAction(
+      mode: finalMode,
+      holdPosition: finalMode == SessionMode.hold ? finisherDraft.from : null,
+      rng: _rng,
+    ) ?? '';
+    final finalStepStartTime = time;
+    final finisherStep =
+        _draftToStep(finisherDraft, time: time, text: finalActionPhrase);
     _lastMode = finalMode;
-    _lastText = '';
+    _lastText = finalActionPhrase;
     final finisherDuration = finisherDraft.duration!;
     steps.add(finisherStep);
     _fillProfile(profile, time, finisherDuration, stamina);
@@ -752,10 +791,31 @@ class CareerSessionGenerator {
     _fillProfile(excitProfile, time, finisherDuration, excitation);
     time += finisherDuration;
 
-    steps.add(SessionStep(
-      time: time,
-      text: bank.pickCongrats(_rng),
-    ));
+    // **Phase post-final** : ~12 s d'action douce après l'orgasme — la
+    // coach ne lâche pas l'utilisatrice net, on profite de la fin. Mode
+    // contrastant avec le step final (alternance) pour que l'oreille
+    // perçoive bien la bascule « apothéose → calme ». Phrase de compliment
+    // douce piochée dans `post_final` (fallback `congrats` si vide).
+    // Le pool d'actions est tieré par humiliation : lick (= nettoyer après)
+    // est l'aftercare humiliant qui n'apparaît qu'au-dessus d'un seuil.
+    final postFinalDraft = _buildPostFinalDraft(finalMode, humiliationScore);
+    // Phrase : un step `beg` doit porter une CONSIGNE de supplique
+    // (« remercie-moi », « supplie-moi de revenir »), pas un compliment
+    // doux qui sonnerait à côté. Cascade de fallback pour ne jamais
+    // tomber sur un text vide.
+    final postFinalText = postFinalDraft.mode == SessionMode.beg
+        ? (bank.pickPostFinalBeg(_rng) ??
+            bank.pickPostFinal(_rng) ??
+            bank.pickCongrats(_rng))
+        : (bank.pickPostFinal(_rng) ?? bank.pickCongrats(_rng));
+    final postFinalDuration = postFinalDraft.duration!;
+    steps.add(_draftToStep(postFinalDraft, time: time, text: postFinalText));
+    _fillProfile(profile, time, postFinalDuration, stamina);
+    excitation = _runOnEngine(_excitSim, postFinalDraft);
+    _fillProfile(excitProfile, time, postFinalDuration, excitation);
+    time += postFinalDuration;
+    _lastMode = postFinalDraft.mode;
+    _lastText = postFinalText;
 
     final finalDuration = time + 2;
     final trimmedProfile = List<double>.generate(
@@ -782,10 +842,121 @@ class CareerSessionGenerator {
         milestoneDurationSeconds: milestoneDurationSeconds,
         finalCategory: finalCategory,
         silentFinishStartTime: silentFinishStartTime,
+        finalStepTime: finalStepStartTime,
       ),
       staminaProfile: trimmedProfile,
       excitationProfile: trimmedExcit,
     );
+  }
+
+  /// Construit le step de post-final : action douce contrastante avec le
+  /// mode du final, durée 10-15 s, BPM 38-48. La phrase de compliment sera
+  /// ajoutée par le caller.
+  ///
+  /// **Échelle d'humiliation post-final** (du moins au plus humiliant,
+  /// validée avec l'utilisateur) :
+  ///
+  /// 1. `breath` (req 0) — pure récup, jamais bloqué
+  /// 2. `hand` tip→head lent (req 8) — main douce sur la pointe
+  /// 3. `hold tip` (req 20) — bisou prolongé, immobilisation légère
+  /// 4. `beg` libre (req 25) — supplique vocale (« remercie-moi »…)
+  /// 5. `lick` tip→head lent (req 35) — « nettoyer après »
+  /// 6. `rhythm` tip→head lent (req 55) — « continue à me sucer encore »
+  /// 7. `beg` from=head (req 60) — supplique avec bouche tenue sur le gland
+  /// 8. `hold head` (req 70) — bouche tenue sur le gland, post-orgasme
+  ///
+  /// Stratégie de tirage : on filtre par humilCap, on **alterne** avec le
+  /// mode du final (si final = hold, pas de hold post ; si final = lick,
+  /// pas de lick post ; etc.), puis on prend les **3 plus humiliantes
+  /// accessibles** et on tire uniformément dedans. Garde un peu de variété
+  /// tout en respectant la progression : à humil 5 on tombe sur breath,
+  /// à humil 100 on tombe sur les beg + hold head.
+  _StepDraft _buildPostFinalDraft(
+      SessionMode finalMode, double humiliationScore) {
+    final dur = 10 + _rng.nextInt(6); // [10, 15]
+    final bpm = 38 + _rng.nextInt(11); // [38, 48]
+    // Builders à la volée — un `const` figerait dur/bpm tirés ici.
+    _StepDraft breath() => _StepDraft(
+          mode: SessionMode.breath,
+          bpm: null,
+          from: null,
+          to: null,
+          duration: dur,
+        );
+    _StepDraft hand() => _StepDraft(
+          mode: SessionMode.hand,
+          bpm: bpm,
+          from: Position.tip,
+          to: Position.head,
+          duration: dur,
+        );
+    _StepDraft holdTip() => _StepDraft(
+          mode: SessionMode.hold,
+          bpm: null,
+          from: Position.tip,
+          to: null,
+          duration: dur,
+        );
+    _StepDraft lick() => _StepDraft(
+          mode: SessionMode.lick,
+          bpm: bpm,
+          from: Position.tip,
+          to: Position.head,
+          duration: dur,
+        );
+    _StepDraft rhythm() => _StepDraft(
+          mode: SessionMode.rhythm,
+          bpm: bpm,
+          from: Position.tip,
+          to: Position.head,
+          duration: dur,
+        );
+    _StepDraft holdHead() => _StepDraft(
+          mode: SessionMode.hold,
+          bpm: null,
+          from: Position.head,
+          to: null,
+          duration: dur,
+        );
+    _StepDraft begLibre() => _StepDraft(
+          mode: SessionMode.beg,
+          bpm: null,
+          from: null,
+          to: null,
+          duration: dur,
+        );
+    _StepDraft begHead() => _StepDraft(
+          mode: SessionMode.beg,
+          bpm: null,
+          from: Position.head,
+          to: null,
+          duration: dur,
+        );
+    // Échelle ordonnée. `blocked` exclut le mode du final (alternance) et,
+    // pour les beg, vérifie l'unlock `begLibre` (sinon on demanderait à
+    // une utilisatrice qui n'a pas encore validé la milestone d'introduction
+    // au beg de supplier post-orgasme — pédagogiquement faux).
+    final isFinalHold = finalMode == SessionMode.hold;
+    final canBeg = _unlockedKeys.contains(UnlockKey.begLibre);
+    final candidates = <(double req, bool blocked, _StepDraft Function() build)>[
+      (0.0, false, breath),
+      (8.0, !_includeHand || finalMode == SessionMode.hand, hand),
+      (20.0, isFinalHold, holdTip),
+      (25.0, !canBeg, begLibre),
+      (35.0, finalMode == SessionMode.lick, lick),
+      (55.0, finalMode == SessionMode.rhythm, rhythm),
+      (60.0, !canBeg, begHead),
+      (70.0, isFinalHold, holdHead),
+    ];
+    final valid = candidates
+        .where((c) => c.$1 <= humiliationScore && !c.$2)
+        .toList()
+      ..sort((a, b) => b.$1.compareTo(a.$1)); // req décroissante
+    if (valid.isEmpty) return breath();
+    // Top 3 : tirage uniforme dans les 3 plus humiliantes accessibles.
+    // Donne de la variété sans casser la progression d'humiliation.
+    final top = valid.take(3).toList();
+    return top[_rng.nextInt(top.length)].$3();
   }
 
   /// Convertit un [SessionStep] (issu du JSON ou d'une milestone) en

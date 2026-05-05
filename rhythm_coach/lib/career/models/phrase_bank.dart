@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import '../../models/session.dart';
+import '../../models/session_step.dart';
 
 /// Type de transition entre deux steps consécutifs du même mode. Sert à
 /// déclencher une phrase de coach sur un changement de paramètre précis
@@ -53,6 +54,27 @@ class PhraseBank {
   /// profondeurs (« ouvre la bouche, fige-toi »).
   final Map<String, List<String>> _finalAnnouncements;
 
+  /// Phrases impératives prononcées AU DÉBUT du step final, juste avant
+  /// le `finale_chime`. Indexées par mode (`hand`/`lick`/`biffle`) ou par
+  /// `hold_<position>` pour qualifier la profondeur du hold final. La
+  /// phrase doit décrire l'action concrète à exécuter à l'instant t (ex:
+  /// « ouvre ta bouche », « sors ta langue », « avale tout ») — le chime
+  /// est joué dès qu'elle est terminée, pendant le step.
+  final Map<String, List<String>> _finalActions;
+
+  /// Phrases de compliment douces prononcées sur le step de post-final
+  /// (action calme de quelques secondes après l'orgasme). Plus tendres
+  /// que `congrats` qui ferme la séance, plus douces que `finish_orgasm`
+  /// qui souligne la décharge.
+  final List<String> _postFinal;
+
+  /// Suppliques imposées par la coach quand le post-final est un step
+  /// `beg` (« remercie-moi », « supplie-moi de revenir », « demande
+  /// pardon »…). Distinct de `_postFinal` car le contexte est inversé :
+  /// ce n'est plus un compliment mais une consigne adressée à
+  /// l'utilisatrice.
+  final List<String> _postFinalBeg;
+
   const PhraseBank({
     required Map<SessionMode, Map<String, List<String>>> byMode,
     required List<String> congrats,
@@ -62,6 +84,9 @@ class PhraseBank {
     Map<TransitionKind, List<String>> transitions = const {},
     List<String> finishOrgasm = const [],
     Map<String, List<String>> finalAnnouncements = const {},
+    Map<String, List<String>> finalActions = const {},
+    List<String> postFinal = const [],
+    List<String> postFinalBeg = const [],
   })  : _byMode = byMode,
         _congrats = congrats,
         _intros = intros,
@@ -69,7 +94,10 @@ class PhraseBank {
         _encore = encore,
         _transitions = transitions,
         _finishOrgasm = finishOrgasm,
-        _finalAnnouncements = finalAnnouncements;
+        _finalAnnouncements = finalAnnouncements,
+        _finalActions = finalActions,
+        _postFinal = postFinal,
+        _postFinalBeg = postFinalBeg;
 
   /// Tire une phrase pour [mode] dans le tier demandé. Si le tier est absent,
   /// fallback sur 'medium' puis 'any' puis première liste non vide. Retourne
@@ -144,5 +172,46 @@ class PhraseBank {
     final list = _finalAnnouncements[key];
     if (list == null || list.isEmpty) return null;
     return list[rng.nextInt(list.length)];
+  }
+
+  /// Tire la phrase impérative dite AU DÉBUT du step final. Pour `hold`,
+  /// on qualifie par la position (`hold_tip`, `hold_head`, …) parce que
+  /// l'action concrète varie selon la profondeur (langue / lèvres / gorge).
+  /// Pour les autres modes, la clé est juste le nom du mode. Fallback en
+  /// cascade : clé exacte → clé mode (sans position) → null. Retourne
+  /// `null` si rien n'est défini.
+  String? pickFinalAction({
+    required SessionMode mode,
+    Position? holdPosition,
+    required Random rng,
+  }) {
+    final keys = <String>[];
+    if (mode == SessionMode.hold && holdPosition != null) {
+      keys.add('hold_${holdPosition.name}');
+    }
+    keys.add(mode.name);
+    for (final key in keys) {
+      final list = _finalActions[key];
+      if (list != null && list.isNotEmpty) {
+        return list[rng.nextInt(list.length)];
+      }
+    }
+    return null;
+  }
+
+  /// Tire une phrase de compliment doux jouée sur le step post-final
+  /// (l'action calme qui suit l'orgasme). Retourne `null` si la banque
+  /// est vide.
+  String? pickPostFinal(Random rng) {
+    if (_postFinal.isEmpty) return null;
+    return _postFinal[rng.nextInt(_postFinal.length)];
+  }
+
+  /// Tire une consigne de supplique pour un step post-final en mode `beg`
+  /// (« remercie-moi », « supplie-moi de revenir », « demande pardon »…).
+  /// Retourne `null` si la banque est vide.
+  String? pickPostFinalBeg(Random rng) {
+    if (_postFinalBeg.isEmpty) return null;
+    return _postFinalBeg[rng.nextInt(_postFinalBeg.length)];
   }
 }
