@@ -1,0 +1,21 @@
+{
+  "lang": "fr",
+  "id": "initiation",
+  "name": "Session Initiation",
+  "description": "Démarrage en douceur, progression graduelle sur 8 minutes.",
+  "duration_seconds": 480,
+  "intro": "Bienvenue. C'est ta première marche, on va y aller progressivement. Pose ton téléphone bien à plat sur le côté, tu n'auras plus à le regarder. Pendant huit minutes, tu vas suivre ma voix et le rythme des bips — d'abord lent, puis on accélère, on creuse l'amplitude. Respire calmement, ne te crispe pas. Quand tu es prête, valide.",
+  "steps": [
+    {"time": 0,   "text": "On commence. Pose-toi, respire profondément. Trouve un rythme lent et régulier."},
+    {"time": 30,  "text": "Bien. Garde ce tempo. Concentre-toi sur ta respiration."},
+    {"time": 60,  "text": "Accélère légèrement. Sois précis dans chaque mouvement."},
+    {"time": 120, "text": "Tiens ce rythme. Tu es en contrôle."},
+    {"time": 180, "text": "Encore un peu plus vite. Garde l'amplitude."},
+    {"time": 240, "text": "Excellent. Maintiens ce niveau pendant une minute complète."},
+    {"time": 300, "text": "Ralentis progressivement. Récupère sans t'arrêter."},
+    {"time": 360, "text": "Reprends de la vitesse. Une dernière poussée arrive."},
+    {"time": 420, "text": "Donne tout ce qui te reste. Ne lâche pas."},
+    {"time": 465, "text": "Décélère doucement. La séance touche à sa fin."},
+    {"time": 478, "text": "Terminé. Bien joué."}
+  ]
+}

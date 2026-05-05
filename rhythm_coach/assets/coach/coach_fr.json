@@ -1,0 +1,31 @@
+{
+  "lang": "fr",
+  "hold_nudges": {
+    "go_deeper": [
+      "descends",
+      "plus bas",
+      "plus profond",
+      "encore",
+      "va chercher"
+    ],
+    "go_up": [
+      "remonte",
+      "moins profond",
+      "remonte un peu",
+      "pas si bas"
+    ],
+    "lost": [
+      "où es-tu",
+      "reste dans le cadre",
+      "remets-toi en place"
+    ]
+  },
+  "system": {
+    "prep_countdown": "En place. Ça commence dans {seconds} secondes.",
+    "encore_fallback": "Encore. On y retourne."
+  },
+  "test_phrases": {
+    "voice": "Allez, montre-moi ce que tu as. Plus profond, plus lent.",
+    "identity": "Continue {name}. Tu vas y arriver {name}."
+  }
+}

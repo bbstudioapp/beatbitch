@@ -1,0 +1,57 @@
+{
+  "lang": "fr",
+  "id": "coach_02_helene",
+  "title": "Coach exigeante",
+  "publicBio": "Cadre net, posture droite, technique avant tout. Ne crie pas, mais ne laisse rien passer non plus.",
+  "phrases": {
+    "rhythm": {
+      "soft": [
+        "Commence correctement {name}.",
+        "Suis le rythme avec précision {name}.",
+        "Ne traîne pas {name}."
+      ],
+      "medium": [
+        "Plus profond {name}. Je veux du sérieux.",
+        "Garde ce rythme, ne faiblis pas {name}.",
+        "Descends davantage, tu peux mieux faire."
+      ],
+      "hard": [
+        "Va jusqu’au fond {name}. Ne te retiens pas.",
+        "Plus vite et plus profond. Exécute.",
+        "Tu dois tenir ce rythme {name}."
+      ]
+    },
+    "hold": {
+      "soft": [
+        "Tiens la position {name}."
+      ],
+      "medium": [
+        "Reste au fond sans bouger {name}."
+      ],
+      "hard": [
+        "N’enlève pas. Tiens jusqu’au bout {name}."
+      ],
+      "finale": [
+        "Dernier hold. Reste au fond {name}."
+      ]
+    }
+  },
+  "intros": [
+    "Je suis Hélène. Je vais être exigeante avec toi {name}. Prépare-toi correctement.",
+    "On va travailler sérieusement aujourd’hui {name}."
+  ],
+  "congrats": [
+    "Correct {name}. Tu as fait ce qu’il fallait.",
+    "Acceptable. Tu peux encore t’améliorer."
+  ],
+  "nicknames": {
+    "pool": [],
+    "use_user_prenom": true,
+    "use_user_nicknames": false
+  },
+  "coachNicknames": [
+    "Hélène",
+    "madame",
+    "coach"
+  ]
+}

@@ -1,0 +1,1071 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for French (`fr`).
+class AppLocalizationsFr extends AppLocalizations {
+  AppLocalizationsFr([String locale = 'fr']) : super(locale);
+
+  @override
+  String get appTitle => 'Rhythm Coach';
+
+  @override
+  String get modeSelectionAppBarTitle => 'RHYTHM COACH';
+
+  @override
+  String get modeSelectionProfileTooltip => 'Profil & badges';
+
+  @override
+  String get modeSelectionSoundsTooltip => 'Apprendre les sons';
+
+  @override
+  String get modeSelectionHeaderTitle => 'Choisis ton mode';
+
+  @override
+  String get modeSelectionHeaderSubtitle =>
+      'Pose ton téléphone, écoute, exécute.';
+
+  @override
+  String get modeSelectionScenarioTitle => 'SCÉNARIO';
+
+  @override
+  String get modeSelectionScenarioSubtitle => 'Sessions écrites à l\'avance.';
+
+  @override
+  String get modeSelectionCareerTitle => 'CARRIÈRE';
+
+  @override
+  String get modeSelectionCareerSubtitle =>
+      'Sessions générées. Termine pour débloquer le niveau suivant.';
+
+  @override
+  String get homeAppBarTitle => 'SCÉNARIO';
+
+  @override
+  String get homeCameraTestTooltip => 'Test caméra (holds)';
+
+  @override
+  String get homeDeleteSessionTitle => 'Supprimer cette séance ?';
+
+  @override
+  String homeDeleteSessionContent(String sessionName) {
+    return '« $sessionName » sera retirée de tes scénarios.';
+  }
+
+  @override
+  String get commonCancel => 'Annuler';
+
+  @override
+  String get commonDelete => 'Supprimer';
+
+  @override
+  String get commonContinue => 'Continuer';
+
+  @override
+  String get commonAdd => 'Ajouter';
+
+  @override
+  String homeLoadError(String error) {
+    return 'Erreur de chargement des sessions :\n$error';
+  }
+
+  @override
+  String get homeEmpty => 'Aucune session disponible.';
+
+  @override
+  String get homeMySessions => 'Mes séances';
+
+  @override
+  String get homeBuiltinSessions => 'Séances intégrées';
+
+  @override
+  String get homeHeaderTitle => 'Choisis ta séance';
+
+  @override
+  String get homeHeaderSubtitle => 'Pose ton téléphone, écoute, exécute.';
+
+  @override
+  String get sessionStopTitle => 'Arrêter la séance ?';
+
+  @override
+  String get sessionStopContent => 'La progression sera perdue.';
+
+  @override
+  String get sessionStopConfirm => 'Arrêter';
+
+  @override
+  String get sessionVoiceLabel => 'Voix';
+
+  @override
+  String get sessionAmbienceLabel => 'Ambiance';
+
+  @override
+  String get sessionBegRequestLabel => 'DEMANDÉ';
+
+  @override
+  String get sessionBegSupplicateLabel => 'SUPPLIER';
+
+  @override
+  String get sessionStateIdle => 'PRÊT';
+
+  @override
+  String get sessionStateRunning => 'EN COURS';
+
+  @override
+  String get sessionStatePaused => 'PAUSE';
+
+  @override
+  String get sessionStateFinished => 'TERMINÉ';
+
+  @override
+  String get sessionStateFailing => 'FAIL';
+
+  @override
+  String get sessionFailPhasePhrase => 'Phrase de fail';
+
+  @override
+  String get sessionFailPhaseBreath => 'Respiration';
+
+  @override
+  String get sessionFailPhasePunishment => 'Punition';
+
+  @override
+  String get sessionStartPrompt =>
+      'Démarre la séance pour entendre les instructions.';
+
+  @override
+  String get sessionFailButton => 'JE PEUX PAS';
+
+  @override
+  String get sessionIntroBriefing => 'BRIEFING';
+
+  @override
+  String get sessionIntroReplay => 'Réécouter';
+
+  @override
+  String get sessionIntroReady => 'JE SUIS PRÊTE';
+
+  @override
+  String get sessionPrepInPlace => 'EN PLACE';
+
+  @override
+  String get sessionPrepInstruction =>
+      'Pose ton téléphone, mets-toi en position.';
+
+  @override
+  String get sessionFinishedTitle => 'SÉANCE TERMINÉE';
+
+  @override
+  String get sessionFinishedDefaultEnd => 'Merci !';
+
+  @override
+  String get sessionFinishedBadgesTitle => 'Nouveaux paliers de badges';
+
+  @override
+  String get sessionFinishedNoNewBadges =>
+      'Pas de nouveau palier cette fois — la prochaine sera la bonne.';
+
+  @override
+  String get sessionFinishedEncore => 'J\'EN VEUX ENCORE…';
+
+  @override
+  String get sessionFinishedSaved => 'ENREGISTRÉE';
+
+  @override
+  String get sessionFinishedSaving => 'ENREGISTREMENT…';
+
+  @override
+  String get sessionFinishedSaveButton => 'ENREGISTRER CETTE SÉANCE';
+
+  @override
+  String sessionFinishedSavedSnack(String name) {
+    return '« $name » enregistrée dans tes scénarios.';
+  }
+
+  @override
+  String sessionSaveDefaultName(int day, int month) {
+    return 'Ma séance $day/$month';
+  }
+
+  @override
+  String get sessionSaveDialogTitle => 'Enregistrer la séance';
+
+  @override
+  String get sessionSaveDialogContent =>
+      'Donne-lui un nom — elle apparaîtra dans la liste SCÉNARIO.';
+
+  @override
+  String get sessionSaveDialogHint => 'Nom de la séance';
+
+  @override
+  String get sessionSaveDialogConfirm => 'Enregistrer';
+
+  @override
+  String get cameraTestEndButton => 'Retour';
+
+  @override
+  String get profileAppBarTitle => 'PROFIL';
+
+  @override
+  String profileLoadError(String error) {
+    return 'Erreur :\n$error';
+  }
+
+  @override
+  String get profileStatsSection => 'STATISTIQUES';
+
+  @override
+  String get profileBadgesSection => 'BADGES';
+
+  @override
+  String profileLevel(int level) {
+    return 'Niveau $level';
+  }
+
+  @override
+  String get profileReputationUnit => 'pts de réputation';
+
+  @override
+  String get profileStatSessionsCompleted => 'Sessions terminées';
+
+  @override
+  String get profileStatNoFailStreak => 'Streak sans fail';
+
+  @override
+  String get profileStatDailyStreak => 'Streak quotidien';
+
+  @override
+  String get profileStatTotalTime => 'Temps cumulé';
+
+  @override
+  String get profileStatThroatfucks => 'Throatfucks';
+
+  @override
+  String get profileStatBiffles => 'Biffles';
+
+  @override
+  String get profileStatHoldFullMax => 'Hold full max';
+
+  @override
+  String get profileStatHoldThroatTotal => 'Hold throat (cumul)';
+
+  @override
+  String get profileStatHoldFullTotal => 'Hold full (cumul)';
+
+  @override
+  String get profileStatEncores => 'Encores demandés';
+
+  @override
+  String get profileStatQuickies => 'Sessions bâclées';
+
+  @override
+  String get profileStatModesUsed => 'Modes utilisés';
+
+  @override
+  String get profileResetSection => 'ZONE DANGER';
+
+  @override
+  String get profileResetButton => 'Tout remettre à zéro';
+
+  @override
+  String get profileResetDialogTitle => 'Tout remettre à zéro ?';
+
+  @override
+  String get profileResetDialogMessage =>
+      'Cette action efface toutes tes statistiques, badges, progression carrière et points de spécialisation. Irréversible.';
+
+  @override
+  String get profileResetCancel => 'Annuler';
+
+  @override
+  String get profileResetConfirm => 'Tout effacer';
+
+  @override
+  String get profileResetDoneSnackbar => 'Profil remis à zéro.';
+
+  @override
+  String get careerAppBarTitle => 'CARRIÈRE';
+
+  @override
+  String get careerSpecializationTooltip => 'Spécialisation';
+
+  @override
+  String careerLoadError(String error) {
+    return 'Erreur de chargement :\n$error';
+  }
+
+  @override
+  String get careerHeaderTitle => 'Génération procédurale';
+
+  @override
+  String get careerInstruction =>
+      'Choisis un niveau. La durée et la difficulté en découlent.';
+
+  @override
+  String get careerLevelSection => 'Niveau';
+
+  @override
+  String careerMaxLevel(int level) {
+    return 'max $level';
+  }
+
+  @override
+  String get careerQuickieToggle => 'Session bâclée';
+
+  @override
+  String get careerQuickieSubtitle => '6 min — intense';
+
+  @override
+  String get careerQuickieDescription =>
+      '6 min, intense tout du long. Pour quand t\'as pas le temps.';
+
+  @override
+  String careerQuickieLockedSubtitle(int level) {
+    return 'Verrouillé jusqu\'au niveau $level — il faut maîtriser les bases avant de bâcler.';
+  }
+
+  @override
+  String get careerIncludeHandToggle => 'Inclure la stimulation à la main';
+
+  @override
+  String get careerIncludeHandSubtitle =>
+      'Désactive aussi les coups de queue (biffle) — les deux nécessitent la main.';
+
+  @override
+  String careerIncludeHandLockedSubtitle(int level) {
+    return 'Verrouillé jusqu\'au niveau $level — sans la main, le finish bas niveau devient trop dur.';
+  }
+
+  @override
+  String get careerIncludeHandMilestoneLocked =>
+      'Verrouillé pour cette séance — le milestone d\'apprentissage utilise la main.';
+
+  @override
+  String specPointsBannerTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count points libres',
+      one: '1 point libre',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get specPointsBannerSubtitle =>
+      'Tu as gagné des points de spécialisation. Investis-les avant de démarrer.';
+
+  @override
+  String get specPointsBannerCta => 'ALLOUER';
+
+  @override
+  String get careerStartButton => 'DÉMARRER';
+
+  @override
+  String careerCompletedSessions(int count) {
+    return 'Sessions complétées : $count';
+  }
+
+  @override
+  String get careerLevelLockedHint =>
+      'Niveau 1 (termine une séance pour débloquer le suivant)';
+
+  @override
+  String get careerMilestonesPendingTitle => 'Apprentissages en attente';
+
+  @override
+  String get careerMilestonesNextBadge => 'PROCHAIN';
+
+  @override
+  String get careerMilestonesBranchesPrefix => 'Branche : ';
+
+  @override
+  String get careerMilestonesBranchesPrefixPlural => 'Branches : ';
+
+  @override
+  String get cameraTestAppBarTitle => 'TEST CAMÉRA';
+
+  @override
+  String get cameraPreviewUnavailable => 'Aperçu indisponible';
+
+  @override
+  String get cameraStartSession => 'Lancer la session';
+
+  @override
+  String get cameraPermissionDenied =>
+      'Permission caméra refusée ou init impossible. Active la caméra dans les réglages Android.';
+
+  @override
+  String get cameraUnknownError => 'Erreur inconnue.';
+
+  @override
+  String get cameraInitializing => 'Initialisation caméra…';
+
+  @override
+  String get cameraRecalibrate => 'Recalibrer';
+
+  @override
+  String get cameraCalibrate => 'Calibrer (10 s)';
+
+  @override
+  String cameraAxisLabel(String axis) {
+    return 'Axe : $axis';
+  }
+
+  @override
+  String get cameraAxisHorizontal => 'horizontal';
+
+  @override
+  String get cameraAxisVertical => 'vertical';
+
+  @override
+  String cameraLivePositionLabel(String position) {
+    return 'Position live : $position';
+  }
+
+  @override
+  String get cameraCalibrationTitle => 'Calibration';
+
+  @override
+  String get cameraCalibrationInstructions =>
+      'Pendant 10 secondes, fais 3 ou 4 mouvements lents et amples — de la position la plus haute (tip) à la plus basse (full). L\'app en déduira l\'axe et les bornes des 5 niveaux.';
+
+  @override
+  String get cameraCalibratingMessage =>
+      'Calibration en cours… fais des mouvements lents et profonds.';
+
+  @override
+  String get cameraCalibratedTitle => 'Calibration OK';
+
+  @override
+  String cameraCalibrationSummary(String axis, String range, int samples) {
+    return 'Axe : $axis — range $range ($samples échantillons)';
+  }
+
+  @override
+  String get cameraCalibratedHint =>
+      'Tu peux lancer la session. Si la polarité est inversée (tip ↔ full), recalibre dans le bon sens.';
+
+  @override
+  String cameraCalibrationFailedRange(String range) {
+    return 'Range trop faible ($range). Refais des mouvements plus amples.';
+  }
+
+  @override
+  String cameraCalibrationFailed(String error) {
+    return 'Calibration échouée : $error';
+  }
+
+  @override
+  String get cameraReturnButton => 'Retour';
+
+  @override
+  String get specAppBarTitle => 'SPÉCIALISATION';
+
+  @override
+  String specLoadError(String error) {
+    return 'Erreur :\n$error';
+  }
+
+  @override
+  String get specNotEnoughPoints => 'Pas assez de points disponibles.';
+
+  @override
+  String get specRespecConfirmTitle => 'Recommencer la spé ?';
+
+  @override
+  String get specRespecConfirmContent =>
+      'Tous les points de spécialisation seront remis à zéro, tu perdras 1 niveau global et tu ne pourras pas respec à nouveau pendant 3 jours.';
+
+  @override
+  String get specRespecConfirmAction => 'Respec';
+
+  @override
+  String get specIntro =>
+      'Investis tes points pour signaler au moteur ce que tu aimes. Plus tu investis dans une branche, plus le générateur te proposera ce style — sans déséquilibrer tes stats.';
+
+  @override
+  String get specPointsAvailableLabel => 'points disponibles';
+
+  @override
+  String specLevelLabel(int level) {
+    return 'Niveau $level';
+  }
+
+  @override
+  String specSpentLabel(int spent, int cap) {
+    return '$spent / $cap dépensés';
+  }
+
+  @override
+  String get specPointsUnit => 'pts';
+
+  @override
+  String get specRespecActiveLabel =>
+      'Recommencer la spécialisation (-1 niveau)';
+
+  @override
+  String specRespecCooldownLabel(int hours) {
+    return 'Respec dans ${hours}h';
+  }
+
+  @override
+  String formatDurationSeconds(int s) {
+    return '$s s';
+  }
+
+  @override
+  String formatDurationMinutes(int m) {
+    return '$m min';
+  }
+
+  @override
+  String formatDurationMinutesSeconds(int m, int s) {
+    return '$m min $s s';
+  }
+
+  @override
+  String formatDurationHours(int h) {
+    return '$h h';
+  }
+
+  @override
+  String formatDurationHoursMinutes(int h, String mm) {
+    return '$h h $mm';
+  }
+
+  @override
+  String get settingsAppBarTitle => 'RÉGLAGES';
+
+  @override
+  String get settingsLanguageSection => 'Langue';
+
+  @override
+  String get settingsLanguageSubtitle =>
+      'Langue de l\'interface, des phrases coach et du contenu éditorial.';
+
+  @override
+  String get settingsLanguageSystem => 'Suivre le système';
+
+  @override
+  String get settingsLanguageFrench => 'Français';
+
+  @override
+  String get settingsLanguageEnglish => 'English';
+
+  @override
+  String get soundsAppBarTitle => 'SONS';
+
+  @override
+  String get soundsStopLoopTooltip => 'Stop loop';
+
+  @override
+  String get soundsIdentitySection => 'Identité';
+
+  @override
+  String soundsIdentitySubtitle(String token) {
+    return 'Le placeholder « $token » dans les phrases est remplacé par un tirage aléatoire entre ton prénom (si saisi) et la liste de surnoms ci-dessous.';
+  }
+
+  @override
+  String get soundsFirstNameLabel => 'Prénom (optionnel)';
+
+  @override
+  String get soundsFirstNameHelper =>
+      'Vide = pas de prénom dans le pool. Les voix réseau prononcent inégalement les prénoms.';
+
+  @override
+  String get soundsTestSubstitution => 'Tester la substitution';
+
+  @override
+  String get soundsDefaultNicknames => 'Surnoms par défaut';
+
+  @override
+  String get soundsCustomNicknames => 'Surnoms personnalisés';
+
+  @override
+  String get soundsNoCustomNicknames =>
+      'Aucun surnom personnalisé pour l\'instant.';
+
+  @override
+  String get soundsAddNicknameLabel => 'Ajouter un surnom';
+
+  @override
+  String get soundsRemoveNicknameTooltip => 'Supprimer';
+
+  @override
+  String get soundsVoiceSection => 'Voix';
+
+  @override
+  String get soundsVoiceSubtitle =>
+      'Choisis la voix française et la vitesse. Le bouton « Tester » prononce une phrase d\'exemple.';
+
+  @override
+  String get soundsRateLabel => 'Vitesse';
+
+  @override
+  String get soundsTestVoice => 'Tester la voix';
+
+  @override
+  String get soundsNoVoiceDetected =>
+      'Aucune voix française détectée sur cet appareil.';
+
+  @override
+  String get soundsAmbienceSection => 'Ambiance';
+
+  @override
+  String get soundsAmbienceSubtitle =>
+      'Pack d\'arrière-plan appliqué pendant les séances. Sélection partagée avec l\'écran de jeu. Touche un mode pour écouter.';
+
+  @override
+  String get soundsPackLabel => 'Pack';
+
+  @override
+  String soundsModeLabel(String name) {
+    return 'Mode $name';
+  }
+
+  @override
+  String get soundsNoTrack => 'pas de track pour ce mode';
+
+  @override
+  String get soundsRhythmPositionsSection => 'Positions (rhythm)';
+
+  @override
+  String get soundsRhythmPositionsSubtitle =>
+      'Tonalité du bip selon la profondeur. Du plus aigu au plus grave.';
+
+  @override
+  String get soundsLickPositionsSection => 'Positions (lick)';
+
+  @override
+  String get soundsLickPositionsSubtitle =>
+      'Mêmes positions, volume réduit pour le ressenti « plus léger ».';
+
+  @override
+  String soundsLickPositionLabel(String name) {
+    return '$name · lick';
+  }
+
+  @override
+  String soundsLickPositionSubtitle(String name) {
+    return 'Position $name en mode lick';
+  }
+
+  @override
+  String get soundsHoldSection => 'Hold (position + couche overlay)';
+
+  @override
+  String get soundsHoldSubtitle =>
+      'Bip de la position joué simultanément avec la couche hold (plus épaisse).';
+
+  @override
+  String soundsHoldButton(String position) {
+    return 'Hold $position';
+  }
+
+  @override
+  String soundsHoldPositionSubtitle(String name) {
+    return '$name + hold layer';
+  }
+
+  @override
+  String get soundsSpecificSounds => 'Sons spécifiques';
+
+  @override
+  String get soundsBiffleOneShot => 'Biffle (one-shot)';
+
+  @override
+  String get soundsBiffleOneShotSubtitle =>
+      'Son court et percutant. Au loop, suit le BPM.';
+
+  @override
+  String get soundsBreath => 'Breath';
+
+  @override
+  String get soundsBreathSubtitle =>
+      'Tonalité grave et longue, effet « libérateur ».';
+
+  @override
+  String get soundsLoopsDemoSection => 'Loops démos';
+
+  @override
+  String get soundsLoopsDemoSubtitle =>
+      'Ajuste le BPM, lance le loop, écoute, stoppe.';
+
+  @override
+  String get soundsBpmLabel => 'BPM';
+
+  @override
+  String get soundsLoopActive => 'EN COURS';
+
+  @override
+  String get soundsLoopRhythmHeadMid => 'Rhythm head→mid';
+
+  @override
+  String get soundsLoopRhythmThroatFull => 'Rhythm throat→full';
+
+  @override
+  String get soundsLoopLickTipHead => 'Lick tip→head';
+
+  @override
+  String get soundsLoopBiffle => 'Biffle';
+
+  @override
+  String get soundsPosDescTip => 'Très aigu, léger';
+
+  @override
+  String get soundsPosDescHead => 'Aigu';
+
+  @override
+  String get soundsPosDescMid => 'Médium';
+
+  @override
+  String get soundsPosDescThroat => 'Grave';
+
+  @override
+  String get soundsPosDescFull => 'Très grave, lourd';
+
+  @override
+  String get soundsDebugSection => 'Debug';
+
+  @override
+  String get soundsDebugSubtitle => 'Options techniques pour le développement.';
+
+  @override
+  String get soundsDebugShowTimer => 'Afficher le timer';
+
+  @override
+  String get soundsDebugShowTimerSubtitle =>
+      'Remplace l\'animation des mouvements par le compteur mm:ss pendant la séance.';
+
+  @override
+  String get soundsDebugShowStaminaBar => 'Afficher la barre d\'endurance';
+
+  @override
+  String get soundsDebugShowStaminaBarSubtitle =>
+      'Affiche le profil d\'endurance projeté pendant une séance Carrière.';
+
+  @override
+  String get soundsDebugShowExcitationBar => 'Afficher la jauge d\'excitation';
+
+  @override
+  String get soundsDebugShowExcitationBarSubtitle =>
+      'Affiche la jauge 0–100 calculée pendant la séance.';
+
+  @override
+  String get soundsDebugShowHumiliationBar =>
+      'Afficher la jauge d\'humiliation';
+
+  @override
+  String get soundsDebugShowHumiliationBarSubtitle =>
+      'Affiche le score d\'humiliation cumulé pendant la séance.';
+
+  @override
+  String get soundsDebugShowObedienceBar => 'Afficher le score d\'obéissance';
+
+  @override
+  String get soundsDebugShowObedienceBarSubtitle =>
+      'Affiche le score 0–100 d\'obéissance (baisse à chaque fail, remonte avec les punitions).';
+
+  @override
+  String get soundsDebugShowSessionControls => 'Afficher pause / stop';
+
+  @override
+  String get soundsDebugShowSessionControlsSubtitle =>
+      'Réservé au debug : en prod la séance se déroule sans interaction (téléphone posé), seul le bouton FAIL reste utile.';
+
+  @override
+  String get soundsDebugShowModeBadge => 'Afficher mode / BPM / position';
+
+  @override
+  String get soundsDebugShowModeBadgeSubtitle =>
+      'Réservé au debug : en prod l\'animation suffit à indiquer ce qui se passe.';
+
+  @override
+  String get debugBarLabelExcitation => 'EXCIT.';
+
+  @override
+  String get debugBarLabelHumiliation => 'HUMIL.';
+
+  @override
+  String get debugBarLabelObedience => 'OBÉI.';
+
+  @override
+  String get soundsDebugCameraHoldCheck => 'Vérif caméra des holds';
+
+  @override
+  String get soundsDebugCameraHoldCheckSubtitle =>
+      'Pendant les holds, la caméra avant vérifie que la position est tenue. Le coach lance un rappel court si tu dérives. Nécessite d\'avoir calibré la caméra (icône caméra de l\'écran SCÉNARIO).';
+
+  @override
+  String get positionTip => 'Bout';
+
+  @override
+  String get positionHead => 'Gland';
+
+  @override
+  String get positionMid => 'Milieu';
+
+  @override
+  String get positionThroat => 'Gorge';
+
+  @override
+  String get positionFull => 'Au fond';
+
+  @override
+  String get modeShortRhythm => 'RYTHME';
+
+  @override
+  String get modeShortHold => 'HOLD';
+
+  @override
+  String get modeShortLick => 'LICK';
+
+  @override
+  String get modeShortBiffle => 'BIFFLE';
+
+  @override
+  String get modeShortBreath => 'BREATH';
+
+  @override
+  String get modeShortBeg => 'BEG';
+
+  @override
+  String get modeShortFreestyle => 'FREESTYLE';
+
+  @override
+  String get modeShortHand => 'HAND';
+
+  @override
+  String get badgeTierBronze => 'Bronze';
+
+  @override
+  String get badgeTierSilver => 'Argent';
+
+  @override
+  String get badgeTierGold => 'Or';
+
+  @override
+  String get badgeTierPlatinium => 'Platine';
+
+  @override
+  String get badgeNameMarathonien => 'Marathonienne';
+
+  @override
+  String get badgeNameThroatQueen => 'Throat Queen';
+
+  @override
+  String get badgeNameIronLungs => 'Iron Lungs';
+
+  @override
+  String get badgeNameToutTerrain => 'Tout-terrain';
+
+  @override
+  String get badgeNameSansBroncher => 'Sans broncher';
+
+  @override
+  String get badgeNameReguliere => 'Régulière';
+
+  @override
+  String get badgeNameJamaisRassasiee => 'Jamais rassasiée';
+
+  @override
+  String get badgeNameVideCouilles => 'Vide-Couilles';
+
+  @override
+  String get badgeUnitMarathonien => 'minutes cumulées';
+
+  @override
+  String get badgeUnitThroatQueen => 'throatfucks cumulés';
+
+  @override
+  String get badgeUnitIronLungs => 'secondes du plus long hold full';
+
+  @override
+  String get badgeUnitToutTerrain => 'modes différents utilisés';
+
+  @override
+  String get badgeUnitSansBroncher =>
+      'séances complètes consécutives sans fail';
+
+  @override
+  String get badgeUnitReguliere => 'jours consécutifs avec séance';
+
+  @override
+  String get badgeUnitJamaisRassasiee => 'fois où tu as redemandé \"encore\"';
+
+  @override
+  String get badgeUnitVideCouilles => 'sessions bâclées terminées';
+
+  @override
+  String get careerLevelTitleDebutante => 'Débutante';
+
+  @override
+  String get careerLevelTitleApprentieSuceuse => 'Apprentie Suceuse';
+
+  @override
+  String get careerLevelTitlePetiteSalopeConfirmee => 'Petite Salope Confirmée';
+
+  @override
+  String get careerLevelTitleBoucheAPipe => 'Bouche à Pipe';
+
+  @override
+  String get careerLevelTitleAvaleuse => 'Avaleuse';
+
+  @override
+  String get careerLevelTitleThroatQueen => 'Throat Queen';
+
+  @override
+  String get careerLevelTitleReineDuSloppy => 'Reine du Sloppy';
+
+  @override
+  String get careerLevelTitleTrouABiteOfficiel => 'Trou à Bite Officiel';
+
+  @override
+  String get careerLevelTitleVideCouillesPro => 'Vide-Couilles Pro';
+
+  @override
+  String get careerLevelTitleReineDesPutes => 'Reine des Putes';
+
+  @override
+  String get specBranchEnduranceLabel => 'Endurance';
+
+  @override
+  String get specBranchEnduranceDesc =>
+      'Tenir longtemps. Plus de holds, durées rallongées.';
+
+  @override
+  String get specBranchProfondeurLabel => 'Profondeur';
+
+  @override
+  String get specBranchProfondeurDesc =>
+      'Aller chercher loin. Biais throat / full.';
+
+  @override
+  String get specBranchRythmeBiffleLabel => 'Rythme & Biffle';
+
+  @override
+  String get specBranchRythmeBiffleDesc =>
+      'BPM élevés, coups de queue plus fréquents.';
+
+  @override
+  String get specBranchObeissanceLabel => 'Obéissance';
+
+  @override
+  String get specBranchObeissanceDesc => 'Beg insistants, supplique soutenue.';
+
+  @override
+  String get specBranchSloppyLabel => 'Sloppy';
+
+  @override
+  String get specBranchSloppyDesc => 'Lick humide, biffle bas, plus de bave.';
+
+  @override
+  String get specBranchResilienceLabel => 'Résilience';
+
+  @override
+  String get specBranchResilienceDesc =>
+      'Encaisser les fails. Punitions plus dures.';
+
+  @override
+  String get coachPickerTitle => 'Choisir un coach';
+
+  @override
+  String get coachPickerSection => 'COACH';
+
+  @override
+  String coachPickerTierLabel(int tier) {
+    return 'PALIER $tier';
+  }
+
+  @override
+  String get coachBadgePrincipal => 'PRINCIPAL';
+
+  @override
+  String get coachBadgePalierAcquis => 'PALIER ACQUIS';
+
+  @override
+  String get coachBadgeFreeTraining => 'ENTRAÎNEMENT LIBRE';
+
+  @override
+  String get coachBadgeLocked => 'VERROUILLÉ';
+
+  @override
+  String get coachRequiresHands => 'Mains obligatoires';
+
+  @override
+  String coachSummaryPrincipal(String title, int tier) {
+    return '$title · Principal palier $tier';
+  }
+
+  @override
+  String coachSummaryFree(String title) {
+    return '$title · entraînement libre';
+  }
+
+  @override
+  String get coachFreeTrainingDialogTitle => 'Entraînement libre';
+
+  @override
+  String coachFreeTrainingDialogBody(String coachName) {
+    return 'Tu vas t\'entraîner avec $coachName. Tu progresseras sur tes compétences, mais ta jauge de palier n\'avancera pas.';
+  }
+
+  @override
+  String coachFreeTrainingDialogHint(String principalName) {
+    return 'Pour avancer dans ton palier, choisis $principalName.';
+  }
+
+  @override
+  String coachFreeTrainingDialogChoosePrincipal(String principalName) {
+    return 'Choisir $principalName';
+  }
+
+  @override
+  String get coachFreeTrainingDialogContinueAnyway => 'Continuer quand même';
+
+  @override
+  String coachFreeTrainingBannerTitle(String coachName) {
+    return 'Session libre avec $coachName';
+  }
+
+  @override
+  String coachFreeTrainingBannerBodyWithPrincipal(String principalName) {
+    return 'Tu progresses sur tes compétences. Ton palier n\'avance pas — pour ça, choisis $principalName.';
+  }
+
+  @override
+  String get coachFreeTrainingBannerBodyNoPrincipal =>
+      'Tu progresses sur tes compétences. Ton palier n\'avance pas.';
+
+  @override
+  String get coachFreeTrainingBannerSwitchAction => 'CHANGER';
+
+  @override
+  String coachErrorLockedTier(int tier) {
+    return 'Ce coach est encore verrouillé — atteins le palier $tier pour le débloquer.';
+  }
+
+  @override
+  String coachErrorRequiresHands(String coachName) {
+    return '$coachName a besoin que tu actives la main dans les options.';
+  }
+
+  @override
+  String coachErrorMinLevel(String coachName, int minLevel) {
+    return '$coachName demande le niveau $minLevel minimum.';
+  }
+
+  @override
+  String get coachErrorMissingSpecialization =>
+      'Ce coach demande au moins 1 point dans une spécialisation que tu n\'as pas investie.';
+
+  @override
+  String coachErrorInsufficientBranchPoints(
+      String coachName, String requirements) {
+    return '$coachName demande : $requirements. Investis tes points de spécialisation.';
+  }
+}

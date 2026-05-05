@@ -1,0 +1,75 @@
+{
+  "lang": "fr",
+  "fail_phrases": [
+    "Tu abandonnes déjà petite salope ?",
+    "Pathétique. Tu peux mieux que ça.",
+    "Vraiment ? Si tôt ? On va corriger ça tout de suite.",
+    "Cette faiblesse va se payer chère.",
+    "Tu crois que ça suffit ? Erreur.",
+    "Une vraie salope ne lâche pas comme ça.",
+    "Respire… parce que tu vas morfler maintenant."
+  ],
+  "punishments": [
+    {
+      "id": "extra_throat",
+      "name": "Extra Throat",
+      "duration_seconds": 45,
+      "steps": [
+        {"time": 0, "text": "Punition. Quarante secondes en gorge sans pitié.", "mode": "rhythm", "from": "throat", "to": "full", "bpm": 100},
+        {"time": 20, "text": "Plus profond. Avale tout."},
+        {"time": 35, "text": "Hold final.", "mode": "hold", "from": "full", "duration": 8}
+      ]
+    },
+    {
+      "id": "biffle_burst",
+      "name": "Biffle Burst",
+      "duration_seconds": 30,
+      "steps": [
+        {"time": 0, "text": "Punition rapide. Trente secondes de biffle.", "mode": "biffle", "bpm": 135},
+        {"time": 12, "text": "Bave partout salope."},
+        {"time": 25, "text": "Plus fort."}
+      ]
+    },
+    {
+      "id": "deep_hold_chain",
+      "name": "Chaîne de Holds",
+      "duration_seconds": 55,
+      "steps": [
+        {"time": 0, "text": "Trois holds enchaînés. Premier en gorge.", "mode": "hold", "from": "throat", "duration": 10},
+        {"time": 12, "text": "Respire.", "mode": "breath", "duration": 4},
+        {"time": 17, "text": "Deuxième, plus profond.", "mode": "hold", "from": "throat", "duration": 12},
+        {"time": 31, "text": "Respire.", "mode": "breath", "duration": 4},
+        {"time": 36, "text": "Dernier en balls deep.", "mode": "hold", "from": "full", "duration": 15}
+      ]
+    },
+    {
+      "id": "slow_torture",
+      "name": "Torture Lente",
+      "duration_seconds": 50,
+      "steps": [
+        {"time": 0, "text": "Punition lente. Très lent et très profond.", "mode": "rhythm", "from": "throat", "to": "full", "bpm": 40},
+        {"time": 25, "text": "Sens chaque centimètre."},
+        {"time": 45, "text": "Hold.", "mode": "hold", "from": "full", "duration": 10}
+      ]
+    },
+    {
+      "id": "lick_humiliation",
+      "name": "Lick Humiliation",
+      "duration_seconds": 40,
+      "steps": [
+        {"time": 0, "text": "Lèche comme une chienne en chaleur.", "mode": "lick", "from": "tip", "to": "full", "bpm": 70},
+        {"time": 20, "text": "Crache dessus et lèche à nouveau."},
+        {"time": 35, "text": "Dis \"je suis ton trou\"."}
+      ]
+    },
+    {
+      "id": "rapid_full",
+      "name": "Rapid Full",
+      "duration_seconds": 35,
+      "steps": [
+        {"time": 0, "text": "Punition. Va full et reste rapide.", "mode": "rhythm", "from": "full", "to": "full", "bpm": 120},
+        {"time": 18, "text": "Plus vite salope."}
+      ]
+    }
+  ]
+}

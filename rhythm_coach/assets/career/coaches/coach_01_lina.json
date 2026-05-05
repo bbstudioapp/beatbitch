@@ -1,0 +1,11 @@
+{
+  "id": "coach_01_lina",
+  "name": "Lina",
+  "archetype": "bienveillant",
+  "specialties": [
+    "endurance",
+    "profondeur"
+  ],
+  "tier": 1,
+  "isPrincipal": true
+}

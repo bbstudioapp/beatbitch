@@ -1,0 +1,14 @@
+{
+  "id": "coach_04_morgan",
+  "name": "Morgan",
+  "archetype": "brutal",
+  "specialties": [
+    "profondeur",
+    "resilience"
+  ],
+  "tier": 4,
+  "isPrincipal": true,
+  "requirements": {
+    "minPlayerLevel": 19
+  }
+}

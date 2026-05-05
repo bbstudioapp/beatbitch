@@ -1,0 +1,14 @@
+{
+  "id": "coach_02_helene",
+  "name": "Hélène",
+  "archetype": "strict",
+  "specialties": [
+    "profondeur",
+    "obeissance"
+  ],
+  "tier": 2,
+  "isPrincipal": true,
+  "requirements": {
+    "minPlayerLevel": 7
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "lang": "fr",
+  "id": "tutorial",
+  "name": "Tutoriel — Tous les sons",
+  "description": "Découvre chaque son et chaque consigne. La voix t'explique tout, étape par étape.",
+  "duration_seconds": 460,
+  "mode": "beg",
+  "intro": "Bienvenue. Avant de te lancer dans une vraie séance, on va passer en revue tous les sons et toutes les consignes. Pose ton téléphone sur le côté, tu n'auras plus à le regarder. Pendant ce tutoriel, tu n'as rien à faire — pas besoin de sucer, pas besoin de te mettre en position. Tu écoutes, c'est tout. Sept minutes, pas de pression, pas de fail à craindre. Quand tu es prête, valide.",
+  "steps": [
+    {"time": 0, "text": "On commence par les positions. Il y en a cinq, de la plus douce à la plus profonde. Écoute bien chaque son, c'est avec ça que tu vas te repérer pendant les vraies séances. Tu n'as rien à faire, juste écouter."},
+
+    {"time": 16, "text": "Première position — le bout. Le son le plus aigu, le plus léger.",
+                 "mode": "hold", "to": "tip", "duration": 3},
+
+    {"time": 25, "text": "Deuxième position — le gland. Un cran plus grave.",
+                 "mode": "hold", "to": "head", "duration": 3},
+
+    {"time": 34, "text": "Troisième position — le milieu, juste avant la gorge. Encore plus grave.",
+                 "mode": "hold", "to": "mid", "duration": 3},
+
+    {"time": 44, "text": "Quatrième position — l'entrée de la gorge. Là ça commence à descendre sérieusement.",
+                 "mode": "hold", "to": "throat", "duration": 3},
+
+    {"time": 54, "text": "Cinquième position — entièrement, nez contre les couilles. Le son le plus grave, le plus profond. Tu retiens : plus le son est grave, plus tu dois descendre.",
+                 "mode": "hold", "to": "full", "duration": 3},
+
+    {"time": 70, "text": "Maintenant les huit types de consignes que je vais te donner. On les passe une par une. Toujours rien à faire, juste écouter."},
+
+    {"time": 82, "text": "Première consigne — sucer en rythme. Le métronome de base. À chaque bip, un coup. Tempo lent, sur le gland."},
+
+    {"time": 92, "mode": "rhythm", "from": "head", "to": "head", "bpm": 55, "duration": 22},
+
+    {"time": 112, "text": "Maintenant avec une vraie amplitude — du gland jusqu'à l'entrée de la gorge, plus rapide.",
+                  "mode": "rhythm", "from": "head", "to": "throat", "bpm": 80, "duration": 28},
+
+    {"time": 130, "text": "Tu entends bien l'alternance entre les deux tons ? C'est ton guide pour caler l'amplitude du mouvement, du plus haut au plus bas."},
+
+    {"time": 158, "text": "Deuxième consigne — lécher. Juste lécher. Langue sortie, tu passes sur le bout et le gland, mais tu ne mets rien dans la bouche. Le volume est réduit, c'est plus doux, plus discret.",
+                  "mode": "lick", "from": "tip", "to": "head", "bpm": 75, "duration": 22},
+
+    {"time": 178, "text": "Tu vois la différence ? Plus léger, plus suggestif. Pas de pénétration, juste la langue."},
+
+    {"time": 192, "text": "Troisième consigne — tenir au fond. Un seul bip, soutenu par une couche grave. Tu prends la position et tu ne bouges plus pendant la durée annoncée. Là, ce serait entièrement, dix secondes.",
+                  "mode": "hold", "to": "full", "duration": 10},
+
+    {"time": 210, "text": "Quatrième consigne — respirer. Un son unique, doux. C'est ton signal pour souffler, te poser, récupérer.",
+                  "mode": "breath"},
+
+    {"time": 222, "text": "Toujours après un effort, la respiration. Ne la zappe pas."},
+
+    {"time": 236, "text": "Cinquième consigne — recevoir des coups de queue sur le visage. Un bip rapide dédié, sans notion de position. Tu sors la langue, tu présentes la joue, le front, et tu te laisses gifler par la queue à chaque bip. Rien dans la bouche.",
+                  "mode": "biffle", "bpm": 130, "duration": 22},
+
+    {"time": 264, "text": "Sixième consigne — supplier. Pas de bip, juste ma voix. Je te donne un ordre — me supplier, répéter une phrase, une action — et tu t'exécutes à voix haute. Si je précise une position, tu la tiens pendant que tu parles."},
+
+    {"time": 282, "text": "Septième consigne — la main. Tu lâches la bouche, tu travailles à la main. Le son est plus mat, le rythme plus posé. Ça permet à ta gorge de se reposer pendant que ça continue à monter.",
+                  "mode": "hand", "from": "head", "to": "mid", "bpm": 80, "duration": 14},
+
+    {"time": 302, "text": "Huitième et dernière — la phase libre. Deux bips encadrent un moment où tu fais ce que tu veux. Pas de consigne, c'est à toi.",
+                  "mode": "freestyle", "duration": 8},
+
+    {"time": 318, "text": "Voilà pour les huit consignes. Maintenant deux ou trois choses pratiques."},
+
+    {"time": 332, "text": "Le bouton rouge en bas — Je peux pas — c'est ton bouton de secours. Tu le déclenches quand tu n'en peux vraiment plus. Je te dis ce que je pense de toi, je te fais respirer, je te donne une petite punition, et on saute à la section suivante. Tu ne perds pas ta séance, tu la reprends plus loin."},
+
+    {"time": 364, "text": "L'icône équaliseur en haut de l'écran d'accueil ouvre la page Sons. Tu peux y choisir ma voix, ma vitesse, et activer un pack d'ambiance. Dans la page Carrière, tu peux aussi désactiver la stimulation à la main si tu n'en veux pas — ça désactive aussi les coups de queue."},
+
+    {"time": 392, "text": "Et au fil de tes séances, tu vas débloquer des badges — Marathonienne, Throat Queen, Iron Lungs, et d'autres. Je te les annonce à la fin de la séance quand tu en débloques un nouveau. Ça mesure ton parcours."},
+
+    {"time": 420, "text": "Pour finir, un vrai exemple de supplique. Cette fois, tu peux participer si tu veux. Le milieu, dix secondes — tu vas répéter après moi, à voix haute : je ne suis qu'une bonne petite suceuse, et j'en redemande.",
+                  "mode": "beg", "to": "mid", "duration": 10},
+
+    {"time": 444, "text": "Tu sais tout. À toi de jouer."}
+  ]
+}

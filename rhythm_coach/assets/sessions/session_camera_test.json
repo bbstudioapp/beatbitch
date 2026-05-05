@@ -1,0 +1,17 @@
+{
+  "lang": "fr",
+  "id": "camera_test",
+  "name": "Test Caméra — Holds",
+  "description": "Cinq holds longs sur les 5 niveaux, pour valider le tracking caméra.",
+  "duration_seconds": 90,
+  "mode": "rhythm",
+  "intro": "Test de la caméra. On va enchaîner cinq holds, un par niveau de profondeur. Tiens chaque position dix secondes. Si tu sors trop longtemps, je te corrige. Place-toi devant l'objectif, valide quand tu es prête.",
+  "steps": [
+    {"time": 0,  "text": "Hold tip. Reste en surface.", "mode": "hold", "to": "tip", "duration": 12},
+    {"time": 14, "text": "Hold head. Un peu plus profond.", "mode": "hold", "to": "head", "duration": 12},
+    {"time": 30, "text": "Hold mid. Position médiane.", "mode": "hold", "to": "mid", "duration": 12},
+    {"time": 46, "text": "Hold throat. Reste profonde.", "mode": "hold", "to": "throat", "duration": 12},
+    {"time": 62, "text": "Hold full. Ne lâche pas.", "mode": "hold", "to": "full", "duration": 14},
+    {"time": 80, "text": "Test terminé. Bien joué."}
+  ]
+}
