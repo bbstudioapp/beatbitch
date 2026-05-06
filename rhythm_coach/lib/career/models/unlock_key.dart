@@ -26,6 +26,7 @@ enum UnlockKey {
   fullPulse,
   // Tempo
   rhythmExtreme,
+  rhythmHeadMidSustained,
   biffleBasic,
   biffleFast,
   // Modes spéciaux
@@ -92,6 +93,7 @@ enum UnlockKey {
         UnlockKey.throatPulse => 'throat_pulse',
         UnlockKey.fullPulse => 'full_pulse',
         UnlockKey.rhythmExtreme => 'rhythm_extreme',
+        UnlockKey.rhythmHeadMidSustained => 'rhythm_head_mid_sustained',
         UnlockKey.biffleBasic => 'biffle_basic',
         UnlockKey.biffleFast => 'biffle_fast',
         UnlockKey.freestyle => 'freestyle',
