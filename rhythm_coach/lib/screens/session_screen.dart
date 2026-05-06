@@ -183,6 +183,18 @@ class _SessionScreenState extends State<SessionScreen>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Pousse l'AppLocalizations dans le controller pour qu'il puisse
+    // résoudre une annonce TTS d'unlock par défaut depuis l'ARB côté
+    // _finish(). En initState le widget Localizations n'est pas encore
+    // accessible — didChangeDependencies est le 1er hook après le mount
+    // qui peut lire le contexte localisé, et il rejoue à chaque changement
+    // de locale (rebuild MaterialApp via LocaleService).
+    _controller.setAppLocalizations(AppLocalizations.of(context));
+  }
+
+  @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     if (widget.isCareer) {

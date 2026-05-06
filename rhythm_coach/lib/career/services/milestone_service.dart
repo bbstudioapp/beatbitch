@@ -3,12 +3,14 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../services/locale_service.dart';
 import '../models/level_milestone.dart';
 import '../models/milestone_text_override.dart';
 import '../models/specialization.dart';
 import '../models/unlock_key.dart';
 import 'milestone_loader.dart';
+import 'unlock_announcements.dart';
 
 /// Source de vérité pour les milestones de carrière. Persiste les
 /// complétions (avec ou sans fail) dans `SharedPreferences`. Cf. E3 du plan.
@@ -248,9 +250,18 @@ class MilestoneService extends ChangeNotifier {
   }
 
   /// Phrase d'unlock à jouer en TTS après le finale_chime, si la milestone
-  /// vient d'être acquittée. `null` si pas de surcharge ou de phrase.
-  String? getUnlockAnnouncement(String id) =>
-      _overrides[id]?.unlockAnnouncement;
+  /// vient d'être acquittée. Priorité : override texte de la milestone, puis
+  /// annonce par défaut basée sur le 1er unlock (cf. [defaultAnnouncementFor])
+  /// quand [l10n] est fourni. `null` si rien à dire (milestone sans override
+  /// dont l'unlock principal n'a pas d'effet « invisible » à annoncer).
+  String? getUnlockAnnouncement(String id, {AppLocalizations? l10n}) {
+    final override = _overrides[id]?.unlockAnnouncement;
+    if (override != null && override.isNotEmpty) return override;
+    if (l10n == null) return null;
+    final m = findById(id);
+    if (m == null || m.unlocks.isEmpty) return null;
+    return defaultAnnouncementFor(m.unlocks.first, l10n);
+  }
 
   /// Texte localisé pour le step à offset [time] dans la milestone [id].
   /// `null` si pas de surcharge → l'appelant garde le texte d'origine.

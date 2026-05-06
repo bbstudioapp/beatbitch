@@ -1265,4 +1265,28 @@ class AppLocalizationsFr extends AppLocalizations {
       String coachName, String requirements) {
     return '$coachName demande : $requirements. Investis tes points de spécialisation.';
   }
+
+  @override
+  String get unlockAnnouncementSloppyDroolBasic =>
+      'Désormais ta bouche garde plus de salive, et ton lèche en produit plus. Bave-moi dessus, sois sale.';
+
+  @override
+  String get unlockAnnouncementSloppyBiffleSlow =>
+      'Les biffles te font baver maintenant. Reçois-les bouche grande ouverte.';
+
+  @override
+  String get unlockAnnouncementSloppySwallowControl =>
+      'Tu peux désormais retenir ta salive sur ordre. Quand je te le dis, tu n\'avales plus.';
+
+  @override
+  String get unlockAnnouncementSloppySpit =>
+      'Tu sais cracher pour moi maintenant. Quand je te le demande, tu craches tout.';
+
+  @override
+  String get unlockAnnouncementSloppyDroolDeep =>
+      'Quand tu vas profond, ta bouche déborde encore plus. Profite.';
+
+  @override
+  String get unlockAnnouncementRhythmHeadMidSustained =>
+      'Tu peux tenir la cadence plus d\'une minute maintenant, sans pause. Je te le demanderai.';
 }
