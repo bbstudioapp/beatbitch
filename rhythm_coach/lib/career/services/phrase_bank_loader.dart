@@ -117,6 +117,11 @@ class PhraseBankLoader {
         .where((s) => s.trim().isNotEmpty)
         .toList();
 
+    final postFinalLick = (data['post_final_lick'] as List<dynamic>? ?? const [])
+        .map((p) => p.toString())
+        .where((s) => s.trim().isNotEmpty)
+        .toList();
+
     return PhraseBank(
       byMode: byMode,
       congrats: congrats,
@@ -129,6 +134,7 @@ class PhraseBankLoader {
       finalActions: finalActions,
       postFinal: postFinal,
       postFinalBeg: postFinalBeg,
+      postFinalLick: postFinalLick,
     );
   }
 }
