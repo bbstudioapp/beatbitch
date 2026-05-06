@@ -64,6 +64,14 @@ class CareerSessionGenerator {
   /// niveaux avancés où la dramaturgie peut sortir du cadre doux).
   int _level = 1;
 
+  /// `time` (en secondes) à partir duquel une **mini-vague** peut être
+  /// insérée dans la boucle main. Cf. `_shouldEmitMiniWave` pour les
+  /// conditions cumulatives. Initialisée à 5-6 min dans `generate`. Une
+  /// vague émise repousse à `time + 6-7 min`. Vise à casser la diagonale
+  /// d'intensité unique du début au finish sur les sessions longues —
+  /// 1 à 3 mini-vagues sur une session de 25-45 min.
+  int _nextMiniWaveAt = 0;
+
   /// Dernier mode poussé dans la séance, pour éviter qu'un même mode
   /// (breath, beg, …) se déclenche deux steps d'affilé. Reset dans `generate`.
   SessionMode? _lastMode;
@@ -212,6 +220,10 @@ class CareerSessionGenerator {
     _deepProbability = cfg.deepProbability;
     _spec = specialization ?? SpecializationAllocation.empty();
     _level = level;
+    // Première mini-vague entre 5 et 6 minutes : laisse l'intro et le
+    // début de chauffe se dérouler sans rupture, puis le générateur peut
+    // poser un mini-finish pour casser la monotonie.
+    _nextMiniWaveAt = 300 + _rng.nextInt(61);
     _lastMode = null;
     _lastText = '';
     _lastBpm = null;
@@ -381,6 +393,36 @@ class CareerSessionGenerator {
           (time >= minInsert || time >= maxInsert)) {
         insertMilestoneNow();
         if (time >= genUntil) break;
+        continue;
+      }
+      // Mini-vague : 2-3 steps enchaînés à BPM montant qui cassent la
+      // diagonale d'intensité unique du début au finish. Inséré toutes
+      // les ~6-7 minutes sur les sessions longues (≥ 12 min) à partir du
+      // niveau 5. Cf. `_shouldEmitMiniWave`.
+      if (_shouldEmitMiniWave(time, effectiveDuration, stamina, genUntil)) {
+        final progressForWave = time / effectiveDuration;
+        final humilCapForWave = _humilCapAt(time);
+        final waveDrafts = _buildMiniWave(humilCapForWave);
+        for (final wd in waveDrafts) {
+          final waveText = _pickPhrase(bank, wd.mode, 'hard');
+          steps.add(_draftToStep(wd, time: time, text: waveText));
+          final staminaBefore = stamina;
+          stamina = _applyStaminaChange(stamina, wd, progressForWave, cfg);
+          _advanceSalivaSim(wd);
+          _fillProfile(profile, time, wd.duration!, stamina,
+              valueStart: staminaBefore);
+          _lastMode = wd.mode;
+          _lastText = waveText;
+          _lastFrom = wd.from;
+          _lastTo = wd.to;
+          _lastBpm = wd.bpm ?? _lastBpm;
+          _trackPushedStep(wd.mode, wd.to, from: wd.from, bpm: wd.bpm);
+          time += wd.duration!;
+        }
+        // Replanification : 6-7 minutes après la fin de la vague émise.
+        // La séance enchaîne ensuite sur du tirage classique — la stamina
+        // creusée naturellement par la vague pousse vers la retombée.
+        _nextMiniWaveAt = time + 360 + _rng.nextInt(61);
         continue;
       }
       final progress = time / effectiveDuration;
@@ -973,6 +1015,92 @@ class CareerSessionGenerator {
       ),
       staminaProfile: trimmedProfile,
     );
+  }
+
+  /// Vrai si on doit émettre une **mini-vague** au pas courant de la
+  /// boucle main. Conditions cumulatives :
+  /// - durée totale ≥ 12 min (sinon pas le temps de respirer entre la
+  ///   vague et le finish ; les sessions courtes gardent leur diagonale
+  ///   d'intensité simple).
+  /// - niveau ≥ 5 (pédagogie : on ne surprend pas une débutante avec
+  ///   un mini-finish dramatique au milieu de la séance).
+  /// - `time >= _nextMiniWaveAt` (replanifié après chaque vague).
+  /// - `genUntil - time >= 90 s` (laisse une marge avant la phase finish
+  ///   pour ne pas chevaucher pré-finisher / boosts).
+  /// - stamina ≥ 50 (sinon la vague creuserait jusqu'au déficit, le sas
+  ///   breath obligerait à respirer immédiatement et casserait l'effet).
+  bool _shouldEmitMiniWave(
+      int time, int effectiveDuration, double stamina, int genUntil) {
+    if (effectiveDuration < 720) return false;
+    if (_level < 5) return false;
+    if (time < _nextMiniWaveAt) return false;
+    if (genUntil - time < 90) return false;
+    if (stamina < 50) return false;
+    return true;
+  }
+
+  /// Construit la séquence de la mini-vague : 2 à 3 steps rythmés à BPM
+  /// montant, chacun à profondeur progressive (head→mid puis head→mid
+  /// puis head→throat si débloqué). Variations de `to` choisies pour ne
+  /// pas trigger le détecteur de pattern plat (`_isFlatRhythmicPattern`)
+  /// et pour matérialiser la montée à l'oreille (BPMs espacés de 20).
+  ///
+  /// Chaque step est filtré par `_enforceHumiliationRequired(humilCap)` :
+  /// si la vague propose un step trop humiliant pour le cap courant, il
+  /// dégrade vers du plus doux automatiquement (ex throat → mid). Si après
+  /// dégradation un step duplique le précédent, il est skip plutôt que
+  /// re-poussé — la vague peut donc se réduire à 2 steps en pratique.
+  List<_StepDraft> _buildMiniWave(double humilCap) {
+    final hasThroat = _unlockedKeys.contains(UnlockKey.throatHoldShort) ||
+        _maxDepthIndex >= Position.throat.index;
+    // Steps montants : BPMs espacés de 20 pour que la variance détectée
+    // par `_isFlatRhythmicPattern` (< 10) ne déclenche pas. Choix
+    // mode=rhythm sur les 3 steps pour cohérence dramaturgique (un seul
+    // mode = montée homogène). `to` qui change évite aussi le pattern
+    // plat — la diversification interne ne peut pas le casser.
+    final raw = <_StepDraft>[
+      const _StepDraft(
+        mode: SessionMode.rhythm,
+        bpm: 100,
+        from: Position.head,
+        to: Position.mid,
+        duration: 12,
+      ),
+      const _StepDraft(
+        mode: SessionMode.rhythm,
+        bpm: 120,
+        from: Position.head,
+        to: Position.mid,
+        duration: 10,
+      ),
+      _StepDraft(
+        mode: SessionMode.rhythm,
+        bpm: 135,
+        from: Position.head,
+        to: hasThroat ? Position.throat : Position.mid,
+        duration: 8,
+      ),
+    ];
+    final out = <_StepDraft>[];
+    Position? prevTo;
+    int? prevBpm;
+    for (final s in raw) {
+      final filtered = _enforceHumiliationRequired(s, humilCap);
+      // Skip si la dégradation rend ce step identique au précédent
+      // (mêmes from/to/bpm) — la vague compresserait sinon en plat.
+      if (filtered.to == prevTo && filtered.bpm == prevBpm) continue;
+      out.add(filtered);
+      prevTo = filtered.to;
+      prevBpm = filtered.bpm;
+    }
+    // Garde au minimum 2 steps : si la cascade a tout aplati (cas humil
+    // très basse en début de niveau 5), on retombe sur les 2 premiers
+    // steps de `raw` sans filtre, qui sont volontairement modérés
+    // (head→mid 100/120 — req mécanique très basse).
+    if (out.length < 2) {
+      return raw.take(2).toList();
+    }
+    return out;
   }
 
   /// Construit le step de post-final : action douce contrastante avec le
