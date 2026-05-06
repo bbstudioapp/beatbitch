@@ -7,6 +7,7 @@ import '../../models/session.dart';
 import '../../models/session_step.dart';
 import '../../services/excitation_engine.dart';
 import '../../services/humiliation_engine.dart';
+import '../../services/saliva_engine.dart';
 import '../models/career_level.dart';
 import '../models/level_milestone.dart';
 import '../models/phrase_bank.dart';
@@ -74,10 +75,6 @@ class CareerSessionGenerator {
   /// scriptée d'un step à l'autre. Reset dans `generate`.
   String _lastText = '';
 
-  /// Niveau de carrière de la session en cours. Sert au filtrage par
-  /// niveau (ex : freestyle débloqué au niveau 4 seulement).
-  int _level = 1;
-
   /// Dernier BPM appliqué à un step (rhythm/lick/biffle/hand). Sert à
   /// forcer la variété : un nouveau BPM trop proche du précédent est
   /// décalé de 18–30 BPM par `_diversifyBpm`.
@@ -93,6 +90,15 @@ class CareerSessionGenerator {
   /// comportement de l'`ExcitationEngine` runtime : décroissance V²/800,
   /// spike par profondeur, plateaux. Réinitialisé à chaque `generate`.
   late ExcitationEngine _excitSim;
+
+  /// Simulateur de salive utilisé pendant la génération. Mime le
+  /// comportement du `SalivaEngine` runtime : production par mode/position,
+  /// auto-déglutition au-dessus de 75. Sert à projeter la lubrification
+  /// au moment du draft d'un step throat/full (cf. Phase 4). En V1 le
+  /// SwallowMode est assumé `allowed` (le générateur n'émet pas encore de
+  /// steps forbidden auto-générés ; les milestones les portent en dur).
+  late SalivaEngine _salivaSim;
+  int _salivaSimSecond = 0;
 
   /// Set des `UnlockKey` débloquées pour la génération en cours. Une action
   /// dont la clé n'est pas dedans est rejetée par `_isUnlocked` et dégradée
@@ -150,7 +156,6 @@ class CareerSessionGenerator {
     _maxDepthIndex = cfg.maxDepthIndex;
     _deepProbability = cfg.deepProbability;
     _spec = specialization ?? SpecializationAllocation.empty();
-    _level = level;
     _lastMode = null;
     _lastText = '';
     _lastBpm = null;
@@ -184,6 +189,8 @@ class CareerSessionGenerator {
         : (cfg.minFinal + (excitationTarget - cfg.excitationTarget))
             .clamp(0.0, excitationTarget);
     _excitSim = ExcitationEngine()..setMax(resolvedExcitationTarget);
+    _salivaSim = SalivaEngine()..reset();
+    _salivaSimSecond = 0;
     final steps = <SessionStep>[];
     final profile = List<double>.filled(effectiveDuration + 60, _staminaMax);
     final excitProfile = List<double>.filled(effectiveDuration + 60, 0.0);
@@ -227,12 +234,14 @@ class CareerSessionGenerator {
           from: mStep.from,
           to: mStep.to,
           duration: mStep.duration,
+          swallowMode: mStep.swallowMode,
         ));
         // Simulation stamina/excitation pour chaque step de la séquence,
         // pour que la projection reste cohérente.
         final mDraft = _stepToDraft(mStep, SessionMode.rhythm);
         stamina = _applyStaminaChange(
             stamina, mDraft, time / effectiveDuration, cfg);
+        _advanceSalivaSim(mDraft);
         excitation = _runOnEngine(_excitSim, mDraft);
         _fillProfile(
             profile, time + mStep.time, mStep.duration ?? 0, stamina);
@@ -247,6 +256,14 @@ class CareerSessionGenerator {
       time += milestone.durationSeconds;
       milestoneDurationSeconds = milestone.durationSeconds;
       milestoneInserted = true;
+      // Réutilisation post-acquittement : les unlocks de la milestone
+      // deviennent disponibles pour les steps générés APRÈS la séquence
+      // (corps restant, pré-finisher, boosts, final). On suppose succès au
+      // runtime — sur fail la session est replanifiée par le contrôleur, ce
+      // qui régénère un set d'unlocks cohérent.
+      if (milestone.unlocks.isNotEmpty) {
+        _unlockedKeys = {..._unlockedKeys, ...milestone.unlocks};
+      }
     }
 
     // Step #0 obligatoirement non text-only à time=0 (sinon _lastConfigStep
@@ -273,6 +290,7 @@ class CareerSessionGenerator {
       _lastTo = first.to;
       stamina = _applyStaminaChange(stamina, first, 0.0, cfg);
       _fillProfile(profile, 0, first.duration ?? 1, stamina);
+      _advanceSalivaSim(first);
       excitation = _runOnEngine(_excitSim, first);
       _fillProfile(excitProfile, 0, first.duration ?? 1, excitation);
       time += first.duration ?? 1;
@@ -389,6 +407,7 @@ class CareerSessionGenerator {
           final breathText = _pickPhrase(bank, SessionMode.breath, 'soft');
           steps.add(_draftToStep(breathDraft, time: time, text: breathText));
           stamina = _applyStaminaChange(stamina, breathDraft, progress, cfg);
+          _advanceSalivaSim(breathDraft);
           excitation = _runOnEngine(_excitSim, breathDraft);
           _fillProfile(profile, time, breathDraft.duration!, stamina);
           _fillProfile(excitProfile, time, breathDraft.duration!, excitation);
@@ -418,6 +437,7 @@ class CareerSessionGenerator {
         // ou profondeur change entre eux.
         final partText = partIdx == 0 ? _pickPhrase(bank, partDraft.mode, tier) : '';
         stamina = _applyStaminaChange(stamina, partDraft, progress, cfg);
+        _advanceSalivaSim(partDraft);
         excitation = _runOnEngine(_excitSim, partDraft);
         steps.add(_draftToStep(partDraft, time: time, text: partText));
         _lastMode = partDraft.mode;
@@ -435,6 +455,7 @@ class CareerSessionGenerator {
       final chain = draft.chainNext;
       if (chain != null && chain.duration != null) {
         stamina = _applyStaminaChange(stamina, chain, progress, cfg);
+        _advanceSalivaSim(chain);
         excitation = _runOnEngine(_excitSim, chain);
         steps.add(_draftToStep(chain, time: time, text: ''));
         _lastMode = chain.mode;
@@ -491,10 +512,12 @@ class CareerSessionGenerator {
           from: mStep.from,
           to: mStep.to,
           duration: mStep.duration,
+          swallowMode: mStep.swallowMode,
         ));
         final mDraft = _stepToDraft(mStep, SessionMode.rhythm);
         stamina = _applyStaminaChange(
             stamina, mDraft, time / effectiveDuration, cfg);
+        _advanceSalivaSim(mDraft);
         excitation = _runOnEngine(_excitSim, mDraft);
         _fillProfile(
             profile, time + mStep.time, mStep.duration ?? 0, stamina);
@@ -584,6 +607,7 @@ class CareerSessionGenerator {
       _lastMode = SessionMode.rhythm;
       _lastText = preText;
       _fillProfile(profile, time, preDur, stamina);
+      _advanceSalivaSim(preDraft);
       excitation = _runOnEngine(_excitSim, preDraft);
       _fillProfile(excitProfile, time, preDur, excitation);
       time += preDur;
@@ -623,23 +647,15 @@ class CareerSessionGenerator {
     // même tempo tout en restant clairement en mode finish. La cible (`to`)
     // varie également d'un cran selon le step — sinon on enchaîne 5 fois le
     // même tip→mid à 148 BPM, sensation de stagnation.
-    // Cap de profondeur des boosts indexé sur le niveau (proxy de
-    // milestone d'introduction) :
-    // - jusqu'au niveau 5 : mid (idx 2). Throat n'est pas encore introduit.
-    // - niveaux 6-10 : throat (idx 3). intro_hold_throat_short au niveau 6.
-    // - niveaux 11+ : full (idx 4). intro_hold_full_short au niveau 11.
-    // Borné en plus par `_maxDepthIndex` (sécurité, ne devrait jamais
-    // descendre sous le cap niveau ci-dessus).
-    final int levelBoostCeiling;
-    if (level < 6) {
-      levelBoostCeiling = 2;
-    } else if (level < 11) {
-      levelBoostCeiling = 3;
-    } else {
-      levelBoostCeiling = 4;
-    }
+    // Cap de profondeur des boosts gaté par les milestones effectivement
+    // acquittées (cf. `_milestoneRhythmCeilingIdx`) : throat ouvert si
+    // `throatPulse` débloqué (intro_throat_pulse), full si `fullPulse`
+    // (intro_full_pulse). Indépendant du niveau seul — sauter des milestones
+    // ne donne pas accès aux profondeurs. Borné par `_maxDepthIndex` en
+    // sécurité, et par mid (idx 2) au minimum (un boost ne descend jamais
+    // sous mid pour rester reconnaissable comme un sprint).
     final boostMaxToIdx =
-        min(_maxDepthIndex.clamp(2, 4), levelBoostCeiling);
+        max(2, _milestoneRhythmCeilingIdx());
     // Index dans `steps` du dernier boost ajouté. Sert ensuite à substituer
     // le `text` par une annonce du final (ex: hand → lick → "sors ta langue,
     // j'arrive") quand le mode change pour le finisher.
@@ -651,30 +667,46 @@ class CareerSessionGenerator {
     // explicitement noté ce ralentissement.
     int prevBoostBpm = 0;
     int prevBoostToIdx = 0;
+    // **Ramp progressif** : la phase finish doit s'entendre comme une
+    // accélération, pas comme un sprint plat à 100% dès le 1er boost.
+    // On planifie sur 4 boosts (typique : 2 minBoosts + 1-2 si saturé) et
+    // on échelonne BPM et profondeur sur cette progression. La physique
+    // (`deficit`) ne sert plus qu'en bonus — sans la ramp, baseBpm = bpmCap
+    // dès le 1er boost, ce que l'utilisateur a relevé.
+    const plannedBoosts = 4;
     while (boostsAdded < minBoosts ||
         (excitation < resolvedMinFinal - 1.0 && boostsAdded < 5)) {
       // Durée variable : 12 à 16 s pour casser la régularité.
       final boostDur = 12 + _rng.nextInt(5);
-      final deficit = (resolvedMinFinal - excitation).clamp(0.0, 30.0);
-      final baseBpm = (bpmCap - 30 + deficit.round()).clamp(bpmFloor, bpmCap);
-      // Variabilité contrôlée : on tire +0..+15 BPM par-dessus le base, jamais
-      // de décalage négatif. Combiné au plancher `prevBoostBpm`, ça garantit
-      // un BPM strictement non-décroissant tout en gardant un peu de hasard.
-      final shift = _rng.nextInt(16);
-      final bpmRaw = (baseBpm + shift).clamp(bpmFloor, bpmCap);
-      // Plancher monotone : on ne descend jamais sous le BPM du boost précédent.
-      // Si bpmRaw < prevBoostBpm, on relève à prevBoostBpm (et un cran +5 si
-      // possible pour entendre la montée), tronqué par bpmCap.
+      // Progression linéaire 0→1 sur les `plannedBoosts` premiers, puis
+      // saturée à 1.0 pour le 5e boost de secours. Plancher 0.4 : on ne
+      // démarre pas non plus en mode mou — premier boost à ~40% de la
+      // dynamique floor↔cap pour rester reconnaissable comme un sprint.
+      final progress =
+          ((boostsAdded + 1) / plannedBoosts).clamp(0.4, 1.0);
+      final targetBpm =
+          (bpmFloor + progress * (bpmCap - bpmFloor)).round();
+      // Jitter ±5 BPM autour de la cible pour ne pas répéter exactement
+      // le même tempo deux boosts d'affilée. Capé par bpmCap (jamais
+      // au-delà du plafond du niveau).
+      final shift = _rng.nextInt(11) - 5;
+      final bpmRaw = (targetBpm + shift).clamp(bpmFloor, bpmCap);
+      // Plancher monotone : on ne descend jamais sous le BPM du boost
+      // précédent. Si bpmRaw repassait sous (jitter négatif sur un palier
+      // déjà haut), on remonte à prevBoostBpm + 4 pour entendre la montée.
       final bpm = bpmRaw <= prevBoostBpm
-          ? min(prevBoostBpm + 5, bpmCap)
+          ? min(prevBoostBpm + 4, bpmCap)
           : bpmRaw;
-      // `to` ne redescend jamais sous le `to` précédent. Pour la variété, on
-      // peut atteindre boostMaxToIdx ou rester à boostMaxToIdx-1 — mais une
-      // fois atteint un niveau de profondeur, on ne revient pas en arrière.
-      final toIdxFloor = max(prevBoostToIdx, boostMaxToIdx - 1);
-      final toIdx = boostMaxToIdx >= 3 && _rng.nextBool()
-          ? max(toIdxFloor, boostMaxToIdx - 1)
-          : boostMaxToIdx;
+      // Profondeur : ramp aussi sur la progression. boost 1 vise
+      // `boostMaxToIdx - 2`, boost 2 vise -1, boost 3+ vise le max.
+      // Toujours capé entre mid (idx 2) et le plafond. Le plancher
+      // `prevBoostToIdx` garantit la monotonie (jamais de descente).
+      final progressionToIdx = (boostMaxToIdx -
+              2 +
+              2 * (boostsAdded / (plannedBoosts - 1)).clamp(0.0, 1.0))
+          .round()
+          .clamp(2, boostMaxToIdx);
+      final toIdx = max(prevBoostToIdx, progressionToIdx);
       final boostTo = Position.values[toIdx];
       // `from` : 2 crans au-dessus si possible (pour amplitude max), sinon
       // 1 cran. Permet à un finish niveau 4 (maxDepthIndex=2 → mid) de
@@ -709,6 +741,7 @@ class CareerSessionGenerator {
       _lastText = boostText;
       _lastBpm = boostDraft.bpm ?? _lastBpm;
       stamina = _applyStaminaChange(stamina, boostDraft, 1.0, cfg);
+      _advanceSalivaSim(boostDraft);
       excitation = _runOnEngine(_excitSim, boostDraft);
       _fillProfile(profile, time, boostDur, stamina);
       _fillProfile(excitProfile, time, boostDur, excitation);
@@ -733,60 +766,44 @@ class CareerSessionGenerator {
       humilCap: finalHumilCap,
       includeHand: includeHand,
       maxDepth: _maxDepthIndex,
-      level: level,
       finishMul: finishMul,
     );
     final finalCategory = _categorizeFinal(finisherDraft);
     final finalMode = finisherDraft.mode;
 
-    // **Annonce du final sur la step pré-finale** : si le finisher change
-    // de mode (ex: dernier boost = hand, finisher = lick), on remplace le
-    // texte du dernier boost par une phrase qui prépare l'utilisatrice au
-    // changement physique (« sors ta langue, j'arrive »). Sans ça, la
-    // bascule de mode arrive sans préavis vocal et casse la dramaturgie.
-    if (lastBoostIndex != null && burstMode != finalMode) {
-      final announce = bank.pickFinalAnnouncement(
-        preMode: burstMode,
-        finalMode: finalMode,
-        rng: _rng,
-      );
-      if (announce != null && announce.isNotEmpty) {
-        final old = steps[lastBoostIndex];
-        steps[lastBoostIndex] = SessionStep(
-          time: old.time,
-          text: announce,
-          from: old.from,
-          to: old.to,
-          bpm: old.bpm,
-          duration: old.duration,
-          mode: old.mode,
-          chainAction: old.chainAction,
-        );
-        _lastText = announce;
-      }
-    }
-
-    // **Phrase d'action sur le step final** : impératif court à exécuter
-    // immédiatement (« ouvre ta bouche », « sors ta langue », « avale
-    // tout »…). Indexée par mode, et pour `hold` qualifiée par profondeur
-    // (bouche / lèvres / gorge). Le `SessionController` joue cette phrase
-    // au démarrage du step puis enchaîne le `finale_chime` PENDANT le step
-    // (cf. `Session.finalStepTime`) — ainsi l'orgasme retentit sur l'action
-    // en cours, pas après. Fallback `congrats` si la banque ne fournit pas
-    // de `final_action` pour ce mode.
+    // **Annonce du final** : si le finisher change de mode (ex: dernier
+    // boost = hand, finisher = lick), on prépare une phrase qui annonce le
+    // changement physique imminent (« sors ta langue, j'arrive »). On la
+    // pose **sur le step final lui-même** (pas sur le dernier boost) pour
+    // qu'elle retentisse juste avant le `finale_chime` — feedback : annoncée
+    // 12-16 s en avance sur un boost, l'effet « ça arrive » se diluait. Si
+    // le finisher reste dans le même mode, on retombe sur la phrase d'action
+    // (« ouvre ta bouche », « avale tout »…) qui guide l'exécution.
+    final announcePhrase = (lastBoostIndex != null && burstMode != finalMode)
+        ? bank.pickFinalAnnouncement(
+            preMode: burstMode,
+            finalMode: finalMode,
+            rng: _rng,
+          )
+        : null;
     final finalActionPhrase = bank.pickFinalAction(
       mode: finalMode,
       holdPosition: finalMode == SessionMode.hold ? finisherDraft.from : null,
       rng: _rng,
-    ) ?? '';
+    );
+    final finalStepText =
+        (announcePhrase != null && announcePhrase.isNotEmpty)
+            ? announcePhrase
+            : (finalActionPhrase ?? '');
     final finalStepStartTime = time;
     final finisherStep =
-        _draftToStep(finisherDraft, time: time, text: finalActionPhrase);
+        _draftToStep(finisherDraft, time: time, text: finalStepText);
     _lastMode = finalMode;
-    _lastText = finalActionPhrase;
+    _lastText = finalStepText;
     final finisherDuration = finisherDraft.duration!;
     steps.add(finisherStep);
     _fillProfile(profile, time, finisherDuration, stamina);
+    _advanceSalivaSim(finisherDraft);
     excitation = _runOnEngine(_excitSim, finisherDraft);
     _fillProfile(excitProfile, time, finisherDuration, excitation);
     time += finisherDuration;
@@ -811,6 +828,7 @@ class CareerSessionGenerator {
     final postFinalDuration = postFinalDraft.duration!;
     steps.add(_draftToStep(postFinalDraft, time: time, text: postFinalText));
     _fillProfile(profile, time, postFinalDuration, stamina);
+    _advanceSalivaSim(postFinalDraft);
     excitation = _runOnEngine(_excitSim, postFinalDraft);
     _fillProfile(excitProfile, time, postFinalDuration, excitation);
     time += postFinalDuration;
@@ -893,8 +911,8 @@ class CareerSessionGenerator {
     _StepDraft holdTip() => _StepDraft(
           mode: SessionMode.hold,
           bpm: null,
-          from: Position.tip,
-          to: null,
+          from: null,
+          to: Position.tip,
           duration: dur,
         );
     _StepDraft lick() => _StepDraft(
@@ -914,8 +932,8 @@ class CareerSessionGenerator {
     _StepDraft holdHead() => _StepDraft(
           mode: SessionMode.hold,
           bpm: null,
-          from: Position.head,
-          to: null,
+          from: null,
+          to: Position.head,
           duration: dur,
         );
     _StepDraft begLibre() => _StepDraft(
@@ -928,8 +946,8 @@ class CareerSessionGenerator {
     _StepDraft begHead() => _StepDraft(
           mode: SessionMode.beg,
           bpm: null,
-          from: Position.head,
-          to: null,
+          from: null,
+          to: Position.head,
           duration: dur,
         );
     // Échelle ordonnée. `blocked` exclut le mode du final (alternance) et,
@@ -961,17 +979,15 @@ class CareerSessionGenerator {
 
   /// Convertit un [SessionStep] (issu du JSON ou d'une milestone) en
   /// [_StepDraft] interne pour pouvoir le passer à `_applyStaminaChange`
-  /// et `_runOnEngine`. Inverse le swap from↔to fait par `_draftToStep`
-  /// pour les modes hold/beg.
+  /// et `_runOnEngine`. Convention uniforme : hold/beg portent leur
+  /// position dans `to` ; aucun swap.
   _StepDraft _stepToDraft(SessionStep step, SessionMode defaultMode) {
     final mode = step.mode ?? defaultMode;
-    final isHoldLike =
-        mode == SessionMode.hold || mode == SessionMode.beg;
     return _StepDraft(
       mode: mode,
       bpm: step.bpm,
-      from: isHoldLike ? step.to : step.from,
-      to: isHoldLike ? null : step.to,
+      from: step.from,
+      to: step.to,
       duration: step.duration ?? 0,
     );
   }
@@ -988,8 +1004,10 @@ class CareerSessionGenerator {
     if (intense) {
       // Plus profond et plus rapide que quickie : la régen post-Supplier
       // est censée prouver que l'utilisatrice « monte d'un niveau ».
-      // Plafonné par maxDepthIndex pour rester dans le contrat du niveau.
-      final to = Position.values[_maxDepthIndex.clamp(2, 3)];
+      // Profondeur plafonnée par les milestones acquittées (jamais throat
+      // sans `throat_pulse`, jamais full sans `full_pulse`) — on borne aussi
+      // à throat (idx 3) pour ne jamais lancer un intense full d'amorce.
+      final to = Position.values[_milestoneRhythmCeilingIdx().clamp(2, 3)];
       return _StepDraft(
         mode: SessionMode.rhythm,
         bpm: 90,
@@ -1007,13 +1025,10 @@ class CareerSessionGenerator {
         duration: 8,
       );
     }
-    // Panel de variantes : on retient seulement celles compatibles avec
-    // le niveau (head→mid demande maxDepthIndex ≥ 2, déjà le cas dès
-    // niveau 1) et avec `_includeHand`. Tirage uniforme dans la liste
-    // filtrée pour assurer la variété demandée — chaque variante a une
-    // signature identifiable (lick lent, rhythm doux superficiel, rhythm
-    // amplitude moyenne, hand amorce).
-    final allowMid = _maxDepthIndex >= Position.mid.index;
+    // Panel de variantes filtré par milestones : `rhythm_mid_basic`
+    // (intro_deeper_basics, niveau 2) gate les variantes head→mid /
+    // tip→mid. Sans cette milestone, on retombe sur lick / rhythm tip→head
+    // / hand tip→head (toutes débloquées via intro_basics niveau 1).
     final variants = <_StepDraft>[
       const _StepDraft(
         mode: SessionMode.lick,
@@ -1029,22 +1044,20 @@ class CareerSessionGenerator {
         to: Position.head,
         duration: 16,
       ),
-      if (allowMid)
-        const _StepDraft(
-          mode: SessionMode.rhythm,
-          bpm: 70,
-          from: Position.head,
-          to: Position.mid,
-          duration: 14,
-        ),
-      if (allowMid)
-        const _StepDraft(
-          mode: SessionMode.rhythm,
-          bpm: 65,
-          from: Position.tip,
-          to: Position.mid,
-          duration: 16,
-        ),
+      const _StepDraft(
+        mode: SessionMode.rhythm,
+        bpm: 70,
+        from: Position.head,
+        to: Position.mid,
+        duration: 14,
+      ),
+      const _StepDraft(
+        mode: SessionMode.rhythm,
+        bpm: 65,
+        from: Position.tip,
+        to: Position.mid,
+        duration: 16,
+      ),
       if (_includeHand)
         const _StepDraft(
           mode: SessionMode.hand,
@@ -1054,7 +1067,9 @@ class CareerSessionGenerator {
           duration: 18,
         ),
     ];
-    return variants[_rng.nextInt(variants.length)];
+    final allowed = variants.where(_isUnlocked).toList();
+    if (allowed.isEmpty) return variants.first;
+    return allowed[_rng.nextInt(allowed.length)];
   }
 
   /// Construit un step `breath` dont la durée est calculée pour combler
@@ -1091,8 +1106,10 @@ class CareerSessionGenerator {
   /// d'humeur générale.
   _StepDraft _buildRecoveryStep() {
     final canBeg = _unlockedKeys.contains(UnlockKey.begLibre);
-    final canFreestyle = _unlockedKeys.contains(UnlockKey.freestyle)
-        && _level >= HumiliationScale.freestyleMinLevel;
+    // Freestyle gaté uniquement par sa milestone (intro_freestyle, niveau
+    // 7) — on ne double-check plus le niveau, l'acquittement de la
+    // milestone est l'unique source de vérité.
+    final canFreestyle = _unlockedKeys.contains(UnlockKey.freestyle);
     final candidates = [
       SessionMode.lick,
       if (_includeHand) SessionMode.biffle,
@@ -1210,21 +1227,25 @@ class CareerSessionGenerator {
         );
         return _StepDraft(mode: mode, bpm: bpm, from: from, to: to, duration: dur);
       case SessionMode.biffle:
+        // Biffle = coups de queue sur le visage : pas de notion de
+        // position. from/to restent null.
         final bpm = _lerp(80.0, 140.0, bpmScore).round();
-        final (from, to) = _sampleFromTo(ampScore);
         final dur = _scaleDuration(
           _lerp(15.0, 40.0, durScore),
           enduranceFactor: 0.05,
         );
-        return _StepDraft(mode: mode, bpm: bpm, from: from, to: to, duration: dur);
+        return _StepDraft(
+            mode: mode, bpm: bpm, from: null, to: null, duration: dur);
       case SessionMode.hold:
-        final from = _pickHoldPosition(ampScore);
+        // Convention uniforme hold/beg : la position tenue est dans `to`
+        // (matche BeepEngine et le format SessionStep des JSON).
+        final to = _pickHoldPosition(ampScore);
         final dur = _scaleDuration(
           _lerp(8.0, 30.0, max(durScore, bpmScore)),
           enduranceFactor: 0.08,
           resilienceFactor: 0.07,
         );
-        return _StepDraft(mode: mode, bpm: null, from: from, to: null, duration: dur);
+        return _StepDraft(mode: mode, bpm: null, from: null, to: to, duration: dur);
       case SessionMode.lick:
         // Sloppy : monte le BPM minimum (≥ 65 = lick humide / saliveux).
         final sloppyPts = _pts(SpecializationBranch.sloppy);
@@ -1244,24 +1265,25 @@ class CareerSessionGenerator {
         return _StepDraft(
             mode: mode, bpm: null, from: null, to: null, duration: dur);
       case SessionMode.beg:
+        // Convention uniforme hold/beg : la position tenue est dans `to`.
         // Obéissance : beg plus profonds (ampScore boosté localement) et
         // plus longs.
         final obPts = _pts(SpecializationBranch.obeissance);
         final begAmp =
             (ampScore + 0.10 * obPts).clamp(0.0, 1.0);
-        final from = _pickBegPosition(begAmp);
+        final to = _pickBegPosition(begAmp);
         final baseDur = _scaleDuration(
           _lerp(7.0, 16.0, durScore),
           enduranceFactor: 0.04,
           extraFactor: obPts * 0.06,
         );
         final chained = _maybePickBegWithChain(
-          from: from,
+          to: to,
           obPts: obPts,
         );
         if (chained != null) return chained;
         return _StepDraft(
-            mode: mode, bpm: null, from: from, to: null, duration: baseDur);
+            mode: mode, bpm: null, from: null, to: to, duration: baseDur);
       case SessionMode.hand:
         // Hand sert d'outil d'excitation/endurance pure : sa fréquence peut
         // grimper sans coût d'humiliation. Plage très large pour permettre
@@ -1410,7 +1432,8 @@ class CareerSessionGenerator {
                     : 1.0;
         next -= (bpm / 100.0) * depth * dur * depthMul / 3.0;
       case SessionMode.hold:
-        final depth = _positionDepth(draft.from, draft.from);
+        // Convention uniforme : hold/beg portent leur position dans `to`.
+        final depth = _positionDepth(draft.to, draft.to);
         next -= depth * dur / 2.5;
       case SessionMode.biffle:
         // Biffle = effort soutenu (la fille encaisse), conso entre rythme
@@ -1419,11 +1442,12 @@ class CareerSessionGenerator {
         final depth = _positionDepth(draft.from, draft.to);
         next -= (bpm / 100.0) * depth * dur / 3.5;
       case SessionMode.beg:
-        // Sans `from` ou `from = head` → assimilé à du repos vocal (regen).
-        // Avec `from = mid/throat/full` → coût comme un hold à cette
+        // Convention uniforme : hold/beg portent leur position dans `to`.
+        // Sans `to` ou `to = head` → assimilé à du repos vocal (regen).
+        // Avec `to = mid/throat/full` → coût comme un hold à cette
         // profondeur (la position doit être tenue pendant la supplique).
-        final from = draft.from;
-        if (from == null || from == Position.head) {
+        final to = draft.to;
+        if (to == null || to == Position.head) {
           final regen = _lerp(
             cfg.regenStartMultiplier,
             cfg.regenEndMultiplier,
@@ -1431,7 +1455,7 @@ class CareerSessionGenerator {
           );
           next += dur * 1.0 * regen;
         } else {
-          final depth = _positionDepth(from, from);
+          final depth = _positionDepth(to, to);
           next -= depth * dur / 2.5;
         }
       case SessionMode.lick:
@@ -1472,22 +1496,22 @@ class CareerSessionGenerator {
   }
 
   /// Si [draft] est un `beg` qui suit immédiatement un `lick` ou un
-  /// `breath`, retourne une copie sans `from` (récup vocale pure).
+  /// `breath`, retourne une copie sans position tenue (récup vocale pure).
   /// Sinon, renvoie [draft] tel quel.
   _StepDraft _stripBegFromAfterSoft(
     _StepDraft draft,
     List<SessionStep> steps,
   ) {
     if (draft.mode != SessionMode.beg) return draft;
-    if (draft.from == null) return draft;
+    if (draft.to == null) return draft;
     if (steps.isEmpty) return draft;
     final prev = steps.last.mode;
     if (prev != SessionMode.lick && prev != SessionMode.breath) return draft;
     return _StepDraft(
       mode: draft.mode,
       bpm: draft.bpm,
-      from: null,
-      to: draft.to,
+      from: draft.from,
+      to: null,
       duration: draft.duration,
     );
   }
@@ -1509,27 +1533,33 @@ class CareerSessionGenerator {
   /// possible mais minoritaire (~15%) — sinon on se retrouve avec une
   /// majorité de tip→head en début de session, alors que la position de
   /// référence pour la coach est head.
-  (Position, Position) _sampleFromTo(double ampScore) {
+  /// [capByDepth] = true → ceiling et probabilité de profondeur appliqués
+  /// (rythme : la profondeur est gated par milestone). false → toutes
+  /// profondeurs autorisées (lick : la langue n'a pas de tension de
+  /// profondeur ; le filtre se fait en aval via `_isUnlocked` quand `to`
+  /// requiert une milestone, ex: `lick_full`).
+  (Position, Position) _sampleFromTo(double ampScore,
+      {bool capByDepth = true}) {
     final clamped = ampScore.clamp(0.0, 1.0);
     // Min mid (idx 2) au lieu de head (idx 1) : l'amplitude minimale est
-    // head→mid, pas tip→head. Plafond cappé par le niveau via _maxDepthIndex.
-    final ceiling = _maxDepthIndex.clamp(2, 4);
-    var deepestIdx = _lerp(2.0, ceiling.toDouble(), clamped).round().clamp(2, ceiling);
+    // head→mid, pas tip→head.
+    final ceiling = capByDepth ? _maxDepthIndex.clamp(2, 4) : 4;
+    var deepestIdx =
+        _lerp(2.0, ceiling.toDouble(), clamped).round().clamp(2, ceiling);
     // Bonus Profondeur (spé) : remonte la probabilité de profond, dans
-    // la limite du plafond niveau.
+    // la limite du plafond du tirage.
     final depthPts = _pts(SpecializationBranch.profondeur);
+    final effectiveDeepProb = capByDepth ? _deepProbability : 1.0;
     final boostedDeepProb =
-        (_deepProbability + 0.08 * depthPts).clamp(0.0, 1.0);
+        (effectiveDeepProb + 0.08 * depthPts).clamp(0.0, 1.0);
     // Si le tirage demande une position profonde (≥ throat) mais que la
-    // probabilité du niveau ne le permet pas, on rabat sur mid.
+    // probabilité ne le permet pas, on rabat sur mid.
     if (deepestIdx >= 3 && _rng.nextDouble() >= boostedDeepProb) {
       deepestIdx = 2;
     }
     final int shallowestIdx;
     if (deepestIdx >= 3 && _rng.nextDouble() < 0.15) {
       // ~15% : tip pour les amplitudes pleines (tip→full marque bien).
-      // Réservé aux niveaux qui autorisent throat+ (sinon tip→mid c'est
-      // pas vraiment "plein").
       shallowestIdx = 0;
     } else {
       // Sinon : head ou plus profond (jamais tip), uniforme entre les
@@ -1542,12 +1572,10 @@ class CareerSessionGenerator {
     );
   }
 
-  /// Tirage spécifique au mode hand. La main tient la base de la queue,
-  /// donc on plafonne la profondeur à throat (jamais full, contrairement
-  /// au tirage générique). On autorise l'amplitude courte tip→head qui
-  /// est exclue du tirage générique. Cap supplémentaire par
-  /// `_maxDepthIndex` (ne dépassera jamais throat même si le niveau
-  /// autorise full).
+  /// Tirage spécifique au mode hand. La stimulation main n'engage pas la
+  /// bouche : aucune contrainte de profondeur (ni `_maxDepthIndex`, ni
+  /// `_deepProbability`). On autorise l'amplitude courte tip→head qui
+  /// est exclue du tirage générique pour la variété.
   ///
   /// **Règle transverse** : `from` et `to` désignent toujours deux zones
   /// différentes (`from.index < to.index` strict). Pas de stimulation sur
@@ -1555,24 +1583,13 @@ class CareerSessionGenerator {
   /// mode rythmé qui alterne entre deux positions.
   (Position, Position) _sampleFromToForHand(double ampScore) {
     final clamped = ampScore.clamp(0.0, 1.0);
-    // Profondeur cible bornée à throat (idx 3). Et également capée par
-    // _maxDepthIndex pour les bas niveaux qui n'ont pas encore throat.
-    // Floor à 1 (head) pour pouvoir avoir tip→head comme amplitude
-    // minimale ; mais si _maxDepthIndex <= 0 (cas pathologique), on
-    // remonte à au moins 1 pour garder un from < to possible.
-    final ceiling = min(3, _maxDepthIndex.clamp(1, 4));
-    // ampScore=0 → idx 1 (head). ampScore=1 → ceiling (throat ou max niveau).
-    var deepestIdx =
-        _lerp(1.0, ceiling.toDouble(), clamped).round().clamp(1, ceiling);
-    // Si throat tiré mais le niveau ne le permet probabilistiquement pas,
-    // on rabat sur mid (cohérent avec la logique de _sampleFromTo).
-    if (deepestIdx >= 3 &&
-        _rng.nextDouble() >= _deepProbability.clamp(0.0, 1.0)) {
-      deepestIdx = 2;
-    }
-    // shallowestIdx : strictement plus petit que deepestIdx. Avec
-    // deepestIdx=1 (head), seul tip est possible → tip→head garanti.
-    // Avec deepestIdx ∈ {2 (mid), 3 (throat)}, parmi tip ou head.
+    // ampScore=0 → idx 1 (head). ampScore=1 → idx 4 (full). Toutes
+    // amplitudes ouvertes — la main n'a pas de tension de profondeur.
+    final deepestIdx =
+        _lerp(1.0, 4.0, clamped).round().clamp(1, 4);
+    // shallowestIdx strictement plus petit que deepestIdx. tip→head pour
+    // amplitude minimale ; sinon tip ou head pour les amplitudes plus
+    // grandes (le from est toujours en surface en hand).
     final int shallowestIdx;
     if (deepestIdx == 1) {
       shallowestIdx = 0;
@@ -1587,14 +1604,16 @@ class CareerSessionGenerator {
 
   /// Tirage spécifique au mode lick. Tant que `_humiliationScore < 2`,
   /// le lick reste sur tip→head (l'utilisatrice n'a pas encore appris à
-  /// lécher plus profond). À partir de 2, toutes les amplitudes du tirage
-  /// générique sont autorisées, y compris tip→throat/full pour les
-  /// amplitudes pleines.
+  /// lécher plus profond). À partir de 2, toutes les amplitudes sont
+  /// autorisées sans cap niveau — la langue n'a pas de tension de
+  /// profondeur (`capByDepth: false`). Si le tirage tombe sur to=full
+  /// sans la milestone `lick_full`, le filtre `_isUnlocked` en cascade
+  /// dégrade.
   (Position, Position) _sampleFromToForLick(double ampScore) {
     if (_humiliationScore < 2.0) {
       return (Position.tip, Position.head);
     }
-    return _sampleFromTo(ampScore);
+    return _sampleFromTo(ampScore, capByDepth: false);
   }
 
   /// Choix de la position d'un hold selon ampScore : mid / throat / full.
@@ -1622,30 +1641,42 @@ class CareerSessionGenerator {
     return pick;
   }
 
-  /// Choix de la position du hold final selon le niveau. Bas niveau : on
-  /// reste sur mid/throat, pour ne pas demander un full d'entrée. Niveau
-  /// intermédiaire : tirage parmi mid/throat/full. Haut niveau : full.
-  /// Capé en plus par `_maxDepthIndex` (niveau 1 = mid forcé).
-  Position _pickFinisherPosition(int level) {
-    Position pick;
-    if (level <= 1) {
-      pick = Position.mid;
-    } else if (level <= 2) {
-      pick = _rng.nextBool() ? Position.mid : Position.throat;
-    } else if (level <= 4) {
-      final r = _rng.nextDouble();
-      if (r < 0.30) {
-        pick = Position.mid;
-      } else if (r < 0.70) {
-        pick = Position.throat;
-      } else {
-        pick = Position.full;
-      }
+  /// Cap de profondeur autorisé pour les modes rythmés (rhythm/hand) en
+  /// `to`, basé sur les milestones effectivement acquittées :
+  /// - `fullPulse` (intro_full_pulse) → full ouvert
+  /// - `throatPulse` (intro_throat_pulse) → throat ouvert
+  /// - sinon → plafond mid (la joueuse n'a pas encore appris la profondeur)
+  ///
+  /// Capé aussi par `_maxDepthIndex` en sécurité (cohérence niveau).
+  /// Indépendant du niveau : c'est l'acquittement de la milestone qui
+  /// débloque, pas le passage de palier.
+  int _milestoneRhythmCeilingIdx() {
+    final int milestoneCap;
+    if (_unlockedKeys.contains(UnlockKey.fullPulse)) {
+      milestoneCap = Position.full.index;
+    } else if (_unlockedKeys.contains(UnlockKey.throatPulse)) {
+      milestoneCap = Position.throat.index;
     } else {
-      pick = Position.full;
+      milestoneCap = Position.mid.index;
     }
-    if (pick.index > _maxDepthIndex) pick = Position.values[_maxDepthIndex];
-    return pick;
+    return min(milestoneCap, _maxDepthIndex);
+  }
+
+  /// Choix de la position du pré-finisher (transition rythmée juste avant
+  /// les boosts, bas niveaux). Le cap suit `_milestoneRhythmCeilingIdx`
+  /// — gating par milestones acquittées, jamais par niveau seul.
+  Position _pickFinisherPosition(int level) {
+    final ceilingIdx = _milestoneRhythmCeilingIdx();
+    if (ceilingIdx <= Position.mid.index) return Position.mid;
+    if (ceilingIdx == Position.throat.index) {
+      // throatPulse acquis : 30% mid (variété) / 70% throat.
+      return _rng.nextDouble() < 0.30 ? Position.mid : Position.throat;
+    }
+    // ceilingIdx == full → fullPulse acquis : tirage parmi mid/throat/full.
+    final r = _rng.nextDouble();
+    if (r < 0.30) return Position.mid;
+    if (r < 0.70) return Position.throat;
+    return Position.full;
   }
 
   /// Tente de transformer un beg simple en beg + action enchaînée
@@ -1662,13 +1693,13 @@ class CareerSessionGenerator {
   /// Le tirage est uniforme parmi les templates dont les deux composants
   /// passent `_isUnlocked`. `null` si aucun ne passe.
   _StepDraft? _maybePickBegWithChain({
-    required Position? from,
+    required Position? to,
     required int obPts,
   }) {
-    // Pour V1, on n'attache une chain que sur un beg libre (from == null).
+    // Pour V1, on n'attache une chain que sur un beg libre (to == null).
     // Les beg avec position tenue (mid/throat/full) sont déjà mécaniquement
     // chargés, on ne veut pas y greffer une seconde action en plus.
-    if (from != null) return null;
+    if (to != null) return null;
     final probability = 0.20 + 0.05 * obPts;
     if (_rng.nextDouble() > probability.clamp(0.20, 0.60)) return null;
 
@@ -1692,7 +1723,7 @@ class CareerSessionGenerator {
   /// Templates `(beg, chainAction)` pour la palette `_maybePickBegWithChain`.
   /// La durée du beg est l'enveloppe : pour un beg libre on l'écrase par
   /// `baseDuration` clampé entre les deux bornes définies ici (utilisé
-  /// comme min/max). Pour un beg ancré (`from != null`), on garde tel quel.
+  /// comme min/max). Pour un beg ancré (`to != null`), on garde tel quel.
   static const List<(_StepDraft, _StepDraft)> _begChainTemplates = [
     // Beg libre + rhythm tip→head 80 BPM 18 s.
     (
@@ -1740,19 +1771,19 @@ class CareerSessionGenerator {
       _StepDraft(
         mode: SessionMode.hold,
         bpm: null,
-        from: Position.head,
-        to: null,
+        from: null,
+        to: Position.head,
         duration: 6,
       ),
     ),
     // Beg head + lick head→mid 65 BPM 12 s — profil obéissance avancée
-    // (gated par begThroat car beg from non-null).
+    // (gated par begThroat car beg to non-null).
     (
       _StepDraft(
         mode: SessionMode.beg,
         bpm: null,
-        from: Position.head,
-        to: null,
+        from: null,
+        to: Position.head,
         duration: 8,
       ),
       _StepDraft(
@@ -1793,6 +1824,24 @@ class CareerSessionGenerator {
     final end = min(profile.length, from + count);
     for (var i = max(0, from); i < end; i++) {
       profile[i] = value;
+    }
+  }
+
+  /// Avance la simulation salive pour un draft. Mute `_salivaSim` et
+  /// `_salivaSimSecond`. Appelé en parallèle de chaque simulation excit
+  /// principale via [_emitDraftOnSims].
+  void _advanceSalivaSim(_StepDraft draft) {
+    final dur = draft.duration ?? 0;
+    if (dur <= 0) return;
+    for (var s = 0; s < dur; s++) {
+      _salivaSim.onTickSecond(
+        mode: draft.mode,
+        from: draft.from,
+        to: draft.to,
+        swallowMode: SwallowMode.allowed,
+        elapsedSecond: _salivaSimSecond,
+      );
+      _salivaSimSecond++;
     }
   }
 
@@ -1860,7 +1909,6 @@ class CareerSessionGenerator {
     required double humilCap,
     required bool includeHand,
     required int maxDepth,
-    required int level,
     required double finishMul,
   }) {
     final endPts = _pts(SpecializationBranch.endurance);
@@ -1897,8 +1945,8 @@ class CareerSessionGenerator {
       _StepDraft(
         mode: SessionMode.hold,
         bpm: null,
-        from: Position.tip,
-        to: null,
+        from: null,
+        to: Position.tip,
         duration: shortHoldDur,
       ),
       5.0,
@@ -1925,8 +1973,8 @@ class CareerSessionGenerator {
       _StepDraft(
         mode: SessionMode.hold,
         bpm: null,
-        from: Position.head,
-        to: null,
+        from: null,
+        to: Position.head,
         duration: shortHoldDur,
       ),
       14.0,
@@ -1939,8 +1987,8 @@ class CareerSessionGenerator {
       _StepDraft(
         mode: SessionMode.hold,
         bpm: null,
-        from: Position.mid,
-        to: null,
+        from: null,
+        to: Position.mid,
         duration: shortHoldDur,
       ),
       10.0,
@@ -1965,9 +2013,15 @@ class CareerSessionGenerator {
     }
 
     if (maxDepth >= Position.throat.index) {
-      // Cible : 10s niveau 4, +2s par niveau, +2s par point Endurance.
-      // Cap relâché à 40s pour laisser respirer la branche endurance maxée.
-      final targetDur = (10 + (level - 4) * 2 + endPts * 2).clamp(10, 40);
+      // Cible évolutive avec l'humiliation accumulée (humilCap = score
+      // courant + rampe de finish). Seuil d'introduction throat ≈ 10
+      // d'humiliation (req intrinsèque hold throat 10s = 8, marge
+      // de tolérance) : à humilCap=10 on tient le minimum (10s) ;
+      // +2s par tranche de 5 points d'humil au-dessus. Cap relâché
+      // à 40s pour laisser respirer la branche endurance maxée.
+      final humilOver = max(0.0, humilCap - 10.0);
+      final targetDur =
+          (10 + (humilOver / 5).floor() * 2 + endPts * 2).clamp(10, 40);
       final dur = _trimHoldFinalDuration(
         target: targetDur,
         humilCap: humilCap,
@@ -1982,8 +2036,8 @@ class CareerSessionGenerator {
         _StepDraft(
           mode: SessionMode.hold,
           bpm: null,
-          from: Position.throat,
-          to: null,
+          from: null,
+          to: Position.throat,
           duration: dur,
         ),
         req,
@@ -1992,9 +2046,13 @@ class CareerSessionGenerator {
     }
 
     if (maxDepth >= Position.full.index) {
-      // Cible : 10s niveau 8, +3s par niveau, +3s par point Endurance.
-      // Cap relâché à 80s.
-      final targetDur = (10 + (level - 8) * 3 + endPts * 3).clamp(10, 80);
+      // Cible évolutive avec l'humiliation accumulée. Seuil d'introduction
+      // full ≈ 30 d'humiliation (req intrinsèque hold full 10s = 22,
+      // marge de tolérance) : à humilCap=30 on tient le minimum (10s) ;
+      // +3s par tranche de 8 points d'humil au-dessus. Cap relâché à 80s.
+      final humilOver = max(0.0, humilCap - 30.0);
+      final targetDur =
+          (10 + (humilOver / 8).floor() * 3 + endPts * 3).clamp(10, 80);
       final dur = _trimHoldFinalDuration(
         target: targetDur,
         humilCap: humilCap,
@@ -2009,8 +2067,8 @@ class CareerSessionGenerator {
         _StepDraft(
           mode: SessionMode.hold,
           bpm: null,
-          from: Position.full,
-          to: null,
+          from: null,
+          to: Position.full,
           duration: dur,
         ),
         req,
@@ -2161,7 +2219,10 @@ class CareerSessionGenerator {
   /// est null) si le draft a exactement la même amplitude que le step
   /// précédent. Sert pour rhythm/lick/hand/biffle : empêche d'enchaîner
   /// deux head→mid identiques. Décale d'un cran vers le haut ou le bas
-  /// selon ce qui est possible (en respectant `_maxDepthIndex`).
+  /// selon le mode :
+  /// - rhythm : `_milestoneRhythmCeilingIdx()` (gating milestone)
+  /// - lick / hand : full ouvert (pas de tension de profondeur)
+  /// - biffle : pas concerné (from/to null par convention)
   _StepDraft _diversifyAmplitude(_StepDraft d) {
     if (d.mode != SessionMode.rhythm &&
         d.mode != SessionMode.lick &&
@@ -2176,9 +2237,9 @@ class CareerSessionGenerator {
     // Même amplitude que le step précédent : on décale `to` d'un cran.
     final toIdx = d.to?.index;
     if (toIdx == null) return d;
-    final ceil = d.mode == SessionMode.hand
-        ? min(3, _maxDepthIndex)
-        : _maxDepthIndex;
+    final ceil = d.mode == SessionMode.rhythm
+        ? _milestoneRhythmCeilingIdx()
+        : 4;
     final fromIdx = d.from?.index ?? 0;
     final canUp = toIdx + 1 <= ceil;
     final canDown = toIdx - 1 > fromIdx;
@@ -2214,19 +2275,19 @@ class CareerSessionGenerator {
   /// Convertit un [_StepDraft] interne en [SessionStep] sérialisable.
   /// Pour les modes hold/beg, swap `from` (position cible interne au draft)
   /// vers `to` côté SessionStep — sémantique « on tient jusqu'à cette
-  /// position ». Les autres modes (rhythm/lick/hand/biffle) gardent
-  /// from/to inchangés (alternance from↔to).
+  /// position ». Convention uniforme : hold/beg portent leur position dans
+  /// `to`, les autres modes (rhythm/lick/hand/biffle) utilisent from→to
+  /// pour l'alternance. Plus de swap, le draft interne et le SessionStep
+  /// produit utilisent la même convention.
   SessionStep _draftToStep(_StepDraft draft,
       {required int time, String text = ''}) {
-    final isHoldLike =
-        draft.mode == SessionMode.hold || draft.mode == SessionMode.beg;
     return SessionStep(
       time: time,
       text: text,
       mode: draft.mode,
       bpm: draft.bpm,
-      from: isHoldLike ? null : draft.from,
-      to: isHoldLike ? (draft.to ?? draft.from) : draft.to,
+      from: draft.from,
+      to: draft.to,
       duration: draft.duration,
     );
   }
@@ -2252,7 +2313,7 @@ class CareerSessionGenerator {
     if (d.mode == SessionMode.hand) return FinalCategory.easy;
     if (d.mode == SessionMode.biffle) return FinalCategory.medium;
     if (d.mode == SessionMode.hold) {
-      switch (d.from) {
+      switch (d.to) {
         case Position.tip:
           return FinalCategory.easy;
         case Position.head:
@@ -2275,15 +2336,16 @@ class CareerSessionGenerator {
   UnlockKey? _unlockKeyFor(_StepDraft d) {
     switch (d.mode) {
       case SessionMode.hold:
-        final from = d.from;
-        if (from == null || from == Position.tip) return UnlockKey.holdTip;
-        if (from == Position.head) return UnlockKey.holdHead;
-        if (from == Position.mid) return UnlockKey.holdMidShort;
+        // Convention : hold/beg portent leur position dans `to`.
+        final to = d.to;
+        if (to == null || to == Position.tip) return UnlockKey.holdTip;
+        if (to == Position.head) return UnlockKey.holdHead;
+        if (to == Position.mid) return UnlockKey.holdMidShort;
         final dur = d.duration ?? 0;
-        if (from == Position.throat) {
+        if (to == Position.throat) {
           return dur > 10 ? UnlockKey.throatHoldLong : UnlockKey.throatHoldShort;
         }
-        if (from == Position.full) {
+        if (to == Position.full) {
           return dur > 10 ? UnlockKey.fullHoldLong : UnlockKey.fullHoldShort;
         }
         return null;
@@ -2301,11 +2363,12 @@ class CareerSessionGenerator {
       case SessionMode.freestyle:
         return UnlockKey.freestyle;
       case SessionMode.beg:
-        if (d.from == null) return UnlockKey.begLibre;
-        if (d.from == Position.full) return UnlockKey.begFull;
+        // Convention : hold/beg portent leur position dans `to`.
+        if (d.to == null) return UnlockKey.begLibre;
+        if (d.to == Position.full) return UnlockKey.begFull;
         // Toute supplique avec position tenue (head/mid/throat) reste
         // gated par begThroat (palier niveau 14). Avant ça, seule la
-        // supplique libre (from=null) doit apparaître. Évite que le
+        // supplique libre (to=null) doit apparaître. Évite que le
         // générateur produise des beg head/mid après l'unlock de
         // begLibre alors qu'aucun milestone ne les a explicitement
         // introduits.
@@ -2369,7 +2432,13 @@ class CareerSessionGenerator {
         bpm: current.bpm,
         duration: current.duration,
       );
-      if (r <= available && _isUnlocked(current)) return current;
+      // Lubrification : la salive projetée module le cap pour les actions
+      // qui exigent un fond lubrifié (throat/full). Sous-lubrifié → cap
+      // réduit (l'action est dégradée plus probablement). Bien lubrifié →
+      // cap augmenté (la coach peut pousser plus loin).
+      final lubeDelta = _lubricationCapDelta(current);
+      final effectiveAvailable = available + lubeDelta;
+      if (r <= effectiveAvailable && _isUnlocked(current)) return current;
       current = _stepDownOne(current);
     }
     return _StepDraft(
@@ -2379,6 +2448,32 @@ class CareerSessionGenerator {
       to: Position.head,
       duration: draft.duration ?? 12,
     );
+  }
+
+  /// Retourne un offset au cap d'humiliation selon la lubrification projetée
+  /// par `_salivaSim`. S'applique uniquement aux actions qui sollicitent une
+  /// pénétration profonde (rhythm/lick avec deepest ≥ throat, hold throat/full).
+  /// - saliva < 25 → -5 (sec, l'action coûte plus cher)
+  /// - saliva ≥ 60 → +3 (humide, on peut pousser un peu plus)
+  /// - sinon : 0
+  double _lubricationCapDelta(_StepDraft d) {
+    final deepest = _deepestOf(d.from, d.to);
+    final needsLube = (d.mode == SessionMode.rhythm ||
+            d.mode == SessionMode.lick ||
+            d.mode == SessionMode.hold) &&
+        deepest != null &&
+        deepest.index >= Position.throat.index;
+    if (!needsLube) return 0.0;
+    final saliva = _salivaSim.value;
+    if (saliva < 25.0) return -5.0;
+    if (saliva >= 60.0) return 3.0;
+    return 0.0;
+  }
+
+  Position? _deepestOf(Position? a, Position? b) {
+    if (a == null) return b;
+    if (b == null) return a;
+    return a.index >= b.index ? a : b;
   }
 
   /// Stratégie de dégradation : raccourcir un hold long, baisser `to`
@@ -2392,7 +2487,7 @@ class CareerSessionGenerator {
     // Hold throat/full long → raccourcir d'abord (la durée pèse beaucoup
     // sur l'humiliation requise, la position reste contractuelle).
     if (d.mode == SessionMode.hold &&
-        (d.from == Position.throat || d.from == Position.full) &&
+        (d.to == Position.throat || d.to == Position.full) &&
         (d.duration ?? 0) > 5) {
       return _StepDraft(
         mode: d.mode,
@@ -2400,6 +2495,19 @@ class CareerSessionGenerator {
         from: d.from,
         to: d.to,
         duration: max(2, (d.duration ?? 0) ~/ 2),
+      );
+    }
+    // Hold/beg : descendre `to` (la position tenue) d'un cran avant
+    // d'aller plus loin.
+    final isHoldLike =
+        d.mode == SessionMode.hold || d.mode == SessionMode.beg;
+    if (isHoldLike && d.to != null && d.to!.index > Position.tip.index) {
+      return _StepDraft(
+        mode: d.mode,
+        bpm: d.bpm,
+        from: d.from,
+        to: Position.values[d.to!.index - 1],
+        duration: d.duration,
       );
     }
     if (d.to != null && d.to!.index > Position.head.index) {
@@ -2445,12 +2553,13 @@ class CareerSessionGenerator {
         duration: d.duration,
       );
     }
-    if (d.mode == SessionMode.beg && d.from != null) {
+    if (d.mode == SessionMode.beg && d.to != null) {
+      // Beg avec position tenue → repli sur beg libre.
       return _StepDraft(
         mode: d.mode,
         bpm: d.bpm,
         from: null,
-        to: d.to,
+        to: null,
         duration: d.duration,
       );
     }
@@ -2463,13 +2572,27 @@ class CareerSessionGenerator {
     );
   }
 
-  /// Retire `_lastMode` des candidats si une alternative existe — empêche
-  /// qu'un même mode (typiquement breath ou beg) se déclenche deux steps
-  /// d'affilé. Si la liste tombe à 0 (cas pathologique : un seul candidat
-  /// déjà égal au précédent), on revient à la liste d'origine.
+  /// Retire `_lastMode` des candidats si une alternative existe et que le
+  /// mode est « ponctuel » (breath / beg / biffle / hold / freestyle) — deux
+  /// events identiques d'affilé y sonneraient comme un bug.
+  ///
+  /// Pour les modes « flow » (rhythm / lick / hand), on **accepte la
+  /// répétition** : la variété passe par les paramètres (BPM via
+  /// `_applyBpmDiversity` qui force ≥18 BPM de delta, profondeur via
+  /// `_diversifyAmplitude` qui décale d'un cran). Sans cette fenêtre de
+  /// rester sur le même mode, on sortait nécessairement de rythme à chaque
+  /// step ; l'utilisateur a relevé que la séance ressemblait à une rotation
+  /// stricte au lieu de phases prolongées avec variation.
   List<SessionMode> _filterRepeated(List<SessionMode> candidates) {
-    if (_lastMode == null || candidates.length <= 1) return candidates;
-    final filtered = candidates.where((m) => m != _lastMode).toList();
+    final last = _lastMode;
+    if (last == null || candidates.length <= 1) return candidates;
+    const flowModes = {
+      SessionMode.rhythm,
+      SessionMode.lick,
+      SessionMode.hand,
+    };
+    if (flowModes.contains(last)) return candidates;
+    final filtered = candidates.where((m) => m != last).toList();
     if (filtered.isEmpty) return candidates;
     return filtered;
   }

@@ -9,6 +9,14 @@
     "Une vraie salope ne lâche pas comme ça.",
     "Respire… parce que tu vas morfler maintenant."
   ],
+  "fail_phrases_swallow": [
+    "Tu as avalé. Sans permission. Tu sais ce qui t'attend.",
+    "Je t'avais dit de garder. Tu n'as pas tenu. Tu vas le payer.",
+    "Petite désobéissante. Tu as ravalé alors que je l'interdisais.",
+    "Tu ne peux même pas tenir ta salive quand on te le demande. Pitoyable.",
+    "Tu as craqué. Tu as avalé. On va te rappeler comment on obéit.",
+    "Une seule consigne : ne pas avaler. Et tu n'as pas tenu. Honteuse."
+  ],
   "punishments": [
     {
       "id": "extra_throat",
@@ -17,7 +25,7 @@
       "steps": [
         {"time": 0, "text": "Punition. Quarante secondes en gorge sans pitié.", "mode": "rhythm", "from": "throat", "to": "full", "bpm": 100},
         {"time": 20, "text": "Plus profond. Avale tout."},
-        {"time": 35, "text": "Hold final.", "mode": "hold", "from": "full", "duration": 8}
+        {"time": 35, "text": "Hold final.", "mode": "hold", "to": "full", "duration": 8}
       ]
     },
     {
@@ -35,11 +43,11 @@
       "name": "Chaîne de Holds",
       "duration_seconds": 55,
       "steps": [
-        {"time": 0, "text": "Trois holds enchaînés. Premier en gorge.", "mode": "hold", "from": "throat", "duration": 10},
+        {"time": 0, "text": "Trois holds enchaînés. Premier en gorge.", "mode": "hold", "to": "throat", "duration": 10},
         {"time": 12, "text": "Respire.", "mode": "breath", "duration": 4},
-        {"time": 17, "text": "Deuxième, plus profond.", "mode": "hold", "from": "throat", "duration": 12},
+        {"time": 17, "text": "Deuxième, plus profond.", "mode": "hold", "to": "throat", "duration": 12},
         {"time": 31, "text": "Respire.", "mode": "breath", "duration": 4},
-        {"time": 36, "text": "Dernier en balls deep.", "mode": "hold", "from": "full", "duration": 15}
+        {"time": 36, "text": "Dernier en balls deep.", "mode": "hold", "to": "full", "duration": 15}
       ]
     },
     {
@@ -49,7 +57,7 @@
       "steps": [
         {"time": 0, "text": "Punition lente. Très lent et très profond.", "mode": "rhythm", "from": "throat", "to": "full", "bpm": 40},
         {"time": 25, "text": "Sens chaque centimètre."},
-        {"time": 45, "text": "Hold.", "mode": "hold", "from": "full", "duration": 10}
+        {"time": 45, "text": "Hold.", "mode": "hold", "to": "full", "duration": 10}
       ]
     },
     {

@@ -7,9 +7,11 @@ class DebugSettingsService {
   static const String _kShowExcitationBar = 'debug.show_excitation_bar';
   static const String _kShowHumiliationBar = 'debug.show_humiliation_bar';
   static const String _kShowObedienceBar = 'debug.show_obedience_bar';
+  static const String _kShowSalivaBar = 'debug.show_saliva_bar';
   static const String _kShowSessionControls = 'debug.show_session_controls';
   static const String _kShowModeBadge = 'debug.show_mode_badge';
   static const String _kCameraHoldCheck = 'debug.camera_hold_check';
+  static const String _kSkipSessionButton = 'debug.skip_session_button';
 
   Future<bool> getShowStaminaBar() async {
     final prefs = await SharedPreferences.getInstance();
@@ -68,6 +70,16 @@ class DebugSettingsService {
     await prefs.setBool(_kShowObedienceBar, value);
   }
 
+  Future<bool> getShowSalivaBar() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_kShowSalivaBar) ?? false;
+  }
+
+  Future<void> setShowSalivaBar(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kShowSalivaBar, value);
+  }
+
   /// Quand true, l'écran de session affiche les boutons play/pause et stop.
   /// Réservé au debug : en prod, la séance se déroule de bout en bout sans
   /// interaction (téléphone posé sur le côté), seul le bouton FAIL reste
@@ -111,5 +123,19 @@ class DebugSettingsService {
   Future<void> setCameraHoldCheck(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kCameraHoldCheck, value);
+  }
+
+  /// Quand true, l'écran de session expose un bouton « DEBUG : terminer en
+  /// succès » qui clôt la séance immédiatement comme si elle avait été
+  /// jouée intégralement sans fail (badges, milestones, niveau). Pratique
+  /// pour itérer sur le contenu sans devoir rejouer une séance entière.
+  Future<bool> getSkipSessionButton() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_kSkipSessionButton) ?? false;
+  }
+
+  Future<void> setSkipSessionButton(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kSkipSessionButton, value);
   }
 }

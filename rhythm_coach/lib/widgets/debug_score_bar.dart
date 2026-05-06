@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 
 /// Barre debug générique : label fixe à gauche (~64 px), barre à fraction
@@ -99,6 +100,18 @@ Color humiliationColorForRatio(double ratio) {
   return const Color(0xFFCE93D8);
 }
 
+/// Palette « salive » : transparent → bleu pâle → cyan → bleu profond, et
+/// rouge sombre au-dessus du seuil de débordement (90 %) pour signaler la
+/// saturation. Quand la jauge atteint 100 % ça déborde, on veut le rendre
+/// visible d'un coup d'œil.
+Color salivaColorForRatio(double ratio) {
+  if (ratio >= 1.0) return const Color(0xFF7B1FA2);
+  if (ratio >= 0.90) return const Color(0xFF1976D2);
+  if (ratio >= 0.60) return const Color(0xFF29B6F6);
+  if (ratio >= 0.30) return const Color(0xFF81D4FA);
+  return const Color(0xFFB3E5FC);
+}
+
 /// Palette « obéissance » : rouge si bas (rebelle), vert si haut (docile).
 Color obedienceColorForRatio(double ratio) {
   if (ratio >= 0.90) return const Color(0xFF66BB6A);
@@ -106,4 +119,96 @@ Color obedienceColorForRatio(double ratio) {
   if (ratio >= 0.50) return Colors.amber;
   if (ratio >= 0.25) return const Color(0xFFFFA726);
   return const Color(0xFFEF5350);
+}
+
+/// Plus petit multiple de 50 ≥ value, minimum 100. Utilisé pour les jauges
+/// sans borne haute (humiliation, obédiance) qui doivent rester lisibles
+/// même au-delà de 100.
+double _dynamicMaxStep50(double v) {
+  if (v <= 100) return 100;
+  return ((v / 50).ceil() * 50).toDouble();
+}
+
+/// Barre debug de la jauge d'excitation 0–max. Le `max` est imposé par
+/// l'appelant (cap moteur, cf. CareerLevel.minFinal).
+class ExcitationBar extends StatelessWidget {
+  final double value;
+  final double max;
+
+  const ExcitationBar({
+    super.key,
+    required this.value,
+    this.max = 100.0,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DebugScoreBar(
+      label: AppLocalizations.of(context).debugBarLabelExcitation,
+      value: value,
+      max: max,
+      colorForRatio: excitationColorForRatio,
+    );
+  }
+}
+
+/// Barre debug du score d'humiliation. Pas de cap théorique : le score
+/// peut dépasser 100 sur les longues carrières. `max` adapté par paliers
+/// de 50 (100, 150, 200…).
+class HumiliationBar extends StatelessWidget {
+  final double value;
+
+  const HumiliationBar({super.key, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return DebugScoreBar(
+      label: AppLocalizations.of(context).debugBarLabelHumiliation,
+      value: value,
+      max: _dynamicMaxStep50(value),
+      colorForRatio: humiliationColorForRatio,
+    );
+  }
+}
+
+/// Barre debug de la jauge de salive 0–max. Le `max` est dynamique selon
+/// les compétences sloppy acquises (60 défaut, 100 si `sloppyDroolBasic`,
+/// +20 si `sloppyDroolDeep`).
+class SalivaBar extends StatelessWidget {
+  final double value;
+  final double max;
+
+  const SalivaBar({
+    super.key,
+    required this.value,
+    this.max = 60.0,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DebugScoreBar(
+      label: AppLocalizations.of(context).debugBarLabelSaliva,
+      value: value,
+      max: max,
+      colorForRatio: salivaColorForRatio,
+    );
+  }
+}
+
+/// Barre debug du score d'obéissance. Score persistant entre sessions,
+/// démarre à 0, sans borne haute. `max` adapté par paliers de 50.
+class ObedienceBar extends StatelessWidget {
+  final double value;
+
+  const ObedienceBar({super.key, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return DebugScoreBar(
+      label: AppLocalizations.of(context).debugBarLabelObedience,
+      value: value,
+      max: _dynamicMaxStep50(value),
+      colorForRatio: obedienceColorForRatio,
+    );
+  }
 }

@@ -34,11 +34,20 @@ class PunishmentLoader {
         .map((e) => e.toString())
         .toList();
 
+    final swallowPhrases =
+        (data['fail_phrases_swallow'] as List<dynamic>? ?? const [])
+            .map((e) => e.toString())
+            .toList();
+
     final punishments = (data['punishments'] as List<dynamic>? ?? const [])
         .map((e) => Punishment.fromJson(e as Map<String, dynamic>))
         .toList();
 
-    return PunishmentBundle(failPhrases: phrases, punishments: punishments);
+    return PunishmentBundle(
+      failPhrases: phrases,
+      failPhrasesSwallow: swallowPhrases,
+      punishments: punishments,
+    );
   }
 
   String _resolvePath(String lang) {
@@ -51,10 +60,18 @@ class PunishmentLoader {
 
 class PunishmentBundle {
   final List<String> failPhrases;
+
+  /// Phrases de fail dédiées à la transgression du toggle de déglutition
+  /// (la salope a avalé alors que la coach l'avait interdit). Pool tiré
+  /// uniquement quand `swallowMode == forbidden` au moment du fail. Si
+  /// vide, on retombe sur [failPhrases] pour ne pas casser la session.
+  final List<String> failPhrasesSwallow;
+
   final List<Punishment> punishments;
 
   const PunishmentBundle({
     required this.failPhrases,
+    this.failPhrasesSwallow = const [],
     required this.punishments,
   });
 

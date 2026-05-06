@@ -3,8 +3,6 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../models/session.dart';
-import '../../services/humiliation_engine.dart';
 import '../../services/locale_service.dart';
 import '../models/level_milestone.dart';
 import '../models/milestone_text_override.dart';
@@ -83,6 +81,15 @@ class MilestoneService extends ChangeNotifier {
     _overrides = loaded;
   }
 
+  /// Recharge les overrides texte pour la locale active. À appeler après
+  /// un changement de locale (cf. listener dans `main.dart`). No-op si le
+  /// service n'a pas encore chargé son catalogue.
+  Future<void> reloadLocaleOverrides() async {
+    if (!_loaded) return;
+    await _loadOverrides();
+    notifyListeners();
+  }
+
   /// Vrai si la milestone d'id [id] a été acquittée (sans fail).
   bool isCompleted(String id) => _completed.contains(id);
 
@@ -116,72 +123,85 @@ class MilestoneService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Retourne la milestone **body** à insérer dans la prochaine session
-  /// de [level]. Les milestones de placement `finalApotheose` sont
-  /// exclues — elles ont leur propre canal via [pendingFinalForLevel].
-  /// Critères : `m.level <= level` (on rattrape les milestones non acquittées
-  /// d'anciens niveaux), `requires` tous acquittés, non encore acquittée.
+  /// Tolérance d'humiliation appliquée au seuil de candidature d'une
+  /// milestone : `1 + obedience/50`. Plus l'utilisatrice obéit, plus on
+  /// peut lui imposer une milestone légèrement au-dessus de son
+  /// thermomètre courant. Plancher +1 garanti pour que les milestones à
+  /// `humilRequired ≤ 1` (ex. `intro_basics`) soient jouables dès humil 0.
+  static double humilTolerance(double obedience) {
+    final ob = obedience < 0 ? 0.0 : obedience;
+    return 1.0 + ob / 50.0;
+  }
+
+  /// Retourne la milestone **body** à insérer dans la prochaine session,
+  /// éligible à l'humiliation [humiliationScore] modulée par l'obédiance
+  /// [obedience]. Les milestones de placement `finalApotheose` sont
+  /// exclues — elles ont leur propre canal via [pendingFinalFor].
+  ///
+  /// **Critères** :
+  /// - `m.humilRequired ≤ humiliationScore + humilTolerance(obedience)`
+  /// - `requires` tous acquittés
+  /// - non encore acquittée
   ///
   /// **Tri** :
-  /// 1. Points investis dans la branche du milestone, **descendant** —
-  ///    on priorise ce qui aligne avec la spé du joueur. Milestone sans
-  ///    branche (transverse) = score 0.
-  /// 2. À égalité : humiliation maximale requise par la séquence,
-  ///    **ascendante** — on prend le palier accessible le moins coûteux
-  ///    pour ne pas sauter de marche.
-  /// 3. Tie-break final : numéro de niveau croissant.
+  /// 1. Points investis dans la branche du milestone, **descendant**.
+  /// 2. À égalité : `humilRequired` **ascendant** (le palier le moins
+  ///    coûteux d'abord, pour ne pas sauter de marche).
+  /// 3. Tie-break final : id alphabétique (déterministe).
   ///
-  /// Si [allocation] est null, on retombe sur l'ancien comportement
-  /// (tri par niveau croissant uniquement) — utile pour les tests / les
-  /// appels qui n'ont pas accès aux points.
-  LevelMilestone? pendingForLevel(
-    int level, {
+  /// Si [allocation] est null, on saute le critère 1 (tri par humil ASC
+  /// puis id) — utile pour les tests / appels sans accès aux points spé.
+  LevelMilestone? pendingFor({
+    required double humiliationScore,
+    required double obedience,
     SpecializationAllocation? allocation,
   }) {
-    final all = allPendingForLevel(level, allocation: allocation);
+    final all = allPendingFor(
+      humiliationScore: humiliationScore,
+      obedience: obedience,
+      allocation: allocation,
+    );
     return all.isEmpty ? null : all.first;
   }
 
-  /// Variante de [pendingForLevel] dédiée aux milestones de placement
-  /// `finalApotheose`. Une session peut donc en jouer **une body + une
-  /// final** sur la même séance. Critères et tri identiques. Retourne
-  /// `null` si aucun candidat.
-  LevelMilestone? pendingFinalForLevel(
-    int level, {
+  /// Variante de [pendingFor] pour les milestones de placement
+  /// `finalApotheose`. Une session peut donc jouer **une body + une
+  /// final** sur la même séance. Retourne `null` si aucun candidat.
+  LevelMilestone? pendingFinalFor({
+    required double humiliationScore,
+    required double obedience,
     SpecializationAllocation? allocation,
   }) {
-    final all = allPendingForLevel(
-      level,
+    final all = allPendingFor(
+      humiliationScore: humiliationScore,
+      obedience: obedience,
       allocation: allocation,
       placement: MilestonePlacement.finalApotheose,
     );
     return all.isEmpty ? null : all.first;
   }
 
-  /// Toutes les milestones pending pour [level], triées selon les mêmes
-  /// critères que `pendingForLevel`. La première de la liste est celle
-  /// qui sera effectivement insérée dans la prochaine session générée.
-  /// Liste vide si aucune candidate. [placement] filtre par placement
-  /// (default `body` pour préserver la sémantique historique : les
-  /// appelants existants ne voient que les milestones de corps).
-  List<LevelMilestone> allPendingForLevel(
-    int level, {
+  /// Toutes les milestones pending éligibles à `humiliationScore` +
+  /// tolérance d'obédiance, triées selon les mêmes critères que
+  /// `pendingFor`. La première de la liste est celle qui sera
+  /// effectivement insérée dans la prochaine session générée.
+  /// Liste vide si aucune candidate.
+  List<LevelMilestone> allPendingFor({
+    required double humiliationScore,
+    required double obedience,
     SpecializationAllocation? allocation,
     MilestonePlacement placement = MilestonePlacement.body,
   }) {
+    final cap = humiliationScore + humilTolerance(obedience);
     final candidates = _catalog
         .where((m) => m.placement == placement)
-        .where((m) => m.level <= level)
+        .where((m) => m.humilRequired <= cap)
         .where((m) => !_completed.contains(m.id))
         .where((m) => m.requires.every(hasUnlock))
         .toList();
     if (candidates.isEmpty) return const [];
-    if (allocation == null) {
-      candidates.sort((a, b) => a.level.compareTo(b.level));
-      return candidates;
-    }
     int branchPoints(LevelMilestone m) {
-      if (m.branches.isEmpty) return 0;
+      if (allocation == null || m.branches.isEmpty) return 0;
       var best = 0;
       for (final b in m.branches) {
         final pts = allocation.pointsIn(b);
@@ -192,55 +212,11 @@ class MilestoneService extends ChangeNotifier {
     candidates.sort((a, b) {
       final byBranch = branchPoints(b).compareTo(branchPoints(a));
       if (byBranch != 0) return byBranch;
-      final byHumil = _humilFor(a).compareTo(_humilFor(b));
+      final byHumil = a.humilRequired.compareTo(b.humilRequired);
       if (byHumil != 0) return byHumil;
-      return a.level.compareTo(b.level);
+      return a.id.compareTo(b.id);
     });
     return candidates;
-  }
-
-  /// Humiliation max requise par un step de la séquence — sert à ranger
-  /// les milestones de difficulté équivalente (mêmes points spé) du moins
-  /// au plus exigeant. Cache trivial par id pour ne pas recalculer.
-  final Map<String, double> _humilCache = <String, double>{};
-  double _humilFor(LevelMilestone m) {
-    final cached = _humilCache[m.id];
-    if (cached != null) return cached;
-    var maxReq = 0.0;
-    for (final s in m.sequence) {
-      final mode = s.mode ?? SessionMode.rhythm;
-      final r = HumiliationScale.requiredFor(
-        mode: mode,
-        from: s.from,
-        to: s.to,
-        bpm: s.bpm,
-        duration: s.duration,
-      );
-      if (r > maxReq) maxReq = r;
-    }
-    _humilCache[m.id] = maxReq;
-    return maxReq;
-  }
-
-  /// Vrai si au moins une milestone de niveau exactement [level] a été
-  /// acquittée. Utilisé par `CareerProgressService.canLevelUp` pour
-  /// exiger qu'au moins une des milestones du niveau courant soit
-  /// validée avant de passer au suivant.
-  bool hasAnyCompletedAtLevel(int level) {
-    for (final m in _catalog) {
-      if (m.level == level && _completed.contains(m.id)) return true;
-    }
-    return false;
-  }
-
-  /// Vrai si le catalogue contient au moins une milestone de niveau
-  /// exactement [level]. Si `false`, `canLevelUp` ne bloque pas (rien
-  /// à acquitter à ce niveau).
-  bool hasAnyAtLevel(int level) {
-    for (final m in _catalog) {
-      if (m.level == level) return true;
-    }
-    return false;
   }
 
   /// Set des `UnlockKey` accordés par TOUTES les milestones complétées.
@@ -302,7 +278,7 @@ class MilestoneService extends ChangeNotifier {
 
   /// Injecte un catalogue + un set de complétions sans passer par le
   /// loader d'assets ni `SharedPreferences`. Réservé aux tests unitaires
-  /// du tri de `pendingForLevel`.
+  /// du tri de `pendingFor`.
   @visibleForTesting
   void seedForTest({
     required List<LevelMilestone> catalog,
@@ -310,7 +286,6 @@ class MilestoneService extends ChangeNotifier {
   }) {
     _catalog = List<LevelMilestone>.unmodifiable(catalog);
     _completed = Set<String>.from(completed);
-    _humilCache.clear();
     _loaded = true;
   }
 

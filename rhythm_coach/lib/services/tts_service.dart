@@ -10,12 +10,14 @@ class TtsService {
   static const double _defaultRate = 0.5;
   static const double _defaultVolume = 1.0;
 
-  /// Voix préférées par locale, par ordre décroissant de qualité.
-  /// Pour FR : la voix -network demande une connexion ; -local marche hors-ligne.
-  /// Pour les autres locales : pas de préférence hardcodée — fallback gender=female
-  /// puis première voix disponible.
+  /// Voix préférées par locale, par ordre décroissant de qualité. **Voix
+  /// locales uniquement** : on n'autorise jamais de voix réseau (cf.
+  /// [_isLocalVoice]) — les voix `-network` envoient le texte aux serveurs
+  /// Google, ce qui est inacceptable vu le contenu des phrases (intime,
+  /// cru). Pour les autres locales : pas de préférence hardcodée — fallback
+  /// gender=female puis première voix locale disponible.
   static const Map<String, List<String>> _preferredVoiceNamesByLanguage = {
-    'fr': ['fr-fr-x-fra-network', 'fr-fr-x-vlf-local'],
+    'fr': ['fr-fr-x-vlf-local', 'fr-fr-x-frd-local', 'fr-fr-x-frc-local'],
   };
 
   final FlutterTts _tts = FlutterTts();
@@ -200,13 +202,21 @@ class TtsService {
   /// `locale.startsWith(languageCode)`). Si `locale` est null, retourne
   /// toutes les voix du moteur (utile pour exposer un sélecteur sans
   /// restriction de langue).
-  Future<List<Map<String, String>>> listVoicesForLocale([Locale? locale]) async {
+  ///
+  /// **Filtre voix locales uniquement** par défaut : les voix `-network`
+  /// (Google Cloud) sont exclues — elles transmettent chaque phrase aux
+  /// serveurs Google. `includeNetwork: true` pour outrepasser (debug).
+  Future<List<Map<String, String>>> listVoicesForLocale(
+      [Locale? locale, bool includeNetwork = false]) async {
     final raw = await _tts.getVoices;
     if (raw is! List) return const [];
-    final all = raw
+    var all = raw
         .whereType<Map>()
         .map((v) => v.map((k, val) => MapEntry(k.toString(), val.toString())))
         .toList();
+    if (!includeNetwork) {
+      all = all.where(_isLocalVoice).toList();
+    }
     if (locale == null) return all;
     final code = locale.languageCode.toLowerCase();
     return all
@@ -214,8 +224,26 @@ class TtsService {
         .toList();
   }
 
-  /// Variante : toutes les voix du moteur, sans filtre de locale.
+  /// Variante : toutes les voix locales du moteur, sans filtre de locale.
   Future<List<Map<String, String>>> listAllVoices() => listVoicesForLocale(null);
+
+  /// Heuristique « voix hors-ligne ». La convention Google Android TTS
+  /// suffixe les voix online par `-network` (ex: `fr-fr-x-fra-network`)
+  /// et les voix offline par `-local`. Côté features, certaines builds de
+  /// `flutter_tts` exposent `networkConnectionRequired` dans la liste de
+  /// features (stringifiée à ce stade). On exclut sur l'un ou l'autre
+  /// indice — toute ambiguïté penche vers « probablement local » pour ne
+  /// pas masquer une voix légitime à l'utilisateur.
+  static bool _isLocalVoice(Map<String, String> v) {
+    final name = (v['name'] ?? '').toLowerCase();
+    if (name.contains('-network') || name.contains('network')) return false;
+    final features = (v['features'] ?? '').toLowerCase();
+    if (features.contains('networkconnectionrequired') ||
+        features.contains('networkrequired')) {
+      return false;
+    }
+    return true;
+  }
 
   Future<List<Map<String, String>>> listEngines() async {
     final raw = await _tts.getEngines;

@@ -1,3 +1,4 @@
+import '../services/saliva_engine.dart';
 import 'session.dart';
 
 /// Position cible d'une étape. Détermine la tonalité du bip joué.
@@ -56,6 +57,13 @@ class SessionStep {
   /// complet n'est jouable que si parent ET chainAction sont unlocked.
   final SessionStep? chainAction;
 
+  /// Bascule l'état de déglutition de la session courante. Sticky : reste
+  /// actif jusqu'à un nouveau step qui le change. `null` = pas de
+  /// changement, hérite du courant. Le forçage à `forbidden` est ignoré
+  /// par le `SessionController` si la compétence `sloppySwallowControl`
+  /// n'est pas acquise — cohérent avec le gating standard via UnlockKey.
+  final SwallowMode? swallowMode;
+
   const SessionStep({
     required this.time,
     this.text = '',
@@ -65,10 +73,16 @@ class SessionStep {
     this.duration,
     this.mode,
     this.chainAction,
+    this.swallowMode,
   });
 
   /// True quand l'étape ne fait QUE déclencher une phrase TTS et n'apporte
   /// aucune configuration de bip — le loop courant continue intact.
+  ///
+  /// Le champ [swallowMode] ne compte pas comme « configuration de bip » :
+  /// un step text-only peut quand même porter un changement sticky du
+  /// toggle de déglutition (cohérent avec sa nature : ce n'est pas un
+  /// override audio, c'est une règle de jeu).
   bool get isTextOnly =>
       from == null && to == null && bpm == null && mode == null;
 
@@ -77,25 +91,57 @@ class SessionStep {
     final chain = chainRaw is Map<String, dynamic>
         ? SessionStep.fromJson({
             // chainAction.time est sans signification dans le JSON source —
-            // le loader le repositionnera. On met 0 pour passer le `time
-            // as int` non-nullable du parser.
+            // le loader le repositionnera. On met 0 pour passer le parser
+            // non-nullable de `time`.
             'time': 0,
             ...chainRaw,
           })
         : null;
+    final time = _asInt(json['time']);
+    if (time == null) {
+      throw FormatException(
+          'SessionStep.fromJson: champ "time" manquant ou non-numérique '
+          '(reçu: ${json['time']?.runtimeType} = ${json['time']})');
+    }
+    final rawText = json['text'];
     return SessionStep(
-      time: json['time'] as int,
-      text: (json['text'] as String?) ?? '',
-      from: Position.fromString(json['from'] as String?),
-      to: Position.fromString(json['to'] as String?),
-      bpm: (json['bpm'] as num?)?.toInt(),
-      duration: (json['duration'] as num?)?.toInt(),
-      mode: json['mode'] is String
-          ? SessionMode.fromString(json['mode'] as String)
-          : null,
+      time: time,
+      text: rawText is String ? rawText : '',
+      from: Position.fromString(_asString(json['from'])),
+      to: Position.fromString(_asString(json['to'])),
+      bpm: _asInt(json['bpm']),
+      duration: _asInt(json['duration']),
+      mode: _asString(json['mode']) == null
+          ? null
+          : SessionMode.fromString(json['mode'] as String),
       chainAction: chain,
+      swallowMode: _swallowModeFromString(_asString(json['swallow_mode'])),
     );
   }
+
+  static SwallowMode? _swallowModeFromString(String? raw) {
+    if (raw == null) return null;
+    switch (raw.toLowerCase()) {
+      case 'allowed':
+        return SwallowMode.allowed;
+      case 'forbidden':
+        return SwallowMode.forbidden;
+      default:
+        return null;
+    }
+  }
+
+  /// Parser tolérant : accepte int, double, ou string numérique.
+  /// Retourne null pour absent, non-numérique ou string non parseable.
+  static int? _asInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    if (v is double) return v.toInt();
+    if (v is String) return int.tryParse(v.trim());
+    return null;
+  }
+
+  static String? _asString(dynamic v) => v is String ? v : null;
 
   Map<String, dynamic> toJson() => {
         'time': time,
@@ -107,6 +153,7 @@ class SessionStep {
         if (mode != null) 'mode': mode!.serialized,
         if (chainAction != null)
           'chainAction': chainAction!.toJsonForChain(),
+        if (swallowMode != null) 'swallow_mode': swallowMode!.name,
       };
 
   /// Sérialisation `chainAction` : on omet `time` (recalculé par le

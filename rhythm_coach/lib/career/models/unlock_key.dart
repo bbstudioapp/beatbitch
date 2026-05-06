@@ -39,6 +39,20 @@ enum UnlockKey {
   sloppyBiffleSlow,
   sloppyLoudSuck,
   sloppyOverflow,
+  // Compétences sloppy V2 liées à la barre de salive (cf. SalivaEngine).
+  // Gates effectifs côté SessionController + générateur :
+  //   - sloppySwallowControl : autorise le toggle SwallowMode.forbidden
+  //     dans une session (sans, le toggle est forcé à allowed).
+  //   - sloppySpit : autorise l'ordre coach « crache ».
+  //   - sloppyDroolDeep : multiplicateur production hold throat/full +
+  //     plafond barre +20.
+  //   - sloppyJarCollect : collecte externe (V2).
+  //   - sloppyShareLube : combo générateur exploitant la lubrification (V2).
+  sloppySwallowControl,
+  sloppySpit,
+  sloppyDroolDeep,
+  sloppyJarCollect,
+  sloppyShareLube,
   resilienceEndureBasic,
   resilienceRecovery,
   resilienceOneMore,
@@ -88,6 +102,11 @@ enum UnlockKey {
         UnlockKey.sloppyBiffleSlow => 'sloppy_biffle_slow',
         UnlockKey.sloppyLoudSuck => 'sloppy_loud_suck',
         UnlockKey.sloppyOverflow => 'sloppy_overflow',
+        UnlockKey.sloppySwallowControl => 'sloppy_swallow_control',
+        UnlockKey.sloppySpit => 'sloppy_spit',
+        UnlockKey.sloppyDroolDeep => 'sloppy_drool_deep',
+        UnlockKey.sloppyJarCollect => 'sloppy_jar_collect',
+        UnlockKey.sloppyShareLube => 'sloppy_share_lube',
         UnlockKey.resilienceEndureBasic => 'resilience_endure_basic',
         UnlockKey.resilienceRecovery => 'resilience_recovery',
         UnlockKey.resilienceOneMore => 'resilience_one_more',

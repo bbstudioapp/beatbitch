@@ -771,6 +771,13 @@ class AppLocalizationsFr extends AppLocalizations {
       'Affiche le score 0–100 d\'obéissance (baisse à chaque fail, remonte avec les punitions).';
 
   @override
+  String get soundsDebugShowSalivaBar => 'Afficher la jauge de salive';
+
+  @override
+  String get soundsDebugShowSalivaBarSubtitle =>
+      'Affiche la jauge 0–max de salive accumulée pendant la séance. Monte avec lick/rhythm/hold profond, descend avec breath/hand. Auto-déglutition à 75 quand la déglutition est autorisée.';
+
+  @override
   String get soundsDebugShowSessionControls => 'Afficher pause / stop';
 
   @override
@@ -794,11 +801,158 @@ class AppLocalizationsFr extends AppLocalizations {
   String get debugBarLabelObedience => 'OBÉI.';
 
   @override
+  String get debugBarLabelSaliva => 'SALIVE';
+
+  @override
   String get soundsDebugCameraHoldCheck => 'Vérif caméra des holds';
 
   @override
   String get soundsDebugCameraHoldCheckSubtitle =>
       'Pendant les holds, la caméra avant vérifie que la position est tenue. Le coach lance un rappel court si tu dérives. Nécessite d\'avoir calibré la caméra (icône caméra de l\'écran SCÉNARIO).';
+
+  @override
+  String get soundsDebugSkipSession => 'Bouton « terminer en succès »';
+
+  @override
+  String get soundsDebugSkipSessionSubtitle =>
+      'Affiche un bouton dans la séance qui termine immédiatement comme un succès complet (badges, milestones, niveau). Pratique pour itérer sur le contenu sans tout jouer.';
+
+  @override
+  String get sessionDebugFinishButton => 'DEBUG : terminer en succès';
+
+  @override
+  String get soundsDebugScenarioButton => 'Debug — scénario carrière';
+
+  @override
+  String get soundsDebugScenarioSubtitle =>
+      'Visualise une session générée sans la jouer : niveau, humil, obéi, milestones, unlocks, et simulation Supplier / fail.';
+
+  @override
+  String get careerDebugTitle => 'Debug — Scénario carrière';
+
+  @override
+  String get careerDebugSectionParams => 'Paramètres';
+
+  @override
+  String get careerDebugSectionScenario => 'Scénario';
+
+  @override
+  String get careerDebugLevel => 'Niveau';
+
+  @override
+  String get careerDebugHumiliation => 'Humiliation';
+
+  @override
+  String get careerDebugObedience => 'Obéissance';
+
+  @override
+  String get careerDebugIncludeHand => 'Inclure la stimulation à la main';
+
+  @override
+  String get careerDebugQuickie => 'Mode bâclée';
+
+  @override
+  String get careerDebugIntense => 'Mode intense (post-Supplier)';
+
+  @override
+  String get careerDebugExcitTarget => 'Cible excitation';
+
+  @override
+  String get careerDebugDurationOverride => 'Durée override';
+
+  @override
+  String get careerDebugMilestoneBody => 'Milestone body';
+
+  @override
+  String get careerDebugMilestoneFinal => 'Milestone final';
+
+  @override
+  String get careerDebugUnlocks => 'Unlocks';
+
+  @override
+  String get careerDebugUnlocksLoadCurrent => 'Acquis';
+
+  @override
+  String get careerDebugUnlocksClear => 'Aucun';
+
+  @override
+  String get careerDebugUnlocksAll => 'Tous';
+
+  @override
+  String get careerDebugAuto => 'Auto';
+
+  @override
+  String get careerDebugNone => 'Aucune';
+
+  @override
+  String get careerDebugRegenerate => 'Régénérer';
+
+  @override
+  String get careerDebugShowTtsTexts => 'Afficher les textes TTS';
+
+  @override
+  String get careerDebugStatExcit => 'Excit fin';
+
+  @override
+  String get careerDebugStatStamina => 'Stamina fin';
+
+  @override
+  String get careerDebugStatHumilCap => 'Humil cap fin';
+
+  @override
+  String get careerDebugTagMilestoneBody => 'MILESTONE';
+
+  @override
+  String get careerDebugTagMilestoneFinal => 'MILESTONE FINAL';
+
+  @override
+  String get careerDebugTagBoost => 'BOOST';
+
+  @override
+  String get careerDebugTagFinal => 'FINAL';
+
+  @override
+  String get careerDebugTagPostFinal => 'POST-FINAL';
+
+  @override
+  String get careerDebugTextOnly => 'TEXT-ONLY';
+
+  @override
+  String get careerDebugHumilReq => 'req';
+
+  @override
+  String get careerDebugStepActionsTitle => 'Step';
+
+  @override
+  String get careerDebugSimulateFail => 'Simuler un fail ici';
+
+  @override
+  String get careerDebugSimulateSupplier => 'Simuler un Supplier ici';
+
+  @override
+  String get careerDebugClearFork => 'Effacer la branche';
+
+  @override
+  String get careerDebugClearAnnotation => 'Effacer l\'annotation';
+
+  @override
+  String get careerDebugForkBanner => 'BRANCHE SUPPLIER';
+
+  @override
+  String get careerDebugForkFrom => 'Depuis';
+
+  @override
+  String get careerDebugForkSteps => 'steps';
+
+  @override
+  String get careerDebugFailSnapshotTitle => 'FAIL simulé';
+
+  @override
+  String get careerDebugFailSnapshotNext => 'Reprend au step';
+
+  @override
+  String get careerDebugFailSnapshotNoNext =>
+      'Plus de step jouable après ce fail (fin de séance).';
 
   @override
   String get positionTip => 'Bout';

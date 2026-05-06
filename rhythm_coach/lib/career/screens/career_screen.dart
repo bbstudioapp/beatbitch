@@ -77,7 +77,7 @@ class _CareerScreenState extends State<CareerScreen> {
   /// connaître les bases ne fait pas sens pédagogiquement, et l'intensity
   /// floor 0.65 du quickie pousse la débutante au-delà de ce qu'elle est
   /// prête à encaisser.
-  static const int _quickieUnlockLevel = 5;
+  static const int _quickieUnlockLevel = 8;
 
   @override
   void initState() {
@@ -95,6 +95,8 @@ class _CareerScreenState extends State<CareerScreen> {
       _progress.getCompletedSessions(),
       _progress.getIncludeHand(),
       _specService.load(),
+      _stats.getHumiliationLevel(),
+      _stats.getObedienceLevel(),
     ]);
     final maxLevel = results[3] as int;
     // Synchronise le palier de coach avec le niveau global avant que
@@ -109,6 +111,8 @@ class _CareerScreenState extends State<CareerScreen> {
       completedSessions: results[5] as int,
       includeHand: results[6] as bool,
       specialization: results[7] as SpecializationAllocation,
+      humiliationScore: results[8] as double,
+      obedienceScore: results[9] as double,
     );
   }
 
@@ -175,14 +179,16 @@ class _CareerScreenState extends State<CareerScreen> {
     // puis une autre en apothéose.
     final milestone = quickie
         ? null
-        : milestoneService.pendingForLevel(
-            clamped,
+        : milestoneService.pendingFor(
+            humiliationScore: humiliationScore,
+            obedience: obedienceScore,
             allocation: bundle.specialization,
           );
     final finalMilestone = quickie
         ? null
-        : milestoneService.pendingFinalForLevel(
-            clamped,
+        : milestoneService.pendingFinalFor(
+            humiliationScore: humiliationScore,
+            obedience: obedienceScore,
             allocation: bundle.specialization,
           );
     // Force includeHand=true si le milestone pending l'exige (séquence
@@ -411,8 +417,7 @@ class _CareerScreenState extends State<CareerScreen> {
 
     await ctrl.requestUpgrade(
       insistentBeg: beg,
-      upcomingSteps: newGen.session.steps,
-      upcomingDurationSeconds: newGen.session.durationSeconds,
+      upcomingSession: newGen.session,
     );
   }
 
@@ -478,8 +483,7 @@ class _CareerScreenState extends State<CareerScreen> {
 
     await ctrl.requestUpgrade(
       insistentBeg: beg,
-      upcomingSteps: newGen.session.steps,
-      upcomingDurationSeconds: newGen.session.durationSeconds,
+      upcomingSession: newGen.session,
     );
     return true;
   }
@@ -742,7 +746,8 @@ class _CareerScreenState extends State<CareerScreen> {
               ),
               const SizedBox(height: 12),
               _PendingMilestonesList(
-                level: level,
+                humiliationScore: bundle.humiliationScore,
+                obedience: bundle.obedienceScore,
                 allocation: bundle.specialization,
               ),
               const SizedBox(height: 24),
@@ -775,8 +780,9 @@ class _CareerScreenState extends State<CareerScreen> {
                 );
               }(),
               () {
-                final pendingMilestone = milestoneService.pendingForLevel(
-                  level,
+                final pendingMilestone = milestoneService.pendingFor(
+                  humiliationScore: bundle.humiliationScore,
+                  obedience: bundle.obedienceScore,
                   allocation: bundle.specialization,
                 );
                 final milestoneLocksHand =
@@ -1017,19 +1023,22 @@ class _LevelTitleCard extends StatelessWidget {
 }
 
 class _PendingMilestonesList extends StatelessWidget {
-  final int level;
+  final double humiliationScore;
+  final double obedience;
   final SpecializationAllocation? allocation;
 
   const _PendingMilestonesList({
-    required this.level,
+    required this.humiliationScore,
+    required this.obedience,
     required this.allocation,
   });
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final pending = milestoneService.allPendingForLevel(
-      level,
+    final pending = milestoneService.allPendingFor(
+      humiliationScore: humiliationScore,
+      obedience: obedience,
       allocation: allocation,
     );
     if (pending.isEmpty) return const SizedBox.shrink();
@@ -1227,6 +1236,13 @@ class _CareerBundle {
   final int completedSessions;
   final bool includeHand;
   final SpecializationAllocation specialization;
+  /// Humiliation lifetime persistée (`StatsService.getHumiliationLevel`).
+  /// Sert au filtre de candidature des milestones (`pendingFor`) au build
+  /// de l'écran et au _start.
+  final double humiliationScore;
+  /// Obédiance lifetime persistée — module la tolérance d'humil pour le
+  /// filtre milestone (`humilTolerance = 1 + obedience/50`).
+  final double obedienceScore;
 
   const _CareerBundle({
     required this.bank,
@@ -1237,5 +1253,7 @@ class _CareerBundle {
     required this.completedSessions,
     required this.includeHand,
     required this.specialization,
+    required this.humiliationScore,
+    required this.obedienceScore,
   });
 }

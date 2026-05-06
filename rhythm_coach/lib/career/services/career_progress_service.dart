@@ -1,36 +1,17 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'milestone_service.dart';
-
 /// Persiste l'état de progression du mode Carrière entre lancements de l'app.
+///
+/// Depuis la refonte E3.5, la progression de niveau n'est plus gatée par les
+/// milestones : celles-ci sont sélectionnées via `MilestoneService.pendingFor`
+/// (humiliation + obédiance), indépendamment du compteur de niveau.
 class CareerProgressService {
   static const String _kMaxLevel = 'career.max_level';
   static const String _kLastLevel = 'career.last_level';
   static const String _kCompleted = 'career.completed_sessions';
   static const String _kIncludeHand = 'career.include_hand';
 
-  /// Référence au service des milestones, injectée au constructeur.
-  /// `canLevelUp` l'utilise pour exiger qu'au moins une milestone du
-  /// niveau courant soit acquittée avant le passage au suivant.
-  final MilestoneService? _milestones;
-
-  CareerProgressService({MilestoneService? milestoneService})
-      : _milestones = milestoneService;
-
-  /// Vrai si la progression peut s'incrémenter. Pour passer du niveau
-  /// [currentLevel] au suivant, il faut qu'**au moins une** milestone
-  /// du niveau exact [currentLevel] ait été acquittée. Pas besoin de
-  /// les avoir toutes — les autres seront rattrapées dans les séances
-  /// futures via `pendingForLevel(level)`. Si le niveau ne contient
-  /// aucune milestone (cas hypothétique), pas de blocage. Si aucun
-  /// service de milestones n'est injecté, retourne toujours vrai
-  /// (mode héritage / tests).
-  bool canLevelUp(int currentLevel) {
-    final m = _milestones;
-    if (m == null) return true;
-    if (!m.hasAnyAtLevel(currentLevel)) return true;
-    return m.hasAnyCompletedAtLevel(currentLevel);
-  }
+  CareerProgressService();
 
   Future<int> getMaxLevel() async {
     final prefs = await SharedPreferences.getInstance();
@@ -67,9 +48,6 @@ class CareerProgressService {
     await prefs.setInt(_kCompleted, completed);
     if (levelUp) {
       final currentMax = prefs.getInt(_kMaxLevel) ?? 1;
-      // Si une milestone du niveau courant est encore en attente, on
-      // gèle la progression : la session compte mais le palier reste.
-      if (!canLevelUp(currentMax)) return;
       final newMax = currentMax + 1;
       await prefs.setInt(_kMaxLevel, newMax);
       await prefs.setInt(_kLastLevel, newMax);

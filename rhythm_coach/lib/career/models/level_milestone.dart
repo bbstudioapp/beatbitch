@@ -13,16 +13,23 @@ import 'unlock_key.dart';
 ///   directif, pas pédagogique. Cf. milestones `intro_final_*`.
 enum MilestonePlacement { body, finalApotheose }
 
-/// Une milestone : séquence pédagogique imposée à un niveau, qui débloque
-/// une ou plusieurs `UnlockKey` une fois acquittée. Cf. E3 du plan.
+/// Une milestone : séquence pédagogique imposée, qui débloque une ou
+/// plusieurs `UnlockKey` une fois acquittée. Cf. E3 du plan.
+///
+/// **Sélection par humiliation** : depuis la refonte E3.5, une milestone
+/// devient candidate quand le score d'humiliation courant atteint
+/// `humilRequired - tolerance(obedience)`, où `tolerance = 1 + obedience/50`.
+/// Le concept de « niveau de milestone » a disparu — l'humiliation et
+/// l'obédiance pilotent seuls la progression pédagogique.
 class LevelMilestone {
   /// Identifiant stable (ex: `"intro_hold_throat_short"`).
   final String id;
 
-  /// Niveau auquel cette milestone est activée. Si l'utilisatrice est
-  /// déjà passée à un niveau supérieur sans l'acquitter, elle reste
-  /// candidate (V2 : blocage progression).
-  final int level;
+  /// Humiliation maximale exigée par un step de la séquence. Calculée par
+  /// le `MilestoneLoader` via `HumiliationScale.requiredFor` sur chaque
+  /// step. Sert de seuil de candidature : la milestone n'est servie que
+  /// quand `humilCurrent + 1 + obedience/50 ≥ humilRequired`.
+  final double humilRequired;
 
   /// Libellé court affichable dans l'UI ("Première gorge tenue").
   final String displayLabel;
@@ -60,7 +67,7 @@ class LevelMilestone {
   final bool requiresHands;
 
   /// Branches de spécialisation associées à cette milestone. Sert au
-  /// `MilestoneService.pendingForLevel(...)` pour prioriser les milestones
+  /// `MilestoneService.pendingFor(...)` pour prioriser les milestones
   /// dont au moins une branche correspond aux points investis par
   /// l'utilisatrice (cf. doc « Sélection milestone par spé + humil »).
   /// Liste vide = transverse (aucune branche dominante).
@@ -77,7 +84,7 @@ class LevelMilestone {
 
   const LevelMilestone({
     required this.id,
-    required this.level,
+    required this.humilRequired,
     required this.displayLabel,
     required this.sequence,
     required this.durationSeconds,

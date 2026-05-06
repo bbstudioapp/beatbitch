@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../career/screens/career_scenario_debug_screen.dart';
 import '../career/services/debug_settings_service.dart';
 import '../l10n/app_localizations.dart';
 import '../models/ambience_pack.dart';
@@ -56,9 +57,11 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
   bool _showExcitationBar = false;
   bool _showHumiliationBar = false;
   bool _showObedienceBar = false;
+  bool _showSalivaBar = false;
   bool _showSessionControls = false;
   bool _showModeBadge = false;
   bool _cameraHoldCheck = false;
+  bool _skipSessionButton = false;
 
   // Identité.
   final TextEditingController _prenomController = TextEditingController();
@@ -79,9 +82,11 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
       final showExcit = await _debug.getShowExcitationBar();
       final showHumil = await _debug.getShowHumiliationBar();
       final showObed = await _debug.getShowObedienceBar();
+      final showSaliva = await _debug.getShowSalivaBar();
       final showControls = await _debug.getShowSessionControls();
       final showBadge = await _debug.getShowModeBadge();
       final camCheck = await _debug.getCameraHoldCheck();
+      final skipSession = await _debug.getSkipSessionButton();
       if (!mounted) return;
       setState(() {
         _ready = true;
@@ -93,9 +98,11 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
         _showExcitationBar = showExcit;
         _showHumiliationBar = showHumil;
         _showObedienceBar = showObed;
+        _showSalivaBar = showSaliva;
         _showSessionControls = showControls;
         _showModeBadge = showBadge;
         _cameraHoldCheck = camCheck;
+        _skipSessionButton = skipSession;
         _prenomController.text = widget.userProfile.prenom ?? '';
       });
     });
@@ -591,6 +598,29 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       title: Text(
+                        t.soundsDebugShowSalivaBar,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      subtitle: Text(
+                        t.soundsDebugShowSalivaBarSubtitle,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppTheme.textMuted,
+                        ),
+                      ),
+                      value: _showSalivaBar,
+                      onChanged: (v) async {
+                        await _debug.setShowSalivaBar(v);
+                        if (!mounted) return;
+                        setState(() => _showSalivaBar = v);
+                      },
+                    ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
                         t.soundsDebugShowSessionControls,
                         style: const TextStyle(
                           fontSize: 14,
@@ -655,6 +685,62 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
                         await _debug.setCameraHoldCheck(v);
                         if (!mounted) return;
                         setState(() => _cameraHoldCheck = v);
+                      },
+                    ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        t.soundsDebugSkipSession,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      subtitle: Text(
+                        t.soundsDebugSkipSessionSubtitle,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppTheme.textMuted,
+                        ),
+                      ),
+                      value: _skipSessionButton,
+                      onChanged: (v) async {
+                        await _debug.setSkipSessionButton(v);
+                        if (!mounted) return;
+                        setState(() => _skipSessionButton = v);
+                      },
+                    ),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(
+                        Icons.auto_awesome,
+                        color: AppTheme.accent,
+                      ),
+                      title: Text(
+                        t.soundsDebugScenarioButton,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      subtitle: Text(
+                        t.soundsDebugScenarioSubtitle,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppTheme.textMuted,
+                        ),
+                      ),
+                      trailing: const Icon(
+                        Icons.chevron_right,
+                        color: AppTheme.textMuted,
+                      ),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) =>
+                                const CareerScenarioDebugScreen(),
+                          ),
+                        );
                       },
                     ),
                   ],

@@ -6,6 +6,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../career/models/phrase_bank.dart';
 import '../career/models/specialization.dart';
+import '../career/models/unlock_key.dart';
 import '../main.dart' show milestoneService;
 import '../models/punishment.dart';
 import '../models/session.dart';
@@ -19,6 +20,7 @@ import '../services/humiliation_engine.dart';
 import '../services/obedience_engine.dart';
 import '../services/punishment_loader.dart';
 import '../services/random_comments_loader.dart';
+import '../services/saliva_engine.dart';
 import '../services/stamina_engine.dart';
 import '../services/stats_service.dart';
 import '../services/tts_service.dart';
@@ -49,6 +51,21 @@ class SessionController extends ChangeNotifier {
   HumiliationEngine get humiliation => _humiliation;
   final ObedienceEngine _obedience = ObedienceEngine();
   ObedienceEngine get obedience => _obedience;
+  final SalivaEngine _saliva = SalivaEngine();
+  SalivaEngine get saliva => _saliva;
+
+  /// Mode de déglutition courant. Sticky entre steps : un step text-only
+  /// avec champ `swallow_mode` change l'état, qui persiste tant qu'aucun
+  /// autre step ne le change. Reset à [SwallowMode.allowed] au start et
+  /// après un fail. Forçage à `allowed` si l'unlock `sloppySwallowControl`
+  /// n'est pas acquis (guard câblé en Phase 3).
+  SwallowMode _swallowMode = SwallowMode.allowed;
+  SwallowMode get swallowMode => _swallowMode;
+
+  /// Nombre de débordements salive comptabilisés cette session (cap 3
+  /// pour le bonus humiliation).
+  int _salivaOverflowsThisSession = 0;
+  static const int _salivaOverflowsCap = 3;
 
   /// Endurance live : descend à chaque beat consommateur, regen en breath/
   /// freestyle/idle. Distincte du `_staminaProfile` projeté par le générateur
@@ -125,6 +142,15 @@ class SessionController extends ChangeNotifier {
   /// True tant que le flow fail est en cours.
   /// Mis à false par stop() pour interrompre proprement les phases async.
   bool _failActive = false;
+
+  /// Compteur incrémenté à chaque entrée dans un flow fail (`triggerFail`,
+  /// `_runMiniPunishmentFlow`). Permet aux awaits longs (TTS speak, breath,
+  /// punition) de détecter qu'ils ont été interrompus par un `stop()` puis
+  /// remplacés par un nouveau flow — sans cette garde, le flag booléen seul
+  /// peut être réarmé entre l'await et le check, et l'ancien flow continue
+  /// son chemin par-dessus le nouveau.
+  int _failGen = 0;
+  bool _isFailFlowAlive(int gen) => _failActive && _failGen == gen;
 
   Timer? _punishmentTicker;
 
@@ -442,48 +468,80 @@ class SessionController extends ChangeNotifier {
 
   // ─── Cycle principal ───────────────────────────────────────────────────
 
+  bool _starting = false;
+
   Future<void> start() async {
+    // Guard synchrone : un double-clic peut entrer ici deux fois avant
+    // que le premier `await _tts.init()` rende la main et que `_state`
+    // bascule à `running`. Le drapeau ferme cette fenêtre.
+    if (_starting) return;
     if (_state == SessionState.running) return;
+    _starting = true;
+    try {
+      if (_state == SessionState.idle || _state == SessionState.finished) {
+        _stopwatch.reset();
+        _timelineOffset = Duration.zero;
+        _nextStepIndex = 0;
+        _lastSpoken = null;
+        _lastSpokenResolvedText = null;
+        _lastConfigStep = null;
+        _configApplied = false;
+        _hadFailThisSession = false;
+        _finalChimePlayed = false;
+        _sessionBadgeUnlocks = const [];
+        _currentHoldFullDuration = 0;
+        _lastHoldTickAtSecond = -1;
+        _resilienceTickAccumulator = 0;
+        _miniPunishmentsTriggered = 0;
+        _excitation.reset();
+        _excitation.setMax(_excitationMax);
+        _humiliation.seed(0);
+        _obedience.seed(0);
+        _saliva.reset();
+        _swallowMode = SwallowMode.allowed;
+        _salivaOverflowsThisSession = 0;
+        // Application des compétences sloppy sur les multiplicateurs de
+        // l'engine et le plafond de la barre. Cohérent avec le pattern
+        // "compétence acquise = effet immédiat dès la séance suivante".
+        // - sloppyDroolBasic : production lick ×1.5, plafond 100
+        // - sloppyBiffleSlow : production biffle ×3
+        // - sloppyDroolDeep : hold throat/full ×1.5, plafond +20
+        if (milestoneService.hasUnlock(UnlockKey.sloppyDroolBasic)) {
+          _saliva.setLickProductionMultiplier(1.5);
+          _saliva.setMax(SalivaEngine.sloppyBaseMax);
+        } else {
+          _saliva.setMax(SalivaEngine.defaultMax);
+        }
+        if (milestoneService.hasUnlock(UnlockKey.sloppyBiffleSlow)) {
+          _saliva.setBiffleProductionMultiplier(3.0);
+        }
+        if (milestoneService.hasUnlock(UnlockKey.sloppyDroolDeep)) {
+          _saliva.setHoldDepthProductionMultiplier(1.5);
+          _saliva.setMax(_saliva.maxValue + SalivaEngine.sloppyDeepBonus);
+        }
+        _stamina.reset();
+        // Lectures async tolérées : si pas finies au premier beat, on est
+        // juste à valeur neutre (résistance 0, humiliation 0, obédiance 0).
+        // Pas critique — les bumps en cours de session s'appliqueront aux
+        // valeurs neutres puis seront remplacés à la première lecture async.
+        _stats.getResistanceLevel().then((r) => _excitation.setResistance(r));
+        _stats.getHumiliationLevel().then((h) => _humiliation.seed(h));
+        _stats.getObedienceLevel().then((o) => _obedience.seed(o));
+      }
 
-    if (_state == SessionState.idle || _state == SessionState.finished) {
-      _stopwatch.reset();
-      _timelineOffset = Duration.zero;
-      _nextStepIndex = 0;
-      _lastSpoken = null;
-      _lastSpokenResolvedText = null;
-      _lastConfigStep = null;
-      _configApplied = false;
-      _hadFailThisSession = false;
-      _finalChimePlayed = false;
-      _sessionBadgeUnlocks = const [];
-      _currentHoldFullDuration = 0;
-      _lastHoldTickAtSecond = -1;
-      _resilienceTickAccumulator = 0;
-      _miniPunishmentsTriggered = 0;
-      _excitation.reset();
-      _excitation.setMax(_excitationMax);
-      _humiliation.seed(0);
-      _obedience.seed(0);
-      _stamina.reset();
-      // Lectures async tolérées : si pas finies au premier beat, on est
-      // juste à valeur neutre (résistance 0, humiliation 0, obédiance 0).
-      // Pas critique — les bumps en cours de session s'appliqueront aux
-      // valeurs neutres puis seront remplacés à la première lecture async.
-      _stats.getResistanceLevel().then((r) => _excitation.setResistance(r));
-      _stats.getHumiliationLevel().then((h) => _humiliation.seed(h));
-      _stats.getObedienceLevel().then((o) => _obedience.seed(o));
+      await _tts.init();
+      await _beep.init();
+      await WakelockPlus.enable();
+
+      _stopwatch.start();
+      _state = SessionState.running;
+      _startTicker();
+      _startRandomComments();
+      notifyListeners();
+      _checkSteps();
+    } finally {
+      _starting = false;
     }
-
-    await _tts.init();
-    await _beep.init();
-    await WakelockPlus.enable();
-
-    _stopwatch.start();
-    _state = SessionState.running;
-    _startTicker();
-    _startRandomComments();
-    notifyListeners();
-    _checkSteps();
   }
 
   Future<void> pause() async {
@@ -549,6 +607,33 @@ class SessionController extends ChangeNotifier {
     _ticker = Timer.periodic(_tickInterval, (_) => _onTick());
   }
 
+  /// Debug : termine la séance immédiatement comme un succès complet, sans
+  /// la jouer. Utile pour itérer sur le contenu (milestones, badges, level
+  /// up) sans rejouer une session entière. Réservé au flag de debug
+  /// `DebugSettingsService.getSkipSessionButton`.
+  ///
+  /// Avance la timeline jusqu'à la durée de la session pour que les compteurs
+  /// (`_stats.addElapsedSeconds`, etc.) reflètent une session complète, puis
+  /// délègue à `_finish` qui fait le travail standard de clôture.
+  Future<void> debugFinishSuccess() async {
+    if (_state != SessionState.running && _state != SessionState.paused) {
+      return;
+    }
+    _stopwatch.stop();
+    _ticker?.cancel();
+    _ticker = null;
+    _stopRandomComments();
+    await _tts.stop();
+    await _beep.stop();
+    // Cale l'horloge logique sur la durée totale (les badges qui regardent
+    // `totalSeconds` créditent la session entière).
+    final missing =
+        Duration(seconds: session.durationSeconds) - elapsed;
+    if (missing > Duration.zero) _timelineOffset += missing;
+    _hadFailThisSession = false;
+    await _finish();
+  }
+
   void _onTick() {
     _checkSteps();
     _accrueHoldSecond();
@@ -588,6 +673,22 @@ class SessionController extends ChangeNotifier {
       bpm: _beep.currentBpm,
     );
     _stamina.onTickSecond();
+    _saliva.onTickSecond(
+      mode: _beep.currentMode,
+      from: _beep.currentFrom,
+      to: _beep.currentTo,
+      swallowMode: _swallowMode,
+      elapsedSecond: now,
+    );
+    final overflows = _saliva.popOverflowEvents();
+    if (overflows > 0) {
+      final remaining = _salivaOverflowsCap - _salivaOverflowsThisSession;
+      final apply = overflows > remaining ? remaining : overflows;
+      for (var i = 0; i < apply; i++) {
+        _humiliation.onSalivaOverflow();
+      }
+      _salivaOverflowsThisSession += apply;
+    }
     _accrueResilienceTick();
     if (_beep.currentMode != SessionMode.hold) return;
     final pos = _beep.currentFrom;
@@ -663,6 +764,32 @@ class SessionController extends ChangeNotifier {
       if (step.text.isNotEmpty && _tts.isSpeaking) {
         _timelineOffset -= _tickInterval;
         break;
+      }
+
+      // Toggle déglutition (sticky). Appliqué AVANT l'éventuelle config de
+      // bip pour que le mode soit déjà à jour quand le tick suivant
+      // s'exécute. Le forçage à `forbidden` est ignoré tant que l'unlock
+      // `sloppySwallowControl` n'est pas acquis (cf. Phase 5). Le retour
+      // à `allowed` est toujours autorisé (pas besoin de compétence pour
+      // libérer la salope).
+      //
+      // Transition `forbidden` → `allowed` : on considère que la coach a
+      // dit « avale tout maintenant ». Reset salive + bump obéd (la
+      // consigne a été suivie). La transition inverse (`allowed` →
+      // `forbidden`) ne touche pas la barre courante : la salive déjà
+      // accumulée reste, c'est juste l'auto-déglutition qui s'éteint.
+      final stepSwallow = step.swallowMode;
+      if (stepSwallow != null) {
+        final previous = _swallowMode;
+        if (stepSwallow == SwallowMode.allowed ||
+            milestoneService.hasUnlock(UnlockKey.sloppySwallowControl)) {
+          _swallowMode = stepSwallow;
+          if (previous == SwallowMode.forbidden &&
+              stepSwallow == SwallowMode.allowed) {
+            _saliva.forceSwallow();
+            _obedience.onPunishmentCompleted();
+          }
+        }
       }
 
       if (!step.isTextOnly) {
@@ -960,8 +1087,7 @@ class SessionController extends ChangeNotifier {
   /// de 0) — la méthode rebase elle-même.
   Future<void> requestUpgrade({
     required SessionStep insistentBeg,
-    required List<SessionStep> upcomingSteps,
-    required int upcomingDurationSeconds,
+    required Session upcomingSession,
   }) async {
     if (_state != SessionState.running) return;
 
@@ -979,7 +1105,7 @@ class SessionController extends ChangeNotifier {
         bpm: insistentBeg.bpm,
         duration: begDuration,
       ),
-      ...upcomingSteps.map(
+      ...upcomingSession.steps.map(
         (s) => SessionStep(
           time: s.time + offset,
           text: s.text,
@@ -992,13 +1118,26 @@ class SessionController extends ChangeNotifier {
       ),
     ];
 
+    // Décale les timestamps de fin (finalStep / silentFinish) du regen pour
+    // qu'ils tombent sur les bons steps du nouveau `_session`. Sans ça, le
+    // contrôleur ne reconnaît pas le step final → le `finale_chime` est
+    // joué via le fallback de `_finish` ET la phrase finale est rejouée
+    // (« voilà je jouis » + chime APRÈS la phrase d'action déjà speakée du
+    // step final). Doublait l'apothéose à chaque Supplier.
+    final upFinalStepTime = upcomingSession.finalStepTime;
+    final upSilentFinish = upcomingSession.silentFinishStartTime;
+
     _session = Session(
       id: '${_session.id}:upgraded',
       name: _session.name,
       description: _session.description,
-      durationSeconds: offset + upcomingDurationSeconds,
+      durationSeconds: offset + upcomingSession.durationSeconds,
       defaultMode: _session.defaultMode,
       steps: newSteps,
+      finalStepTime: upFinalStepTime != null ? upFinalStepTime + offset : null,
+      silentFinishStartTime:
+          upSilentFinish != null ? upSilentFinish + offset : null,
+      finalCategory: upcomingSession.finalCategory,
     );
 
     // Coupe le TTS en cours pour ne pas garder une phrase orpheline
@@ -1007,6 +1146,11 @@ class SessionController extends ChangeNotifier {
 
     _nextStepIndex = 0;
     _lastConfigStep = null;
+    // Reset du flag chime : la régen apporte son propre step final +
+    // apothéose. Si l'ancienne session avait déjà tiré son chime (cas
+    // rare où Supplier est cliqué pile entre final et fin), on doit
+    // pouvoir rejouer le chime de la nouvelle.
+    _finalChimePlayed = false;
 
     // Force le déclenchement immédiat du beg (time = start ≤ elapsedSeconds).
     _checkSteps();
@@ -1042,9 +1186,16 @@ class SessionController extends ChangeNotifier {
     }
 
     _failActive = true;
+    final myGen = ++_failGen;
     _hadFailThisSession = true;
     _excitation.onFail();
     _stamina.onFail();
+    _saliva.onFail();
+    // Le mode forbidden est levé par le fail : la salope a craqué, on
+    // repart sur des bases neutres. Si la session veut re-imposer le
+    // forbidden après reprise, c'est au scénario de poser un step le
+    // demandant explicitement.
+    _swallowMode = SwallowMode.allowed;
     // Pénalités amplifiées si on craque dans la dernière minute (la
     // session est presque terminée — c'est ruiné).
     final lastMinuteMul = _isInLastMinute() ? 2.0 : 1.0;
@@ -1073,7 +1224,16 @@ class SessionController extends ChangeNotifier {
       // On résout immédiatement : le contenu stocké dans `_currentFailPhrase`
       // est la version affichable (sans `{name}`). Le speak qui suit est
       // alors un pass-through pour le placeholder déjà absent.
-      final raw = _pickRandom(_punishmentBundle.failPhrases);
+      // Si la salope a avalé alors que c'était interdit, on tire dans le
+      // pool dédié `failPhrasesSwallow` (transgression de consigne) plutôt
+      // que dans le pool générique. Fallback transparent au pool standard
+      // si le pool dédié est vide (sécurité contre un JSON incomplet).
+      final swallowPool = _punishmentBundle.failPhrasesSwallow;
+      final pool = (_swallowMode == SwallowMode.forbidden &&
+              swallowPool.isNotEmpty)
+          ? swallowPool
+          : _punishmentBundle.failPhrases;
+      final raw = _pickRandom(pool);
       _currentFailPhrase = raw == null ? null : _tts.resolveText(raw);
       notifyListeners();
       if (_currentFailPhrase != null) {
@@ -1082,7 +1242,7 @@ class SessionController extends ChangeNotifier {
         _lastScriptedSpeakAt = DateTime.now();
         await _tts.speak(_currentFailPhrase!);
       }
-      if (!_failActive) return;
+      if (!_isFailFlowAlive(myGen)) return;
 
       // 3) Respiration : toujours présente comme phase de transition,
       //    mais raccourcie quand l'endurance projetée à l'instant t est
@@ -1104,8 +1264,8 @@ class SessionController extends ChangeNotifier {
         session.defaultMode,
       );
       await _syncAmbienceToCurrentMode();
-      await _waitInterruptible(Duration(seconds: breathSeconds));
-      if (!_failActive) return;
+      await _waitInterruptible(Duration(seconds: breathSeconds), gen: myGen);
+      if (!_isFailFlowAlive(myGen)) return;
 
       // 4) Punition aléatoire.
       _currentPunishment = _pickRandom(_punishmentBundle.punishments);
@@ -1115,12 +1275,12 @@ class SessionController extends ChangeNotifier {
         await _runPunishment(_currentPunishment!);
         // Bonus seulement si la punition a été menée à terme (ni stop()
         // global, ni abandon volontaire via le bouton FAIL).
-        if (_failActive && !_punishmentAbandoned) {
+        if (_isFailFlowAlive(myGen) && !_punishmentAbandoned) {
           _humiliation.onPunishmentCompleted();
           _obedience.onPunishmentCompleted();
         }
       }
-      if (!_failActive) return;
+      if (!_isFailFlowAlive(myGen)) return;
 
       // 5) Saut à la section suivante : on cherche le prochain step de
       //    config et on avance la timeline jusqu'à son `time`. Tous les
@@ -1141,11 +1301,16 @@ class SessionController extends ChangeNotifier {
       // le prochain tick (200 ms d'écart audible sinon).
       _checkSteps();
     } finally {
-      _failPhase = null;
-      _currentFailPhrase = null;
-      _currentPunishment = null;
-      _failActive = false;
-      notifyListeners();
+      // Ne nettoie le state global que si on est toujours owner du flow —
+      // sinon on écraserait celui d'un nouveau triggerFail qui aurait pris
+      // la main pendant l'un de nos awaits.
+      if (_failGen == myGen) {
+        _failPhase = null;
+        _currentFailPhrase = null;
+        _currentPunishment = null;
+        _failActive = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -1153,12 +1318,34 @@ class SessionController extends ChangeNotifier {
   /// jusqu'à atteindre [Punishment.durationSeconds]. Interruptible via
   /// `_abandonPunishment()` (qui complète `_punishmentCompleter`).
   Future<void> _runPunishment(Punishment p) async {
+    // Refuse les appels concurrents : si un précédent est encore actif,
+    // c'est un état incohérent (les flows fail/mini-punition s'attendent
+    // tous via await). On ne ré-entre pas ; le caller verra un retour
+    // immédiat et la séquence en cours continuera son cycle.
+    final previous = _punishmentCompleter;
+    if (previous != null && !previous.isCompleted) {
+      if (kDebugMode) {
+        debugPrint(
+            '[SessionController] _runPunishment ignoré : précédent encore actif');
+      }
+      return;
+    }
+    // Annule un ticker éventuellement orphelin pour ne pas le superposer.
+    _punishmentTicker?.cancel();
+    _punishmentTicker = null;
+
     final completer = Completer<void>();
     _punishmentCompleter = completer;
     final stopwatch = Stopwatch()..start();
     var nextIdx = 0;
 
     void tick() {
+      // Si on n'est plus le completer en cours (un nouveau _runPunishment
+      // a démarré), on stoppe ce tick fantôme sans toucher au state global.
+      if (_punishmentCompleter != completer) {
+        if (!completer.isCompleted) completer.complete();
+        return;
+      }
       if (!_failActive) {
         if (!completer.isCompleted) completer.complete();
         return;
@@ -1194,7 +1381,11 @@ class SessionController extends ChangeNotifier {
     _punishmentTicker = Timer.periodic(_tickInterval, (_) => tick());
 
     await completer.future;
-    _punishmentCompleter = null;
+    // Ne nille le champ que si on est toujours owner (sinon on écraserait
+    // la référence d'un appelant suivant qui aurait pris la main).
+    if (_punishmentCompleter == completer) {
+      _punishmentCompleter = null;
+    }
     await _beep.stop(); // coupe les bips de la punition avant de continuer
   }
 
@@ -1250,6 +1441,7 @@ class SessionController extends ChangeNotifier {
     if (_state != SessionState.running) return;
 
     _failActive = true;
+    final myGen = ++_failGen;
     _disarmHoldVerifier();
     _stopwatch.stop();
     _ticker?.cancel();
@@ -1265,11 +1457,11 @@ class SessionController extends ChangeNotifier {
 
     try {
       await _runPunishment(p);
-      if (_failActive && !_punishmentAbandoned) {
+      if (_isFailFlowAlive(myGen) && !_punishmentAbandoned) {
         _humiliation.onPunishmentCompleted();
         _obedience.onPunishmentCompleted();
       }
-      if (!_failActive) return;
+      if (!_isFailFlowAlive(myGen)) return;
       await _restorePreviousLoop();
       _stopwatch.start();
       _startTicker();
@@ -1277,11 +1469,13 @@ class SessionController extends ChangeNotifier {
       _state = SessionState.running;
       _checkSteps();
     } finally {
-      _failPhase = null;
-      _currentPunishment = null;
-      _punishmentAbandoned = false;
-      _failActive = false;
-      notifyListeners();
+      if (_failGen == myGen) {
+        _failPhase = null;
+        _currentPunishment = null;
+        _punishmentAbandoned = false;
+        _failActive = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -1317,12 +1511,13 @@ class SessionController extends ChangeNotifier {
     return false;
   }
 
-  /// Délai annulable : si [_failActive] passe à false pendant l'attente,
-  /// on retourne immédiatement.
-  Future<void> _waitInterruptible(Duration total) async {
+  /// Délai annulable : si [_failActive] passe à false pendant l'attente
+  /// — ou si la génération a changé (un nouveau flow fail nous a remplacés)
+  /// — on retourne immédiatement.
+  Future<void> _waitInterruptible(Duration total, {required int gen}) async {
     final elapsed = Stopwatch()..start();
     while (elapsed.elapsed < total) {
-      if (!_failActive) return;
+      if (!_isFailFlowAlive(gen)) return;
       await Future<void>.delayed(const Duration(milliseconds: 100));
     }
   }
@@ -1449,15 +1644,29 @@ class SessionController extends ChangeNotifier {
 
   @override
   void dispose() {
+    // Marquer released avant tout : les awaits encore en vol dans _finish,
+    // triggerFail, _runPunishment, etc. testent ce flag avant de relancer
+    // un speak/beep et court-circuitent proprement.
+    final wasAlreadyReleased = _released;
+    _released = true;
     _failActive = false;
     _punishmentTicker?.cancel();
     _randomCommentTimer?.cancel();
     _ticker?.cancel();
     _stopwatch.stop();
-    if (!_released) {
-      _tts.stop();
-      _beep.stop();
-      _ambience.stop();
+    if (!wasAlreadyReleased) {
+      // Chaînage séquentiel : si l'écran est démonté juste avant qu'un
+      // nouveau controller prenne la main (cas pushReplacement non capturé
+      // par detachAudio), on laisse le _tts.stop() finir avant le beep et
+      // l'ambience pour éviter une rafale de stops parallèles dont l'ordre
+      // résolu peut couper le speak/beep du nouveau controller.
+      unawaited(() async {
+        try {
+          await _tts.stop();
+          await _beep.stop();
+          await _ambience.stop();
+        } catch (_) {}
+      }());
       WakelockPlus.disable();
     }
     super.dispose();

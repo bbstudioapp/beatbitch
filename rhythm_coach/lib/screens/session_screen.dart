@@ -16,9 +16,7 @@ import '../l10n/enum_labels.dart';
 import '../models/badge.dart';
 import '../career/services/debug_settings_service.dart';
 import '../career/widgets/stamina_bar.dart';
-import '../widgets/excitation_bar.dart';
-import '../widgets/humiliation_bar.dart';
-import '../widgets/obedience_bar.dart';
+import '../widgets/debug_score_bar.dart';
 import '../controllers/session_controller.dart';
 import '../models/session.dart';
 import '../services/ambience_engine.dart';
@@ -231,8 +229,7 @@ class _SessionScreenState extends State<SessionScreen>
   }
 
   Future<void> _recordCareerCompletion() async {
-    final progress =
-        CareerProgressService(milestoneService: milestoneService);
+    final progress = CareerProgressService();
     final currentMax = await progress.getMaxLevel();
     final level = widget.careerLevel ?? 0;
     final levelUp = !widget.isQuickie &&
@@ -302,8 +299,10 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
   bool _showExcitationBar = false;
   bool _showHumiliationBar = false;
   bool _showObedienceBar = false;
+  bool _showSalivaBar = false;
   bool _showSessionControls = false;
   bool _showModeBadge = false;
+  bool _showSkipSessionButton = false;
   bool _upgradeRequested = false;
   bool _upgradeInFlight = false;
 
@@ -350,9 +349,17 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
       if (!mounted) return;
       setState(() => _showObedienceBar = value);
     });
+    debug.getShowSalivaBar().then((value) {
+      if (!mounted) return;
+      setState(() => _showSalivaBar = value);
+    });
     debug.getShowSessionControls().then((value) {
       if (!mounted) return;
       setState(() => _showSessionControls = value);
+    });
+    debug.getSkipSessionButton().then((value) {
+      if (!mounted) return;
+      setState(() => _showSkipSessionButton = value);
     });
     debug.getShowModeBadge().then((value) {
       if (!mounted) return;
@@ -612,6 +619,13 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
             const SizedBox(height: 4),
             ObedienceBar(value: ctrl.obedience.score),
           ],
+          if (_showSalivaBar) ...[
+            const SizedBox(height: 4),
+            SalivaBar(
+              value: ctrl.saliva.value,
+              max: ctrl.saliva.maxValue,
+            ),
+          ],
           const Spacer(),
           if (_showTimer)
             TimerDisplay(elapsed: ctrl.elapsed, total: ctrl.session.duration)
@@ -667,6 +681,21 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
               },
             ),
           _FailButton(controller: ctrl),
+          if (_showSkipSessionButton && (ctrl.isRunning || ctrl.isPaused)) ...[
+            SizedBox(height: showBar ? 8 : 12),
+            Builder(
+              builder: (ctx) => OutlinedButton.icon(
+                onPressed: () => ctrl.debugFinishSuccess(),
+                icon: const Icon(Icons.fast_forward, size: 18),
+                label: Text(AppLocalizations.of(ctx).sessionDebugFinishButton),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.greenAccent,
+                  side: const BorderSide(color: Colors.greenAccent),
+                  minimumSize: const Size.fromHeight(36),
+                ),
+              ),
+            ),
+          ],
           SizedBox(height: showBar ? 10 : 16),
           _VolumesBlock(
             ttsVolume: _volume,

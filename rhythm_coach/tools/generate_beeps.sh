@@ -44,8 +44,16 @@ beep biffle_beep  900 0.14 0.040 1.00
 # Breath : grave, long, soft attack et fade-out long pour effet « libérateur »
 beep breath_beep  500 0.40 0.180 0.85
 
-# Hand : médium-aigu, plus mat que rhythm pour différencier la stimulation main
-beep hand_beep    780 0.12 0.040 0.85
+# Hand : 2 samples alternés down/up pour évoquer le va-et-vient de la main.
+# Fréquences placées hors du pool position (tip=1400 ... full=280) pour rester
+# acoustiquement distinct des bips bouche → en combo hand+rhythm/lick on doit
+# pouvoir parser les 2 pistes à l'oreille.
+# - down : coup descendant (la main slamme vers la base), grave + un peu plus
+#   long. Le volume sera modulé live par BeepEngine selon la profondeur de
+#   `to` (tip × 0.7 → full × 1.0) → l'amplitude du stroke s'entend.
+# - up : coup remontant (la main décroche vers le gland), bref et clair.
+beep hand_down_beep  360 0.09 0.040 0.95
+beep hand_up_beep    560 0.06 0.025 0.75
 
 # Freestyle markers : montant pour le départ, descendant grave pour la fin
 beep freestyle_start 600 0.20 0.080 0.75
@@ -57,6 +65,6 @@ beep freestyle_end   400 0.30 0.150 0.75
 beep finale_chime    520 1.40 0.700 0.95
 
 echo
-echo "✓ 12 fichiers générés dans $OUT/"
+echo "✓ 13 fichiers générés dans $OUT/"
 echo "Ce sont des sinusoïdes simples — remplace-les par tes propres samples"
 echo "(coups secs, claps, slurps, etc.) en gardant les mêmes noms de fichiers."

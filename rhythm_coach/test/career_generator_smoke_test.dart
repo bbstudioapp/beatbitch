@@ -99,7 +99,7 @@ void main() {
     // l'apotheose entière. `session.finalMilestoneId` est renseigné.
     const milestone = LevelMilestone(
       id: 'intro_final_hold_tip',
-      level: 2,
+      humilRequired: 0.0,
       displayLabel: 'test',
       placement: MilestonePlacement.finalApotheose,
       sequence: [
@@ -168,7 +168,7 @@ void main() {
     // remplace la phase finish.
     const body = LevelMilestone(
       id: 'body_test',
-      level: 2,
+      humilRequired: 0.0,
       displayLabel: 'body',
       sequence: [
         SessionStep(
@@ -186,7 +186,7 @@ void main() {
     );
     const finalM = LevelMilestone(
       id: 'final_test',
-      level: 2,
+      humilRequired: 0.0,
       displayLabel: 'final',
       placement: MilestonePlacement.finalApotheose,
       sequence: [
@@ -297,5 +297,104 @@ void main() {
         }
       }
     }
+  });
+
+  test(
+      'milestone unlock — la compétence devient utilisable APRÈS la séquence',
+      () {
+    // On utilise `UnlockKey.freestyle` parce que ce mode est gaté
+    // uniquement via `_isUnlocked` / `_buildRecoveryStep` : aucune cascade
+    // de diversification (`_diversifyAmplitude`, `_diversifyLongSegment`)
+    // ne peut le produire incidemment. Sans l'unlock, aucun step
+    // `mode=freestyle` n'est généré ; avec l'unlock propagé après la
+    // milestone, les recovery steps peuvent en piocher.
+    const milestone = LevelMilestone(
+      id: 'unlock_freestyle_test',
+      humilRequired: 0.0,
+      displayLabel: 'unlock freestyle',
+      insertAtMinSeconds: 60,
+      insertAtMaxSeconds: 60,
+      sequence: [
+        SessionStep(
+          time: 0,
+          text: 'm-intro',
+          mode: SessionMode.lick,
+          from: Position.tip,
+          to: Position.head,
+          bpm: 60,
+          duration: 8,
+        ),
+        SessionStep(
+          time: 8,
+          text: 'm-payoff',
+          mode: SessionMode.freestyle,
+          duration: 10,
+        ),
+      ],
+      durationSeconds: 18,
+      unlocks: [UnlockKey.freestyle],
+    );
+    final initial = <UnlockKey>{
+      UnlockKey.handBasic,
+      UnlockKey.lickTipBasic,
+      UnlockKey.rhythmTipHead,
+      UnlockKey.holdTip,
+      UnlockKey.holdHead,
+      UnlockKey.rhythmMidBasic,
+      UnlockKey.lickFull,
+      UnlockKey.holdMidShort,
+      UnlockKey.biffleBasic,
+      UnlockKey.begLibre,
+    };
+
+    // (1) Sans milestone, aucun step `mode=freestyle` ne doit apparaître :
+    // le set initial ne contient pas la clé, et le mode n'est candidat
+    // qu'à travers `_buildRecoveryStep` (qui consulte `_unlockedKeys`).
+    for (var seed = 0; seed < 10; seed++) {
+      final r = CareerSessionGenerator(seed: seed).generate(
+        level: 4,
+        bank: _bank(),
+        unlockedKeys: initial,
+        humiliationScore: 30.0,
+      );
+      final freestyles = r.session.steps
+          .where((s) => !s.isTextOnly && s.mode == SessionMode.freestyle);
+      expect(freestyles, isEmpty,
+          reason:
+              'seed=$seed sans milestone : freestyle devrait rester gaté '
+              'par _isUnlocked');
+    }
+
+    // (2) Avec milestone : la séquence en pose un en interne, et tout
+    // freestyle hors séquence doit se trouver APRÈS la fin de la milestone.
+    // Sur 30 seeds, on doit observer au moins une apparition post-milestone
+    // — preuve que l'unlock est bien propagé dans `_unlockedKeys`.
+    var foundPostMilestone = false;
+    for (var seed = 0; seed < 30; seed++) {
+      final r = CareerSessionGenerator(seed: seed).generate(
+        level: 4,
+        bank: _bank(),
+        milestone: milestone,
+        unlockedKeys: initial,
+        humiliationScore: 30.0,
+      );
+      final mStart = r.session.milestoneStartTime!;
+      final mEnd = mStart + r.session.milestoneDurationSeconds!;
+      for (final s in r.session.steps) {
+        if (s.isTextOnly) continue;
+        if (s.mode != SessionMode.freestyle) continue;
+        final isMilestoneStep = s.time >= mStart && s.time < mEnd;
+        if (isMilestoneStep) continue;
+        expect(s.time, greaterThanOrEqualTo(mEnd),
+            reason:
+                'seed=$seed freestyle à t=${s.time} avant la fin de la '
+                'milestone (mEnd=$mEnd) — gating violé');
+        foundPostMilestone = true;
+      }
+    }
+    expect(foundPostMilestone, isTrue,
+        reason:
+            'sur 30 seeds, aucun freestyle post-milestone : l\'unlock ne '
+            'semble pas propagé dans _unlockedKeys après l\'insertion');
   });
 }
