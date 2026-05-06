@@ -100,6 +100,19 @@ class CareerSessionGenerator {
   Position? _lastFrom;
   Position? _lastTo;
 
+  /// Buffer roulant des 3 derniers steps rythmés émis (mode + from + to +
+  /// bpm). Sert à détecter un **pattern plat** sur une fenêtre élargie :
+  /// même mode + même profondeur cible + variance BPM < 10 sur 3 steps
+  /// consécutifs = monotone, on force une diversification au step suivant.
+  /// Sans cette fenêtre, `_diversifyAmplitude` ne regardait que le step
+  /// strictement précédent et laissait passer des séries du genre
+  /// `head→mid 90 / head→mid 92 / head→mid 88` (BPMs proches mais différents
+  /// donc check classique satisfait, alors que l'oreille perçoit un plat).
+  /// Les steps transit (breath / freestyle) sont **ignorés** : un breath
+  /// de récup au milieu d'une série rythmée ne casse pas la perception du
+  /// pattern, on veut qu'il continue à compter.
+  final List<_RecentEmit> _recentEmits = [];
+
   /// Simulateur de salive utilisé pendant la génération. Mime le
   /// comportement du `SalivaEngine` runtime : production par mode/position,
   /// auto-déglutition au-dessus de 75. Sert à projeter la lubrification
@@ -200,6 +213,7 @@ class CareerSessionGenerator {
     _lastType = null;
     _stepsInLastType = 0;
     _stepsOutsideBouche = 0;
+    _recentEmits.clear();
     _unlockedKeys = unlockedKeys;
     _coachModeWeights = coachModeWeights;
     _humiliationCareer = humiliationCareer;
@@ -277,7 +291,8 @@ class CareerSessionGenerator {
         // Tracking de continuité par type — chaque step de la séquence
         // compte (la séquence peut elle-même alterner bouche/transit).
         if (mStep.mode != null && !mStep.isTextOnly) {
-          _trackPushedStep(mStep.mode!, mStep.to);
+          _trackPushedStep(mStep.mode!, mStep.to,
+              from: mStep.from, bpm: mStep.bpm);
         }
       }
       // Met à jour le « dernier mode/texte » avec le dernier step de la
@@ -320,7 +335,8 @@ class CareerSessionGenerator {
       _lastBpm = first.bpm ?? _lastBpm;
       _lastFrom = first.from;
       _lastTo = first.to;
-      _trackPushedStep(first.mode, first.to);
+      _trackPushedStep(first.mode, first.to,
+          from: first.from, bpm: first.bpm);
       final staminaBefore = stamina;
       stamina = _applyStaminaChange(stamina, first, 0.0, cfg);
       _fillProfile(profile, 0, first.duration ?? 1, stamina,
@@ -468,7 +484,8 @@ class CareerSessionGenerator {
         _lastText = partText;
         _lastFrom = partDraft.from;
         _lastTo = partDraft.to;
-        _trackPushedStep(partDraft.mode, partDraft.to);
+        _trackPushedStep(partDraft.mode, partDraft.to,
+            from: partDraft.from, bpm: partDraft.bpm);
         _fillProfile(profile, time, partDraft.duration!, stamina,
             valueStart: staminaBefore);
         time += partDraft.duration!;
@@ -517,7 +534,8 @@ class CareerSessionGenerator {
         _lastText = '';
         _lastFrom = chain.from;
         _lastTo = chain.to;
-        _trackPushedStep(chain.mode, chain.to);
+        _trackPushedStep(chain.mode, chain.to,
+            from: chain.from, bpm: chain.bpm);
         _fillProfile(profile, time, chain.duration!, stamina,
             valueStart: staminaBefore);
         time += chain.duration!;
@@ -578,7 +596,8 @@ class CareerSessionGenerator {
         _fillProfile(profile, time + mStep.time, mStep.duration ?? 0, stamina,
             valueStart: staminaBeforeFinal);
         if (mStep.mode != null && !mStep.isTextOnly) {
-          _trackPushedStep(mStep.mode!, mStep.to);
+          _trackPushedStep(mStep.mode!, mStep.to,
+              from: mStep.from, bpm: mStep.bpm);
         }
       }
       time += finalMilestone.durationSeconds;
@@ -658,7 +677,8 @@ class CareerSessionGenerator {
       steps.add(_draftToStep(preDraft, time: time, text: preText));
       _lastMode = SessionMode.rhythm;
       _lastText = preText;
-      _trackPushedStep(SessionMode.rhythm, preDraft.to);
+      _trackPushedStep(SessionMode.rhythm, preDraft.to,
+          from: preDraft.from, bpm: preDraft.bpm);
       final staminaBeforePre = stamina;
       stamina = _applyStaminaChange(
           stamina, preDraft, time / effectiveDuration, cfg);
@@ -798,7 +818,8 @@ class CareerSessionGenerator {
       _lastMode = boostDraft.mode;
       _lastText = boostText;
       _lastBpm = boostDraft.bpm ?? _lastBpm;
-      _trackPushedStep(boostDraft.mode, boostDraft.to);
+      _trackPushedStep(boostDraft.mode, boostDraft.to,
+          from: boostDraft.from, bpm: boostDraft.bpm);
       final staminaBeforeBoost = stamina;
       stamina = _applyStaminaChange(stamina, boostDraft, 1.0, cfg);
       _advanceSalivaSim(boostDraft);
@@ -865,7 +886,8 @@ class CareerSessionGenerator {
         _draftToStep(finisherDraft, time: time, text: finalStepText);
     _lastMode = finalMode;
     _lastText = finalStepText;
-    _trackPushedStep(finalMode, finisherDraft.to);
+    _trackPushedStep(finalMode, finisherDraft.to,
+        from: finisherDraft.from, bpm: finisherDraft.bpm);
     final finisherDuration = finisherDraft.duration!;
     steps.add(finisherStep);
     final staminaBeforeFinisher = stamina;
@@ -902,7 +924,8 @@ class CareerSessionGenerator {
     time += postFinalDuration;
     _lastMode = postFinalDraft.mode;
     _lastText = postFinalText;
-    _trackPushedStep(postFinalDraft.mode, postFinalDraft.to);
+    _trackPushedStep(postFinalDraft.mode, postFinalDraft.to,
+        from: postFinalDraft.from, bpm: postFinalDraft.bpm);
 
     final finalDuration = time + 2;
     final trimmedProfile = List<double>.generate(
@@ -1646,11 +1669,16 @@ class CareerSessionGenerator {
     return 0.50;
   }
 
-  /// Met à jour `_lastType` / `_stepsInLastType` après push d'un step.
+  /// Met à jour `_lastType` / `_stepsInLastType` après push d'un step,
+  /// et alimente `_recentEmits` (buffer 3 derniers, modes rythmés
+  /// uniquement) pour la détection de pattern plat.
+  ///
   /// Les steps `transit` (breath / freestyle) sont une parenthèse
-  /// transparente : ils ne touchent pas le tracking pour qu'un breath
-  /// de récup au milieu d'une série bouche n'efface pas la continuité.
-  void _trackPushedStep(SessionMode mode, Position? to) {
+  /// transparente : ils ne touchent ni le tracking de type ni le buffer
+  /// `_recentEmits` — un breath de récup au milieu d'une série rythmée ne
+  /// doit pas remettre le compteur à zéro côté détection de monotonie.
+  void _trackPushedStep(SessionMode mode, Position? to,
+      {Position? from, int? bpm}) {
     final type = _classifyStep(mode, to);
     if (type == _StepType.transit) return;
     if (type == _StepType.bouche) {
@@ -1664,6 +1692,44 @@ class CareerSessionGenerator {
       _lastType = type;
       _stepsInLastType = 1;
     }
+    // Buffer pattern plat : on n'enregistre que les modes à amplitude
+    // (rhythm / lick / hand / biffle) — ce sont les seuls où la notion de
+    // « même profondeur + même BPM » fait sens. Les hold / beg ne portent
+    // pas de BPM, et leur monotonie est gérée ailleurs (variation de
+    // position dans `_pickHoldPosition` / `_lastFrom`).
+    if (mode == SessionMode.rhythm ||
+        mode == SessionMode.lick ||
+        mode == SessionMode.hand ||
+        mode == SessionMode.biffle) {
+      _recentEmits.add((mode: mode, from: from, to: to, bpm: bpm));
+      while (_recentEmits.length > 3) {
+        _recentEmits.removeAt(0);
+      }
+    }
+  }
+
+  /// Vrai si le draft proposé prolongerait un **pattern plat** : les 3
+  /// derniers émis + le draft sont tous (a) du même mode rythmé,
+  /// (b) à la même profondeur cible `to`, (c) avec une variance BPM
+  /// < 10 sur les 4 valeurs. Sans cette fenêtre élargie, une série
+  /// `head→mid 88 / head→mid 92 / head→mid 90` glissait à travers le
+  /// check classique (BPMs « différents ») alors que l'oreille perçoit
+  /// un plat. Le seuil < 10 reste serré : 10 BPM de variance c'est déjà
+  /// audible, on n'intervient que sous ce seuil.
+  bool _isFlatRhythmicPattern(_StepDraft d) {
+    if (_recentEmits.length < 3) return false;
+    if (d.bpm == null || d.to == null) return false;
+    if (!_recentEmits.every((e) => e.mode == d.mode)) return false;
+    if (!_recentEmits.every((e) => e.to == d.to)) return false;
+    final bpms = <int>[
+      for (final e in _recentEmits)
+        if (e.bpm != null) e.bpm!,
+      d.bpm!,
+    ];
+    if (bpms.length < 4) return false;
+    final maxB = bpms.reduce(max);
+    final minB = bpms.reduce(min);
+    return (maxB - minB) < 10;
   }
 
   /// Pondération issue de la spé seule, sans le filtre coach. Le coach
@@ -2656,8 +2722,10 @@ class CareerSessionGenerator {
   /// Force une légère variation de la cible `to` (ou de `from` si `to`
   /// est null) si le draft a exactement la même amplitude que le step
   /// précédent. Sert pour rhythm/lick/hand/biffle : empêche d'enchaîner
-  /// deux head→mid identiques. Décale d'un cran vers le haut ou le bas
-  /// selon le mode :
+  /// deux head→mid identiques **et** détecte une monotonie sur fenêtre
+  /// élargie (3 derniers émis + draft = même mode + même `to` + BPMs
+  /// resserrés). Quand l'un des deux cas se déclenche, décale d'un cran
+  /// vers le haut ou le bas selon le mode :
   /// - rhythm : `_milestoneRhythmCeilingIdx()` (gating milestone)
   /// - lick / hand : full ouvert (pas de tension de profondeur)
   /// - biffle : pas concerné (from/to null par convention)
@@ -2670,9 +2738,17 @@ class CareerSessionGenerator {
     }
     final lastFrom = _lastFrom;
     final lastTo = _lastTo;
-    if (lastFrom == null || lastTo == null) return d;
-    if (d.from != lastFrom || d.to != lastTo) return d;
-    // Même amplitude que le step précédent : on décale `to` d'un cran.
+    final exactSameAsLast = lastFrom != null &&
+        lastTo != null &&
+        d.from == lastFrom &&
+        d.to == lastTo;
+    // Le détecteur fenêtre 3 ne déclenche que si on a déjà 3 émissions
+    // rythmées en buffer. Tant qu'il n'y en a pas (début de session), on
+    // s'appuie uniquement sur le check classique sur le step précédent.
+    final flatPattern = _isFlatRhythmicPattern(d);
+    if (!exactSameAsLast && !flatPattern) return d;
+    // Même amplitude que le step précédent OU pattern plat sur 3 steps :
+    // on décale `to` d'un cran.
     final toIdx = d.to?.index;
     if (toIdx == null) return d;
     final ceil = d.mode == SessionMode.rhythm
@@ -3096,6 +3172,16 @@ class CareerSessionGenerator {
 /// - `transit` (breath, freestyle) : pause neutre, ne casse pas la
 ///   continuité du type courant.
 enum _StepType { bouche, langue, libreMain, transit }
+
+/// Snapshot léger d'un step rythmé déjà émis, conservé dans le buffer
+/// roulant `_recentEmits`. Sert à `_isFlatRhythmicPattern` pour détecter
+/// une monotonie sur fenêtre 3 (mêmes mode + to + BPMs proches).
+typedef _RecentEmit = ({
+  SessionMode mode,
+  Position? from,
+  Position? to,
+  int? bpm,
+});
 
 /// Classe un step (mode + position éventuelle) en `_StepType`. La
 /// position est nécessaire pour `beg` : un beg avec `to` tenu = la
