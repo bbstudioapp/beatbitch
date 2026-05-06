@@ -62,6 +62,29 @@ class CareerSessionGenerator {
   /// (breath, beg, …) se déclenche deux steps d'affilé. Reset dans `generate`.
   SessionMode? _lastMode;
 
+  /// Type effectif du dernier step poussé (= cluster sémantique :
+  /// bouche / langue / libre-main). Sert à forcer une continuité par
+  /// type sur plusieurs steps consécutifs : la séance est censée se
+  /// concentrer sur la bouche, les autres types sont des intros / des
+  /// respirations entre deux phases bouche.
+  ///
+  /// Les steps `transit` (breath / freestyle) sont des parenthèses
+  /// transparentes : ils ne touchent ni `_lastType` ni `_stepsInLastType`,
+  /// pour qu'un breath de récup au milieu d'une série bouche n'efface pas
+  /// la continuité.
+  _StepType? _lastType;
+  int _stepsInLastType = 0;
+
+  /// Nombre de steps **consécutifs** posés en dehors du type `bouche`.
+  /// Reset à 0 dès qu'un step bouche est poussé. Sert à imposer un cap
+  /// dur sur la durée d'une excursion hors bouche : passé un certain
+  /// nombre de steps cumulés (peu importe que ce soit langue ou
+  /// libre-main), on force le retour à bouche.
+  ///
+  /// Distinct de `_stepsInLastType` qui reset à chaque changement de
+  /// type — ce compteur-là tient sur tout l'écart bouche → bouche.
+  int _stepsOutsideBouche = 0;
+
   /// Dernière phrase TTS poussée, pour éviter de répéter la même phrase
   /// scriptée d'un step à l'autre. Reset dans `generate`.
   String _lastText = '';
@@ -174,6 +197,9 @@ class CareerSessionGenerator {
     _lastBpm = null;
     _lastFrom = null;
     _lastTo = null;
+    _lastType = null;
+    _stepsInLastType = 0;
+    _stepsOutsideBouche = 0;
     _unlockedKeys = unlockedKeys;
     _coachModeWeights = coachModeWeights;
     _humiliationCareer = humiliationCareer;
@@ -247,6 +273,11 @@ class CareerSessionGenerator {
         _advanceSalivaSim(mDraft);
         _fillProfile(
             profile, time + mStep.time, mStep.duration ?? 0, stamina);
+        // Tracking de continuité par type — chaque step de la séquence
+        // compte (la séquence peut elle-même alterner bouche/transit).
+        if (mStep.mode != null && !mStep.isTextOnly) {
+          _trackPushedStep(mStep.mode!, mStep.to);
+        }
       }
       // Met à jour le « dernier mode/texte » avec le dernier step de la
       // milestone — sert au filtrage anti-répétition de la suite générée.
@@ -288,6 +319,7 @@ class CareerSessionGenerator {
       _lastBpm = first.bpm ?? _lastBpm;
       _lastFrom = first.from;
       _lastTo = first.to;
+      _trackPushedStep(first.mode, first.to);
       stamina = _applyStaminaChange(stamina, first, 0.0, cfg);
       _fillProfile(profile, 0, first.duration ?? 1, stamina);
       _advanceSalivaSim(first);
@@ -397,6 +429,10 @@ class CareerSessionGenerator {
           time += breathDraft.duration!;
           _lastMode = SessionMode.breath;
           _lastText = breathText;
+          // breath = transit → ne touche pas _lastType (parenthèse
+          // transparente). On l'appelle quand même pour cohérence si la
+          // règle évoluait.
+          _trackPushedStep(SessionMode.breath, null);
         }
       }
 
@@ -426,6 +462,7 @@ class CareerSessionGenerator {
         _lastText = partText;
         _lastFrom = partDraft.from;
         _lastTo = partDraft.to;
+        _trackPushedStep(partDraft.mode, partDraft.to);
         _fillProfile(profile, time, partDraft.duration!, stamina);
         time += partDraft.duration!;
       }
@@ -442,6 +479,7 @@ class CareerSessionGenerator {
         _lastText = '';
         _lastFrom = chain.from;
         _lastTo = chain.to;
+        _trackPushedStep(chain.mode, chain.to);
         _fillProfile(profile, time, chain.duration!, stamina);
         time += chain.duration!;
       }
@@ -499,6 +537,9 @@ class CareerSessionGenerator {
         _advanceSalivaSim(mDraft);
         _fillProfile(
             profile, time + mStep.time, mStep.duration ?? 0, stamina);
+        if (mStep.mode != null && !mStep.isTextOnly) {
+          _trackPushedStep(mStep.mode!, mStep.to);
+        }
       }
       time += finalMilestone.durationSeconds;
       _lastMode = finalMilestone.sequence.last.mode ?? _lastMode;
@@ -577,6 +618,7 @@ class CareerSessionGenerator {
       steps.add(_draftToStep(preDraft, time: time, text: preText));
       _lastMode = SessionMode.rhythm;
       _lastText = preText;
+      _trackPushedStep(SessionMode.rhythm, preDraft.to);
       _fillProfile(profile, time, preDur, stamina);
       _advanceSalivaSim(preDraft);
       time += preDur;
@@ -712,6 +754,7 @@ class CareerSessionGenerator {
       _lastMode = boostDraft.mode;
       _lastText = boostText;
       _lastBpm = boostDraft.bpm ?? _lastBpm;
+      _trackPushedStep(boostDraft.mode, boostDraft.to);
       stamina = _applyStaminaChange(stamina, boostDraft, 1.0, cfg);
       _advanceSalivaSim(boostDraft);
       _fillProfile(profile, time, boostDur, stamina);
@@ -776,6 +819,7 @@ class CareerSessionGenerator {
         _draftToStep(finisherDraft, time: time, text: finalStepText);
     _lastMode = finalMode;
     _lastText = finalStepText;
+    _trackPushedStep(finalMode, finisherDraft.to);
     final finisherDuration = finisherDraft.duration!;
     steps.add(finisherStep);
     _fillProfile(profile, time, finisherDuration, stamina);
@@ -806,6 +850,7 @@ class CareerSessionGenerator {
     time += postFinalDuration;
     _lastMode = postFinalDraft.mode;
     _lastText = postFinalText;
+    _trackPushedStep(postFinalDraft.mode, postFinalDraft.to);
 
     final finalDuration = time + 2;
     final trimmedProfile = List<double>.generate(
@@ -1082,9 +1127,24 @@ class CareerSessionGenerator {
       if (_includeHand) SessionMode.biffle,
       if (canBeg) SessionMode.beg,
       if (canFreestyle) SessionMode.freestyle,
+      // Rhythm très doux comme « récup en bouche » : BPM bas, tip→head,
+      // coût stamina modéré. Toujours candidat — la friction de continuité
+      // décide s'il gagne (en bouche : ×3.0, hors bouche : ×3.0 voire +
+      // selon la durée d'excursion). Sans ça, une recovery déclenchée
+      // depuis bouche reste systématiquement bloquée hors bouche, et le
+      // pattern « rhythm → recovery → rhythm » fait des séries de 1 step.
+      SessionMode.rhythm,
+      // Hold court tip/head : bisou prolongé / immobilisation douce. Sert
+      // à insérer l'alternance rhythm/hold même pendant les phases où la
+      // stamina est basse (sinon on n'a que des hold sur les rares moments
+      // hors recovery). Coût stamina faible à cette profondeur.
+      SessionMode.hold,
     ];
     final pool = _filterRepeated(candidates);
-    final mode = pool[_rng.nextInt(pool.length)];
+    // Tirage pondéré pour que la friction de continuité par type s'applique
+    // aussi à la recovery (sans ça, une recovery uniforme repousse souvent
+    // langue/libre alors que la séance vient juste de quitter bouche).
+    final mode = _pickWeightedMode(pool);
     final bpm = 45 + _rng.nextInt(14); // [45, 58]
     final dur = 10 + _rng.nextInt(9); // [10, 18]
     _StepDraft draft;
@@ -1109,6 +1169,30 @@ class CareerSessionGenerator {
         from: null,
         to: null,
         duration: freeDur,
+      );
+    } else if (mode == SessionMode.rhythm) {
+      // Rhythm en recovery = bouche douce. Amplitude minimale (tip→head),
+      // BPM bas — le coût stamina reste modéré pour ne pas creuser la
+      // dette d'endurance qu'on cherche justement à combler ailleurs.
+      draft = _StepDraft(
+        mode: mode,
+        bpm: bpm,
+        from: Position.tip,
+        to: Position.head,
+        duration: dur,
+      );
+    } else if (mode == SessionMode.hold) {
+      // Hold court en recovery = bisou prolongé / immobilisation douce.
+      // Position aléatoire entre tip (bisou) et head (gland tenu), durée
+      // courte (4-7 s) pour rester une vraie respiration, pas un effort.
+      final holdDur = 4 + _rng.nextInt(4);
+      final to = _rng.nextBool() ? Position.tip : Position.head;
+      draft = _StepDraft(
+        mode: mode,
+        bpm: null,
+        from: null,
+        to: to,
+        duration: holdDur,
       );
     } else {
       final (from, to) = _sampleFromTo(0.3);
@@ -1144,8 +1228,24 @@ class CareerSessionGenerator {
     if (diff < 0.30) {
       candidates.add(SessionMode.lick);
     }
-    if (diff >= 0.20) {
+    // Bouche disponible quoi qu'il arrive si on y est déjà ou si on en
+    // est sorti depuis longtemps : à diff < 0.20 le panel par défaut ne
+    // contient que lick/hand, donc sans cette injection on est mécaniquement
+    // forcé de quitter bouche au step suivant — la friction de continuité
+    // n'a plus rien à pousser. La cohérence par type (séries de plusieurs
+    // steps sur bouche) ne marche que si rhythm reste un candidat valide
+    // pendant la phase de chauffe.
+    if (diff >= 0.20 ||
+        _stepsOutsideBouche >= 2 ||
+        _lastType == _StepType.bouche) {
       candidates.add(SessionMode.rhythm);
+    }
+    // Hold candidat dès diff >= 0.20 normalement, mais aussi dès diff >= 0.10
+    // si on est déjà en bouche : permet l'alternance rhythm/hold à
+    // l'intérieur d'une série bouche (sinon les phases de chauffe restaient
+    // 100 % rhythm uniforme — l'utilisateur attend rythme/rythme/hold/…).
+    if (diff >= 0.20 ||
+        (_lastType == _StepType.bouche && diff >= 0.10)) {
       candidates.add(SessionMode.hold);
     }
     if (diff >= 0.40 && _includeHand) {
@@ -1297,8 +1397,115 @@ class CareerSessionGenerator {
   double _modeWeight(SessionMode m) {
     final base = _modeBaseWeight(m);
     final coachFactor = _coachModeWeights[m] ?? 1.0;
-    final result = base * coachFactor;
+    final continuity = _continuityMultiplier(m);
+    final result = base * coachFactor * continuity;
     return result < 0 ? 0 : result;
+  }
+
+  /// Multiplicateur appliqué à `_modeWeight` pour favoriser la continuité
+  /// par type de step. Le but est que la séance ressente une cohérence :
+  /// on reste plusieurs steps consécutifs sur le même type, avec variation
+  /// par paramètres (BPM, profondeur, phrases) plutôt que de sauter d'un
+  /// type à l'autre à chaque step. La bouche est le cœur de l'app —
+  /// continuité forte, friction marquée pour en sortir, retour activement
+  /// favorisé après une excursion.
+  ///
+  /// Échelle (réglée pour que la bouche reste le type majoritaire en
+  /// nombre de steps) :
+  /// - même type que le précédent :
+  ///     * bouche → bouche : ×3.0 (très collant — on n'en sort pas pour rien)
+  ///     * langue → langue, libre → libre :
+  ///         - 1er step : ×1.8 (continuité tolérée)
+  ///         - 2e step+ : ×0.6 (dégradation rapide — une excursion hors
+  ///           bouche doit rester courte, c'est une intro/transition)
+  /// - changement vers bouche depuis langue/libre :
+  ///     * 1 step hors bouche : ×1.4 (variété tolérée mais on encourage)
+  ///     * 2 steps hors bouche : ×3.0 (forcer le retour)
+  ///     * 3+ steps hors bouche : ×6.0 (verrouiller le retour)
+  /// - changement DEPUIS bouche vers langue/libre :
+  ///     * < 2 steps de bouche : ×0.30 (très peu de chances de partir)
+  ///     * 2-3 steps de bouche : ×0.55
+  ///     * 4+ steps de bouche : ×0.80 (variété tolérée après une vraie phase)
+  /// - changement entre langue ↔ libre/main : ×0.50 (friction marquée —
+  ///   on ne saute pas d'un type secondaire à l'autre, on repasse par
+  ///   bouche)
+  ///
+  /// Cas neutres (×1.0) :
+  /// - pas de _lastType encore (premier step)
+  /// - dernier type = transit (breath/freestyle ne reset pas, donc rare)
+  /// - candidat = beg (ambivalent — son type effectif dépend du `to`
+  ///   tiré APRÈS le pick, donc on ne biaise pas le tirage du mode)
+  /// - candidat = breath/freestyle (sont tirés par d'autres voies, jamais
+  ///   par `_pickWeightedMode`, mais on reste neutre par sécurité)
+  double _continuityMultiplier(SessionMode candidate) {
+    final last = _lastType;
+    if (last == null) return 1.0;
+    if (last == _StepType.transit) return 1.0;
+
+    if (candidate == SessionMode.breath ||
+        candidate == SessionMode.freestyle) {
+      return 1.0;
+    }
+
+    // beg est ambivalent au moment du tirage : son `to` est décidé après
+    // dans `_mapDifficultyToStep`. À diff bas (= début de session,
+    // chauffe), `ampScore` tend vers 0 et le beg sort en libre (`to=null`).
+    // Si on le traitait neutre (×1.0), il sortait ~14 % du temps en plein
+    // milieu d'une série bouche et la fragmentait. On le classe donc en
+    // libre/main par défaut — quitte à manquer un peu les beg-non-libre
+    // (rares, n'apparaissent qu'à ampScore haut, donc à diff haut).
+    final cand = candidate == SessionMode.beg
+        ? _StepType.libreMain
+        : _classifyStep(candidate, null);
+    if (cand == _StepType.transit) return 1.0;
+
+    // Verrou strict : si on a déjà 2+ steps consécutifs hors bouche
+    // (peu importe lequel), on pousse fortement pour rebasculer sur
+    // bouche. Plus on s'écarte longtemps, plus le retour est verrouillé.
+    if (_stepsOutsideBouche >= 2) {
+      if (cand == _StepType.bouche) return 6.0 + _stepsOutsideBouche * 1.5;
+      return 0.05; // quasi banni — sert juste de fallback si bouche bloqué
+    }
+
+    if (cand == last) {
+      if (last == _StepType.bouche) return 3.0;
+      // langue / libre/main : continuité dégradée pour ne pas s'éterniser.
+      // 1 step de plus est OK, mais au-delà on pousse le retour à bouche.
+      return _stepsInLastType >= 2 ? 0.6 : 1.8;
+    }
+    if (cand == _StepType.bouche) {
+      // Retour à bouche : encouragé dès la 1re excursion, fort dès 2.
+      if (_stepsOutsideBouche >= 1) return 3.0;
+      return 1.4;
+    }
+    if (last == _StepType.bouche) {
+      // Quitter bouche est très onéreux : on n'en sort qu'après une vraie
+      // phase de bouche (3+ steps), et même là la friction reste marquée.
+      if (_stepsInLastType < 3) return 0.10;
+      if (_stepsInLastType < 5) return 0.30;
+      return 0.55;
+    }
+    return 0.50;
+  }
+
+  /// Met à jour `_lastType` / `_stepsInLastType` après push d'un step.
+  /// Les steps `transit` (breath / freestyle) sont une parenthèse
+  /// transparente : ils ne touchent pas le tracking pour qu'un breath
+  /// de récup au milieu d'une série bouche n'efface pas la continuité.
+  void _trackPushedStep(SessionMode mode, Position? to) {
+    final type = _classifyStep(mode, to);
+    if (type == _StepType.transit) return;
+    if (type == _StepType.bouche) {
+      _stepsOutsideBouche = 0;
+    } else {
+      _stepsOutsideBouche++;
+    }
+    if (type == _lastType) {
+      _stepsInLastType++;
+    } else {
+      _lastType = type;
+      _stepsInLastType = 1;
+    }
   }
 
   /// Pondération issue de la spé seule, sans le filtre coach. Le coach
@@ -1318,13 +1525,22 @@ class CareerSessionGenerator {
       case SessionMode.beg:
         return 1.0 + 0.60 * _pts(SpecializationBranch.obeissance);
       case SessionMode.hand:
-        // Poids un peu boosté : le mode hand doit apparaître plus souvent
-        // qu'un mode marginal car il sert de respiration entre les phases
-        // « bouche ». Sans ça les bas niveaux n'en voient quasi jamais.
-        return 1.4;
-      case SessionMode.breath:
-      case SessionMode.freestyle:
+        // Poids neutre : la friction de continuité par type pilote déjà
+        // l'apparition du hand (intro + reprises de souffle). Avant la
+        // friction, on boostait à 1.4 pour qu'il sorte du fond du panel,
+        // mais ce coup de pouce devient un excès qui éclipse la bouche.
         return 1.0;
+      case SessionMode.breath:
+        return 1.0;
+      case SessionMode.freestyle:
+        // Freestyle = vraie pause libre, sans bip ni guidage. Seul mode
+        // tiré uniquement par `_buildRecoveryStep`, donc son poids doit
+        // rester marginal pour ne pas dominer toutes les récup une fois
+        // débloqué (sinon ~25 % des récup partaient en freestyle parce
+        // que son multiplicateur de continuité est neutre — `transit` —
+        // alors que les autres candidats prennent la friction de quitter
+        // bouche). Un poids bas le garde comme option ponctuelle.
+        return 0.25;
     }
   }
 
@@ -2579,6 +2795,42 @@ class CareerSessionGenerator {
       return roll < pMediumToHard ? 'hard' : tier;
     }
     return tier;
+  }
+}
+
+/// Cluster sémantique d'un step, utilisé pour assurer la cohérence de
+/// la séance : on doit rester plusieurs steps consécutifs sur le même
+/// type avant d'en changer (sauf `transit` qui est une parenthèse
+/// transparente : breath de récup, freestyle).
+///
+/// - `bouche` (rhythm, hold, beg-non-libre) : cœur de l'app, on y
+///   passe la majorité du temps.
+/// - `langue` (lick) : variante douce, intros et transitions.
+/// - `libreMain` (hand, biffle, beg-libre) : la bouche est libre, la
+///   stim vient de la main / d'un coup / d'une supplique vocale pure.
+/// - `transit` (breath, freestyle) : pause neutre, ne casse pas la
+///   continuité du type courant.
+enum _StepType { bouche, langue, libreMain, transit }
+
+/// Classe un step (mode + position éventuelle) en `_StepType`. La
+/// position est nécessaire pour `beg` : un beg avec `to` tenu = la
+/// bouche reste sur la verge pendant la supplique → `bouche` ; un
+/// beg libre (sans `to`) = supplique purement vocale → `libreMain`.
+_StepType _classifyStep(SessionMode mode, Position? to) {
+  switch (mode) {
+    case SessionMode.rhythm:
+    case SessionMode.hold:
+      return _StepType.bouche;
+    case SessionMode.lick:
+      return _StepType.langue;
+    case SessionMode.hand:
+    case SessionMode.biffle:
+      return _StepType.libreMain;
+    case SessionMode.beg:
+      return to == null ? _StepType.libreMain : _StepType.bouche;
+    case SessionMode.breath:
+    case SessionMode.freestyle:
+      return _StepType.transit;
   }
 }
 

@@ -384,4 +384,106 @@ void main() {
             'sur 30 seeds, aucun freestyle post-milestone : l\'unlock ne '
             'semble pas propagé dans _unlockedKeys après l\'insertion');
   });
+
+  test('cohérence par type — la séance reste plusieurs steps sur le même type',
+      () {
+    // Le but du jeu est de se concentrer sur la bouche. Le générateur doit
+    // produire des séries de steps consécutifs du même type (bouche /
+    // langue / libre-main) plutôt que de sauter d'un type à l'autre à
+    // chaque step. Breath/freestyle sont des parenthèses transparentes.
+    //
+    // Critères vérifiés sur 30 seeds en niveau 8 (toutes les compétences
+    // sont susceptibles d'apparaître) :
+    // 1) la longueur moyenne d'une série du même type > 1.6 (= au moins
+    //    un peu de continuité, vs 1.0 si le générateur sautait à chaque
+    //    fois) ;
+    // 2) bouche est le type majoritaire en nombre de steps (le but du jeu) ;
+    // 3) aucun saut langue ↔ libre-main sans passer par bouche ne dépasse
+    //    une fréquence "anormale" (tolérance large car la friction n'est
+    //    pas une interdiction).
+    final samples = <List<SessionStep>>[];
+    for (var seed = 0; seed < 30; seed++) {
+      final r = CareerSessionGenerator(seed: seed).generate(
+        level: 8,
+        bank: _bank(),
+        unlockedKeys: _allUnlocks,
+        humiliationCareer: 25.0,
+        obedience: 100.0,
+      );
+      samples.add(r.session.steps);
+    }
+
+    // Classifier local — on duplique la logique pour que le test reste
+    // indépendant du privé.
+    String classify(SessionMode mode, Position? to) {
+      switch (mode) {
+        case SessionMode.rhythm:
+        case SessionMode.hold:
+          return 'bouche';
+        case SessionMode.lick:
+          return 'langue';
+        case SessionMode.hand:
+        case SessionMode.biffle:
+          return 'libreMain';
+        case SessionMode.beg:
+          return to == null ? 'libreMain' : 'bouche';
+        case SessionMode.breath:
+        case SessionMode.freestyle:
+          return 'transit';
+      }
+    }
+
+    var totalRunLengths = 0;
+    var totalRuns = 0;
+    // Comptage en temps cumulé (et pas en nombre de steps brut) — c'est
+    // ça que l'utilisateur ressent : un rhythm de 30s dominant compte
+    // plus qu'un beg-libre de 8s ponctuel. Le test brut "majorité de
+    // bouche en nombre de steps" pénalisait à tort les sessions où la
+    // bouche tient 60% du temps avec quelques transitions courtes.
+    var boucheSec = 0;
+    var langueSec = 0;
+    var libreSec = 0;
+    for (final steps in samples) {
+      String? currentType;
+      var currentLen = 0;
+      for (final s in steps) {
+        if (s.isTextOnly || s.mode == null) continue;
+        final t = classify(s.mode!, s.to);
+        if (t == 'transit') continue;
+        final dur = s.duration ?? 0;
+        switch (t) {
+          case 'bouche':
+            boucheSec += dur;
+          case 'langue':
+            langueSec += dur;
+          case 'libreMain':
+            libreSec += dur;
+        }
+        if (t == currentType) {
+          currentLen++;
+        } else {
+          if (currentType != null) {
+            totalRunLengths += currentLen;
+            totalRuns++;
+          }
+          currentType = t;
+          currentLen = 1;
+        }
+      }
+      if (currentType != null && currentLen > 0) {
+        totalRunLengths += currentLen;
+        totalRuns++;
+      }
+    }
+    final avgRunLen = totalRunLengths / totalRuns;
+    expect(avgRunLen, greaterThan(1.6),
+        reason:
+            'avg run length=$avgRunLen — le générateur saute trop vite '
+            'd\'un type à l\'autre, la friction de continuité ne mord pas');
+    final totalSec = boucheSec + langueSec + libreSec;
+    expect(boucheSec, greaterThan(langueSec + libreSec),
+        reason:
+            'bouche=${boucheSec}s langue=${langueSec}s libre=${libreSec}s '
+            '(total=${totalSec}s) — la bouche doit dominer en temps cumulé');
+  });
 }
