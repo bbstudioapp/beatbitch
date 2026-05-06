@@ -72,6 +72,14 @@ class CareerSessionGenerator {
   /// 1 à 3 mini-vagues sur une session de 25-45 min.
   int _nextMiniWaveAt = 0;
 
+  /// `time` du dernier ordre de déglutition forcé (`swallow_order`).
+  /// Sert au cooldown 90 s entre deux ordres : sans ça, une joueuse spé
+  /// sloppy avec lick à fond sature en permanence et le coach radoterait
+  /// « avale » toutes les 30 s. Initialisée à -120 dans `generate` pour
+  /// laisser un premier ordre arriver dès la fin de la rampe initiale
+  /// si la salive monte vite.
+  int _lastSwallowOrderAt = -120;
+
   /// Dernier mode poussé dans la séance, pour éviter qu'un même mode
   /// (breath, beg, …) se déclenche deux steps d'affilé. Reset dans `generate`.
   SessionMode? _lastMode;
@@ -224,6 +232,7 @@ class CareerSessionGenerator {
     // début de chauffe se dérouler sans rupture, puis le générateur peut
     // poser un mini-finish pour casser la monotonie.
     _nextMiniWaveAt = 300 + _rng.nextInt(61);
+    _lastSwallowOrderAt = -120;
     _lastMode = null;
     _lastText = '';
     _lastBpm = null;
@@ -423,6 +432,31 @@ class CareerSessionGenerator {
         // La séance enchaîne ensuite sur du tirage classique — la stamina
         // creusée naturellement par la vague pousse vers la retombée.
         _nextMiniWaveAt = time + 360 + _rng.nextInt(61);
+        continue;
+      }
+      // Ordre de déglutition forcé : quand la simulation salive sature,
+      // on transforme la jauge silencieuse en mécanique gameplay — un
+      // beg libre court « avale tout » avec phrase dédiée. Cf.
+      // `_maybeBuildSwallowOrder` pour les conditions.
+      final swallowDraft = _maybeBuildSwallowOrder(time, genUntil);
+      if (swallowDraft != null) {
+        final swallowText =
+            bank.pickSwallowOrder(_rng) ?? _pickPhrase(bank, SessionMode.beg, 'hard');
+        steps.add(_draftToStep(swallowDraft, time: time, text: swallowText));
+        final staminaBefore = stamina;
+        stamina = _applyStaminaChange(
+            stamina, swallowDraft, time / effectiveDuration, cfg);
+        // Conséquence simulée de l'ordre : la sim retombe à 0, comme si
+        // la joueuse obéissait. En runtime le SessionController fera de
+        // même via `SalivaEngine.forceSwallow()`.
+        _salivaSim.forceSwallow();
+        _fillProfile(profile, time, swallowDraft.duration!, stamina,
+            valueStart: staminaBefore);
+        _lastMode = SessionMode.beg;
+        _lastText = swallowText;
+        _trackPushedStep(SessionMode.beg, null);
+        time += swallowDraft.duration!;
+        _lastSwallowOrderAt = time;
         continue;
       }
       final progress = time / effectiveDuration;
@@ -1101,6 +1135,41 @@ class CareerSessionGenerator {
       return raw.take(2).toList();
     }
     return out;
+  }
+
+  /// Construit éventuellement un step **swallow_order** : beg libre court
+  /// (5-7 s) qui matérialise l'ordre coach « avale tout » quand la sim
+  /// salive sature. Sans ce mécanisme, `SalivaEngine` est un compteur
+  /// silencieux — la jauge monte, l'auto-déglutition se déclenche
+  /// silencieusement, et la mécanique "saliva" n'a aucun rendu côté
+  /// dramaturgie. Avec ce step, un overflow projeté devient un moment
+  /// audible : phrase impérative + mini-pause beg libre.
+  ///
+  /// Conditions cumulatives :
+  /// - `_salivaSim.value >= 80` : marge de 10 sous le seuil overflow (90)
+  ///   pour anticiper et ne pas attendre que ça déborde réellement
+  ///   (l'auto-swallow runtime peut intercepter à 75 et masquer).
+  /// - `time - _lastSwallowOrderAt >= 90` : cooldown 90 s pour ne pas
+  ///   spammer les ordres en série (cas spé sloppy à fond sur lick).
+  /// - `genUntil - time >= 60` : marge avant le finish — la dramaturgie
+  ///   scriptée ne doit pas être interrompue par un ordre opportuniste.
+  /// - `begLibre` débloqué (sinon on imposerait une mécanique avant la
+  ///   pédagogie qui la déverrouille).
+  ///
+  /// Retourne null si une condition manque.
+  _StepDraft? _maybeBuildSwallowOrder(int time, int genUntil) {
+    if (_salivaSim.value < 80.0) return null;
+    if (time - _lastSwallowOrderAt < 90) return null;
+    if (genUntil - time < 60) return null;
+    if (!_unlockedKeys.contains(UnlockKey.begLibre)) return null;
+    final dur = 5 + _rng.nextInt(3); // [5, 7]
+    return _StepDraft(
+      mode: SessionMode.beg,
+      bpm: null,
+      from: null,
+      to: null,
+      duration: dur,
+    );
   }
 
   /// Construit le step de post-final : action douce contrastante avec le

@@ -84,6 +84,12 @@ class PhraseBank {
   /// vide. Distinct pour pouvoir varier sans diluer le pool générique.
   final List<String> _postFinalLick;
 
+  /// Ordres de déglutition forcée (« avale tout », « déglutis », …)
+  /// piochés par le générateur quand la sim salive sature en cours de
+  /// séance. Step beg libre court attaché. Pool dédié pour pouvoir
+  /// varier le ton (impératif sec) sans polluer les autres pools beg.
+  final List<String> _swallowOrders;
+
   const PhraseBank({
     required Map<SessionMode, Map<String, List<String>>> byMode,
     required List<String> congrats,
@@ -97,6 +103,7 @@ class PhraseBank {
     List<String> postFinal = const [],
     List<String> postFinalBeg = const [],
     List<String> postFinalLick = const [],
+    List<String> swallowOrders = const [],
   })  : _byMode = byMode,
         _congrats = congrats,
         _intros = intros,
@@ -108,7 +115,8 @@ class PhraseBank {
         _finalActions = finalActions,
         _postFinal = postFinal,
         _postFinalBeg = postFinalBeg,
-        _postFinalLick = postFinalLick;
+        _postFinalLick = postFinalLick,
+        _swallowOrders = swallowOrders;
 
   /// Tire une phrase pour [mode] dans le tier demandé. Si le tier est absent,
   /// fallback sur 'medium' puis 'any' puis première liste non vide. Retourne
@@ -235,5 +243,14 @@ class PhraseBank {
   String? pickPostFinalLick(Random rng) {
     if (_postFinalLick.isEmpty) return null;
     return _postFinalLick[rng.nextInt(_postFinalLick.length)];
+  }
+
+  /// Tire un ordre de déglutition forcée (« avale tout », « déglutis »…)
+  /// pour un step beg libre court inséré quand la sim salive sature.
+  /// Retourne `null` si le pool est vide — l'appelant peut alors
+  /// retomber sur le tier `hard` du mode beg comme fallback.
+  String? pickSwallowOrder(Random rng) {
+    if (_swallowOrders.isEmpty) return null;
+    return _swallowOrders[rng.nextInt(_swallowOrders.length)];
   }
 }
