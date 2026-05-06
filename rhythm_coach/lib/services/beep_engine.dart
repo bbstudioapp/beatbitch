@@ -92,7 +92,15 @@ class BeepEngine {
   /// d'interpolation BPM. Null = pas de rampe (la rampe a besoin d'une
   /// fenêtre temporelle pour avoir du sens).
   int? _loopDurationMs;
-  bool _alternateToggle = false;
+
+  /// Toggle d'alternance from↔to du loop rythmé. Initialisé à `true` pour
+  /// que le **premier beat tombe sur `to`** (cf. `_pickPosition` :
+  /// `_alternateToggle ? to : _from`). Démarrer sur la profondeur cible —
+  /// pas sur le point de départ — colle au phrasé naturel d'une cadence
+  /// (« mid mid mid… » et pas « head mid head mid… ») et fait que l'orbe
+  /// visuel atteint `to` dès le premier bip. Réarmé à `true` à chaque
+  /// `applyStep` / `startRhythmDemo` / `startLickDemo`.
+  bool _alternateToggle = true;
 
   /// Hand : alternance down/up indépendante du toggle de position.
   /// Utilisé seulement quand `_to` est null ou égal à `_from` (pas
@@ -272,7 +280,7 @@ class BeepEngine {
       _from = _pickShallowerThan(_from);
     }
 
-    _alternateToggle = false;
+    _alternateToggle = true;
     _handStrokeFallbackDown = true;
     _stopLoop();
     _freestyleEndTimer?.cancel();
@@ -576,7 +584,7 @@ class BeepEngine {
     if (_to != null && _to == _from) {
       _from = _pickShallowerThan(_from);
     }
-    _alternateToggle = false;
+    _alternateToggle = true;
     _stopLoop();
     _startBeatLoop(volume: _rhythmVolume);
   }
@@ -594,7 +602,7 @@ class BeepEngine {
     if (_to != null && _to == _from) {
       _from = _pickShallowerThan(_from);
     }
-    _alternateToggle = false;
+    _alternateToggle = true;
     _stopLoop();
     _startBeatLoop(volume: _lickVolume);
   }
