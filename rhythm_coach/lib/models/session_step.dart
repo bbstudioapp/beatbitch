@@ -39,7 +39,16 @@ class SessionStep {
   final Position? to;
 
   /// Tempo en battements par minute. Utilisé par rhythm, lick, biffle.
+  /// Pour une rampe (cf. [bpmEnd]), c'est la valeur de **départ** du step.
   final int? bpm;
+
+  /// Tempo de **fin** de step pour les rampes BPM intra-step. Quand non
+  /// null et différent de [bpm], le BeepEngine interpole linéairement
+  /// entre `bpm` (début) et `bpmEnd` (fin) sur la durée du step. Utilisé
+  /// pour les phases longues (≥ 30 s) où un tempo constant devient
+  /// monotone — une rampe 90→120 raconte une montée. Null = comportement
+  /// classique (BPM constant).
+  final int? bpmEnd;
 
   /// Durée de l'étape en secondes. Sert pour la vibration des holds
   /// et comme indication de durée du loop courant.
@@ -70,6 +79,7 @@ class SessionStep {
     this.from,
     this.to,
     this.bpm,
+    this.bpmEnd,
     this.duration,
     this.mode,
     this.chainAction,
@@ -110,6 +120,7 @@ class SessionStep {
       from: Position.fromString(_asString(json['from'])),
       to: Position.fromString(_asString(json['to'])),
       bpm: _asInt(json['bpm']),
+      bpmEnd: _asInt(json['bpmEnd'] ?? json['bpm_end']),
       duration: _asInt(json['duration']),
       mode: _asString(json['mode']) == null
           ? null
@@ -149,6 +160,7 @@ class SessionStep {
         if (from != null) 'from': from!.serialized,
         if (to != null) 'to': to!.serialized,
         if (bpm != null) 'bpm': bpm,
+        if (bpmEnd != null) 'bpmEnd': bpmEnd,
         if (duration != null) 'duration': duration,
         if (mode != null) 'mode': mode!.serialized,
         if (chainAction != null)
@@ -164,6 +176,7 @@ class SessionStep {
         if (from != null) 'from': from!.serialized,
         if (to != null) 'to': to!.serialized,
         if (bpm != null) 'bpm': bpm,
+        if (bpmEnd != null) 'bpmEnd': bpmEnd,
         if (duration != null) 'duration': duration,
         if (mode != null) 'mode': mode!.serialized,
       };
