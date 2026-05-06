@@ -198,14 +198,6 @@ class MilestoneService extends ChangeNotifier {
     MilestonePlacement placement = MilestonePlacement.body,
   }) {
     final cap = humiliationScore + humilTolerance(obedience);
-    final candidates = _catalog
-        .where((m) => m.placement == placement)
-        .where((m) => m.minLevel <= playerLevel)
-        .where((m) => m.humilRequired <= cap)
-        .where((m) => !_completed.contains(m.id))
-        .where((m) => m.requires.every(hasUnlock))
-        .toList();
-    if (candidates.isEmpty) return const [];
     int branchPoints(LevelMilestone m) {
       if (allocation == null || m.branches.isEmpty) return 0;
       var best = 0;
@@ -215,6 +207,24 @@ class MilestoneService extends ChangeNotifier {
       }
       return best;
     }
+
+    /// Niveau d'avance accordé par la spé : 1 niveau par point investi
+    /// dans une branche pertinente, capé à 3. Permet à une joueuse spé
+    /// profondeur 3 pts d'accéder à `intro_throat_pulse` (level 10) dès
+    /// le niveau 7 — la branche choisie est récompensée en débloquant
+    /// les compétences associées plus tôt. Cap à 3 pour éviter qu'une
+    /// allocation 5/5 court-circuite la pédagogie.
+    int branchAdvance(LevelMilestone m) =>
+        branchPoints(m).clamp(0, 3);
+
+    final candidates = _catalog
+        .where((m) => m.placement == placement)
+        .where((m) => (m.minLevel - branchAdvance(m)) <= playerLevel)
+        .where((m) => m.humilRequired <= cap)
+        .where((m) => !_completed.contains(m.id))
+        .where((m) => m.requires.every(hasUnlock))
+        .toList();
+    if (candidates.isEmpty) return const [];
     candidates.sort((a, b) {
       final byBranch = branchPoints(b).compareTo(branchPoints(a));
       if (byBranch != 0) return byBranch;

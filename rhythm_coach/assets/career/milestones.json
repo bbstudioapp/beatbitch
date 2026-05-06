@@ -306,10 +306,14 @@
       "requires": ["throat_hold_short"],
       "branches": ["profondeur", "rythmeBiffle"],
       "sequence": [
-        {"time": 0,  "text": "Maintenant on bouge dans la gorge.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 100, "duration": 10},
-        {"time": 10, "text": "Va-et-vient gorge. Tiens.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 90, "duration": 20},
-        {"time": 30, "text": "Respire.", "mode": "breath", "duration": 8},
-        {"time": 38, "text": "Lèche pour finir.", "mode": "lick", "from": "head", "to": "mid", "bpm": 80, "duration": 10}
+        {"time": 0,  "text": "Maintenant on bouge dans la gorge. Trois allers-retours, pas plus.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 90, "duration": 8},
+        {"time": 8,  "text": "Une fois. Va-et-vient gorge.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 80, "duration": 3},
+        {"time": 11, "text": "Respire.", "mode": "breath", "duration": 6},
+        {"time": 17, "text": "Encore une. Lentement.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 75, "duration": 3},
+        {"time": 20, "text": "Reprends ton souffle.", "mode": "breath", "duration": 6},
+        {"time": 26, "text": "Dernière. Tu y es.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 75, "duration": 3},
+        {"time": 29, "text": "Respire profondément.", "mode": "breath", "duration": 8},
+        {"time": 37, "text": "Lèche pour finir, doucement.", "mode": "lick", "from": "head", "to": "mid", "bpm": 75, "duration": 10}
       ]
     },
     {
