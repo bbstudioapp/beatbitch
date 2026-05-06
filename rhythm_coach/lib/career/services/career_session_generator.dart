@@ -1278,7 +1278,8 @@ class CareerSessionGenerator {
     // une utilisatrice qui n'a pas encore validé la milestone d'introduction
     // au beg de supplier post-orgasme — pédagogiquement faux).
     final isFinalHold = finalMode == SessionMode.hold;
-    final canBeg = _unlockedKeys.contains(UnlockKey.begLibre);
+    final canBeg =
+        _unlockedKeys.isEmpty || _unlockedKeys.contains(UnlockKey.begLibre);
     final candidates = <(double req, bool blocked, _StepDraft Function() build)>[
       (0.0, false, breath),
       (8.0, !_includeHand || finalMode == SessionMode.hand, hand),
@@ -1530,14 +1531,21 @@ class CareerSessionGenerator {
   /// d'endurance projeté (cf. `_buildBreathRecovery`), pas comme une option
   /// d'humeur générale.
   _StepDraft _buildRecoveryStep() {
-    final canBeg = _unlockedKeys.contains(UnlockKey.begLibre);
+    // Convention `_unlockedKeys.isEmpty` = mode hérité : pas de gating, tous
+    // les modes sont candidats (cf. `_isUnlocked`). Pour les modes carrière,
+    // on ne propose que ceux dont la milestone d'introduction est acquittée.
+    final heritage = _unlockedKeys.isEmpty;
+    final canBeg = heritage || _unlockedKeys.contains(UnlockKey.begLibre);
+    final canBiffleRecovery =
+        heritage || _unlockedKeys.contains(UnlockKey.biffleBasic);
     // Freestyle gaté uniquement par sa milestone (intro_freestyle, niveau
     // 7) — on ne double-check plus le niveau, l'acquittement de la
     // milestone est l'unique source de vérité.
-    final canFreestyle = _unlockedKeys.contains(UnlockKey.freestyle);
+    final canFreestyle =
+        heritage || _unlockedKeys.contains(UnlockKey.freestyle);
     final candidates = [
       SessionMode.lick,
-      if (_includeHand) SessionMode.biffle,
+      if (_includeHand && canBiffleRecovery) SessionMode.biffle,
       if (canBeg) SessionMode.beg,
       if (canFreestyle) SessionMode.freestyle,
       // Rhythm très doux comme « récup en bouche » : BPM bas, tip→head,
@@ -1686,7 +1694,14 @@ class CareerSessionGenerator {
         (_lastType == _StepType.bouche && diff >= 0.10)) {
       candidates.add(SessionMode.hold);
     }
-    if (diff >= 0.40 && _includeHand) {
+    // biffle : candidat seulement si `biffleBasic` est débloqué (pré-filtre
+    // sur le mode pour éviter une cascade systématique de dégradation
+    // biffle → lick quand la milestone n'est pas acquise). Le pré-filtre
+    // respecte la convention héritée (`_unlockedKeys.isEmpty` = pas de
+    // gating) pour ne pas casser les sessions hors carrière.
+    final canBiffle = _unlockedKeys.isEmpty ||
+        _unlockedKeys.contains(UnlockKey.biffleBasic);
+    if (diff >= 0.40 && _includeHand && canBiffle) {
       candidates.add(SessionMode.biffle);
     }
     if (_includeHand && diff >= 0.10) {
@@ -1697,8 +1712,10 @@ class CareerSessionGenerator {
       candidates.add(SessionMode.hand);
     }
     // beg : candidat seulement si begLibre est déjà acquis (prérequis
-    // transverse à toutes les formes de beg, cf. `_isUnlocked`).
-    final canBeg = _unlockedKeys.contains(UnlockKey.begLibre);
+    // transverse à toutes les formes de beg, cf. `_isUnlocked`). Convention
+    // héritée appliquée aussi (set vide = pas de gating).
+    final canBeg = _unlockedKeys.isEmpty ||
+        _unlockedKeys.contains(UnlockKey.begLibre);
     if (canBeg) {
       // Sa difficulté effective est portée par `from` (head = doux,
       // full = comme un hold profond), pas par diff.
@@ -3262,17 +3279,21 @@ class CareerSessionGenerator {
   /// Vrai si [d] n'est pas gaté par une `UnlockKey` ou si la clé requise
   /// est dans `_unlockedKeys`.
   ///
+  /// **Convention `_unlockedKeys.isEmpty` = mode hérité** : aucun gating
+  /// appliqué. Sert aux scénarios hors carrière (sessions JSON statiques,
+  /// tests) qui n'ont pas de chaîne milestones à consulter — sans cette
+  /// convention, un `generate(...)` sans `unlockedKeys` deviendrait
+  /// injouable (cascade systématique sur la baseline). Les call sites
+  /// carrière passent toujours un set non vide (au minimum les unlocks
+  /// d'`intro_basics` après le niveau 1).
+  ///
   /// **Prérequis transverse `begLibre`** : « beg libre » signifie « bouche
   /// libre, supplique facile ». Toutes les autres formes de beg (avec
   /// `from` = position tenue) sont mécaniquement plus dures (la bouche
   /// reste sur la position pendant la supplique). On les bloque donc tant
   /// que begLibre n'est pas acquise — elle reste la fondation pédagogique.
-  ///
-  /// Les call sites du générateur sont tenus de passer un `unlockedKeys`
-  /// non vide — un set vide bloquerait quasi tous les modes. Pour un test
-  /// qui veut désactiver le gating, passer un set contenant
-  /// `UnlockKey.values.toSet()`.
   bool _isUnlocked(_StepDraft d) {
+    if (_unlockedKeys.isEmpty) return true;
     if (d.mode == SessionMode.beg &&
         !_unlockedKeys.contains(UnlockKey.begLibre)) {
       return false;
