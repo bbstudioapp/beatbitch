@@ -11,8 +11,8 @@ enum PhraseTier { soft, medium, hard }
 ///
 /// `requiredFor(...)` retourne le seuil d'humiliation minimal qu'une
 /// utilisatrice doit avoir pour qu'une action soit jouable. Le score
-/// d'humiliation (cumul lifetime, cf. [HumiliationEngine]) doit être
-/// supérieur ou égal à ce seuil.
+/// d'humiliation effectif (`careerScore + sessionScore`, cf.
+/// [HumiliationEngine]) doit être supérieur ou égal à ce seuil.
 class HumiliationScale {
   static double requiredFor({
     required SessionMode mode,
@@ -30,9 +30,6 @@ class HumiliationScale {
       duration: duration,
       phraseTier: phraseTier,
     );
-    // Pas de borne haute : un hold full 60s exige ~199 d'humil cumulée,
-    // un hold throat 30s ~52, etc. Le clamp à 100 historique masquait
-    // les écarts entre actions extrêmes (toutes ramenées à 100).
     return raw < 0 ? 0.0 : raw;
   }
 
@@ -51,14 +48,16 @@ class HumiliationScale {
         return 0.0;
 
       case SessionMode.lick:
-        // Pas de bonus BPM (lick reste lent par nature).
-        // Profondeur ≤ mid : action « bases » gated par milestone (intro
-        // niveau 1 / niveau 2), pas par humiliation. Au-delà (throat/full)
-        // la profondeur reprend le coût d'humiliation classique.
+        // Pas de bonus BPM (lick reste lent par nature). Coefficient
+        // amplitude réduit (×1.0 au lieu de ×1.5 du rhythm) : sortir la
+        // langue est moins frontal qu'un mouvement de bouche, mais ce
+        // n'est pas gratuit non plus dès lors qu'on dépasse le bout.
+        // tip→head = 0 + 1×1 = 1 (cible pédagogique, juste au-dessus
+        // du gratuit) ; tip→mid = 2 + 2 = 4 ; head→mid = 2 + 1 = 3.
         final deepest = _deepest(from, to);
-        if (deepest == null || deepest.index <= Position.mid.index) return 0.0;
+        if (deepest == null) return 0.0;
         final amplitude = _amplitudeCrans(from, to);
-        return _depthScoreRhythm(deepest) + 1.5 * amplitude;
+        return _depthScoreRhythm(deepest) + 1.0 * amplitude;
 
       case SessionMode.rhythm:
         // Idem lick : ≤ mid → seul le bonus BPM compte (vitesse extrême
@@ -74,7 +73,7 @@ class HumiliationScale {
 
       case SessionMode.biffle:
         // Pas de profondeur fonctionnelle pour le biffle, juste la vitesse.
-        return 10.0 + _bpmExtra(bpm);
+        return 8.0 + _bpmExtra(bpm);
 
       case SessionMode.hold:
         // Convention uniforme hold/beg : la position tenue est dans `to`.
@@ -101,6 +100,9 @@ class HumiliationScale {
   }
 
   /// Score de profondeur pour rhythm/lick (la cible la plus profonde).
+  /// Recalibré pour le modèle 2 thermomètres (cap effectif career+session
+  /// jusqu'à ~50 sur une session menée à terme par une débutante) :
+  /// throat et full tirent vers la zone "carrière mature".
   static double _depthScoreRhythm(Position? p) {
     if (p == null) return 0.0;
     switch (p) {
@@ -111,31 +113,36 @@ class HumiliationScale {
       case Position.mid:
         return 2.0;
       case Position.throat:
-        return 6.0;
+        return 8.0;
       case Position.full:
-        return 15.0;
+        return 18.0;
     }
   }
 
-  /// Score de base pour un hold à la position [p].
+  /// Score de base pour un hold à la position [p]. Tip et head ont un
+  /// petit coût (1) pour ne plus être complètement gratuit, mais restent
+  /// au-dessous du seuil de candidature minimum d'une milestone d'intro
+  /// (humil 0 + tolerance 1 = cap 1) pour ne pas bloquer `intro_basics`.
   static double _depthScoreHold(Position? p) {
     if (p == null) return 0.0;
     switch (p) {
       case Position.tip:
-        return 0.0;
+        return 1.0;
       case Position.head:
         return 1.0;
       case Position.mid:
         return 4.0;
       case Position.throat:
-        return 8.0;
+        return 10.0;
       case Position.full:
-        return 22.0;
+        return 25.0;
     }
   }
 
   /// Multiplicateur de durée pour un hold : tip/head ne dépendent pas
-  /// de la durée, mid à peine, throat et full clairement.
+  /// de la durée, mid à peine, throat et full clairement (montée plus
+  /// douce que l'ancien tuning, pour que la durée reste accessible
+  /// passé le cap effectif de session).
   static double _holdDurationFactor(Position? p) {
     if (p == null) return 0.0;
     switch (p) {
@@ -145,35 +152,35 @@ class HumiliationScale {
       case Position.mid:
         return 0.3;
       case Position.throat:
-        return 1.5;
+        return 1.2;
       case Position.full:
-        return 3.0;
+        return 2.5;
     }
   }
 
   /// Score de base pour un beg (verbal + position tenue).
   static double _depthScoreBeg(Position? p) {
-    if (p == null) return 5.0;
+    if (p == null) return 4.0;
     switch (p) {
       case Position.tip:
-        return 5.0;
+        return 4.0;
       case Position.head:
-        return 7.0;
+        return 6.0;
       case Position.mid:
-        return 10.0;
+        return 9.0;
       case Position.throat:
-        return 20.0;
+        return 18.0;
       case Position.full:
-        return 30.0;
+        return 28.0;
     }
   }
 
   static double _phraseBonus(PhraseTier? tier) {
     switch (tier) {
       case PhraseTier.medium:
-        return 5.0;
+        return 4.0;
       case PhraseTier.hard:
-        return 10.0;
+        return 9.0;
       case PhraseTier.soft:
       case null:
         return 0.0;
@@ -192,45 +199,99 @@ class HumiliationScale {
   }
 }
 
-/// Score d'humiliation cumulé sur la **durée de vie du compte**, démarre
-/// à 0, pas de borne haute (peut dépasser 100 sur les longues carrières).
-/// Persisté entre sessions par `StatsService.humiliationLevel`.
+/// Modèle d'humiliation à **deux thermomètres** :
 ///
-/// Démarre à 0. En session, monte lentement (`+1 toutes les 4 min`),
-/// remonte un peu sur événements positifs (encore, punition complétée,
-/// session clean), descend à chaque fail. Borne basse : 0.
+/// - `careerScore` (persisté entre sessions, stable pendant la session) :
+///   représente l'acceptance d'humiliation construite au fil de la
+///   carrière. C'est le « plancher » du cap effectif d'une nouvelle
+///   session — ce qu'on peut imposer dès la première minute, sans
+///   préchauffe. Recalculée au `_finish` via [applyEndOfSessionDelta]
+///   selon le vécu de la séance.
+///
+/// - `sessionScore` (intra-session, plafonné à [sessionCap] = 50) :
+///   représente la chauffe accumulée pendant la séance. Démarre à 0
+///   (ou à la valeur transmise par la session précédente sur encore
+///   enchaîné), monte avec le tick automatique, les holds profonds
+///   complétés, les punitions complétées, les milestones acquises, etc.
+///   Redescend sur fail / punition abandonnée. Non persisté.
+///
+/// Le cap effectif vu par le générateur est `careerScore + sessionScore`
+/// (cf. [effectiveCap]). Le générateur applique en plus une rampe
+/// interne basée sur le tick rate (~+1/min en clean, ×3 max avec obed).
+///
+/// **Évolution `sessionScore` en cours de session** :
+/// - Tick automatique : +1 tous les 60s (modulé par obed × 1..3)
+/// - Punition complétée : +2 ; abandonnée : −4 (×2 dernière minute)
+/// - Hold throat complété : +1 ; hold full complété : +3
+/// - Milestone acquise : +3
+/// - Crachat sur ordre : +1 ; débordement salive : +0.5
+/// - Fail manuel : −5 (×2 dernière minute)
+/// - Plafond [sessionCap] : 50. Plancher : 0.
+///
+/// **Recalcul `careerScore` au `_finish`** (cf. [applyEndOfSessionDelta]) :
+/// `Δ = α × sessionScore + β × encoresAsked − β × failsCount + γ × clean`
+/// avec `α = 0.10`, `β = 1.5/1.0`, `γ = 1.0`.
 class HumiliationEngine {
-  /// Période entre deux bumps automatiques en cours de session (4 min).
-  static const Duration tickInterval = Duration(seconds: 240);
+  /// Plafond du score session. Une session ultra-longue ne peut pas
+  /// débloquer indéfiniment d'actions — au-delà du cap, la chauffe ne
+  /// monte plus, seul le `careerScore` (persisté) progresse.
+  static const double sessionCap = 50.0;
+
+  /// Période entre deux bumps automatiques en cours de session (1 min).
+  /// Modulée par obédiance dans [onTickSecond] (cap ×3).
+  static const Duration tickInterval = Duration(seconds: 60);
 
   static const double bumpPerInterval = 1.0;
-  static const double bumpEncore = 1.0;
-  static const double bumpPunishmentCompleted = 1.0;
-  static const double bumpSessionClean = 1.0;
-  static const double malusFail = 1.0;
-  static const double malusPunishmentAbandoned = 1.0;
+  static const double bumpPunishmentCompleted = 2.0;
+  static const double bumpHoldThroatCompleted = 1.0;
+  static const double bumpHoldFullCompleted = 3.0;
+  static const double bumpMilestoneAcquired = 3.0;
+  static const double bumpSalivaOverflow = 0.5;
+  static const double bumpSalivaSpit = 1.0;
+  static const double malusFail = 5.0;
+  static const double malusPunishmentAbandoned = 4.0;
 
-  double _score = 0.0;
-  double get score => _score;
+  /// Coefficients du delta `careerScore` calculé en fin de session.
+  /// Cf. [applyEndOfSessionDelta].
+  static const double careerAlpha = 0.10;
+  static const double careerBetaEncore = 1.5;
+  static const double careerBetaFail = 1.0;
+  static const double careerGammaClean = 1.0;
 
-  /// Secondes écoulées dans la session courante depuis le dernier bump.
-  /// Sert au tick automatique (+1 toutes les `tickInterval`).
+  double _careerScore = 0.0;
+  double _sessionScore = 0.0;
   int _secondsSinceLastBump = 0;
 
-  /// Initialise depuis le score persisté. Appelé par le SessionController
-  /// au start (une fois la valeur récupérée de StatsService).
-  void seed(double persisted) {
-    _score = persisted < 0 ? 0 : persisted;
+  double get careerScore => _careerScore;
+  double get sessionScore => _sessionScore;
+
+  /// Cap effectif consommé par le générateur et les checks de
+  /// disponibilité d'action. Le générateur applique sa propre rampe
+  /// interne par-dessus, basée sur le tick rate.
+  double get effectiveCap => _careerScore + _sessionScore;
+
+  /// Compat shim : ancien API `score` (lifetime). Retourne le cap
+  /// effectif. À termes, les call sites devraient consulter
+  /// `careerScore` ou `effectiveCap` selon leur intention.
+  double get score => effectiveCap;
+
+  /// Initialise depuis le score persisté + une éventuelle valeur de
+  /// session conservée (cas encore enchaîné). Appelé par le
+  /// SessionController au start.
+  void seed({required double career, double session = 0.0}) {
+    _careerScore = career < 0 ? 0 : career;
+    _sessionScore = session < 0
+        ? 0
+        : (session > sessionCap ? sessionCap : session);
     _secondsSinceLastBump = 0;
   }
 
-  /// Tick par seconde. Tous les `tickInterval`, +1 au score.
+  /// Tick par seconde. Tous les `tickInterval` (modulé par obed),
+  /// +1 sur le score session.
   ///
   /// **Modulation par obédiance** : à `obedienceLevel = 100`, l'intervalle
-  /// est divisé par 2 (humil tick toutes les 120s au lieu de 240s). À
-  /// `obed = 200`, divisé par 3. Cap d'accélération à ×3 pour ne pas
-  /// laisser une obédiance extrême faire monter humil instantanément.
-  /// Le levier ne ralentit jamais le tick (`obed = 0` = base 240s).
+  /// est divisé par 2 (humil tick toutes les 30s au lieu de 60s). À
+  /// `obed = 200`, divisé par 3. Cap d'accélération à ×3.
   ///
   /// Sémantique : « tu obéis bien, tu en redemandes silencieusement,
   /// donc je peux t'imposer des choses plus humiliantes plus tôt ».
@@ -240,27 +301,62 @@ class HumiliationEngine {
     final period = (tickInterval.inSeconds / accel).round();
     if (_secondsSinceLastBump >= period) {
       _secondsSinceLastBump = 0;
-      _bump(bumpPerInterval);
+      _bumpSession(bumpPerInterval);
     }
   }
 
-  void onEncoreRequested() => _bump(bumpEncore);
-  void onPunishmentCompleted() => _bump(bumpPunishmentCompleted);
-  void onSessionCleanFinish() => _bump(bumpSessionClean);
-  void onMilestoneAcquired() => _bump(2.0);
-  void onFail({double multiplier = 1.0}) => _bump(-malusFail * multiplier);
+  void onPunishmentCompleted() => _bumpSession(bumpPunishmentCompleted);
+  void onHoldThroatCompleted() => _bumpSession(bumpHoldThroatCompleted);
+  void onHoldFullCompleted() => _bumpSession(bumpHoldFullCompleted);
+  void onMilestoneAcquired() => _bumpSession(bumpMilestoneAcquired);
+  void onSalivaOverflow() => _bumpSession(bumpSalivaOverflow);
+  void onSalivaSpit() => _bumpSession(bumpSalivaSpit);
+  void onFail({double multiplier = 1.0}) =>
+      _bumpSession(-malusFail * multiplier);
   void onPunishmentAbandoned({double multiplier = 1.0}) =>
-      _bump(-malusPunishmentAbandoned * multiplier);
+      _bumpSession(-malusPunishmentAbandoned * multiplier);
 
-  /// Bumpe à chaque débordement de la jauge salive (franchissement de 90).
-  /// +0.5 par débordement. Cap session géré par le SessionController.
-  void onSalivaOverflow() => _bump(0.5);
+  /// Bump direct sur le score career — utilisé en fin de session uniquement,
+  /// pour les bonus d'unlock milestone (compétence acquise = chauffe
+  /// permanente sur la carrière).
+  void bumpCareer(double delta) {
+    final next = _careerScore + delta;
+    _careerScore = next < 0 ? 0 : next;
+  }
 
-  /// Bumpe à chaque crachat sur ordre coach. +1.0.
-  void onSalivaSpit() => _bump(1.0);
+  /// Applique en fin de session le delta sur le score career, basé sur
+  /// le vécu de la séance. Remplace les anciens bumps évènementiels qui
+  /// touchaient directement le score persisté pendant la séance.
+  ///
+  /// Formule :
+  /// ```
+  /// Δ = α × sessionScore + β_encore × encoresAsked
+  ///   − β_fail × failsCount + γ × (clean ? 1 : 0)
+  /// ```
+  ///
+  /// Retourne le delta appliqué (informatif).
+  double applyEndOfSessionDelta({
+    required bool clean,
+    int encoresAsked = 0,
+    int failsCount = 0,
+  }) {
+    final delta = careerAlpha * _sessionScore +
+        careerBetaEncore * encoresAsked -
+        careerBetaFail * failsCount +
+        (clean ? careerGammaClean : 0.0);
+    final next = _careerScore + delta;
+    _careerScore = next < 0 ? 0 : next;
+    return delta;
+  }
 
-  void _bump(double delta) {
-    final next = _score + delta;
-    _score = next < 0 ? 0 : next;
+  void _bumpSession(double delta) {
+    final next = _sessionScore + delta;
+    if (next < 0) {
+      _sessionScore = 0;
+    } else if (next > sessionCap) {
+      _sessionScore = sessionCap;
+    } else {
+      _sessionScore = next;
+    }
   }
 }

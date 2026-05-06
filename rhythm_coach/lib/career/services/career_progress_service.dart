@@ -2,9 +2,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Persiste l'état de progression du mode Carrière entre lancements de l'app.
 ///
-/// Depuis la refonte E3.5, la progression de niveau n'est plus gatée par les
-/// milestones : celles-ci sont sélectionnées via `MilestoneService.pendingFor`
-/// (humiliation + obédiance), indépendamment du compteur de niveau.
+/// La progression de niveau n'est pas gatée par les milestones : elle
+/// monte d'un cran à chaque session terminée sans fail au niveau max
+/// (cf. `recordSessionCompleted`). Les milestones sont sélectionnées
+/// via `MilestoneService.pendingFor` selon (humiliation + obédiance + minLevel).
 class CareerProgressService {
   static const String _kMaxLevel = 'career.max_level';
   static const String _kLastLevel = 'career.last_level';

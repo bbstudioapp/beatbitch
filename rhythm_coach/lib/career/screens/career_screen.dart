@@ -182,6 +182,7 @@ class _CareerScreenState extends State<CareerScreen> {
         : milestoneService.pendingFor(
             humiliationScore: humiliationScore,
             obedience: obedienceScore,
+            playerLevel: bundle.maxLevel,
             allocation: bundle.specialization,
           );
     final finalMilestone = quickie
@@ -189,6 +190,7 @@ class _CareerScreenState extends State<CareerScreen> {
         : milestoneService.pendingFinalFor(
             humiliationScore: humiliationScore,
             obedience: obedienceScore,
+            playerLevel: bundle.maxLevel,
             allocation: bundle.specialization,
           );
     // Force includeHand=true si le milestone pending l'exige (séquence
@@ -227,7 +229,9 @@ class _CareerScreenState extends State<CareerScreen> {
       includeHand: includeHand,
       quickie: quickie,
       specialization: bundle.specialization,
-      humiliationScore: humiliationScore,
+      // Session normale : on démarre sans chauffe (sessionScore = 0).
+      humiliationCareer: humiliationScore,
+      humiliationSession: 0.0,
       obedience: obedienceScore,
       milestone: milestone,
       finalMilestone: finalMilestone,
@@ -380,11 +384,15 @@ class _CareerScreenState extends State<CareerScreen> {
     final coachBank = activeCoach.toPhraseBank(fallback: bundle.bank, specialization: bundle.specialization);
 
     final genDuration = remaining - begDuration;
-    final humiliationScore = await _stats.getHumiliationLevel();
+    final humiliationCareer = await _stats.getHumiliationLevel();
     // Pour Supplier on utilise l'obédiance courante du contrôleur (live),
     // pas la valeur persistée — la séance est en cours, le score a déjà
     // été pénalisé par d'éventuels fails de cette session.
     final obedienceScore = ctrl.obedience.score;
+    // sessionScore live : la séance est en cours, on transmet la chauffe
+    // déjà accumulée pour que la régénération reflète la difficulté
+    // actuelle, pas un démarrage à froid.
+    final humiliationSession = ctrl.humiliation.sessionScore;
     final newGen = CareerSessionGenerator().generate(
       durationSeconds: genDuration,
       level: newLevel,
@@ -392,7 +400,8 @@ class _CareerScreenState extends State<CareerScreen> {
       includeHand: bundle.includeHand,
       specialization: bundle.specialization,
       intense: true,
-      humiliationScore: humiliationScore,
+      humiliationCareer: humiliationCareer,
+      humiliationSession: humiliationSession,
       obedience: obedienceScore,
       unlockedKeys: milestoneService.acquiredUnlockKeys(),
       coachModeWeights: activeCoach.modeWeights,
@@ -443,10 +452,14 @@ class _CareerScreenState extends State<CareerScreen> {
 
     final activeCoach = _resolveCoach(bundle);
     final coachBank = activeCoach.toPhraseBank(fallback: bundle.bank, specialization: bundle.specialization);
-    final humiliationScore = await _stats.getHumiliationLevel();
+    final humiliationCareer = await _stats.getHumiliationLevel();
     // Retry milestone : utilise l'obédiance live (un fail vient de la faire
     // descendre, le générateur doit en tenir compte pour adapter le ton).
     final obedienceScore = ctrl.obedience.score;
+    // sessionScore live : un fail vient de la faire baisser. Le retry
+    // doit refléter cet état (cap effectif descendu) sans pour autant
+    // rebaser à zéro la chauffe accumulée avant l'échec.
+    final humiliationSession = ctrl.humiliation.sessionScore;
 
     final newGen = CareerSessionGenerator().generate(
       durationSeconds: retryDuration,
@@ -454,7 +467,8 @@ class _CareerScreenState extends State<CareerScreen> {
       bank: coachBank,
       includeHand: bundle.includeHand,
       specialization: bundle.specialization,
-      humiliationScore: humiliationScore,
+      humiliationCareer: humiliationCareer,
+      humiliationSession: humiliationSession,
       obedience: obedienceScore,
       milestone: milestone,
       // Plan pessimiste : pour le retry, on ne suppose plus que la
@@ -499,6 +513,13 @@ class _CareerScreenState extends State<CareerScreen> {
     required bool includeHand,
     required bool quickie,
   }) async {
+    // Capture la chauffe (`sessionScore` d'humiliation) AVANT de détacher
+    // / disposer le previousController : sinon la valeur est perdue et la
+    // session-encore démarre froide. C'est exactement le levier qui fait
+    // qu'on « repart d'où on était » au lieu de tout réinitialiser.
+    final previousSessionHumiliation =
+        previousController.humiliation.sessionScore;
+
     // Détache l'ancien controller des services audio partagés AVANT que
     // pushReplacement ne déclenche son dispose() — sinon un `tts.stop()` /
     // `beep.stop()` fire-and-forget couperait la première phrase et le
@@ -515,10 +536,11 @@ class _CareerScreenState extends State<CareerScreen> {
     final encoreOpening = coachBank.pickEncore(Random()) ??
         CoachPhrasesService.instance.current.encoreFallback;
 
-    // recordEncoreAsked() vient de bumper le score persistant (+1).
-    // On relit la valeur post-bump pour que la nouvelle session démarre
-    // avec l'acceptance accrue.
-    final humiliationScore = await _stats.getHumiliationLevel();
+    // Lecture post-_finish du contrôleur précédent : le delta career a
+    // déjà été persisté. La sessionScore conservée (`previousSessionHumiliation`)
+    // est passée séparément pour démarrer la session-encore avec la
+    // chauffe d'avant.
+    final humiliationCareer = await _stats.getHumiliationLevel();
     // Encore = nouvelle session : on relit l'obédiance persistée. La
     // session précédente a été persistée par `_finish` du contrôleur
     // précédent, donc cette lecture reflète bien la fin de la session
@@ -529,7 +551,7 @@ class _CareerScreenState extends State<CareerScreen> {
     // refermer le bouton.
     final canChainEncore = _canEncore(
       level: level,
-      humiliationScore: humiliationScore,
+      humiliationScore: humiliationCareer,
       obedienceScore: obedienceScore,
     );
     final result = CareerSessionGenerator().generate(
@@ -540,7 +562,8 @@ class _CareerScreenState extends State<CareerScreen> {
       openingPhrase: encoreOpening,
       quickie: quickie,
       specialization: bundle.specialization,
-      humiliationScore: humiliationScore,
+      humiliationCareer: humiliationCareer,
+      humiliationSession: previousSessionHumiliation,
       obedience: obedienceScore,
       unlockedKeys: milestoneService.acquiredUnlockKeys(),
       coachModeWeights: activeCoach.modeWeights,
@@ -571,6 +594,9 @@ class _CareerScreenState extends State<CareerScreen> {
           canSave: true,
           coachAdvancesTier: coachAdvances,
           specialization: bundle.specialization,
+          // Conserve la chauffe accumulée par la session précédente : on
+          // « repart d'où on était » côté humiliation intra-session.
+          seedHumiliationSession: previousSessionHumiliation,
           onRequestUpgrade: (ctrl) => _handleUpgrade(ctrl, bundle, level),
           onRequestEncore: !canChainEncore
               ? null
@@ -738,6 +764,7 @@ class _CareerScreenState extends State<CareerScreen> {
               _PendingMilestonesList(
                 humiliationScore: bundle.humiliationScore,
                 obedience: bundle.obedienceScore,
+                playerLevel: bundle.maxLevel,
                 allocation: bundle.specialization,
               ),
               const SizedBox(height: 24),
@@ -773,6 +800,7 @@ class _CareerScreenState extends State<CareerScreen> {
                 final pendingMilestone = milestoneService.pendingFor(
                   humiliationScore: bundle.humiliationScore,
                   obedience: bundle.obedienceScore,
+                  playerLevel: bundle.maxLevel,
                   allocation: bundle.specialization,
                 );
                 final milestoneLocksHand =
@@ -1015,11 +1043,13 @@ class _LevelTitleCard extends StatelessWidget {
 class _PendingMilestonesList extends StatelessWidget {
   final double humiliationScore;
   final double obedience;
+  final int playerLevel;
   final SpecializationAllocation? allocation;
 
   const _PendingMilestonesList({
     required this.humiliationScore,
     required this.obedience,
+    required this.playerLevel,
     required this.allocation,
   });
 
@@ -1029,6 +1059,7 @@ class _PendingMilestonesList extends StatelessWidget {
     final pending = milestoneService.allPendingFor(
       humiliationScore: humiliationScore,
       obedience: obedience,
+      playerLevel: playerLevel,
       allocation: allocation,
     );
     if (pending.isEmpty) return const SizedBox.shrink();

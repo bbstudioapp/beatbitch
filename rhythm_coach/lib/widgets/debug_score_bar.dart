@@ -120,21 +120,100 @@ double _dynamicMaxStep50(double v) {
   return ((v / 50).ceil() * 50).toDouble();
 }
 
-/// Barre debug du score d'humiliation. Pas de cap théorique : le score
-/// peut dépasser 100 sur les longues carrières. `max` adapté par paliers
-/// de 50 (100, 150, 200…).
+/// Barre debug du score d'humiliation. Modèle 2 thermomètres :
+/// - `careerScore` (persisté, lifetime) : barre principale
+/// - `sessionScore` (intra-session, capé à 50) : overlay plus clair par
+///   dessus la barre principale, pour visualiser la chauffe en cours
+///
+/// Le chiffre à droite affiche la décomposition `career + session` et le
+/// total. Max dynamique par paliers de 50.
 class HumiliationBar extends StatelessWidget {
-  final double value;
+  final double careerScore;
+  final double sessionScore;
 
-  const HumiliationBar({super.key, required this.value});
+  const HumiliationBar({
+    super.key,
+    required this.careerScore,
+    required this.sessionScore,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return DebugScoreBar(
-      label: AppLocalizations.of(context).debugBarLabelHumiliation,
-      value: value,
-      max: _dynamicMaxStep50(value),
-      colorForRatio: humiliationColorForRatio,
+    final total = careerScore + sessionScore;
+    final max = _dynamicMaxStep50(total);
+    final safeMax = max <= 0 ? 1.0 : max;
+    final careerRatio = (careerScore / safeMax).clamp(0.0, 1.0);
+    final totalRatio = (total / safeMax).clamp(0.0, 1.0);
+    final color = humiliationColorForRatio(totalRatio);
+    final label = AppLocalizations.of(context).debugBarLabelHumiliation;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 64,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 10,
+                color: AppTheme.textMuted,
+                letterSpacing: 1.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Stack(
+              children: [
+                Container(
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF222222),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                // Overlay session (clair, semi-transparent) en arrière-plan
+                // → indique la portée totale (career + session).
+                FractionallySizedBox(
+                  widthFactor: totalRatio,
+                  child: Container(
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.45),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+                // Barre career (couleur pleine) par-dessus → la portion
+                // « stable » du cap effectif est lisible d'un coup d'œil.
+                FractionallySizedBox(
+                  widthFactor: careerRatio,
+                  child: Container(
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 80,
+            child: Text(
+              '${careerScore.round()}+${sessionScore.round()}/${max.round()}',
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                fontSize: 11,
+                color: AppTheme.textSecondary,
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -154,11 +154,13 @@ class MilestoneService extends ChangeNotifier {
   LevelMilestone? pendingFor({
     required double humiliationScore,
     required double obedience,
+    int playerLevel = 1,
     SpecializationAllocation? allocation,
   }) {
     final all = allPendingFor(
       humiliationScore: humiliationScore,
       obedience: obedience,
+      playerLevel: playerLevel,
       allocation: allocation,
     );
     return all.isEmpty ? null : all.first;
@@ -170,11 +172,13 @@ class MilestoneService extends ChangeNotifier {
   LevelMilestone? pendingFinalFor({
     required double humiliationScore,
     required double obedience,
+    int playerLevel = 1,
     SpecializationAllocation? allocation,
   }) {
     final all = allPendingFor(
       humiliationScore: humiliationScore,
       obedience: obedience,
+      playerLevel: playerLevel,
       allocation: allocation,
       placement: MilestonePlacement.finalApotheose,
     );
@@ -182,19 +186,21 @@ class MilestoneService extends ChangeNotifier {
   }
 
   /// Toutes les milestones pending éligibles à `humiliationScore` +
-  /// tolérance d'obédiance, triées selon les mêmes critères que
-  /// `pendingFor`. La première de la liste est celle qui sera
-  /// effectivement insérée dans la prochaine session générée.
-  /// Liste vide si aucune candidate.
+  /// tolérance d'obédiance, gated par `playerLevel ≥ minLevel`. Triées
+  /// selon les mêmes critères que `pendingFor`. La première de la liste
+  /// est celle qui sera effectivement insérée dans la prochaine session
+  /// générée. Liste vide si aucune candidate.
   List<LevelMilestone> allPendingFor({
     required double humiliationScore,
     required double obedience,
+    int playerLevel = 1,
     SpecializationAllocation? allocation,
     MilestonePlacement placement = MilestonePlacement.body,
   }) {
     final cap = humiliationScore + humilTolerance(obedience);
     final candidates = _catalog
         .where((m) => m.placement == placement)
+        .where((m) => m.minLevel <= playerLevel)
         .where((m) => m.humilRequired <= cap)
         .where((m) => !_completed.contains(m.id))
         .where((m) => m.requires.every(hasUnlock))

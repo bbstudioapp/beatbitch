@@ -2,7 +2,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/session.dart';
 import '../models/session_step.dart';
-import 'humiliation_engine.dart';
 
 /// Compteurs cumulés persistants. Toutes les sessions y contribuent
 /// (carrière comme statiques). Lecture/écriture via shared_preferences.
@@ -93,19 +92,15 @@ class StatsService {
   }
 
   /// Comptabilise un appui sur le bouton « J'en veux encore ». Cumul
-  /// global, alimente le badge JamaisRassasiee et bumpe l'humiliation
-  /// lifetime (consentement explicite à plus = on accepte d'être humiliée
-  /// davantage).
+  /// global, alimente le badge JamaisRassasiee. Le bump d'humiliation
+  /// transit désormais via la conservation du `sessionScore` au start
+  /// de la session-encore enchaînée et le delta career intégré au
+  /// `_finish` (cf. `HumiliationEngine.applyEndOfSessionDelta`).
   Future<void> recordEncoreAsked() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(
       _kEncoresAsked,
       (prefs.getInt(_kEncoresAsked) ?? 0) + 1,
-    );
-    final currentH = prefs.getDouble(_kHumiliationLevel) ?? 0.0;
-    await prefs.setDouble(
-      _kHumiliationLevel,
-      currentH + HumiliationEngine.bumpEncore,
     );
   }
 

@@ -56,9 +56,10 @@ class MilestoneLoader {
 
   LevelMilestone? _parse(Map<String, dynamic> raw) {
     final id = raw['id'] as String?;
-    // `level` JSON conservé en éditorial mais ignoré au parsing : la
-    // sélection se fait désormais par humiliation requise (cf.
-    // `humilRequired` calculé plus bas).
+    // `level` du JSON = niveau global minimum pour que la milestone soit
+    // candidate (garde-fou explicite, complémentaire au filtre humil).
+    // Default 1 = pas de garde si non spécifié.
+    final minLevel = (raw['level'] as num?)?.toInt() ?? 1;
     final label = raw['displayLabel'] as String?;
     final seqRaw = raw['sequence'] as List<dynamic>? ?? const [];
     if (id == null || label == null || seqRaw.isEmpty) {
@@ -102,6 +103,7 @@ class MilestoneLoader {
     final placement = _parsePlacement(raw['placement'] as String?);
     return LevelMilestone(
       id: id,
+      minLevel: minLevel,
       humilRequired: _computeHumilRequired(sequence),
       displayLabel: label,
       sequence: sequence,
