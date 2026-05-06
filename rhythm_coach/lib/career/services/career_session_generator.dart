@@ -2380,34 +2380,18 @@ class CareerSessionGenerator {
     );
   }
 
-  /// Tirage spécifique au mode hand. La stimulation main n'engage pas la
-  /// bouche : aucune contrainte de profondeur (ni `_maxDepthIndex`, ni
-  /// `_deepProbability`). On autorise l'amplitude courte tip→head qui
-  /// est exclue du tirage générique pour la variété.
+  /// Tirage spécifique au mode hand. **Une seule variation** en standalone :
+  /// `head→throat`. La main enveloppe la base de la verge ; aller plus haut
+  /// que les lèvres (= head) n'a pas de sens anatomique, et la varier sur
+  /// 3-4 amplitudes brouillait la lecture acoustique sans gain dramaturgique.
+  /// Le BPM (60–180, choisi par `bpmScore`) reste le levier de variété.
   ///
-  /// **Règle transverse** : `from` et `to` désignent toujours deux zones
-  /// différentes (`from.index < to.index` strict). Pas de stimulation sur
-  /// place (head/head, mid/mid…) — ça n'a pas de sens sémantique pour un
-  /// mode rythmé qui alterne entre deux positions.
+  /// `ampScore` est ignoré ici — la variation viendra des futurs combos
+  /// hand+rhythm où `from` du hand s'aligne sur le `from` du rhythm
+  /// (ex. rhythm mid→throat → hand mid→throat, parce que la main ne peut
+  /// pas être plus haut que les lèvres pendant le combo).
   (Position, Position) _sampleFromToForHand(double ampScore) {
-    final clamped = ampScore.clamp(0.0, 1.0);
-    // ampScore=0 → idx 1 (head). ampScore=1 → idx 4 (full). Toutes
-    // amplitudes ouvertes — la main n'a pas de tension de profondeur.
-    final deepestIdx =
-        _lerp(1.0, 4.0, clamped).round().clamp(1, 4);
-    // shallowestIdx strictement plus petit que deepestIdx. tip→head pour
-    // amplitude minimale ; sinon tip ou head pour les amplitudes plus
-    // grandes (le from est toujours en surface en hand).
-    final int shallowestIdx;
-    if (deepestIdx == 1) {
-      shallowestIdx = 0;
-    } else {
-      shallowestIdx = _rng.nextInt(2);
-    }
-    return (
-      Position.values[shallowestIdx],
-      Position.values[deepestIdx],
-    );
+    return (Position.head, Position.throat);
   }
 
   /// Tirage spécifique au mode lick. Tant que `_humiliationCareer < 2`,
