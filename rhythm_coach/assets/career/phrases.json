@@ -124,6 +124,16 @@
       "Souffle. Tu as été sage.",
       "Respire bien, tu l’as mérité.",
       "Calme-toi… je n’ai pas encore fini avec toi."
+    ],
+    "fake_breath": [
+      "Une seconde. C’est tout.",
+      "Inspire vite, on enchaîne.",
+      "Tu crois qu’on s’arrête ? Allez.",
+      "Vite, deux secondes, pas plus.",
+      "Tu rêves d’une pause ? Non.",
+      "Reprends-toi, j’ai pas fini.",
+      "Souffle un coup, et on remet ça.",
+      "Tu pensais avoir gagné une vraie pause ?"
     ]
   },
   "beg": {

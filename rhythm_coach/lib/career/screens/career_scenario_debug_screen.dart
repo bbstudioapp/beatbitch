@@ -859,8 +859,10 @@ class _CareerScenarioDebugScreenState
     final absTime = step.time + timeOffset;
     final tags = _tagsFor(step, session, forkRoot: forkRoot);
     final mode = step.mode;
+    final stepStart = step.time;
     final endTime = step.time + (step.duration ?? 0);
-    final stamina = _profileAt(result.staminaProfile, endTime);
+    final staminaStart = _profileAt(result.staminaProfile, stepStart);
+    final staminaEnd = _profileAt(result.staminaProfile, endTime);
     final humilReq = (mode != null && !step.isTextOnly)
         ? HumiliationScale.requiredFor(
             mode: mode,
@@ -878,18 +880,42 @@ class _CareerScenarioDebugScreenState
         _failSimulatedNextStepTime != null &&
         absTime > _failSimulatedAtStepTime! &&
         absTime < _failSimulatedNextStepTime!;
+    // Fond coloré selon le tag dominant (milestone/boost/final/postFinal)
+    // — remplace les anciens badges textuels qui surchargeaient la ligne.
+    // Priorité : forkRoot > isFailMarker > tag de step. Le tag finalStep
+    // bat boost (un step peut être les deux dans la fenêtre finish).
+    Color? tagBg;
+    Color? tagBorder;
+    if (tags.contains(_StepTag.milestoneFinal)) {
+      tagBg = Colors.deepPurpleAccent.withValues(alpha: 0.16);
+      tagBorder = Colors.deepPurpleAccent.withValues(alpha: 0.5);
+    } else if (tags.contains(_StepTag.milestoneBody)) {
+      tagBg = Colors.purpleAccent.withValues(alpha: 0.14);
+      tagBorder = Colors.purpleAccent.withValues(alpha: 0.45);
+    } else if (tags.contains(_StepTag.finalStep)) {
+      tagBg = Colors.redAccent.withValues(alpha: 0.18);
+      tagBorder = Colors.redAccent.withValues(alpha: 0.55);
+    } else if (tags.contains(_StepTag.boost)) {
+      tagBg = Colors.orangeAccent.withValues(alpha: 0.14);
+      tagBorder = Colors.orangeAccent.withValues(alpha: 0.45);
+    } else if (tags.contains(_StepTag.postFinal)) {
+      tagBg = Colors.lightGreen.withValues(alpha: 0.12);
+      tagBorder = Colors.lightGreen.withValues(alpha: 0.4);
+    }
+    final bgColor = forkRoot
+        ? AppTheme.accent.withValues(alpha: 0.08)
+        : isFailMarker
+            ? Colors.red.withValues(alpha: 0.10)
+            : (tagBg ?? AppTheme.surface);
+    final borderSide = forkRoot
+        ? BorderSide(color: AppTheme.accent.withValues(alpha: 0.4))
+        : (tagBorder != null ? BorderSide(color: tagBorder) : BorderSide.none);
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
-      color: forkRoot
-          ? AppTheme.accent.withValues(alpha: 0.08)
-          : isFailMarker
-              ? Colors.red.withValues(alpha: 0.10)
-              : AppTheme.surface,
+      color: bgColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
-        side: forkRoot
-            ? BorderSide(color: AppTheme.accent.withValues(alpha: 0.4))
-            : BorderSide.none,
+        side: borderSide,
       ),
       child: Opacity(
         opacity: isFailSkipped ? 0.35 : 1,
@@ -934,7 +960,10 @@ class _CareerScenarioDebugScreenState
                     if (humilReq > 0)
                       _chip(
                           '${t.careerDebugHumilReq} ${humilReq.toStringAsFixed(1)}'),
-                    for (final tag in tags) _tagBadge(t, tag),
+                    // Les tags milestone/boost/final/postFinal sont
+                    // matérialisés par la couleur de fond de la Card et
+                    // n'apparaissent plus en badge ici — l'œil parse plus
+                    // vite une coloration que de lire un texte.
                   ],
                 ),
                 if (_showText && step.text.isNotEmpty)
@@ -956,7 +985,13 @@ class _CareerScenarioDebugScreenState
                     padding: const EdgeInsets.only(top: 6),
                     child: Row(
                       children: [
-                        _miniStat('stam.', stamina),
+                        // Lecture : « début → fin » de la stamina projetée
+                        // pour ce step. Sans ce delta on ne distinguait pas
+                        // un breath (rampe ↑) d'un step rythme (rampe ↓) —
+                        // la valeur fin seule pouvait afficher 70 pour un
+                        // breath qui démarrait à 30 et remontait à 70.
+                        _miniStat('stam.',
+                            '${staminaStart.toStringAsFixed(0)} → ${staminaEnd.toStringAsFixed(0)}'),
                       ],
                     ),
                   ),
@@ -968,9 +1003,9 @@ class _CareerScenarioDebugScreenState
     );
   }
 
-  Widget _miniStat(String label, double value) {
+  Widget _miniStat(String label, String value) {
     return Text(
-      '$label ${value.toStringAsFixed(1)}',
+      '$label $value',
       style: const TextStyle(color: AppTheme.textMuted, fontSize: 10),
     );
   }
@@ -985,38 +1020,6 @@ class _CareerScenarioDebugScreenState
       child: Text(
         text,
         style: const TextStyle(color: AppTheme.textPrimary, fontSize: 11),
-      ),
-    );
-  }
-
-  Widget _tagBadge(AppLocalizations t, _StepTag tag) {
-    final (label, color) = switch (tag) {
-      _StepTag.milestoneBody => (
-          t.careerDebugTagMilestoneBody,
-          Colors.purpleAccent
-        ),
-      _StepTag.milestoneFinal => (
-          t.careerDebugTagMilestoneFinal,
-          Colors.deepPurpleAccent
-        ),
-      _StepTag.boost => (t.careerDebugTagBoost, Colors.orangeAccent),
-      _StepTag.finalStep => (t.careerDebugTagFinal, Colors.redAccent),
-      _StepTag.postFinal => (t.careerDebugTagPostFinal, Colors.lightGreen),
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withValues(alpha: 0.6)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-            color: color,
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.8),
       ),
     );
   }
