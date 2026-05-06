@@ -122,6 +122,11 @@ class PhraseBankLoader {
         .where((s) => s.trim().isNotEmpty)
         .toList();
 
+    final swallowOrders = (data['swallow_order'] as List<dynamic>? ?? const [])
+        .map((p) => p.toString())
+        .where((s) => s.trim().isNotEmpty)
+        .toList();
+
     return PhraseBank(
       byMode: byMode,
       congrats: congrats,
@@ -135,6 +140,7 @@ class PhraseBankLoader {
       postFinal: postFinal,
       postFinalBeg: postFinalBeg,
       postFinalLick: postFinalLick,
+      swallowOrders: swallowOrders,
     );
   }
 }
