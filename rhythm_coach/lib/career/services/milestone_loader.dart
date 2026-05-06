@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
+import '../../models/session.dart';
 import '../../models/session_step.dart';
+import '../../services/humiliation_engine.dart';
 import '../models/level_milestone.dart';
 import '../models/specialization.dart';
 import '../models/milestone_text_override.dart';
@@ -54,10 +56,12 @@ class MilestoneLoader {
 
   LevelMilestone? _parse(Map<String, dynamic> raw) {
     final id = raw['id'] as String?;
-    final level = (raw['level'] as num?)?.toInt();
+    // `level` JSON conservé en éditorial mais ignoré au parsing : la
+    // sélection se fait désormais par humiliation requise (cf.
+    // `humilRequired` calculé plus bas).
     final label = raw['displayLabel'] as String?;
     final seqRaw = raw['sequence'] as List<dynamic>? ?? const [];
-    if (id == null || level == null || label == null || seqRaw.isEmpty) {
+    if (id == null || label == null || seqRaw.isEmpty) {
       return null;
     }
     // Expand chainAction : un step JSON avec `chainAction` produit deux
@@ -98,7 +102,7 @@ class MilestoneLoader {
     final placement = _parsePlacement(raw['placement'] as String?);
     return LevelMilestone(
       id: id,
-      level: level,
+      humilRequired: _computeHumilRequired(sequence),
       displayLabel: label,
       sequence: sequence,
       durationSeconds: duration,
@@ -111,6 +115,25 @@ class MilestoneLoader {
       branches: branches,
       placement: placement,
     );
+  }
+
+  /// Humiliation maximale requise par un step de la séquence — sert de
+  /// seuil de candidature côté `MilestoneService.pendingFor(...)`. Calculée
+  /// une fois au load (le résultat est figé dans le modèle).
+  static double _computeHumilRequired(List<SessionStep> sequence) {
+    var max = 0.0;
+    for (final s in sequence) {
+      final mode = s.mode ?? SessionMode.rhythm;
+      final r = HumiliationScale.requiredFor(
+        mode: mode,
+        from: s.from,
+        to: s.to,
+        bpm: s.bpm,
+        duration: s.duration,
+      );
+      if (r > max) max = r;
+    }
+    return max;
   }
 
   /// Parse `placement: "final"` (ou `"final_apotheose"`) en

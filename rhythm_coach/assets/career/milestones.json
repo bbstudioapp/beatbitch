@@ -21,7 +21,7 @@
         {"time": 0,   "text": "Installe-toi confortablement. Prends-moi dans ta main, et commence par monter… descendre.", "mode": "breath", "duration": 8},
         {"time": 8,   "mode": "hand", "from": "tip", "to": "head", "bpm": 60, "duration": 10},
         {"time": 18,  "text": "C'est très bien. Accélère un peu.", "mode": "hand", "from": "tip", "to": "head", "bpm": 80, "duration": 12},
-        {"time": 30,  "text": "Hum… tu es douce. Mais tu vas devoir faire un peu plus que ça. Pose tes lèvres sur le bout.", "mode": "breath", "duration": 7},
+        {"time": 30,  "text": "Mmm… tu es douce. Mais tu vas devoir faire un peu plus que ça. Pose tes lèvres sur le bout.", "mode": "breath", "duration": 7},
         {"time": 37,  "text": "Comme ça. Reste là.", "mode": "hold", "to": "tip", "duration": 4},
         {"time": 41,  "text": "Sors un peu ta langue pour le lécher.", "mode": "hold", "to": "tip", "duration": 5},
         {"time": 46,  "text": "Très bien. Continue.", "mode": "lick", "from": "tip", "to": "head", "bpm": 60, "duration": 10},
@@ -47,8 +47,12 @@
         {"time": 0,  "text": "Aujourd'hui tu vas aller plus loin. Sors ta langue. Pose ta bouche sur le bout, et lèche tout du long, jusqu'au fond.", "mode": "lick", "from": "tip", "to": "full", "bpm": 50, "duration": 14},
         {"time": 14, "text": "Bien. Maintenant prends-le en bouche. Suce-moi jusqu'au milieu de ma queue.", "mode": "rhythm", "from": "tip", "to": "mid", "bpm": 75, "duration": 16},
         {"time": 30, "text": "Continue. Plus court, plus profond.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 85, "duration": 16},
-        {"time": 46, "text": "Reste-là, garde-le bien profond.", "mode": "hold", "to": "head", "duration": 5},
-        {"time": 51, "text": "Reprends, calme, langue dehors.", "mode": "lick", "from": "tip", "to": "head", "bpm": 65, "duration": 10}
+        {"time": 46, "text": "Reste-là, garde-le bien profond.", "mode": "hold", "to": "mid", "duration": 5},
+        {"time": 51, "text": "Suce un peu plus.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 85, "duration": 7},
+        {"time": 58, "text": "Retourne au fond, touche ta gorge, doucement", "mode": "hold", "to": "mid", "duration": 4},
+        {"time": 62, "text": "C’est bien, remonte un peu", "mode": "hold", "to": "head", "duration": 5},
+        {"time": 67, "text": "On y retourne, touche ta gorge, un peu plus", "mode": "hold", "to": "mid", "duration": 7},
+        {"time": 74, "text": "Parfait, reprend ton souffle.", "mode": "breath", "duration": 10}
       ]
     },
     {
@@ -59,14 +63,12 @@
       "requires": [],
       "branches": ["obeissance"],
       "sequence": [
-        {"time": 0,  "text": "Aujourd'hui tu vas apprendre à supplier. Trois phrases précises, pas de position, juste tes mots. Tu vas répéter exactement ce que je te dis.", "mode": "rhythm", "from": "tip", "to": "head", "bpm": 80, "duration": 10},
-        {"time": 10, "text": "Répète après moi : « j'aime te faire du bien ».", "mode": "beg", "duration": 10},
-        {"time": 20, "text": "Reprends ton souffle.", "mode": "breath", "duration": 4},
-        {"time": 24, "text": "Maintenant : « vas-y, fais-moi du bien ». Et continue à me sucer pendant que tu le dis.", "mode": "rhythm", "from": "tip", "to": "head", "bpm": 80, "duration": 4},
-        {"time": 28, "text": "Dis-le, fort.", "mode": "beg", "duration": 10},
-        {"time": 38, "text": "Encore une. Respire.", "mode": "breath", "duration": 4},
-        {"time": 42, "text": "Dernière. Répète : « s'il te plaît, donne-moi ta queue ».", "mode": "beg", "duration": 12},
-        {"time": 54, "text": "Bien. À partir de maintenant, tu peux supplier de toi-même quand tu en veux plus. Le bouton vient d'apparaître à l'écran.", "mode": "lick", "from": "tip", "to": "head", "bpm": 70, "duration": 12}
+        {"time": 0,  "text": "Aujourd'hui tu vas apprendre à supplier. Tu vas répéter exactement ce que je te dis.", "mode": "rhythm", "from": "tip", "to": "head", "bpm": 80, "duration": 7},
+        {"time": 7, "text": "Répète après moi : « j'aime te faire du bien ».", "mode": "beg", "duration": 7},
+        {"time": 14, "text": "Dit : « laisse-moi te faire du bien s’il te plaît ». Dis-le, fort.", "mode": "beg", "duration": 8},
+        {"time": 22, "text": "Répète : « pitié, donne-moi ta queue ».", "mode": "beg", "duration": 6},
+        {"time": 28, "text": "Vas-y maintenant", "mode": "rhythm", "from": "tip", "to": "head", "bpm": 80, "duration": 6},
+        {"time": 34, "text": "Bien. À partir de maintenant, tu peux supplier de toi-même quand tu en veux plus. Le bouton vient d'apparaître à l'écran.", "mode": "lick", "from": "tip", "to": "head", "bpm": 70, "duration": 12}
       ]
     },
     {
@@ -243,11 +245,11 @@
       "branches": ["resilience", "obeissance"],
       "sequence": [
         {"time": 0,  "text": "Aujourd'hui tu vas supplier la gorge ouverte, en comptant. Ta voix t'aide à encaisser. Échauffe.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 100, "duration": 12},
-        {"time": 12, "text": "Gorge ouverte. Compte à voix haute jusqu'à cinq pendant que tu m'implores.", "mode": "beg", "from": "throat", "duration": 5},
+        {"time": 12, "text": "Gorge ouverte. Compte à voix haute jusqu'à cinq pendant que tu m'implores.", "mode": "beg", "to": "throat", "duration": 5},
         {"time": 17, "text": "Bouche libre, redis-moi : « j'ai compté jusqu'à cinq pour toi ».", "mode": "beg", "duration": 8},
-        {"time": 25, "text": "Reprends gorge. Compte jusqu'à six cette fois, sans craquer.", "mode": "beg", "from": "throat", "duration": 6},
+        {"time": 25, "text": "Reprends gorge. Compte jusqu'à six cette fois, sans craquer.", "mode": "beg", "to": "throat", "duration": 6},
         {"time": 31, "text": "Maintenant supplie : « laisse-moi compter encore plus longtemps ».", "mode": "beg", "duration": 8},
-        {"time": 39, "text": "Dernière. Gorge ouverte, compte jusqu'à dix.", "mode": "beg", "from": "throat", "duration": 10},
+        {"time": 39, "text": "Dernière. Gorge ouverte, compte jusqu'à dix.", "mode": "beg", "to": "throat", "duration": 10},
         {"time": 49, "text": "Tu as tenu et parlé. Récupère.", "mode": "lick", "from": "head", "to": "mid", "bpm": 75, "duration": 12}
       ]
     },
@@ -362,9 +364,14 @@
       "requires": ["beg_libre", "throat_pulse"],
       "branches": ["obeissance", "profondeur"],
       "sequence": [
-        {"time": 0,  "text": "Tu vas me supplier la gorge ouverte.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 100, "duration": 8},
-        {"time": 8,  "text": "Tenue gorge pendant que tu m'implores.", "mode": "beg", "from": "throat", "duration": 30},
-        {"time": 38, "text": "Bien. Lèche pour finir.", "mode": "lick", "from": "head", "to": "mid", "bpm": 80, "duration": 10}
+        {"time": 0,  "text": "Ouvre la bouche bien grande, tire la langue. Je veux voir ta gorge ouverte pour moi.", "mode": "beg", "duration": 10},
+        {"time": 10, "text": "Demande-moi de te l'enfoncer plus.", "mode": "beg", "to": "mid", "duration": 8},
+        {"time": 18, "text": "Tu veux que je reste comme ça ? Réponds-moi.", "mode": "beg", "to": "throat", "duration": 10},
+        {"time": 28, "text": "Répète ?", "mode": "beg", "duration": 6},
+        {"time": 34, "text": "Accordée. Est-ce que tu aimes ?", "mode": "beg", "to": "throat", "duration": 8},
+        {"time": 42, "text": "Respire, mais garde ta gorge ouverte et ta langue dehors.", "mode": "beg", "duration": 8},
+        {"time": 50, "text": "Supplie-moi de rester là.", "mode": "beg", "to": "throat", "duration": 10},
+        {"time": 60, "text": "Bonne petite.", "mode": "breath", "duration": 5}
       ]
     },
     {
@@ -390,7 +397,7 @@
       "branches": ["obeissance", "profondeur"],
       "sequence": [
         {"time": 0,  "text": "Tu m'implores à fond.", "mode": "rhythm", "from": "mid", "to": "full", "bpm": 80, "duration": 8},
-        {"time": 8,  "text": "Tenue à fond pendant la supplique.", "mode": "beg", "from": "full", "duration": 30},
+        {"time": 8,  "text": "Tenue à fond pendant la supplique.", "mode": "beg", "to": "full", "duration": 30},
         {"time": 38, "text": "Bien. Lèche pour finir.", "mode": "lick", "from": "head", "to": "head", "bpm": 70, "duration": 12}
       ]
     },
@@ -516,6 +523,40 @@
         {"time": 5,  "text": "Respire par le nez. Bouge pas.", "mode": "breath", "duration": 4},
         {"time": 9,  "text": "Encore. Plus longtemps. Je viens dans ta gorge.", "mode": "hold", "to": "full", "duration": 8},
         {"time": 17, "text": "Avale. Tout. Tiens jusqu'au bout.", "mode": "hold", "to": "full", "duration": 10}
+      ]
+    },
+    {
+      "id": "intro_swallow_control",
+      "level": 4,
+      "displayLabel": "Garde ta salive",
+      "unlocks": ["sloppy_swallow_control"],
+      "requires": ["sloppy_drool_basic"],
+      "branches": ["sloppy", "obeissance"],
+      "sequence": [
+        {"time": 0,  "text": "Aujourd'hui tu apprends à te retenir. À partir de maintenant, je vais t'interdire d'avaler. Ta salive, tu la gardes en bouche jusqu'à ce que je te le permette.", "mode": "lick", "from": "tip", "to": "head", "bpm": 70, "duration": 14},
+        {"time": 14, "text": "Si tu craques et que tu avales sans permission, c'est une faute. Tu appuies sur le gros bouton rouge — je veux le savoir. Compris ?", "mode": "lick", "from": "tip", "to": "head", "bpm": 70, "duration": 12},
+        {"time": 26, "text": "On commence. À partir de maintenant : tu n'avales plus. Garde tout en bouche.", "mode": "lick", "from": "tip", "to": "head", "bpm": 75, "duration": 14, "swallow_mode": "forbidden"},
+        {"time": 40, "text": "Continue. Laisse couler si ça déborde, mais n'avale pas.", "mode": "lick", "from": "tip", "to": "head", "bpm": 70, "duration": 14},
+        {"time": 54, "text": "Bouche grande ouverte. Tiens-le sur le bout. Garde tout.", "mode": "hold", "to": "tip", "duration": 6},
+        {"time": 60, "text": "Reprends, lent. Bave dessus. Toujours rien dans la gorge.", "mode": "lick", "from": "tip", "to": "head", "bpm": 60, "duration": 14},
+        {"time": 74, "text": "Maintenant — avale. Tout d'un coup. Vide ta bouche.", "mode": "lick", "from": "tip", "to": "head", "bpm": 60, "duration": 4, "swallow_mode": "allowed"},
+        {"time": 78, "text": "Bien. Tu sais te retenir. Désormais, quand je te le dirai, tu garderas tout en bouche.", "mode": "lick", "from": "tip", "to": "head", "bpm": 65, "duration": 10}
+      ]
+    },
+    {
+      "id": "intro_sloppy_spit",
+      "level": 5,
+      "displayLabel": "Crache pour moi",
+      "unlocks": ["sloppy_spit"],
+      "requires": ["sloppy_swallow_control"],
+      "branches": ["sloppy"],
+      "sequence": [
+        {"time": 0,  "text": "Aujourd'hui tu apprends à cracher. C'est sale, c'est sonore, c'est ce que je veux. Échauffe.", "mode": "lick", "from": "tip", "to": "head", "bpm": 75, "duration": 12},
+        {"time": 12, "text": "Garde tout. Salive sans rien avaler.", "mode": "lick", "from": "tip", "to": "head", "bpm": 70, "duration": 16, "swallow_mode": "forbidden"},
+        {"time": 28, "text": "Bouche grande ouverte. Reste sur le bout, accumule.", "mode": "hold", "to": "tip", "duration": 8},
+        {"time": 36, "text": "Maintenant — crache sur ma queue. Fort, sonore, sans pudeur.", "mode": "lick", "from": "tip", "to": "head", "bpm": 60, "duration": 4, "swallow_mode": "allowed"},
+        {"time": 40, "text": "Étale ce que tu viens de cracher. Lèche-le partout.", "mode": "lick", "from": "tip", "to": "head", "bpm": 65, "duration": 14},
+        {"time": 54, "text": "Bien. Quand je te dirai « crache », tu cracheras. Sale, sonore, c'est ce que tu es maintenant.", "mode": "lick", "from": "tip", "to": "head", "bpm": 65, "duration": 8}
       ]
     }
   ]

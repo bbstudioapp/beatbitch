@@ -1402,6 +1402,18 @@ abstract class AppLocalizations {
   /// **'Affiche le score 0–100 d\'obéissance (baisse à chaque fail, remonte avec les punitions).'**
   String get soundsDebugShowObedienceBarSubtitle;
 
+  /// No description provided for @soundsDebugShowSalivaBar.
+  ///
+  /// In fr, this message translates to:
+  /// **'Afficher la jauge de salive'**
+  String get soundsDebugShowSalivaBar;
+
+  /// No description provided for @soundsDebugShowSalivaBarSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Affiche la jauge 0–max de salive accumulée pendant la séance. Monte avec lick/rhythm/hold profond, descend avec breath/hand. Auto-déglutition à 75 quand la déglutition est autorisée.'**
+  String get soundsDebugShowSalivaBarSubtitle;
+
   /// No description provided for @soundsDebugShowSessionControls.
   ///
   /// In fr, this message translates to:
@@ -1444,6 +1456,12 @@ abstract class AppLocalizations {
   /// **'OBÉI.'**
   String get debugBarLabelObedience;
 
+  /// No description provided for @debugBarLabelSaliva.
+  ///
+  /// In fr, this message translates to:
+  /// **'SALIVE'**
+  String get debugBarLabelSaliva;
+
   /// No description provided for @soundsDebugCameraHoldCheck.
   ///
   /// In fr, this message translates to:
@@ -1455,6 +1473,288 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Pendant les holds, la caméra avant vérifie que la position est tenue. Le coach lance un rappel court si tu dérives. Nécessite d\'avoir calibré la caméra (icône caméra de l\'écran SCÉNARIO).'**
   String get soundsDebugCameraHoldCheckSubtitle;
+
+  /// No description provided for @soundsDebugSkipSession.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bouton « terminer en succès »'**
+  String get soundsDebugSkipSession;
+
+  /// No description provided for @soundsDebugSkipSessionSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Affiche un bouton dans la séance qui termine immédiatement comme un succès complet (badges, milestones, niveau). Pratique pour itérer sur le contenu sans tout jouer.'**
+  String get soundsDebugSkipSessionSubtitle;
+
+  /// No description provided for @sessionDebugFinishButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'DEBUG : terminer en succès'**
+  String get sessionDebugFinishButton;
+
+  /// No description provided for @soundsDebugScenarioButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'Debug — scénario carrière'**
+  String get soundsDebugScenarioButton;
+
+  /// No description provided for @soundsDebugScenarioSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Visualise une session générée sans la jouer : niveau, humil, obéi, milestones, unlocks, et simulation Supplier / fail.'**
+  String get soundsDebugScenarioSubtitle;
+
+  /// No description provided for @careerDebugTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Debug — Scénario carrière'**
+  String get careerDebugTitle;
+
+  /// No description provided for @careerDebugSectionParams.
+  ///
+  /// In fr, this message translates to:
+  /// **'Paramètres'**
+  String get careerDebugSectionParams;
+
+  /// No description provided for @careerDebugSectionScenario.
+  ///
+  /// In fr, this message translates to:
+  /// **'Scénario'**
+  String get careerDebugSectionScenario;
+
+  /// No description provided for @careerDebugLevel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Niveau'**
+  String get careerDebugLevel;
+
+  /// No description provided for @careerDebugHumiliation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Humiliation'**
+  String get careerDebugHumiliation;
+
+  /// No description provided for @careerDebugObedience.
+  ///
+  /// In fr, this message translates to:
+  /// **'Obéissance'**
+  String get careerDebugObedience;
+
+  /// No description provided for @careerDebugIncludeHand.
+  ///
+  /// In fr, this message translates to:
+  /// **'Inclure la stimulation à la main'**
+  String get careerDebugIncludeHand;
+
+  /// No description provided for @careerDebugQuickie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mode bâclée'**
+  String get careerDebugQuickie;
+
+  /// No description provided for @careerDebugIntense.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mode intense (post-Supplier)'**
+  String get careerDebugIntense;
+
+  /// No description provided for @careerDebugExcitTarget.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cible excitation'**
+  String get careerDebugExcitTarget;
+
+  /// No description provided for @careerDebugDurationOverride.
+  ///
+  /// In fr, this message translates to:
+  /// **'Durée override'**
+  String get careerDebugDurationOverride;
+
+  /// No description provided for @careerDebugMilestoneBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Milestone body'**
+  String get careerDebugMilestoneBody;
+
+  /// No description provided for @careerDebugMilestoneFinal.
+  ///
+  /// In fr, this message translates to:
+  /// **'Milestone final'**
+  String get careerDebugMilestoneFinal;
+
+  /// No description provided for @careerDebugUnlocks.
+  ///
+  /// In fr, this message translates to:
+  /// **'Unlocks'**
+  String get careerDebugUnlocks;
+
+  /// No description provided for @careerDebugUnlocksLoadCurrent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Acquis'**
+  String get careerDebugUnlocksLoadCurrent;
+
+  /// No description provided for @careerDebugUnlocksClear.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun'**
+  String get careerDebugUnlocksClear;
+
+  /// No description provided for @careerDebugUnlocksAll.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tous'**
+  String get careerDebugUnlocksAll;
+
+  /// No description provided for @careerDebugAuto.
+  ///
+  /// In fr, this message translates to:
+  /// **'Auto'**
+  String get careerDebugAuto;
+
+  /// No description provided for @careerDebugNone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune'**
+  String get careerDebugNone;
+
+  /// No description provided for @careerDebugRegenerate.
+  ///
+  /// In fr, this message translates to:
+  /// **'Régénérer'**
+  String get careerDebugRegenerate;
+
+  /// No description provided for @careerDebugShowTtsTexts.
+  ///
+  /// In fr, this message translates to:
+  /// **'Afficher les textes TTS'**
+  String get careerDebugShowTtsTexts;
+
+  /// No description provided for @careerDebugStatExcit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Excit fin'**
+  String get careerDebugStatExcit;
+
+  /// No description provided for @careerDebugStatStamina.
+  ///
+  /// In fr, this message translates to:
+  /// **'Stamina fin'**
+  String get careerDebugStatStamina;
+
+  /// No description provided for @careerDebugStatHumilCap.
+  ///
+  /// In fr, this message translates to:
+  /// **'Humil cap fin'**
+  String get careerDebugStatHumilCap;
+
+  /// No description provided for @careerDebugTagMilestoneBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'MILESTONE'**
+  String get careerDebugTagMilestoneBody;
+
+  /// No description provided for @careerDebugTagMilestoneFinal.
+  ///
+  /// In fr, this message translates to:
+  /// **'MILESTONE FINAL'**
+  String get careerDebugTagMilestoneFinal;
+
+  /// No description provided for @careerDebugTagBoost.
+  ///
+  /// In fr, this message translates to:
+  /// **'BOOST'**
+  String get careerDebugTagBoost;
+
+  /// No description provided for @careerDebugTagFinal.
+  ///
+  /// In fr, this message translates to:
+  /// **'FINAL'**
+  String get careerDebugTagFinal;
+
+  /// No description provided for @careerDebugTagPostFinal.
+  ///
+  /// In fr, this message translates to:
+  /// **'POST-FINAL'**
+  String get careerDebugTagPostFinal;
+
+  /// No description provided for @careerDebugTextOnly.
+  ///
+  /// In fr, this message translates to:
+  /// **'TEXT-ONLY'**
+  String get careerDebugTextOnly;
+
+  /// No description provided for @careerDebugHumilReq.
+  ///
+  /// In fr, this message translates to:
+  /// **'req'**
+  String get careerDebugHumilReq;
+
+  /// No description provided for @careerDebugStepActionsTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Step'**
+  String get careerDebugStepActionsTitle;
+
+  /// No description provided for @careerDebugSimulateFail.
+  ///
+  /// In fr, this message translates to:
+  /// **'Simuler un fail ici'**
+  String get careerDebugSimulateFail;
+
+  /// No description provided for @careerDebugSimulateSupplier.
+  ///
+  /// In fr, this message translates to:
+  /// **'Simuler un Supplier ici'**
+  String get careerDebugSimulateSupplier;
+
+  /// No description provided for @careerDebugClearFork.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacer la branche'**
+  String get careerDebugClearFork;
+
+  /// No description provided for @careerDebugClearAnnotation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacer l\'annotation'**
+  String get careerDebugClearAnnotation;
+
+  /// No description provided for @careerDebugForkBanner.
+  ///
+  /// In fr, this message translates to:
+  /// **'BRANCHE SUPPLIER'**
+  String get careerDebugForkBanner;
+
+  /// No description provided for @careerDebugForkFrom.
+  ///
+  /// In fr, this message translates to:
+  /// **'Depuis'**
+  String get careerDebugForkFrom;
+
+  /// No description provided for @careerDebugForkSteps.
+  ///
+  /// In fr, this message translates to:
+  /// **'steps'**
+  String get careerDebugForkSteps;
+
+  /// No description provided for @careerDebugFailSnapshotTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'FAIL simulé'**
+  String get careerDebugFailSnapshotTitle;
+
+  /// No description provided for @careerDebugFailSnapshotNext.
+  ///
+  /// In fr, this message translates to:
+  /// **'Reprend au step'**
+  String get careerDebugFailSnapshotNext;
+
+  /// No description provided for @careerDebugFailSnapshotNoNext.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plus de step jouable après ce fail (fin de séance).'**
+  String get careerDebugFailSnapshotNoNext;
 
   /// No description provided for @positionTip.
   ///

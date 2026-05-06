@@ -11,11 +11,17 @@ import '../theme/app_theme.dart';
 /// la séance pour donner un repère visuel du tempo et de la position
 /// sans avoir à lire l'heure qui s'écoule.
 ///
-/// - rhythm / lick : échelle verticale des 5 positions, orbe lumineuse
-///   qui se déplace entre `from` et `to` au tempo BPM.
-/// - biffle        : grosse orbe centrale qui pulse au BPM.
-/// - hold / beg    : orbe statique sur la position courante, glow doux.
-/// - breath        : orbe qui dilate/contracte lentement.
+/// L'axe vertical (tip en haut, full en bas) représente la **position le
+/// long de la verge** — sémantique partagée par tous les modes :
+/// - rhythm / hold / beg : position des lèvres (orbe pleine).
+/// - lick                : position de la langue (pastille horizontale).
+/// - hand                : position de la main (anneau, qui entoure la verge).
+/// - biffle              : pas de position (gros pulse central, coups au visage).
+/// - breath / freestyle  : pas de position (orbe respirante).
+///
+/// Cet axe partagé est volontaire : à terme, un step combo (hand+rhythm,
+/// hand+lick) pourra superposer **plusieurs curseurs** sur la même
+/// échelle pour montrer la coordination main/bouche d'un seul regard.
 class MovementAnimation extends StatefulWidget {
   final SessionMode mode;
   final Position from;
@@ -200,43 +206,29 @@ class _MovementAnimationState extends State<MovementAnimation>
 
   Widget _buildForMode(double t) {
     final color = _modeColor(widget.mode);
+    final cursorStyle = _cursorStyleFor(widget.mode);
     final beatDuration = _durationFor(widget.mode, widget.bpm);
     return switch (widget.mode) {
-      SessionMode.rhythm => _PositionLadder(
+      SessionMode.rhythm ||
+      SessionMode.lick ||
+      SessionMode.hand =>
+        _PositionLadder(
           from: widget.from,
           to: widget.to ?? widget.from,
           beatDuration: beatDuration,
           flipped: _flipped,
           color: color,
-        ),
-      SessionMode.lick => _PositionLadder(
-          from: widget.from,
-          to: widget.to ?? widget.from,
-          beatDuration: beatDuration,
-          flipped: _flipped,
-          color: color,
-          dim: true,
+          cursorStyle: cursorStyle,
         ),
       SessionMode.biffle => _Pulse(t: t, color: color),
-      SessionMode.hand => _PositionLadder(
-          from: widget.from,
-          to: widget.to ?? widget.from,
-          beatDuration: beatDuration,
-          flipped: _flipped,
-          color: color,
-        ),
-      SessionMode.hold => _StaticPosition(
+      SessionMode.hold || SessionMode.beg => _StaticPosition(
           position: widget.from,
           t: t,
           color: color,
+          cursorStyle: cursorStyle,
         ),
-      SessionMode.beg => _StaticPosition(
-          position: widget.from,
-          t: t,
-          color: color,
-        ),
-      SessionMode.breath => _Breath(t: t, color: color),
-      SessionMode.freestyle => _Breath(t: t, color: color),
+      SessionMode.breath || SessionMode.freestyle =>
+        _Breath(t: t, color: color),
     };
   }
 
@@ -250,27 +242,50 @@ class _MovementAnimationState extends State<MovementAnimation>
         SessionMode.freestyle => const Color(0xFFB0BEC5),
         SessionMode.hand => const Color(0xFFFFAB91),
       };
+
+  static _CursorStyle _cursorStyleFor(SessionMode m) => switch (m) {
+        // lèvres / bouche → orbe pleine (le sample bip "remplit" la bouche)
+        SessionMode.rhythm ||
+        SessionMode.hold ||
+        SessionMode.beg =>
+          _CursorStyle.orb,
+        // langue → pastille horizontale, lèche la position
+        SessionMode.lick => _CursorStyle.tongue,
+        // main → anneau ouvert (la main entoure la verge, ne la "remplit" pas)
+        SessionMode.hand => _CursorStyle.ring,
+        // modes sans position → fallback orbe (jamais consommé en pratique
+        // car biffle/breath/freestyle utilisent des widgets dédiés)
+        SessionMode.biffle ||
+        SessionMode.breath ||
+        SessionMode.freestyle =>
+          _CursorStyle.orb,
+      };
 }
 
 // ─── Sous-widgets ────────────────────────────────────────────────────────
 
-/// Échelle verticale 5 positions (tip en haut, full en bas) avec un orbe
-/// qui glisse entre `from` et `to` à chaque battement. Quand `from == to`,
-/// l'orbe pulse simplement sur cette position.
+/// Style visuel du curseur pour matérialiser l'organe au contact :
+/// - [orb]    : disc plein (lèvres autour de la verge).
+/// - [ring]   : anneau ouvert (main qui entoure la verge).
+/// - [tongue] : pastille horizontale (langue qui lèche).
+enum _CursorStyle { orb, ring, tongue }
+
+/// Échelle verticale 5 positions (tip en haut, full en bas) avec un
+/// curseur (orbe / anneau / langue) qui glisse entre `from` et `to` à
+/// chaque battement. Quand `from == to`, le curseur pulse simplement
+/// sur cette position.
 ///
-/// La position de l'orbe est interpolée par un `TweenAnimationBuilder` :
-/// - dans un même mode, à chaque flip de battement, l'orbe glisse sur
-///   `beatDuration` vers la nouvelle cible.
-/// - lors d'un changement de step (nouvelles positions from/to), l'orbe
-///   continue depuis sa position visible courante vers la nouvelle cible
-///   plutôt que de téléporter.
+/// Le curseur snap directement à la position cible à chaque beat (pas
+/// de glissement interpolé) — pendant une transition de step (changement
+/// de from/to), un slide donnerait l'impression que 2 bips sont avalés
+/// le temps que le curseur rejoigne sa nouvelle position.
 class _PositionLadder extends StatelessWidget {
   final Position from;
   final Position to;
   final Duration beatDuration;
   final bool flipped;
   final Color color;
-  final bool dim;
+  final _CursorStyle cursorStyle;
 
   const _PositionLadder({
     required this.from,
@@ -278,21 +293,25 @@ class _PositionLadder extends StatelessWidget {
     required this.beatDuration,
     required this.flipped,
     required this.color,
-    this.dim = false,
+    required this.cursorStyle,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Cible courante de l'orbe : flipped=false → `to`, flipped=true → `from`.
+    // Cible courante du curseur : flipped=false → `to`, flipped=true → `from`.
     final target = flipped ? from : to;
-    final targetAlignment = Alignment(-0.1, _toAlign(target.index));
+    final targetAlignment = Alignment(_kCursorX, _toAlign(target.index));
 
-    final orbAlpha = dim ? 0.75 : 1.0;
     final activeIndices = {from.index, to.index};
 
     return Stack(
       alignment: Alignment.center,
       children: [
+        // Silhouette discrète de la verge derrière les graduations.
+        // Donne le contexte anatomique (la position ce n'est pas dans le vide,
+        // c'est sur la verge) → utile pour tous les modes mais surtout pour
+        // hand qui sinon évoque le même axe que la bouche sans repère.
+        const _ShaftBackdrop(),
         // Lignes horizontales fines pour repérer les 5 positions.
         for (var i = 0; i < Position.values.length; i++)
           Align(
@@ -323,15 +342,9 @@ class _PositionLadder extends StatelessWidget {
               ),
             ),
           ),
-        // Orbe positionnée directement sur la cible courante (snap).
-        // Plus de TweenAnimationBuilder qui glissait sur la durée d'un
-        // beat : pendant une transition de step (changement de from/to),
-        // ça donnait l'impression que 2 bips étaient « avalés » le temps
-        // que l'orbe rejoigne sa nouvelle position. Snap = repère visuel
-        // immédiat à chaque battement.
         Align(
           alignment: targetAlignment,
-          child: _Orb(color: color, alpha: orbAlpha),
+          child: _Cursor(style: cursorStyle, color: color),
         ),
       ],
     );
@@ -349,6 +362,10 @@ class _PositionLadder extends StatelessWidget {
         Position.full => 'full',
       };
 }
+
+/// X (Alignment) où vivent le curseur et la silhouette de verge. Légèrement
+/// décalé à gauche pour laisser respirer les labels à droite.
+const double _kCursorX = -0.1;
 
 /// Pulse central calé sur le BPM (utilisé par biffle). L'orbe pleine est
 /// vive au début du battement (t≈0) puis décroît jusqu'au prochain.
@@ -385,16 +402,20 @@ class _Pulse extends StatelessWidget {
   }
 }
 
-/// Orbe statique sur une position donnée, avec un glow doux qui respire
-/// lentement. Utilisé pour hold / beg : pas de tempo, juste un ancrage.
+/// Curseur statique sur une position donnée, avec un glow doux qui
+/// respire lentement. Utilisé pour hold / beg : pas de tempo, juste
+/// un ancrage. Style du curseur paramétrable (orb pour les lèvres,
+/// éventuellement étendu plus tard).
 class _StaticPosition extends StatelessWidget {
   final Position position;
   final double t;
   final Color color;
+  final _CursorStyle cursorStyle;
   const _StaticPosition({
     required this.position,
     required this.t,
     required this.color,
+    required this.cursorStyle,
   });
 
   @override
@@ -403,6 +424,7 @@ class _StaticPosition extends StatelessWidget {
     return Stack(
       alignment: Alignment.center,
       children: [
+        const _ShaftBackdrop(),
         // Repères des 5 positions, plus discrets que pour rhythm.
         for (var i = 0; i < Position.values.length; i++)
           Align(
@@ -428,10 +450,11 @@ class _StaticPosition extends StatelessWidget {
           ),
         ),
         Align(
-          alignment: Alignment(-0.1, _PositionLadder._toAlign(position.index)),
+          alignment:
+              Alignment(_kCursorX, _PositionLadder._toAlign(position.index)),
           child: Transform.scale(
             scale: pulse,
-            child: _Orb(color: color),
+            child: _Cursor(style: cursorStyle, color: color),
           ),
         ),
       ],
@@ -475,16 +498,65 @@ class _Breath extends StatelessWidget {
   }
 }
 
-class _Orb extends StatelessWidget {
-  static const double _size = 28;
+/// Silhouette verticale de la verge en arrière-plan du ladder. Très
+/// discrète (alpha bas, dégradé doux) pour ne pas distraire mais donner
+/// le contexte anatomique de l'axe : tip en haut, base en bas.
+class _ShaftBackdrop extends StatelessWidget {
+  const _ShaftBackdrop();
 
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: const Alignment(_kCursorX, 0),
+      child: FractionallySizedBox(
+        heightFactor: 0.96,
+        child: SizedBox(
+          width: 22,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(99),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  AppTheme.textMuted.withValues(alpha: 0.06),
+                  AppTheme.textMuted.withValues(alpha: 0.12),
+                ],
+              ),
+              border: Border.all(
+                color: AppTheme.textMuted.withValues(alpha: 0.10),
+                width: 1,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Curseur unique au look déterminé par [_CursorStyle]. Sert dans le ladder
+/// (rhythm/lick/hand) et dans la position statique (hold/beg).
+class _Cursor extends StatelessWidget {
+  final _CursorStyle style;
   final Color color;
-  final double alpha;
 
-  const _Orb({
-    required this.color,
-    this.alpha = 1.0,
-  });
+  const _Cursor({required this.style, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return switch (style) {
+      _CursorStyle.orb => _OrbShape(color: color),
+      _CursorStyle.ring => _RingShape(color: color),
+      _CursorStyle.tongue => _TongueShape(color: color),
+    };
+  }
+}
+
+class _OrbShape extends StatelessWidget {
+  static const double _size = 28;
+  final Color color;
+  const _OrbShape({required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -493,12 +565,70 @@ class _Orb extends StatelessWidget {
       height: _size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: color.withValues(alpha: alpha),
+        color: color,
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.55 * alpha),
+            color: color.withValues(alpha: 0.55),
             blurRadius: 18,
             spreadRadius: 3,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Anneau ouvert (la main entoure la verge sans la masquer). Bord coloré
+/// épais, intérieur transparent → en combo on doit voir l'orbe/langue
+/// derrière à la même position si elles coïncident.
+class _RingShape extends StatelessWidget {
+  static const double _size = 28;
+  static const double _stroke = 4;
+  final Color color;
+  const _RingShape({required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: _size,
+      height: _size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.transparent,
+        border: Border.all(color: color, width: _stroke),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.45),
+            blurRadius: 14,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Pastille horizontale, pour la langue qui lèche la position. Plus
+/// large que haute → différencie clairement de l'orbe (cercle plein).
+class _TongueShape extends StatelessWidget {
+  static const double _w = 32;
+  static const double _h = 16;
+  final Color color;
+  const _TongueShape({required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: _w,
+      height: _h,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(_h / 2),
+        color: color,
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.55),
+            blurRadius: 16,
+            spreadRadius: 2,
           ),
         ],
       ),

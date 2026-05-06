@@ -14,10 +14,6 @@ enum PhraseTier { soft, medium, hard }
 /// d'humiliation (cumul lifetime, cf. [HumiliationEngine]) doit être
 /// supérieur ou égal à ce seuil.
 class HumiliationScale {
-  /// Niveau de carrière minimum requis pour débloquer le freestyle.
-  /// Indépendant du score d'humiliation.
-  static const int freestyleMinLevel = 4;
-
   static double requiredFor({
     required SessionMode mode,
     Position? from,
@@ -81,13 +77,16 @@ class HumiliationScale {
         return 10.0 + _bpmExtra(bpm);
 
       case SessionMode.hold:
-        final base = _depthScoreHold(from);
-        final factor = _holdDurationFactor(from);
+        // Convention uniforme hold/beg : la position tenue est dans `to`.
+        final base = _depthScoreHold(to);
+        final factor = _holdDurationFactor(to);
         final extra = factor * max(0, (duration ?? 1) - 1);
         return base + extra;
 
       case SessionMode.beg:
-        final base = _depthScoreBeg(from);
+        // Convention uniforme hold/beg : la position tenue est dans `to`.
+        // `to == null` → beg libre (bouche libre, juste la voix).
+        final base = _depthScoreBeg(to);
         final phraseBonus = _phraseBonus(phraseTier);
         return base + phraseBonus;
     }
@@ -252,6 +251,13 @@ class HumiliationEngine {
   void onFail({double multiplier = 1.0}) => _bump(-malusFail * multiplier);
   void onPunishmentAbandoned({double multiplier = 1.0}) =>
       _bump(-malusPunishmentAbandoned * multiplier);
+
+  /// Bumpe à chaque débordement de la jauge salive (franchissement de 90).
+  /// +0.5 par débordement. Cap session géré par le SessionController.
+  void onSalivaOverflow() => _bump(0.5);
+
+  /// Bumpe à chaque crachat sur ordre coach. +1.0.
+  void onSalivaSpit() => _bump(1.0);
 
   void _bump(double delta) {
     final next = _score + delta;

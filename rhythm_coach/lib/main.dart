@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -33,6 +35,18 @@ Future<void> main() async {
   final coachesWithPhrases = await CoachLoader().load();
   coachService.attachPhrases(coachesWithPhrases);
   await milestoneService.ensureLoaded();
+  // Rebrancher les services dépendants de la locale quand celle-ci change
+  // à chaud (sélecteur dans SoundDemoScreen). MaterialApp rebuild son UI
+  // via AnimatedBuilder ; ce listener s'occupe du contenu éditorial caché
+  // dans les singletons (phrases coach, overrides milestone, packs coach).
+  LocaleService.instance.addListener(() {
+    unawaited(() async {
+      await CoachPhrasesService.instance.ensureLoaded();
+      final coachesWithPhrases = await CoachLoader().load();
+      coachService.attachPhrases(coachesWithPhrases);
+      await milestoneService.reloadLocaleOverrides();
+    }());
+  });
   SystemChrome.setEnabledSystemUIMode(
     SystemUiMode.edgeToEdge,
   );

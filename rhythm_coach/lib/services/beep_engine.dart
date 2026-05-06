@@ -27,7 +27,13 @@ class BeepEngine {
   static const String _holdAsset = 'hold_beep';
   static const String _biffleAsset = 'biffle_beep';
   static const String _breathAsset = 'breath_beep';
-  static const String _handAsset = 'hand_beep';
+  // Hand : 2 samples alternés à chaque beat — down (coup descendant, plus
+  // grave et modulé en volume par la profondeur de `to`) et up (coup
+  // remontant, plus bref et discret). Donne le ressenti d'un va-et-vient
+  // sans avoir besoin d'un sample par position, et reste acoustiquement
+  // distinct du pool bouche pour parser les combos hand+rhythm/lick.
+  static const String _handDownAsset = 'hand_down_beep';
+  static const String _handUpAsset = 'hand_up_beep';
   static const String _freestyleStartAsset = 'freestyle_start';
   static const String _freestyleEndAsset = 'freestyle_end';
   static const String _finaleChimeAsset = 'finale_chime';
@@ -41,7 +47,8 @@ class BeepEngine {
     _holdAsset,
     _biffleAsset,
     _breathAsset,
-    _handAsset,
+    _handDownAsset,
+    _handUpAsset,
     _freestyleStartAsset,
     _freestyleEndAsset,
     _finaleChimeAsset,
@@ -75,7 +82,20 @@ class BeepEngine {
   int _bpm = 60;
   bool _alternateToggle = false;
 
+  /// Hand : alternance down/up indépendante du toggle de position.
+  /// Utilisé seulement quand `_to` est null ou égal à `_from` (pas
+  /// d'amplitude → on dérive le sens du stroke d'un compteur dédié).
+  /// Sinon, le sens est dérivé de la position effective émise (deeper ⇒ down).
+  bool _handStrokeFallbackDown = true;
+
   Timer? _loopTimer;
+
+  /// Token incrémenté par [_stopLoop] : sert à invalider les callbacks
+  /// en vol des loops qui se replanifient eux-mêmes (cf. `_startBeatLoop` /
+  /// `_startBiffleLoop`). Sans ce token, un Timer one-shot replanifié dans
+  /// son propre callback peut s'exécuter une fois après l'annulation
+  /// (race entre `cancel()` et le tick déjà en file).
+  int _loopGen = 0;
 
   /// Timer de fin de freestyle : déclenche le bip de fin après `duration`.
   Timer? _freestyleEndTimer;
@@ -155,6 +175,39 @@ class BeepEngine {
     }
   }
 
+  /// Pause minimale entre deux modes distincts (cas continuité corporelle :
+  /// rythme/hold/beg-non-libre — la salope reste en place, le bip enchaîne
+  /// sans temps mort). Laisse juste au sample précédent le temps de finir
+  /// son décay.
+  static const Duration _modeTransitionGap = Duration(milliseconds: 600);
+
+  /// Pause de transition « grosse » : appliquée quand le nouveau mode
+  /// requiert un changement physique côté utilisatrice (sortir la langue,
+  /// passer à la main, respirer, lâcher pour supplier librement). 1.5 s
+  /// — assez pour que le TTS de l'annonce ait posé l'instruction et que
+  /// le geste change avant le premier bip. Le TTS lui-même ne dépend pas
+  /// de cette pause (le contrôleur speak en parallèle d'`applyStep`).
+  static const Duration _modeTransitionGapBig = Duration(milliseconds: 1500);
+
+  /// Modes pour lesquels l'arrivée demande un changement physique audible
+  /// → on prend la grosse pause. Beg sans `to` (libre) en fait partie ;
+  /// beg avec `to` (gardé en position) reste sur la pause courte.
+  bool _needsBigGap(SessionMode incoming, Position? incomingTo) {
+    switch (incoming) {
+      case SessionMode.lick:
+      case SessionMode.hand:
+      case SessionMode.biffle:
+      case SessionMode.breath:
+      case SessionMode.freestyle:
+        return true;
+      case SessionMode.beg:
+        return incomingTo == null;
+      case SessionMode.rhythm:
+      case SessionMode.hold:
+        return false;
+    }
+  }
+
   /// Applique une étape au moteur. Les étapes text-only sont ignorées
   /// (elles ne touchent pas au loop courant).
   Future<void> applyStep(SessionStep step, SessionMode sessionMode) async {
@@ -162,6 +215,7 @@ class BeepEngine {
     if (!_initialized) await init();
 
     final mode = step.mode ?? sessionMode;
+    final previousMode = _mode;
     _mode = mode;
     if (step.bpm != null) _bpm = step.bpm!.clamp(20, 300);
 
@@ -185,19 +239,41 @@ class BeepEngine {
     }
 
     _alternateToggle = false;
+    _handStrokeFallbackDown = true;
     _stopLoop();
     _freestyleEndTimer?.cancel();
     _freestyleEndTimer = null;
 
+    // Gap de transition : silence avant le démarrage du nouveau mode pour
+    // fluidifier l'enchaînement et laisser le temps physique de changer
+    // (sortir la langue, passer à la main, respirer). Deux durées :
+    // - Modes qui demandent un changement de geste (lick/hand/biffle/
+    //   breath/freestyle/beg-libre) : 1.5 s.
+    // - Modes en continuité (rythme/hold/beg-non-libre) : 600 ms — juste
+    //   le décay du sample précédent.
+    // Pas de pause si on reste sur le même mode (changements bpm/position
+    // doivent rester continus). Le TTS du step a été lancé en parallèle
+    // par le contrôleur, donc cette pause ne le bloque pas — elle ne fait
+    // que retarder les bips, ce qui laisse l'annonce vocale en clair.
+    if (mode != previousMode) {
+      final gap =
+          _needsBigGap(mode, step.to) ? _modeTransitionGapBig : _modeTransitionGap;
+      await Future<void>.delayed(gap);
+      // Si un autre `applyStep` a passé entretemps (changement de mode très
+      // rapide), c'est lui qui doit gagner — on abandonne ce démarrage.
+      if (_mode != mode) return;
+    }
+
     switch (mode) {
       case SessionMode.rhythm:
-        _startBeatLoop(volume: _rhythmVolume, beatAsset: null);
+        _startBeatLoop(volume: _rhythmVolume);
       case SessionMode.lick:
-        _startBeatLoop(volume: _lickVolume, beatAsset: null);
+        _startBeatLoop(volume: _lickVolume);
       case SessionMode.hand:
-        // Sample dédié, volume médian. Sinon même mécanique d'alternance
-        // from→to que rhythm.
-        _startBeatLoop(volume: _handVolume, beatAsset: _handAsset);
+        // Mécanique d'alternance from→to identique à rhythm. La résolution
+        // sample + volume est faite dans `_emitPositionBeat` (down/up + volume
+        // modulé par profondeur de `to`).
+        _startBeatLoop(volume: _handVolume);
       case SessionMode.biffle:
         _startBiffleLoop();
       case SessionMode.hold:
@@ -225,20 +301,79 @@ class BeepEngine {
     }
   }
 
-  /// [beatAsset] : si non-null, ce sample remplace le sample de position
-  /// pour chaque beat (utilisé par hand qui a un son fixe).
-  void _startBeatLoop({required double volume, String? beatAsset}) {
+  /// Loop principal pour les modes rythmés (rhythm/lick/hand). Le sample joué
+  /// à chaque beat dépend du mode :
+  /// - rhythm/lick : sample correspondant à la position effective du beat
+  ///   (alternance from↔to via [_pickPosition]).
+  /// - hand : sample stroke down/up dérivé de la position effective ou,
+  ///   à amplitude nulle, d'un toggle dédié [_handStrokeFallbackDown]. Le
+  ///   volume du down est modulé par la profondeur de `to` (cf. `_resolveHandBeat`).
+  ///
+  /// **Anti-drift** : on ne s'appuie pas sur `Timer.periodic` (intervalle
+  /// fixe, qui drifte de qq ms par tick à cause du scheduler). À la place,
+  /// chaque beat planifie le suivant à `start + n × intervalMs` (temps
+  /// cible absolu). Si un tick arrive avec retard, le suivant rattrape.
+  /// Le visuel (orbe) est piloté par `beatStream` → si l'audio est régulier,
+  /// le visuel l'est aussi.
+  void _startBeatLoop({required double volume}) {
     final intervalMs = (60000 / _bpm).round();
-    _emitPositionBeat(volume, beatAsset);
-    _loopTimer = Timer.periodic(Duration(milliseconds: intervalMs), (_) {
-      _emitPositionBeat(volume, beatAsset);
-    });
+    final myGen = ++_loopGen;
+    final startMs = DateTime.now().millisecondsSinceEpoch;
+    _emitPositionBeat(volume);
+    var n = 1;
+    void scheduleNext() {
+      if (myGen != _loopGen) return;
+      final targetMs = startMs + n * intervalMs;
+      final delayMs =
+          max(1, targetMs - DateTime.now().millisecondsSinceEpoch);
+      _loopTimer = Timer(Duration(milliseconds: delayMs), () {
+        if (myGen != _loopGen) return;
+        _emitPositionBeat(volume);
+        n++;
+        scheduleNext();
+      });
+    }
+    scheduleNext();
   }
 
-  void _emitPositionBeat(double volume, String? beatAsset) {
+  void _emitPositionBeat(double baseVolume) {
     final pos = _pickPosition();
-    _trigger(beatAsset ?? _assetForPosition(pos), volume);
+    if (_mode == SessionMode.hand) {
+      final (asset, vol) = _resolveHandBeat(pos, baseVolume);
+      _trigger(asset, vol);
+    } else {
+      _trigger(_assetForPosition(pos), baseVolume);
+    }
     _notifyBeat(_mode, pos);
+  }
+
+  /// Choisit le sample (down/up) et son volume pour un beat de hand.
+  /// - Avec amplitude (`_to != null && _to != _from`) : la position effective
+  ///   du beat décide. Quand le beat tombe sur l'extrémité la plus profonde →
+  ///   down, sinon → up. Le visuel (orbe sur ladder) flippe sur la même base,
+  ///   donc l'audio reste calé sur l'arrivée de l'orbe.
+  /// - Sans amplitude (single position) : on alterne via [_handStrokeFallbackDown]
+  ///   pour garder la sensation de stroke.
+  /// Volume du down : modulé par la profondeur de `to` ou de `_from` (à défaut),
+  /// 0.7× au tip → 1.0× au full. Volume du up : constant à 0.85× du baseVolume.
+  (String, double) _resolveHandBeat(Position pos, double baseVolume) {
+    final to = _to;
+    final bool isDown;
+    final Position depthRef;
+    if (to == null || to == _from) {
+      isDown = _handStrokeFallbackDown;
+      _handStrokeFallbackDown = !_handStrokeFallbackDown;
+      depthRef = _from;
+    } else {
+      final deeper = to.index >= _from.index ? to : _from;
+      isDown = pos == deeper;
+      depthRef = deeper;
+    }
+    if (isDown) {
+      final factor = 0.7 + 0.3 * (depthRef.index / (Position.values.length - 1));
+      return (_handDownAsset, baseVolume * factor);
+    }
+    return (_handUpAsset, baseVolume * 0.85);
   }
 
   void _notifyBeat(SessionMode mode, Position pos) {
@@ -269,12 +404,25 @@ class BeepEngine {
 
   void _startBiffleLoop() {
     final intervalMs = (60000 / _bpm).round();
+    final myGen = ++_loopGen;
+    final startMs = DateTime.now().millisecondsSinceEpoch;
     _trigger(_biffleAsset, _rhythmVolume);
     _notifyBeat(SessionMode.biffle, _to ?? _from);
-    _loopTimer = Timer.periodic(Duration(milliseconds: intervalMs), (_) {
-      _trigger(_biffleAsset, _rhythmVolume);
-      _notifyBeat(SessionMode.biffle, _to ?? _from);
-    });
+    var n = 1;
+    void scheduleNext() {
+      if (myGen != _loopGen) return;
+      final targetMs = startMs + n * intervalMs;
+      final delayMs =
+          max(1, targetMs - DateTime.now().millisecondsSinceEpoch);
+      _loopTimer = Timer(Duration(milliseconds: delayMs), () {
+        if (myGen != _loopGen) return;
+        _trigger(_biffleAsset, _rhythmVolume);
+        _notifyBeat(SessionMode.biffle, _to ?? _from);
+        n++;
+        scheduleNext();
+      });
+    }
+    scheduleNext();
   }
 
   void _playHoldOneShot(Position position) {
@@ -313,6 +461,11 @@ class BeepEngine {
   void _stopLoop() {
     _loopTimer?.cancel();
     _loopTimer = null;
+    // Invalide tout callback en file pour les loops self-rescheduling :
+    // un Timer en cours d'exécution ne peut plus être annulé, mais sa
+    // continuation (scheduleNext suivant) verra `myGen != _loopGen` et
+    // s'arrêtera proprement.
+    _loopGen++;
   }
 
   // ─── API publique pour la page démo ─────────────────────────────────────
@@ -377,25 +530,7 @@ class BeepEngine {
     }
     _alternateToggle = false;
     _stopLoop();
-    _startBeatLoop(volume: _lickVolume, beatAsset: null);
-  }
-
-  void startHandDemo({
-    required Position from,
-    Position? to,
-    required int bpm,
-  }) {
-    if (!_initialized) return;
-    _mode = SessionMode.hand;
-    _from = from;
-    _to = to;
-    _bpm = bpm.clamp(20, 300);
-    if (_to != null && _to == _from) {
-      _from = _pickShallowerThan(_from);
-    }
-    _alternateToggle = false;
-    _stopLoop();
-    _startBeatLoop(volume: _handVolume, beatAsset: _handAsset);
+    _startBeatLoop(volume: _lickVolume);
   }
 
   void startBiffleDemo({required int bpm}) {
@@ -404,11 +539,6 @@ class BeepEngine {
     _bpm = bpm.clamp(20, 300);
     _stopLoop();
     _startBiffleLoop();
-  }
-
-  void playHandPositionOnce(Position p) {
-    if (!_initialized) return;
-    _trigger(_handAsset, _handVolume);
   }
 
   void playFreestyleStartOnce() {
@@ -484,11 +614,11 @@ class BeepEngine {
     _stopLoop();
     switch (_mode) {
       case SessionMode.rhythm:
-        _startBeatLoop(volume: _rhythmVolume, beatAsset: null);
+        _startBeatLoop(volume: _rhythmVolume);
       case SessionMode.lick:
-        _startBeatLoop(volume: _lickVolume, beatAsset: null);
+        _startBeatLoop(volume: _lickVolume);
       case SessionMode.hand:
-        _startBeatLoop(volume: _handVolume, beatAsset: _handAsset);
+        _startBeatLoop(volume: _handVolume);
       case SessionMode.biffle:
         _startBiffleLoop();
       case SessionMode.hold:
@@ -505,6 +635,7 @@ class BeepEngine {
   }
 
   Future<void> dispose() async {
+    if (!_initialized && _pools.isEmpty) return;
     await stop();
     for (final pool in _pools.values) {
       for (final p in pool.players) {
