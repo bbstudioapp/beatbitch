@@ -7,5 +7,11 @@
     "profondeur"
   ],
   "tier": 1,
-  "isPrincipal": true
+  "isPrincipal": true,
+  "tts": {
+    "voice": "fr-fr-x-fra-local",
+    "voiceLocale": "fr-FR",
+    "rate": 0.55,
+    "pitch": 1.15
+  }
 }

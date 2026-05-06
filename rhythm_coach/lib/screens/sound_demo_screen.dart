@@ -43,7 +43,8 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
   int _bpm = 70;
 
   // Réglages voix — on initialise avec la valeur par défaut du TtsService.
-  double _rate = 0.5;
+  double _rate = TtsService.defaultRate;
+  double _pitch = TtsService.defaultPitch;
   List<Map<String, String>> _voices = const [];
   String? _selectedVoiceName;
 
@@ -91,6 +92,8 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
         _voices = voices;
         _selectedVoiceName = widget.tts.currentVoiceName ??
             (voices.isNotEmpty ? voices.first['name'] : null);
+        _rate = widget.tts.currentRate;
+        _pitch = widget.tts.currentPitch;
         _showStaminaBar = showBar;
         _showTimer = showTimer;
         _showHumiliationBar = showHumil;
@@ -306,6 +309,16 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
                       onChanged: (v) {
                         setState(() => _rate = v);
                         widget.tts.setRate(v);
+                      },
+                    ),
+                    _LabeledSlider(
+                      label: t.soundsPitchLabel,
+                      value: _pitch,
+                      min: 0.5,
+                      max: 2.0,
+                      onChanged: (v) {
+                        setState(() => _pitch = v);
+                        widget.tts.setPitch(v);
                       },
                     ),
                     _SoundButton(
@@ -986,6 +999,18 @@ class _LabeledSlider extends StatelessWidget {
             min: min,
             max: max,
             onChanged: onChanged,
+          ),
+        ),
+        SizedBox(
+          width: 44,
+          child: Text(
+            value.toStringAsFixed(2),
+            textAlign: TextAlign.right,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppTheme.textPrimary,
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
           ),
         ),
       ],

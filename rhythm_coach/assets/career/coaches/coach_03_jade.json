@@ -11,5 +11,11 @@
   "requirements": {
     "requiresHands": true,
     "minPlayerLevel": 13
+  },
+  "tts": {
+    "voice": "fr-fr-x-fra-local",
+    "voiceLocale": "fr-FR",
+    "rate": 0.6,
+    "pitch": 1.3
   }
 }
