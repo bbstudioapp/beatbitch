@@ -189,6 +189,13 @@ class BeepEngine {
   /// de cette pause (le contrôleur speak en parallèle d'`applyStep`).
   static const Duration _modeTransitionGapBig = Duration(milliseconds: 1500);
 
+  /// Pause minimale entre deux steps consécutifs **du même mode** (changement
+  /// BPM/from/to). Sans gap du tout, l'enchaînement est trop serré et la
+  /// nouvelle config démarre par-dessus la fin du beat précédent — surtout
+  /// audible à BPM modéré. Plus court que `_modeTransitionGap` (le geste
+  /// physique ne change pas) mais non nul.
+  static const Duration _sameModeTransitionGap = Duration(milliseconds: 300);
+
   /// Modes pour lesquels l'arrivée demande un changement physique audible
   /// → on prend la grosse pause. Beg sans `to` (libre) en fait partie ;
   /// beg avec `to` (gardé en position) reste sur la pause courte.
@@ -261,6 +268,12 @@ class BeepEngine {
       await Future<void>.delayed(gap);
       // Si un autre `applyStep` a passé entretemps (changement de mode très
       // rapide), c'est lui qui doit gagner — on abandonne ce démarrage.
+      if (_mode != mode) return;
+    } else {
+      // Même mode : petite respiration pour démarquer la nouvelle config
+      // (ex: rhythm 80 BPM head→mid → rhythm 100 BPM mid→throat). Sans
+      // ce gap, le passage est mécanique et on entend le tempo « sauter ».
+      await Future<void>.delayed(_sameModeTransitionGap);
       if (_mode != mode) return;
     }
 
