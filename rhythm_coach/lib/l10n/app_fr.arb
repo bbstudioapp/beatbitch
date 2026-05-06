@@ -594,5 +594,35 @@
       "coachName": { "type": "String" },
       "requirements": { "type": "String" }
     }
+  },
+
+  "unlockAnnouncementSloppyDroolBasic": "Désormais ta bouche garde plus de salive, et ton lèche en produit plus. Bave-moi dessus, sois sale.",
+  "@unlockAnnouncementSloppyDroolBasic": {
+    "description": "Annonce TTS post-finale_chime quand la milestone qui débloque sloppy_drool_basic est acquittée."
+  },
+
+  "unlockAnnouncementSloppyBiffleSlow": "Les biffles te font baver maintenant. Reçois-les bouche grande ouverte.",
+  "@unlockAnnouncementSloppyBiffleSlow": {
+    "description": "Annonce TTS post-finale_chime quand la milestone qui débloque sloppy_biffle_slow est acquittée."
+  },
+
+  "unlockAnnouncementSloppySwallowControl": "Tu peux désormais retenir ta salive sur ordre. Quand je te le dis, tu n'avales plus.",
+  "@unlockAnnouncementSloppySwallowControl": {
+    "description": "Annonce TTS post-finale_chime quand la milestone qui débloque sloppy_swallow_control est acquittée."
+  },
+
+  "unlockAnnouncementSloppySpit": "Tu sais cracher pour moi maintenant. Quand je te le demande, tu craches tout.",
+  "@unlockAnnouncementSloppySpit": {
+    "description": "Annonce TTS post-finale_chime quand la milestone qui débloque sloppy_spit est acquittée."
+  },
+
+  "unlockAnnouncementSloppyDroolDeep": "Quand tu vas profond, ta bouche déborde encore plus. Profite.",
+  "@unlockAnnouncementSloppyDroolDeep": {
+    "description": "Annonce TTS post-finale_chime quand la milestone qui débloque sloppy_drool_deep est acquittée."
+  },
+
+  "unlockAnnouncementRhythmHeadMidSustained": "Tu peux tenir la cadence plus d'une minute maintenant, sans pause. Je te le demanderai.",
+  "@unlockAnnouncementRhythmHeadMidSustained": {
+    "description": "Annonce TTS post-finale_chime quand la milestone qui débloque rhythm_head_mid_sustained est acquittée."
   }
 }

@@ -7,6 +7,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import '../career/models/phrase_bank.dart';
 import '../career/models/specialization.dart';
 import '../career/models/unlock_key.dart';
+import '../l10n/app_localizations.dart';
 import '../main.dart' show milestoneService;
 import '../models/punishment.dart';
 import '../models/session.dart';
@@ -175,6 +176,16 @@ class SessionController extends ChangeNotifier {
   /// ou `beep.stop()` qui couperait le démarrage d'une nouvelle session
   /// en train de prendre la main (race observée sur le bouton « encore »).
   bool _released = false;
+
+  /// `AppLocalizations` poussé depuis le screen via [setAppLocalizations]
+  /// (appelé en `didChangeDependencies` côté `_SessionScreenState`). Permet
+  /// au `_finish()` de résoudre une annonce TTS d'unlock par défaut quand
+  /// la milestone n'a pas d'override texte. `null` pour les controllers
+  /// instanciés hors widget tree (tests, sessions hors carrière sans l10n).
+  AppLocalizations? _appLocalizations;
+  void setAppLocalizations(AppLocalizations? l10n) {
+    _appLocalizations = l10n;
+  }
 
   /// Callback déclenché par `triggerFail` quand l'utilisatrice rate dans
   /// la fenêtre milestone et qu'un retry est encore disponible. Retourne
@@ -966,7 +977,10 @@ class SessionController extends ChangeNotifier {
       final wasAlreadyCompleted = milestoneService.isCompleted(id);
       await milestoneService.markCompleted(id, hadFail: _hadFailThisSession);
       if (!_hadFailThisSession && !wasAlreadyCompleted && !_released) {
-        final announce = milestoneService.getUnlockAnnouncement(id);
+        final announce = milestoneService.getUnlockAnnouncement(
+          id,
+          l10n: _appLocalizations,
+        );
         if (announce != null &&
             (isFinal || milestoneAnnouncement == null)) {
           milestoneAnnouncement = announce;

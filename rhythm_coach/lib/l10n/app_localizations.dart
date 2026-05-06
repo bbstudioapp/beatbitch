@@ -2308,6 +2308,42 @@ abstract class AppLocalizations {
   /// **'{coachName} demande : {requirements}. Investis tes points de spécialisation.'**
   String coachErrorInsufficientBranchPoints(
       String coachName, String requirements);
+
+  /// Annonce TTS post-finale_chime quand la milestone qui débloque sloppy_drool_basic est acquittée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Désormais ta bouche garde plus de salive, et ton lèche en produit plus. Bave-moi dessus, sois sale.'**
+  String get unlockAnnouncementSloppyDroolBasic;
+
+  /// Annonce TTS post-finale_chime quand la milestone qui débloque sloppy_biffle_slow est acquittée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les biffles te font baver maintenant. Reçois-les bouche grande ouverte.'**
+  String get unlockAnnouncementSloppyBiffleSlow;
+
+  /// Annonce TTS post-finale_chime quand la milestone qui débloque sloppy_swallow_control est acquittée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu peux désormais retenir ta salive sur ordre. Quand je te le dis, tu n\'avales plus.'**
+  String get unlockAnnouncementSloppySwallowControl;
+
+  /// Annonce TTS post-finale_chime quand la milestone qui débloque sloppy_spit est acquittée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu sais cracher pour moi maintenant. Quand je te le demande, tu craches tout.'**
+  String get unlockAnnouncementSloppySpit;
+
+  /// Annonce TTS post-finale_chime quand la milestone qui débloque sloppy_drool_deep est acquittée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quand tu vas profond, ta bouche déborde encore plus. Profite.'**
+  String get unlockAnnouncementSloppyDroolDeep;
+
+  /// Annonce TTS post-finale_chime quand la milestone qui débloque rhythm_head_mid_sustained est acquittée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu peux tenir la cadence plus d\'une minute maintenant, sans pause. Je te le demanderai.'**
+  String get unlockAnnouncementRhythmHeadMidSustained;
 }
 
 class _AppLocalizationsDelegate
