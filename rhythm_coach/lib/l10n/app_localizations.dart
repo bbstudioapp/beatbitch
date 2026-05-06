@@ -1366,18 +1366,6 @@ abstract class AppLocalizations {
   /// **'Affiche le profil d\'endurance projeté pendant une séance Carrière.'**
   String get soundsDebugShowStaminaBarSubtitle;
 
-  /// No description provided for @soundsDebugShowExcitationBar.
-  ///
-  /// In fr, this message translates to:
-  /// **'Afficher la jauge d\'excitation'**
-  String get soundsDebugShowExcitationBar;
-
-  /// No description provided for @soundsDebugShowExcitationBarSubtitle.
-  ///
-  /// In fr, this message translates to:
-  /// **'Affiche la jauge 0–100 calculée pendant la séance.'**
-  String get soundsDebugShowExcitationBarSubtitle;
-
   /// No description provided for @soundsDebugShowHumiliationBar.
   ///
   /// In fr, this message translates to:
@@ -1437,12 +1425,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Réservé au debug : en prod l\'animation suffit à indiquer ce qui se passe.'**
   String get soundsDebugShowModeBadgeSubtitle;
-
-  /// No description provided for @debugBarLabelExcitation.
-  ///
-  /// In fr, this message translates to:
-  /// **'EXCIT.'**
-  String get debugBarLabelExcitation;
 
   /// No description provided for @debugBarLabelHumiliation.
   ///
@@ -1558,12 +1540,6 @@ abstract class AppLocalizations {
   /// **'Mode intense (post-Supplier)'**
   String get careerDebugIntense;
 
-  /// No description provided for @careerDebugExcitTarget.
-  ///
-  /// In fr, this message translates to:
-  /// **'Cible excitation'**
-  String get careerDebugExcitTarget;
-
   /// No description provided for @careerDebugDurationOverride.
   ///
   /// In fr, this message translates to:
@@ -1629,12 +1605,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Afficher les textes TTS'**
   String get careerDebugShowTtsTexts;
-
-  /// No description provided for @careerDebugStatExcit.
-  ///
-  /// In fr, this message translates to:
-  /// **'Excit fin'**
-  String get careerDebugStatExcit;
 
   /// No description provided for @careerDebugStatStamina.
   ///

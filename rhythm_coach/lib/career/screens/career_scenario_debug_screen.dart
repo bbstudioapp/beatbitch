@@ -22,7 +22,7 @@ import '../services/specialization_service.dart';
 /// Écran de debug pour visualiser une session générée par le mode carrière
 /// sans la jouer. Permet de faire varier les paramètres d'entrée (niveau,
 /// humil, obed, milestones, unlocks…) et d'inspecter la liste des steps,
-/// les profils excit / stamina projetés, et de simuler un branchement
+/// le profil stamina projeté, et de simuler un branchement
 /// Supplier ou un fail à un instant précis.
 class CareerScenarioDebugScreen extends StatefulWidget {
   const CareerScenarioDebugScreen({super.key});
@@ -46,7 +46,6 @@ class _CareerScenarioDebugScreenState
   bool _includeHand = true;
   bool _quickie = false;
   bool _intense = false;
-  double _excitTarget = -1; // <0 = auto
   int _durationOverride = 0; // 0 = auto
   String _milestoneChoice = _kAuto;
   String _finalMilestoneChoice = _kAuto;
@@ -122,7 +121,6 @@ class _CareerScenarioDebugScreenState
       intense: _intense,
       humiliationScore: _humil,
       obedience: _obed,
-      excitationTarget: _excitTarget,
       durationSeconds: _durationOverride > 0 ? _durationOverride : null,
       specialization: _spec,
       milestone: milestone,
@@ -365,18 +363,6 @@ class _CareerScenarioDebugScreenState
               onChanged: (v) => setState(() => _intense = v),
             ),
             _slider(
-              label: _excitTarget < 0
-                  ? '${t.careerDebugExcitTarget} : ${t.careerDebugAuto}'
-                  : '${t.careerDebugExcitTarget} : ${_excitTarget.toStringAsFixed(0)}',
-              value: _excitTarget < 0 ? -1 : _excitTarget,
-              min: -1,
-              max: 150,
-              divisions: 151,
-              onChanged: (v) {
-                setState(() => _excitTarget = v < 0 ? -1 : v);
-              },
-            ),
-            _slider(
               label: _durationOverride <= 0
                   ? '${t.careerDebugDurationOverride} : ${t.careerDebugAuto}'
                   : '${t.careerDebugDurationOverride} : ${_formatTime(_durationOverride)}',
@@ -581,9 +567,6 @@ class _CareerScenarioDebugScreenState
       for (final s in session.steps)
         if (s.mode != null) s.mode!,
     }.toList();
-    final excitFinal = res.excitationProfile.isEmpty
-        ? 0.0
-        : res.excitationProfile.last;
     final staminaFinal =
         res.staminaProfile.isEmpty ? 0.0 : res.staminaProfile.last;
     final humilCapFinal = _humil + 4.0;
@@ -636,9 +619,6 @@ class _CareerScenarioDebugScreenState
             const SizedBox(height: 12),
             Row(
               children: [
-                _statTile(t.careerDebugStatExcit,
-                    excitFinal.toStringAsFixed(1)),
-                const SizedBox(width: 8),
                 _statTile(t.careerDebugStatStamina,
                     staminaFinal.toStringAsFixed(1)),
                 const SizedBox(width: 8),
@@ -692,7 +672,6 @@ class _CareerScenarioDebugScreenState
       ),
       child: CustomPaint(
         painter: _ProfilePainter(
-          excitation: res.excitationProfile,
           stamina: res.staminaProfile,
         ),
         child: const SizedBox.expand(),
@@ -880,7 +859,6 @@ class _CareerScenarioDebugScreenState
     final tags = _tagsFor(step, session, forkRoot: forkRoot);
     final mode = step.mode;
     final endTime = step.time + (step.duration ?? 0);
-    final excit = _profileAt(result.excitationProfile, endTime);
     final stamina = _profileAt(result.staminaProfile, endTime);
     final humilReq = (mode != null && !step.isTextOnly)
         ? HumiliationScale.requiredFor(
@@ -977,8 +955,6 @@ class _CareerScenarioDebugScreenState
                     padding: const EdgeInsets.only(top: 6),
                     child: Row(
                       children: [
-                        _miniStat('excit', excit),
-                        const SizedBox(width: 8),
                         _miniStat('stam.', stamina),
                       ],
                     ),
@@ -1200,54 +1176,34 @@ enum _StepTag {
 }
 
 class _ProfilePainter extends CustomPainter {
-  final List<double> excitation;
   final List<double> stamina;
-  _ProfilePainter({required this.excitation, required this.stamina});
+  _ProfilePainter({required this.stamina});
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (excitation.isEmpty && stamina.isEmpty) return;
-    final n =
-        excitation.length > stamina.length ? excitation.length : stamina.length;
+    if (stamina.isEmpty) return;
+    final n = stamina.length;
     if (n < 2) return;
-    const maxExcit = 100.0;
     const maxStamina = 100.0;
-    final excitPaint = Paint()
-      ..color = const Color(0xFFFFB74D)
-      ..strokeWidth = 1.4
-      ..style = PaintingStyle.stroke;
     final staminaPaint = Paint()
       ..color = const Color(0xFF80CBC4)
       ..strokeWidth = 1.4
       ..style = PaintingStyle.stroke;
-    final excitPath = Path();
     final staminaPath = Path();
     for (var i = 0; i < n; i++) {
       final dx = (i / (n - 1)) * size.width;
-      if (i < excitation.length) {
-        final dy = size.height -
-            (excitation[i].clamp(0.0, maxExcit) / maxExcit) * size.height;
-        if (i == 0) {
-          excitPath.moveTo(dx, dy);
-        } else {
-          excitPath.lineTo(dx, dy);
-        }
-      }
-      if (i < stamina.length) {
-        final dy = size.height -
-            (stamina[i].clamp(0.0, maxStamina) / maxStamina) * size.height;
-        if (i == 0) {
-          staminaPath.moveTo(dx, dy);
-        } else {
-          staminaPath.lineTo(dx, dy);
-        }
+      final dy = size.height -
+          (stamina[i].clamp(0.0, maxStamina) / maxStamina) * size.height;
+      if (i == 0) {
+        staminaPath.moveTo(dx, dy);
+      } else {
+        staminaPath.lineTo(dx, dy);
       }
     }
-    canvas.drawPath(excitPath, excitPaint);
     canvas.drawPath(staminaPath, staminaPaint);
   }
 
   @override
   bool shouldRepaint(covariant _ProfilePainter old) =>
-      old.excitation != excitation || old.stamina != stamina;
+      old.stamina != stamina;
 }

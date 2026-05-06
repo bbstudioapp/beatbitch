@@ -30,9 +30,10 @@ class PhraseBank {
   final List<String> _congrats;
   final List<String> _intros;
 
-  /// Phrases TTS déclenchées au franchissement d'un seuil de la jauge
-  /// d'excitation. Indexé par seuil (25/50/75/90).
-  final Map<int, List<String>> _excitation;
+  /// Phrases TTS déclenchées au franchissement d'un seuil de progression
+  /// de la session (ratio temps écoulé / durée totale). Indexé par seuil
+  /// en pourcent (25/50/75/90).
+  final Map<int, List<String>> _progress;
 
   /// Phrases d'ouverture pour les sessions « encore » (régénération
   /// post-finished). Remplace l'intro vocale habituelle.
@@ -79,7 +80,7 @@ class PhraseBank {
     required Map<SessionMode, Map<String, List<String>>> byMode,
     required List<String> congrats,
     required List<String> intros,
-    Map<int, List<String>> excitation = const {},
+    Map<int, List<String>> progress = const {},
     List<String> encore = const [],
     Map<TransitionKind, List<String>> transitions = const {},
     List<String> finishOrgasm = const [],
@@ -90,7 +91,7 @@ class PhraseBank {
   })  : _byMode = byMode,
         _congrats = congrats,
         _intros = intros,
-        _excitation = excitation,
+        _progress = progress,
         _encore = encore,
         _transitions = transitions,
         _finishOrgasm = finishOrgasm,
@@ -128,10 +129,12 @@ class PhraseBank {
     return _intros[rng.nextInt(_intros.length)];
   }
 
-  /// Tire une phrase pour le seuil d'excitation [threshold] (25/50/75/90).
-  /// Retourne null si la banque ne contient rien pour ce seuil.
-  String? pickExcitation(int threshold, Random rng) {
-    final list = _excitation[threshold];
+  /// Tire une phrase pour le seuil de progression [threshold] (25/50/75/90)
+  /// — déclenchée au franchissement du ratio `elapsedSeconds /
+  /// session.durationSeconds` correspondant. Retourne null si la banque ne
+  /// contient rien pour ce seuil.
+  String? pickProgress(int threshold, Random rng) {
+    final list = _progress[threshold];
     if (list == null || list.isEmpty) return null;
     return list[rng.nextInt(list.length)];
   }

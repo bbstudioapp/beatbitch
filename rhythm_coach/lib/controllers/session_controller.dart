@@ -14,7 +14,6 @@ import '../models/session_step.dart';
 import '../services/ambience_engine.dart';
 import '../services/badge_service.dart';
 import '../services/beep_engine.dart';
-import '../services/excitation_engine.dart';
 import '../services/hold_verifier.dart';
 import '../services/humiliation_engine.dart';
 import '../services/obedience_engine.dart';
@@ -45,8 +44,6 @@ class SessionController extends ChangeNotifier {
   final RandomCommentsBundle _randomComments;
   final StatsService _stats;
   final BadgeService _badges;
-  final ExcitationEngine _excitation = ExcitationEngine();
-  ExcitationEngine get excitation => _excitation;
   final HumiliationEngine _humiliation = HumiliationEngine();
   HumiliationEngine get humiliation => _humiliation;
   final ObedienceEngine _obedience = ObedienceEngine();
@@ -79,15 +76,19 @@ class SessionController extends ChangeNotifier {
   /// fonctionne exactement comme avant.
   final HoldVerifier? _holdVerifier;
 
-  /// Cap de la jauge d'excitation pour cette session. Configuré par le
-  /// constructeur (mode « encore » → cap > 100). Reset() préserve le cap.
-  final double _excitationMax;
-
   /// Banque de phrases optionnelle, fournie pour les sessions carrière.
-  /// Sert à tirer les commentaires TTS aux franchissements de seuils
-  /// d'excitation. `null` pour les sessions statiques (le déclenchement
-  /// est alors un no-op).
+  /// Sert à tirer les commentaires TTS aux franchissements de seuils de
+  /// progression de la séance. `null` pour les sessions statiques (le
+  /// déclenchement est alors un no-op).
   final PhraseBank? _phraseBank;
+
+  /// Seuils de progression (en pourcent de durée écoulée) déjà annoncés
+  /// pour la session en cours. Évite de relire la même phrase deux fois.
+  final Set<int> _announcedProgressMarkers = <int>{};
+
+  /// Pourcentages canoniques aux franchissements desquels on tire une
+  /// phrase TTS via `PhraseBank.pickProgress`.
+  static const List<int> _progressMarkers = [25, 50, 75, 90];
 
   /// Profil d'endurance projeté seconde par seconde, fourni par le
   /// générateur procédural (mode Carrière). Sert au flow fail pour
@@ -240,7 +241,6 @@ class SessionController extends ChangeNotifier {
     PhraseBank? phraseBank,
     List<double>? staminaProfile,
     HoldVerifier? holdVerifier,
-    double excitationMax = ExcitationEngine.defaultMax,
     SpecializationAllocation? specialization,
   })  : _session = session,
         _tts = tts,
@@ -253,27 +253,37 @@ class SessionController extends ChangeNotifier {
         _phraseBank = phraseBank,
         _staminaProfile = staminaProfile,
         _holdVerifier = holdVerifier,
-        _excitationMax = excitationMax,
         _specialization = specialization {
     _beep.onBeat = _handleBeat;
-    _excitation.setMax(excitationMax);
-    _excitation.onThresholdCrossed = _handleExcitationThreshold;
   }
 
-  void _handleExcitationThreshold(int threshold) {
+  /// Tire une phrase TTS au franchissement d'un palier de progression
+  /// (25/50/75/90 % de la durée totale de session). Ne joue pas si une
+  /// phrase scriptée est en cours — on rate alors l'annonce, le palier
+  /// reste marqué pour la session.
+  void _handleProgressMarker(int threshold) {
     final bank = _phraseBank;
     if (bank == null) return;
-    final phrase = bank.pickExcitation(threshold, _random);
+    final phrase = bank.pickProgress(threshold, _random);
     if (phrase == null || phrase.isEmpty) return;
-    // On parle « hors-script » : pas de _lastScriptedSpeakAt mis à jour, le
-    // cooldown des commentaires aléatoires reste sur les vrais scriptés.
-    if (_tts.isSpeaking) {
-      // Ne pas couper une phrase scriptée en cours pour annoncer un seuil.
-      // Le seuil est déjà marqué franchi côté ExcitationEngine — on rate
-      // juste l'annonce. Acceptable : un nouveau bip attendra naturellement.
-      return;
-    }
+    if (_tts.isSpeaking) return;
     _tts.speak(phrase);
+  }
+
+  /// Vérifie si un nouveau palier `_progressMarkers` a été franchi entre
+  /// le tick précédent et le courant. Tire une seule phrase par tick pour
+  /// éviter d'enchaîner deux annonces.
+  void _checkProgressMarkers() {
+    final total = session.durationSeconds;
+    if (total <= 0) return;
+    final percent = (elapsedSeconds * 100 / total).floor();
+    for (final marker in _progressMarkers) {
+      if (percent >= marker && !_announcedProgressMarkers.contains(marker)) {
+        _announcedProgressMarkers.add(marker);
+        _handleProgressMarker(marker);
+        return;
+      }
+    }
   }
 
   /// Détecte un changement de paramètre entre [previous] et [current] et
@@ -331,12 +341,6 @@ class SessionController extends ChangeNotifier {
   void _handleBeat(BeatEvent e) {
     _stats.recordBeat(mode: e.mode, to: e.to, from: e.from);
     _stats.markModeUsed(e.mode);
-    _excitation.onBeat(
-      mode: e.mode,
-      to: e.to,
-      from: e.from,
-      bpm: _beep.currentBpm,
-    );
     _stamina.onBeat(e);
   }
 
@@ -493,8 +497,7 @@ class SessionController extends ChangeNotifier {
         _lastHoldTickAtSecond = -1;
         _resilienceTickAccumulator = 0;
         _miniPunishmentsTriggered = 0;
-        _excitation.reset();
-        _excitation.setMax(_excitationMax);
+        _announcedProgressMarkers.clear();
         _humiliation.seed(0);
         _obedience.seed(0);
         _saliva.reset();
@@ -521,10 +524,9 @@ class SessionController extends ChangeNotifier {
         }
         _stamina.reset();
         // Lectures async tolérées : si pas finies au premier beat, on est
-        // juste à valeur neutre (résistance 0, humiliation 0, obédiance 0).
-        // Pas critique — les bumps en cours de session s'appliqueront aux
-        // valeurs neutres puis seront remplacés à la première lecture async.
-        _stats.getResistanceLevel().then((r) => _excitation.setResistance(r));
+        // juste à valeur neutre (humiliation 0, obédiance 0). Pas critique —
+        // les bumps en cours de session s'appliqueront aux valeurs neutres
+        // puis seront remplacés à la première lecture async.
         _stats.getHumiliationLevel().then((h) => _humiliation.seed(h));
         _stats.getObedienceLevel().then((o) => _obedience.seed(o));
       }
@@ -637,6 +639,7 @@ class SessionController extends ChangeNotifier {
   void _onTick() {
     _checkSteps();
     _accrueHoldSecond();
+    _checkProgressMarkers();
     if (elapsedSeconds >= session.durationSeconds) {
       _finish();
       return;
@@ -646,22 +649,11 @@ class SessionController extends ChangeNotifier {
 
   /// Crédite une seconde au compteur hold throat/full quand on est dans
   /// ce mode. Utilise [elapsedSeconds] pour ne créditer qu'une fois par
-  /// seconde (le ticker tourne à 200 ms). Pousse aussi le passif de la
-  /// jauge d'excitation pour cette seconde.
+  /// seconde (le ticker tourne à 200 ms).
   void _accrueHoldSecond() {
     final now = elapsedSeconds;
     if (now == _lastHoldTickAtSecond) return;
     _lastHoldTickAtSecond = now;
-    // Tick excitation : applique le passif du mode courant pour 1 s.
-    // Note : `setCurrentMode` ne réapplique pas le spike initial s'il a
-    // déjà été déclenché par `_checkSteps` pour ce step (déduplication
-    // via `_lastSpikeMode`/`_lastSpikeFrom` côté engine).
-    _excitation.setCurrentMode(
-      mode: _beep.currentMode,
-      from: _beep.currentFrom,
-      to: _beep.currentTo,
-    );
-    _excitation.onTickSecond();
     _obedience.onTickSecond();
     // L'humil tick est accéléré par l'obédiance courante : plus elle obéit
     // bien, plus on accepte qu'elle ait droit à plus d'humiliation par
@@ -810,13 +802,6 @@ class SessionController extends ChangeNotifier {
         _lastConfigStep = step;
         modeChanged = true;
         _armHoldVerifierIfHoldStep(step);
-        // Notifie l'excitation du nouveau mode/from/to : déclenche le spike
-        // initial pour hold / beg-non-libre, mémorise pour le tick passif.
-        _excitation.setCurrentMode(
-          mode: resolvedMode,
-          from: step.from ?? _beep.currentFrom,
-          to: step.to,
-        );
         // Si la step n'a pas son propre texte scripté, on tente une phrase
         // de transition (« plus vite », « plus profond »…). Ça ne joue
         // que si on est resté dans le même mode et qu'un paramètre clé a
@@ -1188,7 +1173,6 @@ class SessionController extends ChangeNotifier {
     _failActive = true;
     final myGen = ++_failGen;
     _hadFailThisSession = true;
-    _excitation.onFail();
     _stamina.onFail();
     _saliva.onFail();
     // Le mode forbidden est levé par le fail : la salope a craqué, on

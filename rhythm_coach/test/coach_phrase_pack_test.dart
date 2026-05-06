@@ -23,7 +23,7 @@ void main() {
         'intros': ['hello'],
         'congrats': ['merci'],
         'encore': ['encore'],
-        'excitation': {
+        'progress': {
           '50': ['mid'],
           '90': ['peak'],
         },
@@ -34,8 +34,8 @@ void main() {
       expect(pack.intros, ['hello']);
       expect(pack.congrats, ['merci']);
       expect(pack.encore, ['encore']);
-      expect(pack.excitation[50], ['mid']);
-      expect(pack.excitation[90], ['peak']);
+      expect(pack.progress[50], ['mid']);
+      expect(pack.progress[90], ['peak']);
     });
 
     test('ignore les clés inconnues et listes vides', () {
@@ -44,12 +44,12 @@ void main() {
           'unknownMode': {'soft': ['x']},
           'rhythm': {'soft': []},
         },
-        'excitation': {'notANumber': ['x']},
+        'progress': {'notANumber': ['x']},
         'intros': ['  ', 'real'],
       });
       expect(pack.byMode.containsKey(SessionMode.rhythm), isFalse,
           reason: 'liste vide → tier non créé');
-      expect(pack.excitation, isEmpty);
+      expect(pack.progress, isEmpty);
       expect(pack.intros, ['real'], reason: 'whitespace-only filtré');
     });
 
@@ -73,7 +73,7 @@ void main() {
           },
           congrats: ['G_congrats'],
           intros: ['G_intro'],
-          excitation: {
+          progress: {
             50: ['G_excit50'],
           },
           encore: ['G_encore'],
@@ -144,13 +144,13 @@ void main() {
           .pickEncore(rng), 'G_encore');
     });
 
-    test('excitation : coach prioritaire au seuil, fallback sinon', () {
-      final coach = coachWith(const CoachPhrasePack(excitation: {
+    test('progress : coach prioritaire au seuil, fallback sinon', () {
+      final coach = coachWith(const CoachPhrasePack(progress: {
         50: ['C_50'],
       }));
       final bank = coach.toPhraseBank(fallback: globalBank());
-      expect(bank.pickExcitation(50, rng), 'C_50');
-      expect(bank.pickExcitation(90, rng), isNull,
+      expect(bank.pickProgress(50, rng), 'C_50');
+      expect(bank.pickProgress(90, rng), isNull,
           reason: 'global n\'a pas de phrase 90 → null');
     });
 
@@ -161,7 +161,7 @@ void main() {
       expect(bank.pickIntro(rng), 'G_intro');
       expect(bank.pickCongrats(rng), 'G_congrats');
       expect(bank.pickEncore(rng), 'G_encore');
-      expect(bank.pickExcitation(50, rng), 'G_excit50');
+      expect(bank.pickProgress(50, rng), 'G_excit50');
     });
   });
 }

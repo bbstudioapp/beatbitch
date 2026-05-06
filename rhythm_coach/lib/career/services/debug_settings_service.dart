@@ -4,7 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 class DebugSettingsService {
   static const String _kShowStaminaBar = 'debug.show_stamina_bar';
   static const String _kShowTimer = 'debug.show_timer';
-  static const String _kShowExcitationBar = 'debug.show_excitation_bar';
   static const String _kShowHumiliationBar = 'debug.show_humiliation_bar';
   static const String _kShowObedienceBar = 'debug.show_obedience_bar';
   static const String _kShowSalivaBar = 'debug.show_saliva_bar';
@@ -35,19 +34,6 @@ class DebugSettingsService {
   Future<void> setShowTimer(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kShowTimer, value);
-  }
-
-  /// Quand true, l'écran de session affiche la jauge d'excitation 0–100
-  /// (debug). En production le feedback se fait via les commentaires TTS
-  /// déclenchés à certains seuils.
-  Future<bool> getShowExcitationBar() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_kShowExcitationBar) ?? false;
-  }
-
-  Future<void> setShowExcitationBar(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_kShowExcitationBar, value);
   }
 
   Future<bool> getShowHumiliationBar() async {

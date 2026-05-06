@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import '../../models/final_category.dart';
 import '../../models/session.dart';
 import '../../models/session_step.dart';
-import '../../services/excitation_engine.dart';
 import '../../services/humiliation_engine.dart';
 import '../../services/saliva_engine.dart';
 import '../models/career_level.dart';
@@ -15,17 +14,14 @@ import '../models/specialization.dart';
 import '../models/unlock_key.dart';
 
 /// Résultat d'une génération : la session figée à passer au controller +
-/// le profil d'endurance projeté + le profil d'excitation projeté
-/// (utile à l'overlay debug `StaminaBar` / `ExcitationBar`).
+/// le profil d'endurance projeté (utile à l'overlay debug `StaminaBar`).
 class CareerGenerationResult {
   final Session session;
   final List<double> staminaProfile;
-  final List<double> excitationProfile;
 
   const CareerGenerationResult({
     required this.session,
     required this.staminaProfile,
-    required this.excitationProfile,
   });
 }
 
@@ -35,11 +31,6 @@ class CareerGenerationResult {
 class CareerSessionGenerator {
   static const int _finisherBudgetSeconds = 12;
   static const double _staminaMax = 100.0;
-  /// Sentinel pour signaler "pas de cible explicite, utilise celle du
-  /// niveau" (cf. `CareerLevel.excitationTarget`). Distinct de toute valeur
-  /// que l'écran carrière peut passer pour les régénérations en cours de
-  /// session (Supplier / Encore qui transmettent une cible explicite).
-  static const double _defaultExcitationTarget = -1.0;
 
   /// Budget réservé en fin de session pour la phase d'accélération qui
   /// précède le hold final (bas niveaux uniquement). Permet d'enchaîner
@@ -86,11 +77,6 @@ class CareerSessionGenerator {
   Position? _lastFrom;
   Position? _lastTo;
 
-  /// Simulateur d'excitation utilisé pendant la génération. Mime le
-  /// comportement de l'`ExcitationEngine` runtime : décroissance V²/800,
-  /// spike par profondeur, plateaux. Réinitialisé à chaque `generate`.
-  late ExcitationEngine _excitSim;
-
   /// Simulateur de salive utilisé pendant la génération. Mime le
   /// comportement du `SalivaEngine` runtime : production par mode/position,
   /// auto-déglutition au-dessus de 75. Sert à projeter la lubrification
@@ -129,7 +115,7 @@ class CareerSessionGenerator {
     required PhraseBank bank,
     int? durationSeconds,
     bool includeHand = true,
-    double excitationTarget = _defaultExcitationTarget,
+    int encoreChainIndex = 0,
     String? openingPhrase,
     bool quickie = false,
     SpecializationAllocation? specialization,
@@ -175,29 +161,18 @@ class CareerSessionGenerator {
     final effectiveDuration = quickie ? 6 * 60 : (durationSeconds ?? cfg.durationSeconds);
     final intensityFloor =
         quickie ? 0.65 : (intense ? 0.55 : 0.0);
-    // Cible d'excitation : si l'appelant n'a rien passé (sentinel négatif),
-    // on prend celle du niveau. Encore et Supplier transmettent une valeur
-    // explicite (ancien max + bonus) qu'on respecte.
-    final resolvedExcitationTarget =
-        excitationTarget < 0 ? cfg.excitationTarget : excitationTarget;
-    // `minFinal` = seuil que les boosts visent (≠ max engine). Pour les
-    // chaînes encore, on monte minFinal proportionnellement (delta target
-    // appliqué aussi à minFinal pour rester cohérent). Sentinel négatif =
-    // base niveau ; sinon valeur explicite.
-    final resolvedMinFinal = excitationTarget < 0
-        ? cfg.minFinal
-        : (cfg.minFinal + (excitationTarget - cfg.excitationTarget))
-            .clamp(0.0, excitationTarget);
-    _excitSim = ExcitationEngine()..setMax(resolvedExcitationTarget);
+    // Nombre de boosts en phase finish : table par niveau + bonus encore
+    // (chaîne encore = +2 boosts par cran, sans plafond explicite côté
+    // générateur). Le caller borne le nombre d'encores enchaînés via le
+    // gating `_canEncore`.
+    final boostsCount = cfg.boostsCount + max(0, encoreChainIndex) * 2;
     _salivaSim = SalivaEngine()..reset();
     _salivaSimSecond = 0;
     final steps = <SessionStep>[];
     final profile = List<double>.filled(effectiveDuration + 60, _staminaMax);
-    final excitProfile = List<double>.filled(effectiveDuration + 60, 0.0);
 
     var time = 0;
     var stamina = _staminaMax;
-    var excitation = 0.0;
 
     // Insertion différée de la milestone d'apprentissage. Pour permettre
     // une chauffe avant de tomber sur la séquence pédagogique, on insère
@@ -236,17 +211,14 @@ class CareerSessionGenerator {
           duration: mStep.duration,
           swallowMode: mStep.swallowMode,
         ));
-        // Simulation stamina/excitation pour chaque step de la séquence,
-        // pour que la projection reste cohérente.
+        // Simulation stamina/salive pour chaque step de la séquence, pour
+        // que la projection reste cohérente.
         final mDraft = _stepToDraft(mStep, SessionMode.rhythm);
         stamina = _applyStaminaChange(
             stamina, mDraft, time / effectiveDuration, cfg);
         _advanceSalivaSim(mDraft);
-        excitation = _runOnEngine(_excitSim, mDraft);
         _fillProfile(
             profile, time + mStep.time, mStep.duration ?? 0, stamina);
-        _fillProfile(
-            excitProfile, time + mStep.time, mStep.duration ?? 0, excitation);
       }
       // Met à jour le « dernier mode/texte » avec le dernier step de la
       // milestone — sert au filtrage anti-répétition de la suite générée.
@@ -291,8 +263,6 @@ class CareerSessionGenerator {
       stamina = _applyStaminaChange(stamina, first, 0.0, cfg);
       _fillProfile(profile, 0, first.duration ?? 1, stamina);
       _advanceSalivaSim(first);
-      excitation = _runOnEngine(_excitSim, first);
-      _fillProfile(excitProfile, 0, first.duration ?? 1, excitation);
       time += first.duration ?? 1;
     }
 
@@ -373,18 +343,6 @@ class CareerSessionGenerator {
           humiliationScore + (progress * 4.0).floorToDouble();
       draft = _enforceHumiliationRequired(draft, humilCap);
 
-      // Anti-saturation : si en projetant ce step on dépasserait 90% alors
-      // qu'il reste plus d'1 min avant le pré-finisher, on bascule sur
-      // un step de récup pour garder de la marge.
-      final secondsLeft = genUntil - time;
-      if (secondsLeft > 60) {
-        final preview = _runOnEngine(_forkEngine(_excitSim), draft);
-        if (preview > 90.0) {
-          draft = _enforceHumiliationRequired(_buildRecoveryStep(), humilCap);
-          draft = _stripBegFromAfterSoft(draft, steps);
-        }
-      }
-
       // Variété BPM : évite d'enchaîner des steps au même tempo.
       draft = _applyBpmDiversity(draft);
       // Variété amplitude : évite d'enchaîner deux fois exactement la
@@ -408,9 +366,7 @@ class CareerSessionGenerator {
           steps.add(_draftToStep(breathDraft, time: time, text: breathText));
           stamina = _applyStaminaChange(stamina, breathDraft, progress, cfg);
           _advanceSalivaSim(breathDraft);
-          excitation = _runOnEngine(_excitSim, breathDraft);
           _fillProfile(profile, time, breathDraft.duration!, stamina);
-          _fillProfile(excitProfile, time, breathDraft.duration!, excitation);
           time += breathDraft.duration!;
           _lastMode = SessionMode.breath;
           _lastText = breathText;
@@ -438,14 +394,12 @@ class CareerSessionGenerator {
         final partText = partIdx == 0 ? _pickPhrase(bank, partDraft.mode, tier) : '';
         stamina = _applyStaminaChange(stamina, partDraft, progress, cfg);
         _advanceSalivaSim(partDraft);
-        excitation = _runOnEngine(_excitSim, partDraft);
         steps.add(_draftToStep(partDraft, time: time, text: partText));
         _lastMode = partDraft.mode;
         _lastText = partText;
         _lastFrom = partDraft.from;
         _lastTo = partDraft.to;
         _fillProfile(profile, time, partDraft.duration!, stamina);
-        _fillProfile(excitProfile, time, partDraft.duration!, excitation);
         time += partDraft.duration!;
       }
 
@@ -456,14 +410,12 @@ class CareerSessionGenerator {
       if (chain != null && chain.duration != null) {
         stamina = _applyStaminaChange(stamina, chain, progress, cfg);
         _advanceSalivaSim(chain);
-        excitation = _runOnEngine(_excitSim, chain);
         steps.add(_draftToStep(chain, time: time, text: ''));
         _lastMode = chain.mode;
         _lastText = '';
         _lastFrom = chain.from;
         _lastTo = chain.to;
         _fillProfile(profile, time, chain.duration!, stamina);
-        _fillProfile(excitProfile, time, chain.duration!, excitation);
         time += chain.duration!;
       }
 
@@ -518,11 +470,8 @@ class CareerSessionGenerator {
         stamina = _applyStaminaChange(
             stamina, mDraft, time / effectiveDuration, cfg);
         _advanceSalivaSim(mDraft);
-        excitation = _runOnEngine(_excitSim, mDraft);
         _fillProfile(
             profile, time + mStep.time, mStep.duration ?? 0, stamina);
-        _fillProfile(
-            excitProfile, time + mStep.time, mStep.duration ?? 0, excitation);
       }
       time += finalMilestone.durationSeconds;
       _lastMode = finalMilestone.sequence.last.mode ?? _lastMode;
@@ -555,10 +504,6 @@ class CareerSessionGenerator {
         finalDuration,
         (i) => i < profile.length ? profile[i] : stamina,
       );
-      final trimmedExcit = List<double>.generate(
-        finalDuration,
-        (i) => i < excitProfile.length ? excitProfile[i] : excitation,
-      );
 
       return CareerGenerationResult(
         session: Session(
@@ -581,7 +526,6 @@ class CareerSessionGenerator {
           finalStepTime: finalStepStartTime,
         ),
         staminaProfile: trimmedProfile,
-        excitationProfile: trimmedExcit,
       );
     }
 
@@ -608,8 +552,6 @@ class CareerSessionGenerator {
       _lastText = preText;
       _fillProfile(profile, time, preDur, stamina);
       _advanceSalivaSim(preDraft);
-      excitation = _runOnEngine(_excitSim, preDraft);
-      _fillProfile(excitProfile, time, preDur, excitation);
       time += preDur;
     }
 
@@ -628,16 +570,16 @@ class CareerSessionGenerator {
     // humiliation (cap inutile), mais on laisse `_enforceHumiliationRequired`
     // tourner — il rejettera juste si la profondeur du draft demande trop.
     final boostHumilCap = humiliationScore + 8.0;
-    var boostsAdded = 0;
-    // **Forçage minimum de 2 boosts** : la phase finish doit toujours
-    // sonner comme un sprint clair, même si la dernière minute du main
-    // loop a déjà saturé l'excitation à 100. Sinon le passage main → final
-    // perd sa dramaturgie (le commentaire CLAUDE.md notait cette faille).
-    const minBoosts = 2;
-    // **BPM cap qui scale par niveau** : niveau 1 plafonne à ~110 BPM
-    // (hand) / 130 (rhythm), niveau 18 à 170/180. Évite qu'une débutante
-    // se retrouve avec head→mid à 168 BPM dans son finish.
-    final levelBpmBoost = ((level - 1) * 4).clamp(0, 70);
+    // Nombre total de boosts : table par niveau + bonus encore (fixé en
+    // amont via `boostsCount`). Plus de boucle conditionnelle sur la
+    // jauge — le sprint est entièrement déterministe.
+    final totalBoosts = max(1, boostsCount);
+    // **BPM cap qui scale par niveau ET par chaîne d'encore** : niveau 1
+    // plafonne à ~110 BPM (hand) / 130 (rhythm), niveau 18 à 170/180. Le
+    // mode encore ajoute +8 BPM par cran de chaîne pour intensifier le
+    // sprint sans changer le nombre de boosts.
+    final levelBpmBoost =
+        ((level - 1) * 4 + max(0, encoreChainIndex) * 8).clamp(0, 70);
     final bpmCap = useHandBurst
         ? (110 + levelBpmBoost).clamp(110, 170)
         : (130 + levelBpmBoost).clamp(130, 180);
@@ -669,21 +611,20 @@ class CareerSessionGenerator {
     int prevBoostToIdx = 0;
     // **Ramp progressif** : la phase finish doit s'entendre comme une
     // accélération, pas comme un sprint plat à 100% dès le 1er boost.
-    // On planifie sur 4 boosts (typique : 2 minBoosts + 1-2 si saturé) et
-    // on échelonne BPM et profondeur sur cette progression. La physique
-    // (`deficit`) ne sert plus qu'en bonus — sans la ramp, baseBpm = bpmCap
-    // dès le 1er boost, ce que l'utilisateur a relevé.
-    const plannedBoosts = 4;
-    while (boostsAdded < minBoosts ||
-        (excitation < resolvedMinFinal - 1.0 && boostsAdded < 5)) {
-      // Durée variable : 12 à 16 s pour casser la régularité.
-      final boostDur = 12 + _rng.nextInt(5);
-      // Progression linéaire 0→1 sur les `plannedBoosts` premiers, puis
-      // saturée à 1.0 pour le 5e boost de secours. Plancher 0.4 : on ne
-      // démarre pas non plus en mode mou — premier boost à ~40% de la
-      // dynamique floor↔cap pour rester reconnaissable comme un sprint.
-      final progress =
-          ((boostsAdded + 1) / plannedBoosts).clamp(0.4, 1.0);
+    // On échelonne BPM et profondeur sur la totalité des boosts prévus.
+    // Plancher 0.4 : premier boost à ~40 % de la dynamique floor↔cap pour
+    // rester reconnaissable comme un sprint dès l'attaque.
+    final plannedBoosts = totalBoosts;
+    for (var boostsAdded = 0; boostsAdded < totalBoosts; boostsAdded++) {
+      // Durée variable : 12 à 16 s par défaut, +1s par cran de chaîne
+      // encore pour allonger un peu chaque sprint.
+      final boostDur =
+          12 + _rng.nextInt(5) + max(0, encoreChainIndex).clamp(0, 4);
+      // Progression linéaire 0→1 sur les `plannedBoosts`. Plancher 0.4 :
+      // pas de démarrage mou.
+      final progress = plannedBoosts <= 1
+          ? 1.0
+          : ((boostsAdded + 1) / plannedBoosts).clamp(0.4, 1.0);
       final targetBpm =
           (bpmFloor + progress * (bpmCap - bpmFloor)).round();
       // Jitter ±5 BPM autour de la cible pour ne pas répéter exactement
@@ -701,9 +642,10 @@ class CareerSessionGenerator {
       // `boostMaxToIdx - 2`, boost 2 vise -1, boost 3+ vise le max.
       // Toujours capé entre mid (idx 2) et le plafond. Le plancher
       // `prevBoostToIdx` garantit la monotonie (jamais de descente).
+      final rampDenom = plannedBoosts <= 1 ? 1 : (plannedBoosts - 1);
       final progressionToIdx = (boostMaxToIdx -
               2 +
-              2 * (boostsAdded / (plannedBoosts - 1)).clamp(0.0, 1.0))
+              2 * (boostsAdded / rampDenom).clamp(0.0, 1.0))
           .round()
           .clamp(2, boostMaxToIdx);
       final toIdx = max(prevBoostToIdx, progressionToIdx);
@@ -742,11 +684,8 @@ class CareerSessionGenerator {
       _lastBpm = boostDraft.bpm ?? _lastBpm;
       stamina = _applyStaminaChange(stamina, boostDraft, 1.0, cfg);
       _advanceSalivaSim(boostDraft);
-      excitation = _runOnEngine(_excitSim, boostDraft);
       _fillProfile(profile, time, boostDur, stamina);
-      _fillProfile(excitProfile, time, boostDur, excitation);
       time += boostDur;
-      boostsAdded++;
       // Mémorise BPM/profondeur retenus (post-dégradation humil) pour que le
       // boost suivant ne puisse pas redescendre sous ce palier.
       prevBoostBpm = boostDraft.bpm ?? prevBoostBpm;
@@ -756,12 +695,15 @@ class CareerSessionGenerator {
     }
 
     // Final : action longue tenue qui clôture la séance. Distinct de la
-    // phase « finish » (boosts) qui pousse l'excitation à 100 ; le final
-    // est l'apothéose contemplative. Choisi parmi les candidats valides
-    // selon le score d'humiliation, le plafond de profondeur du niveau,
-    // et la durée des holds profonds qui scale avec le niveau.
+    // phase « finish » (boosts) ; le final est l'apothéose contemplative.
+    // Choisi parmi les candidats valides selon le score d'humiliation, le
+    // plafond de profondeur du niveau, et la durée des holds profonds qui
+    // scale avec le niveau et la chaîne d'encore.
     final finalHumilCap = humiliationScore + 4.0; // rampe progress=1
-    final finishMul = resolvedExcitationTarget / 100.0;
+    // En chaîne encore, on allonge le final pour que la dramaturgie de
+    // « tu en veux encore » se traduise aussi côté apothéose. Bornée par
+    // le clamp de `_pickFinal` pour rester raisonnable.
+    final finishMul = 1.0 + max(0, encoreChainIndex) * 0.10;
     final finisherDraft = _pickFinal(
       humilCap: finalHumilCap,
       includeHand: includeHand,
@@ -804,8 +746,6 @@ class CareerSessionGenerator {
     steps.add(finisherStep);
     _fillProfile(profile, time, finisherDuration, stamina);
     _advanceSalivaSim(finisherDraft);
-    excitation = _runOnEngine(_excitSim, finisherDraft);
-    _fillProfile(excitProfile, time, finisherDuration, excitation);
     time += finisherDuration;
 
     // **Phase post-final** : ~12 s d'action douce après l'orgasme — la
@@ -829,8 +769,6 @@ class CareerSessionGenerator {
     steps.add(_draftToStep(postFinalDraft, time: time, text: postFinalText));
     _fillProfile(profile, time, postFinalDuration, stamina);
     _advanceSalivaSim(postFinalDraft);
-    excitation = _runOnEngine(_excitSim, postFinalDraft);
-    _fillProfile(excitProfile, time, postFinalDuration, excitation);
     time += postFinalDuration;
     _lastMode = postFinalDraft.mode;
     _lastText = postFinalText;
@@ -839,10 +777,6 @@ class CareerSessionGenerator {
     final trimmedProfile = List<double>.generate(
       finalDuration,
       (i) => i < profile.length ? profile[i] : stamina,
-    );
-    final trimmedExcit = List<double>.generate(
-      finalDuration,
-      (i) => i < excitProfile.length ? excitProfile[i] : excitation,
     );
 
     return CareerGenerationResult(
@@ -863,7 +797,6 @@ class CareerSessionGenerator {
         finalStepTime: finalStepStartTime,
       ),
       staminaProfile: trimmedProfile,
-      excitationProfile: trimmedExcit,
     );
   }
 
@@ -978,9 +911,9 @@ class CareerSessionGenerator {
   }
 
   /// Convertit un [SessionStep] (issu du JSON ou d'une milestone) en
-  /// [_StepDraft] interne pour pouvoir le passer à `_applyStaminaChange`
-  /// et `_runOnEngine`. Convention uniforme : hold/beg portent leur
-  /// position dans `to` ; aucun swap.
+  /// [_StepDraft] interne pour pouvoir le passer à `_applyStaminaChange`.
+  /// Convention uniforme : hold/beg portent leur position dans `to` ;
+  /// aucun swap.
   _StepDraft _stepToDraft(SessionStep step, SessionMode defaultMode) {
     final mode = step.mode ?? defaultMode;
     return _StepDraft(
@@ -1845,40 +1778,10 @@ class CareerSessionGenerator {
     }
   }
 
-  /// Simule le passage d'un step sur l'engine [eng] et retourne la valeur
-  /// finale d'excitation. Mute [eng] : pour un preview sans effet de bord,
-  /// passer un fork via [_forkEngine].
-  double _runOnEngine(ExcitationEngine eng, _StepDraft draft) {
-    final dur = draft.duration ?? 0;
-    if (dur <= 0) return eng.value;
-    eng.setCurrentMode(
-      mode: draft.mode,
-      from: draft.from,
-      to: draft.to,
-    );
-    final beatsPerSecond = (draft.bpm ?? 0) / 60.0;
-    var beatAccumulator = 0.0;
-    for (var s = 0; s < dur; s++) {
-      if (beatsPerSecond > 0) {
-        beatAccumulator += beatsPerSecond;
-        while (beatAccumulator >= 1.0) {
-          eng.onBeat(
-            mode: draft.mode,
-            to: draft.to,
-            from: draft.from,
-          );
-          beatAccumulator -= 1.0;
-        }
-      }
-      eng.onTickSecond();
-    }
-    return eng.value;
-  }
-
-  /// Choisit le **final** (= action de clôture après la phase de boosts
-  /// qui amène l'excitation à sa cible). Distinct du finish (= bursts), le
-  /// final est volontairement contemplatif : hand lent, lick / biffle bas,
-  /// ou un hold tenu sur une position de plus en plus profonde.
+  /// Choisit le **final** (= action de clôture après la phase de boosts).
+  /// Distinct du finish (= bursts), le final est volontairement contemplatif :
+  /// hand lent, lick / biffle bas, ou un hold tenu sur une position de plus
+  /// en plus profonde.
   ///
   /// Palette ordonnée par humiliation requise (hardcodée — la req
   /// "intrinsèque" calculée par `HumiliationScale.requiredFor` est parfois
@@ -2290,15 +2193,6 @@ class CareerSessionGenerator {
       to: draft.to,
       duration: draft.duration,
     );
-  }
-
-  /// Crée une copie de [src] partageant son cap et sa valeur courante.
-  /// Sert au preview (« et si on jouait ce draft maintenant ? ») sans
-  /// muter l'engine principal.
-  ExcitationEngine _forkEngine(ExcitationEngine src) {
-    return ExcitationEngine()
-      ..setMax(src.maxValue)
-      ..seed(src.value);
   }
 
   /// Catégorise le draft retenu par `_pickFinal` pour piocher la bonne

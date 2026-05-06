@@ -294,9 +294,10 @@ class CoachPhrasePack {
   final List<String> congrats;
   final List<String> encore;
 
-  /// Phrases déclenchées au franchissement d'un seuil de la jauge
-  /// d'excitation, indexé par seuil (25/50/75/90).
-  final Map<int, List<String>> excitation;
+  /// Phrases déclenchées au franchissement d'un seuil de progression de la
+  /// séance (ratio elapsed/duration), indexé par seuil en pourcent
+  /// (25/50/75/90).
+  final Map<int, List<String>> progress;
 
   /// Phrases colorées par branche de spécialisation. Pour chaque branche,
   /// pool indexé par tier (`soft` / `medium` / `hard` typiquement). Quand
@@ -337,7 +338,7 @@ class CoachPhrasePack {
     this.intros = const [],
     this.congrats = const [],
     this.encore = const [],
-    this.excitation = const {},
+    this.progress = const {},
     this.branchPhrases = const {},
     this.randomComments = const [],
     this.nicknames = CoachNicknamePool.empty,
@@ -353,7 +354,7 @@ class CoachPhrasePack {
       intros.isEmpty &&
       congrats.isEmpty &&
       encore.isEmpty &&
-      excitation.isEmpty &&
+      progress.isEmpty &&
       branchPhrases.isEmpty &&
       randomComments.isEmpty &&
       nicknames.isEmpty &&
@@ -373,7 +374,7 @@ class CoachPhrasePack {
   ///   "intros":   [...],
   ///   "congrats": [...],
   ///   "encore":   [...],
-  ///   "excitation": { "25": [...], "50": [...], "75": [...], "90": [...] }
+  ///   "progress":   { "25": [...], "50": [...], "75": [...], "90": [...] }
   /// }
   /// ```
   ///
@@ -403,14 +404,14 @@ class CoachPhrasePack {
       }
     }
 
-    final excitation = <int, List<String>>{};
-    final excitNode = root['excitation'];
-    if (excitNode is Map<String, dynamic>) {
-      excitNode.forEach((key, raw) {
+    final progress = <int, List<String>>{};
+    final progressNode = root['progress'];
+    if (progressNode is Map<String, dynamic>) {
+      progressNode.forEach((key, raw) {
         final threshold = int.tryParse(key);
         if (threshold == null) return;
         final list = stringList(raw);
-        if (list.isNotEmpty) excitation[threshold] = list;
+        if (list.isNotEmpty) progress[threshold] = list;
       });
     }
 
@@ -448,7 +449,7 @@ class CoachPhrasePack {
       intros: stringList(root['intros']),
       congrats: stringList(root['congrats']),
       encore: stringList(root['encore']),
-      excitation: excitation,
+      progress: progress,
       branchPhrases: branchPhrases,
       randomComments: stringList(root['randomComments']),
       nicknames: nicknames,
@@ -680,7 +681,7 @@ class Coach {
   ///   sinon on retombe sur le `pickFor` du fallback. La résolution se fait
   ///   donc au moment du tirage, pas à la composition (pour pouvoir refléter
   ///   un éventuel rechargement à chaud).
-  /// - Pour `intros / congrats / encore / excitation` : même logique —
+  /// - Pour `intros / congrats / encore / progress` : même logique —
   ///   la liste coach prime, vide → fallback.
   ///
   /// Le résultat est une [PhraseBank] consommable telle quelle par
@@ -798,12 +799,12 @@ class _CoachComposedPhraseBank extends PhraseBank {
   }
 
   @override
-  String? pickExcitation(int threshold, Random rng) {
-    final list = coachPhrases.excitation[threshold];
+  String? pickProgress(int threshold, Random rng) {
+    final list = coachPhrases.progress[threshold];
     if (list != null && list.isNotEmpty) {
       return list[rng.nextInt(list.length)];
     }
-    return fallback.pickExcitation(threshold, rng);
+    return fallback.pickProgress(threshold, rng);
   }
 
   @override

@@ -47,13 +47,13 @@ class PhraseBankLoader {
         .where((s) => s.trim().isNotEmpty)
         .toList();
 
-    final excitation = <int, List<String>>{};
-    final excitNode = data['excitation'];
-    if (excitNode is Map<String, dynamic>) {
-      excitNode.forEach((key, phrases) {
+    final progress = <int, List<String>>{};
+    final progressNode = data['progress'];
+    if (progressNode is Map<String, dynamic>) {
+      progressNode.forEach((key, phrases) {
         final threshold = int.tryParse(key);
         if (threshold == null || phrases is! List) return;
-        excitation[threshold] = phrases
+        progress[threshold] = phrases
             .map((p) => p.toString())
             .where((s) => s.trim().isNotEmpty)
             .toList();
@@ -121,7 +121,7 @@ class PhraseBankLoader {
       byMode: byMode,
       congrats: congrats,
       intros: intros,
-      excitation: excitation,
+      progress: progress,
       encore: encore,
       transitions: transitions,
       finishOrgasm: finishOrgasm,

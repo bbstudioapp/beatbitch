@@ -82,8 +82,9 @@ Défauts à ne pas répéter :
   "congrats": [],   // une phrase tirée à la fin d'une séance complétée
   "encore":   [],   // une phrase tirée à l'ouverture d'une session « encore »
 
-  // Phrases déclenchées au franchissement d'un seuil de la jauge d'excitation.
-  "excitation": {
+  // Phrases déclenchées au franchissement d'un seuil de progression de la
+  // séance (ratio elapsedSeconds / durationSeconds × 100).
+  "progress": {
     "25": [],
     "50": [],
     "75": [],
@@ -128,7 +129,7 @@ La clé est une chaîne libre. Conventions consommées par le code actuel :
 
 | Tier         | Sens                                                          | Utilisé par                              |
 |--------------|---------------------------------------------------------------|------------------------------------------|
-| `soft`       | Début de séance, jauge d'excitation basse, ton doux           | Tous les modes                           |
+| `soft`       | Début de séance, ton doux                                     | Tous les modes                           |
 | `medium`     | Milieu de séance, intensité moyenne                           | Tous les modes (et fallback de `pickFor`)|
 | `hard`       | Fin de séance / pic d'intensité                               | Tous les modes                           |
 | `finale`     | Phrases pour les holds finaux les plus longs                  | `hold` uniquement                        |
@@ -154,10 +155,10 @@ Phrase de fin de séance, jouée juste avant l'écran « finished ».
 ### `encore`
 Phrase d'ouverture pour les sessions « encore » (relance immédiate après une séance terminée). Pas de décompte d'intro, donc cette phrase est jointe directement au tout premier step.
 
-### `excitation`
-Indexée par seuil de la jauge d'excitation (0–100 ou plus en mode encore). Chaque seuil n'est franchi **qu'une fois par séance** — la phrase est lue une fois, pas en boucle.
+### `progress`
+Indexée par seuil de progression de la séance, en pourcent (`elapsedSeconds / durationSeconds × 100`). Chaque seuil n'est franchi **qu'une fois par séance** — la phrase est lue une fois, pas en boucle.
 
-Seuils canoniques : `25`, `50`, `75`, `90`. Tu peux en ajouter d'autres, mais le `ExcitationEngine` ne les déclenchera que s'ils sont câblés côté code.
+Seuils canoniques : `25`, `50`, `75`, `90`. Tu peux en ajouter d'autres, mais le `SessionController` ne les déclenchera que s'ils sont câblés côté code.
 
 ### `nicknames`
 Pilote la résolution du placeholder `{name}` dans **toutes** les phrases du coach (pack coach + fallback global). Tirage aléatoire à chaque occurrence — deux `{name}` dans la même phrase peuvent renvoyer deux surnoms différents.
@@ -252,5 +253,5 @@ Concrètement : si tu changes un `tier` ou un `minPlayerLevel` et que la séquen
 |-------------------------------------------|-------------------------------------------------------------------------------|
 | Le coach ne dit jamais de phrase perso    | Fichier mal nommé (id ou langue erronée), ou JSON invalide → check `flutter run` logs |
 | La phrase tirée n'est pas la bonne tier   | Tier absent ou liste vide → `PhraseBank` retombe sur `medium` puis fallback   |
-| Les seuils d'excitation ne se déclenchent | `ExcitationEngine` doit être actif (mode Carrière), seuils 25/50/75/90 attendus |
+| Les seuils `progress` ne se déclenchent   | Mode Carrière requis (PhraseBank fournie), seuils 25/50/75/90 attendus        |
 | Coach absent du picker                    | Pas dans `CoachCatalog.defaults`, ou tier > tier courant du joueur            |
