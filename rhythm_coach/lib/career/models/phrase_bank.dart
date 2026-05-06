@@ -76,6 +76,14 @@ class PhraseBank {
   /// l'utilisatrice.
   final List<String> _postFinalBeg;
 
+  /// Consignes spécifiques au post-final lick (« lèche pour nettoyer »).
+  /// Tirées en priorité sur `_postFinal` quand le step post-final résolu
+  /// est un lick — typiquement biaisé par la spé sloppy en niveau avancé.
+  /// Le pool générique `_postFinal` peut contenir quelques phrases lick
+  /// (« lèche-le encore un peu, nettoie bien ») qui font fallback si
+  /// vide. Distinct pour pouvoir varier sans diluer le pool générique.
+  final List<String> _postFinalLick;
+
   const PhraseBank({
     required Map<SessionMode, Map<String, List<String>>> byMode,
     required List<String> congrats,
@@ -88,6 +96,7 @@ class PhraseBank {
     Map<String, List<String>> finalActions = const {},
     List<String> postFinal = const [],
     List<String> postFinalBeg = const [],
+    List<String> postFinalLick = const [],
   })  : _byMode = byMode,
         _congrats = congrats,
         _intros = intros,
@@ -98,7 +107,8 @@ class PhraseBank {
         _finalAnnouncements = finalAnnouncements,
         _finalActions = finalActions,
         _postFinal = postFinal,
-        _postFinalBeg = postFinalBeg;
+        _postFinalBeg = postFinalBeg,
+        _postFinalLick = postFinalLick;
 
   /// Tire une phrase pour [mode] dans le tier demandé. Si le tier est absent,
   /// fallback sur 'medium' puis 'any' puis première liste non vide. Retourne
@@ -216,5 +226,14 @@ class PhraseBank {
   String? pickPostFinalBeg(Random rng) {
     if (_postFinalBeg.isEmpty) return null;
     return _postFinalBeg[rng.nextInt(_postFinalBeg.length)];
+  }
+
+  /// Tire une consigne pour un step post-final en mode `lick`
+  /// (« lèche pour nettoyer », « astique-moi à la langue »…). Retourne
+  /// `null` si le pool dédié est vide ; l'appelant peut alors retomber
+  /// sur `pickPostFinal`.
+  String? pickPostFinalLick(Random rng) {
+    if (_postFinalLick.isEmpty) return null;
+    return _postFinalLick[rng.nextInt(_postFinalLick.length)];
   }
 }

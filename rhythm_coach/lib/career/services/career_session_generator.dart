@@ -58,6 +58,12 @@ class CareerSessionGenerator {
   /// non fournie : map vide → comportement neutre.
   SpecializationAllocation _spec = SpecializationAllocation.empty();
 
+  /// Niveau global du joueur passé à `generate`. Utilisé pour gater les
+  /// branches de tirage qui n'ont de sens qu'à un certain niveau (ex :
+  /// post-final humiliant biaisé par spé sloppy/obeissance, réservé aux
+  /// niveaux avancés où la dramaturgie peut sortir du cadre doux).
+  int _level = 1;
+
   /// Dernier mode poussé dans la séance, pour éviter qu'un même mode
   /// (breath, beg, …) se déclenche deux steps d'affilé. Reset dans `generate`.
   SessionMode? _lastMode;
@@ -205,6 +211,7 @@ class CareerSessionGenerator {
     _maxDepthIndex = cfg.maxDepthIndex;
     _deepProbability = cfg.deepProbability;
     _spec = specialization ?? SpecializationAllocation.empty();
+    _level = level;
     _lastMode = null;
     _lastText = '';
     _lastBpm = null;
@@ -907,13 +914,22 @@ class CareerSessionGenerator {
     final postFinalDraft = _buildPostFinalDraft(finalMode, _humilCapAt(time));
     // Phrase : un step `beg` doit porter une CONSIGNE de supplique
     // (« remercie-moi », « supplie-moi de revenir »), pas un compliment
-    // doux qui sonnerait à côté. Cascade de fallback pour ne jamais
-    // tomber sur un text vide.
-    final postFinalText = postFinalDraft.mode == SessionMode.beg
-        ? (bank.pickPostFinalBeg(_rng) ??
-            bank.pickPostFinal(_rng) ??
-            bank.pickCongrats(_rng))
-        : (bank.pickPostFinal(_rng) ?? bank.pickCongrats(_rng));
+    // doux qui sonnerait à côté. De même un step `lick` post-final
+    // attaqué pour la spé sloppy doit porter une consigne d'aftercare
+    // humiliant (« lèche pour nettoyer »). Cascade de fallback pour ne
+    // jamais tomber sur un text vide.
+    final String postFinalText;
+    if (postFinalDraft.mode == SessionMode.beg) {
+      postFinalText = bank.pickPostFinalBeg(_rng) ??
+          bank.pickPostFinal(_rng) ??
+          bank.pickCongrats(_rng);
+    } else if (postFinalDraft.mode == SessionMode.lick) {
+      postFinalText = bank.pickPostFinalLick(_rng) ??
+          bank.pickPostFinal(_rng) ??
+          bank.pickCongrats(_rng);
+    } else {
+      postFinalText = bank.pickPostFinal(_rng) ?? bank.pickCongrats(_rng);
+    }
     final postFinalDuration = postFinalDraft.duration!;
     steps.add(_draftToStep(postFinalDraft, time: time, text: postFinalText));
     final staminaBeforePostFinal = stamina;
@@ -1058,6 +1074,36 @@ class CareerSessionGenerator {
         .toList()
       ..sort((a, b) => b.$1.compareTo(a.$1)); // req décroissante
     if (valid.isEmpty) return breath();
+    // Biais spé pour les niveaux avancés : sloppy → lick (« lèche pour
+    // nettoyer »), obeissance → beg (« remercie-moi », supplique
+    // post-orgasme). Conditions cumulatives : level ≥ 7 (bas niveau on
+    // garde le cadre doux pour ne pas brutaliser une débutante après son
+    // orgasme), humilCap ≥ 30 (la chauffe doit être suffisante pour que
+    // le ton tienne), spé ≥ 2 pts dans la branche concernée. 60 % de
+    // chance — assez pour que la couleur de la spé soit perceptible
+    // post-orgasme, mais 40 % de tirage standard pour conserver de la
+    // variété (sinon chaque session avance signe la même fin).
+    if (_level >= 7 && humilCap >= 30) {
+      final sloppyPts = _pts(SpecializationBranch.sloppy);
+      final obPts = _pts(SpecializationBranch.obeissance);
+      // Tirage prioritaire si les deux branches sont présentes : on
+      // privilégie celle qui a le plus de pts. À égalité, sloppy d'abord
+      // (l'aftercare de nettoyage colle mieux au ton « finition »).
+      if (sloppyPts >= 2 && sloppyPts >= obPts && _rng.nextDouble() < 0.60) {
+        final lickCandidate = valid.where((c) {
+          final draft = c.$3();
+          return draft.mode == SessionMode.lick;
+        }).firstOrNull;
+        if (lickCandidate != null) return lickCandidate.$3();
+      }
+      if (obPts >= 2 && _rng.nextDouble() < 0.60) {
+        final begCandidate = valid.where((c) {
+          final draft = c.$3();
+          return draft.mode == SessionMode.beg;
+        }).firstOrNull;
+        if (begCandidate != null) return begCandidate.$3();
+      }
+    }
     // Top 3 : tirage uniforme dans les 3 plus humiliantes accessibles.
     // Donne de la variété sans casser la progression d'humiliation.
     final top = valid.take(3).toList();

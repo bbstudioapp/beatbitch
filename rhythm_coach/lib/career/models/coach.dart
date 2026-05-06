@@ -944,4 +944,11 @@ class _CoachComposedPhraseBank extends PhraseBank {
     // déclinées par coach.
     return fallback.pickPostFinalBeg(rng);
   }
+
+  @override
+  String? pickPostFinalLick(Random rng) {
+    // Délégation au pool global : consignes lick post-final non encore
+    // déclinées par coach.
+    return fallback.pickPostFinalLick(rng);
+  }
 }
