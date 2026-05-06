@@ -84,6 +84,15 @@ class CareerSessionGenerator {
   /// (breath, beg, …) se déclenche deux steps d'affilé. Reset dans `generate`.
   SessionMode? _lastMode;
 
+  /// Durée cumulée (en secondes) des steps `rhythm` poussés consécutivement.
+  /// Tout step d'un autre mode (breath compris) reset à 0. Sert au cap
+  /// « rythme soutenu » : tant que `rhythmHeadMidSustained` n'est pas
+  /// débloqué, la chaîne rythme consécutive est plafonnée à 60 s par
+  /// `_capRhythmConsecutive` / `_canChainRhythm` dans `_mapDifficultyToStep`.
+  /// La milestone `intro_rhythm_sustained` enseigne et débloque ce
+  /// dépassement.
+  int _consecutiveRhythmSeconds = 0;
+
   /// Type effectif du dernier step poussé (= cluster sémantique :
   /// bouche / langue / libre-main). Sert à forcer une continuité par
   /// type sur plusieurs steps consécutifs : la séance est censée se
@@ -241,6 +250,7 @@ class CareerSessionGenerator {
     _lastType = null;
     _stepsInLastType = 0;
     _stepsOutsideBouche = 0;
+    _consecutiveRhythmSeconds = 0;
     _recentEmits.clear();
     _unlockedKeys = unlockedKeys;
     _coachModeWeights = coachModeWeights;
@@ -320,7 +330,7 @@ class CareerSessionGenerator {
         // compte (la séquence peut elle-même alterner bouche/transit).
         if (mStep.mode != null && !mStep.isTextOnly) {
           _trackPushedStep(mStep.mode!, mStep.to,
-              from: mStep.from, bpm: mStep.bpm);
+              from: mStep.from, bpm: mStep.bpm, duration: mStep.duration);
         }
       }
       // Met à jour le « dernier mode/texte » avec le dernier step de la
@@ -364,7 +374,7 @@ class CareerSessionGenerator {
       _lastFrom = first.from;
       _lastTo = first.to;
       _trackPushedStep(first.mode, first.to,
-          from: first.from, bpm: first.bpm);
+          from: first.from, bpm: first.bpm, duration: first.duration);
       final staminaBefore = stamina;
       stamina = _applyStaminaChange(stamina, first, 0.0, cfg);
       _fillProfile(profile, 0, first.duration ?? 1, stamina,
@@ -425,7 +435,8 @@ class CareerSessionGenerator {
           _lastFrom = wd.from;
           _lastTo = wd.to;
           _lastBpm = wd.bpm ?? _lastBpm;
-          _trackPushedStep(wd.mode, wd.to, from: wd.from, bpm: wd.bpm);
+          _trackPushedStep(wd.mode, wd.to,
+              from: wd.from, bpm: wd.bpm, duration: wd.duration);
           time += wd.duration!;
         }
         // Replanification : 6-7 minutes après la fin de la vague émise.
@@ -454,7 +465,8 @@ class CareerSessionGenerator {
             valueStart: staminaBefore);
         _lastMode = SessionMode.beg;
         _lastText = swallowText;
-        _trackPushedStep(SessionMode.beg, null);
+        _trackPushedStep(SessionMode.beg, null,
+            duration: swallowDraft.duration);
         time += swallowDraft.duration!;
         _lastSwallowOrderAt = time;
         continue;
@@ -541,7 +553,8 @@ class CareerSessionGenerator {
           // breath = transit → ne touche pas _lastType (parenthèse
           // transparente). On l'appelle quand même pour cohérence si la
           // règle évoluait.
-          _trackPushedStep(SessionMode.breath, null);
+          _trackPushedStep(SessionMode.breath, null,
+              duration: breathDraft.duration);
         }
       }
 
@@ -573,7 +586,8 @@ class CareerSessionGenerator {
         _lastFrom = partDraft.from;
         _lastTo = partDraft.to;
         _trackPushedStep(partDraft.mode, partDraft.to,
-            from: partDraft.from, bpm: partDraft.bpm);
+            from: partDraft.from, bpm: partDraft.bpm,
+            duration: partDraft.duration);
         _fillProfile(profile, time, partDraft.duration!, stamina,
             valueStart: staminaBefore);
         time += partDraft.duration!;
@@ -603,7 +617,8 @@ class CareerSessionGenerator {
         steps.add(_draftToStep(fakeBreath.draft, time: time, text: fakeBreath.text));
         _lastMode = SessionMode.breath;
         _lastText = fakeBreath.text;
-        _trackPushedStep(SessionMode.breath, null);
+        _trackPushedStep(SessionMode.breath, null,
+            duration: fakeBreath.draft.duration);
         _fillProfile(profile, time, fakeBreath.draft.duration!, stamina,
             valueStart: staminaBeforeFake);
         time += fakeBreath.draft.duration!;
@@ -623,7 +638,7 @@ class CareerSessionGenerator {
         _lastFrom = chain.from;
         _lastTo = chain.to;
         _trackPushedStep(chain.mode, chain.to,
-            from: chain.from, bpm: chain.bpm);
+            from: chain.from, bpm: chain.bpm, duration: chain.duration);
         _fillProfile(profile, time, chain.duration!, stamina,
             valueStart: staminaBefore);
         time += chain.duration!;
@@ -685,7 +700,7 @@ class CareerSessionGenerator {
             valueStart: staminaBeforeFinal);
         if (mStep.mode != null && !mStep.isTextOnly) {
           _trackPushedStep(mStep.mode!, mStep.to,
-              from: mStep.from, bpm: mStep.bpm);
+              from: mStep.from, bpm: mStep.bpm, duration: mStep.duration);
         }
       }
       time += finalMilestone.durationSeconds;
@@ -766,7 +781,7 @@ class CareerSessionGenerator {
       _lastMode = SessionMode.rhythm;
       _lastText = preText;
       _trackPushedStep(SessionMode.rhythm, preDraft.to,
-          from: preDraft.from, bpm: preDraft.bpm);
+          from: preDraft.from, bpm: preDraft.bpm, duration: preDraft.duration);
       final staminaBeforePre = stamina;
       stamina = _applyStaminaChange(
           stamina, preDraft, time / effectiveDuration, cfg);
@@ -907,7 +922,8 @@ class CareerSessionGenerator {
       _lastText = boostText;
       _lastBpm = boostDraft.bpm ?? _lastBpm;
       _trackPushedStep(boostDraft.mode, boostDraft.to,
-          from: boostDraft.from, bpm: boostDraft.bpm);
+          from: boostDraft.from, bpm: boostDraft.bpm,
+          duration: boostDraft.duration);
       final staminaBeforeBoost = stamina;
       stamina = _applyStaminaChange(stamina, boostDraft, 1.0, cfg);
       _advanceSalivaSim(boostDraft);
@@ -975,7 +991,8 @@ class CareerSessionGenerator {
     _lastMode = finalMode;
     _lastText = finalStepText;
     _trackPushedStep(finalMode, finisherDraft.to,
-        from: finisherDraft.from, bpm: finisherDraft.bpm);
+        from: finisherDraft.from, bpm: finisherDraft.bpm,
+        duration: finisherDraft.duration);
     final finisherDuration = finisherDraft.duration!;
     steps.add(finisherStep);
     final staminaBeforeFinisher = stamina;
@@ -1022,7 +1039,8 @@ class CareerSessionGenerator {
     _lastMode = postFinalDraft.mode;
     _lastText = postFinalText;
     _trackPushedStep(postFinalDraft.mode, postFinalDraft.to,
-        from: postFinalDraft.from, bpm: postFinalDraft.bpm);
+        from: postFinalDraft.from, bpm: postFinalDraft.bpm,
+        duration: postFinalDraft.duration);
 
     final finalDuration = time + 2;
     final trimmedProfile = List<double>.generate(
@@ -1654,9 +1672,10 @@ class CareerSessionGenerator {
     // n'a plus rien à pousser. La cohérence par type (séries de plusieurs
     // steps sur bouche) ne marche que si rhythm reste un candidat valide
     // pendant la phase de chauffe.
-    if (diff >= 0.20 ||
-        _stepsOutsideBouche >= 2 ||
-        _lastType == _StepType.bouche) {
+    if ((diff >= 0.20 ||
+            _stepsOutsideBouche >= 2 ||
+            _lastType == _StepType.bouche) &&
+        _canChainRhythm()) {
       candidates.add(SessionMode.rhythm);
     }
     // Hold candidat dès diff >= 0.20 normalement, mais aussi dès diff >= 0.10
@@ -1721,6 +1740,12 @@ class CareerSessionGenerator {
         // d'aller-retours par step ». Le cap est calculé en secondes :
         // durMax = maxPulses × 120 / bpm (×2 car pulse = 2 beats).
         dur = _capRhythmDurationByPulses(dur, bpm, to);
+        // Cap rythme soutenu : tant que la milestone
+        // `intro_rhythm_sustained` n'a pas été acquittée, la chaîne rythme
+        // consécutive est plafonnée à 60 s. Le candidat n'arrive ici que
+        // si `_canChainRhythm()` était vrai au tirage, donc il reste au
+        // moins `_minRhythmStepSeconds` de marge.
+        dur = _capRhythmConsecutive(dur);
         return _StepDraft(mode: mode, bpm: bpm, from: from, to: to, duration: dur);
       case SessionMode.biffle:
         // Biffle = coups de queue sur le visage : pas de notion de
@@ -1925,8 +1950,47 @@ class CareerSessionGenerator {
   /// transparente : ils ne touchent ni le tracking de type ni le buffer
   /// `_recentEmits` — un breath de récup au milieu d'une série rythmée ne
   /// doit pas remettre le compteur à zéro côté détection de monotonie.
+  /// Plafond (en secondes) de la chaîne `rhythm` consécutive sans
+  /// `rhythmHeadMidSustained`. La milestone `intro_rhythm_sustained` ouvre
+  /// la possibilité de pomper plus d'une minute d'affilée — sans elle, le
+  /// générateur force une rupture (autre mode ou breath).
+  static const int _rhythmChainCapSeconds = 60;
+
+  /// Plancher de durée d'un step `rhythm` poussé via `_mapDifficultyToStep`.
+  /// Sert à éviter qu'un step soit tronqué à 1-2 s par `_capRhythmConsecutive`
+  /// quand on est presque au cap. En dessous, on retire `rhythm` des
+  /// candidats au tirage (`_canChainRhythm`).
+  static const int _minRhythmStepSeconds = 8;
+
+  /// Vrai si on peut encore ajouter un step `rhythm` à la chaîne sans
+  /// dépasser le cap (ou si l'unlock `rhythmHeadMidSustained` est acquis,
+  /// auquel cas le cap est désactivé).
+  bool _canChainRhythm() {
+    if (_unlockedKeys.contains(UnlockKey.rhythmHeadMidSustained)) return true;
+    return _consecutiveRhythmSeconds + _minRhythmStepSeconds
+        <= _rhythmChainCapSeconds;
+  }
+
+  /// Tronque la durée d'un step `rhythm` pour respecter le cap chaîne
+  /// consécutive. No-op si l'unlock est acquis ou si la marge restante
+  /// est suffisante.
+  int _capRhythmConsecutive(int dur) {
+    if (_unlockedKeys.contains(UnlockKey.rhythmHeadMidSustained)) return dur;
+    final remaining = _rhythmChainCapSeconds - _consecutiveRhythmSeconds;
+    if (remaining <= 0) return dur; // _canChainRhythm aurait dû filtrer
+    return min(dur, remaining);
+  }
+
   void _trackPushedStep(SessionMode mode, Position? to,
-      {Position? from, int? bpm}) {
+      {Position? from, int? bpm, int? duration}) {
+    // Cap rythme soutenu : on cumule la durée des `rhythm` consécutifs.
+    // Tout autre mode (breath compris — c'est une vraie pause de souffle)
+    // remet le compteur à zéro.
+    if (mode == SessionMode.rhythm) {
+      _consecutiveRhythmSeconds += duration ?? 0;
+    } else {
+      _consecutiveRhythmSeconds = 0;
+    }
     final type = _classifyStep(mode, to);
     if (type == _StepType.transit) return;
     if (type == _StepType.bouche) {

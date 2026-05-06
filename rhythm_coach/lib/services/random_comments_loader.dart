@@ -68,11 +68,20 @@ class RandomComment {
   /// au moins aussi profonde que ce seuil.
   final Position? minDepth;
 
+  /// Si non vide : la phrase n'est candidate que si **toutes** ces clés
+  /// d'unlock (au format `UnlockKey.serialized`) sont acquises pour la
+  /// session courante. Permet de scoper un sous-pool de phrases à une
+  /// compétence : les phrases « bave / déborde / saliva pleine » ne
+  /// sortent qu'une fois `sloppy_drool_basic` acquis, donnant à la
+  /// joueuse un retour audible que sa milestone vient de changer le jeu.
+  final List<String> requiresUnlock;
+
   const RandomComment({
     required this.text,
     this.modes,
     this.minBpm,
     this.minDepth,
+    this.requiresUnlock = const [],
   });
 
   /// Accepte deux formats sérialisés : string simple ou objet avec filtres.
@@ -84,26 +93,52 @@ class RandomComment {
           ?.map((e) => SessionMode.fromString(e as String))
           .whereType<SessionMode>()
           .toList();
+      final unlockRaw = raw['requires_unlock'];
+      final requiresUnlock = <String>[];
+      if (unlockRaw is String && unlockRaw.isNotEmpty) {
+        requiresUnlock.add(unlockRaw);
+      } else if (unlockRaw is List) {
+        for (final v in unlockRaw) {
+          if (v is String && v.isNotEmpty) requiresUnlock.add(v);
+        }
+      }
       return RandomComment(
         text: (raw['text'] as String?) ?? '',
         modes: modes != null && modes.isNotEmpty ? modes : null,
         minBpm: (raw['min_bpm'] as num?)?.toInt(),
         minDepth: Position.fromString(raw['min_depth'] as String?),
+        requiresUnlock: requiresUnlock,
       );
     }
     return const RandomComment(text: '');
   }
 
-  /// Vrai si ce commentaire s'applique au contexte courant.
+  /// Vrai si ce commentaire s'applique au contexte courant ET que tous
+  /// ses [requiresUnlock] sont satisfaits par [unlockedKeys].
   bool matches({
     required SessionMode mode,
     int? bpm,
     Position? depth,
+    Set<String> unlockedKeys = const {},
   }) {
     if (modes != null && !modes!.contains(mode)) return false;
     if (minBpm != null && (bpm == null || bpm < minBpm!)) return false;
     if (minDepth != null) {
       if (depth == null || depth.index < minDepth!.index) return false;
+    }
+    for (final k in requiresUnlock) {
+      if (!unlockedKeys.contains(k)) return false;
+    }
+    return true;
+  }
+
+  /// Vrai si la phrase n'a aucun filtre contextuel (mode/bpm/depth) et que
+  /// ses prérequis d'unlock sont satisfaits — sert de fallback dans
+  /// `pickFor` quand aucune phrase contextuelle ne match.
+  bool isContextlessFor(Set<String> unlockedKeys) {
+    if (modes != null || minBpm != null || minDepth != null) return false;
+    for (final k in requiresUnlock) {
+      if (!unlockedKeys.contains(k)) return false;
     }
     return true;
   }
@@ -135,21 +170,33 @@ class RandomCommentsBundle {
 
   /// Tire une phrase aléatoire compatible avec le contexte courant. Si
   /// aucune phrase contextuelle ne match, fallback sur les phrases sans
-  /// filtre (= phrases applicables partout). Si rien du tout, retourne null.
+  /// filtre (= phrases applicables partout) — toujours filtrées par les
+  /// `requires_unlock` éventuels. Si rien du tout, retourne null.
+  ///
+  /// [unlockedKeys] = compétences acquises pour la session courante (au
+  /// format `UnlockKey.serialized`). Une phrase avec `requires_unlock`
+  /// non couvert est exclue. Set vide = mode hérité (équivalent V1, sans
+  /// scope par compétence).
   String? pickFor({
     required SessionMode mode,
     int? bpm,
     Position? depth,
     required Random rng,
+    Set<String> unlockedKeys = const {},
   }) {
     final matching = comments
-        .where((c) => c.matches(mode: mode, bpm: bpm, depth: depth))
+        .where((c) => c.matches(
+              mode: mode,
+              bpm: bpm,
+              depth: depth,
+              unlockedKeys: unlockedKeys,
+            ))
         .toList();
     if (matching.isNotEmpty) {
       return matching[rng.nextInt(matching.length)].text;
     }
     final fallback = comments
-        .where((c) => c.modes == null && c.minBpm == null && c.minDepth == null)
+        .where((c) => c.isContextlessFor(unlockedKeys))
         .toList();
     if (fallback.isEmpty) return null;
     return fallback[rng.nextInt(fallback.length)].text;

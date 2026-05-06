@@ -1589,6 +1589,17 @@ class SessionController extends ChangeNotifier {
       return;
     }
 
+    // Pas de random pendant la fenêtre milestone : la séquence pédagogique
+    // enchaîne ses propres `text` scriptés et un random venant par-dessus
+    // briserait la dramaturgie de l'apprentissage. On reporte de 3 s plutôt
+    // que de stopper : la fenêtre se referme d'elle-même quand la milestone
+    // se termine, le scheduler reprend naturellement.
+    if (_isInMilestoneWindow()) {
+      _randomCommentTimer =
+          Timer(const Duration(seconds: 3), _fireRandomComment);
+      return;
+    }
+
     // Pas de random pendant beg / breath : ces modes sont vocaux ou
     // respiratoires, l'utilisatrice doit pouvoir se concentrer sur la
     // consigne scriptée sans qu'un commentaire random vienne par-dessus.
@@ -1618,13 +1629,21 @@ class SessionController extends ChangeNotifier {
     }
 
     // Tirage contextualisé : on filtre sur le mode/BPM/profondeur courants.
+    // Les phrases scopées par `requires_unlock` (ex. pool sloppy_drool_basic)
+    // ne sortent que si la compétence est acquise — donne à la joueuse un
+    // retour audible de ses milestones sans toucher au reste du gameplay.
     // Si aucune phrase ne match le contexte, fallback sur les phrases
-    // applicables partout (sans filtre).
+    // applicables partout (toujours filtrées par requires_unlock).
+    final unlockedKeys = milestoneService
+        .acquiredUnlockKeys()
+        .map((k) => k.serialized)
+        .toSet();
     final phrase = _randomComments.pickFor(
       mode: _beep.currentMode,
       bpm: _beep.currentBpm,
       depth: _beep.currentTo ?? _beep.currentFrom,
       rng: _random,
+      unlockedKeys: unlockedKeys,
     );
     if (phrase != null) _tts.speak(phrase);
 

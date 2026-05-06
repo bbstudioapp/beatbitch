@@ -38,21 +38,21 @@
     },
     {
       "id": "intro_deeper_basics",
-      "level": 2,
+      "level": 3,
       "displayLabel": "Plus profond — pose ta bouche",
       "unlocks": ["rhythm_mid_basic", "lick_full"],
       "requires": [],
       "branches": ["profondeur"],
       "sequence": [
-        {"time": 0,  "text": "Aujourd'hui tu vas aller plus loin. Sors ta langue. Pose ta bouche sur le bout, et lèche tout du long, jusqu'au fond.", "mode": "lick", "from": "tip", "to": "full", "bpm": 50, "duration": 14},
+        {"time": 0,  "text": "Aujourd'hui tu vas aller plus loin. Sors ta langue. Pose ta bouche sur le bout, et lèche jusqu'au milieu de ma queue.", "mode": "lick", "from": "tip", "to": "mid", "bpm": 50, "duration": 14},
         {"time": 14, "text": "Bien. Maintenant prends-le en bouche. Suce-moi jusqu'au milieu de ma queue.", "mode": "rhythm", "from": "tip", "to": "mid", "bpm": 75, "duration": 16},
         {"time": 30, "text": "Continue. Plus court, plus profond.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 85, "duration": 16},
-        {"time": 46, "text": "Reste-là, garde-le bien profond.", "mode": "hold", "to": "mid", "duration": 5},
-        {"time": 51, "text": "Suce un peu plus.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 85, "duration": 7},
-        {"time": 58, "text": "Retourne au fond, touche ta gorge, doucement", "mode": "hold", "to": "mid", "duration": 4},
-        {"time": 62, "text": "C’est bien, remonte un peu", "mode": "hold", "to": "head", "duration": 5},
-        {"time": 67, "text": "On y retourne, touche ta gorge, un peu plus", "mode": "hold", "to": "mid", "duration": 7},
-        {"time": 74, "text": "Parfait, reprend ton souffle.", "mode": "breath", "duration": 10}
+        {"time": 46, "text": "Reste-là, garde-le bien profond.", "mode": "hold", "to": "mid", "duration": 4},
+        {"time": 50, "text": "Suce un peu plus.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 85, "duration": 7},
+        {"time": 57, "text": "Retourne au fond, touche ta gorge, doucement.", "mode": "hold", "to": "mid", "duration": 4},
+        {"time": 61, "text": "C’est bien, remonte un peu.", "mode": "hold", "to": "head", "duration": 5},
+        {"time": 66, "text": "On y retourne, touche ta gorge.", "mode": "hold", "to": "mid", "duration": 4},
+        {"time": 70, "text": "Parfait, reprends ton souffle.", "mode": "breath", "duration": 10}
       ]
     },
     {
@@ -120,7 +120,7 @@
     },
     {
       "id": "intro_hold_mid",
-      "level": 4,
+      "level": 3,
       "displayLabel": "Hold position médiane",
       "unlocks": ["hold_mid_short"],
       "requires": [],
@@ -129,10 +129,10 @@
         {"time": 0,  "text": "Plus profond aujourd'hui. Tu vas aller toucher l'entrée de la gorge avec le bout de ma queue. Prends-la loin dans la bouche.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 90, "duration": 12},
         {"time": 12, "text": "Tiens-le là. Deux secondes.", "mode": "hold", "to": "mid", "duration": 3},
         {"time": 15, "text": "Respire. Garde-la profonde.", "mode": "breath", "duration": 6},
-        {"time": 21, "text": "Encore. Quatre secondes cette fois.", "mode": "hold", "to": "mid", "duration": 5},
-        {"time": 26, "text": "Bien. Tu le fais tellement bien qu'on en fait une de plus.", "mode": "breath", "duration": 5},
-        {"time": 31, "text": "Dernière. Trois secondes.", "mode": "hold", "to": "mid", "duration": 4},
-        {"time": 35, "text": "Bien fait. Lèche.", "mode": "lick", "from": "head", "to": "head", "bpm": 80, "duration": 10}
+        {"time": 21, "text": "Encore. Trois secondes cette fois.", "mode": "hold", "to": "mid", "duration": 4},
+        {"time": 25, "text": "Bien. Tu le fais tellement bien qu'on en fait une de plus.", "mode": "breath", "duration": 5},
+        {"time": 30, "text": "Dernière. Trois secondes.", "mode": "hold", "to": "mid", "duration": 4},
+        {"time": 34, "text": "Bien fait. Lèche.", "mode": "lick", "from": "head", "to": "head", "bpm": 80, "duration": 10}
       ]
     },
     {
@@ -182,17 +182,33 @@
     },
     {
       "id": "intro_resilience_endure",
-      "level": 5,
+      "level": 3,
       "displayLabel": "Tiens malgré tout",
       "unlocks": ["resilience_endure_basic"],
-      "requires": ["hold_mid_short"],
+      "requires": [],
       "branches": ["resilience", "endurance"],
       "sequence": [
-        {"time": 0,  "text": "Aujourd'hui on apprend à tenir quand c'est dur. Échauffe.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 95, "duration": 12},
-        {"time": 12, "text": "Tiens-le là. Plus longtemps que d'habitude. Six secondes.", "mode": "hold", "to": "mid", "duration": 6},
-        {"time": 18, "text": "Respire. Tu vas le refaire.", "mode": "breath", "duration": 6},
-        {"time": 24, "text": "Encore. Sept secondes cette fois.", "mode": "hold", "to": "mid", "duration": 7},
-        {"time": 31, "text": "Tu as tenu. Récupère.", "mode": "lick", "from": "head", "to": "mid", "bpm": 65, "duration": 10}
+        {"time": 0,  "text": "Aujourd'hui on apprend à tenir quand c'est dur. Échauffe doucement.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 90, "duration": 12},
+        {"time": 12, "text": "Continue. Tu vas pomper longtemps, sans craquer.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 95, "duration": 25},
+        {"time": 37, "text": "Maintenant tu vas tenir. Va toucher l'entrée de ta gorge avec le bout, et reste là.", "mode": "hold", "to": "mid", "duration": 3},
+        {"time": 40, "text": "Respire. Tu vas y retourner.", "mode": "breath", "duration": 6},
+        {"time": 46, "text": "Repars, plus vite. Encore plus longtemps.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 100, "duration": 25},
+        {"time": 71, "text": "Encore une tenue, plus longue. Va toucher ta gorge, quatre secondes.", "mode": "hold", "to": "mid", "duration": 4},
+        {"time": 75, "text": "Tu as tenu jusqu'au bout. Reprends ton souffle.", "mode": "breath", "duration": 10}
+      ]
+    },
+    {
+      "id": "intro_rhythm_sustained",
+      "level": 3,
+      "displayLabel": "Rythme soutenu — tiens la cadence",
+      "unlocks": ["rhythm_head_mid_sustained"],
+      "requires": [],
+      "branches": ["rythmeBiffle"],
+      "sequence": [
+        {"time": 0,  "text": "Aujourd'hui tu vas apprendre à tenir une cadence longue. Échauffe doucement.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 80, "duration": 12},
+        {"time": 12, "text": "Petit souffle, prépare-toi. Ce qui vient est long.", "mode": "breath", "duration": 6},
+        {"time": 18, "text": "Maintenant tu vas pomper sans t'arrêter, plus d'une minute. Pas de pauses. Tiens la cadence jusqu'au bout.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 90, "duration": 70},
+        {"time": 88, "text": "Tu as tenu, sans casser. Reprends ton souffle.", "mode": "breath", "duration": 12}
       ]
     },
     {
