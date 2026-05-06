@@ -61,6 +61,7 @@
   "sessionIntroBriefing": "BRIEFING",
   "sessionIntroReplay": "Réécouter",
   "sessionIntroReady": "JE SUIS PRÊTE",
+  "sessionPausedIndicator": "EN PAUSE",
   "sessionPrepInPlace": "EN PLACE",
   "sessionPrepInstruction": "Pose ton téléphone, mets-toi en position.",
   "sessionFinishedTitle": "SÉANCE TERMINÉE",
@@ -98,7 +99,9 @@
     }
   },
   "profileStatsSection": "STATISTIQUES",
+  "profileStatsEmpty": "Aucune statistique pour l'instant. Termine quelques séances pour révéler tes compteurs.",
   "profileBadgesSection": "BADGES",
+  "profileBadgesEmpty": "Aucun badge décroché pour l'instant.",
   "profileLevel": "Niveau {level}",
   "@profileLevel": {
     "placeholders": {
@@ -307,6 +310,7 @@
   "soundsVoiceSection": "Voix",
   "soundsVoiceSubtitle": "Choisis la voix française et la vitesse. Le bouton « Tester » prononce une phrase d'exemple.",
   "soundsRateLabel": "Vitesse",
+  "soundsPitchLabel": "Hauteur",
   "soundsTestVoice": "Tester la voix",
   "soundsNoVoiceDetected": "Aucune voix française détectée sur cet appareil.",
   "soundsAmbienceSection": "Ambiance",
@@ -545,6 +549,17 @@
     "placeholders": { "principalName": { "type": "String" } }
   },
   "coachFreeTrainingDialogContinueAnyway": "Continuer quand même",
+
+  "coachPrenomGateTitle": "{coachName} demande à te connaître",
+  "@coachPrenomGateTitle": {
+    "placeholders": { "coachName": { "type": "String" } }
+  },
+  "coachPrenomGateBody": "Avant de démarrer la séance avec {coachName}, donne-moi ton prénom — elle ne s'adressera plus à toi anonymement.",
+  "@coachPrenomGateBody": {
+    "placeholders": { "coachName": { "type": "String" } }
+  },
+  "coachPrenomGateField": "Ton prénom",
+  "coachPrenomGateConfirm": "Continuer",
 
   "coachFreeTrainingBannerTitle": "Session libre avec {coachName}",
   "@coachFreeTrainingBannerTitle": {

@@ -104,6 +104,58 @@ class CoachRequirement {
   }
 }
 
+/// Préférences vocales TTS d'un coach. Tout champ null = on garde le
+/// réglage par défaut (auto-sélection voix locale + rate/pitch globaux).
+/// Sert à donner une « couleur vocale » distincte à chaque coach.
+class CoachVoicePreset {
+  /// Nom système de la voix (ex: `fr-fr-x-fra-local`). Null = pas de
+  /// changement. Si la voix demandée n'existe pas sur l'appareil, on
+  /// retombe sur l'auto-sélection (cf. `TtsService.applyCoachVoicePreset`).
+  final String? voiceName;
+
+  /// Locale BCP-47 associée à la voix (ex: `fr-FR`). Null = on prend
+  /// celle de la voix résolue, ou la locale courante du moteur.
+  final String? voiceLocale;
+
+  /// Vitesse de parole. Plage usuelle 0.3..0.8. Null = `TtsService.defaultRate`.
+  final double? rate;
+
+  /// Hauteur de voix. Plage usuelle 0.5..2.0. Null = `TtsService.defaultPitch`.
+  final double? pitch;
+
+  const CoachVoicePreset({
+    this.voiceName,
+    this.voiceLocale,
+    this.rate,
+    this.pitch,
+  });
+
+  static const CoachVoicePreset empty = CoachVoicePreset();
+
+  bool get isEmpty =>
+      voiceName == null && voiceLocale == null && rate == null && pitch == null;
+
+  /// Désérialise depuis un objet JSON :
+  /// ```jsonc
+  /// "tts": { "voice": "fr-fr-x-fra-local", "rate": 0.55, "pitch": 1.30 }
+  /// ```
+  factory CoachVoicePreset.fromJson(Map<String, dynamic> json) {
+    double? asDouble(dynamic v) => (v is num) ? v.toDouble() : null;
+    String? asString(dynamic v) {
+      if (v is! String) return null;
+      final t = v.trim();
+      return t.isEmpty ? null : t;
+    }
+
+    return CoachVoicePreset(
+      voiceName: asString(json['voice'] ?? json['voiceName']),
+      voiceLocale: asString(json['voiceLocale'] ?? json['locale']),
+      rate: asDouble(json['rate']),
+      pitch: asDouble(json['pitch']),
+    );
+  }
+}
+
 /// Préférences gameplay d'un coach, **indépendantes de la langue**.
 /// Sérialisées dans `assets/career/coaches/<id>.json` (sans suffixe lang).
 ///
@@ -125,6 +177,10 @@ class CoachMeta {
   /// spécialisation. Null = aucun override.
   final Map<SessionMode, double>? modeWeights;
 
+  /// Preset vocal (voix nommée + rate + pitch). Null = pas d'override,
+  /// le coach parle avec la voix auto-sélectionnée par `TtsService`.
+  final CoachVoicePreset? voicePreset;
+
   const CoachMeta({
     this.name,
     this.archetype,
@@ -133,6 +189,7 @@ class CoachMeta {
     this.isPrincipal,
     this.requirements,
     this.modeWeights,
+    this.voicePreset,
   });
 
   static const CoachMeta empty = CoachMeta();
@@ -144,7 +201,8 @@ class CoachMeta {
       tier == null &&
       isPrincipal == null &&
       requirements == null &&
-      modeWeights == null;
+      modeWeights == null &&
+      voicePreset == null;
 
   /// Désérialise depuis un JSON top-level :
   /// ```jsonc
@@ -214,6 +272,11 @@ class CoachMeta {
 
     final rawName = json['name']?.toString().trim();
 
+    final ttsNode = json['tts'];
+    final voicePreset = ttsNode is Map<String, dynamic>
+        ? CoachVoicePreset.fromJson(ttsNode)
+        : null;
+
     return CoachMeta(
       name: (rawName != null && rawName.isNotEmpty) ? rawName : null,
       archetype: archetype,
@@ -224,6 +287,8 @@ class CoachMeta {
           : null,
       requirements: requirements,
       modeWeights: modeWeights,
+      voicePreset:
+          (voicePreset != null && !voicePreset.isEmpty) ? voicePreset : null,
     );
   }
 }
@@ -517,6 +582,11 @@ class Coach {
   /// d'override (le générateur applique uniquement la pondération spé).
   final Map<SessionMode, double> modeWeights;
 
+  /// Preset vocal TTS (voix + rate + pitch). `empty` = auto-sélection
+  /// + valeurs par défaut. Cf. [CoachVoicePreset] et la doc de
+  /// `TtsService.applyCoachVoicePreset`.
+  final CoachVoicePreset voicePreset;
+
   const Coach({
     required this.id,
     required this.name,
@@ -529,6 +599,7 @@ class Coach {
     this.requirements = CoachRequirement.none,
     this.phrases = CoachPhrasePack.empty,
     this.modeWeights = const {},
+    this.voicePreset = CoachVoicePreset.empty,
   });
 
   /// Renvoie une copie avec un autre pack de phrases. Si le pack porte
@@ -548,6 +619,7 @@ class Coach {
       requirements: requirements,
       phrases: pack,
       modeWeights: modeWeights,
+      voicePreset: voicePreset,
     );
   }
 
@@ -568,6 +640,7 @@ class Coach {
       requirements: meta.requirements ?? requirements,
       phrases: phrases,
       modeWeights: meta.modeWeights ?? modeWeights,
+      voicePreset: meta.voicePreset ?? voicePreset,
     );
   }
 

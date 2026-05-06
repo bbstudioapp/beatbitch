@@ -358,6 +358,12 @@ abstract class AppLocalizations {
   /// **'JE SUIS PRÊTE'**
   String get sessionIntroReady;
 
+  /// No description provided for @sessionPausedIndicator.
+  ///
+  /// In fr, this message translates to:
+  /// **'EN PAUSE'**
+  String get sessionPausedIndicator;
+
   /// No description provided for @sessionPrepInPlace.
   ///
   /// In fr, this message translates to:
@@ -478,11 +484,23 @@ abstract class AppLocalizations {
   /// **'STATISTIQUES'**
   String get profileStatsSection;
 
+  /// No description provided for @profileStatsEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune statistique pour l\'instant. Termine quelques séances pour révéler tes compteurs.'**
+  String get profileStatsEmpty;
+
   /// No description provided for @profileBadgesSection.
   ///
   /// In fr, this message translates to:
   /// **'BADGES'**
   String get profileBadgesSection;
+
+  /// No description provided for @profileBadgesEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun badge décroché pour l\'instant.'**
+  String get profileBadgesEmpty;
 
   /// No description provided for @profileLevel.
   ///
@@ -1119,6 +1137,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Vitesse'**
   String get soundsRateLabel;
+
+  /// No description provided for @soundsPitchLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Hauteur'**
+  String get soundsPitchLabel;
 
   /// No description provided for @soundsTestVoice.
   ///
@@ -2205,6 +2229,30 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Continuer quand même'**
   String get coachFreeTrainingDialogContinueAnyway;
+
+  /// No description provided for @coachPrenomGateTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'{coachName} demande à te connaître'**
+  String coachPrenomGateTitle(String coachName);
+
+  /// No description provided for @coachPrenomGateBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Avant de démarrer la séance avec {coachName}, donne-moi ton prénom — elle ne s\'adressera plus à toi anonymement.'**
+  String coachPrenomGateBody(String coachName);
+
+  /// No description provided for @coachPrenomGateField.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ton prénom'**
+  String get coachPrenomGateField;
+
+  /// No description provided for @coachPrenomGateConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Continuer'**
+  String get coachPrenomGateConfirm;
 
   /// No description provided for @coachFreeTrainingBannerTitle.
   ///

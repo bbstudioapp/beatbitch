@@ -524,20 +524,51 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
               : (inPrep
                   ? _PrepCountdownPanel(seconds: _prepCountdown!)
                   : (ctrl.isFinished
-                      ? _FinishedPanel(
-                          badgeUnlocks: ctrl.sessionBadgeUnlocks,
-                          hasPendingBadges: ctrl.hasPendingBadges,
-                          onRevealBadges: ctrl.revealBadgeUnlocks,
-                          endButtonLabel: widget.endButtonLabel ??
-                              t.sessionFinishedDefaultEnd,
-                          onEnd: () => Navigator.of(context).pop(),
-                          onEncore: widget.onRequestEncore == null
-                              ? null
-                              : () => widget.onRequestEncore!(ctrl),
-                          onSave: widget.canSave
-                              ? () => _handleSave(ctrl)
-                              : null,
-                        )
+                      ? (ctrl.hasPendingBadges
+                          // Phase 1 : juste après le post-final. On garde
+                          // l'écran de séance (animation, timer, ambiance)
+                          // visible, et on superpose un overlay centré avec
+                          // les boutons MERCI / ENCORE / SAUVEGARDER. Tap
+                          // MERCI → révélation des badges → bascule sur le
+                          // panel complet (phase 2) au prochain rebuild
+                          // (notifyListeners de revealBadgeUnlocks).
+                          ? Stack(
+                              children: [
+                                Positioned.fill(
+                                  child: _buildRunningView(ctrl),
+                                ),
+                                Positioned.fill(
+                                  child: _FinishedOverlay(
+                                    endButtonLabel: widget.endButtonLabel ??
+                                        t.sessionFinishedDefaultEnd,
+                                    onThanks: () =>
+                                        ctrl.revealBadgeUnlocks(),
+                                    onEncore: widget.onRequestEncore == null
+                                        ? null
+                                        : () => widget.onRequestEncore!(ctrl),
+                                    onSave: widget.canSave
+                                        ? () => _handleSave(ctrl)
+                                        : null,
+                                  ),
+                                ),
+                              ],
+                            )
+                          // Phase 2 : badges révélés. Panel complet avec
+                          // détails badges + points spé + bouton de sortie.
+                          : _FinishedPanel(
+                              badgeUnlocks: ctrl.sessionBadgeUnlocks,
+                              hasPendingBadges: false,
+                              onRevealBadges: ctrl.revealBadgeUnlocks,
+                              endButtonLabel: widget.endButtonLabel ??
+                                  t.sessionFinishedDefaultEnd,
+                              onEnd: () => Navigator.of(context).pop(),
+                              onEncore: widget.onRequestEncore == null
+                                  ? null
+                                  : () => widget.onRequestEncore!(ctrl),
+                              onSave: widget.canSave
+                                  ? () => _handleSave(ctrl)
+                                  : null,
+                            ))
                       : _buildRunningView(ctrl))),
         ),
       ),
@@ -631,6 +662,15 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
           const Spacer(),
           if (_showSessionControls) ...[
             _ControlsRow(controller: ctrl),
+            SizedBox(height: showBar ? 10 : 16),
+          ] else if (ctrl.isPaused) ...[
+            // En prod (contrôles cachés) on signale quand même l'état pause
+            // — sans ça, sortir et rentrer dans l'app ne donne aucun signal
+            // visuel que la séance est suspendue, le user peut croire qu'elle
+            // tourne en silence. Un simple chip suffit, pas de bouton (la
+            // reprise se fait au retour de focus côté contrôleur ou via les
+            // contrôles debug).
+            const _PausedIndicator(),
             SizedBox(height: showBar ? 10 : 16),
           ],
           if (widget.isCareer && widget.onRequestUpgrade != null)
@@ -863,6 +903,49 @@ class _ControlsRow extends StatelessWidget {
         const SizedBox(width: 32),
         const SizedBox(width: 64),
       ],
+    );
+  }
+}
+
+/// Indicateur visuel d'état « en pause » pour la version prod (contrôles
+/// cachés). Affiché uniquement quand `SessionController.isPaused` — sinon
+/// l'utilisatrice n'a aucun signe de l'état de la séance après une sortie
+/// d'app. Pas de bouton de reprise ici : la reprise au retour de focus est
+/// gérée plus haut dans la stack ; ce chip est purement informatif.
+class _PausedIndicator extends StatelessWidget {
+  const _PausedIndicator();
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: AppTheme.accent.withValues(alpha: 0.5),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.pause_circle_filled,
+                size: 18, color: AppTheme.accent),
+            const SizedBox(width: 8),
+            Text(
+              t.sessionPausedIndicator,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 2,
+                color: AppTheme.accent,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -1257,6 +1340,193 @@ class _PrepCountdownPanel extends StatelessWidget {
                 fontSize: 14,
                 color: AppTheme.textMuted,
                 height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Overlay affiché en phase 1 (juste après `_finish`, badges encore
+/// cachés). Ne couvre pas l'écran : il se superpose à l'animation /
+/// timer / ambiance qui restent visibles dessous. Volontairement
+/// minimaliste — on veut que la dramaturgie de fin (chime + dernière
+/// phrase) s'enchaîne sans rupture visuelle, et que les boutons
+/// MERCI / ENCORE soient juste là, en plein milieu, pour valider la
+/// sortie quand l'utilisatrice est prête. Tap MERCI → révélation des
+/// badges → bascule sur le `_FinishedPanel` complet.
+class _FinishedOverlay extends StatefulWidget {
+  final String endButtonLabel;
+  final Future<void> Function() onThanks;
+  final Future<void> Function()? onEncore;
+  final Future<String?> Function()? onSave;
+
+  const _FinishedOverlay({
+    required this.endButtonLabel,
+    required this.onThanks,
+    required this.onEncore,
+    required this.onSave,
+  });
+
+  @override
+  State<_FinishedOverlay> createState() => _FinishedOverlayState();
+}
+
+class _FinishedOverlayState extends State<_FinishedOverlay> {
+  bool _encoreInFlight = false;
+  bool _saveInFlight = false;
+  bool _saved = false;
+
+  Future<void> _handleEncore() async {
+    final cb = widget.onEncore;
+    if (cb == null || _encoreInFlight) return;
+    setState(() => _encoreInFlight = true);
+    try {
+      await cb();
+    } finally {
+      if (mounted) setState(() => _encoreInFlight = false);
+    }
+  }
+
+  Future<void> _handleSave() async {
+    final cb = widget.onSave;
+    if (cb == null || _saveInFlight || _saved) return;
+    setState(() => _saveInFlight = true);
+    try {
+      final name = await cb();
+      if (!mounted) return;
+      if (name != null) {
+        setState(() => _saved = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).sessionFinishedSavedSnack(name),
+            ),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saveInFlight = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Voile sombre derrière les boutons : laisse l'animation visible
+            // mais améliore la lisibilité — sinon le texte des boutons se
+            // fond dans la silhouette / orbe en arrière-plan.
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+              decoration: BoxDecoration(
+                color: AppTheme.background.withValues(alpha: 0.78),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: AppTheme.accent.withValues(alpha: 0.35),
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    t.sessionFinishedTitle,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 4,
+                      color: AppTheme.accent,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      onPressed:
+                          _encoreInFlight ? null : () => widget.onThanks(),
+                      child: Text(
+                        widget.endButtonLabel.toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (widget.onEncore != null) ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        onPressed: _encoreInFlight ? null : _handleEncore,
+                        child: _encoreInFlight
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2.5),
+                              )
+                            : Text(
+                                t.sessionFinishedEncore,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 2,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                  if (widget.onSave != null) ...[
+                    const SizedBox(height: 8),
+                    TextButton.icon(
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 10, horizontal: 12),
+                      ),
+                      onPressed:
+                          (_saveInFlight || _saved) ? null : _handleSave,
+                      icon: Icon(
+                        _saved ? Icons.check : Icons.bookmark_add_outlined,
+                        size: 18,
+                      ),
+                      label: Text(
+                        _saved
+                            ? t.sessionFinishedSaved
+                            : (_saveInFlight
+                                ? t.sessionFinishedSaving
+                                : t.sessionFinishedSaveButton),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ],

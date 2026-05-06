@@ -38,6 +38,7 @@ class TtsService {
   // État courant exposé pour permettre aux écrans (ex: SONS) d'afficher
   // les bons défauts de slider et de sélecteur.
   double _rate = _defaultRate;
+  double _pitch = _defaultPitch;
   String? _currentVoiceName;
 
   TtsService({Locale locale = const Locale('fr')}) : _locale = locale;
@@ -50,8 +51,13 @@ class TtsService {
   bool get isSpeaking => _speaking;
 
   double get currentRate => _rate;
+  double get currentPitch => _pitch;
   String? get currentVoiceName => _currentVoiceName;
   Locale get locale => _locale;
+
+  /// Valeurs par défaut, exposées pour les UI qui veulent réinitialiser.
+  static double get defaultRate => _defaultRate;
+  static double get defaultPitch => _defaultPitch;
 
   void attachProfile(UserProfileService profile) {
     _profile = profile;
@@ -193,7 +199,10 @@ class TtsService {
     await _tts.setSpeechRate(_rate);
   }
 
-  Future<void> setPitch(double pitch) => _tts.setPitch(pitch.clamp(0.5, 2.0));
+  Future<void> setPitch(double pitch) async {
+    _pitch = pitch.clamp(0.5, 2.0);
+    await _tts.setPitch(_pitch);
+  }
 
   Future<void> setVolume(double volume) =>
       _tts.setVolume(volume.clamp(0.0, 1.0));
@@ -254,6 +263,57 @@ class TtsService {
   Future<void> setVoiceByName(String name, String locale) async {
     await _tts.setVoice({'name': name, 'locale': locale});
     _currentVoiceName = name;
+  }
+
+  /// Applique un preset vocal coach : voix nommée + rate + pitch. Toute
+  /// valeur null laisse le réglage courant intact. Utilisé au start d'une
+  /// session carrière pour donner sa « couleur vocale » à chaque coach
+  /// (cf. `assets/career/coaches/<id>.json` → `tts.voice/rate/pitch`).
+  ///
+  /// Si la voix demandée n'existe pas sur l'appareil, on tombe sur
+  /// `_selectVoice()` (auto-sélection préférée locale) plutôt que
+  /// d'échouer silencieusement avec une voix exotique.
+  Future<void> applyCoachVoicePreset({
+    String? voiceName,
+    String? voiceLocale,
+    double? rate,
+    double? pitch,
+  }) async {
+    if (!_initialized) await init();
+    if (voiceName != null) {
+      try {
+        final voices = await listVoicesForLocale();
+        final match = voices.firstWhereOrNull(
+          (v) => (v['name'] ?? '') == voiceName,
+        );
+        if (match != null) {
+          await setVoiceByName(
+            voiceName,
+            voiceLocale ?? match['locale'] ?? _ttsLanguageTag(_locale),
+          );
+        } else {
+          if (kDebugMode) {
+            debugPrint('[TTS] preset coach : voix « $voiceName » introuvable, '
+                'fallback auto');
+          }
+          await _selectVoice();
+        }
+      } catch (e) {
+        if (kDebugMode) debugPrint('[TTS] applyCoachVoicePreset KO : $e');
+      }
+    }
+    if (rate != null) await setRate(rate);
+    if (pitch != null) await setPitch(pitch);
+  }
+
+  /// Réinitialise voix/rate/pitch aux valeurs par défaut. Appelé en sortie
+  /// de session carrière pour ne pas qu'un preset coach contamine les
+  /// autres écrans (SONS, autre coach, scénario hors carrière).
+  Future<void> restoreDefaultVoicePreset() async {
+    if (!_initialized) await init();
+    await setRate(_defaultRate);
+    await setPitch(_defaultPitch);
+    await _selectVoice();
   }
 
   Future<void> dispose() async {

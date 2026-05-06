@@ -148,6 +148,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get sessionIntroReady => 'JE SUIS PRÊTE';
 
   @override
+  String get sessionPausedIndicator => 'EN PAUSE';
+
+  @override
   String get sessionPrepInPlace => 'EN PLACE';
 
   @override
@@ -217,7 +220,14 @@ class AppLocalizationsFr extends AppLocalizations {
   String get profileStatsSection => 'STATISTIQUES';
 
   @override
+  String get profileStatsEmpty =>
+      'Aucune statistique pour l\'instant. Termine quelques séances pour révéler tes compteurs.';
+
+  @override
   String get profileBadgesSection => 'BADGES';
+
+  @override
+  String get profileBadgesEmpty => 'Aucun badge décroché pour l\'instant.';
 
   @override
   String profileLevel(int level) {
@@ -606,6 +616,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get soundsRateLabel => 'Vitesse';
 
   @override
+  String get soundsPitchLabel => 'Hauteur';
+
+  @override
   String get soundsTestVoice => 'Tester la voix';
 
   @override
@@ -877,7 +890,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get careerDebugShowTtsTexts => 'Afficher les textes TTS';
 
-  @override
   @override
   String get careerDebugStatStamina => 'Stamina fin';
 
@@ -1195,6 +1207,22 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get coachFreeTrainingDialogContinueAnyway => 'Continuer quand même';
+
+  @override
+  String coachPrenomGateTitle(String coachName) {
+    return '$coachName demande à te connaître';
+  }
+
+  @override
+  String coachPrenomGateBody(String coachName) {
+    return 'Avant de démarrer la séance avec $coachName, donne-moi ton prénom — elle ne s\'adressera plus à toi anonymement.';
+  }
+
+  @override
+  String get coachPrenomGateField => 'Ton prénom';
+
+  @override
+  String get coachPrenomGateConfirm => 'Continuer';
 
   @override
   String coachFreeTrainingBannerTitle(String coachName) {

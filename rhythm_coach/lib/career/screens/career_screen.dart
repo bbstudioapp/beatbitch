@@ -154,12 +154,24 @@ class _CareerScreenState extends State<CareerScreen> {
         : (_includeHandOverride ?? bundle.includeHand);
 
     final activeCoach = _resolveCoach(bundle);
+    // À partir du tier 2 (Hélène), on ne démarre pas tant que l'utilisatrice
+    // n'a pas posé un prénom : les coachs supérieurs s'adressent à elle de
+    // manière personnelle, et entendre « salope » sans aucun prénom dilue
+    // la tension dramaturgique recherchée. Lina (tier 1) reste accessible
+    // sans prénom — le bizutage de découverte tolère l'anonymat.
+    if (activeCoach.tier >= 2 &&
+        (widget.userProfile.prenom == null ||
+            widget.userProfile.prenom!.trim().isEmpty)) {
+      final ok = await _promptForPrenom(activeCoach);
+      if (!ok || !mounted) return;
+    }
     final coachAdvances = coachService.advancesTier(activeCoach);
     // Compose la bank du coach par-dessus la globale : tirage prioritaire
     // sur les phrases du coach, fallback transparent sur la PhraseBank
     // commune pour les cases vides.
     final coachBank = activeCoach.toPhraseBank(fallback: bundle.bank, specialization: bundle.specialization);
     _installCoachNameResolver(activeCoach);
+    await _applyCoachVoicePreset(activeCoach);
 
     // Force quickie=false sous le seuil de déblocage — sécurité au cas où
     // une persistance antérieure (avant le verrou) ou un toggle en RAM ne
@@ -299,6 +311,7 @@ class _CareerScreenState extends State<CareerScreen> {
 
     if (verifier != null) camService.stopSessionDetection();
     widget.tts.setNameResolver(null);
+    await widget.tts.restoreDefaultVoicePreset();
     // Reset des unlocks provisoires : la session est terminée. Si la
     // milestone a été acquittée, son unlock est déjà persisté dans
     // `_completed` via `markCompleted` ; sinon, on retire l'illusion.
@@ -330,6 +343,96 @@ class _CareerScreenState extends State<CareerScreen> {
       userFallback: widget.userProfile.activePool,
     );
     widget.tts.setNameResolver(resolver);
+  }
+
+  /// Ouvre un dialog modal qui force la saisie d'un prénom. Retourne
+  /// `true` si l'utilisatrice a validé un prénom non vide (alors persisté
+  /// via `UserProfileService.setPrenom`), `false` si elle a annulé. Sert
+  /// de gate avant de démarrer une séance avec un coach tier ≥ 2 — la
+  /// session ne se lance pas tant qu'on n'a pas de prénom à utiliser.
+  Future<bool> _promptForPrenom(Coach coach) async {
+    final controller = TextEditingController();
+    final t = AppLocalizations.of(context);
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: AppTheme.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(t.coachPrenomGateTitle(coach.name)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                t.coachPrenomGateBody(coach.name),
+                style: const TextStyle(
+                  color: AppTheme.textSecondary,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                textCapitalization: TextCapitalization.words,
+                decoration: InputDecoration(
+                  labelText: t.coachPrenomGateField,
+                  border: const OutlineInputBorder(),
+                ),
+                onSubmitted: (_) {
+                  if (controller.text.trim().isNotEmpty) {
+                    Navigator.of(ctx).pop(true);
+                  }
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(t.commonCancel),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (controller.text.trim().isEmpty) return;
+                Navigator.of(ctx).pop(true);
+              },
+              child: Text(t.coachPrenomGateConfirm),
+            ),
+          ],
+        );
+      },
+    );
+    if (result == true) {
+      await widget.userProfile.setPrenom(controller.text.trim());
+      return true;
+    }
+    return false;
+  }
+
+  /// Applique le preset vocal du coach (voix + rate + pitch) au moteur TTS.
+  /// No-op si le coach n'a pas de preset déclaré dans son JSON. La sortie
+  /// de session restaure les valeurs par défaut via
+  /// `TtsService.restoreDefaultVoicePreset`.
+  Future<void> _applyCoachVoicePreset(Coach coach) async {
+    final preset = coach.voicePreset;
+    if (preset.isEmpty) {
+      // Pas de preset : on s'assure quand même que les défauts sont en
+      // place — au cas où un coach précédent en aurait posé un et qu'on
+      // soit revenu sur ce coach sans passer par un restoreDefaults.
+      await widget.tts.restoreDefaultVoicePreset();
+      return;
+    }
+    await widget.tts.applyCoachVoicePreset(
+      voiceName: preset.voiceName,
+      voiceLocale: preset.voiceLocale,
+      rate: preset.rate,
+      pitch: preset.pitch,
+    );
   }
 
   /// Action « Supplier » : régénère la suite de la séance à un palier
@@ -532,6 +635,7 @@ class _CareerScreenState extends State<CareerScreen> {
     final coachAdvances = coachService.advancesTier(activeCoach);
     final coachBank = activeCoach.toPhraseBank(fallback: bundle.bank, specialization: bundle.specialization);
     _installCoachNameResolver(activeCoach);
+    await _applyCoachVoicePreset(activeCoach);
 
     final encoreOpening = coachBank.pickEncore(Random()) ??
         CoachPhrasesService.instance.current.encoreFallback;
@@ -615,6 +719,7 @@ class _CareerScreenState extends State<CareerScreen> {
 
     if (verifier != null) camService.stopSessionDetection();
     widget.tts.setNameResolver(null);
+    await widget.tts.restoreDefaultVoicePreset();
 
     // Reload du bundle après le retour de la séance encore : le `_start`
     // initial avait déjà reloadé au moment du pushReplacement, mais à ce

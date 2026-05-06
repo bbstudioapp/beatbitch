@@ -291,23 +291,54 @@ class _StatsBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
+    // On masque les stats qui n'ont jamais été incrémentées : on ne veut
+    // pas dévoiler les axes possibles (throatfucks, biffles, holds…) à une
+    // utilisatrice qui n'y a pas encore touché. Le bloc `gateBy` porte
+    // l'entier de référence ; dès qu'il dépasse 0, l'entrée est révélée.
     final entries = <_StatEntry>[
-      _StatEntry(t.profileStatSessionsCompleted, '${stats.sessionsCompleted}'),
-      _StatEntry(t.profileStatNoFailStreak, '${stats.sessionsNoFailStreak}'),
-      _StatEntry(t.profileStatDailyStreak, '${stats.dailyStreak} j'),
+      _StatEntry(t.profileStatSessionsCompleted, '${stats.sessionsCompleted}',
+          gateBy: stats.sessionsCompleted),
+      _StatEntry(t.profileStatNoFailStreak, '${stats.sessionsNoFailStreak}',
+          gateBy: stats.sessionsNoFailStreak),
+      _StatEntry(t.profileStatDailyStreak, '${stats.dailyStreak} j',
+          gateBy: stats.dailyStreak),
       _StatEntry(t.profileStatTotalTime,
-          formatDurationDetailed(context, stats.totalSeconds)),
-      _StatEntry(t.profileStatThroatfucks, '${stats.throatfucks}'),
-      _StatEntry(t.profileStatBiffles, '${stats.biffles}'),
-      _StatEntry(t.profileStatHoldFullMax, '${stats.maxHoldFullAtomic} s'),
+          formatDurationDetailed(context, stats.totalSeconds),
+          gateBy: stats.totalSeconds),
+      _StatEntry(t.profileStatThroatfucks, '${stats.throatfucks}',
+          gateBy: stats.throatfucks),
+      _StatEntry(t.profileStatBiffles, '${stats.biffles}',
+          gateBy: stats.biffles),
+      _StatEntry(t.profileStatHoldFullMax, '${stats.maxHoldFullAtomic} s',
+          gateBy: stats.maxHoldFullAtomic),
       _StatEntry(t.profileStatHoldThroatTotal,
-          formatDurationDetailed(context, stats.holdThroatSeconds)),
+          formatDurationDetailed(context, stats.holdThroatSeconds),
+          gateBy: stats.holdThroatSeconds),
       _StatEntry(t.profileStatHoldFullTotal,
-          formatDurationDetailed(context, stats.holdFullSeconds)),
-      _StatEntry(t.profileStatEncores, '${stats.encoresAsked}'),
-      _StatEntry(t.profileStatQuickies, '${stats.quickiesCompleted}'),
-      _StatEntry(t.profileStatModesUsed, '${stats.distinctModesUsed} / 8'),
-    ];
+          formatDurationDetailed(context, stats.holdFullSeconds),
+          gateBy: stats.holdFullSeconds),
+      _StatEntry(t.profileStatEncores, '${stats.encoresAsked}',
+          gateBy: stats.encoresAsked),
+      _StatEntry(t.profileStatQuickies, '${stats.quickiesCompleted}',
+          gateBy: stats.quickiesCompleted),
+      _StatEntry(t.profileStatModesUsed, '${stats.distinctModesUsed} / 8',
+          gateBy: stats.distinctModesUsed),
+    ].where((e) => e.gateBy > 0).toList(growable: false);
+
+    if (entries.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Text(
+          t.profileStatsEmpty,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+        ),
+      );
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -354,7 +385,10 @@ class _StatsBlock extends StatelessWidget {
 class _StatEntry {
   final String label;
   final String value;
-  const _StatEntry(this.label, this.value);
+  /// Valeur de référence utilisée pour décider si l'entrée est affichée.
+  /// 0 = stat jamais touchée → entrée masquée (on ne révèle pas l'axe).
+  final int gateBy;
+  const _StatEntry(this.label, this.value, {required this.gateBy});
 }
 
 class _BadgesGrid extends StatelessWidget {
@@ -364,6 +398,26 @@ class _BadgesGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // On ne dévoile que les badges déjà décrochés au moins en bronze.
+    // Les familles à tier=none restent invisibles → pas de spoil sur les
+    // axes possibles tant que l'utilisatrice n'a pas commencé à les
+    // travailler.
+    final unlocked = states.where((s) => s.tier != BadgeTier.none).toList();
+    if (unlocked.isEmpty) {
+      final t = AppLocalizations.of(context);
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Text(
+          t.profileBadgesEmpty,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+        ),
+      );
+    }
     return GridView.count(
       crossAxisCount: 2,
       mainAxisSpacing: 10,
@@ -372,7 +426,7 @@ class _BadgesGrid extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       childAspectRatio: 1.6,
       children: [
-        for (final s in states) _BadgeCard(state: s),
+        for (final s in unlocked) _BadgeCard(state: s),
       ],
     );
   }
