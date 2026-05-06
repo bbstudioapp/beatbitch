@@ -433,6 +433,11 @@ class CareerSessionGenerator {
       // Variété amplitude : évite d'enchaîner deux fois exactement la
       // même paire from/to dans le même mode.
       draft = _diversifyAmplitude(draft);
+      // Rampe BPM intra-step : pour les steps longs (≥ 30 s) sur amplitude
+      // moyenne (≤ mid), pose `bpmEnd` distinct pour raconter une
+      // montée / descente sur la durée. Skip throat/full pour ne pas
+      // violer le cap pulses (cf. `_capRhythmDurationByPulses`).
+      draft = _maybeApplyBpmRamp(draft, progress);
 
       // Sas breath conditionnel : on insère un breath UNIQUEMENT si le
       // draft retenu provoquerait un déficit d'endurance (stamina projetée
@@ -2832,6 +2837,61 @@ class CareerSessionGenerator {
     );
   }
 
+  /// Pose éventuellement une rampe `bpmEnd` sur le draft : sur les steps
+  /// rythmés (rhythm / lick / hand) longs (≥ 30 s) à profondeur ≤ mid,
+  /// avec 50 % de probabilité, retourne une copie où `bpmEnd` est décalé
+  /// de ±15..25 BPM. Sens biaisé par la position dans la séance : 70 %
+  /// montée quand `progress > 0.5` (la séance pousse vers le finish),
+  /// 50/50 sinon.
+  ///
+  /// **Pourquoi seulement ≤ mid** : un step throat ou full a sa propre
+  /// tension (la profondeur), pas besoin d'ajouter une rampe ; et
+  /// surtout, accélérer un step throat/full ferait dépasser le cap
+  /// pulses calculé sur le BPM de départ (cf. `_capRhythmDurationByPulses`).
+  /// On garde la rampe pour les phases de bouche moyennes où l'oreille
+  /// a vraiment le temps de se lasser sans contraste de profondeur.
+  ///
+  /// **Bornes** : le BPM cible est clampé entre 50 (sinon on tombe dans
+  /// du quasi-statique) et le cap niveau pour le mode (170 hand / 180
+  /// rhythm pour les niveaux hauts, plus bas pour les débutantes).
+  _StepDraft _maybeApplyBpmRamp(_StepDraft d, double progress) {
+    if (d.mode != SessionMode.rhythm &&
+        d.mode != SessionMode.lick &&
+        d.mode != SessionMode.hand) {
+      return d;
+    }
+    final bpm = d.bpm;
+    final dur = d.duration;
+    final to = d.to;
+    if (bpm == null || dur == null || to == null) return d;
+    if (dur < 30) return d;
+    if (to.index > Position.mid.index) return d;
+    if (_rng.nextDouble() >= 0.5) return d;
+
+    // Direction : 70 % montée passé la moitié de la séance, sinon 50/50.
+    final goesUp =
+        progress > 0.5 ? _rng.nextDouble() < 0.70 : _rng.nextBool();
+    final delta = 15 + _rng.nextInt(11); // [15, 25]
+    // Cap BPM par mode + niveau, miroir de la logique boost (`110 +
+    // (level-1)*4` pour hand, `130 + ...` pour rhythm). Lick suit rhythm
+    // — c'est aussi un mode rythmé bouche.
+    final hardCap = d.mode == SessionMode.hand
+        ? (110 + (_level - 1) * 4).clamp(60, 170)
+        : (130 + (_level - 1) * 4).clamp(60, 180);
+    final raw = goesUp ? bpm + delta : bpm - delta;
+    final clamped = raw.clamp(50, hardCap);
+    if (clamped == bpm) return d; // Rampe nulle = pas la peine.
+    return _StepDraft(
+      mode: d.mode,
+      bpm: d.bpm,
+      bpmEnd: clamped,
+      from: d.from,
+      to: d.to,
+      duration: d.duration,
+      chainNext: d.chainNext,
+    );
+  }
+
   /// Convertit un [_StepDraft] interne en [SessionStep] sérialisable.
   /// Pour les modes hold/beg, swap `from` (position cible interne au draft)
   /// vers `to` côté SessionStep — sémantique « on tient jusqu'à cette
@@ -2846,6 +2906,7 @@ class CareerSessionGenerator {
       text: text,
       mode: draft.mode,
       bpm: draft.bpm,
+      bpmEnd: draft.bpmEnd,
       from: draft.from,
       to: draft.to,
       duration: draft.duration,
@@ -3256,6 +3317,10 @@ _StepType _classifyStep(SessionMode mode, Position? to) {
 class _StepDraft {
   final SessionMode mode;
   final int? bpm;
+
+  /// BPM cible en fin de step pour les rampes intra-step (cf. doc de
+  /// `SessionStep.bpmEnd`). Null = pas de rampe (BPM constant).
+  final int? bpmEnd;
   final Position? from;
   final Position? to;
   final int? duration;
@@ -3272,6 +3337,7 @@ class _StepDraft {
     required this.from,
     required this.to,
     required this.duration,
+    this.bpmEnd,
     this.chainNext,
   });
 
@@ -3279,6 +3345,7 @@ class _StepDraft {
         time: t,
         mode: mode,
         bpm: bpm,
+        bpmEnd: bpmEnd,
         from: from,
         to: to,
         duration: duration,

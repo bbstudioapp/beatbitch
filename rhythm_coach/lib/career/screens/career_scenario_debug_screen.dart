@@ -955,7 +955,10 @@ class _CareerScenarioDebugScreenState
                   children: [
                     if (step.from != null || step.to != null)
                       _chip(_positionLabel(context, step)),
-                    if (step.bpm != null) _chip('${step.bpm} BPM'),
+                    if (step.bpm != null)
+                      _chip(step.bpmEnd != null && step.bpmEnd != step.bpm
+                          ? '${step.bpm}→${step.bpmEnd} BPM'
+                          : '${step.bpm} BPM'),
                     if (step.isTextOnly) _chip(t.careerDebugTextOnly),
                     if (humilReq > 0)
                       _chip(

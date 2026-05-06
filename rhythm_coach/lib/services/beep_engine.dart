@@ -80,6 +80,18 @@ class BeepEngine {
   Position _from = Position.head;
   Position? _to;
   int _bpm = 60;
+
+  /// BPM **cible** en fin de step pour les rampes intra-step. Null = pas
+  /// de rampe, le loop tourne à `_bpm` constant. Quand non null et
+  /// différent de `_bpm`, le BPM utilisé pour planifier chaque tick est
+  /// interpolé linéairement entre `_bpm` (à `t=0`) et `_bpmEnd` (à
+  /// `t=_loopDurationMs`). Cf. `_currentInterpolatedBpm`.
+  int? _bpmEnd;
+
+  /// Durée du step rythmé en cours, en millisecondes. Sert au calcul
+  /// d'interpolation BPM. Null = pas de rampe (la rampe a besoin d'une
+  /// fenêtre temporelle pour avoir du sens).
+  int? _loopDurationMs;
   bool _alternateToggle = false;
 
   /// Hand : alternance down/up indépendante du toggle de position.
@@ -225,6 +237,21 @@ class BeepEngine {
     final previousMode = _mode;
     _mode = mode;
     if (step.bpm != null) _bpm = step.bpm!.clamp(20, 300);
+    // Rampe BPM intra-step : on n'arme `_bpmEnd` / `_loopDurationMs` que
+    // si la valeur cible est explicitement différente du BPM de départ ET
+    // qu'on a une durée connue. Sinon on retombe en mode constant — un
+    // step sans `bpmEnd` ou avec `bpmEnd == bpm` ne change rien à
+    // l'ancien comportement.
+    if (step.bpmEnd != null &&
+        step.bpmEnd != step.bpm &&
+        step.duration != null &&
+        step.duration! > 0) {
+      _bpmEnd = step.bpmEnd!.clamp(20, 300);
+      _loopDurationMs = step.duration! * 1000;
+    } else {
+      _bpmEnd = null;
+      _loopDurationMs = null;
+    }
 
     // Hold et beg : la position cible vient de `step.to` (sémantique « tenir
     // jusqu'à ce point »). On la stocke dans `_from` pour rester compatible
@@ -329,24 +356,46 @@ class BeepEngine {
   /// Le visuel (orbe) est piloté par `beatStream` → si l'audio est régulier,
   /// le visuel l'est aussi.
   void _startBeatLoop({required double volume}) {
-    final intervalMs = (60000 / _bpm).round();
     final myGen = ++_loopGen;
     final startMs = DateTime.now().millisecondsSinceEpoch;
     _emitPositionBeat(volume);
-    var n = 1;
+    // `lastTargetMs` accumule les intervalles idéaux successifs. Sans
+    // rampe, `currentInterval` est constant et on retrouve le calcul
+    // historique `startMs + n × intervalMs`. Avec rampe, l'intervalle
+    // change à chaque tick (cf. `_currentInterpolatedBpm`), donc on cumule
+    // explicitement plutôt que d'utiliser `n * intervalMs`.
+    var lastTargetMs = startMs;
     void scheduleNext() {
       if (myGen != _loopGen) return;
-      final targetMs = startMs + n * intervalMs;
+      final elapsedMs = lastTargetMs - startMs;
+      final currentBpm = _currentInterpolatedBpm(elapsedMs);
+      final intervalMs = (60000 / currentBpm).round();
+      lastTargetMs += intervalMs;
       final delayMs =
-          max(1, targetMs - DateTime.now().millisecondsSinceEpoch);
+          max(1, lastTargetMs - DateTime.now().millisecondsSinceEpoch);
       _loopTimer = Timer(Duration(milliseconds: delayMs), () {
         if (myGen != _loopGen) return;
         _emitPositionBeat(volume);
-        n++;
         scheduleNext();
       });
     }
     scheduleNext();
+  }
+
+  /// BPM courant à `elapsedMs` du démarrage du loop. Retourne `_bpm`
+  /// (constant) si pas de rampe armée. Sinon interpolation linéaire entre
+  /// `_bpm` (t=0) et `_bpmEnd` (t=`_loopDurationMs`), clampée — au-delà
+  /// de la durée annoncée (le step a duré plus que prévu, cas rare mais
+  /// possible si un fail/pause a glissé), on reste sur `_bpmEnd` plutôt
+  /// que d'extrapoler.
+  double _currentInterpolatedBpm(int elapsedMs) {
+    final bpmEnd = _bpmEnd;
+    final dur = _loopDurationMs;
+    if (bpmEnd == null || dur == null || dur <= 0) {
+      return _bpm.toDouble();
+    }
+    final t = (elapsedMs / dur).clamp(0.0, 1.0);
+    return _bpm + (bpmEnd - _bpm) * t;
   }
 
   void _emitPositionBeat(double baseVolume) {
@@ -416,22 +465,26 @@ class BeepEngine {
   }
 
   void _startBiffleLoop() {
-    final intervalMs = (60000 / _bpm).round();
     final myGen = ++_loopGen;
     final startMs = DateTime.now().millisecondsSinceEpoch;
     _trigger(_biffleAsset, _rhythmVolume);
     _notifyBeat(SessionMode.biffle, _to ?? _from);
-    var n = 1;
+    // Cumul des intervalles successifs (cf. `_startBeatLoop`) — supporte
+    // la rampe BPM intra-step quand `_bpmEnd` / `_loopDurationMs` sont
+    // armés. Comportement strictement identique sans rampe.
+    var lastTargetMs = startMs;
     void scheduleNext() {
       if (myGen != _loopGen) return;
-      final targetMs = startMs + n * intervalMs;
+      final elapsedMs = lastTargetMs - startMs;
+      final currentBpm = _currentInterpolatedBpm(elapsedMs);
+      final intervalMs = (60000 / currentBpm).round();
+      lastTargetMs += intervalMs;
       final delayMs =
-          max(1, targetMs - DateTime.now().millisecondsSinceEpoch);
+          max(1, lastTargetMs - DateTime.now().millisecondsSinceEpoch);
       _loopTimer = Timer(Duration(milliseconds: delayMs), () {
         if (myGen != _loopGen) return;
         _trigger(_biffleAsset, _rhythmVolume);
         _notifyBeat(SessionMode.biffle, _to ?? _from);
-        n++;
         scheduleNext();
       });
     }
