@@ -96,10 +96,17 @@ class CareerSessionGenerator {
   /// Mode absent = 1.0 (neutre). Cf. CoachMeta.modeWeights.
   Map<SessionMode, double> _coachModeWeights = const {};
 
-  /// Score d'humiliation au démarrage de la session (cf. param
-  /// `humiliationScore` de `generate`). Sert au tirage spécifique de
-  /// certains modes (lick : amplitudes complètes seulement à partir de 2).
-  double _humiliationScore = 0.0;
+  /// Score career d'humiliation (persisté lifetime) au démarrage de la
+  /// session. Sert au tirage spécifique de certains modes (lick :
+  /// amplitudes complètes seulement à partir de 2).
+  double _humiliationCareer = 0.0;
+
+  /// Score session d'humiliation (intra-session) au moment de la
+  /// génération. Vaut 0 pour une session normale, > 0 sur encore
+  /// enchaîné ou régénération en cours de séance (Supplier / retry
+  /// milestone). Le générateur projette une rampe par-dessus ce score
+  /// basée sur le tick automatique (cf. [_humilCapAt]).
+  double _humiliationSession = 0.0;
 
   /// Score d'obédiance au démarrage de la session (cf. param `obedience`
   /// de `generate`). Pilote le tier de phrase auto-bumpé dans `_pickPhrase`
@@ -109,6 +116,25 @@ class CareerSessionGenerator {
 
   CareerSessionGenerator({int? seed})
       : _rng = seed != null ? Random(seed) : Random();
+
+  /// Cap effectif d'humiliation projeté au temps `seconds` depuis le
+  /// début de la session générée. Modèle 2 thermomètres :
+  ///
+  ///   `cap(t) = career + min(session + tickRate × t/60, sessionCap)`
+  ///
+  /// avec `tickRate = 1 × accel(obed)` (cf. `HumiliationEngine.onTickSecond`).
+  /// La projection ne tient pas compte des bumps évènementiels (punition
+  /// complétée, hold profond complété…) — c'est volontairement
+  /// conservateur, le runtime peut accepter des actions un poil plus
+  /// dures que ce que la rampe seule prédit.
+  double _humilCapAt(int seconds) {
+    final accel = (1.0 + _obedience / 100.0).clamp(1.0, 3.0);
+    final tickRate = HumiliationEngine.bumpPerInterval * accel; // par minute
+    final added = tickRate * seconds / 60.0;
+    final session = (_humiliationSession + added)
+        .clamp(0.0, HumiliationEngine.sessionCap);
+    return _humiliationCareer + session;
+  }
 
   CareerGenerationResult generate({
     required int level,
@@ -121,7 +147,8 @@ class CareerSessionGenerator {
     SpecializationAllocation? specialization,
     bool intense = false,
     double obedience = 100.0,
-    double humiliationScore = 0.0,
+    double humiliationCareer = 0.0,
+    double humiliationSession = 0.0,
     LevelMilestone? milestone,
     LevelMilestone? finalMilestone,
     Set<UnlockKey> unlockedKeys = const {},
@@ -149,7 +176,8 @@ class CareerSessionGenerator {
     _lastTo = null;
     _unlockedKeys = unlockedKeys;
     _coachModeWeights = coachModeWeights;
-    _humiliationScore = humiliationScore;
+    _humiliationCareer = humiliationCareer;
+    _humiliationSession = humiliationSession;
     _obedience = obedience;
     // Mode "Session bâclée" : 6 min, intense tout du long. Floor d'intensité
     // appliqué au tirage de difficulté + on saute l'intro douce et la
@@ -335,12 +363,11 @@ class CareerSessionGenerator {
       // beg avec from=null suit la même branche regen que from=head.
       var draft = _stripBegFromAfterSoft(initialDraft, steps);
 
-      // Filtre humiliation requise : on garde uniquement ce que le score
-      // d'humiliation courant permet. La tolérance progresse au fil de la
-      // session (+1 toutes les 4 min) — on monte d'un cran pour préparer
-      // le score plus haut qu'on visera en fin de séance.
-      final humilCap =
-          humiliationScore + (progress * 4.0).floorToDouble();
+      // Filtre humiliation requise : on garde uniquement ce que le cap
+      // effectif (career + session projeté à `time`) permet. La rampe
+      // session (+1/min en clean, ×3 max avec obed, capée à sessionCap)
+      // est intégrée par `_humilCapAt`.
+      final humilCap = _humilCapAt(time);
       draft = _enforceHumiliationRequired(draft, humilCap);
 
       // Variété BPM : évite d'enchaîner des steps au même tempo.
@@ -561,7 +588,7 @@ class CareerSessionGenerator {
     //   (rhythm sera de toute façon doux à ce niveau, autant pousser via hand)
     // - sinon : 75% rhythm, 25% hand (variété)
     final preferHand =
-        humiliationScore < 5 && level <= 3 ? 0.70 : 0.25;
+        _humiliationCareer < 5 && level <= 3 ? 0.70 : 0.25;
     final useHandBurst = _rng.nextDouble() < preferHand;
     final burstMode =
         useHandBurst ? SessionMode.hand : SessionMode.rhythm;
@@ -569,7 +596,10 @@ class CareerSessionGenerator {
     // Plafond humiliation pour les bursts. Hand n'est pas gating par
     // humiliation (cap inutile), mais on laisse `_enforceHumiliationRequired`
     // tourner — il rejettera juste si la profondeur du draft demande trop.
-    final boostHumilCap = humiliationScore + 8.0;
+    // Cap assoupli pour les boosts : projection au temps `time` du début
+    // de la phase finish, +8 de tolérance pour permettre des bursts un
+    // poil au-dessus du cap mécanique strict (tradition du finish).
+    final boostHumilCap = _humilCapAt(time) + 8.0;
     // Nombre total de boosts : table par niveau + bonus encore (fixé en
     // amont via `boostsCount`). Plus de boucle conditionnelle sur la
     // jauge — le sprint est entièrement déterministe.
@@ -699,7 +729,11 @@ class CareerSessionGenerator {
     // Choisi parmi les candidats valides selon le score d'humiliation, le
     // plafond de profondeur du niveau, et la durée des holds profonds qui
     // scale avec le niveau et la chaîne d'encore.
-    final finalHumilCap = humiliationScore + 4.0; // rampe progress=1
+    // Cap effectif au moment du final (=quasi fin de session, sessionCap
+    // probablement saturé). Le générateur ne bénéficie pas des bumps
+    // évènementiels (punition complétée etc.) — uniquement de la rampe
+    // automatique — donc c'est volontairement conservateur.
+    final finalHumilCap = _humilCapAt(time);
     // En chaîne encore, on allonge le final pour que la dramaturgie de
     // « tu en veux encore » se traduise aussi côté apothéose. Bornée par
     // le clamp de `_pickFinal` pour rester raisonnable.
@@ -755,7 +789,7 @@ class CareerSessionGenerator {
     // douce piochée dans `post_final` (fallback `congrats` si vide).
     // Le pool d'actions est tieré par humiliation : lick (= nettoyer après)
     // est l'aftercare humiliant qui n'apparaît qu'au-dessus d'un seuil.
-    final postFinalDraft = _buildPostFinalDraft(finalMode, humiliationScore);
+    final postFinalDraft = _buildPostFinalDraft(finalMode, _humilCapAt(time));
     // Phrase : un step `beg` doit porter une CONSIGNE de supplique
     // (« remercie-moi », « supplie-moi de revenir »), pas un compliment
     // doux qui sonnerait à côté. Cascade de fallback pour ne jamais
@@ -823,7 +857,7 @@ class CareerSessionGenerator {
   /// tout en respectant la progression : à humil 5 on tombe sur breath,
   /// à humil 100 on tombe sur les beg + hold head.
   _StepDraft _buildPostFinalDraft(
-      SessionMode finalMode, double humiliationScore) {
+      SessionMode finalMode, double humilCap) {
     final dur = 10 + _rng.nextInt(6); // [10, 15]
     final bpm = 38 + _rng.nextInt(11); // [38, 48]
     // Builders à la volée — un `const` figerait dur/bpm tirés ici.
@@ -900,7 +934,7 @@ class CareerSessionGenerator {
       (70.0, isFinalHold, holdHead),
     ];
     final valid = candidates
-        .where((c) => c.$1 <= humiliationScore && !c.$2)
+        .where((c) => c.$1 <= humilCap && !c.$2)
         .toList()
       ..sort((a, b) => b.$1.compareTo(a.$1)); // req décroissante
     if (valid.isEmpty) return breath();
@@ -1535,7 +1569,7 @@ class CareerSessionGenerator {
     );
   }
 
-  /// Tirage spécifique au mode lick. Tant que `_humiliationScore < 2`,
+  /// Tirage spécifique au mode lick. Tant que `_humiliationCareer < 2`,
   /// le lick reste sur tip→head (l'utilisatrice n'a pas encore appris à
   /// lécher plus profond). À partir de 2, toutes les amplitudes sont
   /// autorisées sans cap niveau — la langue n'a pas de tension de
@@ -1543,7 +1577,7 @@ class CareerSessionGenerator {
   /// sans la milestone `lick_full`, le filtre `_isUnlocked` en cascade
   /// dégrade.
   (Position, Position) _sampleFromToForLick(double ampScore) {
-    if (_humiliationScore < 2.0) {
+    if (_humiliationCareer < 2.0) {
       return (Position.tip, Position.head);
     }
     return _sampleFromTo(ampScore, capByDepth: false);

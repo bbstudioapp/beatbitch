@@ -119,7 +119,7 @@ class _CareerScenarioDebugScreenState
       includeHand: _includeHand,
       quickie: _quickie,
       intense: _intense,
-      humiliationScore: _humil,
+      humiliationCareer: _humil,
       obedience: _obed,
       durationSeconds: _durationOverride > 0 ? _durationOverride : null,
       specialization: _spec,
@@ -157,6 +157,7 @@ class _CareerScenarioDebugScreenState
       return milestoneService.pendingFinalFor(
         humiliationScore: _humil,
         obedience: _obed,
+        playerLevel: _level,
         allocation: _spec,
       );
     }
@@ -197,7 +198,7 @@ class _CareerScenarioDebugScreenState
       includeHand: _includeHand,
       specialization: _spec,
       intense: true,
-      humiliationScore: _humil,
+      humiliationCareer: _humil,
       obedience: _obed,
       milestone: milestone,
       finalMilestone: finalMilestone,

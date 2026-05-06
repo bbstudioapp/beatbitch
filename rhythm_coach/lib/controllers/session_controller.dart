@@ -242,6 +242,7 @@ class SessionController extends ChangeNotifier {
     List<double>? staminaProfile,
     HoldVerifier? holdVerifier,
     SpecializationAllocation? specialization,
+    double seedHumiliationSession = 0.0,
   })  : _session = session,
         _tts = tts,
         _beep = beep,
@@ -253,9 +254,16 @@ class SessionController extends ChangeNotifier {
         _phraseBank = phraseBank,
         _staminaProfile = staminaProfile,
         _holdVerifier = holdVerifier,
-        _specialization = specialization {
+        _specialization = specialization,
+        _seedHumiliationSession = seedHumiliationSession {
     _beep.onBeat = _handleBeat;
   }
+
+  /// Valeur initiale du `sessionScore` d'humiliation au start. Vaut 0
+  /// pour une session normale. Sur encore enchaîné, le caller transmet
+  /// le `sessionScore` final de la session précédente pour conserver
+  /// la chauffe accumulée (cf. modèle 2 thermomètres).
+  final double _seedHumiliationSession;
 
   /// Tire une phrase TTS au franchissement d'un palier de progression
   /// (25/50/75/90 % de la durée totale de session). Ne joue pas si une
@@ -498,7 +506,11 @@ class SessionController extends ChangeNotifier {
         _resilienceTickAccumulator = 0;
         _miniPunishmentsTriggered = 0;
         _announcedProgressMarkers.clear();
-        _humiliation.seed(0);
+        // Seed neutre : remplacé par les valeurs persistées dès que la
+        // lecture async (plus bas) revient. `seedHumiliationSession`
+        // transporte la chauffe d'une session précédente lors d'un
+        // encore enchaîné (sinon 0 = pas de chauffe initiale).
+        _humiliation.seed(career: 0, session: _seedHumiliationSession);
         _obedience.seed(0);
         _saliva.reset();
         _swallowMode = SwallowMode.allowed;
@@ -526,8 +538,15 @@ class SessionController extends ChangeNotifier {
         // Lectures async tolérées : si pas finies au premier beat, on est
         // juste à valeur neutre (humiliation 0, obédiance 0). Pas critique —
         // les bumps en cours de session s'appliqueront aux valeurs neutres
-        // puis seront remplacés à la première lecture async.
-        _stats.getHumiliationLevel().then((h) => _humiliation.seed(h));
+        // puis seront remplacés à la première lecture async. La career
+        // est seed sur la valeur persistée ; le session conserve sa
+        // valeur de seed (encore enchaîné).
+        _stats.getHumiliationLevel().then(
+              (h) => _humiliation.seed(
+                career: h,
+                session: _seedHumiliationSession,
+              ),
+            );
         _stats.getObedienceLevel().then((o) => _obedience.seed(o));
       }
 
@@ -895,8 +914,17 @@ class SessionController extends ChangeNotifier {
     _disarmHoldVerifier();
     await _stats.addElapsedSeconds(elapsedSeconds);
     await _stats.recordSessionCompleted(hadFail: _hadFailThisSession);
+    // Recalcul intégré du score career d'humiliation : delta = α × sessionScore
+    // + β_encore × encoresAsked − β_fail × failsCount + γ × clean. Remplace
+    // les anciens bumps évènementiels qui touchaient directement le score
+    // persisté (cf. modèle 2 thermomètres). encoresAsked compté = 0 ici :
+    // l'encore est déclenché depuis l'écran finished APRÈS ce _finish.
+    _humiliation.applyEndOfSessionDelta(
+      clean: !_hadFailThisSession,
+      encoresAsked: 0,
+      failsCount: _hadFailThisSession ? 1 : 0,
+    );
     if (!_hadFailThisSession) {
-      _humiliation.onSessionCleanFinish();
       _obedience.onSessionCleanFinish();
       // Compteurs des badges de fin de séance (Bouche pleine / Repeinte /
       // Gobeuse / Nettoyeuse / Suppliante). On crédite uniquement sur
@@ -913,9 +941,9 @@ class SessionController extends ChangeNotifier {
         await _stats.recordPostFinalMode(postFinalMode);
       }
     }
-    // Les scores d'humiliation et d'obédiance sont cumulés entre sessions
-    // (thermomètres persistants). On persiste les scores finaux atteints.
-    await _stats.setHumiliationLevel(_humiliation.score);
+    // Persiste l'obédiance (thermomètre lifetime). L'humiliation career
+    // est persistée en tout fin de _finish (après les bonus milestones
+    // éventuels) — éviter une double écriture.
     await _stats.setObedienceLevel(_obedience.score);
 
     // Acquittement milestone AVANT le bascule en `finished` : sans ça,
@@ -943,12 +971,18 @@ class SessionController extends ChangeNotifier {
             (isFinal || milestoneAnnouncement == null)) {
           milestoneAnnouncement = announce;
         }
-        _humiliation.onMilestoneAcquired();
-        await _stats.setHumiliationLevel(_humiliation.score);
+        // Bonus permanent sur la career : compétence acquise = chauffe
+        // permanente (pas un bump session jeté à la fin de la séance).
+        _humiliation
+            .bumpCareer(HumiliationEngine.bumpMilestoneAcquired);
       }
     }
     await markIfPresent(session.milestoneId, isFinal: false);
     await markIfPresent(session.finalMilestoneId, isFinal: true);
+
+    // Persiste le score career une fois pour toutes : delta de fin +
+    // d'éventuels bonus milestone sont déjà incorporés.
+    await _stats.setHumiliationLevel(_humiliation.careerScore);
 
     // Réconciliation badges AVANT le bascule en `finished` : `_FinishedPanel`
     // initialise son `_badgesHidden` à partir de `hasPendingBadges` au

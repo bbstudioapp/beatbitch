@@ -118,6 +118,12 @@ class SessionScreen extends StatefulWidget {
   /// Null = pas de carrière → pas de mini-punition.
   final SpecializationAllocation? specialization;
 
+  /// Valeur initiale du `sessionScore` d'humiliation au start. Vaut 0
+  /// pour une session normale. Sur encore enchaîné, le caller transmet
+  /// le `sessionScore` final de la session précédente pour conserver
+  /// la chauffe accumulée (cf. modèle 2 thermomètres).
+  final double seedHumiliationSession;
+
   const SessionScreen({
     super.key,
     required this.session,
@@ -141,6 +147,7 @@ class SessionScreen extends StatefulWidget {
     this.careerLevel,
     this.coachAdvancesTier = true,
     this.specialization,
+    this.seedHumiliationSession = 0.0,
   });
 
   @override
@@ -166,6 +173,7 @@ class _SessionScreenState extends State<SessionScreen>
       phraseBank: widget.phraseBank,
       holdVerifier: widget.holdVerifier,
       specialization: widget.specialization,
+      seedHumiliationSession: widget.seedHumiliationSession,
     );
     _controller.onMilestoneRetry = widget.onMilestoneRetry;
     if (widget.isCareer) {
@@ -582,7 +590,10 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
           ],
           if (_showHumiliationBar) ...[
             const SizedBox(height: 4),
-            HumiliationBar(value: ctrl.humiliation.score),
+            HumiliationBar(
+              careerScore: ctrl.humiliation.careerScore,
+              sessionScore: ctrl.humiliation.sessionScore,
+            ),
           ],
           if (_showObedienceBar) ...[
             const SizedBox(height: 4),

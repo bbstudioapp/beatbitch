@@ -61,7 +61,7 @@ void main() {
     final result = gen.generate(
       level: 10,
       bank: _bank(),
-      humiliationScore: 30.0,
+      humiliationCareer: 30.0,
       unlockedKeys: _allUnlocks,
     );
     expect(result.session.steps, isNotEmpty);
@@ -231,7 +231,7 @@ void main() {
       level: 2,
       bank: _bank(),
       unlockedKeys: acquired,
-      humiliationScore: 0.0,
+      humiliationCareer: 0.0,
     );
     expect(result.session.finalMilestoneId, isNull,
         reason: 'pas de milestone-final → finalMilestoneId doit être null');
@@ -268,7 +268,7 @@ void main() {
         final result = gen.generate(
           level: level,
           bank: _bank(),
-          humiliationScore: humil,
+          humiliationCareer: humil,
           unlockedKeys: _allUnlocks,
         );
         for (final s in result.session.steps) {
@@ -342,7 +342,7 @@ void main() {
         level: 4,
         bank: _bank(),
         unlockedKeys: initial,
-        humiliationScore: 30.0,
+        humiliationCareer: 30.0,
       );
       final freestyles = r.session.steps
           .where((s) => !s.isTextOnly && s.mode == SessionMode.freestyle);
@@ -363,7 +363,7 @@ void main() {
         bank: _bank(),
         milestone: milestone,
         unlockedKeys: initial,
-        humiliationScore: 30.0,
+        humiliationCareer: 30.0,
       );
       final mStart = r.session.milestoneStartTime!;
       final mEnd = mStart + r.session.milestoneDurationSeconds!;

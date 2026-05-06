@@ -16,14 +16,22 @@ enum MilestonePlacement { body, finalApotheose }
 /// Une milestone : séquence pédagogique imposée, qui débloque une ou
 /// plusieurs `UnlockKey` une fois acquittée. Cf. E3 du plan.
 ///
-/// **Sélection par humiliation** : depuis la refonte E3.5, une milestone
-/// devient candidate quand le score d'humiliation courant atteint
-/// `humilRequired - tolerance(obedience)`, où `tolerance = 1 + obedience/50`.
-/// Le concept de « niveau de milestone » a disparu — l'humiliation et
-/// l'obédiance pilotent seuls la progression pédagogique.
+/// **Sélection par humiliation + minLevel** : une milestone devient
+/// candidate quand `playerMaxLevel ≥ minLevel` ET que le score
+/// d'humiliation courant atteint `humilRequired - tolerance(obedience)`,
+/// où `tolerance = 1 + obedience/50`. Le `minLevel` (champ `level` du
+/// JSON) sert de garde-fou explicite : une milestone à humilRequired=0
+/// ne doit pas tomber dès la première session si elle est pédagogiquement
+/// « avancée » — l'auteur l'ancre à un niveau global minimum.
 class LevelMilestone {
   /// Identifiant stable (ex: `"intro_hold_throat_short"`).
   final String id;
+
+  /// Niveau global minimum pour que la milestone soit candidate. Lu
+  /// depuis le champ `level` du JSON (rétro-compat avec l'ancien
+  /// schéma). Default 1 → toujours candidate côté niveau, c'est
+  /// l'humiliation qui filtre.
+  final int minLevel;
 
   /// Humiliation maximale exigée par un step de la séquence. Calculée par
   /// le `MilestoneLoader` via `HumiliationScale.requiredFor` sur chaque
@@ -89,6 +97,7 @@ class LevelMilestone {
     required this.sequence,
     required this.durationSeconds,
     required this.unlocks,
+    this.minLevel = 1,
     this.requires = const [],
     this.insertAtMinSeconds,
     this.insertAtMaxSeconds,
