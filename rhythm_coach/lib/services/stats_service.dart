@@ -20,7 +20,6 @@ class StatsService {
   static const String _kDailyStreak = 'stats.daily_streak';
   static const String _kEncoresAsked = 'stats.encores_asked';
   static const String _kQuickiesCompleted = 'stats.quickies_completed';
-  static const String _kResistanceLevel = 'stats.resistance_level';
   static const String _kHumiliationLevel = 'stats.humiliation_level';
   static const String _kObedienceLevel = 'stats.obedience_level';
 
@@ -31,11 +30,6 @@ class StatsService {
   static const String _kFinalsGobeuse = 'stats.finals_gobeuse';
   static const String _kPostFinalsNettoyeuse = 'stats.post_finals_nettoyeuse';
   static const String _kPostFinalsSuppliante = 'stats.post_finals_suppliante';
-
-  /// Incrément de résistance par appui sur « J'en veux encore ». Plus la
-  /// résistance est haute, plus tous les apports d'excitation sont
-  /// atténués (multiplicateur `1/(1+R)`).
-  static const double resistanceIncrementPerEncore = 0.3;
 
   Future<StatsSnapshot> snapshot() async {
     final prefs = await SharedPreferences.getInstance();
@@ -52,7 +46,6 @@ class StatsService {
       dailyStreak: prefs.getInt(_kDailyStreak) ?? 0,
       encoresAsked: prefs.getInt(_kEncoresAsked) ?? 0,
       quickiesCompleted: prefs.getInt(_kQuickiesCompleted) ?? 0,
-      resistanceLevel: prefs.getDouble(_kResistanceLevel) ?? 0.0,
       humiliationLevel: prefs.getDouble(_kHumiliationLevel) ?? 0.0,
       obedienceLevel: prefs.getDouble(_kObedienceLevel) ?? 0.0,
       finalsBouchePleine: prefs.getInt(_kFinalsBouchePleine) ?? 0,
@@ -99,27 +92,15 @@ class StatsService {
     );
   }
 
-  /// Lit uniquement la résistance courante. Utile au démarrage de session
-  /// pour configurer l'`ExcitationEngine` sans charger tout le snapshot.
-  Future<double> getResistanceLevel() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getDouble(_kResistanceLevel) ?? 0.0;
-  }
-
   /// Comptabilise un appui sur le bouton « J'en veux encore ». Cumul
-  /// global, alimente le badge JamaisRassasiee, fait monter la résistance
-  /// de [resistanceIncrementPerEncore] et bumpe l'humiliation lifetime
-  /// (consentement explicite à plus = on accepte d'être humiliée davantage).
+  /// global, alimente le badge JamaisRassasiee et bumpe l'humiliation
+  /// lifetime (consentement explicite à plus = on accepte d'être humiliée
+  /// davantage).
   Future<void> recordEncoreAsked() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(
       _kEncoresAsked,
       (prefs.getInt(_kEncoresAsked) ?? 0) + 1,
-    );
-    final currentR = prefs.getDouble(_kResistanceLevel) ?? 0.0;
-    await prefs.setDouble(
-      _kResistanceLevel,
-      currentR + resistanceIncrementPerEncore,
     );
     final currentH = prefs.getDouble(_kHumiliationLevel) ?? 0.0;
     await prefs.setDouble(
@@ -297,7 +278,6 @@ class StatsService {
       _kDailyStreak,
       _kEncoresAsked,
       _kQuickiesCompleted,
-      _kResistanceLevel,
       _kHumiliationLevel,
       _kObedienceLevel,
       _kFinalsBouchePleine,
@@ -326,7 +306,6 @@ class StatsSnapshot {
   final int dailyStreak;
   final int encoresAsked;
   final int quickiesCompleted;
-  final double resistanceLevel;
   final double humiliationLevel;
   final double obedienceLevel;
   final int finalsBouchePleine;
@@ -348,7 +327,6 @@ class StatsSnapshot {
     required this.dailyStreak,
     required this.encoresAsked,
     required this.quickiesCompleted,
-    required this.resistanceLevel,
     required this.humiliationLevel,
     required this.obedienceLevel,
     this.finalsBouchePleine = 0,

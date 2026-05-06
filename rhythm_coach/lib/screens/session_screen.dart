@@ -66,21 +66,8 @@ class SessionScreen extends StatefulWidget {
   final String? introText;
 
   /// Banque de phrases optionnelle (mode Carrière). Sert au TTS
-  /// d'annonce des seuils d'excitation. Null pour les sessions statiques.
+  /// d'annonce des seuils de progression. Null pour les sessions statiques.
   final PhraseBank? phraseBank;
-
-  /// Cap **moteur** de la jauge d'excitation pour cette session. Borne
-  /// physique (clamp interne, calculs de seuil). Mode « encore » → valeur
-  /// > 100 (par défaut 100).
-  final double excitationMax;
-
-  /// Cap **visuel** de la barre d'excitation. La barre se remplit
-  /// complètement quand la valeur atteint ce seuil, même si le moteur
-  /// peut grimper plus haut. En carrière, on passe `minFinal` ici pour
-  /// que la débutante voie sa jauge atteindre 100 % au seuil de finish
-  /// (sans brider le moteur sous-jacent). Si null, on retombe sur
-  /// `excitationMax` (= ancien comportement).
-  final double? excitationBarMax;
 
   /// Texte du bouton de fin (état finished). Si null, utilise la valeur
   /// localisée par défaut (« Merci ! » en FR).
@@ -145,8 +132,6 @@ class SessionScreen extends StatefulWidget {
     this.onRequestUpgrade,
     this.introText,
     this.phraseBank,
-    this.excitationMax = 100.0,
-    this.excitationBarMax,
     this.endButtonLabel,
     this.onRequestEncore,
     this.onMilestoneRetry,
@@ -179,7 +164,6 @@ class _SessionScreenState extends State<SessionScreen>
       randomComments: widget.randomComments,
       staminaProfile: widget.staminaProfile,
       phraseBank: widget.phraseBank,
-      excitationMax: widget.excitationMax,
       holdVerifier: widget.holdVerifier,
       specialization: widget.specialization,
     );
@@ -254,7 +238,6 @@ class _SessionScreenState extends State<SessionScreen>
         onRequestEncore: widget.onRequestEncore,
         autoStart: widget.autoStart,
         canSave: widget.canSave,
-        excitationBarMax: widget.excitationBarMax,
       ),
     );
   }
@@ -270,7 +253,6 @@ class _SessionScreenContent extends StatefulWidget {
   final Future<void> Function(SessionController controller)? onRequestEncore;
   final bool autoStart;
   final bool canSave;
-  final double? excitationBarMax;
 
   final BeepEngine beep;
 
@@ -285,7 +267,6 @@ class _SessionScreenContent extends StatefulWidget {
     required this.onRequestEncore,
     required this.autoStart,
     required this.canSave,
-    required this.excitationBarMax,
   });
 
   @override
@@ -296,7 +277,6 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
   double _volume = 1.0;
   bool _showStaminaBar = false;
   bool _showTimer = false;
-  bool _showExcitationBar = false;
   bool _showHumiliationBar = false;
   bool _showObedienceBar = false;
   bool _showSalivaBar = false;
@@ -336,10 +316,6 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     debug.getShowTimer().then((value) {
       if (!mounted) return;
       setState(() => _showTimer = value);
-    });
-    debug.getShowExcitationBar().then((value) {
-      if (!mounted) return;
-      setState(() => _showExcitationBar = value);
     });
     debug.getShowHumiliationBar().then((value) {
       if (!mounted) return;
@@ -602,13 +578,6 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
               profile: widget.staminaProfile!,
               currentSecond: ctrl.elapsedSeconds,
               liveValue: ctrl.stamina.value,
-            ),
-          ],
-          if (_showExcitationBar) ...[
-            const SizedBox(height: 4),
-            ExcitationBar(
-              value: ctrl.excitation.value,
-              max: widget.excitationBarMax ?? ctrl.excitation.maxValue,
             ),
           ],
           if (_showHumiliationBar) ...[
@@ -1288,9 +1257,9 @@ class _PrepCountdownPanel extends StatelessWidget {
 
 /// Panneau affiché quand la séance est terminée. Deux boutons :
 /// fermeture (« Merci ! » ou un libellé custom) et, si fourni en
-/// callback, relance d'une nouvelle session avec une cible d'excitation
-/// plus haute (« J'en veux encore… »). Affiche aussi les nouveaux
-/// paliers de badges débloqués pendant la séance.
+/// callback, relance d'une nouvelle session-encore plus intense
+/// (« J'en veux encore… »). Affiche aussi les nouveaux paliers de
+/// badges débloqués pendant la séance.
 class _FinishedPanel extends StatefulWidget {
   final List<BadgeUnlock> badgeUnlocks;
   final bool hasPendingBadges;

@@ -35,22 +35,10 @@ class CareerLevel {
   /// (rhythm + hold). Permet de raréfier au niveau 2 sans bannir.
   final double deepProbability;
 
-  /// Plafond d'excitation atteignable à ce niveau. Sert à la fois de
-  /// `maxValue` du moteur d'excitation (clamp haut) et de `max` de la
-  /// barre UI. Adapté au niveau pour qu'il reste atteignable sans BPM
-  /// élevés ni profondeur ouverte (interdits aux bas niveaux). Niveau 1
-  /// = 70, niveau 6+ = 100. Le mode encore monte cette valeur de +20.
-  final double excitationTarget;
-
-  /// Cible **minimale** que les boosts visent en phase finish. Découplée
-  /// du `excitationTarget` (max UI) : permet à un finish de monter au-delà
-  /// du minimum si la dynamique le permet, mais garantit qu'on atteint au
-  /// moins ce seuil avant de basculer sur le final. De base 90 ; plus bas
-  /// aux premiers niveaux pour que le finish soit toujours bouclable.
-  /// Si `minFinal > excitationTarget`, le moteur ne peut pas atteindre
-  /// minFinal (clampé par maxValue) — c'est OK, les boosts s'arrêtent
-  /// après `minBoosts` et le finish reste lisible.
-  final double minFinal;
+  /// Nombre de boosts émis pendant la phase finish. Scale avec le niveau
+  /// pour allonger et durcir l'apothéose des paliers élevés. Le mode
+  /// encore ajoute `encoreChainIndex * 2` par-dessus côté générateur.
+  final int boostsCount;
 
   const CareerLevel({
     required this.level,
@@ -61,8 +49,7 @@ class CareerLevel {
     required this.title,
     required this.maxDepthIndex,
     required this.deepProbability,
-    required this.excitationTarget,
-    required this.minFinal,
+    required this.boostsCount,
   });
 
   /// Déduit la config d'un niveau N. Niveau 1 = doux et permissif ;
@@ -81,30 +68,8 @@ class CareerLevel {
       title: _titleForLevel(level),
       maxDepthIndex: _maxDepthForLevel(level),
       deepProbability: _deepProbabilityForLevel(level),
-      excitationTarget: _excitationTargetForLevel(level),
-      minFinal: _minFinalForLevel(level),
+      boostsCount: _boostsCountForLevel(level),
     );
-  }
-
-  /// Plafond d'excitation atteignable côté moteur : toujours 100. La
-  /// progression par niveau passe désormais uniquement par `minFinal` (la
-  /// barre UI plafonne à minFinal pour donner l'impression d'atteindre
-  /// l'objectif), pas par un cap engine artificiellement bas. Le mode
-  /// encore ajoute +20 par-dessus (= 120).
-  static double _excitationTargetForLevel(int level) => 100.0;
-
-  /// Seuil minimal d'excitation que les boosts doivent atteindre pour
-  /// boucler le finish. Sert également de **plafond visuel** de la barre
-  /// (cf. `excitationBarMax` côté SessionScreen) : la barre fait le plein
-  /// quand l'excitation atteint minFinal, même si le moteur peut grimper
-  /// plus haut. Une débutante voit donc sa jauge se remplir « à temps »
-  /// sans qu'on bride la physique sous-jacente.
-  static double _minFinalForLevel(int level) {
-    if (level <= 1) return 50.0;
-    if (level <= 2) return 65.0;
-    if (level <= 3) return 70.0;
-    if (level <= 5) return 80.0;
-    return 90.0;
   }
 
   /// Mapping niveau → durée. Couple progression et endurance : un niveau
@@ -154,5 +119,15 @@ class CareerLevel {
     if (level <= 5) return 0.30;
     if (level <= 8) return 0.55;
     return 0.80;
+  }
+
+  /// Nombre de boosts émis dans la phase finish. Plus on monte en niveau,
+  /// plus la phase d'apothéose s'allonge — la séance niveau 1 reste tendue
+  /// mais courte, la séance niveau 15+ enchaîne 5 boosts.
+  static int _boostsCountForLevel(int level) {
+    if (level <= 3) return 2;
+    if (level <= 7) return 3;
+    if (level <= 12) return 4;
+    return 5;
   }
 }

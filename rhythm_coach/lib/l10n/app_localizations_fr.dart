@@ -749,13 +749,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Affiche le profil d\'endurance projeté pendant une séance Carrière.';
 
   @override
-  String get soundsDebugShowExcitationBar => 'Afficher la jauge d\'excitation';
-
-  @override
-  String get soundsDebugShowExcitationBarSubtitle =>
-      'Affiche la jauge 0–100 calculée pendant la séance.';
-
-  @override
   String get soundsDebugShowHumiliationBar =>
       'Afficher la jauge d\'humiliation';
 
@@ -790,9 +783,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get soundsDebugShowModeBadgeSubtitle =>
       'Réservé au debug : en prod l\'animation suffit à indiquer ce qui se passe.';
-
-  @override
-  String get debugBarLabelExcitation => 'EXCIT.';
 
   @override
   String get debugBarLabelHumiliation => 'HUMIL.';
@@ -855,9 +845,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get careerDebugIntense => 'Mode intense (post-Supplier)';
 
   @override
-  String get careerDebugExcitTarget => 'Cible excitation';
-
-  @override
   String get careerDebugDurationOverride => 'Durée override';
 
   @override
@@ -891,8 +878,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get careerDebugShowTtsTexts => 'Afficher les textes TTS';
 
   @override
-  String get careerDebugStatExcit => 'Excit fin';
-
   @override
   String get careerDebugStatStamina => 'Stamina fin';
 

@@ -125,7 +125,7 @@
     "Tu en veux encore {name} ? D’accord, on continue doucement.",
     "Prête pour un autre round {name} ? On y va tranquillement."
   ],
-  "excitation": {
+  "progress": {
     "25": [
       "Tu commences bien {name}, je sens que tu te détends.",
       "C’est bien {name}, tu prends le rythme."

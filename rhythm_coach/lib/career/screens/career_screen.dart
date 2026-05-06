@@ -211,7 +211,6 @@ class _CareerScreenState extends State<CareerScreen> {
     // entièrement (le générateur ne consulte pas `finalXxx` quand
     // `finalMilestone != null`).
     final unlockedKeys = milestoneService.acquiredUnlockKeys();
-    final levelCfg = CareerLevel.forLevel(clamped);
     // Gating bouton encore : niveau ≥ 5, ET (milestone unlock + minimum
     // d'engagement) OU obédiance lifetime ≥ 80 (voie alternative). Évalué
     // au start — si l'utilisatrice acquiert l'unlock pendant la session,
@@ -269,8 +268,6 @@ class _CareerScreenState extends State<CareerScreen> {
           staminaProfile: result.staminaProfile,
           introText: introText,
           phraseBank: coachBank,
-          excitationMax: levelCfg.excitationTarget,
-          excitationBarMax: levelCfg.minFinal,
           holdVerifier: verifier,
           canSave: true,
           coachAdvancesTier: coachAdvances,
@@ -283,7 +280,7 @@ class _CareerScreenState extends State<CareerScreen> {
                     bundle: bundle,
                     previousController: ctrl,
                     level: clamped,
-                    previousMax: ctrl.excitation.maxValue,
+                    encoreChainIndex: 1,
                     includeHand: includeHand,
                     quickie: quickie,
                   ),
@@ -489,16 +486,16 @@ class _CareerScreenState extends State<CareerScreen> {
   }
 
   /// Action « J'en veux encore » depuis l'écran finished. Régénère une
-  /// session au même niveau et même durée mais avec une cible d'excitation
-  /// montée de +20. Comptabilise l'encore (badge JamaisRassasiee).
-  /// Push remplace l'écran courant — le SessionController précédent est
-  /// disposed.
+  /// session au même niveau et même durée, avec un finish plus dense :
+  /// `encoreChainIndex * 2` boosts en plus, BPM cap relevé, final allongé.
+  /// Comptabilise l'encore (badge JamaisRassasiee). Push remplace l'écran
+  /// courant — le SessionController précédent est disposed.
   Future<void> _handleEncore({
     required BuildContext context,
     required _CareerBundle bundle,
     required SessionController previousController,
     required int level,
-    required double previousMax,
+    required int encoreChainIndex,
     required bool includeHand,
     required bool quickie,
   }) async {
@@ -515,7 +512,6 @@ class _CareerScreenState extends State<CareerScreen> {
     final coachBank = activeCoach.toPhraseBank(fallback: bundle.bank, specialization: bundle.specialization);
     _installCoachNameResolver(activeCoach);
 
-    final newTarget = previousMax + 20.0;
     final encoreOpening = coachBank.pickEncore(Random()) ??
         CoachPhrasesService.instance.current.encoreFallback;
 
@@ -540,7 +536,7 @@ class _CareerScreenState extends State<CareerScreen> {
       level: level,
       bank: coachBank,
       includeHand: includeHand,
-      excitationTarget: newTarget,
+      encoreChainIndex: encoreChainIndex,
       openingPhrase: encoreOpening,
       quickie: quickie,
       specialization: bundle.specialization,
@@ -570,12 +566,6 @@ class _CareerScreenState extends State<CareerScreen> {
           // Pas d'introText : on saute le panel d'intro et le décompte.
           // L'opening phrase est déjà jointe au step #0 de la session.
           phraseBank: coachBank,
-          excitationMax: newTarget,
-          // Bar visuelle : on translate `minFinal` du niveau du même +20
-          // que le moteur, pour que la barre encore atteigne 100 % juste
-          // au-dessus du seuil de finish initial.
-          excitationBarMax:
-              CareerLevel.forLevel(level).minFinal + (newTarget - 100.0),
           autoStart: true,
           holdVerifier: verifier,
           canSave: true,
@@ -589,7 +579,7 @@ class _CareerScreenState extends State<CareerScreen> {
                     bundle: bundle,
                     previousController: ctrl,
                     level: level,
-                    previousMax: ctrl.excitation.maxValue,
+                    encoreChainIndex: encoreChainIndex + 1,
                     includeHand: includeHand,
                     quickie: quickie,
                   ),

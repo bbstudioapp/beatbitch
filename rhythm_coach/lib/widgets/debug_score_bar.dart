@@ -83,15 +83,6 @@ class DebugScoreBar extends StatelessWidget {
   }
 }
 
-/// Palette « excitation » : rose pâle → rouge → blanc à 100 %.
-Color excitationColorForRatio(double ratio) {
-  if (ratio >= 1.0) return Colors.white;
-  if (ratio >= 0.75) return const Color(0xFFEF5350);
-  if (ratio >= 0.50) return const Color(0xFFFFA726);
-  if (ratio >= 0.25) return Colors.amber;
-  return const Color(0xFFF8BBD0);
-}
-
 /// Palette « humiliation » : violet doux → magenta → rouge sombre.
 Color humiliationColorForRatio(double ratio) {
   if (ratio >= 0.75) return const Color(0xFFB71C1C);
@@ -127,29 +118,6 @@ Color obedienceColorForRatio(double ratio) {
 double _dynamicMaxStep50(double v) {
   if (v <= 100) return 100;
   return ((v / 50).ceil() * 50).toDouble();
-}
-
-/// Barre debug de la jauge d'excitation 0–max. Le `max` est imposé par
-/// l'appelant (cap moteur, cf. CareerLevel.minFinal).
-class ExcitationBar extends StatelessWidget {
-  final double value;
-  final double max;
-
-  const ExcitationBar({
-    super.key,
-    required this.value,
-    this.max = 100.0,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return DebugScoreBar(
-      label: AppLocalizations.of(context).debugBarLabelExcitation,
-      value: value,
-      max: max,
-      colorForRatio: excitationColorForRatio,
-    );
-  }
 }
 
 /// Barre debug du score d'humiliation. Pas de cap théorique : le score

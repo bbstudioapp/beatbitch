@@ -54,7 +54,6 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
   final DebugSettingsService _debug = DebugSettingsService();
   bool _showStaminaBar = false;
   bool _showTimer = false;
-  bool _showExcitationBar = false;
   bool _showHumiliationBar = false;
   bool _showObedienceBar = false;
   bool _showSalivaBar = false;
@@ -79,7 +78,6 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
       final voices = await widget.tts.listVoicesForLocale(widget.tts.locale);
       final showBar = await _debug.getShowStaminaBar();
       final showTimer = await _debug.getShowTimer();
-      final showExcit = await _debug.getShowExcitationBar();
       final showHumil = await _debug.getShowHumiliationBar();
       final showObed = await _debug.getShowObedienceBar();
       final showSaliva = await _debug.getShowSalivaBar();
@@ -95,7 +93,6 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
             (voices.isNotEmpty ? voices.first['name'] : null);
         _showStaminaBar = showBar;
         _showTimer = showTimer;
-        _showExcitationBar = showExcit;
         _showHumiliationBar = showHumil;
         _showObedienceBar = showObed;
         _showSalivaBar = showSaliva;
@@ -524,29 +521,6 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
                         await _debug.setShowStaminaBar(v);
                         if (!mounted) return;
                         setState(() => _showStaminaBar = v);
-                      },
-                    ),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        t.soundsDebugShowExcitationBar,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppTheme.textPrimary,
-                        ),
-                      ),
-                      subtitle: Text(
-                        t.soundsDebugShowExcitationBarSubtitle,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppTheme.textMuted,
-                        ),
-                      ),
-                      value: _showExcitationBar,
-                      onChanged: (v) async {
-                        await _debug.setShowExcitationBar(v);
-                        if (!mounted) return;
-                        setState(() => _showExcitationBar = v);
                       },
                     ),
                     SwitchListTile(

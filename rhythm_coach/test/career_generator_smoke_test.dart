@@ -80,19 +80,6 @@ void main() {
     expect(maxRequired, greaterThanOrEqualTo(8.0));
   });
 
-  test('profil excitation reste dans [0, 100]', () {
-    final gen = CareerSessionGenerator(seed: 7);
-    final result = gen.generate(
-      level: 5,
-      bank: _bank(),
-      unlockedKeys: _allUnlocks,
-    );
-    for (final v in result.excitationProfile) {
-      expect(v, lessThanOrEqualTo(100.5));
-      expect(v, greaterThanOrEqualTo(-0.5));
-    }
-  });
-
   test('finalMilestone (placement=final) remplace la phase finish', () {
     // Une milestone-final remplace pré-finisher + boosts + step finisher.
     // Sa séquence est posée juste avant le congrats text-only et fournit
