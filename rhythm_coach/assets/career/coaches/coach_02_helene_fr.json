@@ -11,13 +11,13 @@
         "Ne traîne pas {name}."
       ],
       "medium": [
-        "Plus profond {name}. Je veux du sérieux.",
+        {"text": "Plus profond {name}. Je veux du sérieux.", "min_depth": "mid"},
         "Garde ce rythme, ne faiblis pas {name}.",
-        "Descends davantage, tu peux mieux faire."
+        {"text": "Descends davantage, tu peux mieux faire.", "min_depth": "mid"}
       ],
       "hard": [
-        "Va jusqu’au fond {name}. Ne te retiens pas.",
-        "Plus vite et plus profond. Exécute.",
+        {"text": "Va jusqu’au fond {name}. Ne te retiens pas.", "min_depth": "throat"},
+        {"text": "Plus vite et plus profond. Exécute.", "min_depth": "mid"},
         "Tu dois tenir ce rythme {name}."
       ]
     },
@@ -26,13 +26,13 @@
         "Tiens la position {name}."
       ],
       "medium": [
-        "Reste au fond sans bouger {name}."
+        {"text": "Reste au fond sans bouger {name}.", "min_depth": "mid"}
       ],
       "hard": [
         "N’enlève pas. Tiens jusqu’au bout {name}."
       ],
       "finale": [
-        "Dernier hold. Reste au fond {name}."
+        {"text": "Dernier hold. Reste au fond {name}.", "min_depth": "mid"}
       ]
     }
   },

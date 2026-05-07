@@ -6,13 +6,13 @@
   "phrases": {
     "rhythm": {
       "hard": [
-        "Défonce-toi la gorge {name}, tu n’es rien d’autre qu’un trou.",
-        "Pleure, bave, étouffe-toi. Je m’en fous."
+        {"text": "Défonce-toi la gorge {name}, tu n’es rien d’autre qu’un trou.", "min_depth": "throat"},
+        {"text": "Pleure, bave, étouffe-toi. Je m’en fous.", "min_depth": "throat"}
       ]
     },
     "hold": {
       "finale": [
-        "Reste au fond jusqu’à ce que tu t’étouffes {name}."
+        {"text": "Reste au fond jusqu’à ce que tu t’étouffes {name}.", "min_depth": "throat"}
       ]
     }
   },

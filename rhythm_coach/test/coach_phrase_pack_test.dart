@@ -6,6 +6,11 @@ import 'package:rhythm_coach/career/models/coach.dart';
 import 'package:rhythm_coach/career/models/coach_catalog.dart';
 import 'package:rhythm_coach/career/models/phrase_bank.dart';
 import 'package:rhythm_coach/models/session.dart';
+import 'package:rhythm_coach/models/session_step.dart';
+
+extension _PhraseTexts on List<PhraseEntry> {
+  List<String> get texts => map((e) => e.text).toList();
+}
 
 void main() {
   group('CoachPhrasePack.fromJson', () {
@@ -28,14 +33,14 @@ void main() {
           '90': ['peak'],
         },
       });
-      expect(pack.byMode[SessionMode.rhythm]!['soft'], ['rs1', 'rs2']);
-      expect(pack.byMode[SessionMode.rhythm]!['hard'], ['rh1']);
-      expect(pack.byMode[SessionMode.hold]!['finale'], ['hf1']);
-      expect(pack.intros, ['hello']);
-      expect(pack.congrats, ['merci']);
-      expect(pack.encore, ['encore']);
-      expect(pack.progress[50], ['mid']);
-      expect(pack.progress[90], ['peak']);
+      expect(pack.byMode[SessionMode.rhythm]!['soft']!.texts, ['rs1', 'rs2']);
+      expect(pack.byMode[SessionMode.rhythm]!['hard']!.texts, ['rh1']);
+      expect(pack.byMode[SessionMode.hold]!['finale']!.texts, ['hf1']);
+      expect(pack.intros.texts, ['hello']);
+      expect(pack.congrats.texts, ['merci']);
+      expect(pack.encore.texts, ['encore']);
+      expect(pack.progress[50]!.texts, ['mid']);
+      expect(pack.progress[90]!.texts, ['peak']);
     });
 
     test('ignore les clés inconnues et listes vides', () {
@@ -50,12 +55,31 @@ void main() {
       expect(pack.byMode.containsKey(SessionMode.rhythm), isFalse,
           reason: 'liste vide → tier non créé');
       expect(pack.progress, isEmpty);
-      expect(pack.intros, ['real'], reason: 'whitespace-only filtré');
+      expect(pack.intros.texts, ['real'], reason: 'whitespace-only filtré');
     });
 
     test('JSON vide → pack vide non null', () {
       final pack = CoachPhrasePack.fromJson({});
       expect(pack.isEmpty, isTrue);
+    });
+
+    test('parse un objet contraint avec min_depth/max_depth', () {
+      final pack = CoachPhrasePack.fromJson({
+        'phrases': {
+          'hold': {
+            'medium': [
+              'simple',
+              {'text': 'respire par le nez', 'max_depth': 'mid'},
+            ],
+          },
+        },
+      });
+      final entries = pack.byMode[SessionMode.hold]!['medium']!;
+      expect(entries.length, 2);
+      expect(entries[0].text, 'simple');
+      expect(entries[0].hasNoConstraints, isTrue);
+      expect(entries[1].text, 'respire par le nez');
+      expect(entries[1].maxDepth, isNotNull);
     });
   });
 
@@ -63,20 +87,20 @@ void main() {
     PhraseBank globalBank() => const PhraseBank(
           byMode: {
             SessionMode.rhythm: {
-              'soft': ['G_rhythm_soft'],
-              'medium': ['G_rhythm_medium'],
-              'hard': ['G_rhythm_hard'],
+              'soft': [PhraseEntry(text: 'G_rhythm_soft')],
+              'medium': [PhraseEntry(text: 'G_rhythm_medium')],
+              'hard': [PhraseEntry(text: 'G_rhythm_hard')],
             },
             SessionMode.hold: {
-              'soft': ['G_hold_soft'],
+              'soft': [PhraseEntry(text: 'G_hold_soft')],
             },
           },
-          congrats: ['G_congrats'],
-          intros: ['G_intro'],
+          congrats: [PhraseEntry(text: 'G_congrats')],
+          intros: [PhraseEntry(text: 'G_intro')],
           progress: {
-            50: ['G_excit50'],
+            50: [PhraseEntry(text: 'G_excit50')],
           },
-          encore: ['G_encore'],
+          encore: [PhraseEntry(text: 'G_encore')],
         );
 
     Coach coachWith(CoachPhrasePack pack) {
@@ -89,7 +113,7 @@ void main() {
       final coach = coachWith(const CoachPhrasePack(
         byMode: {
           SessionMode.rhythm: {
-            'soft': ['C_rhythm_soft'],
+            'soft': [PhraseEntry(text: 'C_rhythm_soft')],
           },
         },
       ));
@@ -101,7 +125,7 @@ void main() {
       final coach = coachWith(const CoachPhrasePack(
         byMode: {
           SessionMode.rhythm: {
-            'soft': ['C_rhythm_soft'],
+            'soft': [PhraseEntry(text: 'C_rhythm_soft')],
           },
         },
       ));
@@ -118,7 +142,9 @@ void main() {
     });
 
     test('intros / congrats / encore : coach prioritaire, fallback sinon', () {
-      final coachAvecIntro = coachWith(const CoachPhrasePack(intros: ['C_intro']));
+      final coachAvecIntro = coachWith(const CoachPhrasePack(
+        intros: [PhraseEntry(text: 'C_intro')],
+      ));
       expect(coachAvecIntro.toPhraseBank(fallback: globalBank()).pickIntro(rng),
           'C_intro');
 
@@ -127,7 +153,7 @@ void main() {
           'G_intro');
 
       final coachAvecCongrats = coachWith(const CoachPhrasePack(
-        congrats: ['C_congrats'],
+        congrats: [PhraseEntry(text: 'C_congrats')],
       ));
       expect(
           coachAvecCongrats.toPhraseBank(fallback: globalBank()).pickCongrats(rng),
@@ -136,7 +162,9 @@ void main() {
           .toPhraseBank(fallback: globalBank())
           .pickCongrats(rng), 'G_congrats');
 
-      final coachAvecEncore = coachWith(const CoachPhrasePack(encore: ['C_e']));
+      final coachAvecEncore = coachWith(const CoachPhrasePack(
+        encore: [PhraseEntry(text: 'C_e')],
+      ));
       expect(coachAvecEncore.toPhraseBank(fallback: globalBank()).pickEncore(rng),
           'C_e');
       expect(coachWith(const CoachPhrasePack())
@@ -146,7 +174,7 @@ void main() {
 
     test('progress : coach prioritaire au seuil, fallback sinon', () {
       final coach = coachWith(const CoachPhrasePack(progress: {
-        50: ['C_50'],
+        50: [PhraseEntry(text: 'C_50')],
       }));
       final bank = coach.toPhraseBank(fallback: globalBank());
       expect(bank.pickProgress(50, rng), 'C_50');
@@ -162,6 +190,101 @@ void main() {
       expect(bank.pickCongrats(rng), 'G_congrats');
       expect(bank.pickEncore(rng), 'G_encore');
       expect(bank.pickProgress(50, rng), 'G_excit50');
+    });
+  });
+
+  group('PhraseBank.pickFor — filtrage par contexte', () {
+    final rng = Random(0);
+
+    test('max_depth filtre les phrases pour les profondeurs au-delà', () {
+      const bank = PhraseBank(
+        byMode: {
+          SessionMode.hold: {
+            'medium': [
+              PhraseEntry(
+                text: 'respire par le nez',
+                maxDepth: Position.mid,
+              ),
+              PhraseEntry(text: 'générique'),
+            ],
+          },
+        },
+        congrats: [],
+        intros: [],
+      );
+      // Hold full → la phrase max_depth=mid doit être exclue. Reste
+      // « générique » qui passe (sans contraintes).
+      for (var i = 0; i < 10; i++) {
+        final picked = bank.pickFor(
+          SessionMode.hold,
+          'medium',
+          rng,
+          context: const PhraseContext(depth: Position.full),
+        );
+        expect(picked, 'générique');
+      }
+      // Hold mid → la phrase max_depth=mid passe, plus la générique. On
+      // accepte les deux dans le tirage.
+      final results = <String>{};
+      for (var i = 0; i < 50; i++) {
+        results.add(bank.pickFor(
+          SessionMode.hold,
+          'medium',
+          rng,
+          context: const PhraseContext(depth: Position.mid),
+        ));
+      }
+      expect(results, contains('respire par le nez'));
+      expect(results, contains('générique'));
+    });
+
+    test('min_depth filtre les phrases pour les profondeurs en-dessous', () {
+      const bank = PhraseBank(
+        byMode: {
+          SessionMode.rhythm: {
+            'hard': [
+              PhraseEntry(
+                text: 'nez contre les couilles',
+                minDepth: Position.full,
+              ),
+              PhraseEntry(text: 'plus dur'),
+            ],
+          },
+        },
+        congrats: [],
+        intros: [],
+      );
+      // Rhythm head→mid → minDepth=full ne match pas. Fallback sur
+      // « plus dur ».
+      for (var i = 0; i < 10; i++) {
+        final picked = bank.pickFor(
+          SessionMode.rhythm,
+          'hard',
+          rng,
+          context: const PhraseContext(depth: Position.mid),
+        );
+        expect(picked, 'plus dur');
+      }
+    });
+
+    test('sans contexte → tirage uniforme, pas de filtre', () {
+      const bank = PhraseBank(
+        byMode: {
+          SessionMode.hold: {
+            'medium': [
+              PhraseEntry(
+                text: 'contrainte',
+                maxDepth: Position.mid,
+              ),
+            ],
+          },
+        },
+        congrats: [],
+        intros: [],
+      );
+      // Sans contexte, la phrase contrainte sort quand même (compat
+      // historique).
+      expect(bank.pickFor(SessionMode.hold, 'medium', rng), 'contrainte');
     });
   });
 }

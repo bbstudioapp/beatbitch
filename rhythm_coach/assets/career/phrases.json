@@ -11,7 +11,7 @@
       "Tu es mignonne quand tu suces doucement."
     ],
     "medium": [
-      "Plus profond maintenant. C’est bien.",
+      {"text": "Plus profond maintenant. C’est bien.", "min_depth": "mid"},
       "Tu commences à bien me prendre.",
       "Continue comme ça, tu m’excites.",
       "Bave bien dessus, c’est parfait.",
@@ -19,14 +19,14 @@
       "Je sens que je vais finir par venir si tu continues."
     ],
     "hard": [
-      "Défonce ta gorge salope.",
-      "Plus fort. Plus profond. Je vais venir.",
-      "Étouffe-toi avec. Avale tout.",
-      "Nez contre les couilles à chaque coup.",
+      {"text": "Défonce ta gorge salope.", "min_depth": "throat"},
+      {"text": "Plus fort. Plus profond. Je vais venir.", "min_depth": "mid"},
+      {"text": "Étouffe-toi avec. Avale tout.", "min_depth": "throat"},
+      {"text": "Nez contre les couilles à chaque coup.", "min_depth": "full"},
       "Tu veux mon sperme ? Alors suce mieux.",
-      "Crève ta gorge dessus. Je veux décharger.",
+      {"text": "Crève ta gorge dessus. Je veux décharger.", "min_depth": "throat"},
       "Tu n’es qu’un trou à bite.",
-      "Je vais te remplir la gorge si tu continues.",
+      {"text": "Je vais te remplir la gorge si tu continues.", "min_depth": "throat"},
       "Pleure, bave, mais ne t’arrête pas."
     ],
     "boost": [
@@ -105,15 +105,15 @@
       "Tiens-le bien au fond."
     ],
     "hard": [
-      "Reste au fond salope. Je vais jouir.",
-      "Nez collé. Ne bouge surtout pas.",
+      {"text": "Reste au fond salope. Je vais jouir.", "min_depth": "throat"},
+      {"text": "Nez collé. Ne bouge surtout pas.", "min_depth": "full"},
       "Tu vas recevoir mon sperme si tu tiens.",
-      "Étouffe-toi dessus, je suis proche."
+      {"text": "Étouffe-toi dessus, je suis proche.", "min_depth": "throat"}
     ],
     "finale": [
-      "Au plus profond. Tiens jusqu’à la fin.",
-      "Reste encastrée, je vais venir.",
-      "Nez collé. Dernier effort.",
+      {"text": "Au plus profond. Tiens jusqu’à la fin.", "min_depth": "throat"},
+      {"text": "Reste encastrée, je vais venir.", "min_depth": "throat"},
+      {"text": "Nez collé. Dernier effort.", "min_depth": "full"},
       "Tiens-le bien, tu vas mériter mon foutre."
     ]
   },

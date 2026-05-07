@@ -4,6 +4,7 @@ import '../../models/session.dart';
 import '../../models/session_step.dart';
 import '../../services/random_comments_loader.dart';
 import 'phrase_bank.dart';
+import 'phrase_entry.dart';
 import 'specialization.dart';
 
 /// Archétypes de coachs. Chaque archétype incarne un ton et une posture
@@ -352,17 +353,18 @@ class CoachNicknamePool {
 /// JAMAIS généré automatiquement.
 class CoachPhrasePack {
   /// Phrases par mode (rhythm/lick/biffle/hold/breath/beg/freestyle/hand)
-  /// puis par tier (chaîne libre, voir doc plus haut).
-  final Map<SessionMode, Map<String, List<String>>> byMode;
+  /// puis par tier (chaîne libre, voir doc plus haut). Chaque entrée peut
+  /// porter des contraintes de profondeur/BPM/unlock — cf. [PhraseEntry].
+  final Map<SessionMode, Map<String, List<PhraseEntry>>> byMode;
 
-  final List<String> intros;
-  final List<String> congrats;
-  final List<String> encore;
+  final List<PhraseEntry> intros;
+  final List<PhraseEntry> congrats;
+  final List<PhraseEntry> encore;
 
   /// Phrases déclenchées au franchissement d'un seuil de progression de la
   /// séance (ratio elapsed/duration), indexé par seuil en pourcent
   /// (25/50/75/90).
-  final Map<int, List<String>> progress;
+  final Map<int, List<PhraseEntry>> progress;
 
   /// Phrases colorées par branche de spécialisation. Pour chaque branche,
   /// pool indexé par tier (`soft` / `medium` / `hard` typiquement). Quand
@@ -372,7 +374,8 @@ class CoachPhrasePack {
   /// pour profondeur, « tu ne faiblis jamais » pour endurance, etc.).
   ///
   /// Vide / absent = pas de coloration, comportement historique.
-  final Map<SpecializationBranch, Map<String, List<String>>> branchPhrases;
+  final Map<SpecializationBranch, Map<String, List<PhraseEntry>>>
+      branchPhrases;
 
   /// Commentaires aléatoires propres à ce coach. Si non vide, **remplacent**
   /// la liste globale de `random_comments.json` pendant la séance. Vide =
@@ -455,43 +458,44 @@ class CoachPhrasePack {
     }
 
     final phrasesNode = root['phrases'];
-    final byMode = <SessionMode, Map<String, List<String>>>{};
+    final byMode = <SessionMode, Map<String, List<PhraseEntry>>>{};
     if (phrasesNode is Map<String, dynamic>) {
       for (final mode in SessionMode.values) {
         final modeNode = phrasesNode[mode.name];
         if (modeNode is! Map<String, dynamic>) continue;
-        final tiers = <String, List<String>>{};
+        final tiers = <String, List<PhraseEntry>>{};
         modeNode.forEach((tier, raw) {
-          final list = stringList(raw);
+          final list = PhraseEntry.listFromJson(raw);
           if (list.isNotEmpty) tiers[tier] = list;
         });
         if (tiers.isNotEmpty) byMode[mode] = tiers;
       }
     }
 
-    final progress = <int, List<String>>{};
+    final progress = <int, List<PhraseEntry>>{};
     final progressNode = root['progress'];
     if (progressNode is Map<String, dynamic>) {
       progressNode.forEach((key, raw) {
         final threshold = int.tryParse(key);
         if (threshold == null) return;
-        final list = stringList(raw);
+        final list = PhraseEntry.listFromJson(raw);
         if (list.isNotEmpty) progress[threshold] = list;
       });
     }
 
     // branchPhrases : map branche → tier → liste. Tolère les clés inconnues
     // (branche serializée non reconnue → ignorée silencieusement).
-    final branchPhrases = <SpecializationBranch, Map<String, List<String>>>{};
+    final branchPhrases =
+        <SpecializationBranch, Map<String, List<PhraseEntry>>>{};
     final branchNode = root['branchPhrases'];
     if (branchNode is Map<String, dynamic>) {
       branchNode.forEach((branchKey, tiersRaw) {
         if (tiersRaw is! Map<String, dynamic>) return;
         final branch = _parseBranch(branchKey);
         if (branch == null) return;
-        final tiers = <String, List<String>>{};
+        final tiers = <String, List<PhraseEntry>>{};
         tiersRaw.forEach((tier, raw) {
-          final list = stringList(raw);
+          final list = PhraseEntry.listFromJson(raw);
           if (list.isNotEmpty) tiers[tier] = list;
         });
         if (tiers.isNotEmpty) branchPhrases[branch] = tiers;
@@ -511,9 +515,9 @@ class CoachPhrasePack {
 
     return CoachPhrasePack(
       byMode: byMode,
-      intros: stringList(root['intros']),
-      congrats: stringList(root['congrats']),
-      encore: stringList(root['encore']),
+      intros: PhraseEntry.listFromJson(root['intros']),
+      congrats: PhraseEntry.listFromJson(root['congrats']),
+      encore: PhraseEntry.listFromJson(root['encore']),
       progress: progress,
       branchPhrases: branchPhrases,
       randomComments: stringList(root['randomComments']),
@@ -831,7 +835,12 @@ class _CoachComposedPhraseBank extends PhraseBank {
         );
 
   @override
-  String pickFor(SessionMode mode, String tier, Random rng) {
+  String pickFor(
+    SessionMode mode,
+    String tier,
+    Random rng, {
+    PhraseContext? context,
+  }) {
     // Coloration branche dominante : avant le pool standard, on tente le
     // pool branchPhrases[dominantBranch][tier]. Pas de coloration sur les
     // tiers `boost`/`finale` (dramaturgie propre, déjà spécifique).
@@ -840,7 +849,8 @@ class _CoachComposedPhraseBank extends PhraseBank {
       if (rng.nextDouble() < _branchPickProbability) {
         final pool = coachPhrases.branchPhrases[branch]?[tier];
         if (pool != null && pool.isNotEmpty) {
-          return pool[rng.nextInt(pool.length)];
+          final picked = pickPhraseEntry(pool, rng, context: context);
+          if (picked != null) return picked;
         }
       }
     }
@@ -848,26 +858,24 @@ class _CoachComposedPhraseBank extends PhraseBank {
     if (tiers != null) {
       final candidates = tiers[tier];
       if (candidates != null && candidates.isNotEmpty) {
-        return candidates[rng.nextInt(candidates.length)];
+        final picked = pickPhraseEntry(candidates, rng, context: context);
+        if (picked != null) return picked;
       }
     }
-    return fallback.pickFor(mode, tier, rng);
+    return fallback.pickFor(mode, tier, rng, context: context);
   }
 
   @override
   String pickCongrats(Random rng) {
-    if (coachPhrases.congrats.isNotEmpty) {
-      return coachPhrases
-          .congrats[rng.nextInt(coachPhrases.congrats.length)];
-    }
+    final picked = pickPhraseEntry(coachPhrases.congrats, rng);
+    if (picked != null) return picked;
     return fallback.pickCongrats(rng);
   }
 
   @override
   String? pickIntro(Random rng) {
-    if (coachPhrases.intros.isNotEmpty) {
-      return coachPhrases.intros[rng.nextInt(coachPhrases.intros.length)];
-    }
+    final picked = pickPhraseEntry(coachPhrases.intros, rng);
+    if (picked != null) return picked;
     return fallback.pickIntro(rng);
   }
 
@@ -875,16 +883,16 @@ class _CoachComposedPhraseBank extends PhraseBank {
   String? pickProgress(int threshold, Random rng) {
     final list = coachPhrases.progress[threshold];
     if (list != null && list.isNotEmpty) {
-      return list[rng.nextInt(list.length)];
+      final picked = pickPhraseEntry(list, rng);
+      if (picked != null) return picked;
     }
     return fallback.pickProgress(threshold, rng);
   }
 
   @override
   String? pickEncore(Random rng) {
-    if (coachPhrases.encore.isNotEmpty) {
-      return coachPhrases.encore[rng.nextInt(coachPhrases.encore.length)];
-    }
+    final picked = pickPhraseEntry(coachPhrases.encore, rng);
+    if (picked != null) return picked;
     return fallback.pickEncore(rng);
   }
 

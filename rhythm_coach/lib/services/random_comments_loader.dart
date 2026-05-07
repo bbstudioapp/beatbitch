@@ -64,9 +64,20 @@ class RandomComment {
   /// Si non null : ne sort que si le BPM courant >= seuil.
   final int? minBpm;
 
+  /// Si non null : ne sort que si le BPM courant <= seuil. Permet de
+  /// réserver une phrase calme (« doucement », « prends ton temps ») à un
+  /// rythme bas, sans qu'elle tombe en plein sprint à 140 BPM.
+  final int? maxBpm;
+
   /// Si non null : ne sort que si la profondeur courante (to ?? from) est
   /// au moins aussi profonde que ce seuil.
   final Position? minDepth;
+
+  /// Si non null : ne sort que si la profondeur courante (to ?? from) est
+  /// au plus aussi profonde que ce seuil. Permet de réserver une phrase
+  /// du type « respire par le nez » à un hold pas trop profond, où la
+  /// respiration nasale reste possible.
+  final Position? maxDepth;
 
   /// Si non vide : la phrase n'est candidate que si **toutes** ces clés
   /// d'unlock (au format `UnlockKey.serialized`) sont acquises pour la
@@ -80,7 +91,9 @@ class RandomComment {
     required this.text,
     this.modes,
     this.minBpm,
+    this.maxBpm,
     this.minDepth,
+    this.maxDepth,
     this.requiresUnlock = const [],
   });
 
@@ -106,7 +119,9 @@ class RandomComment {
         text: (raw['text'] as String?) ?? '',
         modes: modes != null && modes.isNotEmpty ? modes : null,
         minBpm: (raw['min_bpm'] as num?)?.toInt(),
+        maxBpm: (raw['max_bpm'] as num?)?.toInt(),
         minDepth: Position.fromString(raw['min_depth'] as String?),
+        maxDepth: Position.fromString(raw['max_depth'] as String?),
         requiresUnlock: requiresUnlock,
       );
     }
@@ -123,8 +138,12 @@ class RandomComment {
   }) {
     if (modes != null && !modes!.contains(mode)) return false;
     if (minBpm != null && (bpm == null || bpm < minBpm!)) return false;
+    if (maxBpm != null && bpm != null && bpm > maxBpm!) return false;
     if (minDepth != null) {
       if (depth == null || depth.index < minDepth!.index) return false;
+    }
+    if (maxDepth != null && depth != null && depth.index > maxDepth!.index) {
+      return false;
     }
     for (final k in requiresUnlock) {
       if (!unlockedKeys.contains(k)) return false;
@@ -136,7 +155,13 @@ class RandomComment {
   /// ses prérequis d'unlock sont satisfaits — sert de fallback dans
   /// `pickFor` quand aucune phrase contextuelle ne match.
   bool isContextlessFor(Set<String> unlockedKeys) {
-    if (modes != null || minBpm != null || minDepth != null) return false;
+    if (modes != null ||
+        minBpm != null ||
+        maxBpm != null ||
+        minDepth != null ||
+        maxDepth != null) {
+      return false;
+    }
     for (final k in requiresUnlock) {
       if (!unlockedKeys.contains(k)) return false;
     }

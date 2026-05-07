@@ -6,18 +6,18 @@
   "phrases": {
     "rhythm": {
       "hard": [
-        "Défonce ta gorge {name}.",
-        "Plus profond, trou à bite.",
+        {"text": "Défonce ta gorge {name}.", "min_depth": "throat"},
+        {"text": "Plus profond, trou à bite.", "min_depth": "mid"},
         "Avale tout sans te plaindre."
       ]
     },
     "hold": {
       "hard": [
-        "Reste au fond. Suffoque dessus {name}.",
-        "Nez contre les couilles. Tiens."
+        {"text": "Reste au fond. Suffoque dessus {name}.", "min_depth": "throat"},
+        {"text": "Nez contre les couilles. Tiens.", "min_depth": "full"}
       ],
       "finale": [
-        "Reste plantée jusqu’au bout {name}."
+        {"text": "Reste plantée jusqu’au bout {name}.", "min_depth": "mid"}
       ]
     }
   },
