@@ -1,12 +1,12 @@
 {
   "@@locale": "en",
 
-  "appTitle": "Rhythm Coach",
+  "appTitle": "BeatBitch",
   "@appTitle": {
     "description": "Application name displayed by the Android system."
   },
 
-  "modeSelectionAppBarTitle": "RHYTHM COACH",
+  "modeSelectionAppBarTitle": "BEATBITCH",
   "modeSelectionProfileTooltip": "Profile & badges",
   "modeSelectionSoundsTooltip": "Learn the sounds",
   "modeSelectionHeaderTitle": "Pick your mode",
@@ -705,6 +705,6 @@
   "surpriseSettingsPermissionMissing": "Allow notifications in the system settings.",
   "surpriseSettingsExactAlarmMissing": "Exact alarms are denied by the system.",
   "surpriseSettingsBatteryHintTitle": "Battery optimization",
-  "surpriseSettingsBatteryHintBody": "On some phones (Xiaomi, Huawei, Samsung), disable battery optimization for Rhythm Coach to guarantee reminders.",
+  "surpriseSettingsBatteryHintBody": "On some phones (Xiaomi, Huawei, Samsung), disable battery optimization for BeatBitch to guarantee reminders.",
   "surpriseSettingsOpenBatterySettings": "Open the settings"
 }

@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Sources brutes des icônes (générées par Gemini, conservées hors repo)
+assets/icon/*.orig.png

@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:rhythm_coach/career/models/coach.dart';
-import 'package:rhythm_coach/career/models/coach_catalog.dart';
-import 'package:rhythm_coach/career/models/specialization.dart';
-import 'package:rhythm_coach/career/services/coach_service.dart';
+import 'package:beat_bitch/career/models/coach.dart';
+import 'package:beat_bitch/career/models/coach_catalog.dart';
+import 'package:beat_bitch/career/models/specialization.dart';
+import 'package:beat_bitch/career/services/coach_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

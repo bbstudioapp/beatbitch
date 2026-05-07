@@ -1,4 +1,4 @@
-# rhythm_coach
+# BeatBitch
 
 A new Flutter project.
 

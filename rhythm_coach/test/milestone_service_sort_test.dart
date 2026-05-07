@@ -1,11 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:rhythm_coach/career/models/level_milestone.dart';
-import 'package:rhythm_coach/career/models/specialization.dart';
-import 'package:rhythm_coach/career/models/unlock_key.dart';
-import 'package:rhythm_coach/career/services/milestone_service.dart';
-import 'package:rhythm_coach/models/session.dart';
-import 'package:rhythm_coach/models/session_step.dart';
-import 'package:rhythm_coach/services/humiliation_engine.dart';
+import 'package:beat_bitch/career/models/level_milestone.dart';
+import 'package:beat_bitch/career/models/specialization.dart';
+import 'package:beat_bitch/career/models/unlock_key.dart';
+import 'package:beat_bitch/career/services/milestone_service.dart';
+import 'package:beat_bitch/models/session.dart';
+import 'package:beat_bitch/models/session_step.dart';
+import 'package:beat_bitch/services/humiliation_engine.dart';
 
 double _humilMaxOf(Iterable<SessionStep> steps) {
   var best = 0.0;
