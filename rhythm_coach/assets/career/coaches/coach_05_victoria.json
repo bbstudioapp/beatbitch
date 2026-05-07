@@ -16,5 +16,11 @@
     "hold": 1.2,
     "lick": 0.7,
     "freestyle": 0.5
+  },
+  "tts": {
+    "voice": "fr-fr-x-frc-local",
+    "voiceLocale": "fr-FR",
+    "rate": 0.59,
+    "pitch": 1.09
   }
 }

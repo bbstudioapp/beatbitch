@@ -237,10 +237,11 @@ class CareerSessionGenerator {
     _deepProbability = cfg.deepProbability;
     _spec = specialization ?? SpecializationAllocation.empty();
     _level = level;
-    // Première mini-vague entre 5 et 6 minutes : laisse l'intro et le
+    // Première mini-vague entre 4 et 5 minutes : laisse l'intro et le
     // début de chauffe se dérouler sans rupture, puis le générateur peut
-    // poser un mini-finish pour casser la monotonie.
-    _nextMiniWaveAt = 300 + _rng.nextInt(61);
+    // poser un mini-finish pour casser la monotonie. Cadence resserrée
+    // (vs 5-6 min initial) pour viser 3 vagues sur une session 19 min.
+    _nextMiniWaveAt = 240 + _rng.nextInt(61);
     _lastSwallowOrderAt = -120;
     _lastMode = null;
     _lastText = '';
@@ -257,14 +258,16 @@ class CareerSessionGenerator {
     _humiliationCareer = humiliationCareer;
     _humiliationSession = humiliationSession;
     _obedience = obedience;
-    // Mode "Session bâclée" : 6 min, intense tout du long. Floor d'intensité
-    // appliqué au tirage de difficulté + on saute l'intro douce et la
-    // pré-finition. Override la durée passée en paramètre.
+    // Mode "Session bâclée" : 6 min par défaut, intense tout du long. Floor
+    // d'intensité appliqué au tirage de difficulté + on saute l'intro douce
+    // et la pré-finition. Une durée explicite reste prioritaire (cas de la
+    // session surprise qui demande 60-240s avec dramaturgie quickie).
     //
     // Mode "intense" : régénération post-Supplier. On garde la durée
     // demandée mais on supprime le soft intro et on applique un plancher
     // de difficulté solide pour que la suite ressente vraiment le level up.
-    final effectiveDuration = quickie ? 6 * 60 : (durationSeconds ?? cfg.durationSeconds);
+    final effectiveDuration =
+        durationSeconds ?? (quickie ? 6 * 60 : cfg.durationSeconds);
     final intensityFloor =
         quickie ? 0.65 : (intense ? 0.55 : 0.0);
     // Nombre de boosts en phase finish : table par niveau + bonus encore
@@ -416,7 +419,7 @@ class CareerSessionGenerator {
       }
       // Mini-vague : 2-3 steps enchaînés à BPM montant qui cassent la
       // diagonale d'intensité unique du début au finish. Inséré toutes
-      // les ~6-7 minutes sur les sessions longues (≥ 12 min) à partir du
+      // les ~4-5 minutes sur les sessions longues (≥ 12 min) à partir du
       // niveau 5. Cf. `_shouldEmitMiniWave`.
       if (_shouldEmitMiniWave(time, effectiveDuration, stamina, genUntil)) {
         final progressForWave = time / effectiveDuration;
@@ -439,10 +442,37 @@ class CareerSessionGenerator {
               from: wd.from, bpm: wd.bpm, duration: wd.duration);
           time += wd.duration!;
         }
-        // Replanification : 6-7 minutes après la fin de la vague émise.
+        // Pause longue post-vague : breath dédié dimensionné pour viser
+        // ~95 stamina, sortie volontaire du cap [4,12] du sas breath
+        // standard — la vague est un mini-finish, on s'autorise une vraie
+        // respiration scénarisée derrière pour repartir de plein. Borne
+        // [12, 20] s : 12 = baseline minimale même si stamina déjà haute,
+        // 20 = plafond pour ne pas casser le rythme dramaturgique de la
+        // session. À niveau 9 milieu de séance (regen ≈ 1.6, ≈ 4.5/s),
+        // 15-20 s rendent ~70-90 stamina.
+        final postWaveProgress = time / effectiveDuration;
+        final postWaveBreath = _buildPostWaveBreath(
+            stamina, postWaveProgress, cfg, genUntil - time);
+        if (postWaveBreath != null) {
+          final breathText = _pickPhrase(bank, SessionMode.breath, 'soft');
+          steps.add(_draftToStep(postWaveBreath, time: time, text: breathText));
+          final staminaBefore = stamina;
+          stamina =
+              _applyStaminaChange(stamina, postWaveBreath, postWaveProgress, cfg);
+          _advanceSalivaSim(postWaveBreath);
+          _fillProfile(profile, time, postWaveBreath.duration!, stamina,
+              valueStart: staminaBefore);
+          _lastMode = SessionMode.breath;
+          _lastText = breathText;
+          _trackPushedStep(SessionMode.breath, null,
+              duration: postWaveBreath.duration);
+          time += postWaveBreath.duration!;
+        }
+        // Replanification : 4-5 minutes après la fin de la vague émise.
         // La séance enchaîne ensuite sur du tirage classique — la stamina
-        // creusée naturellement par la vague pousse vers la retombée.
-        _nextMiniWaveAt = time + 360 + _rng.nextInt(61);
+        // restaurée par la pause longue permet d'enchaîner sereinement
+        // jusqu'à la prochaine vague.
+        _nextMiniWaveAt = time + 240 + _rng.nextInt(61);
         continue;
       }
       // Ordre de déglutition forcé : quand la simulation salive sature,
@@ -1079,15 +1109,18 @@ class CareerSessionGenerator {
   /// - `time >= _nextMiniWaveAt` (replanifié après chaque vague).
   /// - `genUntil - time >= 90 s` (laisse une marge avant la phase finish
   ///   pour ne pas chevaucher pré-finisher / boosts).
-  /// - stamina ≥ 50 (sinon la vague creuserait jusqu'au déficit, le sas
-  ///   breath obligerait à respirer immédiatement et casserait l'effet).
+  /// - stamina ≥ 35 (assoupli vs 50 initial : sur les profils profondeur
+  ///   + endurance basse, la stamina creuse vite et la vague était
+  ///   skippée systématiquement aux 5-6 min. La pause longue post-vague
+  ///   replenit derrière, donc on peut émettre depuis une stamina plus
+  ///   modeste sans casser la dramaturgie).
   bool _shouldEmitMiniWave(
       int time, int effectiveDuration, double stamina, int genUntil) {
     if (effectiveDuration < 720) return false;
     if (_level < 5) return false;
     if (time < _nextMiniWaveAt) return false;
     if (genUntil - time < 90) return false;
-    if (stamina < 50) return false;
+    if (stamina < 35) return false;
     return true;
   }
 
@@ -1153,6 +1186,54 @@ class CareerSessionGenerator {
       return raw.take(2).toList();
     }
     return out;
+  }
+
+  /// Construit la **pause longue post-vague** : breath dédié dont la
+  /// durée vise à remonter la stamina à ~95 (`_postWaveBreathTarget`).
+  /// Distinct du sas breath standard (`_buildBreathRecovery`) qui cap à
+  /// 12 s — ici on s'autorise jusqu'à 20 s parce que la vague est un
+  /// mini-finish dramatique : on assume une vraie respiration scénarisée
+  /// derrière, pas un soupir de 6 s.
+  ///
+  /// Borne basse 12 s : même si la stamina est déjà haute (cas vague
+  /// dégradée par humilCap qui n'a pas creusé), on garde une pause
+  /// audible — le silence post-vague est un moment dramaturgique.
+  ///
+  /// Borne haute 20 s : au-delà, la pause devient plus longue que la
+  /// vague elle-même (~30 s) et le coach radoterait du soft. La regen
+  /// finit le job sur les phases libres suivantes si besoin.
+  ///
+  /// Retourne null si moins de 12 s sont disponibles avant `genUntil`
+  /// (rare : la vague checke déjà `genUntil - time >= 90`, mais la
+  /// vague elle-même consomme jusqu'à 30 s, donc on revérifie ici).
+  _StepDraft? _buildPostWaveBreath(
+    double stamina,
+    double progress,
+    CareerLevel cfg,
+    int remainingSeconds,
+  ) {
+    if (remainingSeconds < 12) return null;
+    final regen = _lerp(
+      cfg.regenStartMultiplier,
+      cfg.regenEndMultiplier,
+      progress,
+    );
+    final regenPerSec = 2.8 * regen;
+    const target = 95.0;
+    final deficit = (target - stamina).clamp(0.0, target);
+    final raw = regenPerSec <= 0 ? 12.0 : deficit / regenPerSec;
+    // Borne dur entre [12, 20] et capée par le temps restant avant le
+    // pré-finisher / boosts pour ne pas marcher sur la dramaturgie de
+    // fin de session.
+    final upperBound = remainingSeconds < 20 ? remainingSeconds : 20;
+    final dur = raw.ceil().clamp(12, upperBound);
+    return _StepDraft(
+      mode: SessionMode.breath,
+      bpm: null,
+      from: null,
+      to: null,
+      duration: dur,
+    );
   }
 
   /// Construit éventuellement un step **swallow_order** : beg libre court
@@ -1277,18 +1358,27 @@ class CareerSessionGenerator {
     // pour les beg, vérifie l'unlock `begLibre` (sinon on demanderait à
     // une utilisatrice qui n'a pas encore validé la milestone d'introduction
     // au beg de supplier post-orgasme — pédagogiquement faux).
+    //
+    // Holds tip/head : bloqués dès que la joueuse a débloqué un palier de
+    // hold plus profond (`holdMidShort` ou plus). Cohérent avec la philo
+    // design « le seul hold qui a du sens est le plus profond que tu sais
+    // tenir » — un hold tip/head post-orgasme alors que mid est acquis
+    // est juste une régression arbitraire.
     final isFinalHold = finalMode == SessionMode.hold;
     final canBeg =
         _unlockedKeys.isEmpty || _unlockedKeys.contains(UnlockKey.begLibre);
+    final holdCeilingIdx = _milestoneHoldCeilingIdx();
+    final holdTipObsolete = holdCeilingIdx > Position.tip.index;
+    final holdHeadObsolete = holdCeilingIdx > Position.head.index;
     final candidates = <(double req, bool blocked, _StepDraft Function() build)>[
       (0.0, false, breath),
       (8.0, !_includeHand || finalMode == SessionMode.hand, hand),
-      (20.0, isFinalHold, holdTip),
+      (20.0, isFinalHold || holdTipObsolete, holdTip),
       (25.0, !canBeg, begLibre),
       (35.0, finalMode == SessionMode.lick, lick),
       (55.0, finalMode == SessionMode.rhythm, rhythm),
       (60.0, !canBeg, begHead),
-      (70.0, isFinalHold, holdHead),
+      (70.0, isFinalHold || holdHeadObsolete, holdHead),
     ];
     final valid = candidates
         .where((c) => c.$1 <= humilCap && !c.$2)
@@ -2523,8 +2613,21 @@ class CareerSessionGenerator {
     final probability = 0.20 + 0.05 * obPts;
     if (_rng.nextDouble() > probability.clamp(0.20, 0.60)) return null;
 
+    final holdCeilingIdx = _milestoneHoldCeilingIdx();
     final candidates = <(_StepDraft, _StepDraft)>[];
     for (final tpl in _begChainTemplates) {
+      // Si le chainNext est un hold à profondeur sous le palier de hold
+      // débloqué par milestones, on filtre — un hold tip/head qui suit
+      // un beg alors qu'on maîtrise mid est une régression. On NE le
+      // promote pas en silence (durée 6 s d'un template tip/head ne
+      // tient pas une bouchée à throat ou full) — on retire juste le
+      // template du tirage.
+      final chain = tpl.$2;
+      if (chain.mode == SessionMode.hold &&
+          chain.to != null &&
+          chain.to!.index < holdCeilingIdx) {
+        continue;
+      }
       if (!_isUnlocked(tpl.$1) || !_isUnlocked(tpl.$2)) continue;
       candidates.add(tpl);
     }

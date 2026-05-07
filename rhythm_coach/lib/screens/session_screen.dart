@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../career/models/level_milestone.dart';
 import '../career/models/phrase_bank.dart';
 import '../career/models/specialization.dart';
 import '../career/models/unlock_key.dart';
@@ -13,6 +16,7 @@ import '../career/widgets/free_spec_points_banner.dart';
 import '../main.dart' show milestoneService;
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
+import '../l10n/format_helpers.dart';
 import '../models/badge.dart';
 import '../career/services/debug_settings_service.dart';
 import '../career/widgets/stamina_bar.dart';
@@ -32,6 +36,7 @@ import '../services/tts_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/mode_badge_row.dart';
 import '../widgets/movement_animation.dart';
+import '../widgets/session_background.dart';
 import '../widgets/timer_display.dart';
 
 class SessionScreen extends StatefulWidget {
@@ -124,6 +129,13 @@ class SessionScreen extends StatefulWidget {
   /// la chauffe accumulée (cf. modèle 2 thermomètres).
   final double seedHumiliationSession;
 
+  /// Si true, le bouton « Merci » de fin de session minimise l'app (via
+  /// `SystemNavigator.pop`) au lieu de revenir à l'écran précédent.
+  /// Utilisé pour les sessions surprise déclenchées par notif : la
+  /// joueuse a tapé pour une parenthèse — elle attend de retomber sur
+  /// son téléphone, pas sur l'arborescence carrière.
+  final bool closeAppOnEnd;
+
   const SessionScreen({
     super.key,
     required this.session,
@@ -148,6 +160,7 @@ class SessionScreen extends StatefulWidget {
     this.coachAdvancesTier = true,
     this.specialization,
     this.seedHumiliationSession = 0.0,
+    this.closeAppOnEnd = false,
   });
 
   @override
@@ -258,6 +271,7 @@ class _SessionScreenState extends State<SessionScreen>
         onRequestEncore: widget.onRequestEncore,
         autoStart: widget.autoStart,
         canSave: widget.canSave,
+        closeAppOnEnd: widget.closeAppOnEnd,
       ),
     );
   }
@@ -273,6 +287,7 @@ class _SessionScreenContent extends StatefulWidget {
   final Future<void> Function(SessionController controller)? onRequestEncore;
   final bool autoStart;
   final bool canSave;
+  final bool closeAppOnEnd;
 
   final BeepEngine beep;
 
@@ -287,6 +302,7 @@ class _SessionScreenContent extends StatefulWidget {
     required this.onRequestEncore,
     required this.autoStart,
     required this.canSave,
+    required this.closeAppOnEnd,
   });
 
   @override
@@ -303,6 +319,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
   bool _showSessionControls = false;
   bool _showModeBadge = false;
   bool _showSkipSessionButton = false;
+  bool _showBackgroundMedia = true;
   bool _upgradeRequested = false;
   bool _upgradeInFlight = false;
 
@@ -360,6 +377,10 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     debug.getShowModeBadge().then((value) {
       if (!mounted) return;
       setState(() => _showModeBadge = value);
+    });
+    debug.getShowBackgroundMedia().then((value) {
+      if (!mounted) return;
+      setState(() => _showBackgroundMedia = value);
     });
     if (widget.introText != null && widget.introText!.trim().isNotEmpty) {
       _introPending = true;
@@ -526,7 +547,16 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
             : AppBar(
                 title: Text(ctrl.session.name),
               ),
-        body: SafeArea(
+        body: Stack(
+          children: [
+            // Background d'ambiance derrière toute l'UI. Subtil, animé,
+            // n'intercepte aucun tap (IgnorePointer interne). Le toggle
+            // utilisateur `showBackgroundMedia` (page SONS) court-circuite
+            // les médias et ne rend que le dégradé.
+            Positioned.fill(
+                child:
+                    SessionBackground(mediaEnabled: _showBackgroundMedia)),
+            SafeArea(
           child: _introPending
               ? _IntroPanel(
                   text: _resolvedIntroText!,
@@ -569,19 +599,39 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                           // détails badges + points spé + bouton de sortie.
                           : _FinishedPanel(
                               badgeUnlocks: ctrl.sessionBadgeUnlocks,
+                              milestoneUnlocks: ctrl.sessionMilestoneUnlocks,
                               hasPendingBadges: false,
                               onRevealBadges: ctrl.revealBadgeUnlocks,
                               endButtonLabel: widget.endButtonLabel ??
                                   t.sessionFinishedDefaultEnd,
-                              onEnd: () => Navigator.of(context).pop(),
+                              onEnd: widget.closeAppOnEnd
+                                  ? () => SystemNavigator.pop()
+                                  : () => Navigator.of(context).pop(),
                               onEncore: widget.onRequestEncore == null
                                   ? null
                                   : () => widget.onRequestEncore!(ctrl),
                               onSave: widget.canSave
                                   ? () => _handleSave(ctrl)
                                   : null,
+                              elapsedSeconds: ctrl.elapsedSeconds,
                             ))
-                      : _buildRunningView(ctrl))),
+                      : Stack(
+                          children: [
+                            Positioned.fill(child: _buildRunningView(ctrl)),
+                            // Overlay flou + bouton play centré quand la
+                            // séance est en pause. Couvre l'intégralité de
+                            // l'écran de jeu, peu importe le mode prod /
+                            // debug — la reprise est toujours à un tap.
+                            if (ctrl.isPaused)
+                              Positioned.fill(
+                                child: _PausedOverlay(
+                                  onResume: ctrl.resume,
+                                ),
+                              ),
+                          ],
+                        ))),
+            ),
+          ],
         ),
       ),
     );
@@ -614,12 +664,13 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
           SizedBox(height: showBar ? 6 : 12),
           if (ctrl.isFailing)
             _FailPhaseIndicator(controller: ctrl)
-          else if (ctrl.hasConfig && _showModeBadge)
+          else if (ctrl.hasConfig)
             ModeBadgeRow(
               mode: ctrl.currentMode,
               from: ctrl.currentFrom,
               to: ctrl.currentTo,
               bpm: ctrl.currentBpm,
+              showDetails: _showModeBadge,
             )
           else
             const SizedBox(height: 30),
@@ -675,16 +726,9 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
           if (_showSessionControls) ...[
             _ControlsRow(controller: ctrl),
             SizedBox(height: showBar ? 10 : 16),
-          ] else if (ctrl.isPaused) ...[
-            // En prod (contrôles cachés) on signale quand même l'état pause
-            // — sans ça, sortir et rentrer dans l'app ne donne aucun signal
-            // visuel que la séance est suspendue, le user peut croire qu'elle
-            // tourne en silence. Un simple chip suffit, pas de bouton (la
-            // reprise se fait au retour de focus côté contrôleur ou via les
-            // contrôles debug).
-            const _PausedIndicator(),
-            SizedBox(height: showBar ? 10 : 16),
           ],
+          // L'état pause est signalé par l'overlay flou plein écran
+          // monté un cran au-dessus (cf. `_PausedOverlay` dans `body`).
           if (widget.isCareer && widget.onRequestUpgrade != null)
             ListenableBuilder(
               listenable: milestoneService,
@@ -919,43 +963,66 @@ class _ControlsRow extends StatelessWidget {
   }
 }
 
-/// Indicateur visuel d'état « en pause » pour la version prod (contrôles
-/// cachés). Affiché uniquement quand `SessionController.isPaused` — sinon
-/// l'utilisatrice n'a aucun signe de l'état de la séance après une sortie
-/// d'app. Pas de bouton de reprise ici : la reprise au retour de focus est
-/// gérée plus haut dans la stack ; ce chip est purement informatif.
-class _PausedIndicator extends StatelessWidget {
-  const _PausedIndicator();
+/// Overlay plein écran affiché quand `SessionController.isPaused` est vrai.
+/// Combine un fond grisé + flou Gaussien sur l'écran de jeu (pour signaler
+/// sans ambiguïté que la séance est suspendue) avec un gros bouton play
+/// circulaire centré. Tap n'importe où → resume. Le `BackdropFilter` se
+/// nourrit du `Stack` parent (running view en `Positioned.fill` derrière).
+class _PausedOverlay extends StatelessWidget {
+  final VoidCallback onResume;
+  const _PausedOverlay({required this.onResume});
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    return Center(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: AppTheme.accent.withValues(alpha: 0.5),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.pause_circle_filled,
-                size: 18, color: AppTheme.accent),
-            const SizedBox(width: 8),
-            Text(
-              t.sessionPausedIndicator,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 2,
-                color: AppTheme.accent,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onResume,
+        splashColor: AppTheme.accent.withValues(alpha: 0.15),
+        highlightColor: Colors.transparent,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+          child: Container(
+            color: Colors.black.withValues(alpha: 0.55),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppTheme.accent,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.accent.withValues(alpha: 0.45),
+                          blurRadius: 24,
+                          spreadRadius: 4,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.play_arrow,
+                      size: 72,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    t.sessionPausedIndicator,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 4,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -1555,6 +1622,7 @@ class _FinishedOverlayState extends State<_FinishedOverlay> {
 /// badges débloqués pendant la séance.
 class _FinishedPanel extends StatefulWidget {
   final List<BadgeUnlock> badgeUnlocks;
+  final List<LevelMilestone> milestoneUnlocks;
   final bool hasPendingBadges;
   final Future<void> Function() onRevealBadges;
   final String endButtonLabel;
@@ -1565,14 +1633,20 @@ class _FinishedPanel extends StatefulWidget {
   /// callback retourne le nom donné, ou null si l'utilisateur a annulé.
   final Future<String?> Function()? onSave;
 
+  /// Durée totale écoulée pendant la séance (timeline incluant les sauts
+  /// post-fail). Affichée en haut du panel.
+  final int elapsedSeconds;
+
   const _FinishedPanel({
     required this.badgeUnlocks,
+    required this.milestoneUnlocks,
     required this.hasPendingBadges,
     required this.onRevealBadges,
     required this.endButtonLabel,
     required this.onEnd,
     required this.onEncore,
     required this.onSave,
+    required this.elapsedSeconds,
   });
 
   @override
@@ -1671,6 +1745,7 @@ class _FinishedPanelState extends State<_FinishedPanel> {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final unlocks = widget.badgeUnlocks;
+    final milestoneUnlocks = widget.milestoneUnlocks;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
       child: Column(
@@ -1686,6 +1761,19 @@ class _FinishedPanelState extends State<_FinishedPanel> {
               color: AppTheme.accent,
             ),
           ),
+          const SizedBox(height: 6),
+          Text(
+            t.sessionFinishedDuration(
+              formatDurationDetailed(context, widget.elapsedSeconds),
+            ),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 1,
+              color: AppTheme.textSecondary,
+            ),
+          ),
           const SizedBox(height: 24),
           Expanded(
             child: SingleChildScrollView(
@@ -1699,6 +1787,10 @@ class _FinishedPanelState extends State<_FinishedPanel> {
                             count: _availableSpecPoints,
                             onAllocate: _openSpecializationScreen,
                           ),
+                          const SizedBox(height: 16),
+                        ],
+                        if (milestoneUnlocks.isNotEmpty) ...[
+                          _MilestoneUnlocksBlock(unlocks: milestoneUnlocks),
                           const SizedBox(height: 16),
                         ],
                         _BadgeUnlocksBlock(unlocks: unlocks),
@@ -1921,6 +2013,96 @@ class _BadgeUnlockTile extends StatelessWidget {
                     color: color,
                   ),
                 ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Bloc affiché sur l'écran de fin : liste les milestones acquittées
+/// pendant cette séance. Caché si la liste est vide (pas d'état neutre :
+/// les apprentissages sont des événements, l'absence n'est pas notable).
+class _MilestoneUnlocksBlock extends StatelessWidget {
+  final List<LevelMilestone> unlocks;
+  const _MilestoneUnlocksBlock({required this.unlocks});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          t.sessionFinishedMilestonesTitle,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 12,
+            color: AppTheme.textMuted,
+            letterSpacing: 1.5,
+          ),
+        ),
+        const SizedBox(height: 12),
+        for (final m in unlocks) ...[
+          _MilestoneUnlockTile(milestone: m),
+          const SizedBox(height: 10),
+        ],
+      ],
+    );
+  }
+}
+
+class _MilestoneUnlockTile extends StatelessWidget {
+  final LevelMilestone milestone;
+  const _MilestoneUnlockTile({required this.milestone});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final branches = milestone.branches;
+    final branchPrefix = branches.length > 1
+        ? t.careerMilestonesBranchesPrefixPlural
+        : t.careerMilestonesBranchesPrefix;
+    final branchLabels =
+        branches.map((b) => b.localizedLabel(context)).join(' · ');
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppTheme.accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: AppTheme.accent.withValues(alpha: 0.45),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.school, color: AppTheme.accent, size: 28),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  milestone.displayLabel,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                if (branches.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    '$branchPrefix$branchLabels',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.textMuted,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

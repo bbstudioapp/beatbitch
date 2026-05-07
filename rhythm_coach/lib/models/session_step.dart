@@ -73,6 +73,14 @@ class SessionStep {
   /// n'est pas acquise — cohérent avec le gating standard via UnlockKey.
   final SwallowMode? swallowMode;
 
+  /// Id du média de fond à pousser à l'écran quand ce step démarre.
+  /// Référence une entrée de `assets/backgrounds.json`. Null = pas
+  /// d'override, le fond suit la rotation aléatoire calée sur les
+  /// changements de mode (cf. `BackgroundsService`). Si l'id est
+  /// inconnu au runtime (asset manquant), le service no-op
+  /// silencieusement — on ne casse pas la séance pour un fond.
+  final String? background;
+
   const SessionStep({
     required this.time,
     this.text = '',
@@ -84,6 +92,7 @@ class SessionStep {
     this.mode,
     this.chainAction,
     this.swallowMode,
+    this.background,
   });
 
   /// True quand l'étape ne fait QUE déclencher une phrase TTS et n'apporte
@@ -127,6 +136,7 @@ class SessionStep {
           : SessionMode.fromString(json['mode'] as String),
       chainAction: chain,
       swallowMode: _swallowModeFromString(_asString(json['swallow_mode'])),
+      background: _asString(json['background']),
     );
   }
 
@@ -166,6 +176,7 @@ class SessionStep {
         if (chainAction != null)
           'chainAction': chainAction!.toJsonForChain(),
         if (swallowMode != null) 'swallow_mode': swallowMode!.name,
+        if (background != null) 'background': background,
       };
 
   /// Sérialisation `chainAction` : on omet `time` (recalculé par le

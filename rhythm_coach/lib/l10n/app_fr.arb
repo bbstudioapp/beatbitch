@@ -65,9 +65,16 @@
   "sessionPrepInPlace": "EN PLACE",
   "sessionPrepInstruction": "Pose ton téléphone, mets-toi en position.",
   "sessionFinishedTitle": "SÉANCE TERMINÉE",
+  "sessionFinishedDuration": "Durée : {duration}",
+  "@sessionFinishedDuration": {
+    "placeholders": {
+      "duration": { "type": "String" }
+    }
+  },
   "sessionFinishedDefaultEnd": "Merci !",
   "sessionFinishedBadgesTitle": "Nouveaux paliers de badges",
   "sessionFinishedNoNewBadges": "Pas de nouveau palier cette fois — la prochaine sera la bonne.",
+  "sessionFinishedMilestonesTitle": "Apprentissages validés",
   "sessionFinishedEncore": "J'EN VEUX ENCORE…",
   "sessionFinishedSaved": "ENREGISTRÉE",
   "sessionFinishedSaving": "ENREGISTREMENT…",
@@ -137,8 +144,6 @@
       "error": { "type": "String" }
     }
   },
-  "careerHeaderTitle": "Génération procédurale",
-  "careerInstruction": "Choisis un niveau. La durée et la difficulté en découlent.",
   "careerLevelSection": "Niveau",
   "careerMaxLevel": "max {level}",
   "@careerMaxLevel": {
@@ -149,20 +154,8 @@
   "careerQuickieToggle": "Session bâclée",
   "careerQuickieSubtitle": "6 min — intense",
   "careerQuickieDescription": "6 min, intense tout du long. Pour quand t'as pas le temps.",
-  "careerQuickieLockedSubtitle": "Verrouillé jusqu'au niveau {level} — il faut maîtriser les bases avant de bâcler.",
-  "@careerQuickieLockedSubtitle": {
-    "placeholders": {
-      "level": { "type": "int" }
-    }
-  },
   "careerIncludeHandToggle": "Inclure la stimulation à la main",
   "careerIncludeHandSubtitle": "Désactive aussi les coups de queue (biffle) — les deux nécessitent la main.",
-  "careerIncludeHandLockedSubtitle": "Verrouillé jusqu'au niveau {level} — sans la main, le finish bas niveau devient trop dur.",
-  "@careerIncludeHandLockedSubtitle": {
-    "placeholders": {
-      "level": { "type": "int" }
-    }
-  },
   "careerIncludeHandMilestoneLocked": "Verrouillé pour cette séance — le milestone d'apprentissage utilise la main.",
   "specPointsBannerTitle": "{count, plural, =1{1 point libre} other{{count} points libres}}",
   "@specPointsBannerTitle": {
@@ -181,8 +174,6 @@
   },
   "careerLevelLockedHint": "Niveau 1 (termine une séance pour débloquer le suivant)",
 
-  "careerMilestonesPendingTitle": "Apprentissages en attente",
-  "careerMilestonesNextBadge": "PROCHAIN",
   "careerMilestonesBranchesPrefix": "Branche : ",
   "careerMilestonesBranchesPrefixPlural": "Branches : ",
 
@@ -394,6 +385,8 @@
   "soundsDebugCameraHoldCheckSubtitle": "Pendant les holds, la caméra avant vérifie que la position est tenue. Le coach lance un rappel court si tu dérives. Nécessite d'avoir calibré la caméra (icône caméra de l'écran SCÉNARIO).",
   "soundsDebugSkipSession": "Bouton « terminer en succès »",
   "soundsDebugSkipSessionSubtitle": "Affiche un bouton dans la séance qui termine immédiatement comme un succès complet (badges, milestones, niveau). Pratique pour itérer sur le contenu sans tout jouer.",
+  "soundsShowBackgroundMedia": "Fonds média en séance",
+  "soundsShowBackgroundMediaSubtitle": "Affiche les images/GIF de assets/backgrounds.json en arrière-plan, avec rotation à chaque step. Désactive pour ne voir que le dégradé d'ambiance.",
   "sessionDebugFinishButton": "DEBUG : terminer en succès",
 
   "soundsDebugScenarioButton": "Debug — scénario carrière",
@@ -444,16 +437,16 @@
   "positionHead": "Gland",
   "positionMid": "Milieu",
   "positionThroat": "Gorge",
-  "positionFull": "Au fond",
+  "positionFull": "Tout",
 
-  "modeShortRhythm": "RYTHME",
-  "modeShortHold": "HOLD",
-  "modeShortLick": "LICK",
+  "modeShortRhythm": "SUCE",
+  "modeShortHold": "AU FOND",
+  "modeShortLick": "LÈCHE",
   "modeShortBiffle": "BIFFLE",
-  "modeShortBreath": "BREATH",
-  "modeShortBeg": "BEG",
-  "modeShortFreestyle": "FREESTYLE",
-  "modeShortHand": "HAND",
+  "modeShortBreath": "RESPIRE",
+  "modeShortBeg": "SUPPLIE",
+  "modeShortFreestyle": "LIBRE",
+  "modeShortHand": "BRANLE",
 
   "badgeTierBronze": "Bronze",
   "badgeTierSilver": "Argent",
@@ -624,5 +617,72 @@
   "unlockAnnouncementRhythmHeadMidSustained": "Tu peux tenir la cadence plus d'une minute maintenant, sans pause. Je te le demanderai.",
   "@unlockAnnouncementRhythmHeadMidSustained": {
     "description": "Annonce TTS post-finale_chime quand la milestone qui débloque rhythm_head_mid_sustained est acquittée."
-  }
+  },
+
+  "modeSelectionSurpriseTooltip": "Rappels surprise",
+  "@modeSelectionSurpriseTooltip": {
+    "description": "Tooltip de l'icône de notification dans l'AppBar du ModeSelectionScreen."
+  },
+
+  "surpriseNotifTitle": "C'est l'heure",
+  "@surpriseNotifTitle": {
+    "description": "Titre de la notification surprise (court, lockscreen-friendly)."
+  },
+  "surpriseNotifBody1": "Suce-moi tout de suite",
+  "@surpriseNotifBody1": {
+    "description": "Body cru de la notification surprise, variante 1. Tirage aléatoire au moment du schedule."
+  },
+  "surpriseNotifBody2": "Je veux t'en mettre plein la bouche MAINTENANT",
+  "@surpriseNotifBody2": {
+    "description": "Body cru de la notification surprise, variante 2."
+  },
+  "surpriseNotifBody3": "Mets-toi à genoux, c'est l'heure !",
+  "@surpriseNotifBody3": {
+    "description": "Body cru de la notification surprise, variante 3."
+  },
+
+  "surpriseSettingsAppBarTitle": "Rappel surprise",
+  "surpriseSettingsHeaderSubtitle": "Pendant la fenêtre, l'app peut envoyer des notifications à des moments aléatoires. Au tap, elle ouvre une session courte.",
+  "surpriseSettingsEnableLabel": "Activer les rappels",
+  "surpriseSettingsEnableSubtitle": "Notifications aléatoires pendant la fenêtre.",
+  "surpriseSettingsWindowLabel": "Fenêtre temporelle",
+  "surpriseSettingsWindowValue": "{minutes} min",
+  "@surpriseSettingsWindowValue": {
+    "placeholders": {
+      "minutes": { "type": "int" }
+    }
+  },
+  "surpriseSettingsAlertCountLabel": "Nombre de rappels",
+  "surpriseSettingsAlertCountValue": "{count, plural, one{1 rappel} other{{count} rappels}}",
+  "@surpriseSettingsAlertCountValue": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "surpriseSettingsDurationLabel": "Durée des sessions",
+  "surpriseSettingsDurationValue": "{minSec} s – {maxSec} s",
+  "@surpriseSettingsDurationValue": {
+    "placeholders": {
+      "minSec": { "type": "int" },
+      "maxSec": { "type": "int" }
+    }
+  },
+  "surpriseSettingsActiveStatus": "Actif jusqu'à {endTime}",
+  "@surpriseSettingsActiveStatus": {
+    "placeholders": {
+      "endTime": { "type": "String" }
+    }
+  },
+  "surpriseSettingsActiveAlertsLeft": "{count, plural, one{1 alerte restante} other{{count} alertes restantes}}",
+  "@surpriseSettingsActiveAlertsLeft": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "surpriseSettingsInactiveStatus": "Aucun rappel programmé",
+  "surpriseSettingsPermissionMissing": "Autorise les notifications dans les paramètres système.",
+  "surpriseSettingsExactAlarmMissing": "Les alarmes exactes sont refusées par le système.",
+  "surpriseSettingsBatteryHintTitle": "Optimisation batterie",
+  "surpriseSettingsBatteryHintBody": "Sur certains téléphones (Xiaomi, Huawei, Samsung), désactive l'optimisation batterie pour Rhythm Coach pour garantir les rappels.",
+  "surpriseSettingsOpenBatterySettings": "Ouvrir les paramètres"
 }

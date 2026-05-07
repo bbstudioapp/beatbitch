@@ -13,9 +13,9 @@
     "minPlayerLevel": 13
   },
   "tts": {
-    "voice": "fr-fr-x-fra-local",
+    "voice": "fr-FR-language",
     "voiceLocale": "fr-FR",
-    "rate": 0.6,
-    "pitch": 1.3
+    "rate": 0.66,
+    "pitch": 1.76
   }
 }

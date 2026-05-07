@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../l10n/enum_labels.dart';
 import '../models/session.dart';
 import '../models/session_step.dart';
 import '../services/beep_engine.dart';
@@ -329,7 +330,7 @@ class _PositionLadder extends StatelessWidget {
           Align(
             alignment: Alignment(0.92, _toAlign(i)),
             child: Text(
-              _label(Position.values[i]),
+              Position.values[i].localizedLabel(context),
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: activeIndices.contains(i)
@@ -353,14 +354,6 @@ class _PositionLadder extends StatelessWidget {
   /// Convertit un index de position (0..4) en y d'Alignment (-1..1).
   static double _toAlign(int index) =>
       Position.values.length == 1 ? 0 : index / (Position.values.length - 1) * 2 - 1;
-
-  static String _label(Position p) => switch (p) {
-        Position.tip => 'tip',
-        Position.head => 'head',
-        Position.mid => 'mid',
-        Position.throat => 'throat',
-        Position.full => 'full',
-      };
 }
 
 /// X (Alignment) où vivent le curseur et la silhouette de verge. Légèrement
@@ -440,7 +433,7 @@ class _StaticPosition extends StatelessWidget {
         Align(
           alignment: Alignment(0.92, _PositionLadder._toAlign(position.index)),
           child: Text(
-            _PositionLadder._label(position),
+            position.localizedLabel(context),
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,

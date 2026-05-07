@@ -60,6 +60,7 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
   bool _showSalivaBar = false;
   bool _showSessionControls = false;
   bool _showModeBadge = false;
+  bool _showBackgroundMedia = true;
   bool _cameraHoldCheck = false;
   bool _skipSessionButton = false;
 
@@ -84,6 +85,7 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
       final showSaliva = await _debug.getShowSalivaBar();
       final showControls = await _debug.getShowSessionControls();
       final showBadge = await _debug.getShowModeBadge();
+      final showBgMedia = await _debug.getShowBackgroundMedia();
       final camCheck = await _debug.getCameraHoldCheck();
       final skipSession = await _debug.getSkipSessionButton();
       if (!mounted) return;
@@ -101,6 +103,7 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
         _showSalivaBar = showSaliva;
         _showSessionControls = showControls;
         _showModeBadge = showBadge;
+        _showBackgroundMedia = showBgMedia;
         _cameraHoldCheck = camCheck;
         _skipSessionButton = skipSession;
         _prenomController.text = widget.userProfile.prenom ?? '';
@@ -649,6 +652,29 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
                         await _debug.setShowModeBadge(v);
                         if (!mounted) return;
                         setState(() => _showModeBadge = v);
+                      },
+                    ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        t.soundsShowBackgroundMedia,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      subtitle: Text(
+                        t.soundsShowBackgroundMediaSubtitle,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppTheme.textMuted,
+                        ),
+                      ),
+                      value: _showBackgroundMedia,
+                      onChanged: (v) async {
+                        await _debug.setShowBackgroundMedia(v);
+                        if (!mounted) return;
+                        setState(() => _showBackgroundMedia = v);
                       },
                     ),
                     SwitchListTile(

@@ -6,8 +6,8 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'user_profile_service.dart';
 
 class TtsService {
-  static const double _defaultPitch = 1.15;
-  static const double _defaultRate = 0.5;
+  static const double _defaultPitch = 1.13;
+  static const double _defaultRate = 0.56;
   static const double _defaultVolume = 1.0;
 
   /// Voix préférées par locale, par ordre décroissant de qualité. **Voix
@@ -17,7 +17,12 @@ class TtsService {
   /// cru). Pour les autres locales : pas de préférence hardcodée — fallback
   /// gender=female puis première voix locale disponible.
   static const Map<String, List<String>> _preferredVoiceNamesByLanguage = {
-    'fr': ['fr-fr-x-vlf-local', 'fr-fr-x-frd-local', 'fr-fr-x-frc-local'],
+    'fr': [
+      'fr-fr-x-fra-local',
+      'fr-fr-x-vlf-local',
+      'fr-fr-x-frd-local',
+      'fr-fr-x-frc-local',
+    ],
   };
 
   final FlutterTts _tts = FlutterTts();

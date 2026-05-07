@@ -11,6 +11,7 @@ class DebugSettingsService {
   static const String _kShowModeBadge = 'debug.show_mode_badge';
   static const String _kCameraHoldCheck = 'debug.camera_hold_check';
   static const String _kSkipSessionButton = 'debug.skip_session_button';
+  static const String _kShowBackgroundMedia = 'pref.show_background_media';
 
   Future<bool> getShowStaminaBar() async {
     final prefs = await SharedPreferences.getInstance();
@@ -123,5 +124,20 @@ class DebugSettingsService {
   Future<void> setSkipSessionButton(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kSkipSessionButton, value);
+  }
+
+  /// Quand true (défaut), l'écran de session affiche les médias listés
+  /// dans `assets/backgrounds.json` en arrière-plan (rotation à chaque
+  /// step). Quand false, on retombe sur le placeholder animé (dégradé
+  /// radial) — utile si l'utilisatrice n'a posé aucun fichier dans le
+  /// dossier ou veut un visuel sobre pour une session donnée.
+  Future<bool> getShowBackgroundMedia() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_kShowBackgroundMedia) ?? true;
+  }
+
+  Future<void> setShowBackgroundMedia(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kShowBackgroundMedia, value);
   }
 }
