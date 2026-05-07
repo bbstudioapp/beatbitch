@@ -7,19 +7,22 @@ import 'package:rhythm_coach/models/session.dart';
 import 'package:rhythm_coach/models/session_step.dart';
 import 'package:rhythm_coach/services/humiliation_engine.dart';
 
+List<PhraseEntry> _p(List<String> texts) =>
+    texts.map((t) => PhraseEntry(text: t)).toList();
+
 PhraseBank _bank() {
   return PhraseBank(
     byMode: {
       for (final m in SessionMode.values)
         m: {
-          'soft': ['s'],
-          'medium': ['m'],
-          'hard': ['h'],
-          'finale': ['f'],
+          'soft': _p(['s']),
+          'medium': _p(['m']),
+          'hard': _p(['h']),
+          'finale': _p(['f']),
         },
     },
-    congrats: ['bravo'],
-    intros: ['intro'],
+    congrats: _p(['bravo']),
+    intros: _p(['intro']),
   );
 }
 

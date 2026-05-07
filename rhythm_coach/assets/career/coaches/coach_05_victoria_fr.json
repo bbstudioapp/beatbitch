@@ -6,8 +6,8 @@
   "phrases": {
     "rhythm": {
       "hard": [
-        "Descends correctement {name}, ne me fais pas honte.",
-        "Tu es pathétique à ce rythme. Plus profond."
+        {"text": "Descends correctement {name}, ne me fais pas honte.", "min_depth": "mid"},
+        {"text": "Tu es pathétique à ce rythme. Plus profond.", "min_depth": "mid"}
       ]
     },
     "beg": {
@@ -28,18 +28,18 @@
   "branchPhrases": {
     "profondeur": {
       "soft": [
-        "Rentre-le dans ta gorge abyssale {name}.",
-        "Plus profond. Tu sais aller chercher.",
-        "Au fond. C'est là que tu sers."
+        {"text": "Rentre-le dans ta gorge abyssale {name}.", "min_depth": "throat"},
+        {"text": "Plus profond. Tu sais aller chercher.", "min_depth": "mid"},
+        {"text": "Au fond. C'est là que tu sers.", "min_depth": "throat"}
       ],
       "medium": [
-        "Plus loin. Avale comme une vraie pute.",
+        {"text": "Plus loin. Avale comme une vraie pute.", "min_depth": "throat"},
         "Tu as ce trou pour ça. Sers-t'en.",
-        "Encore. Au fond. Là où tu es à ta place."
+        {"text": "Encore. Au fond. Là où tu es à ta place.", "min_depth": "throat"}
       ],
       "hard": [
-        "Au fond {name}. Tout au fond. Étouffe-toi avec.",
-        "Ta gorge appartient à ma queue. Prouve-le."
+        {"text": "Au fond {name}. Tout au fond. Étouffe-toi avec.", "min_depth": "throat"},
+        {"text": "Ta gorge appartient à ma queue. Prouve-le.", "min_depth": "throat"}
       ]
     },
     "rythmeBiffle": {

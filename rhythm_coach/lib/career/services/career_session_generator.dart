@@ -221,6 +221,8 @@ class CareerSessionGenerator {
     Set<UnlockKey> unlockedKeys = const {},
     String? Function(String milestoneId, int stepTime)? milestoneTextResolver,
     Map<SessionMode, double> coachModeWeights = const {},
+    String? sessionName,
+    String? sessionNameQuickie,
   }) {
     assert(
       finalMilestone == null ||
@@ -369,7 +371,7 @@ class CareerSessionGenerator {
         intense: intense,
       );
       final firstText =
-          openingPhrase ?? _pickPhrase(bank, first.mode, 'soft');
+          openingPhrase ?? _pickPhraseForDraft(bank, first, 'soft');
       steps.add(_draftToStep(first, time: 0, text: firstText));
       _lastMode = first.mode;
       _lastText = firstText;
@@ -426,7 +428,7 @@ class CareerSessionGenerator {
         final humilCapForWave = _humilCapAt(time);
         final waveDrafts = _buildMiniWave(humilCapForWave);
         for (final wd in waveDrafts) {
-          final waveText = _pickPhrase(bank, wd.mode, 'hard');
+          final waveText = _pickPhraseForDraft(bank, wd, 'hard');
           steps.add(_draftToStep(wd, time: time, text: waveText));
           final staminaBefore = stamina;
           stamina = _applyStaminaChange(stamina, wd, progressForWave, cfg);
@@ -606,7 +608,8 @@ class CareerSessionGenerator {
         // avec le tier global. Les sous-segments suivants déclencheront
         // automatiquement les phrases de transition (cf. C2) puisque BPM
         // ou profondeur change entre eux.
-        final partText = partIdx == 0 ? _pickPhrase(bank, partDraft.mode, tier) : '';
+        final partText =
+            partIdx == 0 ? _pickPhraseForDraft(bank, partDraft, tier) : '';
         final staminaBefore = stamina;
         stamina = _applyStaminaChange(stamina, partDraft, progress, cfg);
         _advanceSalivaSim(partDraft);
@@ -769,8 +772,8 @@ class CareerSessionGenerator {
         session: Session(
           id: 'career:lvl$level:${effectiveDuration}s${quickie ? ":q" : ""}',
           name: quickie
-              ? 'Carrière niveau $level — bâclée'
-              : 'Carrière niveau $level',
+              ? (sessionNameQuickie ?? 'Carrière niveau $level — bâclée')
+              : (sessionName ?? 'Carrière niveau $level'),
           description: 'Session générée — $effectiveDuration s',
           durationSeconds: finalDuration,
           defaultMode: SessionMode.rhythm,
@@ -806,7 +809,7 @@ class CareerSessionGenerator {
         to: preFinisherTarget,
         duration: preDur,
       );
-      final preText = _pickPhrase(bank, SessionMode.rhythm, 'medium');
+      final preText = _pickPhraseForDraft(bank, preDraft, 'medium');
       steps.add(_draftToStep(preDraft, time: time, text: preText));
       _lastMode = SessionMode.rhythm;
       _lastText = preText;
@@ -942,9 +945,9 @@ class CareerSessionGenerator {
       // Tier dédié `boost` : phrases explicites « accélère / on monte /
       // dernier sprint » pour rendre la phase finish lisible. Fallback
       // sur 'hard' si la bank n'a rien dans 'boost'.
-      var boostText = _pickPhrase(bank, boostDraft.mode, 'boost');
+      var boostText = _pickPhraseForDraft(bank, boostDraft, 'boost');
       if (boostText.isEmpty) {
-        boostText = _pickPhrase(bank, boostDraft.mode, 'hard');
+        boostText = _pickPhraseForDraft(bank, boostDraft, 'hard');
       }
       steps.add(_draftToStep(boostDraft, time: time, text: boostText));
       lastBoostIndex = steps.length - 1;
@@ -1082,8 +1085,8 @@ class CareerSessionGenerator {
       session: Session(
         id: 'career:lvl$level:${effectiveDuration}s${quickie ? ":q" : ""}',
         name: quickie
-            ? 'Carrière niveau $level — bâclée'
-            : 'Carrière niveau $level',
+            ? (sessionNameQuickie ?? 'Carrière niveau $level — bâclée')
+            : (sessionName ?? 'Carrière niveau $level'),
         description: 'Session générée — $effectiveDuration s',
         durationSeconds: finalDuration,
         defaultMode: SessionMode.rhythm,
@@ -3582,6 +3585,11 @@ class CareerSessionGenerator {
   /// précédent (`_lastText`). Quelques essais suffisent : si la banque ne
   /// contient qu'une seule entrée pour ce couple, on accepte la répétition.
   ///
+  /// Si [context] est fourni, le filtrage par contraintes de la
+  /// [PhraseEntry] est appliqué (profondeur min/max, BPM min/max). Pour
+  /// les call sites qui manipulent un `_StepDraft`, utiliser
+  /// [_pickPhraseForDraft] qui calcule le contexte automatiquement.
+  ///
   /// **Auto-bump par obédiance** : plus l'obédiance lifetime est haute,
   /// plus la coach pioche dans les tiers durs. Tu obéis bien → on durcit
   /// le ton. Le bump n'affecte pas les tiers `boost` et `finale` (qui ont
@@ -3592,13 +3600,39 @@ class CareerSessionGenerator {
   ///
   /// Si le tier ciblé n'a pas de phrase pour ce mode, le `pickFor` retombe
   /// transparentement sur le tier d'origine — pas de risque de chaîne vide.
-  String _pickPhrase(PhraseBank bank, SessionMode mode, String tier) {
+  String _pickPhrase(
+    PhraseBank bank,
+    SessionMode mode,
+    String tier, {
+    PhraseContext? context,
+  }) {
     final effectiveTier = _bumpTierByObedience(tier);
     for (var i = 0; i < 4; i++) {
-      final phrase = bank.pickFor(mode, effectiveTier, _rng);
+      final phrase = bank.pickFor(mode, effectiveTier, _rng, context: context);
       if (phrase.isEmpty || phrase != _lastText) return phrase;
     }
-    return bank.pickFor(mode, effectiveTier, _rng);
+    return bank.pickFor(mode, effectiveTier, _rng, context: context);
+  }
+
+  /// Variante de [_pickPhrase] qui extrait le contexte (profondeur, BPM)
+  /// depuis un draft de step. Permet aux phrases tier d'être filtrées par
+  /// les contraintes (« nez collé » réservé à `to=full`, « respire par le
+  /// nez » réservé à `to ≤ mid`, etc.).
+  String _pickPhraseForDraft(
+    PhraseBank bank,
+    _StepDraft draft,
+    String tier,
+  ) {
+    return _pickPhrase(
+      bank,
+      draft.mode,
+      tier,
+      context: PhraseContext(
+        mode: draft.mode,
+        depth: draft.to ?? draft.from,
+        bpm: draft.bpm,
+      ),
+    );
   }
 
   /// Bump conditionnel d'un tier de phrase selon `_obedience`. Cf. doc

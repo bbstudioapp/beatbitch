@@ -15,17 +15,17 @@
         "Doucement {name}, on a le temps."
       ],
       "medium": [
-        "Un peu plus profond maintenant {name}, si tu te sens prête.",
+        {"text": "Un peu plus profond maintenant {name}, si tu te sens prête.", "min_depth": "mid"},
         "Garde ce rythme, tu fais ça très bien {name}.",
-        "Descends un peu plus, c’est bien {name}.",
+        {"text": "Descends un peu plus, c’est bien {name}.", "min_depth": "mid"},
         "Tu contrôles bien ta respiration, je suis fière de toi {name}.",
         "Continue à ce rythme {name}, tu progresses vraiment.",
         "C’est bon ce que tu fais {name}."
       ],
       "hard": [
-        "Va plus profond {name}, tu peux le faire.",
+        {"text": "Va plus profond {name}, tu peux le faire.", "min_depth": "mid"},
         "Tiens ce rythme, je sais que tu en es capable {name}.",
-        "Descends encore un peu, doucement mais sûrement {name}."
+        {"text": "Descends encore un peu, doucement mais sûrement {name}.", "min_depth": "mid"}
       ]
     },
     "lick": {
@@ -46,19 +46,19 @@
     },
     "hold": {
       "soft": [
-        "Garde-le en bouche, respire calmement {name}.",
+        {"text": "Garde-le en bouche, respire calmement {name}.", "max_depth": "mid"},
         "Tiens la position, c’est très bien {name}.",
         "Reste comme ça {name}, tu gères parfaitement."
       ],
       "medium": [
-        "Descends un peu plus profond et tiens {name}.",
-        "Reste au fond, respire par le nez {name}."
+        {"text": "Descends un peu plus profond et tiens {name}.", "min_depth": "mid"},
+        {"text": "Reste au fond, respire par le nez {name}.", "min_depth": "mid", "max_depth": "throat"}
       ],
       "hard": [
-        "Reste bien au fond {name}, ne remonte pas."
+        {"text": "Reste bien au fond {name}, ne remonte pas.", "min_depth": "throat"}
       ],
       "finale": [
-        "Reste au plus profond jusqu’à la fin {name}.",
+        {"text": "Reste au plus profond jusqu’à la fin {name}.", "min_depth": "throat"},
         "Dernier effort, garde-le bien au fond {name}.",
         "Magnifique {name}, reste comme ça jusqu’au signal."
       ]

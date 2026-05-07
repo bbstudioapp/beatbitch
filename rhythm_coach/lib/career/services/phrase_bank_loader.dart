@@ -10,6 +10,12 @@ import '../models/phrase_bank.dart';
 /// Charge la banque de phrases procédurales depuis `assets/career/phrases.json`
 /// (FR par défaut) ou `assets/career/phrases_<lang>.json` pour les autres
 /// langues.
+///
+/// Chaque liste de phrases (par mode/tier, ou pool transverse comme
+/// `congrats`, `transitions`, etc.) accepte des entrées sous deux formes :
+/// une string simple, ou un objet `{text, min_depth?, max_depth?, min_bpm?,
+/// max_bpm?, requires_unlock?}` pour réserver la phrase à un contexte. Cf.
+/// [PhraseEntry] pour le détail des contraintes.
 class PhraseBankLoader {
   static const String _assetPathDefault = 'assets/career/phrases.json';
 
@@ -21,126 +27,70 @@ class PhraseBankLoader {
     final raw = await rootBundle.loadString(path);
     final data = json.decode(raw) as Map<String, dynamic>;
 
-    final byMode = <SessionMode, Map<String, List<String>>>{};
+    final byMode = <SessionMode, Map<String, List<PhraseEntry>>>{};
     for (final mode in SessionMode.values) {
       final node = data[mode.name];
       if (node is! Map<String, dynamic>) continue;
-      final tiers = <String, List<String>>{};
+      final tiers = <String, List<PhraseEntry>>{};
       node.forEach((tier, phrases) {
-        if (phrases is List) {
-          tiers[tier] = phrases
-              .map((p) => p.toString())
-              .where((s) => s.trim().isNotEmpty)
-              .toList();
-        }
+        final list = PhraseEntry.listFromJson(phrases);
+        if (list.isNotEmpty) tiers[tier] = list;
       });
       byMode[mode] = tiers;
     }
 
-    final congrats = (data['congrats'] as List<dynamic>? ?? const [])
-        .map((p) => p.toString())
-        .where((s) => s.trim().isNotEmpty)
-        .toList();
-
-    final intros = (data['intros'] as List<dynamic>? ?? const [])
-        .map((p) => p.toString())
-        .where((s) => s.trim().isNotEmpty)
-        .toList();
-
-    final progress = <int, List<String>>{};
+    final progress = <int, List<PhraseEntry>>{};
     final progressNode = data['progress'];
     if (progressNode is Map<String, dynamic>) {
       progressNode.forEach((key, phrases) {
         final threshold = int.tryParse(key);
-        if (threshold == null || phrases is! List) return;
-        progress[threshold] = phrases
-            .map((p) => p.toString())
-            .where((s) => s.trim().isNotEmpty)
-            .toList();
+        if (threshold == null) return;
+        final list = PhraseEntry.listFromJson(phrases);
+        if (list.isNotEmpty) progress[threshold] = list;
       });
     }
 
-    final encore = (data['encore'] as List<dynamic>? ?? const [])
-        .map((p) => p.toString())
-        .where((s) => s.trim().isNotEmpty)
-        .toList();
-
-    final transitions = <TransitionKind, List<String>>{};
+    final transitions = <TransitionKind, List<PhraseEntry>>{};
     final transNode = data['transitions'];
     if (transNode is Map<String, dynamic>) {
       for (final kind in TransitionKind.values) {
-        final list = transNode[kind.serialized];
-        if (list is! List) continue;
-        transitions[kind] = list
-            .map((p) => p.toString())
-            .where((s) => s.trim().isNotEmpty)
-            .toList();
+        final list = PhraseEntry.listFromJson(transNode[kind.serialized]);
+        if (list.isNotEmpty) transitions[kind] = list;
       }
     }
 
-    final finishOrgasm = (data['finish_orgasm'] as List<dynamic>? ?? const [])
-        .map((p) => p.toString())
-        .where((s) => s.trim().isNotEmpty)
-        .toList();
-
-    final finalAnnouncements = <String, List<String>>{};
+    final finalAnnouncements = <String, List<PhraseEntry>>{};
     final announceNode = data['final_announce'];
     if (announceNode is Map<String, dynamic>) {
       announceNode.forEach((key, phrases) {
-        if (phrases is! List) return;
-        finalAnnouncements[key] = phrases
-            .map((p) => p.toString())
-            .where((s) => s.trim().isNotEmpty)
-            .toList();
+        final list = PhraseEntry.listFromJson(phrases);
+        if (list.isNotEmpty) finalAnnouncements[key] = list;
       });
     }
 
-    final finalActions = <String, List<String>>{};
+    final finalActions = <String, List<PhraseEntry>>{};
     final finalActionNode = data['final_action'];
     if (finalActionNode is Map<String, dynamic>) {
       finalActionNode.forEach((key, phrases) {
-        if (phrases is! List) return;
-        finalActions[key] = phrases
-            .map((p) => p.toString())
-            .where((s) => s.trim().isNotEmpty)
-            .toList();
+        final list = PhraseEntry.listFromJson(phrases);
+        if (list.isNotEmpty) finalActions[key] = list;
       });
     }
 
-    final postFinal = (data['post_final'] as List<dynamic>? ?? const [])
-        .map((p) => p.toString())
-        .where((s) => s.trim().isNotEmpty)
-        .toList();
-
-    final postFinalBeg = (data['post_final_beg'] as List<dynamic>? ?? const [])
-        .map((p) => p.toString())
-        .where((s) => s.trim().isNotEmpty)
-        .toList();
-
-    final postFinalLick = (data['post_final_lick'] as List<dynamic>? ?? const [])
-        .map((p) => p.toString())
-        .where((s) => s.trim().isNotEmpty)
-        .toList();
-
-    final swallowOrders = (data['swallow_order'] as List<dynamic>? ?? const [])
-        .map((p) => p.toString())
-        .where((s) => s.trim().isNotEmpty)
-        .toList();
-
     return PhraseBank(
       byMode: byMode,
-      congrats: congrats,
-      intros: intros,
+      congrats: PhraseEntry.listFromJson(data['congrats']),
+      intros: PhraseEntry.listFromJson(data['intros']),
       progress: progress,
-      encore: encore,
+      encore: PhraseEntry.listFromJson(data['encore']),
       transitions: transitions,
-      finishOrgasm: finishOrgasm,
+      finishOrgasm: PhraseEntry.listFromJson(data['finish_orgasm']),
       finalAnnouncements: finalAnnouncements,
       finalActions: finalActions,
-      postFinal: postFinal,
-      postFinalBeg: postFinalBeg,
-      postFinalLick: postFinalLick,
-      swallowOrders: swallowOrders,
+      postFinal: PhraseEntry.listFromJson(data['post_final']),
+      postFinalBeg: PhraseEntry.listFromJson(data['post_final_beg']),
+      postFinalLick: PhraseEntry.listFromJson(data['post_final_lick']),
+      swallowOrders: PhraseEntry.listFromJson(data['swallow_order']),
     );
   }
 }
