@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/badge.dart';
 import 'stats_service.dart';
 
@@ -76,8 +77,41 @@ class BadgeUnlock {
 
   /// Phrase TTS d'annonce, neutre et factuelle (la coach garde son ton
   /// salace pour le reste). Format intentionnellement court, lu pendant
-  /// l'animation de fin de séance.
-  String announcement() {
-    return 'Badge débloqué : ${definition.displayName}, palier ${tier.label}.';
+  /// l'animation de fin de séance. Utilise les libellés FR du modèle si
+  /// [l10n] est null (rétrocompatibilité avec les call sites hors UI) —
+  /// sinon résout le nom de famille et le palier dans la locale active.
+  String announcement([AppLocalizations? l10n]) {
+    if (l10n == null) {
+      return 'Badge débloqué : ${definition.displayName}, palier ${tier.label}.';
+    }
+    return l10n.badgeUnlockAnnouncement(
+      _localizedFamilyName(l10n),
+      _localizedTierLabel(l10n),
+    );
   }
+
+  String _localizedFamilyName(AppLocalizations l10n) => switch (
+      definition.family) {
+        BadgeFamily.marathonien => l10n.badgeNameMarathonien,
+        BadgeFamily.throatQueen => l10n.badgeNameThroatQueen,
+        BadgeFamily.ironLungs => l10n.badgeNameIronLungs,
+        BadgeFamily.toutTerrain => l10n.badgeNameToutTerrain,
+        BadgeFamily.sansBroncher => l10n.badgeNameSansBroncher,
+        BadgeFamily.reguliere => l10n.badgeNameReguliere,
+        BadgeFamily.jamaisRassasiee => l10n.badgeNameJamaisRassasiee,
+        BadgeFamily.videCouilles => l10n.badgeNameVideCouilles,
+        BadgeFamily.bouchePleine => l10n.badgeNameBouchePleine,
+        BadgeFamily.repeinte => l10n.badgeNameRepeinte,
+        BadgeFamily.gobeuse => l10n.badgeNameGobeuse,
+        BadgeFamily.nettoyeuse => l10n.badgeNameNettoyeuse,
+        BadgeFamily.suppliante => l10n.badgeNameSuppliante,
+      };
+
+  String _localizedTierLabel(AppLocalizations l10n) => switch (tier) {
+        BadgeTier.none => '—',
+        BadgeTier.bronze => l10n.badgeTierBronze,
+        BadgeTier.silver => l10n.badgeTierSilver,
+        BadgeTier.gold => l10n.badgeTierGold,
+        BadgeTier.platinium => l10n.badgeTierPlatinium,
+      };
 }

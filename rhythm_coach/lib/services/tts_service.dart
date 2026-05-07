@@ -23,6 +23,13 @@ class TtsService {
       'fr-fr-x-frd-local',
       'fr-fr-x-frc-local',
     ],
+    'en': [
+      'en-gb-x-gba-local',
+      'en-gb-x-fis-local',
+      'en-us-x-tpf-local',
+      'en-us-x-iol-local',
+      'en-us-x-sfg-local',
+    ],
   };
 
   final FlutterTts _tts = FlutterTts();
@@ -145,12 +152,24 @@ class TtsService {
   }
 
   Future<void> _selectVoice() async {
+    return _selectVoiceWithSeed(null);
+  }
+
+  /// Comme [_selectVoice], mais rotate la liste de voix préférées selon un
+  /// hash du `seed`. Permet à plusieurs presets coach (qui partagent la même
+  /// locale fallback) d'avoir chacun une voix distincte. Avec `seed == null`,
+  /// se comporte comme avant (1ère voix de la liste).
+  Future<void> _selectVoiceWithSeed(String? seed) async {
     try {
       final voices = await listVoicesForLocale(_locale);
       if (voices.isEmpty) return;
 
-      final preferred = _preferredVoiceNamesByLanguage[_locale.languageCode] ??
-          const <String>[];
+      final basePreferred =
+          _preferredVoiceNamesByLanguage[_locale.languageCode] ??
+              const <String>[];
+      final preferred = (seed != null && basePreferred.isNotEmpty)
+          ? _rotateForSeed(basePreferred, seed)
+          : basePreferred;
 
       Map<String, String>? pick;
       for (final name in preferred) {
@@ -174,6 +193,12 @@ class TtsService {
     } catch (e) {
       if (kDebugMode) debugPrint('[TTS] sélection voix échouée : $e');
     }
+  }
+
+  static List<String> _rotateForSeed(List<String> list, String seed) {
+    if (list.isEmpty) return list;
+    final idx = seed.hashCode.abs() % list.length;
+    return [...list.sublist(idx), ...list.sublist(0, idx)];
   }
 
   Map<String, String>? _fallbackPick(List<Map<String, String>> voices) {
@@ -285,7 +310,19 @@ class TtsService {
     double? pitch,
   }) async {
     if (!_initialized) await init();
-    if (voiceName != null) {
+    // Le preset coach est défini en dur dans le JSON meta (lang-indépendant)
+    // mais référence une voix d'une langue précise (ex: `fr-fr-x-fra-local`).
+    // Si la locale active diffère, on ignore la voix nommée et on laisse
+    // `_selectVoice()` choisir une voix de la locale courante via
+    // `_preferredVoiceNamesByLanguage`. Le rate/pitch du coach (sa couleur
+    // vocale) est en revanche conservé — c'est ce qui distingue les coachs
+    // entre eux indépendamment de la langue.
+    final localeMatchesVoice = voiceName == null ||
+        voiceLocale == null ||
+        voiceLocale
+            .toLowerCase()
+            .startsWith(_locale.languageCode.toLowerCase());
+    if (voiceName != null && localeMatchesVoice) {
       try {
         final voices = await listVoicesForLocale();
         final match = voices.firstWhereOrNull(
@@ -306,6 +343,18 @@ class TtsService {
       } catch (e) {
         if (kDebugMode) debugPrint('[TTS] applyCoachVoicePreset KO : $e');
       }
+    } else if (voiceName != null) {
+      // La voix demandée n'est pas dans la langue active : pioche une voix
+      // dans la liste préférée de la locale courante en utilisant un hash
+      // du voiceName comme seed. Chaque coach a donc une voix distincte
+      // (déterministe), au lieu que les 6 coaches partagent la 1ère voix
+      // de la liste — ça préserve une partie de leur identité vocale.
+      if (kDebugMode) {
+        debugPrint('[TTS] preset coach : voix « $voiceName » '
+            '(locale=$voiceLocale) ne matche pas la locale active '
+            '${_locale.languageCode} — fallback rotated');
+      }
+      await _selectVoiceWithSeed(voiceName);
     }
     if (rate != null) await setRate(rate);
     if (pitch != null) await setPitch(pitch);

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
@@ -49,6 +51,7 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
     _ambience = AmbienceEngine();
     _userProfile = UserProfileService();
     _tts.attachProfile(_userProfile);
+    LocaleService.instance.addListener(_handleLocaleChanged);
     // Chargement asynchrone du profil — pas besoin d'await ici, le service
     // expose un `notifyListeners` et la résolution `{name}` se contente du
     // fallback tant que le load n'est pas terminé.
@@ -72,10 +75,15 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    LocaleService.instance.removeListener(_handleLocaleChanged);
     _tts.dispose();
     _beep.dispose();
     _ambience.dispose();
     super.dispose();
+  }
+
+  void _handleLocaleChanged() {
+    unawaited(_tts.setLocale(LocaleService.instance.current));
   }
 
   @override

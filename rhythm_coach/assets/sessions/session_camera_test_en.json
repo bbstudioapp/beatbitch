@@ -1,0 +1,17 @@
+{
+  "lang": "en",
+  "id": "camera_test",
+  "name": "Camera Test — Holds",
+  "description": "Five long holds across the 5 levels, to validate the camera tracking.",
+  "duration_seconds": 90,
+  "mode": "rhythm",
+  "intro": "Camera test. We'll go through five holds, one per depth level. Hold each position for ten seconds. If you drift out too long, I correct you. Get in front of the lens, confirm when you're ready.",
+  "steps": [
+    {"time": 0,  "text": "Hold tip. Stay at the surface.", "mode": "hold", "to": "tip", "duration": 12},
+    {"time": 14, "text": "Hold head. A little deeper.", "mode": "hold", "to": "head", "duration": 12},
+    {"time": 30, "text": "Hold mid. Middle position.", "mode": "hold", "to": "mid", "duration": 12},
+    {"time": 46, "text": "Hold throat. Stay deep.", "mode": "hold", "to": "throat", "duration": 12},
+    {"time": 62, "text": "Hold full. Don't let go.", "mode": "hold", "to": "full", "duration": 14},
+    {"time": 80, "text": "Test done. Well played."}
+  ]
+}

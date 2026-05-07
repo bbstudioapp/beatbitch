@@ -374,6 +374,16 @@ class AppLocalizationsFr extends AppLocalizations {
       'Niveau 1 (termine une séance pour débloquer le suivant)';
 
   @override
+  String careerSessionName(int level) {
+    return 'Carrière niveau $level';
+  }
+
+  @override
+  String careerSessionNameQuickie(int level) {
+    return 'Carrière niveau $level — bâclée';
+  }
+
+  @override
   String get careerMilestonesBranchesPrefix => 'Branche : ';
 
   @override
@@ -993,6 +1003,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get badgeTierPlatinium => 'Platine';
+
+  @override
+  String badgeUnlockAnnouncement(String name, String tier) {
+    return 'Badge débloqué : $name, palier $tier.';
+  }
 
   @override
   String get badgeNameMarathonien => 'Marathonienne';

@@ -1,0 +1,202 @@
+{
+  "lang": "en",
+  "id": "coach_01_lina",
+  "title": "Discovery coach",
+  "publicBio": "Soft and patient guide. Walks you through the first steps, validates each progress. No insults, no roughness: we take our time.",
+  "phrases": {
+    "rhythm": {
+      "soft": [
+        "Start gently {name}, all soft.",
+        "Take it easy {name}, follow the rhythm.",
+        "That's it {name}, breathe calmly.",
+        "You're doing very well {name}, keep it up.",
+        "Let it slide slowly into your mouth {name}.",
+        "You're perfect like this {name}, all gentle.",
+        "Easy {name}, we have time."
+      ],
+      "medium": [
+        "A little deeper now {name}, if you feel ready.",
+        "Hold this rhythm, you're doing great {name}.",
+        "Go down a bit more, that's it {name}.",
+        "You're controlling your breath well, I'm proud of you {name}.",
+        "Keep this rhythm {name}, you're really progressing.",
+        "It's good what you're doing {name}."
+      ],
+      "hard": [
+        "Go deeper {name}, you can do it.",
+        "Hold this rhythm, I know you can {name}.",
+        "Go down a little more, slowly but surely {name}."
+      ]
+    },
+    "lick": {
+      "soft": [
+        "Lick it gently with the tip of your tongue {name}.",
+        "Caress it tenderly {name}, take your time.",
+        "Circle around the head, that's very good {name}.",
+        "Lick it like you adore it {name}."
+      ],
+      "medium": [
+        "Lick the whole length, nice and wet {name}.",
+        "Use your tongue well {name}, cover it with spit.",
+        "Lick with more desire, that's good {name}."
+      ],
+      "hard": [
+        "Lick it more intensely {name}, show me your desire."
+      ]
+    },
+    "hold": {
+      "soft": [
+        "Keep it in your mouth, breathe calmly {name}.",
+        "Hold the position, that's very good {name}.",
+        "Stay like this {name}, you're handling it perfectly."
+      ],
+      "medium": [
+        "Go a little deeper and hold {name}.",
+        "Stay deep, breathe through your nose {name}."
+      ],
+      "hard": [
+        "Stay deep {name}, don't come up."
+      ],
+      "finale": [
+        "Stay all the way deep until the end {name}.",
+        "Last effort, keep it deep {name}.",
+        "Beautiful {name}, stay like this until the signal."
+      ]
+    },
+    "breath": {
+      "soft": [
+        "Breathe calmly {name}.",
+        "Take big breaths {name}.",
+        "Relax your jaw {name}, exhale slowly.",
+        "Catch your breath {name}, you've been very good."
+      ]
+    },
+    "beg": {
+      "soft": [
+        "Say out loud \"I want more {coach}\", all soft.",
+        "Ask me nicely, \"please, make me keep going {coach}\".",
+        "Say it in your little-girl voice: \"I love this, don't stop {coach}\".",
+        "Ask me kindly to continue.",
+        "Tell me out loud why you want more."
+      ],
+      "medium": [
+        "Repeat after me: \"I need your cock {coach}\".",
+        "Ask me clearly, \"deeper please {coach}\".",
+        "Ask me by saying my name, {coach}.",
+        "Beg me properly, I want to hear it."
+      ]
+    },
+    "freestyle": {
+      "soft": [
+        "Your turn for a moment {name}, do what you want.",
+        "Enjoy {name}, show me what you can do."
+      ]
+    },
+    "hand": {
+      "soft": [
+        "Stroke it gently with your hand {name}."
+      ]
+    }
+  },
+  "randomComments": [
+    "Keep going {name}, all soft.",
+    "That's it {name}.",
+    "Breathe, I'm with you {name}.",
+    "Relax your jaw {name}.",
+    "You're progressing well {name}.",
+    "Stay focused, listen to my voice.",
+    "Follow the rhythm {name}, you're doing great.",
+    "I'm proud of you {name}.",
+    "We take our time, don't rush.",
+    "You're exactly where you need to be {name}."
+  ],
+  "intros": [
+    "Hello {name}. I'm Lina, I'll guide you gently through this session. Take your time, listen to my voice and follow the rhythm.",
+    "Hi {name}. We'll take it easy today. I'm here to help you progress without pressure.",
+    "Welcome {name}. I'll guide you step by step. You're safe with me."
+  ],
+  "congrats": [
+    "You've been really very good {name}. I'm proud of you.",
+    "That's it {name}. You did very well today.",
+    "Bravo {name}, you had a beautiful session. Rest now.",
+    "You're really progressing well {name}."
+  ],
+  "encore": [
+    "You want more {name}? Alright, we keep going gently.",
+    "Ready for another round {name}? We'll take it easy."
+  ],
+  "progress": {
+    "25": [
+      "You're starting well {name}, I can feel you relaxing.",
+      "That's it {name}, you're catching the rhythm."
+    ],
+    "50": [
+      "You're doing very well {name}.",
+      "I see you progressing {name}."
+    ],
+    "75": [
+      "You're almost at your limits {name}… you're holding on.",
+      "It's impressive {name}."
+    ],
+    "90": [
+      "Last effort {name}, you're almost there.",
+      "Give what you've got left {name}, I'm with you."
+    ]
+  },
+  "branchPhrases": {
+    "endurance": {
+      "soft": [
+        "You know how to last {name}, that's your strength.",
+        "Hold the rhythm {name}, you have the patience for it."
+      ],
+      "medium": [
+        "You never weaken {name}, I love that about you.",
+        "That's it, keep holding on {name}."
+      ],
+      "hard": [
+        "You can still go {name}, I know you can.",
+        "Hold on a little more, you're an endurance girl."
+      ]
+    },
+    "obeissance": {
+      "soft": [
+        "You're a good girl {name}.",
+        "You listen to me so well {name}."
+      ],
+      "medium": [
+        "Keep obeying me like this {name}, you're doing great.",
+        "You're docile, that's what I love."
+      ],
+      "hard": [
+        "Good girl {name}. Truly a good girl.",
+        "You obey me perfectly, I'm proud."
+      ]
+    },
+    "sloppy": {
+      "soft": [
+        "Let yourself go {name}, drool a little.",
+        "Get it nice and wet with your tongue {name}."
+      ],
+      "medium": [
+        "Drool on it {name}, don't be shy.",
+        "It's good to have a mouth full of spit."
+      ]
+    }
+  },
+  "nicknames": {
+    "pool": [
+      "darling",
+      "sweetie",
+      "honey",
+      "sweet thing",
+      "love"
+    ],
+    "use_user_prenom": true,
+    "use_user_nicknames": false
+  },
+  "coachNicknames": [
+    "Lina",
+    "coach",
+    "ma'am"
+  ]
+}

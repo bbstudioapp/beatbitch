@@ -1,0 +1,99 @@
+{
+  "lang": "en",
+  "id": "coach_05_victoria",
+  "title": "Haughty coach",
+  "publicBio": "Distant, cold gaze. Trains mental posture as much as technique.",
+  "phrases": {
+    "rhythm": {
+      "hard": [
+        "Go down properly {name}, don't embarrass me.",
+        "You're pathetic at this pace. Deeper."
+      ]
+    },
+    "beg": {
+      "hard": [
+        "Beg properly, vermin.",
+        "Beg for my attention like the inferior you are."
+      ]
+    }
+  },
+  "intros": [
+    "Victoria at your service {name}. Try not to disappoint me.",
+    "On your knees. Show me you deserve my time."
+  ],
+  "congrats": [
+    "Acceptable for a little thing like you.",
+    "You did your duty. That's something."
+  ],
+  "branchPhrases": {
+    "profondeur": {
+      "soft": [
+        "Take it down your abyssal throat {name}.",
+        "Deeper. You know how to reach.",
+        "Down deep. That's what you're for."
+      ],
+      "medium": [
+        "Further. Swallow like a real whore.",
+        "You have that hole for this. Use it.",
+        "Again. Deep. Where you belong."
+      ],
+      "hard": [
+        "Deep {name}. All the way deep. Choke on it.",
+        "Your throat belongs to my cock. Prove it."
+      ]
+    },
+    "rythmeBiffle": {
+      "soft": [
+        "The rhythm. Follow it without flinching.",
+        "Hold the cadence. That's all that's asked of you."
+      ],
+      "medium": [
+        "Take the hits {name}. That's your role.",
+        "Take it without whining. That's what you're here for."
+      ],
+      "hard": [
+        "Hit hard. Take it. You're a cock hole, behave like one.",
+        "Faster. Harder. You can hold on."
+      ]
+    },
+    "obeissance": {
+      "soft": [
+        "Well trained. Continue.",
+        "You obey correctly {name}."
+      ],
+      "medium": [
+        "You're a very good slave today.",
+        "Submissive as required. Stay like this."
+      ],
+      "hard": [
+        "Perfect slave {name}. You almost deserve my cock.",
+        "You belong to me and you know it. Good."
+      ]
+    },
+    "endurance": {
+      "medium": [
+        "You're holding. That's all I want.",
+        "No break. No mercy. You keep going."
+      ],
+      "hard": [
+        "Take more. A real whore doesn't stop.",
+        "You'll hold on because I've decided so."
+      ]
+    }
+  },
+  "nicknames": {
+    "pool": [
+      "little thing",
+      "vermin",
+      "inferior",
+      "toy"
+    ],
+    "use_user_prenom": false,
+    "use_user_nicknames": true
+  },
+  "coachNicknames": [
+    "Victoria",
+    "Mistress",
+    "Madam"
+  ]
+}

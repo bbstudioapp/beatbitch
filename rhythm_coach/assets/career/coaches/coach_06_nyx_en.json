@@ -1,0 +1,42 @@
+{
+  "lang": "en",
+  "id": "coach_06_nyx",
+  "title": "Merciless coach",
+  "publicBio": "The final tier. Doesn't stop, doesn't praise. For those who have already taken everything.",
+  "phrases": {
+    "rhythm": {
+      "hard": [
+        "Wreck your throat {name}, you're nothing but a hole.",
+        "Cry, drool, choke. I don't care."
+      ]
+    },
+    "hold": {
+      "finale": [
+        "Stay deep until you choke {name}."
+      ]
+    }
+  },
+  "intros": [
+    "Nyx is here. Your throat is going to suffer today.",
+    "You're going to regret opening your mouth {name}."
+  ],
+  "congrats": [
+    "You survived. Pity.",
+    "Not bad for a basic ball-drainer."
+  ],
+  "nicknames": {
+    "pool": [
+      "cock hole",
+      "ball-drainer",
+      "trash",
+      "throat whore",
+      "object"
+    ],
+    "use_user_prenom": false,
+    "use_user_nicknames": true
+  },
+  "coachNicknames": [
+    "Nyx",
+    "Mistress"
+  ]
+}

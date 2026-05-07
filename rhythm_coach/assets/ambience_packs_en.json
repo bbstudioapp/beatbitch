@@ -1,0 +1,41 @@
+{
+  "lang": "en",
+  "packs": [
+    {
+      "id": "intime",
+      "name": "Intimate",
+      "description": "Warm harmonic drones, heartbeat pulse, binaural tension and breathing pad.",
+      "tracks": {
+        "rhythm": "audio/ambience/deep_drone.mp3",
+        "lick": "audio/ambience/warm_drone.mp3",
+        "biffle": "audio/ambience/heartbeat.mp3",
+        "hold": "audio/ambience/tension_drone.mp3",
+        "breath": "audio/ambience/warm_pad.mp3"
+      }
+    },
+    {
+      "id": "nature",
+      "name": "Nature",
+      "description": "Rain for the loops, wind for the hold, waves for the breath.",
+      "tracks": {
+        "rhythm": "audio/ambience/rain.mp3",
+        "lick": "audio/ambience/rain_light.mp3",
+        "biffle": "audio/ambience/rain.mp3",
+        "hold": "audio/ambience/wind.mp3",
+        "breath": "audio/ambience/ocean.mp3"
+      }
+    },
+    {
+      "id": "studio",
+      "name": "Studio",
+      "description": "Continuous low drone for the loops, silence on hold/breath.",
+      "tracks": {
+        "rhythm": "audio/ambience/drone_low.mp3",
+        "lick": "audio/ambience/drone_low.mp3",
+        "biffle": "audio/ambience/drone_low.mp3",
+        "hold": null,
+        "breath": null
+      }
+    }
+  ]
+}

@@ -1,0 +1,710 @@
+{
+  "@@locale": "en",
+
+  "appTitle": "Rhythm Coach",
+  "@appTitle": {
+    "description": "Application name displayed by the Android system."
+  },
+
+  "modeSelectionAppBarTitle": "RHYTHM COACH",
+  "modeSelectionProfileTooltip": "Profile & badges",
+  "modeSelectionSoundsTooltip": "Learn the sounds",
+  "modeSelectionHeaderTitle": "Pick your mode",
+  "modeSelectionHeaderSubtitle": "Put your phone down, listen, perform.",
+  "modeSelectionScenarioTitle": "SCENARIO",
+  "modeSelectionScenarioSubtitle": "Pre-written sessions.",
+  "modeSelectionCareerTitle": "CAREER",
+  "modeSelectionCareerSubtitle": "Generated sessions. Finish to unlock the next level.",
+
+  "homeAppBarTitle": "SCENARIO",
+  "homeCameraTestTooltip": "Camera test (holds)",
+  "homeDeleteSessionTitle": "Delete this session?",
+  "homeDeleteSessionContent": "“{sessionName}” will be removed from your scenarios.",
+  "@homeDeleteSessionContent": {
+    "placeholders": {
+      "sessionName": { "type": "String" }
+    }
+  },
+  "commonCancel": "Cancel",
+  "commonDelete": "Delete",
+  "commonContinue": "Continue",
+  "commonAdd": "Add",
+  "homeLoadError": "Failed to load sessions:\n{error}",
+  "@homeLoadError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "homeEmpty": "No session available.",
+  "homeMySessions": "My sessions",
+  "homeBuiltinSessions": "Built-in sessions",
+  "homeHeaderTitle": "Pick your session",
+  "homeHeaderSubtitle": "Put your phone down, listen, perform.",
+
+  "sessionStopTitle": "Stop the session?",
+  "sessionStopContent": "Your progress will be lost.",
+  "sessionStopConfirm": "Stop",
+  "sessionVoiceLabel": "Voice",
+  "sessionAmbienceLabel": "Ambience",
+  "sessionBegRequestLabel": "REQUESTED",
+  "sessionBegSupplicateLabel": "BEG",
+  "sessionStateIdle": "READY",
+  "sessionStateRunning": "RUNNING",
+  "sessionStatePaused": "PAUSED",
+  "sessionStateFinished": "DONE",
+  "sessionStateFailing": "FAIL",
+  "sessionFailPhasePhrase": "Fail phrase",
+  "sessionFailPhaseBreath": "Breath",
+  "sessionFailPhasePunishment": "Punishment",
+  "sessionStartPrompt": "Start the session to hear the instructions.",
+  "sessionFailButton": "I CAN'T",
+  "sessionIntroBriefing": "BRIEFING",
+  "sessionIntroReplay": "Replay",
+  "sessionIntroReady": "I'M READY",
+  "sessionPausedIndicator": "PAUSED",
+  "sessionPrepInPlace": "IN POSITION",
+  "sessionPrepInstruction": "Put your phone down, get into position.",
+  "sessionFinishedTitle": "SESSION COMPLETE",
+  "sessionFinishedDuration": "Duration: {duration}",
+  "@sessionFinishedDuration": {
+    "placeholders": {
+      "duration": { "type": "String" }
+    }
+  },
+  "sessionFinishedDefaultEnd": "Thank you!",
+  "sessionFinishedBadgesTitle": "New badge tiers",
+  "sessionFinishedNoNewBadges": "No new tier this time — next one will be it.",
+  "sessionFinishedMilestonesTitle": "Lessons learned",
+  "sessionFinishedEncore": "I WANT MORE…",
+  "sessionFinishedSaved": "SAVED",
+  "sessionFinishedSaving": "SAVING…",
+  "sessionFinishedSaveButton": "SAVE THIS SESSION",
+  "sessionFinishedSavedSnack": "“{name}” saved to your scenarios.",
+  "@sessionFinishedSavedSnack": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "sessionSaveDefaultName": "My session {month}/{day}",
+  "@sessionSaveDefaultName": {
+    "placeholders": {
+      "day": { "type": "int" },
+      "month": { "type": "int" }
+    }
+  },
+  "sessionSaveDialogTitle": "Save the session",
+  "sessionSaveDialogContent": "Give it a name — it will show up in the SCENARIO list.",
+  "sessionSaveDialogHint": "Session name",
+  "sessionSaveDialogConfirm": "Save",
+  "cameraTestEndButton": "Back",
+
+  "profileAppBarTitle": "PROFILE",
+  "profileLoadError": "Error:\n{error}",
+  "@profileLoadError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "profileStatsSection": "STATISTICS",
+  "profileStatsEmpty": "No stats yet. Finish a few sessions to reveal your counters.",
+  "profileBadgesSection": "BADGES",
+  "profileBadgesEmpty": "No badge unlocked yet.",
+  "profileLevel": "Level {level}",
+  "@profileLevel": {
+    "placeholders": {
+      "level": { "type": "int" }
+    }
+  },
+  "profileReputationUnit": "reputation pts",
+  "profileStatSessionsCompleted": "Sessions completed",
+  "profileStatNoFailStreak": "No-fail streak",
+  "profileStatDailyStreak": "Daily streak",
+  "profileStatTotalTime": "Total time",
+  "profileStatThroatfucks": "Throatfucks",
+  "profileStatBiffles": "Cock slaps",
+  "profileStatHoldFullMax": "Longest deep hold",
+  "profileStatHoldThroatTotal": "Throat hold (total)",
+  "profileStatHoldFullTotal": "Full hold (total)",
+  "profileStatEncores": "Encores requested",
+  "profileStatQuickies": "Quickies completed",
+  "profileStatModesUsed": "Modes used",
+  "profileResetSection": "DANGER ZONE",
+  "profileResetButton": "Reset everything",
+  "profileResetDialogTitle": "Reset everything?",
+  "profileResetDialogMessage": "This wipes all your stats, badges, career progression and specialization points. Irreversible.",
+  "profileResetCancel": "Cancel",
+  "profileResetConfirm": "Wipe everything",
+  "profileResetDoneSnackbar": "Profile reset.",
+
+  "careerAppBarTitle": "CAREER",
+  "careerSpecializationTooltip": "Specialization",
+  "careerLoadError": "Failed to load:\n{error}",
+  "@careerLoadError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "careerLevelSection": "Level",
+  "careerMaxLevel": "max {level}",
+  "@careerMaxLevel": {
+    "placeholders": {
+      "level": { "type": "int" }
+    }
+  },
+  "careerQuickieToggle": "Quickie",
+  "careerQuickieSubtitle": "6 min — intense",
+  "careerQuickieDescription": "6 min, intense the whole way through. For when you don't have time.",
+  "careerIncludeHandToggle": "Include hand stimulation",
+  "careerIncludeHandSubtitle": "Also disables cock slaps (biffle) — both need the hand.",
+  "careerIncludeHandMilestoneLocked": "Locked for this session — the learning milestone uses the hand.",
+  "specPointsBannerTitle": "{count, plural, =1{1 unspent point} other{{count} unspent points}}",
+  "@specPointsBannerTitle": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "specPointsBannerSubtitle": "You've earned specialization points. Spend them before you start.",
+  "specPointsBannerCta": "ALLOCATE",
+  "careerStartButton": "START",
+  "careerCompletedSessions": "Sessions completed: {count}",
+  "@careerCompletedSessions": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "careerLevelLockedHint": "Level 1 (finish a session to unlock the next one)",
+
+  "careerSessionName": "Career level {level}",
+  "@careerSessionName": {
+    "placeholders": {
+      "level": { "type": "int" }
+    }
+  },
+  "careerSessionNameQuickie": "Career level {level} — quickie",
+  "@careerSessionNameQuickie": {
+    "placeholders": {
+      "level": { "type": "int" }
+    }
+  },
+
+  "careerMilestonesBranchesPrefix": "Branch: ",
+  "careerMilestonesBranchesPrefixPlural": "Branches: ",
+
+  "cameraTestAppBarTitle": "CAMERA TEST",
+  "cameraPreviewUnavailable": "Preview unavailable",
+  "cameraStartSession": "Start the session",
+  "cameraPermissionDenied": "Camera permission denied or init failed. Enable the camera in Android settings.",
+  "cameraUnknownError": "Unknown error.",
+  "cameraInitializing": "Initializing camera…",
+  "cameraRecalibrate": "Recalibrate",
+  "cameraCalibrate": "Calibrate (10s)",
+  "cameraAxisLabel": "Axis: {axis}",
+  "@cameraAxisLabel": {
+    "placeholders": { "axis": { "type": "String" } }
+  },
+  "cameraAxisHorizontal": "horizontal",
+  "cameraAxisVertical": "vertical",
+  "cameraLivePositionLabel": "Live position: {position}",
+  "@cameraLivePositionLabel": {
+    "placeholders": { "position": { "type": "String" } }
+  },
+  "cameraCalibrationTitle": "Calibration",
+  "cameraCalibrationInstructions": "For 10 seconds, do 3 or 4 slow, wide movements — from the highest point (tip) to the lowest (full). The app will infer the axis and the bounds of the 5 levels.",
+  "cameraCalibratingMessage": "Calibrating… make slow, deep movements.",
+  "cameraCalibratedTitle": "Calibration OK",
+  "cameraCalibrationSummary": "Axis: {axis} — range {range} ({samples} samples)",
+  "@cameraCalibrationSummary": {
+    "placeholders": {
+      "axis": { "type": "String" },
+      "range": { "type": "String" },
+      "samples": { "type": "int" }
+    }
+  },
+  "cameraCalibratedHint": "You can start the session. If polarity is reversed (tip ↔ full), recalibrate the right way.",
+  "cameraCalibrationFailedRange": "Range too small ({range}). Try wider movements.",
+  "@cameraCalibrationFailedRange": {
+    "placeholders": { "range": { "type": "String" } }
+  },
+  "cameraCalibrationFailed": "Calibration failed: {error}",
+  "@cameraCalibrationFailed": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "cameraReturnButton": "Back",
+
+  "specAppBarTitle": "SPECIALIZATION",
+  "specLoadError": "Error:\n{error}",
+  "@specLoadError": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "specNotEnoughPoints": "Not enough points available.",
+  "specRespecConfirmTitle": "Reset your spec?",
+  "specRespecConfirmContent": "All your specialization points will reset, you'll lose 1 global level and you won't be able to respec again for 3 days.",
+  "specRespecConfirmAction": "Respec",
+  "specIntro": "Spend your points to tell the engine what you like. The more you invest in a branch, the more the generator leans into that style — without unbalancing your stats.",
+  "specPointsAvailableLabel": "available points",
+  "specLevelLabel": "Level {level}",
+  "@specLevelLabel": {
+    "placeholders": { "level": { "type": "int" } }
+  },
+  "specSpentLabel": "{spent} / {cap} spent",
+  "@specSpentLabel": {
+    "placeholders": {
+      "spent": { "type": "int" },
+      "cap": { "type": "int" }
+    }
+  },
+  "specPointsUnit": "pts",
+  "specRespecActiveLabel": "Reset specialization (-1 level)",
+  "specRespecCooldownLabel": "Respec in {hours}h",
+  "@specRespecCooldownLabel": {
+    "placeholders": { "hours": { "type": "int" } }
+  },
+
+  "formatDurationSeconds": "{s}s",
+  "@formatDurationSeconds": {
+    "placeholders": { "s": { "type": "int" } }
+  },
+  "formatDurationMinutes": "{m}m",
+  "@formatDurationMinutes": {
+    "placeholders": { "m": { "type": "int" } }
+  },
+  "formatDurationMinutesSeconds": "{m}m {s}s",
+  "@formatDurationMinutesSeconds": {
+    "placeholders": {
+      "m": { "type": "int" },
+      "s": { "type": "int" }
+    }
+  },
+  "formatDurationHours": "{h}h",
+  "@formatDurationHours": {
+    "placeholders": { "h": { "type": "int" } }
+  },
+  "formatDurationHoursMinutes": "{h}h {mm}",
+  "@formatDurationHoursMinutes": {
+    "placeholders": {
+      "h": { "type": "int" },
+      "mm": { "type": "String" }
+    }
+  },
+
+  "settingsAppBarTitle": "SETTINGS",
+  "settingsLanguageSection": "Language",
+  "settingsLanguageSubtitle": "Interface language, coach lines and editorial content.",
+  "settingsLanguageSystem": "Follow system",
+  "settingsLanguageFrench": "Français",
+  "settingsLanguageEnglish": "English",
+
+  "soundsAppBarTitle": "SOUNDS",
+  "soundsStopLoopTooltip": "Stop loop",
+  "soundsIdentitySection": "Identity",
+  "soundsIdentitySubtitle": "The “{token}” placeholder in the lines is replaced by a random pick between your first name (if entered) and the nickname list below.",
+  "@soundsIdentitySubtitle": {
+    "placeholders": {
+      "token": { "type": "String" }
+    }
+  },
+  "soundsFirstNameLabel": "First name (optional)",
+  "soundsFirstNameHelper": "Empty = no first name in the pool. Network voices pronounce names unevenly.",
+  "soundsTestSubstitution": "Test substitution",
+  "soundsDefaultNicknames": "Default nicknames",
+  "soundsCustomNicknames": "Custom nicknames",
+  "soundsNoCustomNicknames": "No custom nickname yet.",
+  "soundsAddNicknameLabel": "Add a nickname",
+  "soundsRemoveNicknameTooltip": "Remove",
+  "soundsVoiceSection": "Voice",
+  "soundsVoiceSubtitle": "Pick the voice and the speed. The “Test” button speaks a sample line.",
+  "soundsRateLabel": "Speed",
+  "soundsPitchLabel": "Pitch",
+  "soundsTestVoice": "Test the voice",
+  "soundsNoVoiceDetected": "No matching voice detected on this device.",
+  "soundsAmbienceSection": "Ambience",
+  "soundsAmbienceSubtitle": "Background pack played during sessions. Selection shared with the play screen. Tap a mode to listen.",
+  "soundsPackLabel": "Pack",
+  "soundsModeLabel": "Mode {name}",
+  "@soundsModeLabel": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "soundsNoTrack": "no track for this mode",
+  "soundsRhythmPositionsSection": "Positions (rhythm)",
+  "soundsRhythmPositionsSubtitle": "Beep tone by depth. Highest to lowest pitch.",
+  "soundsLickPositionsSection": "Positions (lick)",
+  "soundsLickPositionsSubtitle": "Same positions, lower volume for the “lighter” feel.",
+  "soundsLickPositionLabel": "{name} · lick",
+  "@soundsLickPositionLabel": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "soundsLickPositionSubtitle": "Position {name} in lick mode",
+  "@soundsLickPositionSubtitle": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "soundsHoldSection": "Hold (position + overlay layer)",
+  "soundsHoldSubtitle": "Position beep played simultaneously with the hold layer (thicker).",
+  "soundsHoldButton": "Hold {position}",
+  "@soundsHoldButton": {
+    "placeholders": {
+      "position": { "type": "String" }
+    }
+  },
+  "soundsHoldPositionSubtitle": "{name} + hold layer",
+  "@soundsHoldPositionSubtitle": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "soundsSpecificSounds": "Specific sounds",
+  "soundsBiffleOneShot": "Cock slap (one-shot)",
+  "soundsBiffleOneShotSubtitle": "Short, percussive sound. On loop, follows the BPM.",
+  "soundsBreath": "Breath",
+  "soundsBreathSubtitle": "Long, low tone, “release” effect.",
+  "soundsLoopsDemoSection": "Loop demos",
+  "soundsLoopsDemoSubtitle": "Adjust BPM, start the loop, listen, stop.",
+  "soundsBpmLabel": "BPM",
+  "soundsLoopActive": "RUNNING",
+  "soundsLoopRhythmHeadMid": "Rhythm head→mid",
+  "soundsLoopRhythmThroatFull": "Rhythm throat→full",
+  "soundsLoopLickTipHead": "Lick tip→head",
+  "soundsLoopBiffle": "Cock slap",
+  "soundsPosDescTip": "Very high, light",
+  "soundsPosDescHead": "High",
+  "soundsPosDescMid": "Mid",
+  "soundsPosDescThroat": "Low",
+  "soundsPosDescFull": "Very low, heavy",
+  "soundsDebugSection": "Debug",
+  "soundsDebugSubtitle": "Technical options for development.",
+  "soundsDebugShowTimer": "Show timer",
+  "soundsDebugShowTimerSubtitle": "Replaces the movement animation with the mm:ss counter during the session.",
+  "soundsDebugShowStaminaBar": "Show stamina bar",
+  "soundsDebugShowStaminaBarSubtitle": "Shows the projected stamina profile during a Career session.",
+  "soundsDebugShowHumiliationBar": "Show humiliation gauge",
+  "soundsDebugShowHumiliationBarSubtitle": "Shows the cumulated humiliation score during the session.",
+  "soundsDebugShowObedienceBar": "Show obedience score",
+  "soundsDebugShowObedienceBarSubtitle": "Shows the 0–100 obedience score (drops on each fail, rises with punishments).",
+  "soundsDebugShowSalivaBar": "Show saliva gauge",
+  "soundsDebugShowSalivaBarSubtitle": "Shows the 0–max saliva gauge accumulated during the session. Rises with deep lick/rhythm/hold, drops with breath/hand. Auto-swallow at 75 when swallowing is allowed.",
+  "soundsDebugShowSessionControls": "Show pause / stop",
+  "soundsDebugShowSessionControlsSubtitle": "Debug only: in prod the session runs without interaction (phone down), only the FAIL button stays useful.",
+  "soundsDebugShowModeBadge": "Show mode / BPM / position",
+  "soundsDebugShowModeBadgeSubtitle": "Debug only: in prod the animation is enough to indicate what's happening.",
+  "debugBarLabelHumiliation": "HUMIL.",
+  "debugBarLabelObedience": "OBED.",
+  "debugBarLabelSaliva": "SALIVA",
+  "soundsDebugCameraHoldCheck": "Camera hold check",
+  "soundsDebugCameraHoldCheckSubtitle": "During holds, the front camera checks that the position is being held. The coach gives a short cue if you drift. Requires the camera to be calibrated (camera icon in the SCENARIO screen).",
+  "soundsDebugSkipSession": "“Finish as success” button",
+  "soundsDebugSkipSessionSubtitle": "Shows a button in the session that ends it immediately as a full success (badges, milestones, level). Useful to iterate on content without playing through.",
+  "soundsShowBackgroundMedia": "Background media in session",
+  "soundsShowBackgroundMediaSubtitle": "Shows images/GIFs from assets/backgrounds.json in the background, rotating each step. Disable to see only the ambience gradient.",
+  "sessionDebugFinishButton": "DEBUG: finish as success",
+
+  "soundsDebugScenarioButton": "Debug — career scenario",
+  "soundsDebugScenarioSubtitle": "Visualize a generated session without playing it: level, humil, obed, milestones, unlocks, and Beg / fail simulation.",
+
+  "careerDebugTitle": "Debug — Career scenario",
+  "careerDebugSectionParams": "Parameters",
+  "careerDebugSectionScenario": "Scenario",
+  "careerDebugLevel": "Level",
+  "careerDebugHumiliation": "Humiliation",
+  "careerDebugObedience": "Obedience",
+  "careerDebugIncludeHand": "Include hand stimulation",
+  "careerDebugQuickie": "Quickie mode",
+  "careerDebugIntense": "Intense mode (post-Beg)",
+  "careerDebugDurationOverride": "Duration override",
+  "careerDebugMilestoneBody": "Milestone body",
+  "careerDebugMilestoneFinal": "Milestone final",
+  "careerDebugUnlocks": "Unlocks",
+  "careerDebugUnlocksLoadCurrent": "Earned",
+  "careerDebugUnlocksClear": "None",
+  "careerDebugUnlocksAll": "All",
+  "careerDebugAuto": "Auto",
+  "careerDebugNone": "None",
+  "careerDebugRegenerate": "Regenerate",
+  "careerDebugShowTtsTexts": "Show TTS texts",
+  "careerDebugStatStamina": "End stamina",
+  "careerDebugStatHumilCap": "End humil cap",
+  "careerDebugTagMilestoneBody": "MILESTONE",
+  "careerDebugTagMilestoneFinal": "MILESTONE FINAL",
+  "careerDebugTagBoost": "BOOST",
+  "careerDebugTagFinal": "FINAL",
+  "careerDebugTagPostFinal": "POST-FINAL",
+  "careerDebugTextOnly": "TEXT-ONLY",
+  "careerDebugHumilReq": "req",
+  "careerDebugStepActionsTitle": "Step",
+  "careerDebugSimulateFail": "Simulate a fail here",
+  "careerDebugSimulateSupplier": "Simulate a Beg here",
+  "careerDebugClearFork": "Clear the branch",
+  "careerDebugClearAnnotation": "Clear the annotation",
+  "careerDebugForkBanner": "BEG BRANCH",
+  "careerDebugForkFrom": "From",
+  "careerDebugForkSteps": "steps",
+  "careerDebugFailSnapshotTitle": "Simulated FAIL",
+  "careerDebugFailSnapshotNext": "Resumes at step",
+  "careerDebugFailSnapshotNoNext": "No playable step after this fail (end of session).",
+
+  "positionTip": "Tip",
+  "positionHead": "Head",
+  "positionMid": "Mid",
+  "positionThroat": "Throat",
+  "positionFull": "Full",
+
+  "modeShortRhythm": "SUCK",
+  "modeShortHold": "DEEP",
+  "modeShortLick": "LICK",
+  "modeShortBiffle": "SLAP",
+  "modeShortBreath": "BREATHE",
+  "modeShortBeg": "BEG",
+  "modeShortFreestyle": "FREE",
+  "modeShortHand": "STROKE",
+
+  "badgeTierBronze": "Bronze",
+  "badgeTierSilver": "Silver",
+  "badgeTierGold": "Gold",
+  "badgeTierPlatinium": "Platinum",
+
+  "badgeUnlockAnnouncement": "Badge unlocked: {name}, {tier} tier.",
+  "@badgeUnlockAnnouncement": {
+    "description": "TTS line played at session end when a new badge tier is unlocked. {name} = localized badge name, {tier} = localized tier label.",
+    "placeholders": {
+      "name": { "type": "String" },
+      "tier": { "type": "String" }
+    }
+  },
+
+  "badgeNameMarathonien": "Marathoner",
+  "badgeNameThroatQueen": "Throat Queen",
+  "badgeNameIronLungs": "Iron Lungs",
+  "badgeNameToutTerrain": "All-Terrain",
+  "badgeNameSansBroncher": "Unflinching",
+  "badgeNameReguliere": "Regular",
+  "badgeNameJamaisRassasiee": "Never Satisfied",
+  "badgeNameVideCouilles": "Ball-Drainer",
+  "badgeNameBouchePleine": "Mouthful",
+  "badgeNameRepeinte": "Glazed",
+  "badgeNameGobeuse": "Swallower",
+  "badgeNameNettoyeuse": "Cleaner",
+  "badgeNameSuppliante": "Beggar",
+
+  "badgeUnitMarathonien": "minutes total",
+  "badgeUnitThroatQueen": "throatfucks total",
+  "badgeUnitIronLungs": "seconds of the longest full hold",
+  "badgeUnitToutTerrain": "different modes used",
+  "badgeUnitSansBroncher": "complete sessions in a row without a fail",
+  "badgeUnitReguliere": "consecutive days with a session",
+  "badgeUnitJamaisRassasiee": "times you asked for “more”",
+  "badgeUnitVideCouilles": "quickies completed",
+  "badgeUnitBouchePleine": "finishes in the mouth",
+  "badgeUnitRepeinte": "finishes on the face",
+  "badgeUnitGobeuse": "finishes on the tongue",
+  "badgeUnitNettoyeuse": "post-finishes licked clean",
+  "badgeUnitSuppliante": "post-orgasm begs",
+
+  "careerLevelTitleDebutante": "Beginner",
+  "careerLevelTitleApprentieSuceuse": "Apprentice Cocksucker",
+  "careerLevelTitlePetiteSalopeConfirmee": "Confirmed Little Slut",
+  "careerLevelTitleBoucheAPipe": "Cocksucking Mouth",
+  "careerLevelTitleAvaleuse": "Swallower",
+  "careerLevelTitleThroatQueen": "Throat Queen",
+  "careerLevelTitleReineDuSloppy": "Sloppy Queen",
+  "careerLevelTitleTrouABiteOfficiel": "Official Cock Hole",
+  "careerLevelTitleVideCouillesPro": "Pro Ball-Drainer",
+  "careerLevelTitleReineDesPutes": "Queen of Whores",
+
+  "specBranchEnduranceLabel": "Endurance",
+  "specBranchEnduranceDesc": "Last long. More holds, longer durations.",
+  "specBranchProfondeurLabel": "Depth",
+  "specBranchProfondeurDesc": "Reach far down. Throat / full bias.",
+  "specBranchRythmeBiffleLabel": "Rhythm & Slap",
+  "specBranchRythmeBiffleDesc": "Higher BPM, more frequent cock slaps.",
+  "specBranchObeissanceLabel": "Obedience",
+  "specBranchObeissanceDesc": "Insistent begging, sustained pleading.",
+  "specBranchSloppyLabel": "Sloppy",
+  "specBranchSloppyDesc": "Wet lick, low slap, more drool.",
+  "specBranchResilienceLabel": "Resilience",
+  "specBranchResilienceDesc": "Take the fails. Harsher punishments.",
+
+  "coachPickerTitle": "Pick a coach",
+  "coachPickerSection": "COACH",
+  "coachPickerTierLabel": "TIER {tier}",
+  "@coachPickerTierLabel": {
+    "placeholders": { "tier": { "type": "int" } }
+  },
+  "coachBadgePrincipal": "PRIMARY",
+  "coachBadgePalierAcquis": "TIER UNLOCKED",
+  "coachBadgeFreeTraining": "FREE TRAINING",
+  "coachBadgeLocked": "LOCKED",
+  "coachRequiresHands": "Hands required",
+  "coachSummaryPrincipal": "{title} · Primary tier {tier}",
+  "@coachSummaryPrincipal": {
+    "placeholders": {
+      "title": { "type": "String" },
+      "tier": { "type": "int" }
+    }
+  },
+  "coachSummaryFree": "{title} · free training",
+  "@coachSummaryFree": {
+    "placeholders": { "title": { "type": "String" } }
+  },
+
+  "coachFreeTrainingDialogTitle": "Free training",
+  "coachFreeTrainingDialogBody": "You'll be training with {coachName}. You'll progress on your skills, but your tier gauge won't move.",
+  "@coachFreeTrainingDialogBody": {
+    "placeholders": { "coachName": { "type": "String" } }
+  },
+  "coachFreeTrainingDialogHint": "To advance in your tier, pick {principalName}.",
+  "@coachFreeTrainingDialogHint": {
+    "placeholders": { "principalName": { "type": "String" } }
+  },
+  "coachFreeTrainingDialogChoosePrincipal": "Pick {principalName}",
+  "@coachFreeTrainingDialogChoosePrincipal": {
+    "placeholders": { "principalName": { "type": "String" } }
+  },
+  "coachFreeTrainingDialogContinueAnyway": "Continue anyway",
+
+  "coachPrenomGateTitle": "{coachName} wants to know you",
+  "@coachPrenomGateTitle": {
+    "placeholders": { "coachName": { "type": "String" } }
+  },
+  "coachPrenomGateBody": "Before starting the session with {coachName}, give me your first name — she won't speak to you anonymously anymore.",
+  "@coachPrenomGateBody": {
+    "placeholders": { "coachName": { "type": "String" } }
+  },
+  "coachPrenomGateField": "Your first name",
+  "coachPrenomGateConfirm": "Continue",
+
+  "coachFreeTrainingBannerTitle": "Free session with {coachName}",
+  "@coachFreeTrainingBannerTitle": {
+    "placeholders": { "coachName": { "type": "String" } }
+  },
+  "coachFreeTrainingBannerBodyWithPrincipal": "You're progressing on your skills. Your tier doesn't move — for that, pick {principalName}.",
+  "@coachFreeTrainingBannerBodyWithPrincipal": {
+    "placeholders": { "principalName": { "type": "String" } }
+  },
+  "coachFreeTrainingBannerBodyNoPrincipal": "You're progressing on your skills. Your tier doesn't move.",
+  "coachFreeTrainingBannerSwitchAction": "SWITCH",
+
+  "coachErrorLockedTier": "This coach is still locked — reach tier {tier} to unlock her.",
+  "@coachErrorLockedTier": {
+    "placeholders": { "tier": { "type": "int" } }
+  },
+  "coachErrorRequiresHands": "{coachName} needs you to enable the hand in the options.",
+  "@coachErrorRequiresHands": {
+    "placeholders": { "coachName": { "type": "String" } }
+  },
+  "coachErrorMinLevel": "{coachName} requires level {minLevel} minimum.",
+  "@coachErrorMinLevel": {
+    "placeholders": {
+      "coachName": { "type": "String" },
+      "minLevel": { "type": "int" }
+    }
+  },
+  "coachErrorMissingSpecialization": "This coach requires at least 1 point in a specialization you haven't invested in.",
+  "coachErrorInsufficientBranchPoints": "{coachName} requires: {requirements}. Spend your specialization points.",
+  "@coachErrorInsufficientBranchPoints": {
+    "placeholders": {
+      "coachName": { "type": "String" },
+      "requirements": { "type": "String" }
+    }
+  },
+
+  "unlockAnnouncementSloppyDroolBasic": "From now on your mouth holds more spit, and your licking makes more. Drool on me, be filthy.",
+  "@unlockAnnouncementSloppyDroolBasic": {
+    "description": "Post-finale_chime TTS announcement when the milestone unlocking sloppy_drool_basic is acknowledged."
+  },
+
+  "unlockAnnouncementSloppyBiffleSlow": "Cock slaps make you drool now. Take them with your mouth wide open.",
+  "@unlockAnnouncementSloppyBiffleSlow": {
+    "description": "Post-finale_chime TTS announcement when the milestone unlocking sloppy_biffle_slow is acknowledged."
+  },
+
+  "unlockAnnouncementSloppySwallowControl": "You can hold your spit on command now. When I tell you, you don't swallow.",
+  "@unlockAnnouncementSloppySwallowControl": {
+    "description": "Post-finale_chime TTS announcement when the milestone unlocking sloppy_swallow_control is acknowledged."
+  },
+
+  "unlockAnnouncementSloppySpit": "You know how to spit for me now. When I ask, you let it all out.",
+  "@unlockAnnouncementSloppySpit": {
+    "description": "Post-finale_chime TTS announcement when the milestone unlocking sloppy_spit is acknowledged."
+  },
+
+  "unlockAnnouncementSloppyDroolDeep": "When you go deep, your mouth overflows even more. Enjoy it.",
+  "@unlockAnnouncementSloppyDroolDeep": {
+    "description": "Post-finale_chime TTS announcement when the milestone unlocking sloppy_drool_deep is acknowledged."
+  },
+
+  "unlockAnnouncementRhythmHeadMidSustained": "You can hold the pace longer than a minute now, no break. I'll be asking for it.",
+  "@unlockAnnouncementRhythmHeadMidSustained": {
+    "description": "Post-finale_chime TTS announcement when the milestone unlocking rhythm_head_mid_sustained is acknowledged."
+  },
+
+  "modeSelectionSurpriseTooltip": "Surprise reminders",
+  "@modeSelectionSurpriseTooltip": {
+    "description": "Tooltip of the notification icon in the ModeSelectionScreen AppBar."
+  },
+
+  "surpriseNotifTitle": "It's time",
+  "@surpriseNotifTitle": {
+    "description": "Surprise notification title (short, lockscreen-friendly)."
+  },
+  "surpriseNotifBody1": "Suck me right now",
+  "@surpriseNotifBody1": {
+    "description": "Raw body of the surprise notification, variant 1. Random pick at schedule time."
+  },
+  "surpriseNotifBody2": "I want to fill your mouth NOW",
+  "@surpriseNotifBody2": {
+    "description": "Raw body of the surprise notification, variant 2."
+  },
+  "surpriseNotifBody3": "On your knees, it's time!",
+  "@surpriseNotifBody3": {
+    "description": "Raw body of the surprise notification, variant 3."
+  },
+
+  "surpriseSettingsAppBarTitle": "Surprise reminder",
+  "surpriseSettingsHeaderSubtitle": "During the window, the app can send notifications at random times. On tap, it opens a short session.",
+  "surpriseSettingsEnableLabel": "Enable reminders",
+  "surpriseSettingsEnableSubtitle": "Random notifications during the window.",
+  "surpriseSettingsWindowLabel": "Time window",
+  "surpriseSettingsWindowValue": "{minutes} min",
+  "@surpriseSettingsWindowValue": {
+    "placeholders": {
+      "minutes": { "type": "int" }
+    }
+  },
+  "surpriseSettingsAlertCountLabel": "Number of reminders",
+  "surpriseSettingsAlertCountValue": "{count, plural, one{1 reminder} other{{count} reminders}}",
+  "@surpriseSettingsAlertCountValue": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "surpriseSettingsDurationLabel": "Session duration",
+  "surpriseSettingsDurationValue": "{minSec}s – {maxSec}s",
+  "@surpriseSettingsDurationValue": {
+    "placeholders": {
+      "minSec": { "type": "int" },
+      "maxSec": { "type": "int" }
+    }
+  },
+  "surpriseSettingsActiveStatus": "Active until {endTime}",
+  "@surpriseSettingsActiveStatus": {
+    "placeholders": {
+      "endTime": { "type": "String" }
+    }
+  },
+  "surpriseSettingsActiveAlertsLeft": "{count, plural, one{1 alert left} other{{count} alerts left}}",
+  "@surpriseSettingsActiveAlertsLeft": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "surpriseSettingsInactiveStatus": "No reminder scheduled",
+  "surpriseSettingsPermissionMissing": "Allow notifications in the system settings.",
+  "surpriseSettingsExactAlarmMissing": "Exact alarms are denied by the system.",
+  "surpriseSettingsBatteryHintTitle": "Battery optimization",
+  "surpriseSettingsBatteryHintBody": "On some phones (Xiaomi, Huawei, Samsung), disable battery optimization for Rhythm Coach to guarantee reminders.",
+  "surpriseSettingsOpenBatterySettings": "Open the settings"
+}
