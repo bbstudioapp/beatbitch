@@ -11,6 +11,9 @@ import 'l10n/app_localizations.dart';
 import 'screens/mode_selection_screen.dart';
 import 'services/coach_phrases_loader.dart';
 import 'services/locale_service.dart';
+import 'services/surprise_alert_service.dart';
+import 'services/surprise_lifecycle_observer.dart';
+import 'services/surprise_notifications_bootstrap.dart';
 import 'theme/app_theme.dart';
 
 /// Singleton CoachService partagé entre les écrans Carrière. Instancié à
@@ -22,6 +25,10 @@ final CoachService coachService = CoachService();
 /// unlocks acquittés. Consommé par le générateur (gating) et le controller
 /// (markCompleted en fin de session).
 final MilestoneService milestoneService = MilestoneService();
+
+/// Navigator global. Permet au callback de notification (top-level,
+/// hors arbre Widget) de déclencher des push depuis n'importe où.
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,7 +57,27 @@ Future<void> main() async {
   SystemChrome.setEnabledSystemUIMode(
     SystemUiMode.edgeToEdge,
   );
+
+  // Bootstrap notifications surprise. Le titre par défaut sera remplacé
+  // dynamiquement par la valeur localisée au moment de chaque arming via
+  // SurpriseRouter.resolveBodyVariants — mais on en initialise un de
+  // fallback ici pour les notifs déjà programmées avant un éventuel
+  // changement de locale.
+  await SurpriseNotificationsBootstrap.init(
+    localizedTitle: "C'est l'heure",
+    onTap: surpriseNotificationTapHandler,
+  );
+  // Au cold start (app lancée par tap d'une notif), pose le flag d'intent
+  // que `_ModeSelectionScreenState` consommera dans son addPostFrameCallback.
+  final coldStartPayload =
+      await SurpriseNotificationsBootstrap.consumeColdStartPayload();
+  if (coldStartPayload != null) {
+    await SurpriseAlertService.markIntentPending(coldStartPayload);
+  }
+  await SurpriseAlertService.instance.init();
+
   runApp(const RhythmCoachApp());
+  WidgetsBinding.instance.addObserver(SurpriseLifecycleObserver());
 }
 
 class RhythmCoachApp extends StatelessWidget {
@@ -62,6 +89,7 @@ class RhythmCoachApp extends StatelessWidget {
       animation: LocaleService.instance,
       builder: (context, _) {
         return MaterialApp(
+          navigatorKey: navigatorKey,
           onGenerateTitle: (ctx) => AppLocalizations.of(ctx).appTitle,
           debugShowCheckedModeBanner: false,
           theme: AppTheme.build(),
