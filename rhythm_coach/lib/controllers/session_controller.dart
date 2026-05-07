@@ -360,8 +360,10 @@ class SessionController extends ChangeNotifier {
   }
 
   void _handleBeat(BeatEvent e) {
-    _stats.recordBeat(mode: e.mode, to: e.to, from: e.from);
-    _stats.markModeUsed(e.mode);
+    if (!_session.noStats) {
+      _stats.recordBeat(mode: e.mode, to: e.to, from: e.from);
+      _stats.markModeUsed(e.mode);
+    }
     _stamina.onBeat(e);
   }
 
@@ -732,7 +734,9 @@ class SessionController extends ChangeNotifier {
     if (_beep.currentMode != SessionMode.hold) return;
     final pos = _beep.currentFrom;
     if (pos == Position.throat || pos == Position.full) {
-      _stats.recordHoldSecond(pos);
+      if (!_session.noStats) {
+        _stats.recordHoldSecond(pos);
+      }
       if (pos == Position.full) {
         _currentHoldFullDuration++;
       }
@@ -743,7 +747,9 @@ class SessionController extends ChangeNotifier {
   /// vient de finir un hold full, on enregistre sa durée pour Iron Lungs.
   void _flushHoldFull() {
     if (_currentHoldFullDuration > 0) {
-      _stats.recordHoldFullCompleted(_currentHoldFullDuration);
+      if (!_session.noStats) {
+        _stats.recordHoldFullCompleted(_currentHoldFullDuration);
+      }
       _currentHoldFullDuration = 0;
     }
   }
@@ -844,7 +850,9 @@ class SessionController extends ChangeNotifier {
         final previousConfig = _lastConfigStep;
         _beep.applyStep(step, session.defaultMode);
         final resolvedMode = step.mode ?? session.defaultMode;
-        _stats.markModeUsed(resolvedMode);
+        if (!_session.noStats) {
+          _stats.markModeUsed(resolvedMode);
+        }
         _configApplied = true;
         _lastConfigStep = step;
         modeChanged = true;
@@ -954,39 +962,41 @@ class SessionController extends ChangeNotifier {
     await WakelockPlus.disable();
     _flushHoldFull();
     _disarmHoldVerifier();
-    await _stats.addElapsedSeconds(elapsedSeconds);
-    await _stats.recordSessionCompleted(hadFail: _hadFailThisSession);
-    // Recalcul intégré du score career d'humiliation : delta = α × sessionScore
-    // + β_encore × encoresAsked − β_fail × failsCount + γ × clean. Remplace
-    // les anciens bumps évènementiels qui touchaient directement le score
-    // persisté (cf. modèle 2 thermomètres). encoresAsked compté = 0 ici :
-    // l'encore est déclenché depuis l'écran finished APRÈS ce _finish.
-    _humiliation.applyEndOfSessionDelta(
-      clean: !_hadFailThisSession,
-      encoresAsked: 0,
-      failsCount: _hadFailThisSession ? 1 : 0,
-    );
-    if (!_hadFailThisSession) {
-      _obedience.onSessionCleanFinish();
-      // Compteurs des badges de fin de séance (Bouche pleine / Repeinte /
-      // Gobeuse / Nettoyeuse / Suppliante). On crédite uniquement sur
-      // sessions sans fail : si elle s'est plantée en cours de route, le
-      // final qu'elle « aurait » joué ne compte pas pour la collection.
-      final finalStep = _findFinalStep();
-      final finalMode = finalStep?.mode;
-      if (finalMode != null) {
-        await _stats.recordFinalMode(finalMode);
+    if (!_session.noStats) {
+      await _stats.addElapsedSeconds(elapsedSeconds);
+      await _stats.recordSessionCompleted(hadFail: _hadFailThisSession);
+      // Recalcul intégré du score career d'humiliation : delta = α × sessionScore
+      // + β_encore × encoresAsked − β_fail × failsCount + γ × clean. Remplace
+      // les anciens bumps évènementiels qui touchaient directement le score
+      // persisté (cf. modèle 2 thermomètres). encoresAsked compté = 0 ici :
+      // l'encore est déclenché depuis l'écran finished APRÈS ce _finish.
+      _humiliation.applyEndOfSessionDelta(
+        clean: !_hadFailThisSession,
+        encoresAsked: 0,
+        failsCount: _hadFailThisSession ? 1 : 0,
+      );
+      if (!_hadFailThisSession) {
+        _obedience.onSessionCleanFinish();
+        // Compteurs des badges de fin de séance (Bouche pleine / Repeinte /
+        // Gobeuse / Nettoyeuse / Suppliante). On crédite uniquement sur
+        // sessions sans fail : si elle s'est plantée en cours de route, le
+        // final qu'elle « aurait » joué ne compte pas pour la collection.
+        final finalStep = _findFinalStep();
+        final finalMode = finalStep?.mode;
+        if (finalMode != null) {
+          await _stats.recordFinalMode(finalMode);
+        }
+        final postFinalStep = _findPostFinalStep();
+        final postFinalMode = postFinalStep?.mode;
+        if (postFinalMode != null) {
+          await _stats.recordPostFinalMode(postFinalMode);
+        }
       }
-      final postFinalStep = _findPostFinalStep();
-      final postFinalMode = postFinalStep?.mode;
-      if (postFinalMode != null) {
-        await _stats.recordPostFinalMode(postFinalMode);
-      }
+      // Persiste l'obédiance (thermomètre lifetime). L'humiliation career
+      // est persistée en tout fin de _finish (après les bonus milestones
+      // éventuels) — éviter une double écriture.
+      await _stats.setObedienceLevel(_obedience.score);
     }
-    // Persiste l'obédiance (thermomètre lifetime). L'humiliation career
-    // est persistée en tout fin de _finish (après les bonus milestones
-    // éventuels) — éviter une double écriture.
-    await _stats.setObedienceLevel(_obedience.score);
 
     // Acquittement milestone AVANT le bascule en `finished` : sans ça,
     // `_recordCareerCompletion` côté SessionScreen (déclenché par le
@@ -1029,18 +1039,20 @@ class SessionController extends ChangeNotifier {
     await markIfPresent(session.finalMilestoneId, isFinal: true);
     _sessionMilestoneUnlocks = List<LevelMilestone>.unmodifiable(newlyUnlocked);
 
-    // Persiste le score career une fois pour toutes : delta de fin +
-    // d'éventuels bonus milestone sont déjà incorporés.
-    await _stats.setHumiliationLevel(_humiliation.careerScore);
+    if (!_session.noStats) {
+      // Persiste le score career une fois pour toutes : delta de fin +
+      // d'éventuels bonus milestone sont déjà incorporés.
+      await _stats.setHumiliationLevel(_humiliation.careerScore);
 
-    // Réconciliation badges AVANT le bascule en `finished` : `_FinishedPanel`
-    // initialise son `_badgesHidden` à partir de `hasPendingBadges` au
-    // premier rendu. Si `_pendingBadgeUnlocks` est encore vide à ce
-    // moment-là, le panel skippe l'étape MERCI et les badges ne sont
-    // jamais révélés. On résout la liste avant le notifyListeners.
-    final snap = await _stats.snapshot();
-    final unlocks = await _badges.reconcileAndDetectUnlocks(snap);
-    _pendingBadgeUnlocks = unlocks;
+      // Réconciliation badges AVANT le bascule en `finished` : `_FinishedPanel`
+      // initialise son `_badgesHidden` à partir de `hasPendingBadges` au
+      // premier rendu. Si `_pendingBadgeUnlocks` est encore vide à ce
+      // moment-là, le panel skippe l'étape MERCI et les badges ne sont
+      // jamais révélés. On résout la liste avant le notifyListeners.
+      final snap = await _stats.snapshot();
+      final unlocks = await _badges.reconcileAndDetectUnlocks(snap);
+      _pendingBadgeUnlocks = unlocks;
+    }
 
     // Apothéose AVANT le bascule en `finished`. Deux cas :
     //
@@ -1206,6 +1218,7 @@ class SessionController extends ChangeNotifier {
       silentFinishStartTime:
           upSilentFinish != null ? upSilentFinish + offset : null,
       finalCategory: upcomingSession.finalCategory,
+      noStats: _session.noStats,
     );
 
     // Coupe le TTS en cours pour ne pas garder une phrase orpheline

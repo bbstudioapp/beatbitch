@@ -7,8 +7,8 @@
   "mode": "rhythm",
   "intro": "À genoux, petite salope. Trente minutes rien que pour moi — t'as intérêt à être bien installée, bouche prête, gorge ouverte. On va alterner les rythmes, les profondeurs, les pauses. Ne réfléchis pas, obéis. Quand tu n'en peux vraiment plus, le bouton rouge déclenche ta punition. Confirme quand tu es prête à m'appartenir.",
   "steps": [
-    {"time": 0,   "text": "À genoux petite salope. Ouvre la bouche.", 
-                  "from": "head", "to": "head", "bpm": 50, "duration": 40},
+    {"time": 0,   "text": "À genoux petite salope. Ouvre la bouche.",
+                  "from": "tip", "to": "head", "bpm": 50, "duration": 40},
     {"time": 35,  "text": "Lèche doucement autour du gland."},
 
     {"time": 70,  "text": "Prends-en plus dans ta bouche maintenant.", 
@@ -23,8 +23,8 @@
                   "mode": "lick", "from": "tip", "to": "head", "bpm": 75, "duration": 45},
     {"time": 265, "text": "Crache dessus, mouille-la bien."},
 
-    {"time": 290, "text": "Remets-la au fond maintenant, plus vite.", 
-                  "mode": "rhythm", "from": "throat", "to": "throat", "bpm": 88, "duration": 70},
+    {"time": 290, "text": "Remets-la au fond maintenant, plus vite.",
+                  "mode": "rhythm", "from": "mid", "to": "throat", "bpm": 88, "duration": 70},
     {"time": 350, "text": "J’entends ta gorge, c’est parfait."},
 
     {"time": 380, "text": "Reste au fond. Ne bouge plus.", 
@@ -51,8 +51,8 @@
                   "mode": "lick", "from": "tip", "to": "head", "bpm": 65, "duration": 50},
     {"time": 830, "text": "C’est bien petite pute, continue comme ça."},
 
-    {"time": 870, "text": "Maintenant tu vas tout prendre sans t’arrêter.", 
-                  "mode": "rhythm", "from": "full", "to": "full", "bpm": 115, "duration": 130},
+    {"time": 870, "text": "Maintenant tu vas tout prendre sans t’arrêter.",
+                  "mode": "rhythm", "from": "throat", "to": "full", "bpm": 115, "duration": 130},
     {"time": 970, "text": "Plus fort salope !"},
     {"time": 1010, "text": "Bave, pleure, je m’en fous."},
 

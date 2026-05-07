@@ -114,6 +114,13 @@ class Session {
   /// dans `_finish`).
   final int? finalStepTime;
 
+  /// Si true, le `SessionController` n'écrit rien dans le `StatsService`
+  /// pendant la séance : pas de cumul de temps, pas de comptage des beats,
+  /// pas de bump humiliation/obéissance persisté, pas de réconciliation
+  /// badges. Sert pour les scénarios pédagogiques (tutoriel) qui ne doivent
+  /// laisser aucune trace dans le profil. Default false.
+  final bool noStats;
+
   const Session({
     required this.id,
     required this.name,
@@ -132,6 +139,7 @@ class Session {
     this.finalCategory,
     this.silentFinishStartTime,
     this.finalStepTime,
+    this.noStats = false,
   });
 
   Duration get duration => Duration(seconds: durationSeconds);
@@ -155,6 +163,7 @@ class Session {
             .toList(),
         intro: (json['intro'] as String?) ?? '',
         lang: (json['lang'] as String?) ?? 'fr',
+        noStats: (json['no_stats'] as bool?) ?? false,
       );
 
   Map<String, dynamic> toJson() => {
@@ -165,6 +174,7 @@ class Session {
         'duration_seconds': durationSeconds,
         'mode': defaultMode.serialized,
         if (intro.isNotEmpty) 'intro': intro,
+        if (noStats) 'no_stats': true,
         'steps': steps.map((s) => s.toJson()).toList(),
       };
 }

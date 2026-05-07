@@ -49,6 +49,7 @@ class SavedSessionsRepository {
       lang: source.lang.isNotEmpty
           ? source.lang
           : LocaleService.instance.languageCode,
+      noStats: source.noStats,
     );
     final file = File('${dir.path}/${_filename(id)}');
     await file.writeAsString(json.encode(saved.toJson()));
