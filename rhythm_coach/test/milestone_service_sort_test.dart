@@ -175,6 +175,46 @@ void main() {
       expect(pick!.id, 'intro_resilience_endure');
     });
 
+    test(
+        'multi-branches matchant 2 spés battent mono-branche matchant 1 spé '
+        'à pts max égaux',
+        () {
+      // User : endurance=2, profondeur=2.
+      // mono : branches=[endurance] → score = 2.
+      // multi : branches=[endurance, profondeur] → score = 4.
+      // Avec l'ancien tri par max(pointsIn), les deux étaient à 2 et le
+      // tie-break humil/id départageait — la couverture multi-spé n'était
+      // pas récompensée. Avec la somme, multi passe devant.
+      final svc = MilestoneService();
+      svc.seedForTest(
+        catalog: [
+          _milestone(
+            id: 'mono_endurance',
+            sequence: [_stepLow()],
+            branches: [SpecializationBranch.endurance],
+          ),
+          _milestone(
+            id: 'multi_endure_profond',
+            sequence: [_stepLow()],
+            branches: [
+              SpecializationBranch.endurance,
+              SpecializationBranch.profondeur,
+            ],
+          ),
+        ],
+      );
+      final pick = svc.pendingFor(
+        humiliationScore: _humilFloor,
+        obedience: _obedFloor,
+        allocation: _alloc({
+          SpecializationBranch.endurance: 2,
+          SpecializationBranch.profondeur: 2,
+        }),
+      );
+      expect(pick, isNotNull);
+      expect(pick!.id, 'multi_endure_profond');
+    });
+
     test('mêmes branchPoints → tri par humilRequired ASC', () {
       final svc = MilestoneService();
       svc.seedForTest(

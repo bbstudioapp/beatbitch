@@ -146,7 +146,12 @@ class MilestoneService extends ChangeNotifier {
   /// - non encore acquittée
   ///
   /// **Tri** :
-  /// 1. Points investis dans la branche du milestone, **descendant**.
+  /// 1. **Score de match spé** : somme des points investis dans
+  ///    *chacune* des branches listées par le milestone, **descendant**.
+  ///    Une milestone qui touche plusieurs branches investies passe donc
+  ///    avant celle qui n'en touche qu'une — la priorité reflète la
+  ///    couverture totale des compétences choisies, pas seulement la
+  ///    branche la plus investie.
   /// 2. À égalité : `humilRequired` **ascendant** (le palier le moins
   ///    coûteux d'abord, pour ne pas sauter de marche).
   /// 3. Tie-break final : id alphabétique (déterministe).
@@ -200,24 +205,38 @@ class MilestoneService extends ChangeNotifier {
     MilestonePlacement placement = MilestonePlacement.body,
   }) {
     final cap = humiliationScore + humilTolerance(obedience);
-    int branchPoints(LevelMilestone m) {
+
+    /// Score de tri : **somme** des points investis dans toutes les
+    /// branches listées par le milestone. Permet de prioriser une
+    /// milestone qui couvre plusieurs spés choisies par rapport à une
+    /// qui n'en couvre qu'une (ex: profondeur=2 + endurance=2 →
+    /// `intro_hold_throat_short` (branches=[endurance, profondeur],
+    /// score=4) passe avant `intro_hold_mid` (branches=[endurance],
+    /// score=2)).
+    int branchScore(LevelMilestone m) {
+      if (allocation == null || m.branches.isEmpty) return 0;
+      var sum = 0;
+      for (final b in m.branches) {
+        sum += allocation.pointsIn(b);
+      }
+      return sum;
+    }
+
+    /// Niveau d'avance accordé par la spé : 1 niveau par point investi
+    /// dans la **branche la plus investie** parmi celles du milestone,
+    /// capé à 3. Permet à une joueuse spé profondeur 3 pts d'accéder à
+    /// `intro_throat_pulse` (level 10) dès le niveau 7. On garde le
+    /// **max** ici (pas la somme) : c'est la maîtrise sur une branche
+    /// qui débloque la compétence en avance, pas la dispersion.
+    int branchAdvance(LevelMilestone m) {
       if (allocation == null || m.branches.isEmpty) return 0;
       var best = 0;
       for (final b in m.branches) {
         final pts = allocation.pointsIn(b);
         if (pts > best) best = pts;
       }
-      return best;
+      return best.clamp(0, 3);
     }
-
-    /// Niveau d'avance accordé par la spé : 1 niveau par point investi
-    /// dans une branche pertinente, capé à 3. Permet à une joueuse spé
-    /// profondeur 3 pts d'accéder à `intro_throat_pulse` (level 10) dès
-    /// le niveau 7 — la branche choisie est récompensée en débloquant
-    /// les compétences associées plus tôt. Cap à 3 pour éviter qu'une
-    /// allocation 5/5 court-circuite la pédagogie.
-    int branchAdvance(LevelMilestone m) =>
-        branchPoints(m).clamp(0, 3);
 
     final candidates = _catalog
         .where((m) => m.placement == placement)
@@ -228,7 +247,7 @@ class MilestoneService extends ChangeNotifier {
         .toList();
     if (candidates.isEmpty) return const [];
     candidates.sort((a, b) {
-      final byBranch = branchPoints(b).compareTo(branchPoints(a));
+      final byBranch = branchScore(b).compareTo(branchScore(a));
       if (byBranch != 0) return byBranch;
       final byHumil = a.humilRequired.compareTo(b.humilRequired);
       if (byHumil != 0) return byHumil;

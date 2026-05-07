@@ -82,8 +82,10 @@ class LevelMilestone {
   ///
   /// Multi-branches : un milestone peut « parler » à plusieurs profils
   /// (ex: `endurance + resilience` pour un hold long sous pression). Le
-  /// score de tri retient le **max** des points investis parmi toutes
-  /// les branches listées — on prend ce que la salope a de mieux.
+  /// score de tri **somme** les points investis dans toutes les branches
+  /// listées — une milestone qui couvre plusieurs spés choisies par la
+  /// joueuse est donc strictement prioritaire sur une milestone mono-
+  /// branche qui ne touche qu'une seule de ses spés.
   final List<SpecializationBranch> branches;
 
   /// Placement de la séquence dans la séance générée. Cf.
