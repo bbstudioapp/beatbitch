@@ -1,4 +1,4 @@
-package com.example.rhythm_coach
+package com.beatbitch.app
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:rhythm_coach/career/models/specialization.dart';
-import 'package:rhythm_coach/controllers/session_controller.dart';
+import 'package:beat_bitch/career/models/specialization.dart';
+import 'package:beat_bitch/controllers/session_controller.dart';
 
 SpecializationAllocation _alloc(int resiliencePts) {
   return SpecializationAllocation(

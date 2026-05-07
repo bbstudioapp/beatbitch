@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:rhythm_coach/career/models/coach.dart';
-import 'package:rhythm_coach/career/models/coach_catalog.dart';
-import 'package:rhythm_coach/career/models/specialization.dart';
+import 'package:beat_bitch/career/models/coach.dart';
+import 'package:beat_bitch/career/models/coach_catalog.dart';
+import 'package:beat_bitch/career/models/specialization.dart';
 
 void main() {
   group('CoachCatalogValidator', () {

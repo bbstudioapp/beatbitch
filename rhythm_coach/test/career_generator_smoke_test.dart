@@ -1,11 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:rhythm_coach/career/models/level_milestone.dart';
-import 'package:rhythm_coach/career/models/phrase_bank.dart';
-import 'package:rhythm_coach/career/models/unlock_key.dart';
-import 'package:rhythm_coach/career/services/career_session_generator.dart';
-import 'package:rhythm_coach/models/session.dart';
-import 'package:rhythm_coach/models/session_step.dart';
-import 'package:rhythm_coach/services/humiliation_engine.dart';
+import 'package:beat_bitch/career/models/level_milestone.dart';
+import 'package:beat_bitch/career/models/phrase_bank.dart';
+import 'package:beat_bitch/career/models/unlock_key.dart';
+import 'package:beat_bitch/career/services/career_session_generator.dart';
+import 'package:beat_bitch/models/session.dart';
+import 'package:beat_bitch/models/session_step.dart';
+import 'package:beat_bitch/services/humiliation_engine.dart';
 
 List<PhraseEntry> _p(List<String> texts) =>
     texts.map((t) => PhraseEntry(text: t)).toList();

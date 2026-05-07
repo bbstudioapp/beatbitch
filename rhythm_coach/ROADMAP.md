@@ -4,18 +4,20 @@
 
 ---
 
-## Phase 1 — Rebranding **BeatBitch** (1 jour)
+## Phase 1 — Rebranding **BeatBitch** ✅ DONE
 
-| Action | Détail |
+| Action | État |
 |---|---|
-| Renommer le package Dart | `rhythm_coach` → `beat_bitch` dans `pubspec.yaml:1` (snake_case obligatoire). Refactor des imports automatique |
-| `applicationId` Android | `com.example.rhythm_coach` → ex. `app.beatbitch` ou `net.kwizer.beatbitch` (`build.gradle.kts:9` namespace + `:26` applicationId). Renommer le dossier Kotlin de `MainActivity` |
-| Description `pubspec.yaml:2` | Réécrire en EN, neutre : ex. `An offline rhythmic voice coach for Android.` |
-| Label Android humain | Créer `res/values/strings.xml` + `values-en/strings.xml` avec `<string name="app_name">BeatBitch</string>`. Référencer `android:label="@string/app_name"` dans le manifest |
-| Icône launcher | Designer une icône (suggestion : initiale "B" stylisée, fond noir, accent ambre = thème de l'app). Générer toutes tailles via `flutter_launcher_icons`. Prévoir version monochrome Android 13+ |
-| Hardcoded "Rhythm Coach" | Grep complet : titres d'écrans, ARB FR+EN, README, CLAUDE.md, manifestes |
+| Package Dart | ✅ `rhythm_coach` → `beat_bitch` (`pubspec.yaml`, 9 imports `package:` dans `test/`) |
+| `applicationId` Android | ✅ `com.beatbitch.app` (namespace + applicationId dans `build.gradle.kts`). Dossier Kotlin migré `com/example/rhythm_coach/` → `com/beatbitch/app/` + `package` MainActivity |
+| Description `pubspec.yaml` | ✅ `An offline rhythmic voice coach for Android.` |
+| Label Android | ✅ `res/values/strings.xml` + `values-en/strings.xml` avec `app_name=BeatBitch`. Manifest référence `@string/app_name` |
+| Icône launcher | ✅ `flutter_launcher_icons ^0.14.4` configuré. 3 sources (`assets/icon/app_icon.png`, `app_icon_foreground.png`, `app_icon_monochrome.png`). Mipmap legacy + adaptive foreground/background + monochrome Android 13+ générés. **Note** : monochromes regénérés manuellement post-launcher_icons à cause d'un bug du package qui aplatit l'alpha au resize |
+| "Rhythm Coach" → "BeatBitch" | ✅ ARB FR+EN, code l10n, `widget_test.dart`, `web/manifest.json`, `README.md`, `CLAUDE.md` |
 
-**Output** : l'app s'appelle BeatBitch partout, icône custom, package distribuable.
+**Output** : app s'appelle BeatBitch partout, icône custom, `flutter analyze` clean, 81 tests passent, APK debug build OK.
+
+> Le **dossier physique** du projet reste `rhythm_coach/` au niveau du repo `tss2` — le renommer en `beat_bitch/` est un `git mv` qu'on peut faire plus tard, ça touche les CI/scripts.
 
 ---
 

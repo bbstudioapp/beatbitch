@@ -2,8 +2,8 @@ import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:rhythm_coach/career/models/coach.dart';
-import 'package:rhythm_coach/career/models/coach_catalog.dart';
+import 'package:beat_bitch/career/models/coach.dart';
+import 'package:beat_bitch/career/models/coach_catalog.dart';
 
 Coach _coachWith(CoachNicknamePool pool) {
   return CoachCatalog.defaults.first.withPhrases(

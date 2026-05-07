@@ -9,10 +9,10 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'Rhythm Coach';
+  String get appTitle => 'BeatBitch';
 
   @override
-  String get modeSelectionAppBarTitle => 'RHYTHM COACH';
+  String get modeSelectionAppBarTitle => 'BEATBITCH';
 
   @override
   String get modeSelectionProfileTooltip => 'Profile & badges';
@@ -1383,7 +1383,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get surpriseSettingsBatteryHintBody =>
-      'On some phones (Xiaomi, Huawei, Samsung), disable battery optimization for Rhythm Coach to guarantee reminders.';
+      'On some phones (Xiaomi, Huawei, Samsung), disable battery optimization for BeatBitch to guarantee reminders.';
 
   @override
   String get surpriseSettingsOpenBatterySettings => 'Open the settings';

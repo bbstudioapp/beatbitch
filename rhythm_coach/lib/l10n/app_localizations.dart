@@ -101,13 +101,13 @@ abstract class AppLocalizations {
   /// Nom de l'application affiché par le système Android.
   ///
   /// In fr, this message translates to:
-  /// **'Rhythm Coach'**
+  /// **'BeatBitch'**
   String get appTitle;
 
   /// No description provided for @modeSelectionAppBarTitle.
   ///
   /// In fr, this message translates to:
-  /// **'RHYTHM COACH'**
+  /// **'BEATBITCH'**
   String get modeSelectionAppBarTitle;
 
   /// No description provided for @modeSelectionProfileTooltip.
@@ -2484,7 +2484,7 @@ abstract class AppLocalizations {
   /// No description provided for @surpriseSettingsBatteryHintBody.
   ///
   /// In fr, this message translates to:
-  /// **'Sur certains téléphones (Xiaomi, Huawei, Samsung), désactive l\'optimisation batterie pour Rhythm Coach pour garantir les rappels.'**
+  /// **'Sur certains téléphones (Xiaomi, Huawei, Samsung), désactive l\'optimisation batterie pour BeatBitch pour garantir les rappels.'**
   String get surpriseSettingsBatteryHintBody;
 
   /// No description provided for @surpriseSettingsOpenBatterySettings.

@@ -2,11 +2,11 @@ import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:rhythm_coach/career/models/coach.dart';
-import 'package:rhythm_coach/career/models/coach_catalog.dart';
-import 'package:rhythm_coach/career/models/phrase_bank.dart';
-import 'package:rhythm_coach/models/session.dart';
-import 'package:rhythm_coach/models/session_step.dart';
+import 'package:beat_bitch/career/models/coach.dart';
+import 'package:beat_bitch/career/models/coach_catalog.dart';
+import 'package:beat_bitch/career/models/phrase_bank.dart';
+import 'package:beat_bitch/models/session.dart';
+import 'package:beat_bitch/models/session_step.dart';
 
 extension _PhraseTexts on List<PhraseEntry> {
   List<String> get texts => map((e) => e.text).toList();
