@@ -1,0 +1,30 @@
+{
+  "lang": "en",
+  "id": "initiation",
+  "name": "Initiation Session",
+  "description": "Gentle start, gradual progression over 8 minutes.",
+  "duration_seconds": 480,
+  "mode": "rhythm",
+  "intro": "Welcome. This is your first step, we'll go gradually. Set your phone flat on its side, you won't need to look at it anymore. For eight minutes, you'll follow my voice and the rhythm of the beeps — slow at first, then we pick up speed and widen the amplitude. Breathe calmly, don't tense up. When you're ready, confirm.",
+  "steps": [
+    {"time": 0,   "text": "We start. Settle in, breathe deeply. Find a slow, steady rhythm.",
+                  "mode": "rhythm", "from": "tip", "to": "head", "bpm": 50},
+    {"time": 30,  "text": "Good. Hold this tempo. Focus on your breath."},
+    {"time": 60,  "text": "Speed up slightly. Be precise in each movement.",
+                  "mode": "rhythm", "from": "head", "to": "mid", "bpm": 75},
+    {"time": 120, "text": "Hold this rhythm. You're in control."},
+    {"time": 180, "text": "A bit faster again. Keep the amplitude.",
+                  "mode": "rhythm", "from": "head", "to": "mid", "bpm": 95},
+    {"time": 240, "text": "Excellent. Maintain this level for one full minute.",
+                  "mode": "rhythm", "from": "head", "to": "throat", "bpm": 105},
+    {"time": 300, "text": "Slow down gradually. Recover without stopping.",
+                  "mode": "lick", "from": "tip", "to": "head", "bpm": 55},
+    {"time": 360, "text": "Pick up speed again. One last push is coming.",
+                  "mode": "rhythm", "from": "head", "to": "throat", "bpm": 120},
+    {"time": 420, "text": "Give everything you've got left. Don't let go.",
+                  "mode": "rhythm", "from": "head", "to": "full", "bpm": 135},
+    {"time": 465, "text": "Slow down gently. The session is ending.",
+                  "mode": "rhythm", "from": "tip", "to": "head", "bpm": 65},
+    {"time": 478, "text": "Done. Well played."}
+  ]
+}

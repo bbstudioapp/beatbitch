@@ -1,0 +1,76 @@
+{
+  "lang": "en",
+  "id": "tutorial",
+  "name": "Tutorial — All sounds",
+  "description": "Discover every sound and every cue. The voice explains everything, step by step.",
+  "duration_seconds": 460,
+  "mode": "beg",
+  "no_stats": true,
+  "intro": "Welcome. Before jumping into a real session, we'll go over all the sounds and cues. Set your phone on its side, you won't need to look at it. During this tutorial, you have nothing to do — no need to suck, no need to get into position. You listen, that's all. Seven minutes, no pressure, no fail to fear. When you're ready, confirm.",
+  "steps": [
+    {"time": 0, "text": "We start with the positions. There are five, from softest to deepest. Listen to each sound, that's how you'll find your bearings during the real sessions. You don't have anything to do, just listen."},
+
+    {"time": 16, "text": "First position — the tip. The highest, lightest sound.",
+                 "mode": "hold", "to": "tip", "duration": 3},
+
+    {"time": 25, "text": "Second position — the head. One notch lower.",
+                 "mode": "hold", "to": "head", "duration": 3},
+
+    {"time": 34, "text": "Third position — the middle, just before the throat. Lower still.",
+                 "mode": "hold", "to": "mid", "duration": 3},
+
+    {"time": 44, "text": "Fourth position — the throat entrance. That's where it starts going down for real.",
+                 "mode": "hold", "to": "throat", "duration": 3},
+
+    {"time": 54, "text": "Fifth position — all the way, nose against the balls. The lowest, deepest sound. Remember: the lower the sound, the deeper you have to go.",
+                 "mode": "hold", "to": "full", "duration": 3},
+
+    {"time": 70, "text": "Now the eight types of cues I'll give you. We'll go through them one by one. Still nothing to do, just listen."},
+
+    {"time": 82, "text": "First cue — sucking in rhythm. The base metronome. One stroke per beep. Slow tempo, on the head."},
+
+    {"time": 92, "mode": "rhythm", "from": "tip", "to": "head", "bpm": 55, "duration": 22},
+
+    {"time": 112, "text": "Now with real amplitude — from the head to the throat entrance, faster.",
+                  "mode": "rhythm", "from": "head", "to": "throat", "bpm": 80, "duration": 28},
+
+    {"time": 130, "text": "Hear the alternation between the two tones? That's your guide to set the amplitude of the movement, from highest to lowest."},
+
+    {"time": 158, "text": "Second cue — licking. Just licking. Tongue out, you pass over the tip and the head, but you don't put anything in your mouth. The volume is lower, it's softer, more discreet.",
+                  "mode": "lick", "from": "tip", "to": "head", "bpm": 75, "duration": 22},
+
+    {"time": 178, "text": "See the difference? Lighter, more suggestive. No penetration, just the tongue."},
+
+    {"time": 192, "text": "Third cue — hold deep. A single beep, supported by a low layer. You take the position and you don't move for the announced duration. Here, it would be all the way, ten seconds.",
+                  "mode": "hold", "to": "full", "duration": 10},
+
+    {"time": 210, "text": "Fourth cue — breathe. A single, soft sound. That's your signal to exhale, settle, recover.",
+                  "mode": "breath"},
+
+    {"time": 222, "text": "Always after an effort, the breath. Don't skip it."},
+
+    {"time": 236, "text": "Fifth cue — taking cock slaps on your face. A dedicated quick beep, no position notion. You stick out your tongue, you offer your cheek, your forehead, and you let yourself get slapped by the cock on each beep. Nothing in the mouth.",
+                  "mode": "biffle", "bpm": 130, "duration": 22},
+
+    {"time": 264, "text": "Sixth cue — beg. No beep, just my voice. I give you an order — beg me, repeat a phrase, an action — and you do it out loud. If I specify a position, you hold it while you speak."},
+
+    {"time": 282, "text": "Seventh cue — the hand. You drop the mouth, you work with the hand. The sound is more matte, the rhythm more measured. It lets your throat rest while it keeps building.",
+                  "mode": "hand", "from": "head", "to": "mid", "bpm": 80, "duration": 14},
+
+    {"time": 302, "text": "Eighth and last — the free phase. Two beeps frame a moment when you do whatever you want. No cue, it's yours.",
+                  "mode": "freestyle", "duration": 8},
+
+    {"time": 318, "text": "That's the eight cues. Now two or three practical things."},
+
+    {"time": 332, "text": "The red button at the bottom — I can't — that's your safety button. You trigger it when you really can't go on. I tell you what I think of you, I make you breathe, I give you a small punishment, and we skip to the next section. You don't lose your session, you pick it up further on."},
+
+    {"time": 364, "text": "The equalizer icon at the top of the home screen opens the Sounds page. There you can pick my voice, my speed, and enable an ambience pack. On the Career page, you can also disable hand stimulation if you don't want it — that also disables the cock slaps."},
+
+    {"time": 392, "text": "And as you go through your sessions, you'll unlock badges — Marathoner, Throat Queen, Iron Lungs, and others. I announce them at the end of the session when you unlock a new one. It measures your journey."},
+
+    {"time": 420, "text": "To finish, a real example of begging. This time, you can join in if you want. The middle, ten seconds — you'll repeat after me, out loud: I'm just a good little cocksucker, and I want more.",
+                  "mode": "beg", "to": "mid", "duration": 10},
+
+    {"time": 444, "text": "You know everything. Your turn to play."}
+  ]
+}

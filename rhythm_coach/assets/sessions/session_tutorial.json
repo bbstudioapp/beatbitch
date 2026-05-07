@@ -5,6 +5,7 @@
   "description": "Découvre chaque son et chaque consigne. La voix t'explique tout, étape par étape.",
   "duration_seconds": 460,
   "mode": "beg",
+  "no_stats": true,
   "intro": "Bienvenue. Avant de te lancer dans une vraie séance, on va passer en revue tous les sons et toutes les consignes. Pose ton téléphone sur le côté, tu n'auras plus à le regarder. Pendant ce tutoriel, tu n'as rien à faire — pas besoin de sucer, pas besoin de te mettre en position. Tu écoutes, c'est tout. Sept minutes, pas de pression, pas de fail à craindre. Quand tu es prête, valide.",
   "steps": [
     {"time": 0, "text": "On commence par les positions. Il y en a cinq, de la plus douce à la plus profonde. Écoute bien chaque son, c'est avec ça que tu vas te repérer pendant les vraies séances. Tu n'as rien à faire, juste écouter."},
@@ -28,7 +29,7 @@
 
     {"time": 82, "text": "Première consigne — sucer en rythme. Le métronome de base. À chaque bip, un coup. Tempo lent, sur le gland."},
 
-    {"time": 92, "mode": "rhythm", "from": "head", "to": "head", "bpm": 55, "duration": 22},
+    {"time": 92, "mode": "rhythm", "from": "tip", "to": "head", "bpm": 55, "duration": 22},
 
     {"time": 112, "text": "Maintenant avec une vraie amplitude — du gland jusqu'à l'entrée de la gorge, plus rapide.",
                   "mode": "rhythm", "from": "head", "to": "throat", "bpm": 80, "duration": 28},
