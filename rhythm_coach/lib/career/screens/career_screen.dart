@@ -22,10 +22,10 @@ import '../../l10n/enum_labels.dart';
 import '../../main.dart' show coachService, milestoneService;
 import '../models/career_level.dart';
 import '../models/coach.dart';
-import '../models/level_milestone.dart';
 import '../models/phrase_bank.dart';
 import '../models/specialization.dart';
 import '../models/unlock_key.dart';
+import '../services/career_encore_gate.dart';
 import '../services/career_progress_service.dart';
 import '../services/career_session_generator.dart';
 import '../services/phrase_bank_loader.dart';
@@ -464,12 +464,12 @@ class _CareerScreenState extends State<CareerScreen> {
     required double humiliationScore,
     required double obedienceScore,
   }) {
-    if (level < 5) return false;
-    if (obedienceScore >= 80.0) return true;
-    final hasMilestone =
-        milestoneService.acquiredUnlockKeys().contains(UnlockKey.encore);
-    if (!hasMilestone) return false;
-    return humiliationScore >= 30.0 || obedienceScore >= 50.0;
+    return CareerEncoreGate.canEncore(
+      level: level,
+      humiliationScore: humiliationScore,
+      obedienceScore: obedienceScore,
+      milestoneService: milestoneService,
+    );
   }
 
   Future<void> _handleUpgrade(
@@ -816,24 +816,6 @@ class _CareerScreenState extends State<CareerScreen> {
                 ),
               ],
               const SizedBox(height: 24),
-              Text(
-                t.careerHeaderTitle,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: AppTheme.textSecondary,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                t.careerInstruction,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: AppTheme.textMuted,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 24),
               if (hasPendingSpecPoints)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16),
@@ -865,43 +847,40 @@ class _CareerScreenState extends State<CareerScreen> {
                 title: localizedCareerLevelTitle(context, cfg.level),
                 durationLabel: durationLabel,
               ),
-              const SizedBox(height: 12),
-              _PendingMilestonesList(
-                humiliationScore: bundle.humiliationScore,
-                obedience: bundle.obedienceScore,
-                playerLevel: bundle.maxLevel,
-                allocation: bundle.specialization,
-              ),
               const SizedBox(height: 24),
-              () {
-                final quickieLocked = bundle.maxLevel < _quickieUnlockLevel;
-                return SwitchListTile(
+              // Switch « Session bâclée » : caché tant que le niveau de
+              // déblocage n'est pas atteint (au lieu d'un toggle grisé,
+              // l'option n'apparaît tout simplement pas).
+              if (bundle.maxLevel >= _quickieUnlockLevel)
+                SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(
                     t.careerQuickieToggle,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 14,
-                      color: quickieLocked
-                          ? AppTheme.textMuted
-                          : AppTheme.textPrimary,
+                      color: AppTheme.textPrimary,
                     ),
                   ),
                   subtitle: Text(
-                    quickieLocked
-                        ? t.careerQuickieLockedSubtitle(_quickieUnlockLevel)
-                        : t.careerQuickieDescription,
+                    t.careerQuickieDescription,
                     style: const TextStyle(
                       fontSize: 11,
                       color: AppTheme.textMuted,
                     ),
                   ),
-                  value: quickieLocked ? false : _quickie,
-                  onChanged: quickieLocked
-                      ? null
-                      : (v) => setState(() => _quickie = v),
-                );
-              }(),
+                  value: _quickie,
+                  onChanged: (v) => setState(() => _quickie = v),
+                ),
+              // Switch « stimulation à la main » : caché tant que le niveau
+              // de déblocage n'est pas atteint. Une fois le niveau atteint,
+              // le switch est interactif ; si une milestone pending impose
+              // les mains, on garde le toggle interactif aussi (le joueur
+              // peut sortir du contexte pédagogique en désactivant — un
+              // message dédié l'avertit de cette sortie de contexte).
               () {
+                final levelLocksHand =
+                    bundle.maxLevel < _includeHandUnlockLevel;
+                if (levelLocksHand) return const SizedBox.shrink();
                 final pendingMilestone = milestoneService.pendingFor(
                   humiliationScore: bundle.humiliationScore,
                   obedience: bundle.obedienceScore,
@@ -910,24 +889,16 @@ class _CareerScreenState extends State<CareerScreen> {
                 );
                 final milestoneLocksHand =
                     pendingMilestone?.requiresHands ?? false;
-                final levelLocksHand =
-                    bundle.maxLevel < _includeHandUnlockLevel;
-                final locked = levelLocksHand || milestoneLocksHand;
                 final subtitle = milestoneLocksHand
                     ? t.careerIncludeHandMilestoneLocked
-                    : levelLocksHand
-                        ? t.careerIncludeHandLockedSubtitle(
-                            _includeHandUnlockLevel)
-                        : t.careerIncludeHandSubtitle;
+                    : t.careerIncludeHandSubtitle;
                 return SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(
                     t.careerIncludeHandToggle,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 14,
-                      color: locked
-                          ? AppTheme.textMuted
-                          : AppTheme.textPrimary,
+                      color: AppTheme.textPrimary,
                     ),
                   ),
                   subtitle: Text(
@@ -937,14 +908,9 @@ class _CareerScreenState extends State<CareerScreen> {
                       color: AppTheme.textMuted,
                     ),
                   ),
-                  // Forcé à ON quand le niveau est sous le seuil OU quand
-                  // le milestone pending l'exige (intro_basics, intro_biffle).
-                  value: locked
-                      ? true
-                      : (_includeHandOverride ?? bundle.includeHand),
-                  onChanged: locked
-                      ? null
-                      : (v) => setState(() => _includeHandOverride = v),
+                  value: _includeHandOverride ?? bundle.includeHand,
+                  onChanged: (v) =>
+                      setState(() => _includeHandOverride = v),
                 );
               }(),
               const SizedBox(height: 16),
@@ -1139,142 +1105,6 @@ class _LevelTitleCard extends StatelessWidget {
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PendingMilestonesList extends StatelessWidget {
-  final double humiliationScore;
-  final double obedience;
-  final int playerLevel;
-  final SpecializationAllocation? allocation;
-
-  const _PendingMilestonesList({
-    required this.humiliationScore,
-    required this.obedience,
-    required this.playerLevel,
-    required this.allocation,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context);
-    final pending = milestoneService.allPendingFor(
-      humiliationScore: humiliationScore,
-      obedience: obedience,
-      playerLevel: playerLevel,
-      allocation: allocation,
-    );
-    if (pending.isEmpty) return const SizedBox.shrink();
-    final next = pending.first;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8, left: 4),
-          child: Text(
-            t.careerMilestonesPendingTitle,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppTheme.textMuted,
-              letterSpacing: 1.2,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        for (final m in pending) ...[
-          _PendingMilestoneCard(
-            milestone: m,
-            isNext: identical(m, next),
-          ),
-          const SizedBox(height: 8),
-        ],
-      ],
-    );
-  }
-}
-
-class _PendingMilestoneCard extends StatelessWidget {
-  final LevelMilestone milestone;
-  final bool isNext;
-
-  const _PendingMilestoneCard({
-    required this.milestone,
-    required this.isNext,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context);
-    final branches = milestone.branches;
-    final branchPrefix = branches.length > 1
-        ? t.careerMilestonesBranchesPrefixPlural
-        : t.careerMilestonesBranchesPrefix;
-    final branchLabels =
-        branches.map((b) => b.localizedLabel(context)).join(' · ');
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: isNext
-              ? AppTheme.accent.withValues(alpha: 0.6)
-              : AppTheme.accent.withValues(alpha: 0.15),
-          width: isNext ? 1.5 : 1,
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  milestone.displayLabel,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-                if (branches.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    '$branchPrefix$branchLabels',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppTheme.textMuted,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          if (isNext) ...[
-            const SizedBox(width: 8),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppTheme.accent.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                t.careerMilestonesNextBadge,
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.accent,
-                  letterSpacing: 1.2,
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     );

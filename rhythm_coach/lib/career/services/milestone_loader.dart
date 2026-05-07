@@ -119,13 +119,49 @@ class MilestoneLoader {
     );
   }
 
-  /// Humiliation maximale requise par un step de la séquence — sert de
-  /// seuil de candidature côté `MilestoneService.pendingFor(...)`. Calculée
-  /// une fois au load (le résultat est figé dans le modèle).
+  /// Humiliation maximale requise par la séquence — sert de seuil de
+  /// candidature côté `MilestoneService.pendingFor(...)`. Calculée une
+  /// fois au load (le résultat est figé dans le modèle).
+  ///
+  /// Règle : pour les `hold`, on **agrège la durée** des steps consécutifs
+  /// qui partagent le même `to`. Sémantique pédagogique : tenir 7s + 9s
+  /// + 8s à mid sans pause au milieu équivaut physiquement à un hold mid
+  /// 24s, pas à trois holds courts isolés. Toute step de mode différent
+  /// OU de position différente (y compris un `breath`) casse la chaîne
+  /// et déclenche son évaluation. Les autres modes (rhythm/lick/beg/
+  /// biffle/hand/breath/freestyle) ne dépendent pas de la durée dans
+  /// `requiredFor`, donc l'agrégation n'a pas d'effet sur eux — on les
+  /// évalue step par step comme avant.
   static double _computeHumilRequired(List<SessionStep> sequence) {
     var max = 0.0;
+    Position? chainTo;
+    int chainDur = 0;
+
+    void flushChain() {
+      if (chainTo == null) return;
+      final r = HumiliationScale.requiredFor(
+        mode: SessionMode.hold,
+        to: chainTo,
+        duration: chainDur,
+      );
+      if (r > max) max = r;
+      chainTo = null;
+      chainDur = 0;
+    }
+
     for (final s in sequence) {
       final mode = s.mode ?? SessionMode.rhythm;
+      if (mode == SessionMode.hold && s.to != null) {
+        if (chainTo == s.to) {
+          chainDur += s.duration ?? 0;
+        } else {
+          flushChain();
+          chainTo = s.to;
+          chainDur = s.duration ?? 0;
+        }
+        continue;
+      }
+      flushChain();
       final r = HumiliationScale.requiredFor(
         mode: mode,
         from: s.from,
@@ -135,6 +171,7 @@ class MilestoneLoader {
       );
       if (r > max) max = r;
     }
+    flushChain();
     return max;
   }
 
