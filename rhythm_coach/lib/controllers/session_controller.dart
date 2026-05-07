@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
+import '../career/models/level_milestone.dart';
 import '../career/models/phrase_bank.dart';
 import '../career/models/specialization.dart';
 import '../career/models/unlock_key.dart';
@@ -13,6 +14,7 @@ import '../models/punishment.dart';
 import '../models/session.dart';
 import '../models/session_step.dart';
 import '../services/ambience_engine.dart';
+import '../services/backgrounds_service.dart';
 import '../services/badge_service.dart';
 import '../services/beep_engine.dart';
 import '../services/hold_verifier.dart';
@@ -378,6 +380,14 @@ class SessionController extends ChangeNotifier {
   List<BadgeUnlock> _sessionBadgeUnlocks = const [];
   List<BadgeUnlock> get sessionBadgeUnlocks => _sessionBadgeUnlocks;
 
+  /// Milestones acquittées **dans cette séance** (= viennent d'être
+  /// `markCompleted` sans fail, n'étaient pas déjà acquittées avant).
+  /// Vide tant que [_finish] n'a pas terminé son acquittement. Consommé
+  /// par l'écran de fin pour lister les apprentissages validés à côté
+  /// des badges.
+  List<LevelMilestone> _sessionMilestoneUnlocks = const [];
+  List<LevelMilestone> get sessionMilestoneUnlocks => _sessionMilestoneUnlocks;
+
   /// Compteur interne de la durée passée dans la position courante (s)
   /// quand on est en mode hold throat/full. Sert à crediter chaque
   /// seconde au StatsService et à mémoriser le hold full le plus long
@@ -512,6 +522,7 @@ class SessionController extends ChangeNotifier {
         _hadFailThisSession = false;
         _finalChimePlayed = false;
         _sessionBadgeUnlocks = const [];
+        _sessionMilestoneUnlocks = const [];
         _currentHoldFullDuration = 0;
         _lastHoldTickAtSecond = -1;
         _resilienceTickAccumulator = 0;
@@ -564,6 +575,12 @@ class SessionController extends ChangeNotifier {
       await _tts.init();
       await _beep.init();
       await WakelockPlus.enable();
+
+      // Reset du fond média : on repart sur le placeholder animé tant que
+      // le premier step de config n'a pas tiré une entrée. Évite qu'une
+      // session précédente garde son dernier fond visible le temps du
+      // premier tick.
+      BackgroundsService.instance.clear();
 
       _stopwatch.start();
       _state = SessionState.running;
@@ -832,6 +849,12 @@ class SessionController extends ChangeNotifier {
         _lastConfigStep = step;
         modeChanged = true;
         _armHoldVerifierIfHoldStep(step);
+        // Rotation aléatoire à chaque step de config — anti-doublon
+        // immédiat dans le service. Un override `step.background`
+        // éventuel est appliqué ci-dessous, après le bloc isTextOnly,
+        // parce qu'un step text-only peut aussi vouloir poser un fond
+        // précis sans pour autant changer de config bip.
+        BackgroundsService.instance.pickRandom();
         // Si la step n'a pas son propre texte scripté, on tente une phrase
         // de transition (« plus vite », « plus profond »…). Ça ne joue
         // que si on est resté dans le même mode et qu'un paramètre clé a
@@ -839,6 +862,14 @@ class SessionController extends ChangeNotifier {
         if (step.text.isEmpty && previousConfig != null) {
           _maybeFireTransitionPhrase(previousConfig, step);
         }
+      }
+
+      // Override explicite de fond si le step le précise (milestones,
+      // scénarios, génération carrière qui veut imposer un visuel sur un
+      // beat précis). Posté après pickRandom pour gagner si les deux
+      // s'appliquent au même tick.
+      if (step.background != null) {
+        BackgroundsService.instance.setById(step.background!);
       }
 
       if (step.text.isNotEmpty) {
@@ -972,11 +1003,14 @@ class SessionController extends ChangeNotifier {
     // pour ne pas tasser deux phrases d'unlock en fin de séance — on
     // privilégie celle de la final si présente (= compétence terminale,
     // plus marquante dramaturgiquement).
+    final newlyUnlocked = <LevelMilestone>[];
     Future<void> markIfPresent(String? id, {required bool isFinal}) async {
       if (id == null) return;
       final wasAlreadyCompleted = milestoneService.isCompleted(id);
       await milestoneService.markCompleted(id, hadFail: _hadFailThisSession);
       if (!_hadFailThisSession && !wasAlreadyCompleted && !_released) {
+        final m = milestoneService.findById(id);
+        if (m != null) newlyUnlocked.add(m);
         final announce = milestoneService.getUnlockAnnouncement(
           id,
           l10n: _appLocalizations,
@@ -993,6 +1027,7 @@ class SessionController extends ChangeNotifier {
     }
     await markIfPresent(session.milestoneId, isFinal: false);
     await markIfPresent(session.finalMilestoneId, isFinal: true);
+    _sessionMilestoneUnlocks = List<LevelMilestone>.unmodifiable(newlyUnlocked);
 
     // Persiste le score career une fois pour toutes : delta de fin +
     // d'éventuels bonus milestone sont déjà incorporés.

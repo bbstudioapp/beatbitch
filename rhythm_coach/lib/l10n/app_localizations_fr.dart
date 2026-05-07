@@ -161,6 +161,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get sessionFinishedTitle => 'SÉANCE TERMINÉE';
 
   @override
+  String sessionFinishedDuration(String duration) {
+    return 'Durée : $duration';
+  }
+
+  @override
   String get sessionFinishedDefaultEnd => 'Merci !';
 
   @override
@@ -169,6 +174,9 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get sessionFinishedNoNewBadges =>
       'Pas de nouveau palier cette fois — la prochaine sera la bonne.';
+
+  @override
+  String get sessionFinishedMilestonesTitle => 'Apprentissages validés';
 
   @override
   String get sessionFinishedEncore => 'J\'EN VEUX ENCORE…';
@@ -307,13 +315,6 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get careerHeaderTitle => 'Génération procédurale';
-
-  @override
-  String get careerInstruction =>
-      'Choisis un niveau. La durée et la difficulté en découlent.';
-
-  @override
   String get careerLevelSection => 'Niveau';
 
   @override
@@ -332,21 +333,11 @@ class AppLocalizationsFr extends AppLocalizations {
       '6 min, intense tout du long. Pour quand t\'as pas le temps.';
 
   @override
-  String careerQuickieLockedSubtitle(int level) {
-    return 'Verrouillé jusqu\'au niveau $level — il faut maîtriser les bases avant de bâcler.';
-  }
-
-  @override
   String get careerIncludeHandToggle => 'Inclure la stimulation à la main';
 
   @override
   String get careerIncludeHandSubtitle =>
       'Désactive aussi les coups de queue (biffle) — les deux nécessitent la main.';
-
-  @override
-  String careerIncludeHandLockedSubtitle(int level) {
-    return 'Verrouillé jusqu\'au niveau $level — sans la main, le finish bas niveau devient trop dur.';
-  }
 
   @override
   String get careerIncludeHandMilestoneLocked =>
@@ -381,12 +372,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get careerLevelLockedHint =>
       'Niveau 1 (termine une séance pour débloquer le suivant)';
-
-  @override
-  String get careerMilestonesPendingTitle => 'Apprentissages en attente';
-
-  @override
-  String get careerMilestonesNextBadge => 'PROCHAIN';
 
   @override
   String get careerMilestonesBranchesPrefix => 'Branche : ';
@@ -821,6 +806,13 @@ class AppLocalizationsFr extends AppLocalizations {
       'Affiche un bouton dans la séance qui termine immédiatement comme un succès complet (badges, milestones, niveau). Pratique pour itérer sur le contenu sans tout jouer.';
 
   @override
+  String get soundsShowBackgroundMedia => 'Fonds média en séance';
+
+  @override
+  String get soundsShowBackgroundMediaSubtitle =>
+      'Affiche les images/GIF de assets/backgrounds.json en arrière-plan, avec rotation à chaque step. Désactive pour ne voir que le dégradé d\'ambiance.';
+
+  @override
   String get sessionDebugFinishButton => 'DEBUG : terminer en succès';
 
   @override
@@ -964,31 +956,31 @@ class AppLocalizationsFr extends AppLocalizations {
   String get positionThroat => 'Gorge';
 
   @override
-  String get positionFull => 'Au fond';
+  String get positionFull => 'Tout';
 
   @override
-  String get modeShortRhythm => 'RYTHME';
+  String get modeShortRhythm => 'SUCE';
 
   @override
-  String get modeShortHold => 'HOLD';
+  String get modeShortHold => 'AU FOND';
 
   @override
-  String get modeShortLick => 'LICK';
+  String get modeShortLick => 'LÈCHE';
 
   @override
   String get modeShortBiffle => 'BIFFLE';
 
   @override
-  String get modeShortBreath => 'BREATH';
+  String get modeShortBreath => 'RESPIRE';
 
   @override
-  String get modeShortBeg => 'BEG';
+  String get modeShortBeg => 'SUPPLIE';
 
   @override
-  String get modeShortFreestyle => 'FREESTYLE';
+  String get modeShortFreestyle => 'LIBRE';
 
   @override
-  String get modeShortHand => 'HAND';
+  String get modeShortHand => 'BRANLE';
 
   @override
   String get badgeTierBronze => 'Bronze';
@@ -1289,4 +1281,101 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get unlockAnnouncementRhythmHeadMidSustained =>
       'Tu peux tenir la cadence plus d\'une minute maintenant, sans pause. Je te le demanderai.';
+
+  @override
+  String get modeSelectionSurpriseTooltip => 'Rappels surprise';
+
+  @override
+  String get surpriseNotifTitle => 'C\'est l\'heure';
+
+  @override
+  String get surpriseNotifBody1 => 'Suce-moi tout de suite';
+
+  @override
+  String get surpriseNotifBody2 =>
+      'Je veux t\'en mettre plein la bouche MAINTENANT';
+
+  @override
+  String get surpriseNotifBody3 => 'Mets-toi à genoux, c\'est l\'heure !';
+
+  @override
+  String get surpriseSettingsAppBarTitle => 'Rappel surprise';
+
+  @override
+  String get surpriseSettingsHeaderSubtitle =>
+      'Pendant la fenêtre, l\'app peut envoyer des notifications à des moments aléatoires. Au tap, elle ouvre une session courte.';
+
+  @override
+  String get surpriseSettingsEnableLabel => 'Activer les rappels';
+
+  @override
+  String get surpriseSettingsEnableSubtitle =>
+      'Notifications aléatoires pendant la fenêtre.';
+
+  @override
+  String get surpriseSettingsWindowLabel => 'Fenêtre temporelle';
+
+  @override
+  String surpriseSettingsWindowValue(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String get surpriseSettingsAlertCountLabel => 'Nombre de rappels';
+
+  @override
+  String surpriseSettingsAlertCountValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count rappels',
+      one: '1 rappel',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get surpriseSettingsDurationLabel => 'Durée des sessions';
+
+  @override
+  String surpriseSettingsDurationValue(int minSec, int maxSec) {
+    return '$minSec s – $maxSec s';
+  }
+
+  @override
+  String surpriseSettingsActiveStatus(String endTime) {
+    return 'Actif jusqu\'à $endTime';
+  }
+
+  @override
+  String surpriseSettingsActiveAlertsLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count alertes restantes',
+      one: '1 alerte restante',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get surpriseSettingsInactiveStatus => 'Aucun rappel programmé';
+
+  @override
+  String get surpriseSettingsPermissionMissing =>
+      'Autorise les notifications dans les paramètres système.';
+
+  @override
+  String get surpriseSettingsExactAlarmMissing =>
+      'Les alarmes exactes sont refusées par le système.';
+
+  @override
+  String get surpriseSettingsBatteryHintTitle => 'Optimisation batterie';
+
+  @override
+  String get surpriseSettingsBatteryHintBody =>
+      'Sur certains téléphones (Xiaomi, Huawei, Samsung), désactive l\'optimisation batterie pour Rhythm Coach pour garantir les rappels.';
+
+  @override
+  String get surpriseSettingsOpenBatterySettings => 'Ouvrir les paramètres';
 }

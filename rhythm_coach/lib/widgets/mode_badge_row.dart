@@ -11,25 +11,34 @@ class ModeBadgeRow extends StatelessWidget {
   final Position? to;
   final int bpm;
 
+  /// Si false, affiche uniquement le badge mode (sans BPM ni profondeur).
+  /// Utilisé en prod pour donner un repère "ce que je dois faire" sans
+  /// noyer l'utilisatrice de chiffres ; le toggle debug `showModeBadge`
+  /// passe à true pour réafficher tous les détails.
+  final bool showDetails;
+
   const ModeBadgeRow({
     super.key,
     required this.mode,
     required this.from,
     required this.to,
     required this.bpm,
+    this.showDetails = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    final showPosition = mode == SessionMode.rhythm ||
-        mode == SessionMode.lick ||
-        mode == SessionMode.hand ||
-        mode == SessionMode.hold ||
-        mode == SessionMode.beg;
-    final showBpm = mode == SessionMode.rhythm ||
-        mode == SessionMode.lick ||
-        mode == SessionMode.hand ||
-        mode == SessionMode.biffle;
+    final showPosition = showDetails &&
+        (mode == SessionMode.rhythm ||
+            mode == SessionMode.lick ||
+            mode == SessionMode.hand ||
+            mode == SessionMode.hold ||
+            mode == SessionMode.beg);
+    final showBpm = showDetails &&
+        (mode == SessionMode.rhythm ||
+            mode == SessionMode.lick ||
+            mode == SessionMode.hand ||
+            mode == SessionMode.biffle);
 
     final color = _modeColor(mode);
 
@@ -52,7 +61,7 @@ class ModeBadgeRow extends StatelessWidget {
           ),
         if (showPosition)
           _Badge(
-            label: _positionLabel(from, to, mode),
+            label: _positionLabel(context, from, to, mode),
             color: color,
           ),
       ],
@@ -81,24 +90,17 @@ class ModeBadgeRow extends StatelessWidget {
         SessionMode.hand => const Color(0xFFFFAB91),
       };
 
-  static String _positionLabel(Position from, Position? to, SessionMode mode) {
-    final f = _positionName(from);
+  static String _positionLabel(
+      BuildContext context, Position from, Position? to, SessionMode mode) {
+    final f = from.localizedLabel(context);
     if (to == null ||
         to == from ||
         mode == SessionMode.hold ||
         mode == SessionMode.beg) {
       return f;
     }
-    return '$f → ${_positionName(to)}';
+    return '$f → ${to.localizedLabel(context)}';
   }
-
-  static String _positionName(Position p) => switch (p) {
-        Position.tip => 'tip',
-        Position.head => 'head',
-        Position.mid => 'mid',
-        Position.throat => 'throat',
-        Position.full => 'full',
-      };
 }
 
 class _Badge extends StatelessWidget {

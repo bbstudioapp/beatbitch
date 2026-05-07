@@ -5,14 +5,19 @@ import '../career/screens/career_screen.dart';
 import '../models/ambience_pack.dart';
 import '../services/ambience_engine.dart';
 import '../services/ambience_pack_loader.dart';
+import '../services/backgrounds_loader.dart';
+import '../services/backgrounds_service.dart';
 import '../services/beep_engine.dart';
 import '../services/locale_service.dart';
+import '../services/surprise_alert_service.dart';
+import '../services/surprise_router.dart';
 import '../services/tts_service.dart';
 import '../services/user_profile_service.dart';
 import '../theme/app_theme.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
 import 'sound_demo_screen.dart';
+import 'surprise_settings_screen.dart';
 
 /// Premier écran de l'app : sélection entre Scénario (sessions JSON) et
 /// Carrière (sessions générées). Possède les services partagés (TTS, beep,
@@ -24,12 +29,17 @@ class ModeSelectionScreen extends StatefulWidget {
   State<ModeSelectionScreen> createState() => _ModeSelectionScreenState();
 }
 
-class _ModeSelectionScreenState extends State<ModeSelectionScreen> {
+class _ModeSelectionScreenState extends State<ModeSelectionScreen>
+    with WidgetsBindingObserver {
   late final TtsService _tts;
   late final BeepEngine _beep;
   late final AmbienceEngine _ambience;
   late final UserProfileService _userProfile;
   late final Future<List<AmbiencePack>> _ambiencePacksFuture;
+
+  /// Garde-fou pour éviter de pousser deux fois la SessionScreen surprise
+  /// (entre le tap et l'arrivée du resumed sur la même action).
+  bool _surpriseInFlight = false;
 
   @override
   void initState() {
@@ -44,14 +54,73 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen> {
     // fallback tant que le load n'est pas terminé.
     _userProfile.load();
     _ambiencePacksFuture = AmbiencePackLoader().load();
+    // Catalogue des fonds média poussé dans le singleton dédié. Bundle
+    // vide possible (= JSON sans entrées) → le widget retombe sur le
+    // placeholder animé. Pas d'attente côté UI.
+    BackgroundsLoader()
+        .load()
+        .then((b) => BackgroundsService.instance.setBundle(b));
+    WidgetsBinding.instance.addObserver(this);
+    // Cold start : si l'app a été lancée par tap d'une notif surprise,
+    // un flag d'intent a été posé dans main(). On le consume après la
+    // première frame pour avoir un context utilisable.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _maybeLaunchSurprise();
+    });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _tts.dispose();
     _beep.dispose();
     _ambience.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Warm tap : l'utilisatrice a tapé une notif et l'app revient au
+      // foreground. Le callback top-level a déjà posé le flag d'intent.
+      _maybeLaunchSurprise();
+    }
+  }
+
+  Future<void> _maybeLaunchSurprise() async {
+    if (!mounted || _surpriseInFlight) return;
+    final fired = await SurpriseAlertService.instance.consumeNextIntent();
+    if (!fired || !mounted) return;
+    // Si une autre route est déjà au-dessus (l'utilisatrice est en
+    // session ou sur l'écran carrière), on ne push pas. L'intent a été
+    // consommé pour ne pas re-déclencher au prochain resumed.
+    if (Navigator.of(context).canPop()) return;
+    // Consomme la fenêtre entière : annule toutes les autres alarms
+    // programmées au niveau natif. Sinon une autre notif pourrait tomber
+    // pendant que l'utilisatrice est en pleine session (l'app est
+    // foreground, donc l'observer `resumed` n'est pas re-déclenché et ne
+    // les annule pas par la voie habituelle).
+    await SurpriseAlertService.instance.consumeWindow();
+    if (!mounted) return;
+    _surpriseInFlight = true;
+    try {
+      await SurpriseRouter.launchSession(
+        context: context,
+        tts: _tts,
+        beep: _beep,
+        ambience: _ambience,
+      );
+    } finally {
+      if (mounted) _surpriseInFlight = false;
+    }
+  }
+
+  void _openSurpriseSettings() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const SurpriseSettingsScreen(),
+      ),
+    );
   }
 
   Future<void> _openSoundDemo() async {
@@ -102,6 +171,11 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen> {
       appBar: AppBar(
         title: Text(t.modeSelectionAppBarTitle),
         actions: [
+          IconButton(
+            tooltip: t.modeSelectionSurpriseTooltip,
+            icon: const Icon(Icons.notifications_active_outlined),
+            onPressed: _openSurpriseSettings,
+          ),
           IconButton(
             tooltip: t.modeSelectionProfileTooltip,
             icon: const Icon(Icons.person_outline),

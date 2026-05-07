@@ -23,6 +23,8 @@ dependencies:
   sensors_plus: ^6.0.1
   permission_handler: ^11.3.1
   path_provider: ^2.1.4
+  flutter_local_notifications: ^17.2.3
+  timezone: ^0.9.4
 
 dev_dependencies:
   flutter_lints: ^4.0.0
@@ -46,3 +48,5 @@ flutter:
     - assets/random_comments.json
     - assets/ambience_packs.json
     - assets/nicknames.json
+    - assets/backgrounds.json
+    - assets/backgrounds/

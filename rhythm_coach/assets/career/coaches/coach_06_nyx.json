@@ -14,5 +14,11 @@
   "isPrincipal": true,
   "requirements": {
     "minPlayerLevel": 31
+  },
+  "tts": {
+    "voice": "fr-fr-x-fra-local",
+    "voiceLocale": "fr-FR",
+    "rate": 0.53,
+    "pitch": 0.85
   }
 }

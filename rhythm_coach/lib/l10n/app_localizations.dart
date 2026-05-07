@@ -382,6 +382,12 @@ abstract class AppLocalizations {
   /// **'SÉANCE TERMINÉE'**
   String get sessionFinishedTitle;
 
+  /// No description provided for @sessionFinishedDuration.
+  ///
+  /// In fr, this message translates to:
+  /// **'Durée : {duration}'**
+  String sessionFinishedDuration(String duration);
+
   /// No description provided for @sessionFinishedDefaultEnd.
   ///
   /// In fr, this message translates to:
@@ -399,6 +405,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Pas de nouveau palier cette fois — la prochaine sera la bonne.'**
   String get sessionFinishedNoNewBadges;
+
+  /// No description provided for @sessionFinishedMilestonesTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Apprentissages validés'**
+  String get sessionFinishedMilestonesTitle;
 
   /// No description provided for @sessionFinishedEncore.
   ///
@@ -646,18 +658,6 @@ abstract class AppLocalizations {
   /// **'Erreur de chargement :\n{error}'**
   String careerLoadError(String error);
 
-  /// No description provided for @careerHeaderTitle.
-  ///
-  /// In fr, this message translates to:
-  /// **'Génération procédurale'**
-  String get careerHeaderTitle;
-
-  /// No description provided for @careerInstruction.
-  ///
-  /// In fr, this message translates to:
-  /// **'Choisis un niveau. La durée et la difficulté en découlent.'**
-  String get careerInstruction;
-
   /// No description provided for @careerLevelSection.
   ///
   /// In fr, this message translates to:
@@ -688,12 +688,6 @@ abstract class AppLocalizations {
   /// **'6 min, intense tout du long. Pour quand t\'as pas le temps.'**
   String get careerQuickieDescription;
 
-  /// No description provided for @careerQuickieLockedSubtitle.
-  ///
-  /// In fr, this message translates to:
-  /// **'Verrouillé jusqu\'au niveau {level} — il faut maîtriser les bases avant de bâcler.'**
-  String careerQuickieLockedSubtitle(int level);
-
   /// No description provided for @careerIncludeHandToggle.
   ///
   /// In fr, this message translates to:
@@ -705,12 +699,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Désactive aussi les coups de queue (biffle) — les deux nécessitent la main.'**
   String get careerIncludeHandSubtitle;
-
-  /// No description provided for @careerIncludeHandLockedSubtitle.
-  ///
-  /// In fr, this message translates to:
-  /// **'Verrouillé jusqu\'au niveau {level} — sans la main, le finish bas niveau devient trop dur.'**
-  String careerIncludeHandLockedSubtitle(int level);
 
   /// No description provided for @careerIncludeHandMilestoneLocked.
   ///
@@ -753,18 +741,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Niveau 1 (termine une séance pour débloquer le suivant)'**
   String get careerLevelLockedHint;
-
-  /// No description provided for @careerMilestonesPendingTitle.
-  ///
-  /// In fr, this message translates to:
-  /// **'Apprentissages en attente'**
-  String get careerMilestonesPendingTitle;
-
-  /// No description provided for @careerMilestonesNextBadge.
-  ///
-  /// In fr, this message translates to:
-  /// **'PROCHAIN'**
-  String get careerMilestonesNextBadge;
 
   /// No description provided for @careerMilestonesBranchesPrefix.
   ///
@@ -1492,6 +1468,18 @@ abstract class AppLocalizations {
   /// **'Affiche un bouton dans la séance qui termine immédiatement comme un succès complet (badges, milestones, niveau). Pratique pour itérer sur le contenu sans tout jouer.'**
   String get soundsDebugSkipSessionSubtitle;
 
+  /// No description provided for @soundsShowBackgroundMedia.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fonds média en séance'**
+  String get soundsShowBackgroundMedia;
+
+  /// No description provided for @soundsShowBackgroundMediaSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Affiche les images/GIF de assets/backgrounds.json en arrière-plan, avec rotation à chaque step. Désactive pour ne voir que le dégradé d\'ambiance.'**
+  String get soundsShowBackgroundMediaSubtitle;
+
   /// No description provided for @sessionDebugFinishButton.
   ///
   /// In fr, this message translates to:
@@ -1777,25 +1765,25 @@ abstract class AppLocalizations {
   /// No description provided for @positionFull.
   ///
   /// In fr, this message translates to:
-  /// **'Au fond'**
+  /// **'Tout'**
   String get positionFull;
 
   /// No description provided for @modeShortRhythm.
   ///
   /// In fr, this message translates to:
-  /// **'RYTHME'**
+  /// **'SUCE'**
   String get modeShortRhythm;
 
   /// No description provided for @modeShortHold.
   ///
   /// In fr, this message translates to:
-  /// **'HOLD'**
+  /// **'AU FOND'**
   String get modeShortHold;
 
   /// No description provided for @modeShortLick.
   ///
   /// In fr, this message translates to:
-  /// **'LICK'**
+  /// **'LÈCHE'**
   String get modeShortLick;
 
   /// No description provided for @modeShortBiffle.
@@ -1807,25 +1795,25 @@ abstract class AppLocalizations {
   /// No description provided for @modeShortBreath.
   ///
   /// In fr, this message translates to:
-  /// **'BREATH'**
+  /// **'RESPIRE'**
   String get modeShortBreath;
 
   /// No description provided for @modeShortBeg.
   ///
   /// In fr, this message translates to:
-  /// **'BEG'**
+  /// **'SUPPLIE'**
   String get modeShortBeg;
 
   /// No description provided for @modeShortFreestyle.
   ///
   /// In fr, this message translates to:
-  /// **'FREESTYLE'**
+  /// **'LIBRE'**
   String get modeShortFreestyle;
 
   /// No description provided for @modeShortHand.
   ///
   /// In fr, this message translates to:
-  /// **'HAND'**
+  /// **'BRANLE'**
   String get modeShortHand;
 
   /// No description provided for @badgeTierBronze.
@@ -2344,6 +2332,144 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Tu peux tenir la cadence plus d\'une minute maintenant, sans pause. Je te le demanderai.'**
   String get unlockAnnouncementRhythmHeadMidSustained;
+
+  /// Tooltip de l'icône de notification dans l'AppBar du ModeSelectionScreen.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rappels surprise'**
+  String get modeSelectionSurpriseTooltip;
+
+  /// Titre de la notification surprise (court, lockscreen-friendly).
+  ///
+  /// In fr, this message translates to:
+  /// **'C\'est l\'heure'**
+  String get surpriseNotifTitle;
+
+  /// Body cru de la notification surprise, variante 1. Tirage aléatoire au moment du schedule.
+  ///
+  /// In fr, this message translates to:
+  /// **'Suce-moi tout de suite'**
+  String get surpriseNotifBody1;
+
+  /// Body cru de la notification surprise, variante 2.
+  ///
+  /// In fr, this message translates to:
+  /// **'Je veux t\'en mettre plein la bouche MAINTENANT'**
+  String get surpriseNotifBody2;
+
+  /// Body cru de la notification surprise, variante 3.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mets-toi à genoux, c\'est l\'heure !'**
+  String get surpriseNotifBody3;
+
+  /// No description provided for @surpriseSettingsAppBarTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rappel surprise'**
+  String get surpriseSettingsAppBarTitle;
+
+  /// No description provided for @surpriseSettingsHeaderSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pendant la fenêtre, l\'app peut envoyer des notifications à des moments aléatoires. Au tap, elle ouvre une session courte.'**
+  String get surpriseSettingsHeaderSubtitle;
+
+  /// No description provided for @surpriseSettingsEnableLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Activer les rappels'**
+  String get surpriseSettingsEnableLabel;
+
+  /// No description provided for @surpriseSettingsEnableSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Notifications aléatoires pendant la fenêtre.'**
+  String get surpriseSettingsEnableSubtitle;
+
+  /// No description provided for @surpriseSettingsWindowLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fenêtre temporelle'**
+  String get surpriseSettingsWindowLabel;
+
+  /// No description provided for @surpriseSettingsWindowValue.
+  ///
+  /// In fr, this message translates to:
+  /// **'{minutes} min'**
+  String surpriseSettingsWindowValue(int minutes);
+
+  /// No description provided for @surpriseSettingsAlertCountLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nombre de rappels'**
+  String get surpriseSettingsAlertCountLabel;
+
+  /// No description provided for @surpriseSettingsAlertCountValue.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, one{1 rappel} other{{count} rappels}}'**
+  String surpriseSettingsAlertCountValue(int count);
+
+  /// No description provided for @surpriseSettingsDurationLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Durée des sessions'**
+  String get surpriseSettingsDurationLabel;
+
+  /// No description provided for @surpriseSettingsDurationValue.
+  ///
+  /// In fr, this message translates to:
+  /// **'{minSec} s – {maxSec} s'**
+  String surpriseSettingsDurationValue(int minSec, int maxSec);
+
+  /// No description provided for @surpriseSettingsActiveStatus.
+  ///
+  /// In fr, this message translates to:
+  /// **'Actif jusqu\'à {endTime}'**
+  String surpriseSettingsActiveStatus(String endTime);
+
+  /// No description provided for @surpriseSettingsActiveAlertsLeft.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, one{1 alerte restante} other{{count} alertes restantes}}'**
+  String surpriseSettingsActiveAlertsLeft(int count);
+
+  /// No description provided for @surpriseSettingsInactiveStatus.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun rappel programmé'**
+  String get surpriseSettingsInactiveStatus;
+
+  /// No description provided for @surpriseSettingsPermissionMissing.
+  ///
+  /// In fr, this message translates to:
+  /// **'Autorise les notifications dans les paramètres système.'**
+  String get surpriseSettingsPermissionMissing;
+
+  /// No description provided for @surpriseSettingsExactAlarmMissing.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les alarmes exactes sont refusées par le système.'**
+  String get surpriseSettingsExactAlarmMissing;
+
+  /// No description provided for @surpriseSettingsBatteryHintTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Optimisation batterie'**
+  String get surpriseSettingsBatteryHintTitle;
+
+  /// No description provided for @surpriseSettingsBatteryHintBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sur certains téléphones (Xiaomi, Huawei, Samsung), désactive l\'optimisation batterie pour Rhythm Coach pour garantir les rappels.'**
+  String get surpriseSettingsBatteryHintBody;
+
+  /// No description provided for @surpriseSettingsOpenBatterySettings.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ouvrir les paramètres'**
+  String get surpriseSettingsOpenBatterySettings;
 }
 
 class _AppLocalizationsDelegate
