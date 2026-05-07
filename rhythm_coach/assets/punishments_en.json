@@ -1,0 +1,83 @@
+{
+  "lang": "en",
+  "fail_phrases": [
+    "Giving up already, little slut?",
+    "Pathetic. You can do better than that.",
+    "Really? This soon? We'll fix that right now.",
+    "This weakness is going to cost you.",
+    "You think that's enough? Wrong.",
+    "A real slut doesn't quit like that.",
+    "Breathe… because you're about to take it now."
+  ],
+  "fail_phrases_swallow": [
+    "You swallowed. Without permission. You know what's coming.",
+    "I told you to hold it. You couldn't. You're going to pay for it.",
+    "Disobedient little thing. You swallowed when I forbade it.",
+    "You can't even hold your spit when asked. Pitiful.",
+    "You broke. You swallowed. We're going to remind you how to obey.",
+    "One single instruction: don't swallow. You couldn't. Shameful."
+  ],
+  "punishments": [
+    {
+      "id": "extra_throat",
+      "name": "Extra Throat",
+      "duration_seconds": 45,
+      "steps": [
+        {"time": 0, "text": "Punishment. Forty seconds down the throat, no mercy.", "mode": "rhythm", "from": "throat", "to": "full", "bpm": 100},
+        {"time": 20, "text": "Deeper. Take it all."},
+        {"time": 35, "text": "Final hold.", "mode": "hold", "to": "full", "duration": 8}
+      ]
+    },
+    {
+      "id": "biffle_burst",
+      "name": "Slap Burst",
+      "duration_seconds": 30,
+      "steps": [
+        {"time": 0, "text": "Quick punishment. Thirty seconds of cock slaps.", "mode": "biffle", "bpm": 135},
+        {"time": 12, "text": "Drool everywhere, slut."},
+        {"time": 25, "text": "Harder."}
+      ]
+    },
+    {
+      "id": "deep_hold_chain",
+      "name": "Hold Chain",
+      "duration_seconds": 55,
+      "steps": [
+        {"time": 0, "text": "Three holds in a row. First one down the throat.", "mode": "hold", "to": "throat", "duration": 10},
+        {"time": 12, "text": "Breathe.", "mode": "breath", "duration": 4},
+        {"time": 17, "text": "Second one, deeper.", "mode": "hold", "to": "throat", "duration": 12},
+        {"time": 31, "text": "Breathe.", "mode": "breath", "duration": 4},
+        {"time": 36, "text": "Last one, balls deep.", "mode": "hold", "to": "full", "duration": 15}
+      ]
+    },
+    {
+      "id": "slow_torture",
+      "name": "Slow Torture",
+      "duration_seconds": 50,
+      "steps": [
+        {"time": 0, "text": "Slow punishment. Very slow and very deep.", "mode": "rhythm", "from": "throat", "to": "full", "bpm": 40},
+        {"time": 25, "text": "Feel every inch."},
+        {"time": 45, "text": "Hold.", "mode": "hold", "to": "full", "duration": 10}
+      ]
+    },
+    {
+      "id": "lick_humiliation",
+      "name": "Lick Humiliation",
+      "duration_seconds": 40,
+      "steps": [
+        {"time": 0, "text": "Lick like a bitch in heat.", "mode": "lick", "from": "tip", "to": "full", "bpm": 70},
+        {"time": 20, "text": "Spit on it and lick it again."},
+        {"time": 35, "text": "Say \"I'm your hole\"."}
+      ]
+    },
+    {
+      "id": "rapid_full",
+      "name": "Rapid Full",
+      "duration_seconds": 35,
+      "steps": [
+        {"time": 0, "text": "Punishment. Go full and stay fast.", "mode": "rhythm", "from": "full", "to": "full", "bpm": 120},
+        {"time": 18, "text": "Faster, slut."}
+      ]
+    }
+  ]
+}

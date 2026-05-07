@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
+import 'app_localizations_en.dart';
 import 'app_localizations_fr.dart';
 
 // ignore_for_file: type=lint
@@ -92,7 +93,10 @@ abstract class AppLocalizations {
   ];
 
   /// A list of this localizations delegate's supported locales.
-  static const List<Locale> supportedLocales = <Locale>[Locale('fr')];
+  static const List<Locale> supportedLocales = <Locale>[
+    Locale('en'),
+    Locale('fr')
+  ];
 
   /// Nom de l'application affiché par le système Android.
   ///
@@ -741,6 +745,18 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Niveau 1 (termine une séance pour débloquer le suivant)'**
   String get careerLevelLockedHint;
+
+  /// No description provided for @careerSessionName.
+  ///
+  /// In fr, this message translates to:
+  /// **'Carrière niveau {level}'**
+  String careerSessionName(int level);
+
+  /// No description provided for @careerSessionNameQuickie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Carrière niveau {level} — bâclée'**
+  String careerSessionNameQuickie(int level);
 
   /// No description provided for @careerMilestonesBranchesPrefix.
   ///
@@ -1840,6 +1856,12 @@ abstract class AppLocalizations {
   /// **'Platine'**
   String get badgeTierPlatinium;
 
+  /// Phrase TTS lue à la fin de séance lors du déblocage d'un palier de badge. {name} = nom localisé du badge, {tier} = libellé localisé du palier.
+  ///
+  /// In fr, this message translates to:
+  /// **'Badge débloqué : {name}, palier {tier}.'**
+  String badgeUnlockAnnouncement(String name, String tier);
+
   /// No description provided for @badgeNameMarathonien.
   ///
   /// In fr, this message translates to:
@@ -2483,7 +2505,7 @@ class _AppLocalizationsDelegate
 
   @override
   bool isSupported(Locale locale) =>
-      <String>['fr'].contains(locale.languageCode);
+      <String>['en', 'fr'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -2492,6 +2514,8 @@ class _AppLocalizationsDelegate
 AppLocalizations lookupAppLocalizations(Locale locale) {
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
+    case 'en':
+      return AppLocalizationsEn();
     case 'fr':
       return AppLocalizationsFr();
   }

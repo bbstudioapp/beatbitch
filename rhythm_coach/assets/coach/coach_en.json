@@ -1,0 +1,31 @@
+{
+  "lang": "en",
+  "hold_nudges": {
+    "go_deeper": [
+      "go down",
+      "lower",
+      "deeper",
+      "more",
+      "reach for it"
+    ],
+    "go_up": [
+      "come up",
+      "less deep",
+      "come up a bit",
+      "not so low"
+    ],
+    "lost": [
+      "where are you",
+      "stay in frame",
+      "get back in position"
+    ]
+  },
+  "system": {
+    "prep_countdown": "In position. Starting in {seconds} seconds.",
+    "encore_fallback": "Again. Back to it."
+  },
+  "test_phrases": {
+    "voice": "Come on, show me what you've got. Deeper, slower.",
+    "identity": "Keep going {name}. You can do it {name}."
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "displayLabel": "Long deep hold",
+  "stepTexts": {
+    "0": "Deeper, longer.",
+    "12": "Hold six seconds.",
+    "18": "Breathe well.",
+    "28": "Now ten seconds.",
+    "38": "Well done. Lick to recover."
+  }
+}

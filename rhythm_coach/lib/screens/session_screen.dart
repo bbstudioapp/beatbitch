@@ -2086,7 +2086,7 @@ class _MilestoneUnlockTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  milestone.displayLabel,
+                  milestoneService.getDisplayLabel(milestone.id),
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,

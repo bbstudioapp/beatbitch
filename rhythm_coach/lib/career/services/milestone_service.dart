@@ -287,6 +287,15 @@ class MilestoneService extends ChangeNotifier {
   String? getStepText(String id, int time) =>
       _overrides[id]?.textForTime(time);
 
+  /// Libellé court localisé pour la milestone [id]. Retourne le
+  /// `displayLabel` du catalogue principal (FR) si l'override de la
+  /// locale active n'en fournit pas un.
+  String getDisplayLabel(String id) {
+    final override = _overrides[id]?.displayLabel;
+    if (override != null && override.isNotEmpty) return override;
+    return findById(id)?.displayLabel ?? id;
+  }
+
   /// Compteur de retries cumulés pour la milestone [id].
   int getRetryCount(String id) => _retries[id] ?? 0;
 

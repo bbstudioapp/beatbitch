@@ -1,0 +1,56 @@
+{
+  "lang": "en",
+  "id": "coach_03_jade",
+  "title": "Teasing coach",
+  "publicBio": "Playful, ironic, loves to test. Specialist of cock slaps and sloppy work. Hands required.",
+  "phrases": {
+    "biffle": {
+      "soft": [
+        "Start slapping your face gently {name} ~",
+        "Aww, are you going to take that in your mouth?"
+      ],
+      "medium": [
+        "Harder {name}, make my cock smack on your tongue.",
+        "Look at you, already drooling like a bitch."
+      ],
+      "hard": [
+        "Wreck your face {name}.",
+        "Drool everywhere, little slut.",
+        "Harder! I want it to smack."
+      ]
+    },
+    "lick": {
+      "soft": [
+        "Lick it everywhere, my little bitch."
+      ],
+      "medium": [
+        "Lap it up like a bitch in heat {name}."
+      ],
+      "hard": [
+        "Lick it properly, whore."
+      ]
+    }
+  },
+  "intros": [
+    "Hey there {name} ~ Ready to get a little humiliated today?",
+    "Jade is here. We're going to have fun, you and I."
+  ],
+  "congrats": [
+    "Not bad {name}, you drooled nicely.",
+    "Cute when you suffer a little."
+  ],
+  "nicknames": {
+    "pool": [
+      "little bitch",
+      "slut",
+      "my little whore",
+      "filthy girl"
+    ],
+    "use_user_prenom": false,
+    "use_user_nicknames": true
+  },
+  "coachNicknames": [
+    "Jade",
+    "mistress"
+  ]
+}

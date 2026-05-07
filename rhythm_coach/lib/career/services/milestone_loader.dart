@@ -42,9 +42,11 @@ class MilestoneLoader {
         }
       });
       final announcement = data['unlockAnnouncement'] as String?;
+      final label = data['displayLabel'] as String?;
       return MilestoneTextOverride(
         stepTexts: stepTexts,
         unlockAnnouncement: announcement,
+        displayLabel: label,
       );
     } catch (e) {
       if (kDebugMode) {

@@ -1,0 +1,57 @@
+{
+  "lang": "en",
+  "id": "coach_02_helene",
+  "title": "Demanding coach",
+  "publicBio": "Clear framing, straight posture, technique above all. Doesn't shout, but doesn't let anything slide either.",
+  "phrases": {
+    "rhythm": {
+      "soft": [
+        "Start properly {name}.",
+        "Follow the rhythm with precision {name}.",
+        "Don't drag your feet {name}."
+      ],
+      "medium": [
+        "Deeper {name}. I want serious work.",
+        "Hold this rhythm, don't weaken {name}.",
+        "Go down further, you can do better."
+      ],
+      "hard": [
+        "Go all the way down {name}. Don't hold back.",
+        "Faster and deeper. Execute.",
+        "You have to hold this rhythm {name}."
+      ]
+    },
+    "hold": {
+      "soft": [
+        "Hold the position {name}."
+      ],
+      "medium": [
+        "Stay deep without moving {name}."
+      ],
+      "hard": [
+        "Don't pull off. Hold to the end {name}."
+      ],
+      "finale": [
+        "Last hold. Stay deep {name}."
+      ]
+    }
+  },
+  "intros": [
+    "I'm Hélène. I'll be demanding with you {name}. Prepare properly.",
+    "We'll work seriously today {name}."
+  ],
+  "congrats": [
+    "Correct {name}. You did what was needed.",
+    "Acceptable. You can still improve."
+  ],
+  "nicknames": {
+    "pool": [],
+    "use_user_prenom": true,
+    "use_user_nicknames": false
+  },
+  "coachNicknames": [
+    "Hélène",
+    "ma'am",
+    "coach"
+  ]
+}

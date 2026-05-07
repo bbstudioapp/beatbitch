@@ -1,0 +1,9 @@
+{
+  "displayLabel": "Deep pulse",
+  "stepTexts": {
+    "0": "Warm up before the depth.",
+    "10": "Back-and-forth all the way.",
+    "30": "Breathe.",
+    "40": "Lick to finish."
+  }
+}

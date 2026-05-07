@@ -139,6 +139,7 @@ class _CareerScreenState extends State<CareerScreen> {
   }
 
   Future<void> _start(_CareerBundle bundle) async {
+    final t = AppLocalizations.of(context);
     final level = _selectedLevel ?? bundle.lastChosenLevel;
     final clamped = level.clamp(1, bundle.maxLevel);
     await _progress.setLastChosenLevel(clamped);
@@ -250,6 +251,8 @@ class _CareerScreenState extends State<CareerScreen> {
       unlockedKeys: unlockedKeys,
       milestoneTextResolver: milestoneService.getStepText,
       coachModeWeights: activeCoach.modeWeights,
+      sessionName: t.careerSessionName(clamped),
+      sessionNameQuickie: t.careerSessionNameQuickie(clamped),
     );
 
     final introText = coachBank.pickIntro(Random());
@@ -477,6 +480,7 @@ class _CareerScreenState extends State<CareerScreen> {
     _CareerBundle bundle,
     int currentLevel,
   ) async {
+    final t = AppLocalizations.of(context);
     const begDuration = 12;
     const levelJump = 2;
     final remaining = ctrl.session.durationSeconds - ctrl.elapsedSeconds;
@@ -508,6 +512,8 @@ class _CareerScreenState extends State<CareerScreen> {
       obedience: obedienceScore,
       unlockedKeys: milestoneService.acquiredUnlockKeys(),
       coachModeWeights: activeCoach.modeWeights,
+      sessionName: t.careerSessionName(newLevel),
+      sessionNameQuickie: t.careerSessionNameQuickie(newLevel),
     );
 
     final rng = Random();
@@ -541,6 +547,7 @@ class _CareerScreenState extends State<CareerScreen> {
     _CareerBundle bundle,
     int level,
   ) async {
+    final t = AppLocalizations.of(context);
     final milestoneId = ctrl.session.milestoneId;
     if (milestoneId == null) return false;
     final milestone = milestoneService.findById(milestoneId);
@@ -580,6 +587,8 @@ class _CareerScreenState extends State<CareerScreen> {
       unlockedKeys: milestoneService.acquiredUnlockKeys(),
       milestoneTextResolver: milestoneService.getStepText,
       coachModeWeights: activeCoach.modeWeights,
+      sessionName: t.careerSessionName(level),
+      sessionNameQuickie: t.careerSessionNameQuickie(level),
     );
 
     final rng = Random();
@@ -616,6 +625,7 @@ class _CareerScreenState extends State<CareerScreen> {
     required bool includeHand,
     required bool quickie,
   }) async {
+    final t = AppLocalizations.of(context);
     // Capture la chauffe (`sessionScore` d'humiliation) AVANT de détacher
     // / disposer le previousController : sinon la valeur est perdue et la
     // session-encore démarre froide. C'est exactement le levier qui fait
@@ -671,6 +681,8 @@ class _CareerScreenState extends State<CareerScreen> {
       obedience: obedienceScore,
       unlockedKeys: milestoneService.acquiredUnlockKeys(),
       coachModeWeights: activeCoach.modeWeights,
+      sessionName: t.careerSessionName(level),
+      sessionNameQuickie: t.careerSessionNameQuickie(level),
     );
 
     final camService = CameraMotionService();

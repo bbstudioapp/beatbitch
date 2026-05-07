@@ -45,8 +45,12 @@ flutter:
     - assets/career/milestones/
     - assets/coach/
     - assets/punishments.json
+    - assets/punishments_en.json
     - assets/random_comments.json
+    - assets/random_comments_en.json
     - assets/ambience_packs.json
+    - assets/ambience_packs_en.json
     - assets/nicknames.json
+    - assets/nicknames_en.json
     - assets/backgrounds.json
     - assets/backgrounds/
