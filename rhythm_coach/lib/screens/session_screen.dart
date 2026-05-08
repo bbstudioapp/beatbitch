@@ -33,6 +33,7 @@ import '../services/random_comments_loader.dart';
 import '../services/saved_sessions_repository.dart';
 import '../services/stats_service.dart';
 import '../services/tts_service.dart';
+import 'camera_test_screen.dart';
 import '../theme/app_theme.dart';
 import '../widgets/mode_badge_row.dart';
 import '../widgets/movement_animation.dart';
@@ -193,6 +194,43 @@ class _SessionScreenState extends State<SessionScreen>
       _controller.addListener(_onCareerStateChanged);
     }
     WidgetsBinding.instance.addObserver(this);
+    // Si l'utilisatrice a activé le toggle « Vérif caméra des holds » mais
+    // que le caller n'a pas pu construire le verifier (perm refusée,
+    // calibration manquante, etc. — `buildVerifierIfEnabled` retourne null
+    // silencieusement), on l'avertit ici plutôt que de la laisser jouer
+    // une session sans le feedback qu'elle a explicitement demandé.
+    if (widget.holdVerifier == null) {
+      _maybeShowCameraInactiveSnackbar();
+    }
+  }
+
+  Future<void> _maybeShowCameraInactiveSnackbar() async {
+    final enabled = await DebugSettingsService().getCameraHoldCheck();
+    if (!enabled || !mounted) return;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) return;
+    final t = AppLocalizations.of(context);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(t.sessionCameraInactiveWarning),
+        action: SnackBarAction(
+          label: t.sessionCameraInactiveAction,
+          onPressed: () {
+            if (!mounted) return;
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => CameraTestScreen(
+                  tts: widget.tts,
+                  beep: widget.beep,
+                  ambience: widget.ambience,
+                ),
+              ),
+            );
+          },
+        ),
+        duration: const Duration(seconds: 6),
+      ),
+    );
   }
 
   @override

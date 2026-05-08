@@ -5,17 +5,21 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../career/screens/career_screen.dart';
 import '../models/ambience_pack.dart';
+import '../services/adult_consent_service.dart';
 import '../services/ambience_engine.dart';
 import '../services/ambience_pack_loader.dart';
 import '../services/backgrounds_loader.dart';
 import '../services/backgrounds_service.dart';
 import '../services/beep_engine.dart';
 import '../services/locale_service.dart';
+import '../services/onboarding_service.dart';
 import '../services/surprise_alert_service.dart';
 import '../services/surprise_router.dart';
 import '../services/tts_service.dart';
 import '../services/user_profile_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/adult_gate_dialog.dart';
+import '../widgets/onboarding_sheet.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
 import 'sound_demo_screen.dart';
@@ -67,9 +71,31 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
     // Cold start : si l'app a été lancée par tap d'une notif surprise,
     // un flag d'intent a été posé dans main(). On le consume après la
     // première frame pour avoir un context utilisable.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _runFirstRunFlow();
+      if (!mounted) return;
       _maybeLaunchSurprise();
     });
+  }
+
+  /// Adult gate (18+) puis onboarding 3 étapes. Bloque le reste du flow
+  /// (notifs surprise comprises) tant que le consent n'est pas donné.
+  Future<void> _runFirstRunFlow() async {
+    if (!mounted) return;
+    if (!AdultConsentService.instance.isAccepted) {
+      final accepted = await AdultGateDialog.show(context);
+      if (!mounted || !accepted) return;
+    }
+    if (!mounted) return;
+    if (!OnboardingService.instance.hasBeenShown) {
+      await OnboardingSheet.show(
+        context,
+        onTestVoice: () {
+          if (!mounted) return;
+          _openSoundDemo();
+        },
+      );
+    }
   }
 
   @override
@@ -141,7 +167,6 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
           tts: _tts,
           ambience: _ambience,
           ambiencePacks: ambiencePacks,
-          userProfile: _userProfile,
         ),
       ),
     );
@@ -189,7 +214,10 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
             icon: const Icon(Icons.person_outline),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (_) => const ProfileScreen(),
+                builder: (_) => ProfileScreen(
+                  userProfile: _userProfile,
+                  tts: _tts,
+                ),
               ),
             ),
           ),

@@ -1393,4 +1393,69 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get surpriseSettingsOpenBatterySettings => 'Ouvrir les paramètres';
+
+  @override
+  String get adultGateTitle => 'Accès réservé aux adultes';
+
+  @override
+  String get adultGateBody =>
+      'BeatBitch contient du contenu sexuel explicite : voix de coach crue et dominante, textes explicites, GIFs en arrière-plan. En continuant, tu confirmes :\n\n• avoir au moins 18 ans (ou l\'âge légal de majorité dans ton pays) ;\n• utiliser l\'app dans un cadre privé — l\'audio et le visuel ne se prêtent pas à un usage en lieu public ;\n• comprendre que les phrases peuvent être crues et dominantes.';
+
+  @override
+  String get adultGateAccept => 'J\'ai 18 ans, j\'accepte';
+
+  @override
+  String get adultGateLeave => 'Quitter';
+
+  @override
+  String get onboardingStep1Title => 'Garde un œil sur l\'écran au début';
+
+  @override
+  String get onboardingStep1Body =>
+      'Pour tes premières séances, garde le téléphone sous les yeux : l\'animation et les barres t\'aident à caler les positions et le rythme. Quand tu seras à l\'aise, tu pourras le poser sur le côté et jouer à l\'aveugle, guidée par la voix et les bips.';
+
+  @override
+  String get onboardingStep2Title => 'Monte le volume';
+
+  @override
+  String get onboardingStep2Body =>
+      'La coach parle bas et les bips sont fins. Mets le média à fond ou utilise un casque/enceinte. L\'app n\'envoie rien sur Internet.';
+
+  @override
+  String get onboardingStep3Title => 'Règle la voix, mets ton prénom';
+
+  @override
+  String get onboardingStep3Body =>
+      'Sur l\'écran SONS (icône équaliseur) : règle la voix par défaut (vitesse, timbre) et écoute un exemple. Les coachs de carrière ont leur propre voix figée — seule la voix par défaut, utilisée hors-carrière, est paramétrable.\n\nSur l\'écran Profil (icône silhouette) : indique ton prénom et choisis tes surnoms. La coach pourra t\'appeler par ton nom.';
+
+  @override
+  String get onboardingNext => 'Suivant';
+
+  @override
+  String get onboardingPrevious => 'Précédent';
+
+  @override
+  String get onboardingTestVoice => 'Tester ma voix';
+
+  @override
+  String get onboardingSkip => 'Plus tard';
+
+  @override
+  String get profileAboutSection => 'À PROPOS';
+
+  @override
+  String profileAboutVersion(String appName, String version, String build) {
+    return '$appName v$version (build $build)';
+  }
+
+  @override
+  String get profileAboutOffline =>
+      '100 % hors ligne — aucune télémétrie, aucun envoi réseau.';
+
+  @override
+  String get sessionCameraInactiveWarning =>
+      'Vérif caméra inactive — relancer la calibration';
+
+  @override
+  String get sessionCameraInactiveAction => 'Calibrer';
 }

@@ -2492,6 +2492,120 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Ouvrir les paramètres'**
   String get surpriseSettingsOpenBatterySettings;
+
+  /// No description provided for @adultGateTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Accès réservé aux adultes'**
+  String get adultGateTitle;
+
+  /// No description provided for @adultGateBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'BeatBitch contient du contenu sexuel explicite : voix de coach crue et dominante, textes explicites, GIFs en arrière-plan. En continuant, tu confirmes :\n\n• avoir au moins 18 ans (ou l\'âge légal de majorité dans ton pays) ;\n• utiliser l\'app dans un cadre privé — l\'audio et le visuel ne se prêtent pas à un usage en lieu public ;\n• comprendre que les phrases peuvent être crues et dominantes.'**
+  String get adultGateBody;
+
+  /// No description provided for @adultGateAccept.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'ai 18 ans, j\'accepte'**
+  String get adultGateAccept;
+
+  /// No description provided for @adultGateLeave.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quitter'**
+  String get adultGateLeave;
+
+  /// No description provided for @onboardingStep1Title.
+  ///
+  /// In fr, this message translates to:
+  /// **'Garde un œil sur l\'écran au début'**
+  String get onboardingStep1Title;
+
+  /// No description provided for @onboardingStep1Body.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pour tes premières séances, garde le téléphone sous les yeux : l\'animation et les barres t\'aident à caler les positions et le rythme. Quand tu seras à l\'aise, tu pourras le poser sur le côté et jouer à l\'aveugle, guidée par la voix et les bips.'**
+  String get onboardingStep1Body;
+
+  /// No description provided for @onboardingStep2Title.
+  ///
+  /// In fr, this message translates to:
+  /// **'Monte le volume'**
+  String get onboardingStep2Title;
+
+  /// No description provided for @onboardingStep2Body.
+  ///
+  /// In fr, this message translates to:
+  /// **'La coach parle bas et les bips sont fins. Mets le média à fond ou utilise un casque/enceinte. L\'app n\'envoie rien sur Internet.'**
+  String get onboardingStep2Body;
+
+  /// No description provided for @onboardingStep3Title.
+  ///
+  /// In fr, this message translates to:
+  /// **'Règle la voix, mets ton prénom'**
+  String get onboardingStep3Title;
+
+  /// No description provided for @onboardingStep3Body.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sur l\'écran SONS (icône équaliseur) : règle la voix par défaut (vitesse, timbre) et écoute un exemple. Les coachs de carrière ont leur propre voix figée — seule la voix par défaut, utilisée hors-carrière, est paramétrable.\n\nSur l\'écran Profil (icône silhouette) : indique ton prénom et choisis tes surnoms. La coach pourra t\'appeler par ton nom.'**
+  String get onboardingStep3Body;
+
+  /// No description provided for @onboardingNext.
+  ///
+  /// In fr, this message translates to:
+  /// **'Suivant'**
+  String get onboardingNext;
+
+  /// No description provided for @onboardingPrevious.
+  ///
+  /// In fr, this message translates to:
+  /// **'Précédent'**
+  String get onboardingPrevious;
+
+  /// No description provided for @onboardingTestVoice.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tester ma voix'**
+  String get onboardingTestVoice;
+
+  /// No description provided for @onboardingSkip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plus tard'**
+  String get onboardingSkip;
+
+  /// No description provided for @profileAboutSection.
+  ///
+  /// In fr, this message translates to:
+  /// **'À PROPOS'**
+  String get profileAboutSection;
+
+  /// No description provided for @profileAboutVersion.
+  ///
+  /// In fr, this message translates to:
+  /// **'{appName} v{version} (build {build})'**
+  String profileAboutVersion(String appName, String version, String build);
+
+  /// No description provided for @profileAboutOffline.
+  ///
+  /// In fr, this message translates to:
+  /// **'100 % hors ligne — aucune télémétrie, aucun envoi réseau.'**
+  String get profileAboutOffline;
+
+  /// No description provided for @sessionCameraInactiveWarning.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vérif caméra inactive — relancer la calibration'**
+  String get sessionCameraInactiveWarning;
+
+  /// No description provided for @sessionCameraInactiveAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Calibrer'**
+  String get sessionCameraInactiveAction;
 }
 
 class _AppLocalizationsDelegate
