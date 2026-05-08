@@ -46,3 +46,12 @@ app.*.map.json
 
 # Sources brutes des icônes (générées par Gemini, conservées hors repo)
 assets/icon/*.orig.png
+
+# Assets binaires externalisés — rapatriés depuis un canal externe avant build,
+# jamais versionnés dans le dépôt.
+assets/backgrounds/*.gif
+assets/backgrounds/*.png
+assets/backgrounds/*.jpg
+assets/backgrounds/*.jpeg
+assets/backgrounds/*.webp
+assets/audio/ambience/*.mp3

@@ -8,10 +8,12 @@ import '../theme/app_theme.dart';
 /// fourni par `BackgroundsService.instance.current`, soit le placeholder
 /// animé (dégradé radial qui pulse) si aucun fond n'est posé.
 ///
-/// **Source des médias** : catalogue `assets/backgrounds.json` chargé au
-/// démarrage par `BackgroundsLoader` et injecté dans le service. Un step
-/// peut imposer un fond précis via `step.background = "<id>"` ; sinon le
-/// service rotate aléatoirement à chaque changement de mode.
+/// **Source des médias** : `BackgroundsLoader` scanne l'`AssetManifest`
+/// Flutter au démarrage (dossier `assets/backgrounds/`) et injecte le
+/// résultat dans le service. Un step peut imposer un fond précis via
+/// `step.background = "<id>"` (où l'`id` est le nom de fichier sans
+/// extension) ; sinon le service rotate aléatoirement à chaque
+/// changement de mode.
 ///
 /// **Vidéo** : pas livré en V1 (cf. CLAUDE.md backlog). Pour ajouter,
 /// installer `video_player ^2.x` et étendre `BackgroundMediaType` avec
@@ -24,8 +26,8 @@ class SessionBackground extends StatelessWidget {
   /// Quand false, ignore complètement `BackgroundsService.current` et
   /// rend uniquement le dégradé animé. Permet à l'utilisatrice de
   /// désactiver les médias visuels (toggle dans la page SONS) sans
-  /// vider le `assets/backgrounds.json` ni perdre la rotation côté
-  /// service (qui continue son cycle, juste pas affichée).
+  /// retirer les fichiers du dossier ni perdre la rotation côté service
+  /// (qui continue son cycle, juste pas affichée).
   final bool mediaEnabled;
 
   const SessionBackground({super.key, this.mediaEnabled = true});

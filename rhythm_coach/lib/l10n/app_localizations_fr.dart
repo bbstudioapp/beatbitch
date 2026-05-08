@@ -820,7 +820,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get soundsShowBackgroundMediaSubtitle =>
-      'Affiche les images/GIF de assets/backgrounds.json en arrière-plan, avec rotation à chaque step. Désactive pour ne voir que le dégradé d\'ambiance.';
+      'Affiche les images/GIF présents dans assets/backgrounds/ en arrière-plan, avec rotation à chaque step. Désactive pour ne voir que le dégradé d\'ambiance.';
 
   @override
   String get sessionDebugFinishButton => 'DEBUG : terminer en succès';

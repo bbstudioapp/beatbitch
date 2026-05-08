@@ -126,11 +126,11 @@ class DebugSettingsService {
     await prefs.setBool(_kSkipSessionButton, value);
   }
 
-  /// Quand true (défaut), l'écran de session affiche les médias listés
-  /// dans `assets/backgrounds.json` en arrière-plan (rotation à chaque
-  /// step). Quand false, on retombe sur le placeholder animé (dégradé
-  /// radial) — utile si l'utilisatrice n'a posé aucun fichier dans le
-  /// dossier ou veut un visuel sobre pour une session donnée.
+  /// Quand true (défaut), l'écran de session affiche les médias présents
+  /// dans `assets/backgrounds/` en arrière-plan (rotation à chaque step).
+  /// Quand false, on retombe sur le placeholder animé (dégradé radial) —
+  /// utile si l'utilisatrice n'a posé aucun fichier dans le dossier ou
+  /// veut un visuel sobre pour une session donnée.
   Future<bool> getShowBackgroundMedia() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_kShowBackgroundMedia) ?? true;

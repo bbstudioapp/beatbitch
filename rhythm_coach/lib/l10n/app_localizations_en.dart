@@ -816,7 +816,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get soundsShowBackgroundMediaSubtitle =>
-      'Shows images/GIFs from assets/backgrounds.json in the background, rotating each step. Disable to see only the ambience gradient.';
+      'Shows images/GIFs from assets/backgrounds/ in the background, rotating each step. Disable to see only the ambience gradient.';
 
   @override
   String get sessionDebugFinishButton => 'DEBUG: finish as success';
