@@ -1,0 +1,130 @@
+name: Release Android APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and release signed APK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rhythm_coach
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read version from pubspec.yaml
+        id: version
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | sed -E 's/version:[[:space:]]*//; s/\+.*$//' | tr -d ' ')
+          echo "value=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Version detected: $VERSION (tag v$VERSION)"
+
+      - name: Skip if tag already exists
+        id: gate
+        working-directory: ${{ github.workspace }}
+        run: |
+          if git rev-parse -q --verify "refs/tags/${{ steps.version.outputs.tag }}" >/dev/null; then
+            echo "Tag ${{ steps.version.outputs.tag }} already exists — no new release."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up JDK 17
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        if: steps.gate.outputs.skip != 'true'
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        if: steps.gate.outputs.skip != 'true'
+        run: flutter pub get
+
+      - name: Run tests
+        if: steps.gate.outputs.skip != 'true'
+        run: flutter test
+
+      - name: Decode keystore
+        if: steps.gate.outputs.skip != 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          KEYSTORE_PATH="${{ runner.temp }}/beatbitch-upload.jks"
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$KEYSTORE_PATH"
+          echo "KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
+
+      - name: Write key.properties
+        if: steps.gate.outputs.skip != 'true'
+        env:
+          STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          {
+            printf 'storePassword=%s\n' "$STORE_PASSWORD"
+            printf 'keyPassword=%s\n' "$KEY_PASSWORD"
+            printf 'keyAlias=%s\n' "$KEY_ALIAS"
+            printf 'storeFile=%s\n' "$KEYSTORE_PATH"
+          } > android/key.properties
+
+      - name: Build signed release APK
+        if: steps.gate.outputs.skip != 'true'
+        run: flutter build apk --release
+
+      - name: Package APK and compute SHA256
+        if: steps.gate.outputs.skip != 'true'
+        id: pkg
+        run: |
+          SRC=build/app/outputs/flutter-apk/app-release.apk
+          DST_NAME="BeatBitch-${{ steps.version.outputs.value }}.apk"
+          DST_DIR=build/app/outputs/flutter-apk
+          cp "$SRC" "$DST_DIR/$DST_NAME"
+          ( cd "$DST_DIR" && sha256sum "$DST_NAME" > "$DST_NAME.sha256" )
+          SHA=$(awk '{print $1}' "$DST_DIR/$DST_NAME.sha256")
+          echo "apk_path=rhythm_coach/$DST_DIR/$DST_NAME" >> "$GITHUB_OUTPUT"
+          echo "sha_path=rhythm_coach/$DST_DIR/$DST_NAME.sha256" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        if: steps.gate.outputs.skip != 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: BeatBitch ${{ steps.version.outputs.value }}
+          body: |
+            APK release signé pour Android (side-load uniquement, pas de Play Store).
+
+            **SHA256** : `${{ steps.pkg.outputs.sha }}`
+
+            ## Installation
+            1. Télécharge l'APK et le fichier `.sha256`.
+            2. Vérifie l'intégrité : `sha256sum -c BeatBitch-${{ steps.version.outputs.value }}.apk.sha256`
+            3. Active *Sources inconnues* pour ton gestionnaire de fichiers / navigateur.
+            4. Ouvre l'APK et confirme l'installation.
+
+            ⚠ Build sans assets binaires externalisés (fonds média et MP3 d'ambiance) — l'écran de jeu retombe sur le dégradé animé et l'ambiance reste silencieuse. Les packs externes seront livrés ultérieurement via un canal séparé.
+          files: |
+            ${{ steps.pkg.outputs.apk_path }}
+            ${{ steps.pkg.outputs.sha_path }}
+          draft: false
+          prerelease: false
+          fail_on_unmatched_files: true
