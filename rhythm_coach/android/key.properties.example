@@ -1,0 +1,17 @@
+# Copier ce fichier en `android/key.properties` (gitignoré) avec
+# les vraies valeurs avant de builder un APK release.
+#
+# Génération du keystore (une seule fois, à archiver hors repo) :
+#   keytool -genkey -v \
+#     -keystore ~/.android/beatbitch-upload.jks \
+#     -keyalg RSA -keysize 2048 -validity 10000 \
+#     -alias upload
+#
+# Le mot de passe du keystore et de l'alias doivent être archivés
+# dans un gestionnaire de secrets (1Password, KeePass, …). Les
+# perdre = ne plus pouvoir publier de mise à jour signée.
+
+storePassword=changeme
+keyPassword=changeme
+keyAlias=upload
+storeFile=/absolute/path/to/beatbitch-upload.jks

@@ -60,16 +60,10 @@ class SessionBackground extends StatelessWidget {
   }
 }
 
-/// Rendu d'une entrée du catalogue. Le `path` peut être :
-/// - un asset local (`assets/backgrounds/foo.gif`) → `Image.asset`.
-/// - une URL HTTP/HTTPS (`https://.../foo.gif`) → `Image.network`.
-///
-/// Détection par préfixe `http`. Permet de mélanger des médias bundlés
-/// dans l'APK et des liens externes dans le même `backgrounds.json` sans
-/// changer le schéma. Trade-off URL : pas de cache disque (cache mémoire
-/// seulement par `Image.network`), donc re-DL au cold start. Si ça pose
-/// problème, ajouter `cached_network_image ^3.x` à pubspec et remplacer
-/// `Image.network` par `CachedNetworkImage` ici.
+/// Rendu d'une entrée du catalogue. Le `path` est un asset local
+/// (`assets/backgrounds/foo.gif`) → `Image.asset`. Le support
+/// `Image.network` a été retiré pour distribuer l'app sans permission
+/// INTERNET ; tous les médias sont bundlés dans l'APK.
 ///
 /// Switch sur `type` parce que l'API d'`Image.*` couvre déjà jpg/png/gif
 /// (Flutter joue les GIF nativement) — `gif` et `image` partagent donc
@@ -80,9 +74,6 @@ class _MediaBackground extends StatelessWidget {
 
   const _MediaBackground({required this.entry, super.key});
 
-  bool get _isRemote =>
-      entry.path.startsWith('http://') || entry.path.startsWith('https://');
-
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -91,23 +82,11 @@ class _MediaBackground extends StatelessWidget {
         switch (entry.type) {
           BackgroundMediaType.image ||
           BackgroundMediaType.gif =>
-            _isRemote
-                ? Image.network(
-                    entry.path,
-                    fit: BoxFit.cover,
-                    // Pendant le DL : afficher le placeholder animé pour
-                    // ne pas trouer l'écran de noir le temps du fetch.
-                    loadingBuilder: (_, child, progress) =>
-                        progress == null ? child : const _AmbientGradient(),
-                    // Erreur réseau / 404 : fallback placeholder, pas
-                    // d'icône d'erreur Flutter par-dessus la séance.
-                    errorBuilder: (_, __, ___) => const _AmbientGradient(),
-                  )
-                : Image.asset(
-                    entry.path,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const _AmbientGradient(),
-                  ),
+            Image.asset(
+              entry.path,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const _AmbientGradient(),
+            ),
         },
         // Voile sombre pour garder l'UI lisible quel que soit le média
         // fourni. Préférable au paramètre `opacity` d'Image.* qui baisse
