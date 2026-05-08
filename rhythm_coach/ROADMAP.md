@@ -68,21 +68,45 @@
 
 ---
 
-## Phase 5 — Distribution (0.5-1 jour)
+## Phase 5 — Repo public & CI/CD ✅ DONE
 
-| Action | Détail |
+| Action | État |
 |---|---|
-| Build APK release final | `bash tools/check_release.sh` → APK signé + SHA256 |
-| Screenshots | 3-5 captures : écran d'accueil, choix Carrière, écran de session avec barres debug ON, écran SONS, écran badges. Cadre propre, dark theme bien rendu |
-| Vidéo démo 30s | Téléphone posé latéral filmé, audio capté propre, sous-titres EN. Outil : OBS + scrcpy. Pas besoin de contenu explicite, juste l'UX et le son |
-| GitHub Release v0.1.0 | Repo dédié `beatbitch-releases` (public ou GitHub-only), upload APK + SHA256 + changelog. Tag `v0.1.0` |
-| Privacy policy hostée | GitHub Pages depuis le repo (gratuit). URL stable nécessaire pour certains subs |
+| Compte GitHub dédié | ✅ `bbstudioapp` (séparé du compte principal). Email Proton `beatbitch@proton.me` + noreply `282851981+bbstudioapp@users.noreply.github.com` |
+| SSH alias dédié | ✅ Bloc `Host github-bbstudio` dans `~/.ssh/config` avec clé `~/.ssh/id_ed25519_bbstudio`. Remote utilise `git@github-bbstudio:bbstudioapp/beatbitch.git` |
+| Identité Git par-repo | ✅ `git config user.name "BB Studio"` + `user.email` noreply, scopés au repo (pas global) |
+| Réécriture historique | ✅ `git filter-repo` : 38 commits passés en Conventional Commits, author + committer = BB Studio sur tout l'historique. Purge des binaires (gifs `assets/backgrounds/*.gif`, mp3 ambience `assets/audio/ambience/*.mp3`) → `.git` passé de **125 MB à 3 MB** |
+| Externalisation assets binaires | ✅ `BackgroundsLoader` réécrit pour scanner `AssetManifest` au runtime (plus de `backgrounds.json`). `assets/backgrounds/*.{gif,png,jpg,jpeg,webp}` et `assets/audio/ambience/*.mp3` gitignorés. Code dégrade gracieusement quand vide (placeholder animé / silence). Doc CLAUDE.md + README. **Canal de distribution externe à concevoir** (R2 / Drive / S3 privé) |
+| Workflow release auto | ✅ `.github/workflows/release.yml` — déclenché sur push `main` qui bumpe `version:`, lit pubspec, gate sur tag existant, JDK 17 + Flutter stable, tests + APK release signé + SHA256 + Release GitHub. 4 secrets : `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_PASSWORD`, `KEY_ALIAS`. Doc dans `.github/RELEASE_SETUP.md` |
+| Premier release publié | ✅ `v0.1.0` créé automatiquement par le workflow au premier push main, asset `BeatBitch-0.1.0.apk` + `.sha256` |
+| Licence | ✅ `LICENSE` racine = PolyForm Noncommercial 1.0.0 (usage perso/étude/modif autorisés, commercial interdit sans accord écrit) |
+| README racine | ✅ Landing page courte sur `README.md` racine pointant vers `rhythm_coach/`, Releases et `RELEASE_SETUP.md` (la home GitHub n'affichait que `LICENSE` sinon) |
+| Branche `develop` | ✅ Créée à partir de `main`, push tracking `origin/develop`. Workflow inchangé (release.yml ne tourne que sur main) |
+| Branch protection | ✅ Ruleset GitHub `protect-main-develop` ciblant `main` et `develop` : restrict deletions, linear history, PR obligatoire (0 approvals), block force push, bypass list vide. Push direct rejeté côté serveur, tout passe par PR + auto-merge |
 
-**Output** : un lien stable à coller dans le post Reddit.
+**Output** : repo `bbstudioapp/beatbitch` (privé pour l'instant, à passer public quand le contenu est validé), CI/CD opérationnel, garde-fous Git en place. Premier release auto-publié.
+
+**Reste à faire ici** :
+- Concevoir le **canal externe** pour les assets binaires (gifs + mp3 ambience) et l'**étape de récupération** dans le workflow (curl/aws-cli avant `flutter build apk`).
+- Décider quand passer le repo en **public** (recommandation : après v0.1.0 vert + Topics + description configurés).
+- Optionnel : ajouter un `ci.yml` séparé qui tourne `analyze` + `test` sur les PR vers `develop`/`main`, et le cocher en *Required status checks* du ruleset.
 
 ---
 
-## Phase 6 — Lancement Reddit (étalé sur 1 semaine)
+## Phase 6 — Contenu marketing (0.5-1 jour)
+
+| Action | Détail |
+|---|---|
+| Screenshots | 3-5 captures : écran d'accueil, choix Carrière, écran de session avec barres debug ON, écran SONS, écran badges. Cadre propre, dark theme bien rendu |
+| Vidéo démo 30s | Téléphone posé latéral filmé, audio capté propre, sous-titres EN. Outil : OBS + scrcpy. Pas besoin de contenu explicite, juste l'UX et le son |
+| Privacy policy hostée | GitHub Pages depuis le repo (gratuit). URL stable nécessaire pour certains subs. Source `rhythm_coach/PRIVACY.md` déjà bilingue |
+| Description + Topics GitHub | « About » côté repo : description bilingue 1 ligne. Topics : `flutter`, `android`, `dart`, `tts`, `offline`, `nsfw`, `adult`, `side-load` |
+
+**Output** : repo prêt à montrer, screenshots/vidéo prêtes à coller dans un post.
+
+---
+
+## Phase 7 — Lancement Reddit (étalé sur 1 semaine)
 
 | Étape | Quand |
 |---|---|
@@ -100,11 +124,12 @@
 
 | Bloc | Effort | Bloque la suite ? |
 |---|---|---|
-| Phase 1 — Rebranding BeatBitch | 1 j | Oui (le reste utilise le nouveau package) |
-| Phase 2 — Release config ✅ | 0.5-1 j | Oui (APK signé requis pour distribution) |
-| Phase 3 — Adult gate & onboarding ✅ | 1 j | Non (parallélisable avec phase 4) |
+| Phase 1 — Rebranding BeatBitch ✅ | 1 j | Oui |
+| Phase 2 — Release config ✅ | 0.5-1 j | Oui |
+| Phase 3 — Adult gate & onboarding ✅ | 1 j | Non |
 | Phase 4 — Polish & doc ✅ | 0.5 j | Non |
-| Phase 5 — Distribution | 0.5-1 j | Oui (lien stable requis pour le post) |
-| Phase 6 — Reddit | ~1 sem étalée | — |
+| Phase 5 — Repo public & CI/CD ✅ | 0.5 j | Oui (release auto requis pour la distribution) |
+| Phase 6 — Contenu marketing | 0.5-1 j | Oui (lien + visuels requis pour le post) |
+| Phase 7 — Reddit | ~1 sem étalée | — |
 
-**Chemin critique** : Phase 1 → 2 → 5 → 6 (~3 jours minimum). Phases 3 et 4 en parallèle de 5.
+**Chemin critique** : Phase 1 → 2 → 5 → 6 → 7 (~4 jours minimum). Phases 3 et 4 en parallèle.
