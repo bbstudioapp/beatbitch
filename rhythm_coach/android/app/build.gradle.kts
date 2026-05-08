@@ -1,9 +1,25 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+// Charge `android/key.properties` si présent. Fichier gitignoré, contient
+// le chemin du keystore + les mots de passe (cf. key.properties.example).
+// Absent en CI / sur une machine fraîche → on retombe sur la signature
+// debug pour ne pas casser `flutter run --release` ; un build release
+// destiné à la distribution exige le fichier.
+val keystoreProperties = Properties().apply {
+    val keystorePropertiesFile = rootProject.file("key.properties")
+    if (keystorePropertiesFile.exists()) {
+        FileInputStream(keystorePropertiesFile).use { load(it) }
+    }
+}
+val hasReleaseSigning = keystoreProperties.getProperty("storeFile")?.isNotBlank() == true
 
 android {
     namespace = "com.beatbitch.app"
@@ -31,11 +47,34 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (hasReleaseSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
+            // R8 + shrinker : reduce APK size, strip dead code/resources.
+            // Les `-keep` métier sont dans proguard-rules.pro (ML Kit,
+            // flutter_local_notifications) — sans eux la détection visage
+            // et les alarms cassent en release.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }
