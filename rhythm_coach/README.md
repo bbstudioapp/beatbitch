@@ -72,6 +72,16 @@ Le contenu éditorial vit dans `assets/` (sessions JSON, punitions, commentaires
 
 Voir [PRIVACY.md](PRIVACY.md) — version courte : aucune collecte, tout est local, `allowBackup="false"`.
 
+### Licence
+
+Code et contenus éditoriaux (sessions JSON, phrases coach, commentaires aléatoires, surnoms, milestones, etc.) sous **[PolyForm Noncommercial License 1.0.0](../LICENSE)**.
+
+- ✅ **Étudier, forker, modifier, redistribuer** pour usage non-commercial.
+- ✅ **Contributions bienvenues** — nouvelles phrases coach, sessions, traductions, fixes de code, idées de spécialisation, etc. Ouvre une issue ou une PR.
+- ❌ **Vente, monetisation, redistribution commerciale** interdites — pas de fork "BeatBitch Premium" sur Telegram, Gumroad ou un store alternatif.
+
+Les binaires hors-repo (`assets/backgrounds/*.gif`, `assets/audio/ambience/*.mp3`) restent soumis aux droits de leurs sources d'origine et ne sont pas couverts par cette licence.
+
 ---
 
 ## English
@@ -131,6 +141,16 @@ Editorial content lives in `assets/` (JSON sessions, punishments, random comment
 ### Privacy
 
 See [PRIVACY.md](PRIVACY.md) — short version: no collection, everything is local, `allowBackup="false"`.
+
+### License
+
+Code and editorial content (JSON sessions, coach phrases, random comments, nicknames, milestones, etc.) released under the **[PolyForm Noncommercial License 1.0.0](../LICENSE)**.
+
+- ✅ **Study, fork, modify, redistribute** for noncommercial use.
+- ✅ **Contributions welcome** — new coach phrases, sessions, translations, code fixes, specialization ideas, etc. Open an issue or a PR.
+- ❌ **No commercial use, sale, or paid redistribution** — no "BeatBitch Premium" fork on Telegram, Gumroad, or any alternative store.
+
+Off-repo binary assets (`assets/backgrounds/*.gif`, `assets/audio/ambience/*.mp3`) remain subject to their original sources' rights and are not covered by this license.
 
 ---
 
