@@ -706,5 +706,31 @@
   "surpriseSettingsExactAlarmMissing": "Les alarmes exactes sont refusées par le système.",
   "surpriseSettingsBatteryHintTitle": "Optimisation batterie",
   "surpriseSettingsBatteryHintBody": "Sur certains téléphones (Xiaomi, Huawei, Samsung), désactive l'optimisation batterie pour BeatBitch pour garantir les rappels.",
-  "surpriseSettingsOpenBatterySettings": "Ouvrir les paramètres"
+  "surpriseSettingsOpenBatterySettings": "Ouvrir les paramètres",
+  "adultGateTitle": "Accès réservé aux adultes",
+  "adultGateBody": "BeatBitch contient du contenu sexuel explicite : voix de coach crue et dominante, textes explicites, GIFs en arrière-plan. En continuant, tu confirmes :\n\n• avoir au moins 18 ans (ou l'âge légal de majorité dans ton pays) ;\n• utiliser l'app dans un cadre privé — l'audio et le visuel ne se prêtent pas à un usage en lieu public ;\n• comprendre que les phrases peuvent être crues et dominantes.",
+  "adultGateAccept": "J'ai 18 ans, j'accepte",
+  "adultGateLeave": "Quitter",
+  "onboardingStep1Title": "Garde un œil sur l'écran au début",
+  "onboardingStep1Body": "Pour tes premières séances, garde le téléphone sous les yeux : l'animation et les barres t'aident à caler les positions et le rythme. Quand tu seras à l'aise, tu pourras le poser sur le côté et jouer à l'aveugle, guidée par la voix et les bips.",
+  "onboardingStep2Title": "Monte le volume",
+  "onboardingStep2Body": "La coach parle bas et les bips sont fins. Mets le média à fond ou utilise un casque/enceinte. L'app n'envoie rien sur Internet.",
+  "onboardingStep3Title": "Règle la voix, mets ton prénom",
+  "onboardingStep3Body": "Sur l'écran SONS (icône équaliseur) : règle la voix par défaut (vitesse, timbre) et écoute un exemple. Les coachs de carrière ont leur propre voix figée — seule la voix par défaut, utilisée hors-carrière, est paramétrable.\n\nSur l'écran Profil (icône silhouette) : indique ton prénom et choisis tes surnoms. La coach pourra t'appeler par ton nom.",
+  "onboardingNext": "Suivant",
+  "onboardingPrevious": "Précédent",
+  "onboardingTestVoice": "Tester ma voix",
+  "onboardingSkip": "Plus tard",
+  "profileAboutSection": "À PROPOS",
+  "profileAboutVersion": "{appName} v{version} (build {build})",
+  "@profileAboutVersion": {
+    "placeholders": {
+      "appName": { "type": "String" },
+      "version": { "type": "String" },
+      "build": { "type": "String" }
+    }
+  },
+  "profileAboutOffline": "100 % hors ligne — aucune télémétrie, aucun envoi réseau.",
+  "sessionCameraInactiveWarning": "Vérif caméra inactive — relancer la calibration",
+  "sessionCameraInactiveAction": "Calibrer"
 }

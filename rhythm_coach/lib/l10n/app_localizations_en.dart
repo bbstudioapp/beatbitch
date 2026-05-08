@@ -1387,4 +1387,69 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get surpriseSettingsOpenBatterySettings => 'Open the settings';
+
+  @override
+  String get adultGateTitle => 'Adults only';
+
+  @override
+  String get adultGateBody =>
+      'BeatBitch contains explicit sexual content: crude, dominant coach voice, explicit text, and background GIFs. By continuing, you confirm that:\n\n• you are at least 18 (or the age of majority where you live);\n• you will use the app in private — audio and visuals are not suited to public use;\n• you understand the phrases can be crude and dominant.';
+
+  @override
+  String get adultGateAccept => 'I\'m 18+, I accept';
+
+  @override
+  String get adultGateLeave => 'Leave';
+
+  @override
+  String get onboardingStep1Title => 'Keep an eye on the screen at first';
+
+  @override
+  String get onboardingStep1Body =>
+      'For your first sessions, keep the phone in view: the animation and bars help you nail positions and rhythm. Once you\'re comfortable, you can lay it on its side and play hands-free, guided by voice and beeps.';
+
+  @override
+  String get onboardingStep2Title => 'Crank the volume';
+
+  @override
+  String get onboardingStep2Body =>
+      'The coach speaks low and the beeps are subtle. Push media volume up or use headphones/a speaker. The app sends nothing to the Internet.';
+
+  @override
+  String get onboardingStep3Title => 'Set up voice and name';
+
+  @override
+  String get onboardingStep3Body =>
+      'On the SOUNDS screen (equalizer icon): tune the default voice (speed, timbre) and play a sample. Career coaches use their own fixed voices — only the default (non-career) voice is adjustable.\n\nOn the Profile screen (silhouette icon): enter your first name and pick your nicknames. The coach can call you by name.';
+
+  @override
+  String get onboardingNext => 'Next';
+
+  @override
+  String get onboardingPrevious => 'Back';
+
+  @override
+  String get onboardingTestVoice => 'Test my voice';
+
+  @override
+  String get onboardingSkip => 'Later';
+
+  @override
+  String get profileAboutSection => 'ABOUT';
+
+  @override
+  String profileAboutVersion(String appName, String version, String build) {
+    return '$appName v$version (build $build)';
+  }
+
+  @override
+  String get profileAboutOffline =>
+      '100% offline — no telemetry, nothing sent over the network.';
+
+  @override
+  String get sessionCameraInactiveWarning =>
+      'Camera check inactive — recalibrate';
+
+  @override
+  String get sessionCameraInactiveAction => 'Calibrate';
 }

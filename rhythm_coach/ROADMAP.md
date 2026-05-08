@@ -36,17 +36,22 @@
 
 ---
 
-## Phase 3 — Adult gate & onboarding (1 jour)
+## Phase 3 — Adult gate & onboarding ✅ DONE
 
-| Action | Détail |
+| Action | État |
 |---|---|
-| `AdultConsentService` | Service léger style `LocaleService` : clé `app.adult_consent_accepted` dans `SharedPreferences`, getter/setter, écouté au boot |
-| Dialog 18+ non-skippable | Au premier `ModeSelectionScreen.initState`, si `consent != true` → `showDialog(barrierDismissible: false)` plein écran. Texte : "≥18 ans", "contenu sexuel explicite", "fonctionne en vocal — pas en lieu public", bouton "J'accepte" |
-| Onboarding 3 étapes | Sheet à la 1ère ouverture (clé `onboarding.shown`) après le consent : 1. téléphone latéral / 2. volume haut / 3. tester ma voix → push `SoundDemoScreen` |
-| Snackbar caméra | Dans `SessionScreen.initState`, si toggle camCheck ON et `buildVerifierIfEnabled` retourne null → `SnackBar` "Vérif caméra inactive — relancer la calibration" + action vers `CameraTestScreen` |
-| "À propos / version" | Section en bas de `ProfileScreen` (ou `SoundDemoScreen`), lit `package_info_plus`, affiche `BeatBitch v0.1.0 (build 1)`. Optionnel : lien vers GitHub repo |
+| `AdultConsentService` | ✅ `lib/services/adult_consent_service.dart` (singleton + `SharedPreferences` clé `app.adult_consent_accepted`, init dans `main()`) |
+| Dialog 18+ non-skippable | ✅ `lib/widgets/adult_gate_dialog.dart`, `barrierDismissible: false` + `PopScope(canPop:false)`, joue au 1er postFrame de `ModeSelectionScreen` si non accepté. Bouton « Quitter » → `SystemNavigator.pop`, « J'accepte » persiste le consent |
+| Onboarding 3 étapes | ✅ `lib/widgets/onboarding_sheet.dart`, sheet modale (non dismissible), 3 pages : pose latérale / volume / tester ma voix. Dernier bouton push `SoundDemoScreen`. `OnboardingService` (clé `onboarding.shown`) marque l'affichage à la fermeture |
+| Snackbar caméra | ✅ `SessionScreen.initState` : si `holdVerifier == null` ET toggle `cameraHoldCheck` ON → `SnackBar` `sessionCameraInactiveWarning` avec action `Calibrer` qui push `CameraTestScreen` |
+| "À propos / version" | ✅ `package_info_plus ^9.0.0` ajouté à `pubspec.yaml`. Section `_AboutSection` en bas de `ProfileScreen`, affiche `BeatBitch v{version} (build {build})` + ligne « 100 % offline » |
 
-**Output** : première utilisation propre, conforme aux attentes Reddit NSFW.
+**Output** : première utilisation propre, conforme aux attentes Reddit NSFW. `flutter analyze` clean, 81 tests passent, APK debug build OK.
+
+**Polish post-phase 3** :
+- Section Debug de l'écran SONS désormais wrappée par `kDebugMode` → invisible en release. Le toggle « Vérif caméra des holds » est dans cette section, donc indisponible en release (cohérent avec le statut alpha de la fonction caméra ; reste activable en build debug pour les tests).
+- Bloc Identité (prénom + surnoms) extrait de SONS vers `lib/widgets/identity_section.dart` et ancré en haut de `ProfileScreen` (plus logique). `SoundDemoScreen` ne dépend plus de `UserProfileService`. `onboardingStep3` reformulé en deux paragraphes (voix sur SONS, prénom sur Profil).
+- Texte de l'adult gate enrichi pour mentionner les GIFs visuels en arrière-plan (pas que l'audio). Étape 1 de l'onboarding nuancée : « garde un œil sur l'écran au début », pose latérale possible plus tard avec l'expérience.
 
 ---
 
@@ -97,7 +102,7 @@
 |---|---|---|
 | Phase 1 — Rebranding BeatBitch | 1 j | Oui (le reste utilise le nouveau package) |
 | Phase 2 — Release config | 0.5-1 j | Oui (APK signé requis pour distribution) |
-| Phase 3 — Adult gate & onboarding | 1 j | Non (parallélisable avec phase 4) |
+| Phase 3 — Adult gate & onboarding ✅ | 1 j | Non (parallélisable avec phase 4) |
 | Phase 4 — Polish & doc | 0.5 j | Non |
 | Phase 5 — Distribution | 0.5-1 j | Oui (lien stable requis pour le post) |
 | Phase 6 — Reddit | ~1 sem étalée | — |

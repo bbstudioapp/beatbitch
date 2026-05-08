@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
 import '../career/screens/career_scenario_debug_screen.dart';
@@ -11,7 +12,6 @@ import '../services/beep_engine.dart';
 import '../services/coach_phrases_loader.dart';
 import '../services/locale_service.dart';
 import '../services/tts_service.dart';
-import '../services/user_profile_service.dart';
 import '../theme/app_theme.dart';
 
 /// Écran d'apprentissage des sons + réglages voix/ambiance partagés
@@ -22,7 +22,6 @@ class SoundDemoScreen extends StatefulWidget {
   final TtsService tts;
   final AmbienceEngine ambience;
   final List<AmbiencePack> ambiencePacks;
-  final UserProfileService userProfile;
 
   const SoundDemoScreen({
     super.key,
@@ -30,7 +29,6 @@ class SoundDemoScreen extends StatefulWidget {
     required this.tts,
     required this.ambience,
     required this.ambiencePacks,
-    required this.userProfile,
   });
 
   @override
@@ -64,18 +62,12 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
   bool _cameraHoldCheck = false;
   bool _skipSessionButton = false;
 
-  // Identité.
-  final TextEditingController _prenomController = TextEditingController();
-  final TextEditingController _newNicknameController = TextEditingController();
-
   @override
   void initState() {
     super.initState();
-    widget.userProfile.addListener(_onProfileChanged);
     Future.wait([
       widget.beep.ensureReady(),
       widget.tts.init(),
-      widget.userProfile.load(),
     ]).then((_) async {
       final voices = await widget.tts.listVoicesForLocale(widget.tts.locale);
       final showBar = await _debug.getShowStaminaBar();
@@ -106,25 +98,12 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
         _showBackgroundMedia = showBgMedia;
         _cameraHoldCheck = camCheck;
         _skipSessionButton = skipSession;
-        _prenomController.text = widget.userProfile.prenom ?? '';
       });
     });
   }
 
-  void _onProfileChanged() {
-    if (!mounted) return;
-    final prenom = widget.userProfile.prenom ?? '';
-    if (_prenomController.text != prenom) {
-      _prenomController.text = prenom;
-    }
-    setState(() {});
-  }
-
   @override
   void dispose() {
-    widget.userProfile.removeListener(_onProfileChanged);
-    _prenomController.dispose();
-    _newNicknameController.dispose();
     widget.beep.stop();
     // L'ambiance est laissée pilotée par l'engine global ; on coupe juste
     // le test d'écoute si on quitte la page.
@@ -146,20 +125,6 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
   Future<void> _testVoice() async {
     await widget.tts.stop();
     await widget.tts.speak(CoachPhrasesService.instance.current.testVoicePhrase);
-  }
-
-  Future<void> _testIdentity() async {
-    await widget.tts.stop();
-    await widget.tts.speak(
-      CoachPhrasesService.instance.current.testIdentityPhrase,
-    );
-  }
-
-  Future<void> _addCustomNickname() async {
-    final value = _newNicknameController.text.trim();
-    if (value.isEmpty) return;
-    await widget.userProfile.addCustomNickname(value);
-    _newNicknameController.clear();
   }
 
   Future<void> _previewAmbience(SessionMode mode) async {
@@ -196,98 +161,6 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                _buildSection(
-                  title: t.soundsIdentitySection,
-                  subtitle: t.soundsIdentitySubtitle('name'),
-                  children: [
-                    TextField(
-                      controller: _prenomController,
-                      textInputAction: TextInputAction.done,
-                      decoration: InputDecoration(
-                        labelText: t.soundsFirstNameLabel,
-                        helperText: t.soundsFirstNameHelper,
-                      ),
-                      onSubmitted: (v) => widget.userProfile.setPrenom(v),
-                      onEditingComplete: () =>
-                          widget.userProfile.setPrenom(_prenomController.text),
-                    ),
-                    const SizedBox(height: 8),
-                    _SoundButton(
-                      label: t.soundsTestSubstitution,
-                      subtitle:
-                          '« ${CoachPhrasesService.instance.current.testIdentityPhrase} »',
-                      onTap: _testIdentity,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      t.soundsDefaultNicknames,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.textSecondary,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    for (final n in widget.userProfile.defaultNicknames)
-                      _NicknameToggleTile(
-                        label: n,
-                        enabled:
-                            !widget.userProfile.disabledDefaults.contains(n),
-                        onChanged: (v) =>
-                            widget.userProfile.setDefaultEnabled(n, v),
-                      ),
-                    const SizedBox(height: 12),
-                    Text(
-                      t.soundsCustomNicknames,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.textSecondary,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    if (widget.userProfile.customNicknames.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Text(
-                          t.soundsNoCustomNicknames,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppTheme.textMuted,
-                          ),
-                        ),
-                      ),
-                    for (final n in widget.userProfile.customNicknames)
-                      _NicknameRemovableTile(
-                        label: n,
-                        onRemove: () =>
-                            widget.userProfile.removeCustomNickname(n),
-                      ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _newNicknameController,
-                            textInputAction: TextInputAction.done,
-                            decoration: InputDecoration(
-                              labelText: t.soundsAddNicknameLabel,
-                              isDense: true,
-                            ),
-                            onSubmitted: (_) => _addCustomNickname(),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          tooltip: t.commonAdd,
-                          icon: const Icon(Icons.add_circle,
-                              color: AppTheme.accent),
-                          onPressed: _addCustomNickname,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
                 _buildSection(
                   title: t.soundsVoiceSection,
                   subtitle: t.soundsVoiceSubtitle,
@@ -489,7 +362,8 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
                     ),
                   ],
                 ),
-                _buildSection(
+                if (kDebugMode)
+                  _buildSection(
                   title: t.soundsDebugSection,
                   subtitle: t.soundsDebugSubtitle,
                   children: [
@@ -1226,47 +1100,6 @@ class _AmbiencePreviewButton extends StatelessWidget {
   }
 }
 
-class _NicknameToggleTile extends StatelessWidget {
-  final String label;
-  final bool enabled;
-  final ValueChanged<bool> onChanged;
-
-  const _NicknameToggleTile({
-    required this.label,
-    required this.enabled,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () => onChanged(!enabled),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(
-          children: [
-            Icon(
-              enabled ? Icons.check_box : Icons.check_box_outline_blank,
-              color: enabled ? AppTheme.accent : AppTheme.textMuted,
-              size: 20,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: enabled ? AppTheme.textPrimary : AppTheme.textMuted,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _LanguagePicker extends StatelessWidget {
   final Locale current;
   final ValueChanged<Locale> onChanged;
@@ -1323,40 +1156,3 @@ class _LanguagePicker extends StatelessWidget {
   }
 }
 
-class _NicknameRemovableTile extends StatelessWidget {
-  final String label;
-  final VoidCallback onRemove;
-
-  const _NicknameRemovableTile({
-    required this.label,
-    required this.onRemove,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          const Icon(Icons.label_important_outline,
-              color: AppTheme.accent, size: 18),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-          ),
-          IconButton(
-            tooltip: AppLocalizations.of(context).soundsRemoveNicknameTooltip,
-            icon: const Icon(Icons.close, color: AppTheme.textMuted, size: 18),
-            onPressed: onRemove,
-          ),
-        ],
-      ),
-    );
-  }
-}

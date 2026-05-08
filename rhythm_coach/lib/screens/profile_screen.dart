@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../career/services/career_progress_service.dart';
 import '../career/services/specialization_service.dart';
@@ -10,12 +11,30 @@ import '../models/badge.dart';
 import '../services/badge_service.dart';
 import '../services/reputation_service.dart';
 import '../services/stats_service.dart';
+import '../services/tts_service.dart';
+import '../services/user_profile_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/identity_section.dart';
 
 /// Écran Profil : affiche le score de réputation, les stats cumulées,
-/// et la grille des badges débloqués / en cours.
+/// et la grille des badges débloqués / en cours. Hôte aussi le bloc
+/// Identité (prénom + surnoms) — déplacé depuis l'écran SONS pour
+/// regrouper tout ce qui touche « qui je suis pour la coach ».
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  /// Service de profil utilisateur, partagé avec `ModeSelectionScreen`
+  /// (pour que les surnoms restent synchro entre les écrans).
+  final UserProfileService userProfile;
+
+  /// TTS partagé, utilisé par la section Identité pour le bouton
+  /// « Tester » (lit la phrase d'identité localisée avec substitution
+  /// `{name}`). Optionnel : si null, le bouton n'apparaît pas.
+  final TtsService? tts;
+
+  const ProfileScreen({
+    super.key,
+    required this.userProfile,
+    this.tts,
+  });
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -33,13 +52,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    // Chargement asynchrone — `load()` est idempotent côté service. La
+    // section Identité s'abonne ensuite via `addListener` pour rebuild
+    // quand prénom / surnoms changent.
+    widget.userProfile.load();
     _bundleFuture = _loadBundle();
   }
 
   Future<_ProfileBundle> _loadBundle() async {
     final repSnap = await _rep.snapshot();
     final badges = await _badges.currentStates(repSnap.stats);
-    return _ProfileBundle(reputation: repSnap, badges: badges);
+    final packageInfo = await PackageInfo.fromPlatform();
+    return _ProfileBundle(
+      reputation: repSnap,
+      badges: badges,
+      packageInfo: packageInfo,
+    );
   }
 
   Future<void> _confirmAndResetAll() async {
@@ -117,7 +145,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 level: level,
                 score: bundle.reputation.score,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
+              _SectionLabel(t.soundsIdentitySection),
+              const SizedBox(height: 8),
+              IdentitySection(
+                userProfile: widget.userProfile,
+                tts: widget.tts,
+              ),
+              const SizedBox(height: 24),
               _SectionLabel(t.profileStatsSection),
               const SizedBox(height: 8),
               _StatsBlock(stats: bundle.reputation.stats),
@@ -130,10 +165,63 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 resetting: _resetting,
                 onReset: _confirmAndResetAll,
               ),
+              const SizedBox(height: 24),
+              _AboutSection(info: bundle.packageInfo),
             ],
           );
         },
       ),
+    );
+  }
+}
+
+class _AboutSection extends StatelessWidget {
+  final PackageInfo info;
+  const _AboutSection({required this.info});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _SectionLabel(t.profileAboutSection),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: AppTheme.surface,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                t.profileAboutVersion(
+                  info.appName,
+                  info.version,
+                  info.buildNumber,
+                ),
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                t.profileAboutOffline,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppTheme.textMuted,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -521,6 +609,11 @@ class _BadgeCard extends StatelessWidget {
 class _ProfileBundle {
   final ReputationSnapshot reputation;
   final List<BadgeState> badges;
+  final PackageInfo packageInfo;
 
-  const _ProfileBundle({required this.reputation, required this.badges});
+  const _ProfileBundle({
+    required this.reputation,
+    required this.badges,
+    required this.packageInfo,
+  });
 }

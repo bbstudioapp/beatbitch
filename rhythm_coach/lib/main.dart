@@ -9,8 +9,10 @@ import 'career/services/coach_service.dart';
 import 'career/services/milestone_service.dart';
 import 'l10n/app_localizations.dart';
 import 'screens/mode_selection_screen.dart';
+import 'services/adult_consent_service.dart';
 import 'services/coach_phrases_loader.dart';
 import 'services/locale_service.dart';
+import 'services/onboarding_service.dart';
 import 'services/surprise_alert_service.dart';
 import 'services/surprise_lifecycle_observer.dart';
 import 'services/surprise_notifications_bootstrap.dart';
@@ -33,6 +35,8 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await LocaleService.instance.init();
+  await AdultConsentService.instance.init();
+  await OnboardingService.instance.init();
   await CoachPhrasesService.instance.ensureLoaded();
   // Charge le catalogue puis greffe les packs de phrases par coach
   // (assets/career/coaches/<id>_<lang>.json). Tout asset manquant est
