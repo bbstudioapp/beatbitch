@@ -142,6 +142,6 @@ void surpriseNotificationTapHandler(NotificationResponse response) {
   // pas de dépendance UI. Sûr depuis un isolate top-level.
   // ignore: discarded_futures
   SurpriseAlertService.markIntentPending(payload).catchError((Object e) {
-    debugPrint('Surprise tap handler: $e');
+    if (kDebugMode) debugPrint('Surprise tap handler: $e');
   });
 }

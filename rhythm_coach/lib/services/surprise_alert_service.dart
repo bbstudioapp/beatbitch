@@ -547,7 +547,9 @@ class SurpriseAlertService {
     } catch (e) {
       // Best-effort : on ne casse pas l'arming si une alarm individuelle
       // échoue (p.ex. exact-alarm refusé sur certains OEM).
-      debugPrint('SurpriseAlert: zonedSchedule failed for id=$id: $e');
+      if (kDebugMode) {
+        debugPrint('SurpriseAlert: zonedSchedule failed for id=$id: $e');
+      }
     }
   }
 

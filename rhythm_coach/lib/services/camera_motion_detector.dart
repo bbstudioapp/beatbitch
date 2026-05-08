@@ -264,7 +264,9 @@ class CameraMotionDetector {
 
       _setState(MotionDetectorState.idle);
     } catch (e, st) {
-      debugPrint('CameraMotionDetector init failed: $e\n$st');
+      if (kDebugMode) {
+        debugPrint('CameraMotionDetector init failed: $e\n$st');
+      }
       _setState(MotionDetectorState.error);
       rethrow;
     }
@@ -388,7 +390,7 @@ class CameraMotionDetector {
     try {
       faces = await _faceDetector.processImage(input);
     } catch (e) {
-      debugPrint('FaceDetector error: $e');
+      if (kDebugMode) debugPrint('FaceDetector error: $e');
       return;
     }
     if (faces.isEmpty) return;

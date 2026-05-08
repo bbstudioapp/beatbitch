@@ -55,16 +55,16 @@
 
 ---
 
-## Phase 4 — Polish & doc (0.5 jour)
+## Phase 4 — Polish & doc ✅ DONE
 
-| Action | Détail |
+| Action | État |
 |---|---|
-| `kDebugMode` sur les `debugPrint` non gardés | Concerne 5-6 fichiers (`session_loader.dart:36`, `surprise_alert_service.dart:550`, `surprise_notifications_bootstrap.dart:145`, `camera_motion_detector.dart:267,391`, `coach_loader.dart`, `milestone_service.dart`). `debugPrint` est neutre en release de toute façon mais à standardiser |
-| README EN+FR | À la racine du repo : screenshots (placeholder), feature list, install instructions side-load, mention "100% offline / no telemetry", lien privacy policy, badge version |
-| `PRIVACY.md` | 1 page : aucune donnée envoyée, `shared_preferences` local, `allowBackup="false"`, ML Kit on-device, contact pour bug reports |
-| Mise à jour `CLAUDE.md` | Renommer toutes les occurrences `Rhythm Coach` → `BeatBitch` |
+| `kDebugMode` sur les `debugPrint` non gardés | ✅ 5 sites wrappés : `surprise_notifications_bootstrap.dart:145`, `surprise_alert_service.dart:550`, `camera_motion_detector.dart:267+391`, `coach_service.dart:74`. Audit complet : tous les autres `debugPrint` de `lib/` étaient déjà gardés. `flutter analyze` clean, 81 tests passent |
+| README EN+FR | ✅ `rhythm_coach/README.md` réécrit, bilingue avec ancres FR/EN, badges version/platform/offline, feature list, install side-load, mention 100 % offline / no telemetry, liens vers `PRIVACY.md` et `CLAUDE.md`, section screenshots placeholder |
+| `PRIVACY.md` | ✅ `rhythm_coach/PRIVACY.md` bilingue : aucune donnée envoyée, `INTERNET` non déclaré, `CAMERA` opt-in (ML Kit on-device), `SharedPreferences` sandbox, `allowBackup="false"`, TTS local uniquement, note ML Kit model download via Google Play Services |
+| Mise à jour `CLAUDE.md` | ✅ Le titre est `# BeatBitch` depuis la Phase 1. Aucune occurrence "Rhythm Coach" en branding résiduel. Seul `cd rhythm_coach` (chemin du dossier physique) conservé volontairement |
 
-**Output** : repo public présentable.
+**Output** : repo présentable, branding cohérent, debug logs propres en release.
 
 ---
 
@@ -103,7 +103,7 @@
 | Phase 1 — Rebranding BeatBitch | 1 j | Oui (le reste utilise le nouveau package) |
 | Phase 2 — Release config | 0.5-1 j | Oui (APK signé requis pour distribution) |
 | Phase 3 — Adult gate & onboarding ✅ | 1 j | Non (parallélisable avec phase 4) |
-| Phase 4 — Polish & doc | 0.5 j | Non |
+| Phase 4 — Polish & doc ✅ | 0.5 j | Non |
 | Phase 5 — Distribution | 0.5-1 j | Oui (lien stable requis pour le post) |
 | Phase 6 — Reddit | ~1 sem étalée | — |
 
