@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Privacy Policy / Vie privée
+    url: https://bbstudioapp.github.io/beatbitch/PRIVACY
+    about: How BeatBitch handles your data (spoiler — it doesn't leave your phone). / Comment BeatBitch gère tes données (spoiler — elles ne quittent pas ton téléphone).
+  - name: Releases (signed APK / APK signé)
+    url: https://github.com/bbstudioapp/beatbitch/releases
+    about: Download the latest signed APK with SHA256. / Télécharger le dernier APK signé avec SHA256.
