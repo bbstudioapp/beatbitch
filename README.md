@@ -24,7 +24,7 @@
 Le code Flutter, les assets et la doc projet vivent dans **[`rhythm_coach/`](rhythm_coach/)**.
 
 - **[Présentation complète FR/EN](rhythm_coach/README.md)** — fonctionnalités, modes, install, build local
-- **[Vie privée / Privacy](rhythm_coach/PRIVACY.md)** — aucune collecte, tout est local, `allowBackup="false"`
+- **[Vie privée / Privacy](docs/PRIVACY.md)** — aucune collecte, tout est local, `allowBackup="false"` · [version publiée](https://bbstudioapp.github.io/beatbitch/PRIVACY)
 - **[Setup CI/CD](.github/RELEASE_SETUP.md)** — comment fonctionne le workflow de release auto
 
 ---

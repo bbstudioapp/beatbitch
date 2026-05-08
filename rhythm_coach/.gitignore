@@ -55,3 +55,6 @@ assets/backgrounds/*.jpg
 assets/backgrounds/*.jpeg
 assets/backgrounds/*.webp
 assets/audio/ambience/*.mp3
+
+# Captures marketing — pèsent et changent souvent, hors historique code.
+screenshots/
