@@ -388,7 +388,7 @@ class _StatsBlock extends StatelessWidget {
           gateBy: stats.sessionsCompleted),
       _StatEntry(t.profileStatNoFailStreak, '${stats.sessionsNoFailStreak}',
           gateBy: stats.sessionsNoFailStreak),
-      _StatEntry(t.profileStatDailyStreak, '${stats.dailyStreak} j',
+      _StatEntry(t.profileStatDailyStreak, t.formatDaysShort(stats.dailyStreak),
           gateBy: stats.dailyStreak),
       _StatEntry(t.profileStatTotalTime,
           formatDurationDetailed(context, stats.totalSeconds),

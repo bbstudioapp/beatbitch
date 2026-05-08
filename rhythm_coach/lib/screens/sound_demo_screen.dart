@@ -1025,7 +1025,9 @@ class _AmbiencePackPicker extends StatelessWidget {
                 .map((p) => DropdownMenuItem(
                       value: p.id,
                       child: Text(
-                        p.name,
+                        p.id == AmbiencePack.none.id
+                            ? AppLocalizations.of(context).soundsPackNoneLabel
+                            : p.name,
                         style: const TextStyle(fontSize: 13),
                       ),
                     ))

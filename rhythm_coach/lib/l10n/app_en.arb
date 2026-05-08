@@ -286,6 +286,10 @@
       "mm": { "type": "String" }
     }
   },
+  "formatDaysShort": "{d}d",
+  "@formatDaysShort": {
+    "placeholders": { "d": { "type": "int" } }
+  },
 
   "settingsAppBarTitle": "SETTINGS",
   "settingsLanguageSection": "Language",
@@ -320,6 +324,7 @@
   "soundsAmbienceSection": "Ambience",
   "soundsAmbienceSubtitle": "Background pack played during sessions. Selection shared with the play screen. Tap a mode to listen.",
   "soundsPackLabel": "Pack",
+  "soundsPackNoneLabel": "None",
   "soundsModeLabel": "Mode {name}",
   "@soundsModeLabel": {
     "placeholders": {

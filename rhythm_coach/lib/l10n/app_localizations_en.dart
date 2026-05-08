@@ -541,6 +541,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String formatDaysShort(int d) {
+    return '${d}d';
+  }
+
+  @override
   String get settingsAppBarTitle => 'SETTINGS';
 
   @override
@@ -627,6 +632,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get soundsPackLabel => 'Pack';
+
+  @override
+  String get soundsPackNoneLabel => 'None';
 
   @override
   String soundsModeLabel(String name) {
