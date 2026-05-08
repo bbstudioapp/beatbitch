@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../career/screens/career_screen.dart';
+import '../career/services/career_progress_service.dart';
 import '../models/ambience_pack.dart';
 import '../services/adult_consent_service.dart';
 import '../services/ambience_engine.dart';
@@ -37,11 +38,22 @@ class ModeSelectionScreen extends StatefulWidget {
 
 class _ModeSelectionScreenState extends State<ModeSelectionScreen>
     with WidgetsBindingObserver {
+  /// Niveau carrière minimum pour débloquer les notifications surprise.
+  /// Niveau 5 = palier "Petite Salope Confirmée" — premier palier
+  /// non-débutant. Cohérent avec _includeHandUnlockLevel (4) et plus
+  /// strict que _quickieUnlockLevel (8).
+  static const int _surpriseUnlockLevel = 5;
+
   late final TtsService _tts;
   late final BeepEngine _beep;
   late final AmbienceEngine _ambience;
   late final UserProfileService _userProfile;
+  late final CareerProgressService _careerProgress;
   late final Future<List<AmbiencePack>> _ambiencePacksFuture;
+
+  /// Niveau max persisté. Null tant que pas chargé → on cache l'icône
+  /// surprise par défaut (état pessimiste, évite un flash de l'icône).
+  int? _maxLevel;
 
   /// Garde-fou pour éviter de pousser deux fois la SessionScreen surprise
   /// (entre le tap et l'arrivée du resumed sur la même action).
@@ -54,12 +66,14 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
     _beep = BeepEngine();
     _ambience = AmbienceEngine();
     _userProfile = UserProfileService();
+    _careerProgress = CareerProgressService();
     _tts.attachProfile(_userProfile);
     LocaleService.instance.addListener(_handleLocaleChanged);
     // Chargement asynchrone du profil — pas besoin d'await ici, le service
     // expose un `notifyListeners` et la résolution `{name}` se contente du
     // fallback tant que le load n'est pas terminé.
     _userProfile.load();
+    unawaited(_refreshMaxLevel());
     _ambiencePacksFuture = AmbiencePackLoader().load();
     // Catalogue des fonds média poussé dans le singleton dédié. Bundle
     // vide possible (= JSON sans entrées) → le widget retombe sur le
@@ -118,7 +132,16 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
       // Warm tap : l'utilisatrice a tapé une notif et l'app revient au
       // foreground. Le callback top-level a déjà posé le flag d'intent.
       _maybeLaunchSurprise();
+      // Le niveau peut avoir bougé pendant que l'app était en background
+      // (ex. session terminée par un share intent ou autre flow).
+      unawaited(_refreshMaxLevel());
     }
+  }
+
+  Future<void> _refreshMaxLevel() async {
+    final lvl = await _careerProgress.getMaxLevel();
+    if (!mounted) return;
+    if (_maxLevel != lvl) setState(() => _maxLevel = lvl);
   }
 
   Future<void> _maybeLaunchSurprise() async {
@@ -167,6 +190,7 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
           tts: _tts,
           ambience: _ambience,
           ambiencePacks: ambiencePacks,
+          userProfile: _userProfile,
         ),
       ),
     );
@@ -185,16 +209,18 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
   }
 
   void _openCareer() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => CareerScreen(
-          tts: _tts,
-          beep: _beep,
-          ambience: _ambience,
-          userProfile: _userProfile,
-        ),
-      ),
-    );
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => CareerScreen(
+              tts: _tts,
+              beep: _beep,
+              ambience: _ambience,
+              userProfile: _userProfile,
+            ),
+          ),
+        )
+        .then((_) => _refreshMaxLevel());
   }
 
   @override
@@ -202,13 +228,24 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
     final t = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text(t.modeSelectionAppBarTitle),
-        actions: [
-          IconButton(
-            tooltip: t.modeSelectionSurpriseTooltip,
-            icon: const Icon(Icons.notifications_active_outlined),
-            onPressed: _openSurpriseSettings,
+        titleSpacing: 0,
+        title: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Image.asset(
+            'assets/icon/app_icon.png',
+            height: 36,
+            width: 36,
+            filterQuality: FilterQuality.medium,
+            semanticLabel: t.modeSelectionAppBarTitle,
           ),
+        ),
+        actions: [
+          if ((_maxLevel ?? 1) >= _surpriseUnlockLevel)
+            IconButton(
+              tooltip: t.modeSelectionSurpriseTooltip,
+              icon: const Icon(Icons.notifications_active_outlined),
+              onPressed: _openSurpriseSettings,
+            ),
           IconButton(
             tooltip: t.modeSelectionProfileTooltip,
             icon: const Icon(Icons.person_outline),
@@ -254,19 +291,19 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
               const SizedBox(height: 32),
               Expanded(
                 child: _ModeCard(
-                  title: t.modeSelectionScenarioTitle,
-                  subtitle: t.modeSelectionScenarioSubtitle,
-                  icon: Icons.menu_book_outlined,
-                  onTap: _openScenario,
+                  title: t.modeSelectionCareerTitle,
+                  subtitle: t.modeSelectionCareerSubtitle,
+                  icon: Icons.military_tech_outlined,
+                  onTap: _openCareer,
                 ),
               ),
               const SizedBox(height: 16),
               Expanded(
                 child: _ModeCard(
-                  title: t.modeSelectionCareerTitle,
-                  subtitle: t.modeSelectionCareerSubtitle,
-                  icon: Icons.military_tech_outlined,
-                  onTap: _openCareer,
+                  title: t.modeSelectionScenarioTitle,
+                  subtitle: t.modeSelectionScenarioSubtitle,
+                  icon: Icons.menu_book_outlined,
+                  onTap: _openScenario,
                 ),
               ),
             ],
