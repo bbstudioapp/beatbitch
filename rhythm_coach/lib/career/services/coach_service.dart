@@ -70,8 +70,10 @@ class CoachService extends ChangeNotifier {
   void attachPhrases(List<Coach> coaches) {
     final issues = CoachCatalogValidator.validate(coaches);
     if (issues.isNotEmpty) {
-      for (final i in issues) {
-        debugPrint('[CoachService] catalogue incohérent : $i');
+      if (kDebugMode) {
+        for (final i in issues) {
+          debugPrint('[CoachService] catalogue incohérent : $i');
+        }
       }
       assert(issues.isEmpty,
           'Catalogue de coachs incohérent :\n  - ${issues.join("\n  - ")}');
