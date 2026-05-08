@@ -286,6 +286,10 @@
       "mm": { "type": "String" }
     }
   },
+  "formatDaysShort": "{d} j",
+  "@formatDaysShort": {
+    "placeholders": { "d": { "type": "int" } }
+  },
 
   "settingsAppBarTitle": "RÉGLAGES",
   "settingsLanguageSection": "Langue",
@@ -320,6 +324,7 @@
   "soundsAmbienceSection": "Ambiance",
   "soundsAmbienceSubtitle": "Pack d'arrière-plan appliqué pendant les séances. Sélection partagée avec l'écran de jeu. Touche un mode pour écouter.",
   "soundsPackLabel": "Pack",
+  "soundsPackNoneLabel": "Aucune",
   "soundsModeLabel": "Mode {name}",
   "@soundsModeLabel": {
     "placeholders": {
