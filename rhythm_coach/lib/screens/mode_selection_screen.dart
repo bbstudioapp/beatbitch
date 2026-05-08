@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../l10n/app_localizations.dart';
 import '../career/screens/career_screen.dart';
@@ -144,6 +145,24 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
     if (_maxLevel != lvl) setState(() => _maxLevel = lvl);
   }
 
+  Future<void> _showAbout() async {
+    final info = await PackageInfo.fromPlatform();
+    if (!mounted) return;
+    final t = AppLocalizations.of(context);
+    showAboutDialog(
+      context: context,
+      applicationIcon: Image.asset(
+        'assets/icon/app_icon.png',
+        height: 48,
+        width: 48,
+        filterQuality: FilterQuality.medium,
+      ),
+      applicationName: info.appName,
+      applicationVersion: 'v${info.version} (build ${info.buildNumber})',
+      applicationLegalese: t.profileAboutOffline,
+    );
+  }
+
   Future<void> _maybeLaunchSurprise() async {
     if (!mounted || _surpriseInFlight) return;
     final fired = await SurpriseAlertService.instance.consumeNextIntent();
@@ -230,13 +249,20 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
       appBar: AppBar(
         titleSpacing: 0,
         title: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Image.asset(
-            'assets/icon/app_icon.png',
-            height: 36,
-            width: 36,
-            filterQuality: FilterQuality.medium,
-            semanticLabel: t.modeSelectionAppBarTitle,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: InkWell(
+            onTap: _showAbout,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.all(6),
+              child: Image.asset(
+                'assets/icon/app_icon.png',
+                height: 32,
+                width: 32,
+                filterQuality: FilterQuality.medium,
+                semanticLabel: t.modeSelectionAppBarTitle,
+              ),
+            ),
           ),
         ),
         actions: [
