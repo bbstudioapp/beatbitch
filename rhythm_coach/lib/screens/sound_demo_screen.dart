@@ -12,6 +12,7 @@ import '../services/beep_engine.dart';
 import '../services/coach_phrases_loader.dart';
 import '../services/locale_service.dart';
 import '../services/tts_service.dart';
+import '../services/user_profile_service.dart';
 import '../theme/app_theme.dart';
 
 /// Écran d'apprentissage des sons + réglages voix/ambiance partagés
@@ -22,6 +23,7 @@ class SoundDemoScreen extends StatefulWidget {
   final TtsService tts;
   final AmbienceEngine ambience;
   final List<AmbiencePack> ambiencePacks;
+  final UserProfileService userProfile;
 
   const SoundDemoScreen({
     super.key,
@@ -29,6 +31,7 @@ class SoundDemoScreen extends StatefulWidget {
     required this.tts,
     required this.ambience,
     required this.ambiencePacks,
+    required this.userProfile,
   });
 
   @override
@@ -124,6 +127,11 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
 
   Future<void> _testVoice() async {
     await widget.tts.stop();
+    final prenom = widget.userProfile.prenom?.trim();
+    if (prenom != null && prenom.isNotEmpty) {
+      await widget.tts.speak(prenom);
+      return;
+    }
     await widget.tts.speak(CoachPhrasesService.instance.current.testVoicePhrase);
   }
 
