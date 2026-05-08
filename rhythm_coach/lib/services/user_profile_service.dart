@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
@@ -36,8 +37,18 @@ class UserProfileService extends ChangeNotifier {
   List<String> _customNicknames = const [];
   Set<String> _disabledDefaults = const {};
   bool _loaded = false;
+  String? _defaultsLoadedFor;
+  late final VoidCallback _localeListener = _onLocaleChanged;
 
-  UserProfileService({Random? rng}) : _rng = rng ?? Random();
+  UserProfileService({Random? rng}) : _rng = rng ?? Random() {
+    LocaleService.instance.addListener(_localeListener);
+  }
+
+  @override
+  void dispose() {
+    LocaleService.instance.removeListener(_localeListener);
+    super.dispose();
+  }
 
   String? get prenom => _prenom;
   List<String> get defaultNicknames => List.unmodifiable(_defaultNicknames);
@@ -64,6 +75,13 @@ class UserProfileService extends ChangeNotifier {
     _disabledDefaults =
         (prefs.getStringList(_disabledDefaultsKey) ?? const []).toSet();
 
+    await _loadDefaultsForCurrentLocale();
+
+    _loaded = true;
+    notifyListeners();
+  }
+
+  Future<void> _loadDefaultsForCurrentLocale() async {
     final lang = LocaleService.instance.languageCode;
     try {
       final path = _nicknamesAssetPathFor(lang);
@@ -71,7 +89,6 @@ class UserProfileService extends ChangeNotifier {
       try {
         raw = await rootBundle.loadString(path);
       } catch (_) {
-        // Fallback FR si pas de pack de surnoms pour la locale active.
         raw = await rootBundle.loadString(_nicknamesAssetPathDefault);
       }
       final decoded = json.decode(raw) as Map<String, dynamic>;
@@ -84,9 +101,16 @@ class UserProfileService extends ChangeNotifier {
       if (kDebugMode) debugPrint('[UserProfile] chargement surnoms défaut KO : $e');
       _defaultNicknames = const [];
     }
+    _defaultsLoadedFor = lang;
+  }
 
-    _loaded = true;
-    notifyListeners();
+  void _onLocaleChanged() {
+    final lang = LocaleService.instance.languageCode;
+    if (_defaultsLoadedFor == lang) return;
+    unawaited(() async {
+      await _loadDefaultsForCurrentLocale();
+      notifyListeners();
+    }());
   }
 
   Future<void> setPrenom(String? value) async {

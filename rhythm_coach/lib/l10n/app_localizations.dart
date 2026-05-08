@@ -1004,6 +1004,12 @@ abstract class AppLocalizations {
   /// **'{h} h {mm}'**
   String formatDurationHoursMinutes(int h, String mm);
 
+  /// No description provided for @formatDaysShort.
+  ///
+  /// In fr, this message translates to:
+  /// **'{d} j'**
+  String formatDaysShort(int d);
+
   /// No description provided for @settingsAppBarTitle.
   ///
   /// In fr, this message translates to:
@@ -1165,6 +1171,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Pack'**
   String get soundsPackLabel;
+
+  /// No description provided for @soundsPackNoneLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune'**
+  String get soundsPackNoneLabel;
 
   /// No description provided for @soundsModeLabel.
   ///
