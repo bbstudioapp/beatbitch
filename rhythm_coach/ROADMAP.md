@@ -21,18 +21,18 @@
 
 ---
 
-## Phase 2 — Config release Android (0.5-1 jour)
+## Phase 2 — Config release Android ✅ DONE
 
-| Action | Détail |
+| Action | État |
 |---|---|
-| Keystore release | `keytool -genkey -v -keystore ~/.android/beatbitch-upload.jks -keyalg RSA -keysize 2048 -validity 10000`. Mot de passe **archivé hors repo** (1Password/keepass) — le perdre = ne plus pouvoir mettre à jour |
-| `key.properties` gitignoré | À la racine `android/`, contient les chemins + mots de passe. Ajouter au `.gitignore` |
-| `signingConfigs.create("release")` | Charger `key.properties` via `Properties()` dans `build.gradle.kts`, créer le bloc release, switcher `release { signingConfig = signingConfigs.getByName("release") }` |
-| R8 + ProGuard | Activer `isMinifyEnabled = true`, `isShrinkResources = true`. Créer `android/app/proguard-rules.pro` avec `-keep` ML Kit + `flutter_local_notifications` (sinon les notifs et la détection visage cassent en release) |
-| Pruner permission `INTERNET` | Retirer du manifest + supprimer le bloc `Image.network` dans `widgets/session_background.dart:84-100`. Tous les backgrounds sont déjà bundle-only |
-| Script `tools/check_release.sh` | Run `flutter build apk --release`, vérifier signature avec `apksigner verify`, afficher SHA256. À runner avant chaque tag release |
+| Keystore release | ✅ `android/key.properties` rempli + `key.properties.example` versionné comme template. Mot de passe archivé hors repo |
+| `key.properties` gitignoré | ✅ `android/.gitignore` ligne 12 (`key.properties`, `**/*.keystore`, `**/*.jks`). `git check-ignore` confirme |
+| `signingConfigs.create("release")` | ✅ `build.gradle.kts` charge `key.properties` via `Properties() + FileInputStream`, crée la config conditionnellement (`hasReleaseSigning`). Fallback debug propre si fichier absent → `flutter run --release` reste utilisable en CI / machine fraîche |
+| R8 + ProGuard | ✅ `isMinifyEnabled = true`, `isShrinkResources = true`. `android/app/proguard-rules.pro` couvre ML Kit (`com.google.mlkit.**`, `com.google.android.gms.vision.**`, `com.google.android.odml.**`), flutter_local_notifications + Gson (TypeToken/TypeAdapter), `dontwarn` BouncyCastle/Conscrypt/OpenJSSE |
+| Pruner permission `INTERNET` | ✅ Manifest ne déclare plus que CAMERA, POST_NOTIFICATIONS, USE_EXACT_ALARM, RECEIVE_BOOT_COMPLETED, VIBRATE. `Image.network` retiré de `session_background.dart` (commentaire ligne 65 traçant la suppression). Tous les backgrounds sont bundle-only |
+| Script `tools/check_release.sh` | ✅ Workflow complet : précondition `key.properties`, `flutter build apk --release`, recherche `apksigner` (PATH → `local.properties` → `ANDROID_SDK_ROOT/HOME` → emplacements usuels), `verify --print-certs`, `sha256sum`, taille du fichier. Sortie colorée |
 
-**Output** : APK release signé, minifié, sans permission douteuse.
+**Output** : APK release signé, minifié, sans permission douteuse. Workflow `check_release.sh` à exécuter avant chaque tag.
 
 ---
 
@@ -101,7 +101,7 @@
 | Bloc | Effort | Bloque la suite ? |
 |---|---|---|
 | Phase 1 — Rebranding BeatBitch | 1 j | Oui (le reste utilise le nouveau package) |
-| Phase 2 — Release config | 0.5-1 j | Oui (APK signé requis pour distribution) |
+| Phase 2 — Release config ✅ | 0.5-1 j | Oui (APK signé requis pour distribution) |
 | Phase 3 — Adult gate & onboarding ✅ | 1 j | Non (parallélisable avec phase 4) |
 | Phase 4 — Polish & doc ✅ | 0.5 j | Non |
 | Phase 5 — Distribution | 0.5-1 j | Oui (lien stable requis pour le post) |
