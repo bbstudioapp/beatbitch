@@ -1493,7 +1493,7 @@ abstract class AppLocalizations {
   /// No description provided for @soundsShowBackgroundMediaSubtitle.
   ///
   /// In fr, this message translates to:
-  /// **'Affiche les images/GIF de assets/backgrounds.json en arrière-plan, avec rotation à chaque step. Désactive pour ne voir que le dégradé d\'ambiance.'**
+  /// **'Affiche les images/GIF présents dans assets/backgrounds/ en arrière-plan, avec rotation à chaque step. Désactive pour ne voir que le dégradé d\'ambiance.'**
   String get soundsShowBackgroundMediaSubtitle;
 
   /// No description provided for @sessionDebugFinishButton.

@@ -66,6 +66,8 @@ flutter build apk --release
 
 Le contenu éditorial vit dans `assets/` (sessions JSON, punitions, commentaires aléatoires, packs d'ambiance, banque de phrases carrière). Voir [CLAUDE.md](CLAUDE.md) pour la doc d'architecture détaillée.
 
+> ⚠ **Assets binaires externalisés** : les dossiers `assets/backgrounds/` (GIF/images de fond) et `assets/audio/ambience/` (MP3 d'ambiance) sont **gitignorés** — leurs fichiers ne sont pas versionnés dans le dépôt et doivent être rapatriés depuis un canal externe (à venir) avant `flutter build`. Le code se débrouille gracieusement si ces dossiers sont vides : le fond retombe sur un dégradé animé, l'ambiance sur du silence.
+
 ### Vie privée
 
 Voir [PRIVACY.md](PRIVACY.md) — version courte : aucune collecte, tout est local, `allowBackup="false"`.
@@ -123,6 +125,8 @@ flutter build apk --release
 ```
 
 Editorial content lives in `assets/` (JSON sessions, punishments, random comments, ambience packs, career phrase bank). See [CLAUDE.md](CLAUDE.md) for detailed architecture docs.
+
+> ⚠ **Externalized binary assets**: the `assets/backgrounds/` (background GIFs/images) and `assets/audio/ambience/` (ambience MP3s) folders are **gitignored** — their files are not versioned in the repo and must be fetched from an external channel (TBD) before `flutter build`. The code degrades gracefully when these folders are empty: the background falls back to an animated gradient, ambience to silence.
 
 ### Privacy
 

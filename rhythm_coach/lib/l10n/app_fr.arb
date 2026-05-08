@@ -399,7 +399,7 @@
   "soundsDebugSkipSession": "Bouton « terminer en succès »",
   "soundsDebugSkipSessionSubtitle": "Affiche un bouton dans la séance qui termine immédiatement comme un succès complet (badges, milestones, niveau). Pratique pour itérer sur le contenu sans tout jouer.",
   "soundsShowBackgroundMedia": "Fonds média en séance",
-  "soundsShowBackgroundMediaSubtitle": "Affiche les images/GIF de assets/backgrounds.json en arrière-plan, avec rotation à chaque step. Désactive pour ne voir que le dégradé d'ambiance.",
+  "soundsShowBackgroundMediaSubtitle": "Affiche les images/GIF présents dans assets/backgrounds/ en arrière-plan, avec rotation à chaque step. Désactive pour ne voir que le dégradé d'ambiance.",
   "sessionDebugFinishButton": "DEBUG : terminer en succès",
 
   "soundsDebugScenarioButton": "Debug — scénario carrière",

@@ -1,25 +1,20 @@
-import 'dart:convert';
-
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/services.dart' show AssetManifest, rootBundle;
 
 /// Type d'un média de fond. Pas de vidéo en V1 (cf. CLAUDE.md backlog).
 enum BackgroundMediaType {
   image,
   gif;
 
-  static BackgroundMediaType? fromString(String? raw) {
-    if (raw == null) return null;
-    return switch (raw.toLowerCase()) {
-      'image' => BackgroundMediaType.image,
-      'gif' => BackgroundMediaType.gif,
-      _ => null,
-    };
+  static BackgroundMediaType fromExtension(String ext) {
+    return ext.toLowerCase() == 'gif'
+        ? BackgroundMediaType.gif
+        : BackgroundMediaType.image;
   }
 }
 
-/// Une entrée du catalogue de fonds. Référence un asset par `id` + `path`.
-/// Pas de tags en V1 — on rotate uniformément. Cf. CLAUDE.md backlog
-/// pour le retour des tags si une segmentation par thème devient utile.
+/// Une entrée du catalogue de fonds. L'`id` est dérivé du nom de fichier
+/// (sans extension) — stable tant que le fichier garde son nom, ne dépend
+/// pas de la position dans la liste.
 class BackgroundEntry {
   final String id;
   final BackgroundMediaType type;
@@ -30,22 +25,10 @@ class BackgroundEntry {
     required this.type,
     required this.path,
   });
-
-  factory BackgroundEntry.fromJson(Map<String, dynamic> json) {
-    final id = json['id'];
-    final type = BackgroundMediaType.fromString(json['type'] as String?);
-    final path = json['path'];
-    if (id is! String || type == null || path is! String) {
-      throw FormatException(
-          'BackgroundEntry: id/type/path invalides (reçu: $json)');
-    }
-    return BackgroundEntry(id: id, type: type, path: path);
-  }
 }
 
-/// Bundle chargé depuis `assets/backgrounds.json`. Liste vide → fallback
-/// gracieux côté `BackgroundsService` (le widget retombe sur le dégradé
-/// animé placeholder).
+/// Bundle des fonds bundlés dans l'APK. Liste vide → fallback gracieux côté
+/// `BackgroundsService` (le widget retombe sur le dégradé animé placeholder).
 class BackgroundsBundle {
   final List<BackgroundEntry> entries;
 
@@ -61,21 +44,52 @@ class BackgroundsBundle {
   }
 }
 
+/// Source des fonds : scan de l'`AssetManifest` Flutter au runtime, filtré
+/// sur le dossier `assets/backgrounds/`. Pas de fichier JSON statique à
+/// maintenir : la liste suit ce qui est réellement bundlé dans l'APK.
+///
+/// Les binaires (gifs/images) ne sont **pas** versionnés dans le dépôt git —
+/// ils sont rapatriés depuis un canal externe avant `flutter build`. Si le
+/// dossier est vide à la build, le bundle est vide et le widget tombe sur
+/// son dégradé animé sans planter.
 class BackgroundsLoader {
-  static const String _assetPath = 'assets/backgrounds.json';
+  static const String _prefix = 'assets/backgrounds/';
+  static const Set<String> _supportedExtensions = {
+    'gif',
+    'png',
+    'jpg',
+    'jpeg',
+    'webp',
+  };
 
   Future<BackgroundsBundle> load() async {
     try {
-      final raw = await rootBundle.loadString(_assetPath);
-      final data = json.decode(raw) as Map<String, dynamic>;
-      final list = (data['backgrounds'] as List<dynamic>? ?? const [])
-          .map((e) => BackgroundEntry.fromJson(e as Map<String, dynamic>))
-          .toList();
-      return BackgroundsBundle(entries: list);
+      final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+      final entries = manifest
+          .listAssets()
+          .where((p) => p.startsWith(_prefix))
+          .map(_entryFor)
+          .whereType<BackgroundEntry>()
+          .toList()
+        ..sort((a, b) => a.id.compareTo(b.id));
+      return BackgroundsBundle(entries: entries);
     } catch (_) {
-      // Fichier absent / invalide : on retourne un bundle vide pour que le
-      // widget tombe sur son fallback animé sans planter la session.
       return BackgroundsBundle.empty;
     }
+  }
+
+  static BackgroundEntry? _entryFor(String assetPath) {
+    final filename = assetPath.substring(_prefix.length);
+    if (filename.isEmpty || filename.contains('/')) return null;
+    final dotIdx = filename.lastIndexOf('.');
+    if (dotIdx <= 0 || dotIdx == filename.length - 1) return null;
+    final ext = filename.substring(dotIdx + 1).toLowerCase();
+    if (!_supportedExtensions.contains(ext)) return null;
+    final id = filename.substring(0, dotIdx);
+    return BackgroundEntry(
+      id: id,
+      type: BackgroundMediaType.fromExtension(ext),
+      path: assetPath,
+    );
   }
 }

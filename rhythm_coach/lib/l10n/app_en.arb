@@ -399,7 +399,7 @@
   "soundsDebugSkipSession": "“Finish as success” button",
   "soundsDebugSkipSessionSubtitle": "Shows a button in the session that ends it immediately as a full success (badges, milestones, level). Useful to iterate on content without playing through.",
   "soundsShowBackgroundMedia": "Background media in session",
-  "soundsShowBackgroundMediaSubtitle": "Shows images/GIFs from assets/backgrounds.json in the background, rotating each step. Disable to see only the ambience gradient.",
+  "soundsShowBackgroundMediaSubtitle": "Shows images/GIFs from assets/backgrounds/ in the background, rotating each step. Disable to see only the ambience gradient.",
   "sessionDebugFinishButton": "DEBUG: finish as success",
 
   "soundsDebugScenarioButton": "Debug — career scenario",

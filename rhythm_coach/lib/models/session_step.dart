@@ -74,11 +74,12 @@ class SessionStep {
   final SwallowMode? swallowMode;
 
   /// Id du média de fond à pousser à l'écran quand ce step démarre.
-  /// Référence une entrée de `assets/backgrounds.json`. Null = pas
-  /// d'override, le fond suit la rotation aléatoire calée sur les
-  /// changements de mode (cf. `BackgroundsService`). Si l'id est
-  /// inconnu au runtime (asset manquant), le service no-op
-  /// silencieusement — on ne casse pas la séance pour un fond.
+  /// Correspond au nom de fichier (sans extension) sous
+  /// `assets/backgrounds/`. Null = pas d'override, le fond suit la
+  /// rotation aléatoire calée sur les changements de mode (cf.
+  /// `BackgroundsService`). Si l'id est inconnu au runtime (asset
+  /// manquant), le service no-op silencieusement — on ne casse pas la
+  /// séance pour un fond.
   final String? background;
 
   const SessionStep({
