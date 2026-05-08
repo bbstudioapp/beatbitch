@@ -122,6 +122,7 @@ jobs:
             4. Ouvre l'APK et confirme l'installation.
 
             ⚠ Build sans assets binaires externalisés (fonds média et MP3 d'ambiance) — l'écran de jeu retombe sur le dégradé animé et l'ambiance reste silencieuse. Les packs externes seront livrés ultérieurement via un canal séparé.
+          generate_release_notes: true
           files: |
             ${{ steps.pkg.outputs.apk_path }}
             ${{ steps.pkg.outputs.sha_path }}
