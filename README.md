@@ -45,6 +45,16 @@ Le **side-load**, c'est juste « installer une app sans passer par le Play Store
 
 > 💡 Tu peux désactiver l'autorisation « sources inconnues » après l'install — Android ne la rouvrira pas tant que tu ne mets pas l'app à jour.
 
+### 🔄 Mises à jour automatiques (Obtainium)
+
+L'app reste **strictement hors-ligne** : elle ne va pas chercher d'update toute seule. Pour être prévenu quand une nouvelle version sort et l'installer en deux taps, utilise **[Obtainium](https://github.com/ImranR98/Obtainium)** — un store Android open-source qui surveille les pages GitHub Releases.
+
+1. Installe Obtainium (dispo sur [F-Droid](https://f-droid.org/packages/dev.imranr.obtainium.fdroid/) ou en APK direct depuis son repo).
+2. Dans Obtainium : *Add App* → colle l'URL `https://github.com/bbstudioapp/beatbitch`.
+3. À chaque nouvelle release, Obtainium détecte l'APK `BeatBitch-X.Y.Z.apk` et te propose la mise à jour.
+
+> Aucun trafic réseau n'est généré par BeatBitch elle-même — c'est Obtainium qui interroge GitHub côté utilisateur, indépendamment de l'app. La promesse 100 % hors-ligne reste intacte.
+
 ### 🔒 C'est safe ?
 
 - **APK signé** par la même clé à chaque release — Android refuse l'install si quelqu'un essaie de te refiler un APK trafiqué (la signature ne matchera pas).
@@ -120,6 +130,16 @@ Les binaires hors-repo (gifs et mp3 d'ambiance) restent soumis aux droits de leu
 6. **First launch**: 18+ confirmation (non-skippable), then 3 onboarding screens (phone placement, volume, voice test).
 
 > 💡 You can disable "unknown sources" again after installing — Android won't reopen it unless you update the app.
+
+### 🔄 Automatic updates (Obtainium)
+
+The app stays **strictly offline** — it doesn't reach out for updates by itself. To get notified when a new version ships and install it in two taps, use **[Obtainium](https://github.com/ImranR98/Obtainium)**, an open-source Android store that watches GitHub Releases pages.
+
+1. Install Obtainium (available on [F-Droid](https://f-droid.org/packages/dev.imranr.obtainium.fdroid/) or as a direct APK from its repo).
+2. In Obtainium: *Add App* → paste the URL `https://github.com/bbstudioapp/beatbitch`.
+3. On every new release, Obtainium picks up the `BeatBitch-X.Y.Z.apk` and prompts you to update.
+
+> No network traffic comes from BeatBitch itself — Obtainium queries GitHub on the user side, independently of the app. The 100% offline promise stays intact.
 
 ### 🔒 Is it safe?
 
