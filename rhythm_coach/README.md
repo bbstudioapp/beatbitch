@@ -53,6 +53,10 @@ L'app n'est **pas distribuée sur le Play Store** — installation manuelle uniq
 
 > ⚠ Android 9+ requis. App testée sur Android 13/14.
 
+### Mises à jour automatiques (Obtainium)
+
+L'app reste **strictement hors-ligne** : elle ne va pas chercher d'update toute seule. Pour être prévenu quand une nouvelle version sort, utilise **[Obtainium](https://github.com/ImranR98/Obtainium)** — un store Android open-source qui surveille les pages GitHub Releases. *Add App* → colle `https://github.com/bbstudioapp/beatbitch`. Aucun trafic réseau n'est généré par BeatBitch elle-même : c'est Obtainium qui interroge GitHub côté utilisateur, indépendamment de l'app.
+
 ### Build local (développeurs)
 
 ```bash
@@ -122,6 +126,10 @@ The app is **not distributed on the Play Store** — manual install only.
 5. First launch: 18+ adult gate, then 3-step onboarding.
 
 > ⚠ Android 9+ required. Tested on Android 13/14.
+
+### Automatic updates (Obtainium)
+
+The app stays **strictly offline** — it doesn't reach out for updates by itself. To get notified when a new version ships, use **[Obtainium](https://github.com/ImranR98/Obtainium)**, an open-source Android store that watches GitHub Releases pages. *Add App* → paste `https://github.com/bbstudioapp/beatbitch`. No network traffic comes from BeatBitch itself — Obtainium queries GitHub on the user side, independently of the app.
 
 ### Local build (developers)
 

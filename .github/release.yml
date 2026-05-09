@@ -1,0 +1,58 @@
+# Configuration de la génération automatique des release notes par GitHub.
+# Documenté ici : https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes
+#
+# Le workflow .github/workflows/release.yml passe `generate_release_notes: true`
+# à softprops/action-gh-release. GitHub liste alors toutes les PR mergées
+# entre le tag précédent et le nouveau tag, et les classe selon les labels
+# définis ci-dessous. Le résultat est concaténé sous le `body:` custom de
+# l'action (consignes d'install + SHA256).
+
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+      - duplicate
+      - invalid
+      - wontfix
+    authors:
+      - dependabot
+      - github-actions
+
+  categories:
+    - title: ✨ Nouvelles fonctionnalités
+      labels:
+        - enhancement
+        - feature
+        - feat
+
+    - title: 🐛 Corrections de bugs
+      labels:
+        - bug
+        - fix
+
+    - title: ✍ Contenu éditorial
+      labels:
+        - content
+        - editorial
+
+    - title: 📖 Documentation
+      labels:
+        - documentation
+        - docs
+
+    - title: 🛠 Maintenance & infra
+      labels:
+        - chore
+        - ci
+        - build
+        - refactor
+
+    - title: 🌍 Internationalisation
+      labels:
+        - i18n
+        - l10n
+        - translation
+
+    - title: 🔧 Autres changements
+      labels:
+        - "*"

@@ -86,6 +86,44 @@ jobs:
             printf 'storeFile=%s\n' "$KEYSTORE_PATH"
           } > android/key.properties
 
+      - name: Fetch external assets from R2
+        if: steps.gate.outputs.skip != 'true'
+        env:
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          AWS_REQUEST_CHECKSUM_CALCULATION: WHEN_REQUIRED
+          AWS_RESPONSE_CHECKSUM_VALIDATION: WHEN_REQUIRED
+        run: |
+          if [ -z "$R2_ACCESS_KEY_ID" ] || [ -z "$R2_SECRET_ACCESS_KEY" ] || [ -z "$R2_ENDPOINT" ] || [ -z "$R2_BUCKET" ]; then
+            echo "R2 secrets not configured — skipping external assets fetch."
+            echo "Build will proceed with empty backgrounds/ambience folders (graceful fallback in app)."
+            exit 0
+          fi
+
+          export AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID"
+          export AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY"
+          export AWS_DEFAULT_REGION="auto"
+
+          mkdir -p assets/backgrounds assets/audio/ambience
+
+          echo "Fetching backgrounds from s3://$R2_BUCKET/backgrounds/v1/ ..."
+          aws s3 sync "s3://$R2_BUCKET/backgrounds/v1/" assets/backgrounds/ \
+            --endpoint-url "$R2_ENDPOINT" \
+            --no-progress
+
+          echo "Fetching ambience from s3://$R2_BUCKET/ambience/v1/ ..."
+          aws s3 sync "s3://$R2_BUCKET/ambience/v1/" assets/audio/ambience/ \
+            --endpoint-url "$R2_ENDPOINT" \
+            --no-progress || echo "(ambience prefix empty or missing, continuing)"
+
+          echo "--- Fetched assets ---"
+          echo "Backgrounds:"
+          ls -lh assets/backgrounds/ 2>/dev/null || echo "  (empty)"
+          echo "Ambience:"
+          ls -lh assets/audio/ambience/ 2>/dev/null || echo "  (empty)"
+
       - name: Build signed release APK
         if: steps.gate.outputs.skip != 'true'
         run: flutter build apk --release
@@ -122,6 +160,7 @@ jobs:
             4. Ouvre l'APK et confirme l'installation.
 
             ⚠ Build sans assets binaires externalisés (fonds média et MP3 d'ambiance) — l'écran de jeu retombe sur le dégradé animé et l'ambiance reste silencieuse. Les packs externes seront livrés ultérieurement via un canal séparé.
+          generate_release_notes: true
           files: |
             ${{ steps.pkg.outputs.apk_path }}
             ${{ steps.pkg.outputs.sha_path }}
