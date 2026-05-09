@@ -6,3 +6,9 @@ contact_links:
   - name: Releases (signed APK / APK signé)
     url: https://github.com/bbstudioapp/beatbitch/releases
     about: Download the latest signed APK with SHA256. / Télécharger le dernier APK signé avec SHA256.
+  - name: Asset contribution guide
+    url: https://github.com/bbstudioapp/beatbitch/blob/develop/docs/ASSET_CONTRIBUTIONS.md
+    about: Read this BEFORE submitting a gif or ambience pack — license and source justification are mandatory. / À lire AVANT de soumettre un pack de gifs ou d'ambiance — licence et source obligatoires.
+  - name: Editorial content guide (for AI contributors too)
+    url: https://github.com/bbstudioapp/beatbitch/blob/develop/docs/CONTENT_GUIDE.md
+    about: JSON formats and editorial rules for coach lines, scenarios, nicknames, translations. / Formats JSON et règles éditoriales pour phrases, scénarios, surnoms, traductions.

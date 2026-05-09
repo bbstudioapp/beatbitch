@@ -20,6 +20,7 @@ the wording and ask the right questions upfront.
 | 🐛 **[Bug report](.github/ISSUE_TEMPLATE/bug_report.md)** | Crash, comportement inattendu, son qui foire, audio qui drift, etc. / Crash, unexpected behavior, broken sound, audio drift, etc. |
 | 💡 **[Feature request / Idée](.github/ISSUE_TEMPLATE/feature_request.md)** | Nouveau mode, nouvelle UX, idée d'évolution carrière, etc. / New mode, new UX, career evolution idea, etc. |
 | ✍ **[Content contribution](.github/ISSUE_TEMPLATE/content_contribution.md)** | Phrases coach, scénarios, surnoms, nouvelle langue, nouveau coach. / Coach lines, scenarios, nicknames, new language, new coach. |
+| 🎞 **[Asset contribution](.github/ISSUE_TEMPLATE/asset_contribution.md)** | Pack de gifs de fond ou de sons d'ambiance (MP3). / Background gifs pack or ambience sounds (MP3). |
 
 > Les contributions éditoriales (phrases, scénarios, surnoms, traductions) sont
 > **les bienvenues sans toucher au code** — le template Content guide vers le
@@ -28,6 +29,14 @@ the wording and ask the right questions upfront.
 > Editorial contributions (lines, scenarios, nicknames, translations) are
 > **welcome without touching code** — the Content template guides toward the
 > JSON format the generator consumes directly.
+>
+> Pour les contributions d'assets binaires (gifs / MP3), lis d'abord
+> **[docs/ASSET_CONTRIBUTIONS.md](docs/ASSET_CONTRIBUTIONS.md)** — la
+> licence et la justification de la source sont obligatoires.
+>
+> For binary asset contributions (gifs / MP3), read
+> **[docs/ASSET_CONTRIBUTIONS.md](docs/ASSET_CONTRIBUTIONS.md)** first — the
+> license and source justification are mandatory.
 
 ---
 
