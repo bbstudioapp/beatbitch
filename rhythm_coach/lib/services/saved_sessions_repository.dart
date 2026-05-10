@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' show Locale;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/session.dart';
 import 'locale_service.dart';
@@ -13,8 +15,16 @@ import 'locale_service.dart';
 ///
 /// Ces fichiers respectent exactement le même schéma que ceux d'`assets/sessions/`
 /// → relus par `Session.fromJson` sans branche spéciale.
+///
+/// Sur le web, `path_provider` n'a pas d'implémentation : on bascule sur
+/// `shared_preferences` (= localStorage côté navigateur). Index des ids
+/// dans `_webIndexKey`, payload JSON dans `_webEntryKeyPrefix + id`. Web
+/// reste hors scope de prod, mais on garde la feature fonctionnelle pour
+/// les tests UI au lieu d'afficher l'erreur `MissingPluginException`.
 class SavedSessionsRepository {
   static const String _subdir = 'saved_sessions';
+  static const String _webIndexKey = 'saved_sessions.index';
+  static const String _webEntryKeyPrefix = 'saved_sessions.entry.';
 
   Future<Directory> _ensureDir() async {
     final base = await getApplicationDocumentsDirectory();
@@ -35,7 +45,6 @@ class SavedSessionsRepository {
     required String id,
     required String name,
   }) async {
-    final dir = await _ensureDir();
     final saved = Session(
       id: id,
       name: name,
@@ -51,8 +60,19 @@ class SavedSessionsRepository {
           : LocaleService.instance.languageCode,
       noStats: source.noStats,
     );
+    final payload = json.encode(saved.toJson());
+    if (kIsWeb) {
+      final prefs = await SharedPreferences.getInstance();
+      final ids =
+          (prefs.getStringList(_webIndexKey) ?? const <String>[]).toList();
+      if (!ids.contains(id)) ids.add(id);
+      await prefs.setStringList(_webIndexKey, ids);
+      await prefs.setString('$_webEntryKeyPrefix$id', payload);
+      return saved;
+    }
+    final dir = await _ensureDir();
     final file = File('${dir.path}/${_filename(id)}');
-    await file.writeAsString(json.encode(saved.toJson()));
+    await file.writeAsString(payload);
     return saved;
   }
 
@@ -60,20 +80,35 @@ class SavedSessionsRepository {
   /// langue. Par défaut, on retourne tout (l'utilisateur peut avoir des
   /// sessions sauvegardées dans plusieurs langues).
   Future<List<Session>> loadAll({Locale? locale}) async {
-    final dir = await _ensureDir();
-    final files = await dir
-        .list()
-        .where((e) => e is File && e.path.endsWith('.json'))
-        .cast<File>()
-        .toList();
     final sessions = <Session>[];
-    for (final f in files) {
-      try {
-        final raw = await f.readAsString();
-        sessions
-            .add(Session.fromJson(json.decode(raw) as Map<String, dynamic>));
-      } catch (_) {
-        // Fichier corrompu : on ignore silencieusement.
+    if (kIsWeb) {
+      final prefs = await SharedPreferences.getInstance();
+      final ids = prefs.getStringList(_webIndexKey) ?? const <String>[];
+      for (final id in ids) {
+        final raw = prefs.getString('$_webEntryKeyPrefix$id');
+        if (raw == null) continue;
+        try {
+          sessions
+              .add(Session.fromJson(json.decode(raw) as Map<String, dynamic>));
+        } catch (_) {
+          // Entrée corrompue : on ignore silencieusement.
+        }
+      }
+    } else {
+      final dir = await _ensureDir();
+      final files = await dir
+          .list()
+          .where((e) => e is File && e.path.endsWith('.json'))
+          .cast<File>()
+          .toList();
+      for (final f in files) {
+        try {
+          final raw = await f.readAsString();
+          sessions
+              .add(Session.fromJson(json.decode(raw) as Map<String, dynamic>));
+        } catch (_) {
+          // Fichier corrompu : on ignore silencieusement.
+        }
       }
     }
     final filtered = locale == null
@@ -85,6 +120,15 @@ class SavedSessionsRepository {
   }
 
   Future<void> delete(String id) async {
+    if (kIsWeb) {
+      final prefs = await SharedPreferences.getInstance();
+      final ids =
+          (prefs.getStringList(_webIndexKey) ?? const <String>[]).toList();
+      ids.remove(id);
+      await prefs.setStringList(_webIndexKey, ids);
+      await prefs.remove('$_webEntryKeyPrefix$id');
+      return;
+    }
     final dir = await _ensureDir();
     final file = File('${dir.path}/${_filename(id)}');
     if (await file.exists()) {

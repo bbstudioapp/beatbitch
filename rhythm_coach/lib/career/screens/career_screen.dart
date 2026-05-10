@@ -1024,10 +1024,12 @@ class _LevelPicker extends StatelessWidget {
           children: [
             const Icon(Icons.lock_open, color: AppTheme.accent, size: 18),
             const SizedBox(width: 12),
-            Text(
-              AppLocalizations.of(context).careerLevelLockedHint,
-              style:
-                  const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+            Expanded(
+              child: Text(
+                AppLocalizations.of(context).careerLevelLockedHint,
+                style: const TextStyle(
+                    fontSize: 13, color: AppTheme.textSecondary),
+              ),
             ),
           ],
         ),
