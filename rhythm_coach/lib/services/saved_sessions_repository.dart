@@ -70,7 +70,8 @@ class SavedSessionsRepository {
     for (final f in files) {
       try {
         final raw = await f.readAsString();
-        sessions.add(Session.fromJson(json.decode(raw) as Map<String, dynamic>));
+        sessions
+            .add(Session.fromJson(json.decode(raw) as Map<String, dynamic>));
       } catch (_) {
         // Fichier corrompu : on ignore silencieusement.
       }

@@ -146,8 +146,7 @@ void main() {
       expect(pick!.id, 'intro_hold_mid');
     });
 
-    test('resilience: 2 → multi-branche resilience+endurance gagne biffle',
-        () {
+    test('resilience: 2 → multi-branche resilience+endurance gagne biffle', () {
       final svc = MilestoneService();
       svc.seedForTest(
         catalog: [
@@ -177,8 +176,7 @@ void main() {
 
     test(
         'multi-branches matchant 2 spés battent mono-branche matchant 1 spé '
-        'à pts max égaux',
-        () {
+        'à pts max égaux', () {
       // User : endurance=2, profondeur=2.
       // mono : branches=[endurance] → score = 2.
       // multi : branches=[endurance, profondeur] → score = 4.
@@ -277,13 +275,11 @@ void main() {
         obedience: 0.0,
       );
       expect(pick, isNull,
-          reason:
-              'humil 0 + obed 0 → tolérance 1 → milestone humil 6.1 hors '
+          reason: 'humil 0 + obed 0 → tolérance 1 → milestone humil 6.1 hors '
               'fenêtre');
     });
 
-    test('obed 100 → tolérance +3 → milestone humil 3 candidate à humil 0',
-        () {
+    test('obed 100 → tolérance +3 → milestone humil 3 candidate à humil 0', () {
       // hold mid 4s : humil = 4.0 + 0.3*3 = 4.9. À obed 100, tolérance =
       // 1 + 100/50 = 3 → cap effectif = 0+3 = 3. humil 4.9 > 3 → non.
       // hold mid 1s : humil = 4.0 + 0.3*0 = 4.0. Toujours > 3 → non.
@@ -309,8 +305,7 @@ void main() {
         obedience: 0.0,
       );
       expect(pickAtObed0, isNull,
-          reason:
-              'obed 0 → tolérance 1 → cap=1 → ni humil 3 ni 4 candidates');
+          reason: 'obed 0 → tolérance 1 → cap=1 → ni humil 3 ni 4 candidates');
       final pickAtObed100 = svc.pendingFor(
         humiliationScore: 0.0,
         obedience: 100.0,

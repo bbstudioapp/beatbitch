@@ -46,10 +46,14 @@ void main() {
     test('ignore les clés inconnues et listes vides', () {
       final pack = CoachPhrasePack.fromJson({
         'phrases': {
-          'unknownMode': {'soft': ['x']},
+          'unknownMode': {
+            'soft': ['x']
+          },
           'rhythm': {'soft': []},
         },
-        'progress': {'notANumber': ['x']},
+        'progress': {
+          'notANumber': ['x']
+        },
         'intros': ['  ', 'real'],
       });
       expect(pack.byMode.containsKey(SessionMode.rhythm), isFalse,
@@ -130,8 +134,7 @@ void main() {
         },
       ));
       final bank = coach.toPhraseBank(fallback: globalBank());
-      expect(bank.pickFor(SessionMode.rhythm, 'medium', rng),
-          'G_rhythm_medium',
+      expect(bank.pickFor(SessionMode.rhythm, 'medium', rng), 'G_rhythm_medium',
           reason: 'medium absent côté coach → fallback');
     });
 
@@ -156,20 +159,27 @@ void main() {
         congrats: [PhraseEntry(text: 'C_congrats')],
       ));
       expect(
-          coachAvecCongrats.toPhraseBank(fallback: globalBank()).pickCongrats(rng),
+          coachAvecCongrats
+              .toPhraseBank(fallback: globalBank())
+              .pickCongrats(rng),
           'C_congrats');
-      expect(coachWith(const CoachPhrasePack())
-          .toPhraseBank(fallback: globalBank())
-          .pickCongrats(rng), 'G_congrats');
+      expect(
+          coachWith(const CoachPhrasePack())
+              .toPhraseBank(fallback: globalBank())
+              .pickCongrats(rng),
+          'G_congrats');
 
       final coachAvecEncore = coachWith(const CoachPhrasePack(
         encore: [PhraseEntry(text: 'C_e')],
       ));
-      expect(coachAvecEncore.toPhraseBank(fallback: globalBank()).pickEncore(rng),
+      expect(
+          coachAvecEncore.toPhraseBank(fallback: globalBank()).pickEncore(rng),
           'C_e');
-      expect(coachWith(const CoachPhrasePack())
-          .toPhraseBank(fallback: globalBank())
-          .pickEncore(rng), 'G_encore');
+      expect(
+          coachWith(const CoachPhrasePack())
+              .toPhraseBank(fallback: globalBank())
+              .pickEncore(rng),
+          'G_encore');
     });
 
     test('progress : coach prioritaire au seuil, fallback sinon', () {
@@ -183,8 +193,8 @@ void main() {
     });
 
     test('coach pack vide → 100 % fallback', () {
-      final bank = coachWith(CoachPhrasePack.empty)
-          .toPhraseBank(fallback: globalBank());
+      final bank =
+          coachWith(CoachPhrasePack.empty).toPhraseBank(fallback: globalBank());
       expect(bank.pickFor(SessionMode.rhythm, 'soft', rng), 'G_rhythm_soft');
       expect(bank.pickIntro(rng), 'G_intro');
       expect(bank.pickCongrats(rng), 'G_congrats');

@@ -60,7 +60,8 @@ class CoachLoader {
       return CoachMeta.fromJson(data);
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('CoachLoader: pas de meta global pour $coachId ($path) — $e');
+        debugPrint(
+            'CoachLoader: pas de meta global pour $coachId ($path) — $e');
       }
       return null;
     }

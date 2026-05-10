@@ -144,15 +144,13 @@ void main() {
         result.session.steps.where((s) => !s.isTextOnly).toList();
     final finisher = configSteps.last;
     expect(finisher.text, 'apotheose-3',
-        reason:
-            'le finisher doit être le dernier step de config de la '
+        reason: 'le finisher doit être le dernier step de config de la '
             'séquence milestone-final, reçu text=${finisher.text}');
     expect(finisher.mode, SessionMode.hold);
     expect(finisher.to, Position.tip);
   });
 
-  test('body milestone + final milestone coexistent dans la même séance',
-      () {
+  test('body milestone + final milestone coexistent dans la même séance', () {
     // Le générateur accepte les deux canaux indépendamment. La body est
     // insérée dans la fenêtre [insertAtMin, insertAtMax], la final
     // remplace la phase finish.
@@ -205,12 +203,10 @@ void main() {
     expect(result.session.steps.any((s) => s.text == 'final-step'), isTrue);
 
     // La body apparaît AVANT la final dans la timeline.
-    final bodyTime = result.session.steps
-        .firstWhere((s) => s.text == 'body-step')
-        .time;
-    final finalTime = result.session.steps
-        .firstWhere((s) => s.text == 'final-step')
-        .time;
+    final bodyTime =
+        result.session.steps.firstWhere((s) => s.text == 'body-step').time;
+    final finalTime =
+        result.session.steps.firstWhere((s) => s.text == 'final-step').time;
     expect(bodyTime, lessThan(finalTime),
         reason:
             'body-step (t=$bodyTime) doit précéder final-step (t=$finalTime)');
@@ -250,8 +246,7 @@ void main() {
       (s) => !s.isTextOnly && s.time == finalT,
     );
     expect(finisher.mode, SessionMode.hand,
-        reason:
-            '_pickFinal classique avec humil=0 doit retomber sur hand '
+        reason: '_pickFinal classique avec humil=0 doit retomber sur hand '
             'baseline, reçu ${finisher.mode}');
   });
 
@@ -279,8 +274,7 @@ void main() {
           final to = s.to;
           if (from != null && to != null) {
             expect(from, isNot(equals(to)),
-                reason:
-                    'level=$level humil=$humil mode=${s.mode} '
+                reason: 'level=$level humil=$humil mode=${s.mode} '
                     'from=${from.name} to=${to.name} bpm=${s.bpm} '
                     'time=${s.time}');
           }
@@ -289,8 +283,7 @@ void main() {
     }
   });
 
-  test(
-      'milestone unlock — la compétence devient utilisable APRÈS la séquence',
+  test('milestone unlock — la compétence devient utilisable APRÈS la séquence',
       () {
     // On utilise `UnlockKey.freestyle` parce que ce mode est gaté
     // uniquement via `_isUnlocked` / `_buildRecoveryStep` : aucune cascade
@@ -350,8 +343,7 @@ void main() {
       final freestyles = r.session.steps
           .where((s) => !s.isTextOnly && s.mode == SessionMode.freestyle);
       expect(freestyles, isEmpty,
-          reason:
-              'seed=$seed sans milestone : freestyle devrait rester gaté '
+          reason: 'seed=$seed sans milestone : freestyle devrait rester gaté '
               'par _isUnlocked');
     }
 
@@ -376,15 +368,13 @@ void main() {
         final isMilestoneStep = s.time >= mStart && s.time < mEnd;
         if (isMilestoneStep) continue;
         expect(s.time, greaterThanOrEqualTo(mEnd),
-            reason:
-                'seed=$seed freestyle à t=${s.time} avant la fin de la '
+            reason: 'seed=$seed freestyle à t=${s.time} avant la fin de la '
                 'milestone (mEnd=$mEnd) — gating violé');
         foundPostMilestone = true;
       }
     }
     expect(foundPostMilestone, isTrue,
-        reason:
-            'sur 30 seeds, aucun freestyle post-milestone : l\'unlock ne '
+        reason: 'sur 30 seeds, aucun freestyle post-milestone : l\'unlock ne '
             'semble pas propagé dans _unlockedKeys après l\'insertion');
   });
 
@@ -480,13 +470,11 @@ void main() {
     }
     final avgRunLen = totalRunLengths / totalRuns;
     expect(avgRunLen, greaterThan(1.6),
-        reason:
-            'avg run length=$avgRunLen — le générateur saute trop vite '
+        reason: 'avg run length=$avgRunLen — le générateur saute trop vite '
             'd\'un type à l\'autre, la friction de continuité ne mord pas');
     final totalSec = boucheSec + langueSec + libreSec;
     expect(boucheSec, greaterThan(langueSec + libreSec),
-        reason:
-            'bouche=${boucheSec}s langue=${langueSec}s libre=${libreSec}s '
+        reason: 'bouche=${boucheSec}s langue=${langueSec}s libre=${libreSec}s '
             '(total=${totalSec}s) — la bouche doit dominer en temps cumulé');
   });
 }

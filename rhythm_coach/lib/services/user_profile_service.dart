@@ -22,9 +22,8 @@ class UserProfileService extends ChangeNotifier {
       'user_profile_disabled_default_nicknames';
   static const String _nicknamesAssetPathDefault = 'assets/nicknames.json';
 
-  String _nicknamesAssetPathFor(String lang) => lang == 'fr'
-      ? _nicknamesAssetPathDefault
-      : 'assets/nicknames_$lang.json';
+  String _nicknamesAssetPathFor(String lang) =>
+      lang == 'fr' ? _nicknamesAssetPathDefault : 'assets/nicknames_$lang.json';
 
   /// Fallback ultime si l'utilisateur a tout vidé. Évite que `{name}`
   /// disparaisse complètement et laisse une phrase tronquée.
@@ -98,7 +97,9 @@ class UserProfileService extends ChangeNotifier {
           const [];
       _defaultNicknames = list;
     } catch (e) {
-      if (kDebugMode) debugPrint('[UserProfile] chargement surnoms défaut KO : $e');
+      if (kDebugMode) {
+        debugPrint('[UserProfile] chargement surnoms défaut KO : $e');
+      }
       _defaultNicknames = const [];
     }
     _defaultsLoadedFor = lang;
@@ -184,17 +185,15 @@ class UserProfileService extends ChangeNotifier {
   /// L'override coach (cf. `Coach.buildTextResolver`) prend la main.
   String resolve(String text) {
     if (!text.contains('{')) return text;
-    return text
-        .replaceAllMapped(
-          RegExp(r'\s?\{\s*name\s*\}', caseSensitive: false),
-          (m) {
-            // Si on tire « strip », on jette aussi l'espace capturé.
-            if (_rng.nextBool()) return '';
-            // Préserve l'espace original si présent dans la capture.
-            final hadSpace = m.group(0)?.startsWith(' ') ?? false;
-            return hadSpace ? ' ${pickName()}' : pickName();
-          },
-        )
-        .replaceAll(RegExp(r'\s?\{\s*coach\s*\}', caseSensitive: false), '');
+    return text.replaceAllMapped(
+      RegExp(r'\s?\{\s*name\s*\}', caseSensitive: false),
+      (m) {
+        // Si on tire « strip », on jette aussi l'espace capturé.
+        if (_rng.nextBool()) return '';
+        // Préserve l'espace original si présent dans la capture.
+        final hadSpace = m.group(0)?.startsWith(' ') ?? false;
+        return hadSpace ? ' ${pickName()}' : pickName();
+      },
+    ).replaceAll(RegExp(r'\s?\{\s*coach\s*\}', caseSensitive: false), '');
   }
 }

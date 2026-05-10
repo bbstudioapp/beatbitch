@@ -110,7 +110,9 @@ void main() {
       expect(r.requiredBranchPoints, isEmpty);
     });
 
-    test('seuil non atteint → blockedInsufficientBranchPoints (à intégrer côté CoachService)', () {
+    test(
+        'seuil non atteint → blockedInsufficientBranchPoints (à intégrer côté CoachService)',
+        () {
       // Smoke test : on s'assure juste que la structure est correcte ;
       // l'évaluation côté CoachService est testée dans coach_service_test.
       const r = CoachRequirement(

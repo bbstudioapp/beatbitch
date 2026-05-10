@@ -321,7 +321,8 @@ class CameraMotionDetector {
   /// au préalable, sinon `StateError`.
   void startDetection() {
     if (!isCalibrated) {
-      throw StateError('Calibration manquante — appelez startCalibration() d\'abord');
+      throw StateError(
+          'Calibration manquante — appelez startCalibration() d\'abord');
     }
     _resetSignalState();
     _setState(MotionDetectorState.detecting);
@@ -483,8 +484,10 @@ class CameraMotionDetector {
     required double high,
   }) {
     final sorted = List<double>.from(values)..sort();
-    final lo = sorted[(sorted.length * low).floor().clamp(0, sorted.length - 1)];
-    final hi = sorted[(sorted.length * high).floor().clamp(0, sorted.length - 1)];
+    final lo =
+        sorted[(sorted.length * low).floor().clamp(0, sorted.length - 1)];
+    final hi =
+        sorted[(sorted.length * high).floor().clamp(0, sorted.length - 1)];
     return (lo: lo, hi: hi, span: hi - lo);
   }
 
@@ -561,11 +564,10 @@ class CameraMotionDetector {
 
   void _emitRhythm() {
     if (_recentPeriods.isEmpty) return;
-    final avgMs = _recentPeriods
-            .map((p) => p.inMicroseconds)
-            .reduce((a, b) => a + b) /
-        _recentPeriods.length /
-        1000.0;
+    final avgMs =
+        _recentPeriods.map((p) => p.inMicroseconds).reduce((a, b) => a + b) /
+            _recentPeriods.length /
+            1000.0;
     final bpm = 60000.0 / avgMs;
     final fast = bpm >= fastBpmThreshold;
     final confidence = _recentPeriods.length / _bpmWindow;
@@ -622,7 +624,8 @@ class CameraMotionDetector {
     _accelMagWindow.add(mag);
     if (_accelMagWindow.length > 30) _accelMagWindow.removeAt(0);
     if (_accelMagWindow.length >= 10) {
-      final mean = _accelMagWindow.reduce((a, b) => a + b) / _accelMagWindow.length;
+      final mean =
+          _accelMagWindow.reduce((a, b) => a + b) / _accelMagWindow.length;
       double s = 0;
       for (final v in _accelMagWindow) {
         s += (v - mean) * (v - mean);
@@ -655,7 +658,8 @@ class CameraMotionDetector {
     }
     final Uint8List bytes = allBytes.done().buffer.asUint8List();
 
-    final rotation = InputImageRotationValue.fromRawValue(desc.sensorOrientation);
+    final rotation =
+        InputImageRotationValue.fromRawValue(desc.sensorOrientation);
     if (rotation == null) return null;
 
     final format = InputImageFormatValue.fromRawValue(image.format.raw);

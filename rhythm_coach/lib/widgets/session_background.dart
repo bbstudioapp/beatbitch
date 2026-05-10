@@ -51,10 +51,8 @@ class SessionBackground extends StatelessWidget {
                   switchInCurve: Curves.easeOut,
                   switchOutCurve: Curves.easeIn,
                   child: entry == null
-                      ? const _AmbientGradient(
-                          key: ValueKey('__placeholder__'))
-                      : _MediaBackground(
-                          entry: entry, key: ValueKey(entry.id)),
+                      ? const _AmbientGradient(key: ValueKey('__placeholder__'))
+                      : _MediaBackground(entry: entry, key: ValueKey(entry.id)),
                 );
               },
             ),
@@ -82,9 +80,7 @@ class _MediaBackground extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         switch (entry.type) {
-          BackgroundMediaType.image ||
-          BackgroundMediaType.gif =>
-            Image.asset(
+          BackgroundMediaType.image || BackgroundMediaType.gif => Image.asset(
               entry.path,
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => const _AmbientGradient(),

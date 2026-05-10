@@ -133,7 +133,8 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
       await widget.tts.speak(prenom);
       return;
     }
-    await widget.tts.speak(CoachPhrasesService.instance.current.testVoicePhrase);
+    await widget.tts
+        .speak(CoachPhrasesService.instance.current.testVoicePhrase);
   }
 
   Future<void> _previewAmbience(SessionMode mode) async {
@@ -223,8 +224,8 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
                       selectedId: widget.ambience.currentPack.id,
                       onChanged: (id) async {
                         if (id == null) return;
-                        final pack = widget.ambiencePacks
-                            .firstWhere((p) => p.id == id);
+                        final pack =
+                            widget.ambiencePacks.firstWhere((p) => p.id == id);
                         widget.ambience.setPack(pack);
                         // Si on était en train de tester un asset du pack
                         // précédent, on coupe.
@@ -240,9 +241,9 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
                         _AmbiencePreviewButton(
                           mode: mode,
                           asset: widget.ambience.currentPack.assetFor(mode),
-                          isPlaying: widget.ambience.currentPack
-                                  .assetFor(mode) ==
-                              _ambienceTestingAsset,
+                          isPlaying:
+                              widget.ambience.currentPack.assetFor(mode) ==
+                                  _ambienceTestingAsset,
                           onTap: () => _previewAmbience(mode),
                         ),
                     ],
@@ -373,275 +374,274 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
                 ),
                 if (kDebugMode)
                   _buildSection(
-                  title: t.soundsDebugSection,
-                  subtitle: t.soundsDebugSubtitle,
-                  children: [
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        t.soundsDebugShowTimer,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppTheme.textPrimary,
-                        ),
-                      ),
-                      subtitle: Text(
-                        t.soundsDebugShowTimerSubtitle,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppTheme.textMuted,
-                        ),
-                      ),
-                      value: _showTimer,
-                      onChanged: (v) async {
-                        await _debug.setShowTimer(v);
-                        if (!mounted) return;
-                        setState(() => _showTimer = v);
-                      },
-                    ),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        t.soundsDebugShowStaminaBar,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppTheme.textPrimary,
-                        ),
-                      ),
-                      subtitle: Text(
-                        t.soundsDebugShowStaminaBarSubtitle,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppTheme.textMuted,
-                        ),
-                      ),
-                      value: _showStaminaBar,
-                      onChanged: (v) async {
-                        await _debug.setShowStaminaBar(v);
-                        if (!mounted) return;
-                        setState(() => _showStaminaBar = v);
-                      },
-                    ),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        t.soundsDebugShowHumiliationBar,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppTheme.textPrimary,
-                        ),
-                      ),
-                      subtitle: Text(
-                        t.soundsDebugShowHumiliationBarSubtitle,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppTheme.textMuted,
-                        ),
-                      ),
-                      value: _showHumiliationBar,
-                      onChanged: (v) async {
-                        await _debug.setShowHumiliationBar(v);
-                        if (!mounted) return;
-                        setState(() => _showHumiliationBar = v);
-                      },
-                    ),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        t.soundsDebugShowObedienceBar,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppTheme.textPrimary,
-                        ),
-                      ),
-                      subtitle: Text(
-                        t.soundsDebugShowObedienceBarSubtitle,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppTheme.textMuted,
-                        ),
-                      ),
-                      value: _showObedienceBar,
-                      onChanged: (v) async {
-                        await _debug.setShowObedienceBar(v);
-                        if (!mounted) return;
-                        setState(() => _showObedienceBar = v);
-                      },
-                    ),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        t.soundsDebugShowSalivaBar,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppTheme.textPrimary,
-                        ),
-                      ),
-                      subtitle: Text(
-                        t.soundsDebugShowSalivaBarSubtitle,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppTheme.textMuted,
-                        ),
-                      ),
-                      value: _showSalivaBar,
-                      onChanged: (v) async {
-                        await _debug.setShowSalivaBar(v);
-                        if (!mounted) return;
-                        setState(() => _showSalivaBar = v);
-                      },
-                    ),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        t.soundsDebugShowSessionControls,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppTheme.textPrimary,
-                        ),
-                      ),
-                      subtitle: Text(
-                        t.soundsDebugShowSessionControlsSubtitle,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppTheme.textMuted,
-                        ),
-                      ),
-                      value: _showSessionControls,
-                      onChanged: (v) async {
-                        await _debug.setShowSessionControls(v);
-                        if (!mounted) return;
-                        setState(() => _showSessionControls = v);
-                      },
-                    ),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        t.soundsDebugShowModeBadge,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppTheme.textPrimary,
-                        ),
-                      ),
-                      subtitle: Text(
-                        t.soundsDebugShowModeBadgeSubtitle,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppTheme.textMuted,
-                        ),
-                      ),
-                      value: _showModeBadge,
-                      onChanged: (v) async {
-                        await _debug.setShowModeBadge(v);
-                        if (!mounted) return;
-                        setState(() => _showModeBadge = v);
-                      },
-                    ),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        t.soundsShowBackgroundMedia,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppTheme.textPrimary,
-                        ),
-                      ),
-                      subtitle: Text(
-                        t.soundsShowBackgroundMediaSubtitle,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppTheme.textMuted,
-                        ),
-                      ),
-                      value: _showBackgroundMedia,
-                      onChanged: (v) async {
-                        await _debug.setShowBackgroundMedia(v);
-                        if (!mounted) return;
-                        setState(() => _showBackgroundMedia = v);
-                      },
-                    ),
-                    if (PlatformCapabilities.supportsCameraHoldCheck)
+                    title: t.soundsDebugSection,
+                    subtitle: t.soundsDebugSubtitle,
+                    children: [
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         title: Text(
-                          t.soundsDebugCameraHoldCheck,
+                          t.soundsDebugShowTimer,
                           style: const TextStyle(
                             fontSize: 14,
                             color: AppTheme.textPrimary,
                           ),
                         ),
                         subtitle: Text(
-                          t.soundsDebugCameraHoldCheckSubtitle,
+                          t.soundsDebugShowTimerSubtitle,
                           style: const TextStyle(
                             fontSize: 11,
                             color: AppTheme.textMuted,
                           ),
                         ),
-                        value: _cameraHoldCheck,
+                        value: _showTimer,
                         onChanged: (v) async {
-                          await _debug.setCameraHoldCheck(v);
+                          await _debug.setShowTimer(v);
                           if (!mounted) return;
-                          setState(() => _cameraHoldCheck = v);
+                          setState(() => _showTimer = v);
                         },
                       ),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        t.soundsDebugSkipSession,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppTheme.textPrimary,
-                        ),
-                      ),
-                      subtitle: Text(
-                        t.soundsDebugSkipSessionSubtitle,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppTheme.textMuted,
-                        ),
-                      ),
-                      value: _skipSessionButton,
-                      onChanged: (v) async {
-                        await _debug.setSkipSessionButton(v);
-                        if (!mounted) return;
-                        setState(() => _skipSessionButton = v);
-                      },
-                    ),
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(
-                        Icons.auto_awesome,
-                        color: AppTheme.accent,
-                      ),
-                      title: Text(
-                        t.soundsDebugScenarioButton,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppTheme.textPrimary,
-                        ),
-                      ),
-                      subtitle: Text(
-                        t.soundsDebugScenarioSubtitle,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppTheme.textMuted,
-                        ),
-                      ),
-                      trailing: const Icon(
-                        Icons.chevron_right,
-                        color: AppTheme.textMuted,
-                      ),
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) =>
-                                const CareerScenarioDebugScreen(),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          t.soundsDebugShowStaminaBar,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppTheme.textPrimary,
                           ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
+                        ),
+                        subtitle: Text(
+                          t.soundsDebugShowStaminaBarSubtitle,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.textMuted,
+                          ),
+                        ),
+                        value: _showStaminaBar,
+                        onChanged: (v) async {
+                          await _debug.setShowStaminaBar(v);
+                          if (!mounted) return;
+                          setState(() => _showStaminaBar = v);
+                        },
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          t.soundsDebugShowHumiliationBar,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                        subtitle: Text(
+                          t.soundsDebugShowHumiliationBarSubtitle,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.textMuted,
+                          ),
+                        ),
+                        value: _showHumiliationBar,
+                        onChanged: (v) async {
+                          await _debug.setShowHumiliationBar(v);
+                          if (!mounted) return;
+                          setState(() => _showHumiliationBar = v);
+                        },
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          t.soundsDebugShowObedienceBar,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                        subtitle: Text(
+                          t.soundsDebugShowObedienceBarSubtitle,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.textMuted,
+                          ),
+                        ),
+                        value: _showObedienceBar,
+                        onChanged: (v) async {
+                          await _debug.setShowObedienceBar(v);
+                          if (!mounted) return;
+                          setState(() => _showObedienceBar = v);
+                        },
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          t.soundsDebugShowSalivaBar,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                        subtitle: Text(
+                          t.soundsDebugShowSalivaBarSubtitle,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.textMuted,
+                          ),
+                        ),
+                        value: _showSalivaBar,
+                        onChanged: (v) async {
+                          await _debug.setShowSalivaBar(v);
+                          if (!mounted) return;
+                          setState(() => _showSalivaBar = v);
+                        },
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          t.soundsDebugShowSessionControls,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                        subtitle: Text(
+                          t.soundsDebugShowSessionControlsSubtitle,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.textMuted,
+                          ),
+                        ),
+                        value: _showSessionControls,
+                        onChanged: (v) async {
+                          await _debug.setShowSessionControls(v);
+                          if (!mounted) return;
+                          setState(() => _showSessionControls = v);
+                        },
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          t.soundsDebugShowModeBadge,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                        subtitle: Text(
+                          t.soundsDebugShowModeBadgeSubtitle,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.textMuted,
+                          ),
+                        ),
+                        value: _showModeBadge,
+                        onChanged: (v) async {
+                          await _debug.setShowModeBadge(v);
+                          if (!mounted) return;
+                          setState(() => _showModeBadge = v);
+                        },
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          t.soundsShowBackgroundMedia,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                        subtitle: Text(
+                          t.soundsShowBackgroundMediaSubtitle,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.textMuted,
+                          ),
+                        ),
+                        value: _showBackgroundMedia,
+                        onChanged: (v) async {
+                          await _debug.setShowBackgroundMedia(v);
+                          if (!mounted) return;
+                          setState(() => _showBackgroundMedia = v);
+                        },
+                      ),
+                      if (PlatformCapabilities.supportsCameraHoldCheck)
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(
+                            t.soundsDebugCameraHoldCheck,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
+                          subtitle: Text(
+                            t.soundsDebugCameraHoldCheckSubtitle,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppTheme.textMuted,
+                            ),
+                          ),
+                          value: _cameraHoldCheck,
+                          onChanged: (v) async {
+                            await _debug.setCameraHoldCheck(v);
+                            if (!mounted) return;
+                            setState(() => _cameraHoldCheck = v);
+                          },
+                        ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          t.soundsDebugSkipSession,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                        subtitle: Text(
+                          t.soundsDebugSkipSessionSubtitle,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.textMuted,
+                          ),
+                        ),
+                        value: _skipSessionButton,
+                        onChanged: (v) async {
+                          await _debug.setSkipSessionButton(v);
+                          if (!mounted) return;
+                          setState(() => _skipSessionButton = v);
+                        },
+                      ),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(
+                          Icons.auto_awesome,
+                          color: AppTheme.accent,
+                        ),
+                        title: Text(
+                          t.soundsDebugScenarioButton,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                        subtitle: Text(
+                          t.soundsDebugScenarioSubtitle,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.textMuted,
+                          ),
+                        ),
+                        trailing: const Icon(
+                          Icons.chevron_right,
+                          color: AppTheme.textMuted,
+                        ),
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const CareerScenarioDebugScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
               ],
             ),
     );
@@ -731,8 +731,7 @@ class _SoundButton extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             children: [
-              const Icon(Icons.play_arrow,
-                  color: AppTheme.accent, size: 22),
+              const Icon(Icons.play_arrow, color: AppTheme.accent, size: 22),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -1003,8 +1002,9 @@ class _AmbiencePackPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final value =
-        packs.any((p) => p.id == selectedId) ? selectedId : AmbiencePack.none.id;
+    final value = packs.any((p) => p.id == selectedId)
+        ? selectedId
+        : AmbiencePack.none.id;
     return Row(
       children: [
         SizedBox(
@@ -1095,9 +1095,7 @@ class _AmbiencePreviewButton extends StatelessWidget {
                         fontSize: 11,
                         color: disabled
                             ? AppTheme.textMuted
-                            : (isPlaying
-                                ? Colors.black54
-                                : AppTheme.textMuted),
+                            : (isPlaying ? Colors.black54 : AppTheme.textMuted),
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1167,4 +1165,3 @@ class _LanguagePicker extends StatelessWidget {
     );
   }
 }
-

@@ -14,12 +14,16 @@ enum BadgeFamily {
   // sans fail, en lisant le mode du step final et du step post-final.
   /// Final mode `hold` (toutes profondeurs) — la sauce reste dans la bouche.
   bouchePleine,
+
   /// Final mode `biffle` — la sauce gicle sur le visage.
   repeinte,
+
   /// Final mode `lick` — langue dehors, la coach jouit dessus.
   gobeuse,
+
   /// Post-final mode `lick` — nettoyer après, lécher le sperme qui coule.
   nettoyeuse,
+
   /// Post-final mode `beg` — supplique imposée après l'orgasme.
   suppliante,
 }

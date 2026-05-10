@@ -1,0 +1,93 @@
+name: CI
+
+# Tourne sur chaque PR vers develop ou main pour valider la qualite
+# et la securite du code. Couvre :
+#
+#  - Flutter : `dart format`, `flutter analyze --fatal-infos`,
+#    `flutter test`, validation JSON des assets.
+#  - actionlint : lint des workflows GitHub Actions.
+#  - gitleaks : scan secrets sur les commits / la PR.
+#  - dependency-review : alerte sur les CVE des deps modifiees.
+#
+# A cocher en *Required status checks* dans le ruleset GitHub apres la 1re
+# execution reussie pour bloquer les merges qui regressent.
+
+on:
+  pull_request:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  flutter:
+    name: Flutter — format / analyze / test / JSON
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rhythm_coach
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Dart format
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Flutter analyze (strict)
+        run: flutter analyze --fatal-infos
+
+      - name: Validate JSON assets
+        run: dart run tools/validate_assets.dart
+
+      - name: Flutter test
+        run: flutter test
+
+  actionlint:
+    name: actionlint (workflows)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run actionlint
+        uses: raven-actions/actionlint@v2
+
+  gitleaks:
+    name: gitleaks (secrets scan)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dependency-review:
+    name: dependency-review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Review dependencies
+        uses: actions/dependency-review-action@v4

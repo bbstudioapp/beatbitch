@@ -111,8 +111,7 @@ class SpecializationAllocation {
 
   int pointsIn(SpecializationBranch b) => points[b] ?? 0;
 
-  int get totalSpent =>
-      points.values.fold<int>(0, (acc, v) => acc + v);
+  int get totalSpent => points.values.fold<int>(0, (acc, v) => acc + v);
 
   SpecializationAllocation copyWith({
     Map<SpecializationBranch, int>? points,

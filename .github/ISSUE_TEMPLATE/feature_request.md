@@ -21,6 +21,15 @@ assignees: ''
 <!-- Quel besoin ça couvre ? Quel scénario d'usage ? -->
 <!-- What need does it address? What use case? -->
 
+## Plateforme cible / Target platform
+
+<!-- Si la feature concerne une plateforme particulière. / If the feature targets a specific platform. -->
+
+- [ ] Toutes / All
+- [ ] Android
+- [ ] Windows desktop
+- [ ] Autre / Other:
+
 ## Catégorie / Category
 
 <!-- Coche ce qui s'applique / Check what applies -->
@@ -31,6 +40,7 @@ assignees: ''
 - [ ] UX / Interface
 - [ ] Carrière / Progression / Milestones
 - [ ] Caméra / Détection / Camera detection
+- [ ] Plateforme / Platform support (Linux, macOS, web, …)
 - [ ] Autre / Other:
 
 ## Notes

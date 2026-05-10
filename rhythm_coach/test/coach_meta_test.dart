@@ -118,15 +118,15 @@ void main() {
     test('chaînes vides ou whitespace → null', () {
       expect(CoachPhrasePack.fromJson({'title': '', 'publicBio': '   '}).title,
           isNull);
-      expect(CoachPhrasePack.fromJson({'title': '', 'publicBio': '   '})
-          .publicBio,
+      expect(
+          CoachPhrasePack.fromJson({'title': '', 'publicBio': '   '}).publicBio,
           isNull);
     });
 
     test('Coach.withPhrases applique le title si non-null, garde sinon', () {
       final base = CoachCatalog.defaults.first;
-      final updated = base.withPhrases(
-          const CoachPhrasePack(title: 'Nouveau titre'));
+      final updated =
+          base.withPhrases(const CoachPhrasePack(title: 'Nouveau titre'));
       expect(updated.title, 'Nouveau titre');
       expect(updated.publicBio, base.publicBio,
           reason: 'publicBio non fourni → défaut');
@@ -140,10 +140,9 @@ void main() {
   group('Pipeline complet (meta + pack)', () {
     test('meta puis pack : isPrincipal vient du meta, title vient du pack', () {
       final base = CoachCatalog.defaults.first;
-      final withMeta = base.withMeta(
-          const CoachMeta(isPrincipal: false, tier: 99));
-      final withBoth = withMeta.withPhrases(
-          const CoachPhrasePack(title: 'X'));
+      final withMeta =
+          base.withMeta(const CoachMeta(isPrincipal: false, tier: 99));
+      final withBoth = withMeta.withPhrases(const CoachPhrasePack(title: 'X'));
       expect(withBoth.isPrincipal, isFalse);
       expect(withBoth.tier, 99);
       expect(withBoth.title, 'X');

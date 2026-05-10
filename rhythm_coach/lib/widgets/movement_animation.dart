@@ -228,7 +228,8 @@ class _MovementAnimationState extends State<MovementAnimation>
           color: color,
           cursorStyle: cursorStyle,
         ),
-      SessionMode.breath || SessionMode.freestyle =>
+      SessionMode.breath ||
+      SessionMode.freestyle =>
         _Breath(t: t, color: color),
     };
   }
@@ -352,8 +353,9 @@ class _PositionLadder extends StatelessWidget {
   }
 
   /// Convertit un index de position (0..4) en y d'Alignment (-1..1).
-  static double _toAlign(int index) =>
-      Position.values.length == 1 ? 0 : index / (Position.values.length - 1) * 2 - 1;
+  static double _toAlign(int index) => Position.values.length == 1
+      ? 0
+      : index / (Position.values.length - 1) * 2 - 1;
 }
 
 /// X (Alignment) où vivent le curseur et la silhouette de verge. Légèrement

@@ -11,9 +11,8 @@ class AmbiencePackLoader {
 
   Future<List<AmbiencePack>> load({Locale? locale}) async {
     final lang = (locale ?? LocaleService.instance.current).languageCode;
-    final path = lang == 'fr'
-        ? _assetPathDefault
-        : 'assets/ambience_packs_$lang.json';
+    final path =
+        lang == 'fr' ? _assetPathDefault : 'assets/ambience_packs_$lang.json';
     try {
       final raw = await rootBundle.loadString(path);
       final data = json.decode(raw) as Map<String, dynamic>;

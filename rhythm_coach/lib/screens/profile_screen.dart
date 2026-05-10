@@ -350,7 +350,6 @@ class _ReputationCard extends StatelessWidget {
       ),
     );
   }
-
 }
 
 class _SectionLabel extends StatelessWidget {
@@ -467,12 +466,12 @@ class _StatsBlock extends StatelessWidget {
       ),
     );
   }
-
 }
 
 class _StatEntry {
   final String label;
   final String value;
+
   /// Valeur de référence utilisée pour décider si l'entrée est affichée.
   /// 0 = stat jamais touchée → entrée masquée (on ne révèle pas l'axe).
   final int gateBy;
@@ -591,9 +590,7 @@ class _BadgeCard extends StatelessWidget {
           ),
           const Spacer(),
           Text(
-            next != null
-                ? '${state.value} / $next'
-                : '${state.value} pts',
+            next != null ? '${state.value} / $next' : '${state.value} pts',
             style: const TextStyle(
               fontSize: 11,
               color: AppTheme.textMuted,

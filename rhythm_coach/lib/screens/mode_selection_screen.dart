@@ -80,9 +80,7 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
     // Catalogue des fonds média poussé dans le singleton dédié. Bundle
     // vide possible (= JSON sans entrées) → le widget retombe sur le
     // placeholder animé. Pas d'attente côté UI.
-    BackgroundsLoader()
-        .load()
-        .then((b) => BackgroundsService.instance.setBundle(b));
+    BackgroundsLoader().load().then(BackgroundsService.instance.setBundle);
     WidgetsBinding.instance.addObserver(this);
     // Cold start : si l'app a été lancée par tap d'une notif surprise,
     // un flag d'intent a été posé dans main(). On le consume après la

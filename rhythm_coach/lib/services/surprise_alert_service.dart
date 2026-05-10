@@ -273,7 +273,8 @@ class SurpriseAlertService {
     final alerts = (state['alerts'] as List<dynamic>)
         .map((e) => _SurpriseAlertEntry.fromJson(e as Map<String, dynamic>))
         .toList();
-    final pending = alerts.where((a) => a.status == _AlertStatus.pending).length;
+    final pending =
+        alerts.where((a) => a.status == _AlertStatus.pending).length;
     return SurpriseScheduleSnapshot(
       windowId: state['windowId'] as String,
       windowEnd: windowEnd,
@@ -353,9 +354,8 @@ class SurpriseAlertService {
     final guardEnd = now.add(_foregroundSilenceGuard);
     final p = await SharedPreferences.getInstance();
     final hasIntent = p.getBool(_kIntentPending) ?? false;
-    final tappedId = hasIntent
-        ? int.tryParse(p.getString(_kIntentWindowId) ?? '')
-        : null;
+    final tappedId =
+        hasIntent ? int.tryParse(p.getString(_kIntentWindowId) ?? '') : null;
     var ignoredCount = 0;
     var changed = false;
     for (final a in alerts) {
@@ -404,9 +404,8 @@ class SurpriseAlertService {
     final now = DateTime.now();
     final p = await SharedPreferences.getInstance();
     final hasIntent = p.getBool(_kIntentPending) ?? false;
-    final tappedId = hasIntent
-        ? int.tryParse(p.getString(_kIntentWindowId) ?? '')
-        : null;
+    final tappedId =
+        hasIntent ? int.tryParse(p.getString(_kIntentWindowId) ?? '') : null;
     var ignoredCount = 0;
     var changed = false;
     for (final a in alerts) {
@@ -517,8 +516,7 @@ class SurpriseAlertService {
       final hi = (i == effectiveCount - 1) ? spanSeconds : (i + 1) * stratum;
       final picked = lo + _random.nextInt((hi - lo).clamp(1, spanSeconds));
       var t = start.add(Duration(seconds: picked));
-      if (result.isNotEmpty &&
-          t.difference(result.last) < _spacing) {
+      if (result.isNotEmpty && t.difference(result.last) < _spacing) {
         t = result.last.add(_spacing);
       }
       if (t.isAfter(windowEnd)) break;
@@ -618,9 +616,7 @@ class SurpriseAlertService {
     return '${ts.toRadixString(36)}-${r.toRadixString(36)}';
   }
 
-  int _clampWindow(int v) =>
-      v.clamp(windowSecondsMin, windowSecondsMax);
+  int _clampWindow(int v) => v.clamp(windowSecondsMin, windowSecondsMax);
   int _clampCount(int v) => v.clamp(alertCountMin, alertCountMax);
-  int _clampDuration(int v) =>
-      v.clamp(durationSecondsMin, durationSecondsMax);
+  int _clampDuration(int v) => v.clamp(durationSecondsMin, durationSecondsMax);
 }
