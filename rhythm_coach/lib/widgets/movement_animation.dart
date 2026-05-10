@@ -54,8 +54,15 @@ class MovementAnimation extends StatefulWidget {
 }
 
 class _MovementAnimationState extends State<MovementAnimation>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _controller;
+
+  /// Pulse de bordure synchro aux bips. Décharge à chaque BeatEvent reçu
+  /// pour donner un repère rythmique en vision périphérique — utile quand
+  /// le téléphone est posé sur le côté. Reste à 0 sur les modes statiques
+  /// (le stream n'émet pas pour hold/beg/breath/freestyle), donc pas de
+  /// pulse parasite à gérer par mode.
+  late AnimationController _pulseController;
 
   /// Toggle d'alternance from/to pour rhythm/lick. Bascule à chaque
   /// fin de cycle du controller (= un battement). Garde aligné avec
@@ -79,6 +86,10 @@ class _MovementAnimationState extends State<MovementAnimation>
     _controller = AnimationController(
       vsync: this,
       duration: _durationFor(widget.mode, widget.bpm),
+    );
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 180),
     );
     _startController();
     _maybeSubscribeBeats(widget.beepEngine);
@@ -137,6 +148,7 @@ class _MovementAnimationState extends State<MovementAnimation>
     _beatSub?.cancel();
     _controller.removeStatusListener(_onStatus);
     _controller.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -149,6 +161,10 @@ class _MovementAnimationState extends State<MovementAnimation>
 
   void _onBeatEvent(BeatEvent event) {
     if (!mounted) return;
+    // Pulse de bordure : déclenché pour TOUS les beats audibles (rhythm,
+    // lick, hand, biffle). Décorrelé du flip from↔to ci-dessous — on veut
+    // un flash à chaque bip, peu importe la direction.
+    _pulseController.forward(from: 0);
     // Quand on est piloté par le stream, on ignore le status listener
     // interne du AnimationController : on cale le flip exactement sur
     // l'instant du bip émis par le BeepEngine. Le AnimationController
@@ -218,19 +234,63 @@ class _MovementAnimationState extends State<MovementAnimation>
   @override
   Widget build(BuildContext context) {
     final targetColor = _modeColor(widget.mode);
+    // Pulse de bordure : enveloppe extérieure qui glow à chaque bip via
+    // BoxShadow déborde hors du SizedBox (visible en périphérie même
+    // téléphone posé sur le côté). AnimatedBuilder isolé du reste du build
+    // pour ne pas reconstruire le sous-arbre coûteux (PositionLadder,
+    // painter de trajectoire) à chaque tick du pulse.
     return SizedBox(
       height: widget.height,
-      // Couleur interpolée entre 2 modes pour adoucir les changements de step
-      // (rhythm ambre → lick cyan → hand saumon, etc.). Durée volontairement
-      // plus longue qu'un beat pour rester lisible même à BPM élevé.
-      child: TweenAnimationBuilder<Color?>(
-        tween: ColorTween(end: targetColor),
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeInOut,
-        builder: (context, animatedColor, _) => AnimatedBuilder(
-          animation: _controller,
-          builder: (context, _) =>
-              _buildForMode(_controller.value, animatedColor ?? targetColor),
+      child: AnimatedBuilder(
+        animation: _pulseController,
+        builder: (context, child) {
+          final pulseT = _pulseController.value;
+          // Attack rapide (20% = ~36ms) puis decay long (80% = ~144ms) :
+          // donne un pic net à l'instant du bip, pas un flash linéaire.
+          final intensity = pulseT == 0
+              ? 0.0
+              : (pulseT < 0.2 ? pulseT * 5.0 : 1.0 - (pulseT - 0.2) / 0.8);
+          return DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: intensity > 0
+                  ? [
+                      BoxShadow(
+                        color: targetColor.withValues(alpha: 0.10 * intensity),
+                        blurRadius: 40,
+                        spreadRadius: 2,
+                      ),
+                    ]
+                  : null,
+            ),
+            child: child,
+          );
+        },
+        // Couleur interpolée entre 2 modes pour adoucir les changements de step
+        // (rhythm ambre → lick cyan → hand saumon, etc.). Durée volontairement
+        // plus longue qu'un beat pour rester lisible même à BPM élevé.
+        child: TweenAnimationBuilder<Color?>(
+          tween: ColorTween(end: targetColor),
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeInOut,
+          builder: (context, animatedColor, _) => AnimatedBuilder(
+            animation: _controller,
+            builder: (context, _) => AnimatedSwitcher(
+              // Crossfade des sous-widgets quand le MODE change (PositionLadder
+              // ↔ StaticPosition ↔ Pulse ↔ Breath). Sans ça, la forme du curseur
+              // (orb/tongue/ring) saute net à chaque transition de step. La
+              // couleur étant interpolée par le TweenAnimationBuilder<Color?>
+              // au-dessus, le fade est synchronisé : pas de double fondu visible.
+              duration: const Duration(milliseconds: 250),
+              switchInCurve: Curves.easeInOut,
+              switchOutCurve: Curves.easeInOut,
+              child: KeyedSubtree(
+                key: ValueKey(widget.mode),
+                child: _buildForMode(
+                    _controller.value, animatedColor ?? targetColor),
+              ),
+            ),
+          ),
         ),
       ),
     );
