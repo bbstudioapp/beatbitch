@@ -551,7 +551,8 @@ class _BeatPoint {
   final double t;
   final double idx;
   final bool isAnchor;
-  const _BeatPoint({required this.t, required this.idx, required this.isAnchor});
+  const _BeatPoint(
+      {required this.t, required this.idx, required this.isAnchor});
 }
 
 /// Trace la trajectoire future dans la zone à droite du curseur.

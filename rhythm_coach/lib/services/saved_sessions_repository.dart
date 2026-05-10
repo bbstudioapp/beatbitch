@@ -63,7 +63,8 @@ class SavedSessionsRepository {
     final payload = json.encode(saved.toJson());
     if (kIsWeb) {
       final prefs = await SharedPreferences.getInstance();
-      final ids = (prefs.getStringList(_webIndexKey) ?? const <String>[]).toList();
+      final ids =
+          (prefs.getStringList(_webIndexKey) ?? const <String>[]).toList();
       if (!ids.contains(id)) ids.add(id);
       await prefs.setStringList(_webIndexKey, ids);
       await prefs.setString('$_webEntryKeyPrefix$id', payload);
