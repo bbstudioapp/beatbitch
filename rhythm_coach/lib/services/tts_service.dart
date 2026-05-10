@@ -10,6 +10,16 @@ class TtsService {
   static const double _defaultRate = 0.56;
   static const double _defaultVolume = 1.0;
 
+  // Windows : Microsoft Julie (SAPI) est la seule voix FR locale fiable
+  // sur la plupart des postes. On la force comme voix par defaut ET
+  // pour tous les coachs (les voix Android `fr-fr-x-*-local` n'existent
+  // pas sous SAPI). Rate/pitch ajustes pour Julie specifiquement.
+  static const double _windowsDefaultPitch = 1.22;
+  static const double _windowsDefaultRate = 0.68;
+  // Match case-insensitive sur le nom de voix : couvre "Microsoft Julie
+  // Desktop", "Julie - French (France)", etc. selon les variantes SAPI.
+  static const String _windowsVoiceNeedle = 'julie';
+
   /// Voix préférées par locale, par ordre décroissant de qualité. **Voix
   /// locales uniquement** : on n'autorise jamais de voix réseau (cf.
   /// [_isLocalVoice]) — les voix `-network` envoient le texte aux serveurs
@@ -49,9 +59,16 @@ class TtsService {
 
   // État courant exposé pour permettre aux écrans (ex: SONS) d'afficher
   // les bons défauts de slider et de sélecteur.
-  double _rate = _defaultRate;
-  double _pitch = _defaultPitch;
+  double _rate = _platformDefaultRate;
+  double _pitch = _platformDefaultPitch;
   String? _currentVoiceName;
+
+  static bool get _isWindows =>
+      defaultTargetPlatform == TargetPlatform.windows;
+  static double get _platformDefaultRate =>
+      _isWindows ? _windowsDefaultRate : _defaultRate;
+  static double get _platformDefaultPitch =>
+      _isWindows ? _windowsDefaultPitch : _defaultPitch;
 
   TtsService({Locale locale = const Locale('fr')}) : _locale = locale;
 
@@ -68,8 +85,9 @@ class TtsService {
   Locale get locale => _locale;
 
   /// Valeurs par défaut, exposées pour les UI qui veulent réinitialiser.
-  static double get defaultRate => _defaultRate;
-  static double get defaultPitch => _defaultPitch;
+  /// Sur Windows, retourne les valeurs calibrees pour Microsoft Julie.
+  static double get defaultRate => _platformDefaultRate;
+  static double get defaultPitch => _platformDefaultPitch;
 
   void attachProfile(UserProfileService profile) {
     _profile = profile;
@@ -96,10 +114,16 @@ class TtsService {
     if (_initialized) return;
 
     await _tts.setLanguage(_ttsLanguageTag(_locale));
-    await _tts.setPitch(_defaultPitch);
-    await _tts.setSpeechRate(_defaultRate);
+    await _tts.setPitch(_platformDefaultPitch);
+    await _tts.setSpeechRate(_platformDefaultRate);
     await _tts.setVolume(_defaultVolume);
-    await _tts.awaitSpeakCompletion(true);
+    // `awaitSpeakCompletion(true)` est défaillant sur Windows : la
+    // back-end SAPI n'émet pas toujours l'event de complétion attendu,
+    // ce qui fait freeze/crash le `speak()` suivant. On le garde activé
+    // sur les plateformes où il marche fiablement (Android/iOS).
+    if (defaultTargetPlatform != TargetPlatform.windows) {
+      await _tts.awaitSpeakCompletion(true);
+    }
     await _selectVoice();
 
     _tts.setStartHandler(() => _speaking = true);
@@ -164,21 +188,34 @@ class TtsService {
       final voices = await listVoicesForLocale(_locale);
       if (voices.isEmpty) return;
 
-      final basePreferred =
-          _preferredVoiceNamesByLanguage[_locale.languageCode] ??
-              const <String>[];
-      final preferred = (seed != null && basePreferred.isNotEmpty)
-          ? _rotateForSeed(basePreferred, seed)
-          : basePreferred;
-
       Map<String, String>? pick;
-      for (final name in preferred) {
+
+      // Override Windows : on cherche d'abord Julie (case-insensitive),
+      // peu importe le seed/coach. Sur SAPI il n'y a generalement qu'une
+      // seule voix FR locale fiable, donc tous les coachs partagent
+      // Julie ; leur identite reste portee par le texte/rate/pitch.
+      if (_isWindows && _locale.languageCode == 'fr') {
         pick = voices.firstWhereOrNull(
-          (v) => (v['name'] ?? '') == name,
+          (v) => (v['name'] ?? '').toLowerCase().contains(_windowsVoiceNeedle),
         );
-        if (pick != null) break;
       }
-      pick ??= _fallbackPick(voices);
+
+      if (pick == null) {
+        final basePreferred =
+            _preferredVoiceNamesByLanguage[_locale.languageCode] ??
+                const <String>[];
+        final preferred = (seed != null && basePreferred.isNotEmpty)
+            ? _rotateForSeed(basePreferred, seed)
+            : basePreferred;
+
+        for (final name in preferred) {
+          pick = voices.firstWhereOrNull(
+            (v) => (v['name'] ?? '') == name,
+          );
+          if (pick != null) break;
+        }
+        pick ??= _fallbackPick(voices);
+      }
       if (pick == null) return;
 
       final name = pick['name'];
@@ -216,12 +253,21 @@ class TtsService {
   Future<void> speak(String text) async {
     if (!_initialized) await init();
     if (text.trim().isEmpty) return;
-    await _tts.speak(resolveText(text));
+    try {
+      await _tts.speak(resolveText(text));
+    } catch (e) {
+      _speaking = false;
+      if (kDebugMode) debugPrint('[TTS] speak KO : $e');
+    }
   }
 
   Future<void> stop() async {
     _speaking = false;
-    await _tts.stop();
+    try {
+      await _tts.stop();
+    } catch (e) {
+      if (kDebugMode) debugPrint('[TTS] stop KO : $e');
+    }
   }
 
   Future<void> setRate(double rate) async {
@@ -291,8 +337,12 @@ class TtsService {
   }
 
   Future<void> setVoiceByName(String name, String locale) async {
-    await _tts.setVoice({'name': name, 'locale': locale});
-    _currentVoiceName = name;
+    try {
+      await _tts.setVoice({'name': name, 'locale': locale});
+      _currentVoiceName = name;
+    } catch (e) {
+      if (kDebugMode) debugPrint('[TTS] setVoiceByName KO ($name/$locale) : $e');
+    }
   }
 
   /// Applique un preset vocal coach : voix nommée + rate + pitch. Toute
@@ -310,6 +360,17 @@ class TtsService {
     double? pitch,
   }) async {
     if (!_initialized) await init();
+    // Override Windows : tous les coachs utilisent Julie + rate/pitch
+    // Windows par defaut. Les voix Android-specifiques (`fr-fr-x-*-local`)
+    // n'existent pas sous SAPI, et on n'a typiquement qu'une voix FR
+    // locale correcte (Julie) — donc pas de variation de voix possible.
+    // Les coachs gardent leur identite via leurs phrases.
+    if (_isWindows) {
+      await _selectVoice();
+      await setRate(_windowsDefaultRate);
+      await setPitch(_windowsDefaultPitch);
+      return;
+    }
     // Le preset coach est défini en dur dans le JSON meta (lang-indépendant)
     // mais référence une voix d'une langue précise (ex: `fr-fr-x-fra-local`).
     // Si la locale active diffère, on ignore la voix nommée et on laisse
@@ -365,8 +426,8 @@ class TtsService {
   /// autres écrans (SONS, autre coach, scénario hors carrière).
   Future<void> restoreDefaultVoicePreset() async {
     if (!_initialized) await init();
-    await setRate(_defaultRate);
-    await setPitch(_defaultPitch);
+    await setRate(_platformDefaultRate);
+    await setPitch(_platformDefaultPitch);
     await _selectVoice();
   }
 

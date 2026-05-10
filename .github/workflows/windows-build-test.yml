@@ -1,0 +1,91 @@
+name: Test Windows build (manual)
+
+# Workflow temporaire de validation du build Windows. Trigger manuel
+# uniquement (workflow_dispatch). Ne touche pas aux Releases / tags —
+# uploade le zip resultant comme artifact GitHub (telechargeable depuis
+# l'onglet Actions, conserve 7 jours).
+#
+# A supprimer apres validation du job `release-windows` dans release.yml.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Windows portable zip (no release)
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: rhythm_coach
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Fetch external assets from R2
+        env:
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          AWS_REQUEST_CHECKSUM_CALCULATION: WHEN_REQUIRED
+          AWS_RESPONSE_CHECKSUM_VALIDATION: WHEN_REQUIRED
+        shell: bash
+        run: |
+          if [ -z "$R2_ACCESS_KEY_ID" ] || [ -z "$R2_SECRET_ACCESS_KEY" ] || [ -z "$R2_ENDPOINT" ] || [ -z "$R2_BUCKET" ]; then
+            echo "R2 secrets not configured — skipping external assets fetch."
+            echo "Test build proceeds with empty backgrounds/ambience folders."
+            exit 0
+          fi
+
+          export AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID"
+          export AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY"
+          export AWS_DEFAULT_REGION="auto"
+
+          mkdir -p assets/backgrounds assets/audio/ambience
+
+          aws s3 sync "s3://$R2_BUCKET/backgrounds/v1/" assets/backgrounds/ \
+            --endpoint-url "$R2_ENDPOINT" \
+            --no-progress
+          aws s3 sync "s3://$R2_BUCKET/ambience/v1/" assets/audio/ambience/ \
+            --endpoint-url "$R2_ENDPOINT" \
+            --no-progress || echo "(ambience prefix empty or missing, continuing)"
+
+      - name: Enable Windows desktop
+        run: flutter config --enable-windows-desktop
+
+      - name: Build Windows release
+        run: flutter build windows --release
+
+      - name: Package Windows zip and compute SHA256
+        id: pkg
+        shell: pwsh
+        run: |
+          $src = "build/windows/x64/runner/Release"
+          $dstName = "BeatBitch-test-windows-x64.zip"
+          Compress-Archive -Path "$src/*" -DestinationPath $dstName -Force
+          $hash = (Get-FileHash $dstName -Algorithm SHA256).Hash.ToLower()
+          "$hash  $dstName" | Out-File -Encoding ascii "$dstName.sha256"
+          Write-Host "Built $dstName (SHA256 $hash)"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: beatbitch-windows-test
+          path: |
+            rhythm_coach/BeatBitch-test-windows-x64.zip
+            rhythm_coach/BeatBitch-test-windows-x64.zip.sha256
+          retention-days: 7
+          if-no-files-found: error

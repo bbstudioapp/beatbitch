@@ -11,6 +11,7 @@ import '../services/ambience_engine.dart';
 import '../services/beep_engine.dart';
 import '../services/coach_phrases_loader.dart';
 import '../services/locale_service.dart';
+import '../services/platform_capabilities.dart';
 import '../services/tts_service.dart';
 import '../services/user_profile_service.dart';
 import '../theme/app_theme.dart';
@@ -559,29 +560,30 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
                         setState(() => _showBackgroundMedia = v);
                       },
                     ),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        t.soundsDebugCameraHoldCheck,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppTheme.textPrimary,
+                    if (PlatformCapabilities.supportsCameraHoldCheck)
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          t.soundsDebugCameraHoldCheck,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppTheme.textPrimary,
+                          ),
                         ),
-                      ),
-                      subtitle: Text(
-                        t.soundsDebugCameraHoldCheckSubtitle,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppTheme.textMuted,
+                        subtitle: Text(
+                          t.soundsDebugCameraHoldCheckSubtitle,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.textMuted,
+                          ),
                         ),
+                        value: _cameraHoldCheck,
+                        onChanged: (v) async {
+                          await _debug.setCameraHoldCheck(v);
+                          if (!mounted) return;
+                          setState(() => _cameraHoldCheck = v);
+                        },
                       ),
-                      value: _cameraHoldCheck,
-                      onChanged: (v) async {
-                        await _debug.setCameraHoldCheck(v);
-                        if (!mounted) return;
-                        setState(() => _cameraHoldCheck = v);
-                      },
-                    ),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       title: Text(

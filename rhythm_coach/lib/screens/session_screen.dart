@@ -28,6 +28,7 @@ import '../services/badge_service.dart';
 import '../services/beep_engine.dart';
 import '../services/coach_phrases_loader.dart';
 import '../services/hold_verifier.dart';
+import '../services/platform_capabilities.dart';
 import '../services/punishment_loader.dart';
 import '../services/random_comments_loader.dart';
 import '../services/saved_sessions_repository.dart';
@@ -205,6 +206,7 @@ class _SessionScreenState extends State<SessionScreen>
   }
 
   Future<void> _maybeShowCameraInactiveSnackbar() async {
+    if (!PlatformCapabilities.supportsCameraHoldCheck) return;
     final enabled = await DebugSettingsService().getCameraHoldCheck();
     if (!enabled || !mounted) return;
     final messenger = ScaffoldMessenger.maybeOf(context);

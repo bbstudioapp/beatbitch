@@ -5,6 +5,7 @@ import '../career/services/debug_settings_service.dart';
 import 'camera_motion_detector.dart';
 import 'coach_phrases_loader.dart';
 import 'hold_verifier.dart';
+import 'platform_capabilities.dart';
 import 'tts_service.dart';
 
 /// Singleton qui détient un [CameraMotionDetector] partagé et persiste la
@@ -43,6 +44,7 @@ class CameraMotionService {
   /// Renvoie `false` si la permission caméra a été refusée ou si l'init
   /// caméra a échoué. Dans ce cas le détecteur reste null.
   Future<bool> ensureInitialized() async {
+    if (!PlatformCapabilities.supportsCameraHoldCheck) return false;
     if (_detector != null) return true;
     if (_initializing) {
       // Attente passive le temps que l'init concurrente se termine.
@@ -137,6 +139,7 @@ class CameraMotionService {
     TtsService tts, {
     CoachPhrases? phrases,
   }) async {
+    if (!PlatformCapabilities.supportsCameraHoldCheck) return null;
     final effectivePhrases = phrases ?? CoachPhrasesService.instance.current;
     final enabled = await _debug.getCameraHoldCheck();
     if (!enabled) return null;
