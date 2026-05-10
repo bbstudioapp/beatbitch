@@ -1,0 +1,45 @@
+name: CI (analyze + test)
+
+# Tourne sur chaque PR vers develop ou main pour valider que le code
+# Dart compile et que la suite de tests unitaires passe. À cocher en
+# *Required status checks* dans le ruleset GitHub apres la 1re execution
+# reussie pour bloquer les merges qui regressent.
+
+on:
+  pull_request:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze-and-test:
+    name: flutter analyze + flutter test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rhythm_coach
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test

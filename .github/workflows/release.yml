@@ -153,17 +153,37 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag }}
           name: BeatBitch ${{ steps.version.outputs.value }}
           body: |
-            APK release signé pour Android (side-load uniquement, pas de Play Store).
+            Release multi-plateformes : APK signé pour Android + zip portable Windows desktop.
 
-            **SHA256** : `${{ steps.pkg.outputs.sha }}`
+            **APK Android SHA256** : `${{ steps.pkg.outputs.sha }}`
 
-            ## Installation
-            1. Télécharge l'APK et le fichier `.sha256`.
+            ## 📲 Installation Android (side-load)
+
+            Pas de Play Store — installation manuelle.
+
+            1. Télécharge `BeatBitch-${{ steps.version.outputs.value }}.apk` et son `.sha256`.
             2. Vérifie l'intégrité : `sha256sum -c BeatBitch-${{ steps.version.outputs.value }}.apk.sha256`
             3. Active *Sources inconnues* pour ton gestionnaire de fichiers / navigateur.
             4. Ouvre l'APK et confirme l'installation.
+            5. Au 1er lancement : adult gate 18+, puis onboarding 3 étapes.
 
-            ⚠ Build sans assets binaires externalisés (fonds média et MP3 d'ambiance) — l'écran de jeu retombe sur le dégradé animé et l'ambiance reste silencieuse. Les packs externes seront livrés ultérieurement via un canal séparé.
+            > Mises à jour automatiques via [Obtainium](https://github.com/ImranR98/Obtainium) — `Add App` → URL `https://github.com/bbstudioapp/beatbitch`.
+
+            ## 🖥 Installation Windows desktop
+
+            Le zip Windows arrive en parallèle de l'APK (job CI séparé). Si le fichier `BeatBitch-${{ steps.version.outputs.value }}-windows-x64.zip` apparaît dans la liste ci-dessous, il est prêt à utiliser :
+
+            1. Télécharge `BeatBitch-${{ steps.version.outputs.value }}-windows-x64.zip` et son `.sha256`.
+            2. Vérifie l'intégrité : `Get-FileHash BeatBitch-${{ steps.version.outputs.value }}-windows-x64.zip -Algorithm SHA256` (PowerShell).
+            3. Dézippe où tu veux (`Documents\BeatBitch\`, clé USB, etc.) — c'est un binaire portable, pas d'install registry.
+            4. Lance `rhythm_coach.exe`. Windows SmartScreen peut alerter (binaire non signé) → *Informations supplémentaires* → *Exécuter quand même*.
+            5. Au 1er lancement : adult gate 18+, puis onboarding 3 étapes.
+
+            > Désactivés sur Windows : vérif caméra des holds, notifications surprise. La voix coach utilise Microsoft Julie (SAPI). Tout le reste est identique à Android.
+
+            ## ⚠ Assets binaires
+
+            Si la CI a accès au bucket R2, les fonds animés et MP3 d'ambiance sont bundlés dans les builds. Sinon (fork, premier setup), le build dégrade gracieusement — fonds = dégradé animé, ambiance = silence.
           generate_release_notes: true
           files: |
             ${{ steps.pkg.outputs.apk_path }}

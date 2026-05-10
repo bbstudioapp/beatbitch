@@ -27,19 +27,22 @@ assignees: ''
 
 ## Environnement / Environment
 
-- **Version BeatBitch** : <!-- ex: 0.1.1 (Profil → bas de page) -->
-- **Modèle Android** : <!-- ex: Samsung Galaxy S21 -->
-- **Version Android** : <!-- ex: 15 -->
+- **Version BeatBitch** : <!-- ex: 0.1.3 (Profil → bas de page) -->
+- **Plateforme / Platform** : <!-- coche / check : Android | Windows desktop | autre / other -->
+- **OS** : <!-- ex: Android 15 / Samsung Galaxy S21 — ou — Windows 11 23H2 -->
 - **Langue dans l'app / App language** : <!-- FR ou EN -->
 
 ## Logs / Captures
 
 <!--
-Optionnel : captures d'écran, vidéo, logs adb si tu en as.
-Optional: screenshots, video, adb logs if you have any.
+Optionnel : captures d'écran, vidéo, logs si tu en as.
+Optional: screenshots, video, logs if you have any.
 
-Pour récupérer les logs Android :
+Logs Android :
   adb logcat *:W | grep -i beatbitch
+
+Logs Windows : lance `rhythm_coach.exe` depuis un terminal (cmd / PowerShell) →
+les `debugPrint` et exceptions catchées s'affichent en stdout/stderr.
 -->
 
 ## Notes
