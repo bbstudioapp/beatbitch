@@ -594,81 +594,82 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
             // utilisateur `showBackgroundMedia` (page SONS) court-circuite
             // les médias et ne rend que le dégradé.
             Positioned.fill(
-                child:
-                    SessionBackground(mediaEnabled: _showBackgroundMedia)),
+                child: SessionBackground(mediaEnabled: _showBackgroundMedia)),
             SafeArea(
-          child: _introPending
-              ? _IntroPanel(
-                  text: _resolvedIntroText!,
-                  onReady: _onIntroReady,
-                  onReplay: _speakIntro,
-                )
-              : (inPrep
-                  ? _PrepCountdownPanel(seconds: _prepCountdown!)
-                  : (ctrl.isFinished
-                      ? (ctrl.hasPendingBadges
-                          // Phase 1 : juste après le post-final. On garde
-                          // l'écran de séance (animation, timer, ambiance)
-                          // visible, et on superpose un overlay centré avec
-                          // les boutons MERCI / ENCORE / SAUVEGARDER. Tap
-                          // MERCI → révélation des badges → bascule sur le
-                          // panel complet (phase 2) au prochain rebuild
-                          // (notifyListeners de revealBadgeUnlocks).
-                          ? Stack(
+              child: _introPending
+                  ? _IntroPanel(
+                      text: _resolvedIntroText!,
+                      onReady: _onIntroReady,
+                      onReplay: _speakIntro,
+                    )
+                  : (inPrep
+                      ? _PrepCountdownPanel(seconds: _prepCountdown!)
+                      : (ctrl.isFinished
+                          ? (ctrl.hasPendingBadges
+                              // Phase 1 : juste après le post-final. On garde
+                              // l'écran de séance (animation, timer, ambiance)
+                              // visible, et on superpose un overlay centré avec
+                              // les boutons MERCI / ENCORE / SAUVEGARDER. Tap
+                              // MERCI → révélation des badges → bascule sur le
+                              // panel complet (phase 2) au prochain rebuild
+                              // (notifyListeners de revealBadgeUnlocks).
+                              ? Stack(
+                                  children: [
+                                    Positioned.fill(
+                                      child: _buildRunningView(ctrl),
+                                    ),
+                                    Positioned.fill(
+                                      child: _FinishedOverlay(
+                                        endButtonLabel: widget.endButtonLabel ??
+                                            t.sessionFinishedDefaultEnd,
+                                        onThanks: ctrl.revealBadgeUnlocks,
+                                        onEncore: widget.onRequestEncore == null
+                                            ? null
+                                            : () =>
+                                                widget.onRequestEncore!(ctrl),
+                                        onSave: widget.canSave
+                                            ? () => _handleSave(ctrl)
+                                            : null,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              // Phase 2 : badges révélés. Panel complet avec
+                              // détails badges + points spé + bouton de sortie.
+                              : _FinishedPanel(
+                                  badgeUnlocks: ctrl.sessionBadgeUnlocks,
+                                  milestoneUnlocks:
+                                      ctrl.sessionMilestoneUnlocks,
+                                  hasPendingBadges: false,
+                                  onRevealBadges: ctrl.revealBadgeUnlocks,
+                                  endButtonLabel: widget.endButtonLabel ??
+                                      t.sessionFinishedDefaultEnd,
+                                  onEnd: widget.closeAppOnEnd
+                                      ? SystemNavigator.pop
+                                      : () => Navigator.of(context).pop(),
+                                  onEncore: widget.onRequestEncore == null
+                                      ? null
+                                      : () => widget.onRequestEncore!(ctrl),
+                                  onSave: widget.canSave
+                                      ? () => _handleSave(ctrl)
+                                      : null,
+                                  elapsedSeconds: ctrl.elapsedSeconds,
+                                ))
+                          : Stack(
                               children: [
-                                Positioned.fill(
-                                  child: _buildRunningView(ctrl),
-                                ),
-                                Positioned.fill(
-                                  child: _FinishedOverlay(
-                                    endButtonLabel: widget.endButtonLabel ??
-                                        t.sessionFinishedDefaultEnd,
-                                    onThanks: ctrl.revealBadgeUnlocks,
-                                    onEncore: widget.onRequestEncore == null
-                                        ? null
-                                        : () => widget.onRequestEncore!(ctrl),
-                                    onSave: widget.canSave
-                                        ? () => _handleSave(ctrl)
-                                        : null,
+                                Positioned.fill(child: _buildRunningView(ctrl)),
+                                // Overlay flou + bouton play centré quand la
+                                // séance est en pause. Couvre l'intégralité de
+                                // l'écran de jeu, peu importe le mode prod /
+                                // debug — la reprise est toujours à un tap.
+                                if (ctrl.isPaused)
+                                  Positioned.fill(
+                                    child: _PausedOverlay(
+                                      onResume: ctrl.resume,
+                                    ),
                                   ),
-                                ),
                               ],
-                            )
-                          // Phase 2 : badges révélés. Panel complet avec
-                          // détails badges + points spé + bouton de sortie.
-                          : _FinishedPanel(
-                              badgeUnlocks: ctrl.sessionBadgeUnlocks,
-                              milestoneUnlocks: ctrl.sessionMilestoneUnlocks,
-                              hasPendingBadges: false,
-                              onRevealBadges: ctrl.revealBadgeUnlocks,
-                              endButtonLabel: widget.endButtonLabel ??
-                                  t.sessionFinishedDefaultEnd,
-                              onEnd: widget.closeAppOnEnd
-                                  ? SystemNavigator.pop
-                                  : () => Navigator.of(context).pop(),
-                              onEncore: widget.onRequestEncore == null
-                                  ? null
-                                  : () => widget.onRequestEncore!(ctrl),
-                              onSave: widget.canSave
-                                  ? () => _handleSave(ctrl)
-                                  : null,
-                              elapsedSeconds: ctrl.elapsedSeconds,
-                            ))
-                      : Stack(
-                          children: [
-                            Positioned.fill(child: _buildRunningView(ctrl)),
-                            // Overlay flou + bouton play centré quand la
-                            // séance est en pause. Couvre l'intégralité de
-                            // l'écran de jeu, peu importe le mode prod /
-                            // debug — la reprise est toujours à un tap.
-                            if (ctrl.isPaused)
-                              Positioned.fill(
-                                child: _PausedOverlay(
-                                  onResume: ctrl.resume,
-                                ),
-                              ),
-                          ],
-                        ))),
+                            ))),
             ),
           ],
         ),
@@ -699,128 +700,131 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
               ),
               child: Column(
                 children: [
-          _StateBadge(state: ctrl.state),
-          SizedBox(height: showBar ? 6 : 12),
-          if (ctrl.isFailing)
-            _FailPhaseIndicator(controller: ctrl)
-          else if (ctrl.hasConfig)
-            ModeBadgeRow(
-              mode: ctrl.currentMode,
-              from: ctrl.currentFrom,
-              to: ctrl.currentTo,
-              bpm: ctrl.currentBpm,
-              showDetails: _showModeBadge,
-            )
-          else
-            const SizedBox(height: 30),
-          if (showBar) ...[
-            const SizedBox(height: 4),
-            StaminaBar(
-              profile: widget.staminaProfile!,
-              currentSecond: ctrl.elapsedSeconds,
-              liveValue: ctrl.stamina.value,
-            ),
-          ],
-          if (_showHumiliationBar) ...[
-            const SizedBox(height: 4),
-            HumiliationBar(
-              careerScore: ctrl.humiliation.careerScore,
-              sessionScore: ctrl.humiliation.sessionScore,
-            ),
-          ],
-          if (_showObedienceBar) ...[
-            const SizedBox(height: 4),
-            ObedienceBar(value: ctrl.obedience.score),
-          ],
-          if (_showSalivaBar) ...[
-            const SizedBox(height: 4),
-            SalivaBar(
-              value: ctrl.saliva.value,
-              max: ctrl.saliva.maxValue,
-            ),
-          ],
-          const Spacer(),
-          if (_showTimer)
-            TimerDisplay(elapsed: ctrl.elapsed, total: ctrl.session.duration)
-          else if (ctrl.hasConfig)
-            MovementAnimation(
-              mode: ctrl.currentMode,
-              from: ctrl.currentFrom,
-              to: ctrl.currentTo,
-              bpm: ctrl.currentBpm,
-              height: animHeight,
-              beepEngine: widget.beep,
-            )
-          else
-            SizedBox(height: animHeight),
-          SizedBox(height: showBar ? 12 : 24),
-          _CurrentInstruction(
-            // `currentDisplayText` retourne déjà la version résolue
-            // (`{name}` substitué) du dernier texte parlé / phrase de fail.
-            // Le contrôleur résout une fois au speak, donc l'affichage reste
-            // stable entre rebuilds et matche exactement la voix.
-            text: ctrl.currentDisplayText,
-          ),
-          const Spacer(),
-          if (_showSessionControls) ...[
-            _ControlsRow(controller: ctrl),
-            SizedBox(height: showBar ? 10 : 16),
-          ],
-          // L'état pause est signalé par l'overlay flou plein écran
-          // monté un cran au-dessus (cf. `_PausedOverlay` dans `body`).
-          if (widget.isCareer && widget.onRequestUpgrade != null)
-            ListenableBuilder(
-              listenable: milestoneService,
-              builder: (context, _) {
-                // Le bouton « Supplier » n'apparaît qu'après que la milestone
-                // `intro_beg_libre` (niveau 3) ait été acquittée. Avant ça,
-                // l'utilisatrice n'a pas appris à supplier — afficher le
-                // bouton serait incohérent. Le ChangeNotifier déclenche un
-                // rebuild quand le déblocage arrive en cours de séance.
-                if (!milestoneService.hasUnlock(UnlockKey.begLibre)) {
-                  return const SizedBox.shrink();
-                }
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _SupplierButton(
-                      enabled: ctrl.isRunning &&
-                          !_upgradeRequested &&
-                          !_upgradeInFlight,
-                      used: _upgradeRequested,
-                      onPressed: _onUpgrade,
+                  _StateBadge(state: ctrl.state),
+                  SizedBox(height: showBar ? 6 : 12),
+                  if (ctrl.isFailing)
+                    _FailPhaseIndicator(controller: ctrl)
+                  else if (ctrl.hasConfig)
+                    ModeBadgeRow(
+                      mode: ctrl.currentMode,
+                      from: ctrl.currentFrom,
+                      to: ctrl.currentTo,
+                      bpm: ctrl.currentBpm,
+                      showDetails: _showModeBadge,
+                    )
+                  else
+                    const SizedBox(height: 30),
+                  if (showBar) ...[
+                    const SizedBox(height: 4),
+                    StaminaBar(
+                      profile: widget.staminaProfile!,
+                      currentSecond: ctrl.elapsedSeconds,
+                      liveValue: ctrl.stamina.value,
                     ),
-                    SizedBox(height: showBar ? 8 : 12),
                   ],
-                );
-              },
-            ),
-          _FailButton(controller: ctrl),
-          if (_showSkipSessionButton && (ctrl.isRunning || ctrl.isPaused)) ...[
-            SizedBox(height: showBar ? 8 : 12),
-            Builder(
-              builder: (ctx) => OutlinedButton.icon(
-                onPressed: () => ctrl.debugFinishSuccess(),
-                icon: const Icon(Icons.fast_forward, size: 18),
-                label: Text(AppLocalizations.of(ctx).sessionDebugFinishButton),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.greenAccent,
-                  side: const BorderSide(color: Colors.greenAccent),
-                  minimumSize: const Size.fromHeight(36),
-                ),
-              ),
-            ),
-          ],
-          SizedBox(height: showBar ? 10 : 16),
-          _VolumesBlock(
-            ttsVolume: _volume,
-            ambienceVolume: ctrl.ambienceVolume,
-            onTtsVolume: (v) {
-              setState(() => _volume = v);
-              widget.tts.setVolume(v);
-            },
-            onAmbienceVolume: ctrl.setAmbienceVolume,
-          ),
+                  if (_showHumiliationBar) ...[
+                    const SizedBox(height: 4),
+                    HumiliationBar(
+                      careerScore: ctrl.humiliation.careerScore,
+                      sessionScore: ctrl.humiliation.sessionScore,
+                    ),
+                  ],
+                  if (_showObedienceBar) ...[
+                    const SizedBox(height: 4),
+                    ObedienceBar(value: ctrl.obedience.score),
+                  ],
+                  if (_showSalivaBar) ...[
+                    const SizedBox(height: 4),
+                    SalivaBar(
+                      value: ctrl.saliva.value,
+                      max: ctrl.saliva.maxValue,
+                    ),
+                  ],
+                  const Spacer(),
+                  if (_showTimer)
+                    TimerDisplay(
+                        elapsed: ctrl.elapsed, total: ctrl.session.duration)
+                  else if (ctrl.hasConfig)
+                    MovementAnimation(
+                      mode: ctrl.currentMode,
+                      from: ctrl.currentFrom,
+                      to: ctrl.currentTo,
+                      bpm: ctrl.currentBpm,
+                      height: animHeight,
+                      beepEngine: widget.beep,
+                    )
+                  else
+                    SizedBox(height: animHeight),
+                  SizedBox(height: showBar ? 12 : 24),
+                  _CurrentInstruction(
+                    // `currentDisplayText` retourne déjà la version résolue
+                    // (`{name}` substitué) du dernier texte parlé / phrase de fail.
+                    // Le contrôleur résout une fois au speak, donc l'affichage reste
+                    // stable entre rebuilds et matche exactement la voix.
+                    text: ctrl.currentDisplayText,
+                  ),
+                  const Spacer(),
+                  if (_showSessionControls) ...[
+                    _ControlsRow(controller: ctrl),
+                    SizedBox(height: showBar ? 10 : 16),
+                  ],
+                  // L'état pause est signalé par l'overlay flou plein écran
+                  // monté un cran au-dessus (cf. `_PausedOverlay` dans `body`).
+                  if (widget.isCareer && widget.onRequestUpgrade != null)
+                    ListenableBuilder(
+                      listenable: milestoneService,
+                      builder: (context, _) {
+                        // Le bouton « Supplier » n'apparaît qu'après que la milestone
+                        // `intro_beg_libre` (niveau 3) ait été acquittée. Avant ça,
+                        // l'utilisatrice n'a pas appris à supplier — afficher le
+                        // bouton serait incohérent. Le ChangeNotifier déclenche un
+                        // rebuild quand le déblocage arrive en cours de séance.
+                        if (!milestoneService.hasUnlock(UnlockKey.begLibre)) {
+                          return const SizedBox.shrink();
+                        }
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _SupplierButton(
+                              enabled: ctrl.isRunning &&
+                                  !_upgradeRequested &&
+                                  !_upgradeInFlight,
+                              used: _upgradeRequested,
+                              onPressed: _onUpgrade,
+                            ),
+                            SizedBox(height: showBar ? 8 : 12),
+                          ],
+                        );
+                      },
+                    ),
+                  _FailButton(controller: ctrl),
+                  if (_showSkipSessionButton &&
+                      (ctrl.isRunning || ctrl.isPaused)) ...[
+                    SizedBox(height: showBar ? 8 : 12),
+                    Builder(
+                      builder: (ctx) => OutlinedButton.icon(
+                        onPressed: () => ctrl.debugFinishSuccess(),
+                        icon: const Icon(Icons.fast_forward, size: 18),
+                        label: Text(
+                            AppLocalizations.of(ctx).sessionDebugFinishButton),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.greenAccent,
+                          side: const BorderSide(color: Colors.greenAccent),
+                          minimumSize: const Size.fromHeight(36),
+                        ),
+                      ),
+                    ),
+                  ],
+                  SizedBox(height: showBar ? 10 : 16),
+                  _VolumesBlock(
+                    ttsVolume: _volume,
+                    ambienceVolume: ctrl.ambienceVolume,
+                    onTtsVolume: (v) {
+                      setState(() => _volume = v);
+                      widget.tts.setVolume(v);
+                    },
+                    onAmbienceVolume: ctrl.setAmbienceVolume,
+                  ),
                 ],
               ),
             ),
@@ -1624,8 +1628,7 @@ class _FinishedOverlayState extends State<_FinishedOverlay> {
                         padding: const EdgeInsets.symmetric(
                             vertical: 10, horizontal: 12),
                       ),
-                      onPressed:
-                          (_saveInFlight || _saved) ? null : _handleSave,
+                      onPressed: (_saveInFlight || _saved) ? null : _handleSave,
                       icon: Icon(
                         _saved ? Icons.check : Icons.bookmark_add_outlined,
                         size: 18,
@@ -1714,8 +1717,7 @@ class _FinishedPanelState extends State<_FinishedPanel> {
 
   Future<void> _refreshSpecPoints() async {
     final maxLevel = await CareerProgressService().getMaxLevel();
-    final available =
-        await SpecializationService().availablePoints(maxLevel);
+    final available = await SpecializationService().availablePoints(maxLevel);
     if (!mounted) return;
     setState(() => _availableSpecPoints = available);
   }

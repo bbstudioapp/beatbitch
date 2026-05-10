@@ -235,8 +235,7 @@ class SessionController extends ChangeNotifier {
     required SpecializationAllocation? specialization,
     required double rngValue,
   }) {
-    final pts =
-        specialization?.pointsIn(SpecializationBranch.resilience) ?? 0;
+    final pts = specialization?.pointsIn(SpecializationBranch.resilience) ?? 0;
     if (pts <= 0) return false;
     final probability = 0.05 * pts;
     return rngValue < probability;
@@ -481,10 +480,8 @@ class SessionController extends ChangeNotifier {
   /// True si le bouton FAIL doit être actif. Actif aussi pendant la phase
   /// punishment d'un fail en cours pour permettre d'abandonner la punition.
   bool get canTriggerFail =>
-      (_state == SessionState.running &&
-              _punishmentBundle.isEmpty == false) ||
-          (_state == SessionState.failing &&
-              _failPhase == FailPhase.punishment);
+      (_state == SessionState.running && _punishmentBundle.isEmpty == false) ||
+      (_state == SessionState.failing && _failPhase == FailPhase.punishment);
 
   // ─── Ambiance ──────────────────────────────────────────────────────────
 
@@ -678,8 +675,7 @@ class SessionController extends ChangeNotifier {
     await _beep.stop();
     // Cale l'horloge logique sur la durée totale (les badges qui regardent
     // `totalSeconds` créditent la session entière).
-    final missing =
-        Duration(seconds: session.durationSeconds) - elapsed;
+    final missing = Duration(seconds: session.durationSeconds) - elapsed;
     if (missing > Duration.zero) _timelineOffset += missing;
     _hadFailThisSession = false;
     await _finish();
@@ -944,9 +940,8 @@ class SessionController extends ChangeNotifier {
     if (text.isNotEmpty) {
       await Future.delayed(const Duration(milliseconds: 80));
       final deadline = DateTime.now().add(const Duration(seconds: 8));
-      while (_tts.isSpeaking &&
-          DateTime.now().isBefore(deadline) &&
-          !_released) {
+      while (
+          _tts.isSpeaking && DateTime.now().isBefore(deadline) && !_released) {
         await Future.delayed(const Duration(milliseconds: 50));
       }
     }
@@ -1025,16 +1020,15 @@ class SessionController extends ChangeNotifier {
           id,
           l10n: _appLocalizations,
         );
-        if (announce != null &&
-            (isFinal || milestoneAnnouncement == null)) {
+        if (announce != null && (isFinal || milestoneAnnouncement == null)) {
           milestoneAnnouncement = announce;
         }
         // Bonus permanent sur la career : compétence acquise = chauffe
         // permanente (pas un bump session jeté à la fin de la séance).
-        _humiliation
-            .bumpCareer(HumiliationEngine.bumpMilestoneAcquired);
+        _humiliation.bumpCareer(HumiliationEngine.bumpMilestoneAcquired);
       }
     }
+
     await markIfPresent(session.milestoneId, isFinal: false);
     await markIfPresent(session.finalMilestoneId, isFinal: true);
     _sessionMilestoneUnlocks = List<LevelMilestone>.unmodifiable(newlyUnlocked);
@@ -1262,8 +1256,7 @@ class SessionController extends ChangeNotifier {
 
     // Cas particulier : on est déjà dans le flow fail, en pleine punition
     // → on abandonne la punition (malus obéissance, pas de re-punition).
-    if (_state == SessionState.failing &&
-        _failPhase == FailPhase.punishment) {
+    if (_state == SessionState.failing && _failPhase == FailPhase.punishment) {
       _abandonPunishment();
       return;
     }
@@ -1311,10 +1304,10 @@ class SessionController extends ChangeNotifier {
       // que dans le pool générique. Fallback transparent au pool standard
       // si le pool dédié est vide (sécurité contre un JSON incomplet).
       final swallowPool = _punishmentBundle.failPhrasesSwallow;
-      final pool = (_swallowMode == SwallowMode.forbidden &&
-              swallowPool.isNotEmpty)
-          ? swallowPool
-          : _punishmentBundle.failPhrases;
+      final pool =
+          (_swallowMode == SwallowMode.forbidden && swallowPool.isNotEmpty)
+              ? swallowPool
+              : _punishmentBundle.failPhrases;
       final raw = _pickRandom(pool);
       _currentFailPhrase = raw == null ? null : _tts.resolveText(raw);
       notifyListeners();
@@ -1333,8 +1326,7 @@ class SessionController extends ChangeNotifier {
       _failPhase = FailPhase.breath;
       notifyListeners();
       final stamina = _staminaAtNow();
-      final isFresh =
-          stamina != null && stamina > _breathSkipStaminaThreshold;
+      final isFresh = stamina != null && stamina > _breathSkipStaminaThreshold;
       final breathSeconds =
           isFresh ? (3 + _random.nextInt(3)) : (8 + _random.nextInt(8));
       await _beep.applyStep(
@@ -1698,10 +1690,8 @@ class SessionController extends ChangeNotifier {
     // retour audible de ses milestones sans toucher au reste du gameplay.
     // Si aucune phrase ne match le contexte, fallback sur les phrases
     // applicables partout (toujours filtrées par requires_unlock).
-    final unlockedKeys = milestoneService
-        .acquiredUnlockKeys()
-        .map((k) => k.serialized)
-        .toSet();
+    final unlockedKeys =
+        milestoneService.acquiredUnlockKeys().map((k) => k.serialized).toSet();
     final phrase = _randomComments.pickFor(
       mode: _beep.currentMode,
       bpm: _beep.currentBpm,

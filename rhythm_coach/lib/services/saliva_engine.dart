@@ -195,8 +195,7 @@ class SalivaEngine {
         _value = _value * autoSwallowRatio;
         _lastAutoSwallowAtSecond = elapsedSecond;
         _nextAutoSwallowDelaySeconds = autoSwallowMinSeconds +
-            _rng.nextInt(
-                autoSwallowMaxSeconds - autoSwallowMinSeconds + 1);
+            _rng.nextInt(autoSwallowMaxSeconds - autoSwallowMinSeconds + 1);
       }
     }
   }
@@ -238,8 +237,7 @@ class SalivaEngine {
   }) {
     switch (mode) {
       case SessionMode.lick:
-        return (_baseProductionByMode[mode] ?? 0.0) *
-            _lickProductionMultiplier;
+        return (_baseProductionByMode[mode] ?? 0.0) * _lickProductionMultiplier;
       case SessionMode.rhythm:
         final deepest = _deepestOf(from, to);
         final mult =

@@ -326,9 +326,7 @@ class _BranchCard extends StatelessWidget {
               backgroundColor: canInvest
                   ? AppTheme.accent
                   : AppTheme.surface.withValues(alpha: 0.6),
-              foregroundColor: canInvest
-                  ? Colors.black
-                  : AppTheme.textMuted,
+              foregroundColor: canInvest ? Colors.black : AppTheme.textMuted,
             ),
             onPressed: canInvest ? onInvest : null,
             icon: const Icon(Icons.add, size: 20),
@@ -375,7 +373,8 @@ class _RespecButton extends StatelessWidget {
         label: Text(
           canRespec
               ? AppLocalizations.of(context).specRespecActiveLabel
-              : AppLocalizations.of(context).specRespecCooldownLabel(cooldownHours),
+              : AppLocalizations.of(context)
+                  .specRespecCooldownLabel(cooldownHours),
           style: TextStyle(
             fontSize: 13,
             color: canRespec ? AppTheme.textPrimary : AppTheme.textMuted,

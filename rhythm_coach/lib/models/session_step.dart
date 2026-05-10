@@ -174,8 +174,7 @@ class SessionStep {
         if (bpmEnd != null) 'bpmEnd': bpmEnd,
         if (duration != null) 'duration': duration,
         if (mode != null) 'mode': mode!.serialized,
-        if (chainAction != null)
-          'chainAction': chainAction!.toJsonForChain(),
+        if (chainAction != null) 'chainAction': chainAction!.toJsonForChain(),
         if (swallowMode != null) 'swallow_mode': swallowMode!.name,
         if (background != null) 'background': background,
       };

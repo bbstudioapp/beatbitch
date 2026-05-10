@@ -32,8 +32,7 @@ class CareerScenarioDebugScreen extends StatefulWidget {
       _CareerScenarioDebugScreenState();
 }
 
-class _CareerScenarioDebugScreenState
-    extends State<CareerScenarioDebugScreen> {
+class _CareerScenarioDebugScreenState extends State<CareerScenarioDebugScreen> {
   bool _ready = false;
   PhraseBank? _bank;
   List<LevelMilestone> _catalog = const [];
@@ -109,8 +108,8 @@ class _CareerScenarioDebugScreenState
   void _regenerate() {
     final bank = _bank;
     if (bank == null) return;
-    final milestone = _resolveMilestone(_milestoneChoice,
-        placement: MilestonePlacement.body);
+    final milestone =
+        _resolveMilestone(_milestoneChoice, placement: MilestonePlacement.body);
     final finalMilestone = _resolveMilestone(_finalMilestoneChoice,
         placement: MilestonePlacement.finalApotheose);
     final result = CareerSessionGenerator().generate(
@@ -331,8 +330,7 @@ class _CareerScenarioDebugScreenState
               onChanged: (v) => setState(() => _humil = v),
             ),
             _slider(
-              label:
-                  '${t.careerDebugObedience} : ${_obed.toStringAsFixed(0)}',
+              label: '${t.careerDebugObedience} : ${_obed.toStringAsFixed(0)}',
               value: _obed,
               min: 0,
               max: 200,
@@ -393,8 +391,8 @@ class _CareerScenarioDebugScreenState
             ),
             const SizedBox(height: 12),
             Text(t.careerDebugUnlocks,
-                style: const TextStyle(
-                    color: AppTheme.textMuted, fontSize: 12)),
+                style:
+                    const TextStyle(color: AppTheme.textMuted, fontSize: 12)),
             const SizedBox(height: 6),
             Wrap(
               spacing: 6,
@@ -402,8 +400,8 @@ class _CareerScenarioDebugScreenState
               children: UnlockKey.values.map((k) {
                 final on = _unlocks.contains(k);
                 return FilterChip(
-                  label: Text(k.serialized,
-                      style: const TextStyle(fontSize: 11)),
+                  label:
+                      Text(k.serialized, style: const TextStyle(fontSize: 11)),
                   selected: on,
                   onSelected: (v) {
                     setState(() {
@@ -480,8 +478,8 @@ class _CareerScenarioDebugScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label,
-              style: const TextStyle(
-                  color: AppTheme.textPrimary, fontSize: 12)),
+              style:
+                  const TextStyle(color: AppTheme.textPrimary, fontSize: 12)),
           Slider(
             value: value.clamp(min, max),
             min: min,
@@ -501,9 +499,7 @@ class _CareerScenarioDebugScreenState
     required String value,
     required ValueChanged<String> onChanged,
   }) {
-    final candidates = _catalog
-        .where((m) => m.placement == placement)
-        .toList()
+    final candidates = _catalog.where((m) => m.placement == placement).toList()
       ..sort((a, b) => a.humilRequired.compareTo(b.humilRequired));
     final auto = placement == MilestonePlacement.body
         ? milestoneService.pendingFor(
@@ -588,16 +584,15 @@ class _CareerScenarioDebugScreenState
             const SizedBox(height: 4),
             Text(
               '${cfg.title} • ${_formatTime(session.durationSeconds)} • ${session.steps.length} steps',
-              style:
-                  const TextStyle(color: AppTheme.textMuted, fontSize: 12),
+              style: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
             ),
             if (_appliedMilestone != null)
               Padding(
                 padding: const EdgeInsets.only(top: 2),
                 child: Text(
                   '${t.careerDebugMilestoneBody} : ${_appliedMilestone!.id} (humil≥${_appliedMilestone!.humilRequired.toStringAsFixed(1)})',
-                  style: const TextStyle(
-                      color: AppTheme.textMuted, fontSize: 12),
+                  style:
+                      const TextStyle(color: AppTheme.textMuted, fontSize: 12),
                 ),
               ),
             if (_appliedFinalMilestone != null)
@@ -605,8 +600,8 @@ class _CareerScenarioDebugScreenState
                 padding: const EdgeInsets.only(top: 2),
                 child: Text(
                   '${t.careerDebugMilestoneFinal} : ${_appliedFinalMilestone!.id} (humil≥${_appliedFinalMilestone!.humilRequired.toStringAsFixed(1)})',
-                  style: const TextStyle(
-                      color: AppTheme.textMuted, fontSize: 12),
+                  style:
+                      const TextStyle(color: AppTheme.textMuted, fontSize: 12),
                 ),
               ),
             const SizedBox(height: 8),
@@ -620,8 +615,8 @@ class _CareerScenarioDebugScreenState
             const SizedBox(height: 12),
             Row(
               children: [
-                _statTile(t.careerDebugStatStamina,
-                    staminaFinal.toStringAsFixed(1)),
+                _statTile(
+                    t.careerDebugStatStamina, staminaFinal.toStringAsFixed(1)),
                 const SizedBox(width: 8),
                 _statTile(t.careerDebugStatHumilCap,
                     humilCapFinal.toStringAsFixed(1)),
@@ -651,8 +646,8 @@ class _CareerScenarioDebugScreenState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(label,
-                style: const TextStyle(
-                    color: AppTheme.textMuted, fontSize: 10)),
+                style:
+                    const TextStyle(color: AppTheme.textMuted, fontSize: 10)),
             Text(value,
                 style: const TextStyle(
                     color: AppTheme.textPrimary,
@@ -755,14 +750,12 @@ class _CareerScenarioDebugScreenState
           if (_forkAppliedMilestone != null)
             Text(
               '${t.careerDebugMilestoneBody} : ${_forkAppliedMilestone!.id}',
-              style:
-                  const TextStyle(color: AppTheme.textMuted, fontSize: 11),
+              style: const TextStyle(color: AppTheme.textMuted, fontSize: 11),
             ),
           if (_forkAppliedFinalMilestone != null)
             Text(
               '${t.careerDebugMilestoneFinal} : ${_forkAppliedFinalMilestone!.id}',
-              style:
-                  const TextStyle(color: AppTheme.textMuted, fontSize: 11),
+              style: const TextStyle(color: AppTheme.textMuted, fontSize: 11),
             ),
           const SizedBox(height: 4),
           Align(
@@ -920,9 +913,7 @@ class _CareerScenarioDebugScreenState
       child: Opacity(
         opacity: isFailSkipped ? 0.35 : 1,
         child: InkWell(
-          onTap: step.isTextOnly
-              ? null
-              : () => _showStepActions(t, absTime),
+          onTap: step.isTextOnly ? null : () => _showStepActions(t, absTime),
           child: Padding(
             padding: const EdgeInsets.all(10),
             child: Column(
@@ -1117,8 +1108,7 @@ class _CareerScenarioDebugScreenState
         step.time >= session.silentFinishStartTime!) {
       // Boost = entre silentFinishStartTime et finalStepTime (exclusif),
       // hors fenêtre milestone-final.
-      if (session.finalStepTime != null &&
-          step.time < session.finalStepTime!) {
+      if (session.finalStepTime != null && step.time < session.finalStepTime!) {
         if (!tags.contains(_StepTag.milestoneFinal)) {
           tags.add(_StepTag.boost);
         }
@@ -1211,6 +1201,5 @@ class _ProfilePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _ProfilePainter old) =>
-      old.stamina != stamina;
+  bool shouldRepaint(covariant _ProfilePainter old) => old.stamina != stamina;
 }

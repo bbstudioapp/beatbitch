@@ -62,8 +62,12 @@ class _CameraTestScreenState extends State<CameraTestScreen> {
   CalibrationResult? _calibration;
 
   // Bundles requis par SessionScreen — chargés à l'init.
-  Future<({Session session, PunishmentBundle punishments, RandomCommentsBundle randoms})>?
-      _testBundleFuture;
+  Future<
+      ({
+        Session session,
+        PunishmentBundle punishments,
+        RandomCommentsBundle randoms
+      })>? _testBundleFuture;
 
   @override
   void initState() {
@@ -89,8 +93,7 @@ class _CameraTestScreenState extends State<CameraTestScreen> {
     if (!ok) {
       setState(() {
         _step = _Step.error;
-        _errorMessage =
-            AppLocalizations.of(context).cameraPermissionDenied;
+        _errorMessage = AppLocalizations.of(context).cameraPermissionDenied;
       });
       return;
     }
@@ -108,10 +111,14 @@ class _CameraTestScreenState extends State<CameraTestScreen> {
     });
   }
 
-  Future<({Session session, PunishmentBundle punishments, RandomCommentsBundle randoms})>
-      _loadTestBundle() async {
-    final raw = await rootBundle
-        .loadString('assets/sessions/session_camera_test.json');
+  Future<
+      ({
+        Session session,
+        PunishmentBundle punishments,
+        RandomCommentsBundle randoms
+      })> _loadTestBundle() async {
+    final raw =
+        await rootBundle.loadString('assets/sessions/session_camera_test.json');
     final session = Session.fromJson(json.decode(raw) as Map<String, dynamic>);
     final punishments = await PunishmentLoader().load();
     final randoms = await RandomCommentsLoader().load();

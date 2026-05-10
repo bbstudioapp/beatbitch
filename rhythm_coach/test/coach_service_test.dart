@@ -22,12 +22,15 @@ void main() {
       expect(s.isUnlocked(tier1Principal), isTrue);
       for (final c in s.coaches) {
         if (c.id == tier1Principal.id) continue;
-        expect(s.isUnlocked(c), isFalse, reason: '${c.id} ne doit pas être débloqué au start');
+        expect(s.isUnlocked(c), isFalse,
+            reason: '${c.id} ne doit pas être débloqué au start');
       }
       expect(s.currentTier, 1);
     });
 
-    test('advancesTier renvoie true uniquement pour le Principal du tier courant', () async {
+    test(
+        'advancesTier renvoie true uniquement pour le Principal du tier courant',
+        () async {
       final s = CoachService();
       await s.load();
 
@@ -38,7 +41,8 @@ void main() {
           reason: 'Le palier 2 n\'est pas encore atteint');
     });
 
-    test('syncFromCareerLevel(7) ouvre le palier 2 et débloque son Principal', () async {
+    test('syncFromCareerLevel(7) ouvre le palier 2 et débloque son Principal',
+        () async {
       final s = CoachService();
       await s.load();
 
@@ -56,7 +60,8 @@ void main() {
       await s.syncFromCareerLevel(13); // tier 3
       expect(s.currentTier, 3);
 
-      final unlocked = await s.syncFromCareerLevel(5); // niveau qui mappe tier 1
+      final unlocked =
+          await s.syncFromCareerLevel(5); // niveau qui mappe tier 1
       expect(unlocked, isEmpty);
       expect(s.currentTier, 3, reason: 'Le tier ne doit jamais redescendre');
     });
@@ -70,7 +75,8 @@ void main() {
       expect(unlocked.length, 3, reason: 'Tiers 2, 3 et 4 ouverts d\'un coup');
     });
 
-    test('après un Principal de tier inférieur, advancesTier reste false', () async {
+    test('après un Principal de tier inférieur, advancesTier reste false',
+        () async {
       final s = CoachService();
       await s.load();
       await s.syncFromCareerLevel(13); // tier 3
@@ -164,7 +170,8 @@ void main() {
       expect(s2.isUnlocked(tier2), isTrue);
     });
 
-    test('evaluate avec branches requises non investies → blockedMissingSpecialization',
+    test(
+        'evaluate avec branches requises non investies → blockedMissingSpecialization',
         () async {
       const phantom = Coach(
         id: 'phantom_spec',
@@ -202,7 +209,8 @@ void main() {
       );
       // Catalogue ne contient qu'un Principal par tier. Le service prend le
       // premier match : on remplace.
-      final s2 = CoachService(coaches: [phantomTier1, ...CoachCatalog.defaults.skip(1)]);
+      final s2 = CoachService(
+          coaches: [phantomTier1, ...CoachCatalog.defaults.skip(1)]);
       await s2.load();
       final status = s2.evaluate(
         phantomTier1,
@@ -228,7 +236,8 @@ void main() {
           requiredBranchPoints: {SpecializationBranch.resilience: 3},
         ),
       );
-      final s = CoachService(coaches: [phantomTier1, ...CoachCatalog.defaults.skip(1)]);
+      final s = CoachService(
+          coaches: [phantomTier1, ...CoachCatalog.defaults.skip(1)]);
       await s.load();
 
       // 0 point en résilience → blocked.

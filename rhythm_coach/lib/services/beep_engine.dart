@@ -150,9 +150,8 @@ class BeepEngine {
       // Les samples de finale (variantes incluses) sont rangés dans le
       // sous-dossier `audio/finale/` pour ne pas polluer la racine. Le
       // sample historique reste à la racine pour rétrocompat.
-      final assetPath = isFinaleVariant
-          ? 'audio/finale/$name.mp3'
-          : 'audio/$name.mp3';
+      final assetPath =
+          isFinaleVariant ? 'audio/finale/$name.mp3' : 'audio/$name.mp3';
       for (var i = 0; i < poolSize; i++) {
         try {
           final p = AudioPlayer(playerId: 'beep_${name}_$i');
@@ -298,8 +297,9 @@ class BeepEngine {
     // par le contrôleur, donc cette pause ne le bloque pas — elle ne fait
     // que retarder les bips, ce qui laisse l'annonce vocale en clair.
     if (mode != previousMode) {
-      final gap =
-          _needsBigGap(mode, step.to) ? _modeTransitionGapBig : _modeTransitionGap;
+      final gap = _needsBigGap(mode, step.to)
+          ? _modeTransitionGapBig
+          : _modeTransitionGap;
       await Future<void>.delayed(gap);
       // Si un autre `applyStep` a passé entretemps (changement de mode très
       // rapide), c'est lui qui doit gagner — on abandonne ce démarrage.
@@ -387,6 +387,7 @@ class BeepEngine {
         scheduleNext();
       });
     }
+
     scheduleNext();
   }
 
@@ -440,7 +441,8 @@ class BeepEngine {
       depthRef = deeper;
     }
     if (isDown) {
-      final factor = 0.7 + 0.3 * (depthRef.index / (Position.values.length - 1));
+      final factor =
+          0.7 + 0.3 * (depthRef.index / (Position.values.length - 1));
       return (_handDownAsset, baseVolume * factor);
     }
     return (_handUpAsset, baseVolume * 0.85);
@@ -458,8 +460,7 @@ class BeepEngine {
   /// Retourne une position strictement plus haute (plus aiguë) que [p].
   /// Si [p] est déjà tip (le plus haut), retourne tip.
   Position _pickShallowerThan(Position p) {
-    final shallower =
-        Position.values.where((x) => x.index < p.index).toList();
+    final shallower = Position.values.where((x) => x.index < p.index).toList();
     if (shallower.isEmpty) return p;
     return shallower[_random.nextInt(shallower.length)];
   }
@@ -496,6 +497,7 @@ class BeepEngine {
         scheduleNext();
       });
     }
+
     scheduleNext();
   }
 

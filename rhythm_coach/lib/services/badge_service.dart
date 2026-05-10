@@ -90,8 +90,8 @@ class BadgeUnlock {
     );
   }
 
-  String _localizedFamilyName(AppLocalizations l10n) => switch (
-      definition.family) {
+  String _localizedFamilyName(AppLocalizations l10n) =>
+      switch (definition.family) {
         BadgeFamily.marathonien => l10n.badgeNameMarathonien,
         BadgeFamily.throatQueen => l10n.badgeNameThroatQueen,
         BadgeFamily.ironLungs => l10n.badgeNameIronLungs,

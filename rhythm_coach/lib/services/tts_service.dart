@@ -63,8 +63,7 @@ class TtsService {
   double _pitch = _platformDefaultPitch;
   String? _currentVoiceName;
 
-  static bool get _isWindows =>
-      defaultTargetPlatform == TargetPlatform.windows;
+  static bool get _isWindows => defaultTargetPlatform == TargetPlatform.windows;
   static double get _platformDefaultRate =>
       _isWindows ? _windowsDefaultRate : _defaultRate;
   static double get _platformDefaultPitch =>
@@ -310,7 +309,8 @@ class TtsService {
   }
 
   /// Variante : toutes les voix locales du moteur, sans filtre de locale.
-  Future<List<Map<String, String>>> listAllVoices() => listVoicesForLocale(null);
+  Future<List<Map<String, String>>> listAllVoices() =>
+      listVoicesForLocale(null);
 
   /// Heuristique « voix hors-ligne ». La convention Google Android TTS
   /// suffixe les voix online par `-network` (ex: `fr-fr-x-fra-network`)
@@ -341,7 +341,8 @@ class TtsService {
       await _tts.setVoice({'name': name, 'locale': locale});
       _currentVoiceName = name;
     } catch (e) {
-      if (kDebugMode) debugPrint('[TTS] setVoiceByName KO ($name/$locale) : $e');
+      if (kDebugMode)
+        debugPrint('[TTS] setVoiceByName KO ($name/$locale) : $e');
     }
   }
 
