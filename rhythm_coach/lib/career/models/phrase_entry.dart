@@ -134,11 +134,13 @@ String? pickPhraseEntry(
   if (context == null) {
     return entries[rng.nextInt(entries.length)].text;
   }
-  final matching = entries.where((e) => e.matches(
-        depth: context.depth,
-        bpm: context.bpm,
-        unlockedKeys: context.unlockedKeys,
-      )).toList();
+  final matching = entries
+      .where((e) => e.matches(
+            depth: context.depth,
+            bpm: context.bpm,
+            unlockedKeys: context.unlockedKeys,
+          ))
+      .toList();
   if (matching.isNotEmpty) {
     return matching[rng.nextInt(matching.length)].text;
   }

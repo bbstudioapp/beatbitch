@@ -60,8 +60,8 @@ class MilestoneService extends ChangeNotifier {
       try {
         final decoded = json.decode(rawRetries);
         if (decoded is Map) {
-          _retries = decoded
-              .map((k, v) => MapEntry(k.toString(), (v as num).toInt()));
+          _retries =
+              decoded.map((k, v) => MapEntry(k.toString(), (v as num).toInt()));
         }
       } catch (e) {
         if (kDebugMode) {
@@ -284,8 +284,7 @@ class MilestoneService extends ChangeNotifier {
 
   /// Texte localisé pour le step à offset [time] dans la milestone [id].
   /// `null` si pas de surcharge → l'appelant garde le texte d'origine.
-  String? getStepText(String id, int time) =>
-      _overrides[id]?.textForTime(time);
+  String? getStepText(String id, int time) => _overrides[id]?.textForTime(time);
 
   /// Libellé court localisé pour la milestone [id]. Retourne le
   /// `displayLabel` du catalogue principal (FR) si l'override de la

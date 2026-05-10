@@ -283,9 +283,8 @@ class CoachMeta {
       archetype: archetype,
       specialties: specialties,
       tier: (json['tier'] as num?)?.toInt(),
-      isPrincipal: json['isPrincipal'] is bool
-          ? json['isPrincipal'] as bool
-          : null,
+      isPrincipal:
+          json['isPrincipal'] is bool ? json['isPrincipal'] as bool : null,
       requirements: requirements,
       modeWeights: modeWeights,
       voicePreset:
@@ -320,8 +319,7 @@ class CoachNicknamePool {
 
   static const CoachNicknamePool empty = CoachNicknamePool();
 
-  bool get isEmpty =>
-      pool.isEmpty && !useUserPrenom && !useUserNicknames;
+  bool get isEmpty => pool.isEmpty && !useUserPrenom && !useUserNicknames;
 
   factory CoachNicknamePool.fromJson(Map<String, dynamic> json) {
     final raw = json['pool'];
@@ -374,8 +372,7 @@ class CoachPhrasePack {
   /// pour profondeur, « tu ne faiblis jamais » pour endurance, etc.).
   ///
   /// Vide / absent = pas de coloration, comportement historique.
-  final Map<SpecializationBranch, Map<String, List<PhraseEntry>>>
-      branchPhrases;
+  final Map<SpecializationBranch, Map<String, List<PhraseEntry>>> branchPhrases;
 
   /// Commentaires aléatoires propres à ce coach. Si non vide, **remplacent**
   /// la liste globale de `random_comments.json` pendant la séance. Vide =
@@ -742,9 +739,8 @@ class Coach {
     // Phrases coach : pas de filtres contextuels (tirées brut), enveloppées
     // en RandomComment sans contraintes pour matcher le typage du bundle.
     return RandomCommentsBundle(
-      comments: phrases.randomComments
-          .map((s) => RandomComment(text: s))
-          .toList(),
+      comments:
+          phrases.randomComments.map((s) => RandomComment(text: s)).toList(),
       minIntervalSeconds: fallback.minIntervalSeconds,
       maxIntervalSeconds: fallback.maxIntervalSeconds,
       scriptedCooldownSeconds: fallback.scriptedCooldownSeconds,
@@ -767,9 +763,8 @@ class Coach {
     required PhraseBank fallback,
     SpecializationAllocation? specialization,
   }) {
-    final dominant = specialization == null
-        ? null
-        : _dominantBranch(specialization);
+    final dominant =
+        specialization == null ? null : _dominantBranch(specialization);
     return _CoachComposedPhraseBank(
       coachPhrases: phrases,
       fallback: fallback,
@@ -783,8 +778,7 @@ class Coach {
   /// n'atteint le seuil ou en cas d'égalité parfaite (2 branches au même
   /// nombre de pts ≥ 3 → pas de couleur claire). Cf. `_pickFor` dans
   /// `_CoachComposedPhraseBank` pour l'usage.
-  static SpecializationBranch? _dominantBranch(
-      SpecializationAllocation alloc) {
+  static SpecializationBranch? _dominantBranch(SpecializationAllocation alloc) {
     SpecializationBranch? best;
     var bestPts = 2; // seuil exclusif (≥ 3 pour être dominante)
     var tied = false;

@@ -67,9 +67,7 @@ class HumiliationScale {
           return _bpmExtra(bpm);
         }
         final amplitude = _amplitudeCrans(from, to);
-        return _depthScoreRhythm(deepest) +
-            1.5 * amplitude +
-            _bpmExtra(bpm);
+        return _depthScoreRhythm(deepest) + 1.5 * amplitude + _bpmExtra(bpm);
 
       case SessionMode.biffle:
         // Pas de profondeur fonctionnelle pour le biffle, juste la vitesse.
@@ -280,9 +278,8 @@ class HumiliationEngine {
   /// SessionController au start.
   void seed({required double career, double session = 0.0}) {
     _careerScore = career < 0 ? 0 : career;
-    _sessionScore = session < 0
-        ? 0
-        : (session > sessionCap ? sessionCap : session);
+    _sessionScore =
+        session < 0 ? 0 : (session > sessionCap ? sessionCap : session);
     _secondsSinceLastBump = 0;
   }
 

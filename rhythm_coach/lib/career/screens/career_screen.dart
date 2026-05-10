@@ -170,15 +170,15 @@ class _CareerScreenState extends State<CareerScreen> {
     // Compose la bank du coach par-dessus la globale : tirage prioritaire
     // sur les phrases du coach, fallback transparent sur la PhraseBank
     // commune pour les cases vides.
-    final coachBank = activeCoach.toPhraseBank(fallback: bundle.bank, specialization: bundle.specialization);
+    final coachBank = activeCoach.toPhraseBank(
+        fallback: bundle.bank, specialization: bundle.specialization);
     _installCoachNameResolver(activeCoach);
     await _applyCoachVoicePreset(activeCoach);
 
     // Force quickie=false sous le seuil de déblocage — sécurité au cas où
     // une persistance antérieure (avant le verrou) ou un toggle en RAM ne
     // soit pas réinitialisé par le widget.
-    final quickie =
-        bundle.maxLevel < _quickieUnlockLevel ? false : _quickie;
+    final quickie = bundle.maxLevel < _quickieUnlockLevel ? false : _quickie;
     final humiliationScore = await _stats.getHumiliationLevel();
     final obedienceScore = await _stats.getObedienceLevel();
     // Insère la milestone d'apprentissage en attente pour ce niveau (si
@@ -488,7 +488,8 @@ class _CareerScreenState extends State<CareerScreen> {
 
     final newLevel = currentLevel + levelJump;
     final activeCoach = _resolveCoach(bundle);
-    final coachBank = activeCoach.toPhraseBank(fallback: bundle.bank, specialization: bundle.specialization);
+    final coachBank = activeCoach.toPhraseBank(
+        fallback: bundle.bank, specialization: bundle.specialization);
 
     final genDuration = remaining - begDuration;
     final humiliationCareer = await _stats.getHumiliationLevel();
@@ -561,7 +562,8 @@ class _CareerScreenState extends State<CareerScreen> {
     final retryDuration = remaining + milestone.durationSeconds;
 
     final activeCoach = _resolveCoach(bundle);
-    final coachBank = activeCoach.toPhraseBank(fallback: bundle.bank, specialization: bundle.specialization);
+    final coachBank = activeCoach.toPhraseBank(
+        fallback: bundle.bank, specialization: bundle.specialization);
     final humiliationCareer = await _stats.getHumiliationLevel();
     // Retry milestone : utilise l'obédiance live (un fail vient de la faire
     // descendre, le générateur doit en tenir compte pour adapter le ton).
@@ -643,7 +645,8 @@ class _CareerScreenState extends State<CareerScreen> {
 
     final activeCoach = _resolveCoach(bundle);
     final coachAdvances = coachService.advancesTier(activeCoach);
-    final coachBank = activeCoach.toPhraseBank(fallback: bundle.bank, specialization: bundle.specialization);
+    final coachBank = activeCoach.toPhraseBank(
+        fallback: bundle.bank, specialization: bundle.specialization);
     _installCoachNameResolver(activeCoach);
     await _applyCoachVoicePreset(activeCoach);
 
@@ -921,8 +924,7 @@ class _CareerScreenState extends State<CareerScreen> {
                     ),
                   ),
                   value: _includeHandOverride ?? bundle.includeHand,
-                  onChanged: (v) =>
-                      setState(() => _includeHandOverride = v),
+                  onChanged: (v) => setState(() => _includeHandOverride = v),
                 );
               }(),
               const SizedBox(height: 16),
@@ -935,8 +937,7 @@ class _CareerScreenState extends State<CareerScreen> {
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  onPressed:
-                      hasPendingSpecPoints ? null : () => _start(bundle),
+                  onPressed: hasPendingSpecPoints ? null : () => _start(bundle),
                   child: Text(
                     t.careerStartButton,
                     style: const TextStyle(
@@ -963,7 +964,6 @@ class _CareerScreenState extends State<CareerScreen> {
       ),
     );
   }
-
 }
 
 class _SectionLabel extends StatelessWidget {
@@ -1026,8 +1026,8 @@ class _LevelPicker extends StatelessWidget {
             const SizedBox(width: 12),
             Text(
               AppLocalizations.of(context).careerLevelLockedHint,
-              style: const TextStyle(
-                  fontSize: 13, color: AppTheme.textSecondary),
+              style:
+                  const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
             ),
           ],
         ),
@@ -1204,10 +1204,12 @@ class _CareerBundle {
   final int completedSessions;
   final bool includeHand;
   final SpecializationAllocation specialization;
+
   /// Humiliation lifetime persistée (`StatsService.getHumiliationLevel`).
   /// Sert au filtre de candidature des milestones (`pendingFor`) au build
   /// de l'écran et au _start.
   final double humiliationScore;
+
   /// Obédiance lifetime persistée — module la tolérance d'humil pour le
   /// filtre milestone (`humilTolerance = 1 + obedience/50`).
   final double obedienceScore;

@@ -63,8 +63,7 @@ class CoachCatalog {
       name: 'Morgan',
       title: 'Coach implacable',
       archetype: CoachArchetype.brutal,
-      publicBio:
-          'Direct, frontal, sans détour. Travaille les pics longs '
+      publicBio: 'Direct, frontal, sans détour. Travaille les pics longs '
           'et la profondeur sans concession.',
       specialties: [
         SpecializationBranch.profondeur,
@@ -79,8 +78,7 @@ class CoachCatalog {
       name: 'Victoria',
       title: 'Coach hautaine',
       archetype: CoachArchetype.hautain,
-      publicBio:
-          'Distante, regard froid. Fait travailler la posture mentale '
+      publicBio: 'Distante, regard froid. Fait travailler la posture mentale '
           'autant que la technique.',
       specialties: [
         SpecializationBranch.obeissance,
@@ -95,8 +93,7 @@ class CoachCatalog {
       name: 'Nyx',
       title: 'Coach sans pitié',
       archetype: CoachArchetype.sansPitie,
-      publicBio:
-          'Le palier final. N\'arrête pas, ne félicite pas. Pour celles '
+      publicBio: 'Le palier final. N\'arrête pas, ne félicite pas. Pour celles '
           'qui ont déjà tout encaissé.',
       specialties: SpecializationBranch.values,
       tier: 6,
@@ -142,7 +139,8 @@ class CoachCatalogValidator {
         issues.add('Palier $t : aucun Principal (séquence incomplète).');
       } else if (list.length > 1) {
         final ids = list.map((c) => c.id).join(', ');
-        issues.add('Palier $t : ${list.length} Principals ($ids) — un seul attendu.');
+        issues.add(
+            'Palier $t : ${list.length} Principals ($ids) — un seul attendu.');
       }
     }
 

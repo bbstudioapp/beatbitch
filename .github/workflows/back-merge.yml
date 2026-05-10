@@ -1,0 +1,78 @@
+name: Back-merge main into develop
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  back-merge:
+    name: Open back-merge PR (main → develop)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Skip if main and develop are aligned
+        id: gate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ahead=$(gh api "repos/$GITHUB_REPOSITORY/compare/develop...main" --jq '.ahead_by')
+          echo "main is $ahead commit(s) ahead of develop"
+          if [ "$ahead" = "0" ]; then
+            echo "Nothing to back-merge."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check for existing back-merge PR
+        if: steps.gate.outputs.skip != 'true'
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          existing=$(gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --base develop --head main \
+            --state open \
+            --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            echo "PR #$existing already open, nothing to do."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create back-merge PR
+        if: steps.gate.outputs.skip != 'true' && steps.check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --repo "$GITHUB_REPOSITORY" \
+            --base develop \
+            --head main \
+            --title "chore: back-merge main into develop" \
+            --body "$(cat <<'EOF'
+          Back-merge automatique après merge sur \`main\` (release ou hotfix).
+
+          Cette PR récupère les commits de \`main\` (typiquement : bump de version, tag de release, hotfixes) dans \`develop\` pour aligner les deux branches et éviter la divergence à la prochaine release.
+
+          ## Résolution des conflits
+
+          Conflit attendu sur \`rhythm_coach/pubspec.yaml\` quand develop a déjà bumpé pour la prochaine itération. **Garder la version la plus haute** (celle de develop si > main, sinon celle de main).
+
+          ## Stratégie de merge
+
+          **Merge commit** (pas squash, pas rebase) — on veut préserver l'historique des releases dans develop.
+
+          ---
+
+          PR ouverte automatiquement par \`.github/workflows/back-merge.yml\`.
+          EOF
+          )"

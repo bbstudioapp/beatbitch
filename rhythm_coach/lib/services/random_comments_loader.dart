@@ -39,10 +39,8 @@ class RandomCommentsLoader {
         .toList();
     return RandomCommentsBundle(
       comments: comments,
-      minIntervalSeconds:
-          (data['min_interval_seconds'] as num?)?.toInt() ?? 20,
-      maxIntervalSeconds:
-          (data['max_interval_seconds'] as num?)?.toInt() ?? 45,
+      minIntervalSeconds: (data['min_interval_seconds'] as num?)?.toInt() ?? 20,
+      maxIntervalSeconds: (data['max_interval_seconds'] as num?)?.toInt() ?? 45,
       scriptedCooldownSeconds:
           (data['scripted_cooldown_seconds'] as num?)?.toInt() ?? 4,
     );
@@ -220,9 +218,8 @@ class RandomCommentsBundle {
     if (matching.isNotEmpty) {
       return matching[rng.nextInt(matching.length)].text;
     }
-    final fallback = comments
-        .where((c) => c.isContextlessFor(unlockedKeys))
-        .toList();
+    final fallback =
+        comments.where((c) => c.isContextlessFor(unlockedKeys)).toList();
     if (fallback.isEmpty) return null;
     return fallback[rng.nextInt(fallback.length)].text;
   }

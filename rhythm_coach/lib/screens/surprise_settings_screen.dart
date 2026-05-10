@@ -316,7 +316,7 @@ class _SurpriseSettingsScreenState extends State<SurpriseSettingsScreen> {
             child: TextButton.icon(
               icon: const Icon(Icons.open_in_new, size: 16),
               label: Text(t.surpriseSettingsOpenBatterySettings),
-              onPressed: () => openAppSettings(),
+              onPressed: openAppSettings,
             ),
           ),
         ],

@@ -21,9 +21,8 @@ class PhraseBankLoader {
 
   Future<PhraseBank> load({Locale? locale}) async {
     final lang = (locale ?? LocaleService.instance.current).languageCode;
-    final path = lang == 'fr'
-        ? _assetPathDefault
-        : 'assets/career/phrases_$lang.json';
+    final path =
+        lang == 'fr' ? _assetPathDefault : 'assets/career/phrases_$lang.json';
     final raw = await rootBundle.loadString(path);
     final data = json.decode(raw) as Map<String, dynamic>;
 

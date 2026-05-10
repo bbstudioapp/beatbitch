@@ -1,14 +1,14 @@
 # BeatBitch
 
-![version](https://img.shields.io/badge/version-0.1.1-orange)
-![platform](https://img.shields.io/badge/platform-Android-3ddc84)
+![version](https://img.shields.io/badge/version-0.1.3-orange)
+![platform](https://img.shields.io/badge/platform-Android%20%7C%20Windows-blue)
 ![offline](https://img.shields.io/badge/100%25-offline-blue)
 ![no tracking](https://img.shields.io/badge/no-tracking-success)
 ![license](https://img.shields.io/badge/license-PolyForm%20NC%201.0.0-lightgrey)
 
-> 🇫🇷 **Coach vocal rythmique immersif pour Android.** Tu poses ton téléphone à plat sur le côté, tu lances la séance, tu fermes les yeux. Une voix te guide, des bips marquent le rythme, tu n'as plus besoin de regarder l'écran.
+> 🇫🇷 **Coach vocal rythmique immersif pour Android & Windows desktop.** Tu poses ton téléphone à plat sur le côté, tu lances la séance, tu fermes les yeux. Une voix te guide, des bips marquent le rythme, tu n'as plus besoin de regarder l'écran.
 >
-> 🇬🇧 **Immersive rhythmic voice coach for Android.** Drop your phone flat on its side, start the session, close your eyes. A voice guides you, beeps mark the rhythm — no screen-watching needed.
+> 🇬🇧 **Immersive rhythmic voice coach for Android & Windows desktop.** Drop your phone flat on its side, start the session, close your eyes. A voice guides you, beeps mark the rhythm — no screen-watching needed.
 
 ---
 
@@ -44,6 +44,17 @@ Le **side-load**, c'est juste « installer une app sans passer par le Play Store
 6. **Au 1er lancement** : confirmation 18+ (non-skippable), puis 3 écrans d'onboarding (pose du téléphone, volume, test de la voix).
 
 > 💡 Tu peux désactiver l'autorisation « sources inconnues » après l'install — Android ne la rouvrira pas tant que tu ne mets pas l'app à jour.
+
+### 🖥 Installer sur Windows desktop
+
+Disponible depuis **v0.1.3**. C'est un zip portable, pas un installateur — l'app ne touche ni au registre Windows ni aux dossiers système.
+
+1. Sur la [page Releases](../../releases), télécharge `BeatBitch-X.Y.Z-windows-x64.zip` (et son `.sha256` si tu veux vérifier l'intégrité).
+2. Dézippe où tu veux : `C:\Users\toi\Documents\BeatBitch\`, une clé USB, peu importe.
+3. Lance `rhythm_coach.exe`. Windows SmartScreen peut afficher un avertissement (le binaire n'est pas signé par un éditeur reconnu) → clique « Informations supplémentaires » → « Exécuter quand même ».
+4. Premier lancement : adult gate 18+, puis onboarding 3 étapes (identique à Android).
+
+> ⚠ **Fonctions désactivées sur Windows** : la vérif caméra des holds et les notifications surprise ne sont pas portées (les plugins natifs n'existent pas pour Windows). La voix coach utilise **Microsoft Julie** (SAPI) à la place des voix Android. Sessions, mode Carrière, coachs, badges, langues : tout fonctionne identique à Android.
 
 ### 🔄 Mises à jour automatiques (Obtainium)
 
@@ -87,8 +98,8 @@ Tout est expliqué dans **[CONTRIBUTING.md](CONTRIBUTING.md)**.
 ### 🛠 Curieux du code ?
 
 Tout le projet Flutter vit dans **[`rhythm_coach/`](rhythm_coach/)** :
-- **[Doc dev complète](rhythm_coach/README.md)** — features détaillées, build local, tests
-- **[Architecture](rhythm_coach/CLAUDE.md)** — flow d'une séance, moteur d'excitation, mode Carrière, i18n
+- **[Setup développeur](docs/DEVELOPMENT.md)** — installer Flutter, run par plateforme (Android, Windows, web Chrome), customiser les assets sans coder
+- **[Doc utilisateur Flutter](rhythm_coach/README.md)** — features détaillées, install par plateforme
 - **[Setup CI/CD](.github/RELEASE_SETUP.md)** — workflow de release auto
 
 ### 📝 Licence
@@ -130,6 +141,17 @@ Les binaires hors-repo (gifs et mp3 d'ambiance) restent soumis aux droits de leu
 6. **First launch**: 18+ confirmation (non-skippable), then 3 onboarding screens (phone placement, volume, voice test).
 
 > 💡 You can disable "unknown sources" again after installing — Android won't reopen it unless you update the app.
+
+### 🖥 Install on Windows desktop
+
+Available since **v0.1.3**. Portable zip — no installer, no registry / system-folder writes.
+
+1. From the [Releases page](../../releases), download `BeatBitch-X.Y.Z-windows-x64.zip` (and its `.sha256` if you want to verify integrity).
+2. Unzip wherever you like: `C:\Users\you\Documents\BeatBitch\`, a USB stick, etc.
+3. Run `rhythm_coach.exe`. Windows SmartScreen may warn (binary not signed by a recognized publisher) → click *More info* → *Run anyway*.
+4. First launch: 18+ adult gate, then 3-step onboarding (identical to Android).
+
+> ⚠ **Disabled on Windows**: hold camera check and surprise notifications aren't ported (the native plugins don't have Windows implementations). The coach voice uses **Microsoft Julie** (SAPI) instead of Android voices. Sessions, Career mode, coaches, badges, languages: all work identically to Android.
 
 ### 🔄 Automatic updates (Obtainium)
 

@@ -44,8 +44,10 @@ class CoachPickerScreen extends StatelessWidget {
         _snack(context, t.coachErrorRequiresHands(coach.name));
         return;
       case CoachSelectionStatus.blockedMinLevel:
-        _snack(context,
-            t.coachErrorMinLevel(coach.name, coach.requirements.minPlayerLevel));
+        _snack(
+            context,
+            t.coachErrorMinLevel(
+                coach.name, coach.requirements.minPlayerLevel));
         return;
       case CoachSelectionStatus.blockedMissingSpecialization:
         _snack(context, t.coachErrorMissingSpecialization);
@@ -56,8 +58,8 @@ class CoachPickerScreen extends StatelessWidget {
             .map((e) =>
                 '${SpecializationBranchMeta.forBranch(e.key).label} ≥ ${e.value}')
             .join(', ');
-        _snack(context,
-            t.coachErrorInsufficientBranchPoints(coach.name, missing));
+        _snack(
+            context, t.coachErrorInsufficientBranchPoints(coach.name, missing));
         return;
       case CoachSelectionStatus.selectedAdvancing:
         await service.selectCoach(coach);
@@ -90,7 +92,8 @@ class CoachPickerScreen extends StatelessWidget {
             children: [
               Text(
                 tDialog.coachFreeTrainingDialogBody(coach.name),
-                style: const TextStyle(color: AppTheme.textSecondary, height: 1.4),
+                style:
+                    const TextStyle(color: AppTheme.textSecondary, height: 1.4),
               ),
               if (principal != null) ...[
                 const SizedBox(height: 12),
