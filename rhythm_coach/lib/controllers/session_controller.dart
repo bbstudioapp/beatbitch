@@ -571,7 +571,7 @@ class SessionController extends ChangeNotifier {
                 session: _seedHumiliationSession,
               ),
             );
-        _stats.getObedienceLevel().then((o) => _obedience.seed(o));
+        _stats.getObedienceLevel().then(_obedience.seed);
       }
 
       await _tts.init();

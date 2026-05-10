@@ -82,7 +82,7 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
     // placeholder animé. Pas d'attente côté UI.
     BackgroundsLoader()
         .load()
-        .then((b) => BackgroundsService.instance.setBundle(b));
+        .then(BackgroundsService.instance.setBundle);
     WidgetsBinding.instance.addObserver(this);
     // Cold start : si l'app a été lancée par tap d'une notif surprise,
     // un flag d'intent a été posé dans main(). On le consume après la

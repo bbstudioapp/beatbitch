@@ -623,8 +623,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                                   child: _FinishedOverlay(
                                     endButtonLabel: widget.endButtonLabel ??
                                         t.sessionFinishedDefaultEnd,
-                                    onThanks: () =>
-                                        ctrl.revealBadgeUnlocks(),
+                                    onThanks: ctrl.revealBadgeUnlocks,
                                     onEncore: widget.onRequestEncore == null
                                         ? null
                                         : () => widget.onRequestEncore!(ctrl),
@@ -645,7 +644,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                               endButtonLabel: widget.endButtonLabel ??
                                   t.sessionFinishedDefaultEnd,
                               onEnd: widget.closeAppOnEnd
-                                  ? () => SystemNavigator.pop()
+                                  ? SystemNavigator.pop
                                   : () => Navigator.of(context).pop(),
                               onEncore: widget.onRequestEncore == null
                                   ? null
@@ -1338,7 +1337,7 @@ class _IntroPanel extends StatelessWidget {
           Align(
             alignment: Alignment.centerRight,
             child: TextButton.icon(
-              onPressed: () => onReplay(),
+              onPressed: onReplay,
               icon: const Icon(Icons.replay, size: 18),
               label: Text(t.sessionIntroReplay),
             ),
