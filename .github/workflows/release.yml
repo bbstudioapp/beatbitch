@@ -142,9 +142,11 @@ jobs:
           cp "$SRC" "$DST_DIR/$DST_NAME"
           ( cd "$DST_DIR" && sha256sum "$DST_NAME" > "$DST_NAME.sha256" )
           SHA=$(awk '{print $1}' "$DST_DIR/$DST_NAME.sha256")
-          echo "apk_path=rhythm_coach/$DST_DIR/$DST_NAME" >> "$GITHUB_OUTPUT"
-          echo "sha_path=rhythm_coach/$DST_DIR/$DST_NAME.sha256" >> "$GITHUB_OUTPUT"
-          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          {
+            echo "apk_path=rhythm_coach/$DST_DIR/$DST_NAME"
+            echo "sha_path=rhythm_coach/$DST_DIR/$DST_NAME.sha256"
+            echo "sha=$SHA"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
         if: steps.gate.outputs.skip != 'true'
