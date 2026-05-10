@@ -99,7 +99,13 @@ class TtsService {
     await _tts.setPitch(_defaultPitch);
     await _tts.setSpeechRate(_defaultRate);
     await _tts.setVolume(_defaultVolume);
-    await _tts.awaitSpeakCompletion(true);
+    // `awaitSpeakCompletion(true)` est défaillant sur Windows : la
+    // back-end SAPI n'émet pas toujours l'event de complétion attendu,
+    // ce qui fait freeze/crash le `speak()` suivant. On le garde activé
+    // sur les plateformes où il marche fiablement (Android/iOS).
+    if (defaultTargetPlatform != TargetPlatform.windows) {
+      await _tts.awaitSpeakCompletion(true);
+    }
     await _selectVoice();
 
     _tts.setStartHandler(() => _speaking = true);
@@ -216,12 +222,21 @@ class TtsService {
   Future<void> speak(String text) async {
     if (!_initialized) await init();
     if (text.trim().isEmpty) return;
-    await _tts.speak(resolveText(text));
+    try {
+      await _tts.speak(resolveText(text));
+    } catch (e) {
+      _speaking = false;
+      if (kDebugMode) debugPrint('[TTS] speak KO : $e');
+    }
   }
 
   Future<void> stop() async {
     _speaking = false;
-    await _tts.stop();
+    try {
+      await _tts.stop();
+    } catch (e) {
+      if (kDebugMode) debugPrint('[TTS] stop KO : $e');
+    }
   }
 
   Future<void> setRate(double rate) async {
@@ -291,8 +306,12 @@ class TtsService {
   }
 
   Future<void> setVoiceByName(String name, String locale) async {
-    await _tts.setVoice({'name': name, 'locale': locale});
-    _currentVoiceName = name;
+    try {
+      await _tts.setVoice({'name': name, 'locale': locale});
+      _currentVoiceName = name;
+    } catch (e) {
+      if (kDebugMode) debugPrint('[TTS] setVoiceByName KO ($name/$locale) : $e');
+    }
   }
 
   /// Applique un preset vocal coach : voix nommée + rate + pitch. Toute
