@@ -1,0 +1,46 @@
+{
+  "lang": "fr",
+  "id": "movement_animation_test",
+  "name": "Test trajectoire d'animation",
+  "description": "Mini-scénario qui exerce les transitions du widget MovementAnimation : changement de positions seul, changement de BPM seul, changement de mode (couleur), passage à hold/breath, reprise après pause de courbe. ~1 min.",
+  "duration_seconds": 62,
+  "mode": "rhythm",
+  "intro": "Test des transitions de courbe. Aucune mise en situation, juste un scénario technique.",
+  "steps": [
+    {"time": 0,
+     "text": "Étape 1 sur 9. Rythme head vers mid à 90 BPM. La courbe s'installe.",
+     "from": "head", "to": "mid", "bpm": 90, "duration": 8},
+
+    {"time": 8,
+     "text": "Étape 2. Même positions, BPM passe à 140. Seul le tempo change.",
+     "from": "head", "to": "mid", "bpm": 140, "duration": 6},
+
+    {"time": 14,
+     "text": "Étape 3. Positions throat vers full, retour à 90 BPM. Mode et BPM inchangés depuis l'étape précédente, seules les positions bougent.",
+     "from": "throat", "to": "full", "bpm": 90, "duration": 6},
+
+    {"time": 20,
+     "text": "Étape 4. Grosse amplitude tip vers throat à 110 BPM.",
+     "from": "tip", "to": "throat", "bpm": 110, "duration": 6},
+
+    {"time": 26,
+     "text": "Étape 5. Changement de mode vers lick. La couleur passe d'ambre à cyan.",
+     "mode": "lick", "from": "mid", "to": "throat", "bpm": 80, "duration": 6},
+
+    {"time": 32,
+     "text": "Étape 6. Changement de mode vers hand. La couleur passe à saumon.",
+     "mode": "hand", "from": "head", "to": "mid", "bpm": 120, "duration": 6},
+
+    {"time": 38,
+     "text": "Étape 7. Hold sur mid pendant cinq secondes. La courbe disparaît en fondu.",
+     "mode": "hold", "to": "mid", "duration": 5},
+
+    {"time": 43,
+     "text": "Étape 8. Retour rythmé après le hold. La courbe doit réapparaître en fondu, grosse amplitude tip vers full.",
+     "mode": "rhythm", "from": "tip", "to": "full", "bpm": 100, "duration": 6},
+
+    {"time": 49,
+     "text": "Étape 9. BPM bas, head vers mid à 60 BPM. Permet de vérifier la fenêtre étendue à BPM lent.",
+     "from": "head", "to": "mid", "bpm": 60, "duration": 13}
+  ]
+}

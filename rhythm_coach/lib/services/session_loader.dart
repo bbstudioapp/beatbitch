@@ -13,6 +13,7 @@ class SessionLoader {
     'assets/sessions/session_initiation.json',
     'assets/sessions/session_intense.json',
     'assets/sessions/session_advanced_demo.json',
+    'assets/sessions/session_movement_test.json',
     'assets/sessions/session_tutorial_en.json',
     'assets/sessions/session_initiation_en.json',
     'assets/sessions/session_intense_en.json',
