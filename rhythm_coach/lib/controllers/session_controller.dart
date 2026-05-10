@@ -456,6 +456,21 @@ class SessionController extends ChangeNotifier {
   bool _configApplied = false;
   bool get hasConfig => _configApplied;
 
+  /// Compte à rebours discret pendant les 5 dernières secondes du step
+  /// actif, **uniquement** si le step a opté pour le countdown via
+  /// `SessionStep.showCountdown` (cf. propagation milestone). Retourne
+  /// 5..1 dans la dernière fenêtre, `null` sinon. L'UI consomme ce getter
+  /// pour afficher un Text discret centré ; pas de TTS.
+  int? get countdownSecondsRemaining {
+    final step = _lastConfigStep;
+    if (step == null || !step.showCountdown) return null;
+    final dur = step.duration;
+    if (dur == null || dur <= 0) return null;
+    final remaining = (step.time + dur) - elapsedSeconds;
+    if (remaining < 1 || remaining > 5) return null;
+    return remaining;
+  }
+
   SessionMode get currentMode => _beep.currentMode;
   Position get currentFrom => _beep.currentFrom;
   Position? get currentTo => _beep.currentTo;

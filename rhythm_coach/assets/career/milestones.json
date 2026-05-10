@@ -228,6 +228,7 @@
       "unlocks": ["throat_hold_short"],
       "requires": ["hold_mid_short"],
       "branches": ["endurance", "profondeur"],
+      "showCountdown": true,
       "sequence": [
         {"time": 0,  "text": "Aujourd'hui tu vas tenir gorge. Échauffe.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 100, "duration": 10},
         {"time": 10, "text": "Tiens gorge. Deux secondes.", "mode": "hold", "to": "throat", "duration": 2},
@@ -301,6 +302,7 @@
       "unlocks": ["throat_hold_long"],
       "requires": ["throat_hold_short"],
       "branches": ["endurance", "profondeur"],
+      "showCountdown": true,
       "sequence": [
         {"time": 0,  "text": "Plus longtemps aujourd'hui.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 110, "duration": 12},
         {"time": 12, "text": "Tiens-la six secondes.", "mode": "hold", "to": "throat", "duration": 6},
@@ -349,6 +351,7 @@
       "unlocks": ["full_hold_short"],
       "requires": ["throat_hold_long"],
       "branches": ["endurance", "profondeur"],
+      "showCountdown": true,
       "sequence": [
         {"time": 0,  "text": "Aujourd'hui tu vas tout prendre.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 100, "duration": 10},
         {"time": 10, "text": "Tiens à fond. Deux secondes.", "mode": "hold", "to": "full", "duration": 2},
@@ -378,6 +381,7 @@
       "unlocks": ["full_hold_long"],
       "requires": ["full_pulse"],
       "branches": ["endurance", "profondeur"],
+      "showCountdown": true,
       "sequence": [
         {"time": 0,  "text": "Plus profond plus longtemps.", "mode": "rhythm", "from": "mid", "to": "full", "bpm": 90, "duration": 12},
         {"time": 12, "text": "Tiens six secondes.", "mode": "hold", "to": "full", "duration": 6},

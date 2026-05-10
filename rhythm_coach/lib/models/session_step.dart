@@ -82,6 +82,18 @@ class SessionStep {
   /// séance pour un fond.
   final String? background;
 
+  /// Si vrai, l'UI affiche un compte à rebours discret (5..1) pendant les
+  /// 5 dernières secondes du step. **Exception** : la joueuse ne doit
+  /// normalement JAMAIS savoir quand un hold se termine (pédagogie : on
+  /// doit pouvoir tenir indéfiniment). N'est activé que sur des step types
+  /// précis pour des milestones d'apprentissage :
+  /// - `hold` à `to ∈ {throat, full}` : aide à doser l'effort la première
+  ///   fois sur une zone éprouvante (mid/tip/head ne le déclenchent pas).
+  /// - `breath` : récupération scénarisée — savoir quand on reprend
+  ///   l'action aide à se préparer mentalement.
+  /// Le comportement par défaut hors milestone reste « aucun indice de durée ».
+  final bool showCountdown;
+
   const SessionStep({
     required this.time,
     this.text = '',
@@ -94,6 +106,7 @@ class SessionStep {
     this.chainAction,
     this.swallowMode,
     this.background,
+    this.showCountdown = false,
   });
 
   /// True quand l'étape ne fait QUE déclencher une phrase TTS et n'apporte
@@ -138,6 +151,7 @@ class SessionStep {
       chainAction: chain,
       swallowMode: _swallowModeFromString(_asString(json['swallow_mode'])),
       background: _asString(json['background']),
+      showCountdown: json['showCountdown'] == true,
     );
   }
 
@@ -177,6 +191,7 @@ class SessionStep {
         if (chainAction != null) 'chainAction': chainAction!.toJsonForChain(),
         if (swallowMode != null) 'swallow_mode': swallowMode!.name,
         if (background != null) 'background': background,
+        if (showCountdown) 'showCountdown': true,
       };
 
   /// Sérialisation `chainAction` : on omet `time` (recalculé par le

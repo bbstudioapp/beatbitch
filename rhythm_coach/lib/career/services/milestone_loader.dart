@@ -67,16 +67,49 @@ class MilestoneLoader {
     if (id == null || label == null || seqRaw.isEmpty) {
       return null;
     }
+    // Flag pédagogique au niveau milestone : activer le countdown visuel
+    // sur les steps "scénarisés à durée connue" de la séquence — hold
+    // profonds (throat/full) où doser l'effort est crucial, et breath où
+    // anticiper la reprise aide. Pas de propag sur hold tip/head/mid
+    // (pas un défi physique) ni sur rhythm/lick/hand/biffle/beg (le tempo
+    // donne déjà le repère). Cf. memo `feedback_hold_countdown_scope`.
+    final countdown = raw['showCountdown'] == true;
+    bool wantsCountdown(SessionStep s) {
+      if (!countdown) return false;
+      if (s.mode == SessionMode.breath) return true;
+      if (s.mode == SessionMode.hold &&
+          (s.to == Position.throat || s.to == Position.full)) {
+        return true;
+      }
+      return false;
+    }
+
     // Expand chainAction : un step JSON avec `chainAction` produit deux
     // SessionStep consécutifs dans la séquence. Le second hérite du `time`
     // du parent + sa durée.
     final sequence = <SessionStep>[];
     for (final raw in seqRaw.whereType<Map<String, dynamic>>()) {
-      final parent = SessionStep.fromJson(raw);
+      final parsed = SessionStep.fromJson(raw);
+      final parent = wantsCountdown(parsed)
+          ? SessionStep(
+              time: parsed.time,
+              text: parsed.text,
+              from: parsed.from,
+              to: parsed.to,
+              bpm: parsed.bpm,
+              bpmEnd: parsed.bpmEnd,
+              duration: parsed.duration,
+              mode: parsed.mode,
+              chainAction: parsed.chainAction,
+              swallowMode: parsed.swallowMode,
+              background: parsed.background,
+              showCountdown: true,
+            )
+          : parsed;
       sequence.add(parent);
       final chain = parent.chainAction;
       if (chain != null) {
-        sequence.add(SessionStep(
+        final chainStep = SessionStep(
           time: parent.time + (parent.duration ?? 0),
           text: chain.text,
           from: chain.from,
@@ -84,7 +117,19 @@ class MilestoneLoader {
           bpm: chain.bpm,
           duration: chain.duration,
           mode: chain.mode,
-        ));
+        );
+        sequence.add(wantsCountdown(chainStep)
+            ? SessionStep(
+                time: chainStep.time,
+                text: chainStep.text,
+                from: chainStep.from,
+                to: chainStep.to,
+                bpm: chainStep.bpm,
+                duration: chainStep.duration,
+                mode: chainStep.mode,
+                showCountdown: true,
+              )
+            : chainStep);
       }
     }
     final last = sequence.last;

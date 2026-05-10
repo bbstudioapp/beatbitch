@@ -745,13 +745,25 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                     TimerDisplay(
                         elapsed: ctrl.elapsed, total: ctrl.session.duration)
                   else if (ctrl.hasConfig)
-                    MovementAnimation(
-                      mode: ctrl.currentMode,
-                      from: ctrl.currentFrom,
-                      to: ctrl.currentTo,
-                      bpm: ctrl.currentBpm,
+                    SizedBox(
                       height: animHeight,
-                      beepEngine: widget.beep,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          MovementAnimation(
+                            mode: ctrl.currentMode,
+                            from: ctrl.currentFrom,
+                            to: ctrl.currentTo,
+                            bpm: ctrl.currentBpm,
+                            height: animHeight,
+                            beepEngine: widget.beep,
+                          ),
+                          if (ctrl.countdownSecondsRemaining != null)
+                            _HoldCountdownOverlay(
+                              seconds: ctrl.countdownSecondsRemaining!,
+                            ),
+                        ],
+                      ),
                     )
                   else
                     SizedBox(height: animHeight),
@@ -926,6 +938,48 @@ class _FailPhaseIndicator extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// Compte à rebours discret superposé à l'animation pendant les 5 dernières
+/// secondes d'un step qui a opté pour le countdown (milestones d'apprentissage
+/// hold throat/full et breath uniquement). Visuel-only — pas de TTS — pour ne
+/// pas chevaucher la phrase coach du step suivant.
+///
+/// Le chiffre fade-in sur 200ms à chaque nouvelle valeur (5→4→3…) via
+/// AnimatedSwitcher keyé sur la valeur courante. Pulse léger pour attirer
+/// l'œil en vision périphérique sans crier l'urgence.
+class _HoldCountdownOverlay extends StatelessWidget {
+  final int seconds;
+  const _HoldCountdownOverlay({required this.seconds});
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Align(
+        alignment: const Alignment(0, -0.65),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          transitionBuilder: (child, anim) => FadeTransition(
+            opacity: anim,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.85, end: 1.0).animate(anim),
+              child: child,
+            ),
+          ),
+          child: Text(
+            '$seconds',
+            key: ValueKey<int>(seconds),
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textSecondary.withValues(alpha: 0.85),
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
