@@ -15,6 +15,10 @@ jobs:
     defaults:
       run:
         working-directory: rhythm_coach
+    outputs:
+      skip: ${{ steps.gate.outputs.skip }}
+      version: ${{ steps.version.outputs.value }}
+      tag: ${{ steps.version.outputs.tag }}
 
     steps:
       - name: Checkout
@@ -166,4 +170,89 @@ jobs:
             ${{ steps.pkg.outputs.sha_path }}
           draft: false
           prerelease: false
+          fail_on_unmatched_files: true
+
+  release-windows:
+    name: Build and attach Windows portable zip
+    runs-on: windows-latest
+    needs: release
+    if: needs.release.outputs.skip != 'true'
+    defaults:
+      run:
+        working-directory: rhythm_coach
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Fetch external assets from R2
+        env:
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          AWS_REQUEST_CHECKSUM_CALCULATION: WHEN_REQUIRED
+          AWS_RESPONSE_CHECKSUM_VALIDATION: WHEN_REQUIRED
+        shell: bash
+        run: |
+          if [ -z "$R2_ACCESS_KEY_ID" ] || [ -z "$R2_SECRET_ACCESS_KEY" ] || [ -z "$R2_ENDPOINT" ] || [ -z "$R2_BUCKET" ]; then
+            echo "R2 secrets not configured — skipping external assets fetch."
+            echo "Build will proceed with empty backgrounds/ambience folders (graceful fallback in app)."
+            exit 0
+          fi
+
+          export AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID"
+          export AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY"
+          export AWS_DEFAULT_REGION="auto"
+
+          mkdir -p assets/backgrounds assets/audio/ambience
+
+          echo "Fetching backgrounds from s3://$R2_BUCKET/backgrounds/v1/ ..."
+          aws s3 sync "s3://$R2_BUCKET/backgrounds/v1/" assets/backgrounds/ \
+            --endpoint-url "$R2_ENDPOINT" \
+            --no-progress
+
+          echo "Fetching ambience from s3://$R2_BUCKET/ambience/v1/ ..."
+          aws s3 sync "s3://$R2_BUCKET/ambience/v1/" assets/audio/ambience/ \
+            --endpoint-url "$R2_ENDPOINT" \
+            --no-progress || echo "(ambience prefix empty or missing, continuing)"
+
+      - name: Enable Windows desktop
+        run: flutter config --enable-windows-desktop
+
+      - name: Build Windows release
+        run: flutter build windows --release
+
+      - name: Package Windows zip and compute SHA256
+        id: pkg
+        shell: pwsh
+        run: |
+          $version = "${{ needs.release.outputs.version }}"
+          $src = "build/windows/x64/runner/Release"
+          $dstName = "BeatBitch-$version-windows-x64.zip"
+          Compress-Archive -Path "$src/*" -DestinationPath $dstName -Force
+          $hash = (Get-FileHash $dstName -Algorithm SHA256).Hash.ToLower()
+          "$hash  $dstName" | Out-File -Encoding ascii "$dstName.sha256"
+          "zip_path=rhythm_coach/$dstName" | Out-File -Append -Encoding ascii $env:GITHUB_OUTPUT
+          "sha_path=rhythm_coach/$dstName.sha256" | Out-File -Append -Encoding ascii $env:GITHUB_OUTPUT
+          "sha=$hash" | Out-File -Append -Encoding ascii $env:GITHUB_OUTPUT
+
+      - name: Attach to existing release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.release.outputs.tag }}
+          files: |
+            ${{ steps.pkg.outputs.zip_path }}
+            ${{ steps.pkg.outputs.sha_path }}
           fail_on_unmatched_files: true
