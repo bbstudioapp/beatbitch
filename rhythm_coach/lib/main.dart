@@ -13,6 +13,7 @@ import 'services/adult_consent_service.dart';
 import 'services/coach_phrases_loader.dart';
 import 'services/locale_service.dart';
 import 'services/onboarding_service.dart';
+import 'services/platform_capabilities.dart';
 import 'services/surprise_alert_service.dart';
 import 'services/surprise_lifecycle_observer.dart';
 import 'services/surprise_notifications_bootstrap.dart';
@@ -62,26 +63,34 @@ Future<void> main() async {
     SystemUiMode.edgeToEdge,
   );
 
-  // Bootstrap notifications surprise. Le titre par défaut sera remplacé
-  // dynamiquement par la valeur localisée au moment de chaque arming via
-  // SurpriseRouter.resolveBodyVariants — mais on en initialise un de
-  // fallback ici pour les notifs déjà programmées avant un éventuel
-  // changement de locale.
-  await SurpriseNotificationsBootstrap.init(
-    localizedTitle: "C'est l'heure",
-    onTap: surpriseNotificationTapHandler,
-  );
-  // Au cold start (app lancée par tap d'une notif), pose le flag d'intent
-  // que `_ModeSelectionScreenState` consommera dans son addPostFrameCallback.
-  final coldStartPayload =
-      await SurpriseNotificationsBootstrap.consumeColdStartPayload();
-  if (coldStartPayload != null) {
-    await SurpriseAlertService.markIntentPending(coldStartPayload);
+  // Bootstrap notifications surprise — uniquement sur les plateformes qui
+  // supportent `flutter_local_notifications` + `zonedSchedule` avec alarme
+  // exacte (Android pour l'instant). Sur desktop/web, on saute entièrement
+  // l'init et l'écran de réglages affichera l'état "indisponible".
+  if (PlatformCapabilities.supportsSurpriseNotifications) {
+    // Le titre par défaut sera remplacé dynamiquement par la valeur
+    // localisée au moment de chaque arming via SurpriseRouter
+    // .resolveBodyVariants — mais on en initialise un de fallback ici pour
+    // les notifs déjà programmées avant un éventuel changement de locale.
+    await SurpriseNotificationsBootstrap.init(
+      localizedTitle: "C'est l'heure",
+      onTap: surpriseNotificationTapHandler,
+    );
+    // Au cold start (app lancée par tap d'une notif), pose le flag d'intent
+    // que `_ModeSelectionScreenState` consommera dans son
+    // addPostFrameCallback.
+    final coldStartPayload =
+        await SurpriseNotificationsBootstrap.consumeColdStartPayload();
+    if (coldStartPayload != null) {
+      await SurpriseAlertService.markIntentPending(coldStartPayload);
+    }
+    await SurpriseAlertService.instance.init();
   }
-  await SurpriseAlertService.instance.init();
 
   runApp(const RhythmCoachApp());
-  WidgetsBinding.instance.addObserver(SurpriseLifecycleObserver());
+  if (PlatformCapabilities.supportsSurpriseNotifications) {
+    WidgetsBinding.instance.addObserver(SurpriseLifecycleObserver());
+  }
 }
 
 class RhythmCoachApp extends StatelessWidget {

@@ -5,6 +5,7 @@ import '../models/session.dart';
 import '../services/ambience_engine.dart';
 import '../services/beep_engine.dart';
 import '../services/camera_motion_service.dart';
+import '../services/platform_capabilities.dart';
 import '../services/punishment_loader.dart';
 import '../services/random_comments_loader.dart';
 import '../services/saved_sessions_repository.dart';
@@ -144,11 +145,12 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: Text(t.homeAppBarTitle),
         actions: [
-          IconButton(
-            tooltip: t.homeCameraTestTooltip,
-            icon: const Icon(Icons.videocam_outlined),
-            onPressed: _openCameraTest,
-          ),
+          if (PlatformCapabilities.supportsCameraHoldCheck)
+            IconButton(
+              tooltip: t.homeCameraTestTooltip,
+              icon: const Icon(Icons.videocam_outlined),
+              onPressed: _openCameraTest,
+            ),
         ],
       ),
       body: FutureBuilder<_SessionsBundle>(

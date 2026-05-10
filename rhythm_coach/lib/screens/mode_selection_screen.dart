@@ -15,6 +15,7 @@ import '../services/backgrounds_service.dart';
 import '../services/beep_engine.dart';
 import '../services/locale_service.dart';
 import '../services/onboarding_service.dart';
+import '../services/platform_capabilities.dart';
 import '../services/surprise_alert_service.dart';
 import '../services/surprise_router.dart';
 import '../services/tts_service.dart';
@@ -266,7 +267,8 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
           ),
         ),
         actions: [
-          if ((_maxLevel ?? 1) >= _surpriseUnlockLevel)
+          if (PlatformCapabilities.supportsSurpriseNotifications &&
+              (_maxLevel ?? 1) >= _surpriseUnlockLevel)
             IconButton(
               tooltip: t.modeSelectionSurpriseTooltip,
               icon: const Icon(Icons.notifications_active_outlined),
