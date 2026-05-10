@@ -97,8 +97,9 @@ class UserProfileService extends ChangeNotifier {
           const [];
       _defaultNicknames = list;
     } catch (e) {
-      if (kDebugMode)
+      if (kDebugMode) {
         debugPrint('[UserProfile] chargement surnoms défaut KO : $e');
+      }
       _defaultNicknames = const [];
     }
     _defaultsLoadedFor = lang;

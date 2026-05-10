@@ -341,8 +341,9 @@ class TtsService {
       await _tts.setVoice({'name': name, 'locale': locale});
       _currentVoiceName = name;
     } catch (e) {
-      if (kDebugMode)
+      if (kDebugMode) {
         debugPrint('[TTS] setVoiceByName KO ($name/$locale) : $e');
+      }
     }
   }
 
