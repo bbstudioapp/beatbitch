@@ -5,6 +5,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../l10n/app_localizations.dart';
 import '../career/screens/career_screen.dart';
+import '../career/screens/custom_mode_screen.dart';
 import '../career/services/career_progress_service.dart';
 import '../models/ambience_pack.dart';
 import '../services/adult_consent_service.dart';
@@ -241,6 +242,19 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
         .then((_) => _refreshMaxLevel());
   }
 
+  void _openCustom() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CustomModeScreen(
+          tts: _tts,
+          beep: _beep,
+          ambience: _ambience,
+          userProfile: _userProfile,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
@@ -330,6 +344,15 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
                   subtitle: t.modeSelectionScenarioSubtitle,
                   icon: Icons.menu_book_outlined,
                   onTap: _openScenario,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: _ModeCard(
+                  title: t.modeSelectionCustomTitle,
+                  subtitle: t.modeSelectionCustomSubtitle,
+                  icon: Icons.tune,
+                  onTap: _openCustom,
                 ),
               ),
             ],

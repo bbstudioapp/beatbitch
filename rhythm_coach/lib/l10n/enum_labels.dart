@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import '../career/models/custom_session_config.dart';
 import '../career/models/specialization.dart';
 import '../models/badge.dart';
 import '../models/session.dart';
@@ -110,6 +111,30 @@ extension SpecializationBranchL10n on SpecializationBranch {
       SpecializationBranch.obeissance => t.specBranchObeissanceDesc,
       SpecializationBranch.sloppy => t.specBranchSloppyDesc,
       SpecializationBranch.resilience => t.specBranchResilienceDesc,
+    };
+  }
+}
+
+extension CustomDifficultyL10n on CustomDifficulty {
+  String localizedLabel(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return switch (this) {
+      CustomDifficulty.facile => t.customDifficultyFacile,
+      CustomDifficulty.normal => t.customDifficultyNormal,
+      CustomDifficulty.difficile => t.customDifficultyDifficile,
+      CustomDifficulty.extreme => t.customDifficultyExtreme,
+    };
+  }
+}
+
+extension ModeDoseL10n on ModeDose {
+  String localizedLabel(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return switch (this) {
+      ModeDose.none => t.customDoseNone,
+      ModeDose.rare => t.customDoseRare,
+      ModeDose.normal => t.customDoseNormal,
+      ModeDose.frequent => t.customDoseFrequent,
     };
   }
 }

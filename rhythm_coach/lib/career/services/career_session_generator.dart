@@ -223,6 +223,19 @@ class CareerSessionGenerator {
     Map<SessionMode, double> coachModeWeights = const {},
     String? sessionName,
     String? sessionNameQuickie,
+    // ─── Surcharges pour le mode « Custom » (rétrocompat : tous null /
+    //     false par défaut = comportement carrière inchangé) ───────────────
+    /// Plancher de difficulté appliqué au tirage dès le début de séance
+    /// (prime sur la valeur dérivée de quickie/intense).
+    double? intensityFloorOverride,
+
+    /// Plafond de profondeur (index `Position`) qui prime sur celui du
+    /// `CareerLevel`. Permet au mode custom de borner rhythm/hold.
+    int? maxDepthIndexOverride,
+
+    /// Si true, la `Session` générée est marquée `noStats` → le
+    /// `SessionController` n'écrit rien dans `StatsService`.
+    bool noStats = false,
   }) {
     assert(
       finalMilestone == null ||
@@ -235,7 +248,7 @@ class CareerSessionGenerator {
     );
     final cfg = CareerLevel.forLevel(level);
     _includeHand = includeHand;
-    _maxDepthIndex = cfg.maxDepthIndex;
+    _maxDepthIndex = maxDepthIndexOverride ?? cfg.maxDepthIndex;
     _deepProbability = cfg.deepProbability;
     _spec = specialization ?? SpecializationAllocation.empty();
     _level = level;
@@ -270,7 +283,8 @@ class CareerSessionGenerator {
     // de difficulté solide pour que la suite ressente vraiment le level up.
     final effectiveDuration =
         durationSeconds ?? (quickie ? 6 * 60 : cfg.durationSeconds);
-    final intensityFloor = quickie ? 0.65 : (intense ? 0.55 : 0.0);
+    final intensityFloor =
+        intensityFloorOverride ?? (quickie ? 0.65 : (intense ? 0.55 : 0.0));
     // Nombre de boosts en phase finish : table par niveau + bonus encore
     // (chaîne encore = +2 boosts par cran, sans plafond explicite côté
     // générateur). Le caller borne le nombre d'encores enchaînés via le
@@ -785,6 +799,7 @@ class CareerSessionGenerator {
           finalCategory: finalCategory,
           silentFinishStartTime: silentFinishStartTime,
           finalStepTime: finalStepStartTime,
+          noStats: noStats,
         ),
         staminaProfile: trimmedProfile,
       );
@@ -1090,6 +1105,7 @@ class CareerSessionGenerator {
         finalCategory: finalCategory,
         silentFinishStartTime: silentFinishStartTime,
         finalStepTime: finalStepStartTime,
+        noStats: noStats,
       ),
       staminaProfile: trimmedProfile,
     );

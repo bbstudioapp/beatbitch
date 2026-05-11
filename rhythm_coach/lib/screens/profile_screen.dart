@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../career/services/career_progress_service.dart';
+import '../career/services/custom_config_service.dart';
 import '../career/services/specialization_service.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
@@ -46,6 +47,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final StatsService _stats = StatsService();
   final CareerProgressService _career = CareerProgressService();
   final SpecializationService _spec = SpecializationService();
+  final CustomConfigService _customConfigs = CustomConfigService();
   late Future<_ProfileBundle> _bundleFuture;
   bool _resetting = false;
 
@@ -99,6 +101,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _spec.resetAll(),
       coachService.resetAll(),
       milestoneService.resetAll(),
+      _customConfigs.resetAll(),
     ]);
     if (!mounted) return;
     setState(() {
