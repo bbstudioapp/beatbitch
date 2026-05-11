@@ -62,8 +62,13 @@ class BeepEngine {
   static const double _holdLayerVolume = 0.9;
   static const double _breathVolume = 0.9;
 
-  /// 3 players par sample : couvre BPM jusqu'à ~200 même avec hold (450 ms).
-  static const int _poolSize = 3;
+  /// 4 players par sample. Round-robin : un bip ne réutilise jamais un player
+  /// avant ses 3 voisins, donc le décay du précédent n'est jamais coupé même
+  /// si le sample n'a pas fini — c'est la « superposition de canaux ». 4 (vs 3
+  /// historique) donne de la marge en haut du spectre BPM (boosts carrière
+  /// jusqu'à 180) et quand un step combine deux samples (hold = position +
+  /// hold_beep ~450 ms) : sans cette marge des bips manquaient par moments.
+  static const int _poolSize = 4;
 
   final Map<String, _PlayerPool> _pools = {};
   final Random _random = Random();
@@ -515,13 +520,27 @@ class BeepEngine {
   void _trigger(String assetName, double volume) {
     final pool = _pools[assetName];
     if (pool == null) return;
-    final player = pool.next();
+    final picked = pool.next(volume);
     () async {
+      // setVolume et resume dans des `try` indépendants : un `setVolume` qui
+      // jette (PlatformException ponctuelle observée sur certains Android
+      // quand les appels canal s'enchaînent vite) ne doit pas court-circuiter
+      // le `resume` — sinon le bip est silencieusement perdu, exactement le
+      // « bip qui manque de temps à autre » signalé. Et on saute carrément le
+      // `setVolume` quand le volume n'a pas changé sur ce player (cas courant
+      // d'un loop rythmé) → un appel canal de moins par bip, moins de
+      // contention donc moins de bips en retard/perdus.
+      if (picked.volumeChanged) {
+        try {
+          await picked.player.setVolume(volume);
+        } catch (e) {
+          if (kDebugMode) debugPrint('[BeepEngine] setVolume error : $e');
+        }
+      }
       try {
-        await player.setVolume(volume);
-        await player.resume();
+        await picked.player.resume();
       } catch (e) {
-        if (kDebugMode) debugPrint('[BeepEngine] trigger error : $e');
+        if (kDebugMode) debugPrint('[BeepEngine] resume error : $e');
       }
     }();
   }
@@ -649,7 +668,7 @@ class BeepEngine {
         : _finaleChimeAsset;
     final pool = _pools[asset];
     if (pool == null) return;
-    final player = pool.next();
+    final player = pool.next().player;
     try {
       await player.setVolume(volume.clamp(0.0, 1.0));
       await player.resume();
@@ -744,13 +763,25 @@ class BeatEvent {
 /// Pool round-robin d'AudioPlayer pour un même sample.
 class _PlayerPool {
   final List<AudioPlayer> players;
+
+  /// Dernier volume effectivement poussé sur chaque player (même indexation
+  /// que [players]). `null` = jamais réglé. Sert à sauter le `setVolume`
+  /// quand rien n'a changé (cf. [BeepEngine._trigger]).
+  final List<double?> _lastVolume;
   int _idx = 0;
 
-  _PlayerPool(this.players);
+  _PlayerPool(this.players)
+      : _lastVolume = List<double?>.filled(players.length, null);
 
-  AudioPlayer next() {
-    final p = players[_idx];
+  /// Avance le curseur round-robin et renvoie le player choisi + un flag
+  /// indiquant s'il faut (re)pousser [volume] dessus. Si [volume] est `null`,
+  /// l'appelant gère le volume lui-même → flag toujours `true`.
+  ({AudioPlayer player, bool volumeChanged}) next([double? volume]) {
+    final i = _idx;
     _idx = (_idx + 1) % players.length;
-    return p;
+    if (volume == null) return (player: players[i], volumeChanged: true);
+    final changed = _lastVolume[i] != volume;
+    if (changed) _lastVolume[i] = volume;
+    return (player: players[i], volumeChanged: changed);
   }
 }

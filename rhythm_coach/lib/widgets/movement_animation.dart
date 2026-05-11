@@ -97,7 +97,6 @@ class _MovementAnimationState extends State<MovementAnimation>
       _controller.removeStatusListener(_onStatus);
       _controller.stop();
       _controller.duration = _durationFor(widget.mode, widget.bpm);
-      _flipped = false;
       _startController();
     } else if (tempoChanged) {
       _controller.duration = _durationFor(widget.mode, widget.bpm);
@@ -106,11 +105,8 @@ class _MovementAnimationState extends State<MovementAnimation>
       }
     } else if (positionChanged && _isBeatSynced(widget.mode)) {
       // On repart au début du cycle pour que la prochaine alternance
-      // s'aligne sur la nouvelle paire from/to. Le `TweenAnimationBuilder`
-      // qui pilote la position de l'orbe lisse de toute façon le déplacement
-      // depuis sa position visible courante vers la nouvelle cible.
+      // s'aligne sur la nouvelle paire from/to.
       if (!_isExternallyDriven) {
-        _flipped = false;
         _controller.forward(from: 0);
       }
     }
@@ -121,13 +117,21 @@ class _MovementAnimationState extends State<MovementAnimation>
       _maybeSubscribeBeats(widget.beepEngine);
     }
 
-    // Reset l'ancrage de la courbe future à chaque changement de step (mode,
-    // BPM, ou paire from/to). Sans ça, l'extrapolation continue avec un
-    // `_lastBeatAt` calé sur l'ancien step mais les nouveaux from/to/BPM →
-    // courbe incohérente pendant ~1 beat (cas rhythm→rhythm avec positions
-    // différentes notamment). Le `AnimatedOpacity` autour de la trajectoire
-    // fait un fade-out propre ; le prochain `BeatEvent` recale et fade-in.
+    // Au démarrage d'un nouveau step, le tout premier bip émis par le
+    // BeepEngine tombe TOUJOURS sur `to` (`_alternateToggle = true` à chaque
+    // `applyStep`). On remet donc `_flipped = false` pour que le curseur vise
+    // `to` dès la bascule de step. Sans ce reset, en mode piloté par le stream
+    // `_flipped` conserve la parité du dernier bip du step précédent (donc
+    // ~aléatoire) : une fois sur deux le curseur part vers `from` alors que
+    // l'audio annonce `to` — c'est le décalage « quasiment inversé » observé.
+    // Il se recalait au bout d'un beat, mais à BPM bas ça reste très visible.
+    //
+    // On reset aussi l'ancrage de la courbe future (`_lastBeatAt`) : sinon
+    // l'extrapolation continue avec un `_lastBeatAt` calé sur l'ancien step
+    // mais les nouveaux from/to/BPM. `AnimatedOpacity` fait le fade-out, le
+    // prochain `BeatEvent` recale et fade-in.
     if (modeChanged || tempoChanged || positionChanged) {
+      _flipped = false;
       _lastBeatAt = null;
     }
   }
@@ -460,7 +464,16 @@ class _PositionLadder extends StatelessWidget {
           ),
         AnimatedAlign(
           alignment: targetAlignment,
-          duration: beatDuration,
+          // En régime établi : glisse vers la prochaine cible sur exactement
+          // un beat (anticipation easeInOutCubic, arrivée pile sur le bip).
+          // Juste après une bascule de step (lastBeatAt == null, on attend le
+          // 1er bip pendant le gap de transition silencieux du BeepEngine) :
+          // on rejoint `to` plus vite (≈ le gap mini de 300 ms) pour être en
+          // place quand ce 1er bip — toujours sur `to` — tombe. Le curseur
+          // bouge quand même (pas de saut sec), il se cale juste plus tôt.
+          duration: lastBeatAt == null
+              ? const Duration(milliseconds: 260)
+              : beatDuration,
           curve: Curves.easeInOutCubic,
           child: _Cursor(style: cursorStyle, color: color),
         ),
