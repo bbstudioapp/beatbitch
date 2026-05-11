@@ -292,6 +292,11 @@ class _CareerScreenState extends State<CareerScreen> {
           isQuickie: quickie,
           careerLevel: clamped,
           staminaProfile: result.staminaProfile,
+          // 2ᵉ enveloppe de difficulté : axe surchargé de la séance + snapshot
+          // du profil — consommés par le coach (Phase 4 : phrases attempt/
+          // record/tapout) côté SessionController.
+          capabilityOverloadAxis: result.overloadAxis,
+          capabilityProfile: bundle.capabilityProfile,
           introText: introText,
           phraseBank: coachBank,
           holdVerifier: verifier,
@@ -734,6 +739,8 @@ class _CareerScreenState extends State<CareerScreen> {
           isQuickie: quickie,
           careerLevel: level,
           staminaProfile: result.staminaProfile,
+          capabilityOverloadAxis: result.overloadAxis,
+          capabilityProfile: bundle.capabilityProfile,
           // Pas d'introText : on saute le panel d'intro et le décompte.
           // L'opening phrase est déjà jointe au step #0 de la session.
           phraseBank: coachBank,

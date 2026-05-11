@@ -244,6 +244,10 @@ class HumiliationEngine {
   static const double bumpHoldThroatCompleted = 1.0;
   static const double bumpHoldFullCompleted = 3.0;
   static const double bumpMilestoneAcquired = 3.0;
+
+  /// Bump permanent (career) quand un record du profil de capacités est battu
+  /// (Phase 4) — « l'exploit *est* une soumission acceptée » (§9 de la spec).
+  static const double bumpProgressRecord = 2.0;
   static const double bumpSalivaOverflow = 0.5;
   static const double bumpSalivaSpit = 1.0;
   static const double malusFail = 5.0;

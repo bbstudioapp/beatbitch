@@ -183,6 +183,78 @@
       ]
     }
   },
+  "progressPhrases": {
+    "gorge.engagement_streak": {
+      "attempt": [
+        "Tonight I want your throat {name}, just a little longer than usual — let it get used to him.",
+        "We're taking our time going down your throat {name}, you'll feel the difference."
+      ],
+      "record": [
+        "You kept him down your throat longer than ever {name}, I'm proud of who you're becoming.",
+        "Your throat listens better than it used to {name}, look how far we've come."
+      ],
+      "tapout": [
+        "Easy sweetie, your throat already did a lot tonight — that's exactly what we're working on.",
+        "Noted {name}, we'll leave your throat here. You'll come back to it, we have time."
+      ]
+    },
+    "hold.throat.streak": {
+      "attempt": [
+        "Tonight you'll hold him down your throat a little longer {name}, you can do this.",
+        "When I tell you to hold deep {name}, hold a touch longer than usual, in confidence."
+      ],
+      "record": [
+        "You held him at the back of your throat like never before {name}, I knew you could.",
+        "Nobody holds it like that {name} — not even you before tonight. Truly good girl."
+      ],
+      "tapout": [
+        "You did keep him down there a good while {name}, we'll work on the rest gently.",
+        "It's okay sweetie, your throat said no — we listen to that. The record will come."
+      ]
+    },
+    "noswallow.streak": {
+      "attempt": [
+        "Keep him in your mouth a little longer tonight {name}, don't swallow anything until I say so.",
+        "You're going to let my mess pool in your mouth {name}, no swallowing — a bit longer than last time."
+      ],
+      "record": [
+        "You held your mouth full without swallowing like never before {name}, you obey me so well.",
+        "New full-mouth record {name} — patient, obedient, exactly how I like you."
+      ],
+      "tapout": [
+        "You did hold it a good while before swallowing {name}, that's already a lot. Patience will come.",
+        "It's okay sweetie, your mouth was honest — next time we hold a bit more."
+      ]
+    },
+    "effort.no_breath_streak": {
+      "attempt": [
+        "We're going to keep going a little longer before your break tonight {name}, at your own pace.",
+        "Tonight we breathe a little less {name} — not out of cruelty, just to see what you really carry."
+      ],
+      "record": [
+        "You took it without a break like never before tonight {name}, you're tougher than you think.",
+        "You carried the effort further than ever {name}, and it shows on your face."
+      ],
+      "tapout": [
+        "Breathe sweetie, you needed it — your body spoke, I listen.",
+        "It's okay {name}, we'll stop there on the breath. You held beautifully, truly."
+      ]
+    },
+    "rhythm.motion_streak": {
+      "attempt": [
+        "You'll keep the motion a little longer tonight {name}, without breaking a thing — I'll guide you.",
+        "Hold the rhythm a touch longer than usual {name}, in confidence — you know how."
+      ],
+      "record": [
+        "You didn't drop the rhythm like never before tonight {name}, that's exactly it.",
+        "Stamina record {name} — good girl, really good girl."
+      ],
+      "tapout": [
+        "You slipped a bit early on the rhythm {name}, it's nothing — next time we hold longer.",
+        "No worries sweetie, we'll shorten the chain. You're getting close, I can see it."
+      ]
+    }
+  },
   "nicknames": {
     "pool": [
       "darling",

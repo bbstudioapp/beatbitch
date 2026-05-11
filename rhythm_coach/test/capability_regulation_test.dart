@@ -333,4 +333,88 @@ void main() {
       expect(p.comfortOf(CapabilityAxis.gorgeApneeStreak), 24.0);
     });
   });
+
+  group('CapabilityRegulator — helpers Phase 4 (coach audible)', () {
+    test('progressPhraseChanceForLevel : 0 aux niv ≤ 4, montée douce, plafond',
+        () {
+      for (var lvl = 0; lvl <= 4; lvl++) {
+        expect(CapabilityRegulator.progressPhraseChanceForLevel(lvl), 0.0,
+            reason: 'niv $lvl');
+      }
+      expect(CapabilityRegulator.progressPhraseChanceForLevel(5),
+          closeTo(0.05, 1e-9));
+      expect(CapabilityRegulator.progressPhraseChanceForLevel(6),
+          closeTo(0.10, 1e-9));
+      // monotone croissante jusqu\'au plafond
+      var prev = 0.0;
+      for (var lvl = 5; lvl <= 30; lvl++) {
+        final c = CapabilityRegulator.progressPhraseChanceForLevel(lvl);
+        expect(c, greaterThanOrEqualTo(prev), reason: 'niv $lvl');
+        expect(
+            c, lessThanOrEqualTo(CapabilityRegulator.kProgressPhraseChanceMax));
+        prev = c;
+      }
+      // plafond atteint au niv 12 et tenu au-delà
+      expect(CapabilityRegulator.progressPhraseChanceForLevel(12),
+          CapabilityRegulator.kProgressPhraseChanceMax);
+      expect(CapabilityRegulator.progressPhraseChanceForLevel(99),
+          CapabilityRegulator.kProgressPhraseChanceMax);
+    });
+
+    test('attributeTapOut : argmax du ratio figé/comfort, > 1 seulement', () {
+      const profile = CapabilityProfile({
+        CapabilityAxis.gorgeApneeStreak:
+            CapabilityAxisState(best: 24, comfort: 24),
+        CapabilityAxis.holdFullStreak:
+            CapabilityAxisState(best: 40, comfort: 40),
+      });
+      // apnée figée à 30 (ratio 1.25), holdFull à 41 (ratio ≈ 1.03) → apnée gagne.
+      expect(
+        CapabilityRegulator.attributeTapOut(const {
+          CapabilityAxis.gorgeApneeStreak: 30,
+          CapabilityAxis.holdFullStreak: 41,
+        }, profile),
+        CapabilityAxis.gorgeApneeStreak,
+      );
+      // Tous figés DANS la zone de confort → aucune attribution (fail-flemme).
+      expect(
+        CapabilityRegulator.attributeTapOut(const {
+          CapabilityAxis.gorgeApneeStreak: 18,
+          CapabilityAxis.holdFullStreak: 35,
+        }, profile),
+        isNull,
+      );
+      // Axe sans comfort dans le profil → ignoré.
+      expect(
+        CapabilityRegulator.attributeTapOut(const {
+          CapabilityAxis.biffleStreak: 999,
+        }, profile),
+        isNull,
+      );
+      expect(CapabilityRegulator.attributeTapOut(const {}, profile), isNull);
+    });
+
+    test(
+        'attributeTapOut : inversion pour les axes minimize (floor « trop lent »)',
+        () {
+      const profile = CapabilityProfile({
+        CapabilityAxis.rhythmBpmFloorThroat:
+            CapabilityAxisState(best: 24, comfort: 24),
+      });
+      // floor figé à 30 (= elle n\'a tenu QUE 30 BPM mini, plus lent demandé)
+      // → ratio comfort/figé = 24/30 = 0.8 ≤ 1 → pas d\'attribution.
+      expect(
+        CapabilityRegulator.attributeTapOut(
+            const {CapabilityAxis.rhythmBpmFloorThroat: 30}, profile),
+        isNull,
+      );
+      // floor figé à 18 (elle a craqué en dessous de 24, à 18 BPM)
+      // → ratio 24/18 = 1.33 > 1 → attribué.
+      expect(
+        CapabilityRegulator.attributeTapOut(
+            const {CapabilityAxis.rhythmBpmFloorThroat: 18}, profile),
+        CapabilityAxis.rhythmBpmFloorThroat,
+      );
+    });
+  });
 }

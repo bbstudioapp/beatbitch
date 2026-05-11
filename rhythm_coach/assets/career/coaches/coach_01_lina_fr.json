@@ -183,6 +183,78 @@
       ]
     }
   },
+  "progressPhrases": {
+    "gorge.engagement_streak": {
+      "attempt": [
+        "Ce soir je veux ta gorge {name}, juste un peu plus longtemps que d'habitude — laisse-la s'habituer à lui.",
+        "On va prendre le temps de descendre dans ta gorge {name}, tu vas sentir la différence."
+      ],
+      "record": [
+        "Tu l'as gardée au fond de ta gorge plus longtemps que jamais {name}, je suis fière de ce que tu deviens.",
+        "Ta gorge t'écoute mieux qu'avant {name}, regarde tout le chemin qu'on a fait."
+      ],
+      "tapout": [
+        "Doucement ma belle, ta gorge a déjà fait beaucoup pour ce soir — c'est exactement ce qu'on travaille.",
+        "C'est noté {name}, on s'arrête là pour ta gorge. Tu y reviendras, on a tout le temps."
+      ]
+    },
+    "hold.throat.streak": {
+      "attempt": [
+        "Ce soir tu vas la garder calée au fond un peu plus longtemps {name}, tu peux le faire.",
+        "Quand je te dirai de tenir au fond {name}, tiens un petit peu plus que d'habitude, en confiance."
+      ],
+      "record": [
+        "Tu l'as tenue au fond de ta gorge comme jamais {name}, je le savais que tu en étais capable.",
+        "Personne ne tient comme ça {name} — pas même toi avant ce soir. Vraiment bonne fille."
+      ],
+      "tapout": [
+        "Tu l'as quand même gardée au fond un bon moment {name}, on retravaillera la suite tranquillement.",
+        "C'est bon ma belle, ta gorge a dit non — on l'écoute. Le record viendra à son heure."
+      ]
+    },
+    "noswallow.streak": {
+      "attempt": [
+        "Garde-la dans la bouche un peu plus longtemps ce soir {name}, n'avale rien tant que je ne te le dis pas.",
+        "Tu vas laisser monter ma sauce dans ta bouche {name}, sans rien avaler — un peu plus que la dernière fois."
+      ],
+      "record": [
+        "Tu as gardé ta bouche pleine sans avaler comme jamais {name}, tu m'obéis si bien.",
+        "Nouveau record bouche pleine {name} — patiente, obéissante, exactement comme je t'aime."
+      ],
+      "tapout": [
+        "Tu l'as gardée bien longtemps avant d'avaler {name}, c'est déjà beaucoup. La patience viendra.",
+        "Pas grave ma belle, ta bouche a été honnête — la prochaine fois on tient un peu plus."
+      ]
+    },
+    "effort.no_breath_streak": {
+      "attempt": [
+        "On va enchaîner un peu plus longtemps avant ta pause ce soir {name}, à ton rythme.",
+        "Ce soir on respire un peu moins {name} — pas par cruauté, juste pour voir ce que tu portes vraiment."
+      ],
+      "record": [
+        "Tu as encaissé sans pause comme jamais ce soir {name}, t'es plus solide que tu ne crois.",
+        "Tu as porté l'effort plus loin que jamais {name}, et ça se voit sur ton visage."
+      ],
+      "tapout": [
+        "Respire ma belle, tu en avais besoin — ton corps t'a parlé, je l'écoute.",
+        "C'est ok {name}, on s'arrête là côté souffle. Tu as tenu beau, vraiment beau."
+      ]
+    },
+    "rhythm.motion_streak": {
+      "attempt": [
+        "Tu vas garder le mouvement un peu plus longtemps ce soir {name}, sans rien casser, je te guide.",
+        "Tiens le rythme un poil plus que d'habitude {name}, en confiance — tu sais faire."
+      ],
+      "record": [
+        "Tu n'as pas lâché le rythme comme jamais ce soir {name}, c'est exactement ça.",
+        "Record d'enchaînement {name} — bonne fille, vraiment bonne fille."
+      ],
+      "tapout": [
+        "Tu as flanché un peu tôt sur le rythme {name}, c'est rien — la prochaine fois on tient plus.",
+        "Pas de souci ma belle, on raccourcira la chaîne. Tu te rapproches, je le vois."
+      ]
+    }
+  },
   "nicknames": {
     "pool": [
       "ma belle",

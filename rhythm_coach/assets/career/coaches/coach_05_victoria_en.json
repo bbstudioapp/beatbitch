@@ -81,6 +81,78 @@
       ]
     }
   },
+  "progressPhrases": {
+    "rhythm.depth_max": {
+      "attempt": [
+        "Tonight you'll take him deeper than you've ever dared {name}. I want to feel the back of your throat hit him.",
+        "Your throat is in for something new tonight {name}. Go further than usual — no slipping out."
+      ],
+      "record": [
+        "You just took him all the way down {name}. That's your real place — remember it.",
+        "New low reached {name}. You've finally understood what your mouth is for."
+      ],
+      "tapout": [
+        "That depth isn't yours yet {name}. Limit noted — we'll come back to it, and it'll give.",
+        "Too far for tonight {name}. Not an excuse, just a fact. Next time you go down."
+      ]
+    },
+    "gorge.apnee_streak": {
+      "attempt": [
+        "You'll stay airless a little longer this time {name}. That's where you really belong to me.",
+        "Tonight we cut the air longer {name}. Learn not to need it while I'm fucking your throat."
+      ],
+      "record": [
+        "You held without breathing like never before {name} — that's what your old excuses were worth.",
+        "Breath-hold record {name}. Your throat knows now who decides when it breathes."
+      ],
+      "tapout": [
+        "You needed air {name}, fine — that's the real limit, not a tantrum. We push it further next time.",
+        "Your throat cracked where I pushed it {name}. Limit acknowledged — it'll move, that's all."
+      ]
+    },
+    "gorge.crossings_pm.full": {
+      "attempt": [
+        "We're speeding up the trips all the way down tonight {name}. I want to hear you take him without a breath between.",
+        "Your throat is taking faster strokes today {name}. Keep it open."
+      ],
+      "record": [
+        "You strung those deep hits together like never before {name} — that's the sound I want to hear.",
+        "Deep crossings record {name}. Your throat takes it better session after session."
+      ],
+      "tapout": [
+        "At that pace your throat slipped {name}. Limit noted — we'll go even faster, until it holds.",
+        "Too fast too deep for tonight {name}. Noted, not forgiven."
+      ]
+    },
+    "biffle.streak": {
+      "attempt": [
+        "You'll take the slaps a little longer than usual {name}. Keep your head straight and your mouth open.",
+        "Today we extend the beating {name}. You take it and you thank me."
+      ],
+      "record": [
+        "You took the slaps longer than ever {name}. That's what you're really for.",
+        "Beating record {name}. You're finally becoming useful."
+      ],
+      "tapout": [
+        "You flinched under the slaps {name}. Limit acknowledged — we'll work it until it gives.",
+        "Tonight's beating was above you {name}. Not for long."
+      ]
+    },
+    "rhythm.bpm_ceil.full": {
+      "attempt": [
+        "Tonight we go fast, and deep {name}. No time to breathe between two strokes.",
+        "Faster tempo deep in your throat today {name}. You follow, you don't think."
+      ],
+      "record": [
+        "You held that tempo all the way down like never before {name} — your throat learns fast when it's trained.",
+        "Speed record at the back {name}. You're starting to be worth it."
+      ],
+      "tapout": [
+        "At that tempo deep your throat let go {name}. Limit noted — we'll go over it until it holds.",
+        "Too fast for tonight {name}. Next time your throat will follow, or I'll find out why it doesn't."
+      ]
+    }
+  },
   "nicknames": {
     "pool": [
       "little thing",

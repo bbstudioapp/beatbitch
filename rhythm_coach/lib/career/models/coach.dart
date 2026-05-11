@@ -374,6 +374,23 @@ class CoachPhrasePack {
   /// Vide / absent = pas de coloration, comportement historique.
   final Map<SpecializationBranch, Map<String, List<PhraseEntry>>> branchPhrases;
 
+  /// Phrases de progression du **profil de capacités** (Phase 4 — coach
+  /// audible parcimonieux). Pour chaque axe — clé = `CapabilityAxis.storageKey`
+  /// (ex. `"gorge.apnee_streak"`, `"rhythm.depth_max"`) — trois tiers :
+  ///
+  /// - `attempt` : annonce avant une surcharge (« aujourd'hui on bat ton
+  ///   record de gorge »), injectée comme texte du step #0 par le générateur.
+  /// - `record` : record battu sur l'axe poussé — phrase de reconnaissance,
+  ///   prononcée en fin de séance par `SessionController`.
+  /// - `tapout` : « je peux pas » reconnu comme limite légitime — variante
+  ///   DOUCE des phrases de fail, prononcée à la place de la phrase de fail
+  ///   standard quand le tap-out est imputable à un axe vraiment surchargé.
+  ///
+  /// Déclenchement RARE (∝ niveau, quasi-muet aux premiers paliers). Clé brute
+  /// (String) : une clé inconnue n'est juste jamais consultée. Vide / absent =
+  /// silence — comportement de tous les coachs sauf Lina + Victoria.
+  final Map<String, Map<String, List<PhraseEntry>>> progressPhrases;
+
   /// Commentaires aléatoires propres à ce coach. Si non vide, **remplacent**
   /// la liste globale de `random_comments.json` pendant la séance. Vide =
   /// fallback sur la liste globale (comportement historique). Sert à éviter
@@ -405,6 +422,7 @@ class CoachPhrasePack {
     this.encore = const [],
     this.progress = const {},
     this.branchPhrases = const {},
+    this.progressPhrases = const {},
     this.randomComments = const [],
     this.nicknames = CoachNicknamePool.empty,
     this.coachNicknames = const [],
@@ -421,6 +439,7 @@ class CoachPhrasePack {
       encore.isEmpty &&
       progress.isEmpty &&
       branchPhrases.isEmpty &&
+      progressPhrases.isEmpty &&
       randomComments.isEmpty &&
       nicknames.isEmpty &&
       coachNicknames.isEmpty &&
@@ -499,6 +518,23 @@ class CoachPhrasePack {
       });
     }
 
+    // progressPhrases : map storageKey-d'axe → tier → liste. Clé brute (String),
+    // pas de validation contre l'enum `CapabilityAxis` — une clé inconnue n'est
+    // simplement jamais consultée (cf. CoachPhrasePack.progressPhrases).
+    final progressPhrases = <String, Map<String, List<PhraseEntry>>>{};
+    final progressPhrasesNode = root['progressPhrases'];
+    if (progressPhrasesNode is Map<String, dynamic>) {
+      progressPhrasesNode.forEach((axisKey, tiersRaw) {
+        if (axisKey.trim().isEmpty || tiersRaw is! Map<String, dynamic>) return;
+        final tiers = <String, List<PhraseEntry>>{};
+        tiersRaw.forEach((tier, raw) {
+          final list = PhraseEntry.listFromJson(raw);
+          if (list.isNotEmpty) tiers[tier] = list;
+        });
+        if (tiers.isNotEmpty) progressPhrases[axisKey] = tiers;
+      });
+    }
+
     final nicknamesNode = root['nicknames'];
     final nicknames = nicknamesNode is Map<String, dynamic>
         ? CoachNicknamePool.fromJson(nicknamesNode)
@@ -517,6 +553,7 @@ class CoachPhrasePack {
       encore: PhraseEntry.listFromJson(root['encore']),
       progress: progress,
       branchPhrases: branchPhrases,
+      progressPhrases: progressPhrases,
       randomComments: stringList(root['randomComments']),
       nicknames: nicknames,
       coachNicknames: stringList(root['coachNicknames']),
@@ -888,6 +925,16 @@ class _CoachComposedPhraseBank extends PhraseBank {
     final picked = pickPhraseEntry(coachPhrases.encore, rng);
     if (picked != null) return picked;
     return fallback.pickEncore(rng);
+  }
+
+  @override
+  String? pickProgressPhrase(String axisStorageKey, String tier, Random rng) {
+    final pool = coachPhrases.progressPhrases[axisStorageKey]?[tier];
+    if (pool != null && pool.isNotEmpty) {
+      final picked = pickPhraseEntry(pool, rng);
+      if (picked != null) return picked;
+    }
+    return fallback.pickProgressPhrase(axisStorageKey, tier, rng);
   }
 
   @override

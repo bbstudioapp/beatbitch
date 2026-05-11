@@ -69,6 +69,23 @@ class SessionController extends ChangeNotifier {
   Map<CapabilityAxis, double> get capabilitySessionCeilings =>
       _capabilityTracker?.sessionCeilings ?? const {};
 
+  /// Niveau carrière de la séance — dose la fréquence des phrases du profil
+  /// de capacités (Phase 4, `CapabilityRegulator.progressPhraseChanceForLevel`).
+  /// 0 hors carrière (le profil n'y est de toute façon pas suivi).
+  final int _careerLevel;
+
+  /// Axe de capacité surchargé sur cette séance (`null` hors carrière / profil
+  /// neuf). Sert aux phrases `record` : l'exploit annoncé en fin de séance est
+  /// celui qu'on a poussé exprès (cohérent avec la phrase `attempt` injectée
+  /// par le générateur en début de séance).
+  final CapabilityAxis? _capabilityOverloadAxis;
+
+  /// Snapshot du profil de capacités pris au début de la séance (mode
+  /// carrière). Sert à l'attribution mid-session du tap-out (phrase `tapout`)
+  /// et à détecter un record battu (phrase `record`, en comparant `reached`
+  /// au `best` pré-séance). `null` hors carrière.
+  final CapabilityProfile? _capabilityProfile;
+
   final HumiliationEngine _humiliation = HumiliationEngine();
   HumiliationEngine get humiliation => _humiliation;
   final ObedienceEngine _obedience = ObedienceEngine();
@@ -286,6 +303,9 @@ class SessionController extends ChangeNotifier {
     HoldVerifier? holdVerifier,
     SpecializationAllocation? specialization,
     double seedHumiliationSession = 0.0,
+    int careerLevel = 0,
+    CapabilityAxis? capabilityOverloadAxis,
+    CapabilityProfile? capabilityProfile,
   })  : _session = session,
         _tts = tts,
         _beep = beep,
@@ -300,7 +320,10 @@ class SessionController extends ChangeNotifier {
         _staminaProfile = staminaProfile,
         _holdVerifier = holdVerifier,
         _specialization = specialization,
-        _seedHumiliationSession = seedHumiliationSession {
+        _seedHumiliationSession = seedHumiliationSession,
+        _careerLevel = careerLevel,
+        _capabilityOverloadAxis = capabilityOverloadAxis,
+        _capabilityProfile = capabilityProfile {
     _beep.onBeat = _handleBeat;
   }
 
@@ -1014,6 +1037,16 @@ class SessionController extends ChangeNotifier {
     await WakelockPlus.disable();
     _flushHoldFull();
     _disarmHoldVerifier();
+    // Profil de capacités : on clôt les streaks dès maintenant (la session
+    // s'est terminée proprement) — le rapport est réutilisé plus bas pour le
+    // commit ET sert tout de suite à détecter un record battu sur l'axe poussé
+    // cette séance (Phase 4 : bump + éventuelle phrase coach). `_capabilityTracker`
+    // est null hors carrière → `capReport == null`. `finalizeReport` est
+    // idempotent (re-flush de valeurs déjà figées = max d'elles-mêmes).
+    final capTracker = _capabilityTracker;
+    final SessionCapabilityReport? capReport =
+        (capTracker != null && !_released) ? capTracker.finalizeReport() : null;
+    final CapabilityAxis? recordAxis = _detectCapabilityRecord(capReport);
     if (!_session.noStats) {
       await _stats.addElapsedSeconds(elapsedSeconds);
       await _stats.recordSessionCompleted(hadFail: _hadFailThisSession);
@@ -1029,6 +1062,15 @@ class SessionController extends ChangeNotifier {
       );
       if (!_hadFailThisSession) {
         _obedience.onSessionCleanFinish();
+        // Phase 4 : record battu sur l'axe poussé cette séance → petit bump
+        // permanent humiliation + obéissance (« l'exploit *est* une soumission
+        // acceptée », §9). Posé dès qu'un record est détecté — c'est seulement
+        // l'annonce vocale (en fin de _finish) qui est rare (∝ niveau). AVANT
+        // les persistances `setObedienceLevel` / `setHumiliationLevel`.
+        if (recordAxis != null) {
+          _humiliation.bumpCareer(HumiliationEngine.bumpProgressRecord);
+          _obedience.onCapabilityRecord();
+        }
         // Compteurs des badges de fin de séance (Bouche pleine / Repeinte /
         // Gobeuse / Nettoyeuse / Suppliante). On crédite uniquement sur
         // sessions sans fail : si elle s'est plantée en cours de route, le
@@ -1104,18 +1146,15 @@ class SessionController extends ChangeNotifier {
       final unlocks = await _badges.reconcileAndDetectUnlocks(snap);
       _pendingBadgeUnlocks = unlocks;
 
-      // Profil de capacités : clôt les streaks encore actifs (la session
-      // s'est terminée proprement) et persiste le rapport. `sessionIndex` =
-      // nombre de sessions complétées (déjà incrémenté par
-      // `recordSessionCompleted` plus haut) → sert d'horloge de decay aux
-      // phases ultérieures. Phase 1 : `comfort` est posé naïvement = `best`.
-      final tracker = _capabilityTracker;
-      if (tracker != null && !_released) {
-        final report = tracker.finalizeReport();
-        if (!report.isEmpty) {
-          await _capabilities.commit(report,
-              sessionIndex: snap.sessionsCompleted);
-        }
+      // Profil de capacités : persiste le rapport clôturé plus haut.
+      // `sessionIndex` = nombre de sessions complétées (déjà incrémenté par
+      // `recordSessionCompleted`) → horloge de decay du `CapabilityRegulator`.
+      // Renvoie l'axe imputé du tap-out — ignoré ici (le `tapout` a déjà été
+      // attribué live pour la phrase coach ; l'attribution de `commit` ne sert
+      // qu'au ratchet ↓).
+      if (capReport != null && !capReport.isEmpty) {
+        await _capabilities.commit(capReport,
+            sessionIndex: snap.sessionsCompleted);
       }
     }
 
@@ -1157,6 +1196,20 @@ class SessionController extends ChangeNotifier {
     final announce = milestoneAnnouncement;
     if (announce != null && announce.isNotEmpty) {
       await _tts.speak(announce);
+    } else if (recordAxis != null &&
+        _phraseBank != null &&
+        !_released &&
+        _random.nextDouble() <
+            CapabilityRegulator.progressPhraseChanceForLevel(_careerLevel)) {
+      // Phase 4 — phrase `record` parcimonieuse : seulement s'il n'y a pas eu
+      // d'annonce milestone cette séance (on n'empile pas deux annonces de fin)
+      // et avec une chance ∝ niveau (« record » pas systématiquement annoncé,
+      // §9). Même placement que l'annonce milestone : après le chime + le panel.
+      final phrase = _phraseBank.pickProgressPhrase(
+          recordAxis.storageKey, 'record', _random);
+      if (phrase != null && phrase.isNotEmpty) {
+        await _tts.speak(phrase);
+      }
     }
   }
 
@@ -1191,6 +1244,47 @@ class SessionController extends ChangeNotifier {
       if (s.time > finalT) return s;
     }
     return null;
+  }
+
+  /// Phrase `tapout` du coach (Phase 4) si le « je peux pas » est imputable à
+  /// un axe poussé au-delà de sa zone de confort (§6), avec une chance ∝ niveau.
+  /// Suppose `CapabilityTracker.onFail()` déjà appelé (les `sessionCeilings`
+  /// sont à jour). `null` = pas de phrase dédiée → l'appelant retombe sur le
+  /// tirage de fail standard.
+  String? _tapoutPhraseOrNull() {
+    final tracker = _capabilityTracker;
+    final profile = _capabilityProfile;
+    final bank = _phraseBank;
+    if (tracker == null || profile == null || bank == null) return null;
+    final axis =
+        CapabilityRegulator.attributeTapOut(tracker.sessionCeilings, profile);
+    if (axis == null) return null;
+    if (_random.nextDouble() >=
+        CapabilityRegulator.progressPhraseChanceForLevel(_careerLevel)) {
+      return null;
+    }
+    final phrase = bank.pickProgressPhrase(axis.storageKey, 'tapout', _random);
+    return (phrase != null && phrase.isNotEmpty) ? phrase : null;
+  }
+
+  /// Détecte si la séance vient de battre le `best` de l'axe poussé cette
+  /// séance (`_capabilityOverloadAxis`, axe pilotant `maximize`) en comparant
+  /// `reached` au snapshot pré-séance. Renvoie l'axe en cas de record propre,
+  /// `null` sinon — pas d'axe surchargé, pas d'amélioration, ou séance avec un
+  /// « je peux pas » (on ne célèbre pas un record juste après un tap-out, §9 ;
+  /// le `best` reste enregistré par `CapabilityService.commit` quoi qu'il arrive).
+  CapabilityAxis? _detectCapabilityRecord(SessionCapabilityReport? report) {
+    if (report == null || _hadFailThisSession) return null;
+    final axis = _capabilityOverloadAxis;
+    final profile = _capabilityProfile;
+    if (axis == null || profile == null) return null;
+    if (!axis.pilotant || axis.recordKind != CapabilityRecordKind.maximize) {
+      return null;
+    }
+    final reached = report.reached[axis];
+    if (reached == null) return null;
+    final before = profile.bestOf(axis);
+    return (before == null || reached > before) ? axis : null;
   }
 
   /// Liste des paliers nouvellement franchis, calculée par `_finish` mais
@@ -1387,11 +1481,18 @@ class SessionController extends ChangeNotifier {
       // que dans le pool générique. Fallback transparent au pool standard
       // si le pool dédié est vide (sécurité contre un JSON incomplet).
       final swallowPool = _punishmentBundle.failPhrasesSwallow;
+      final usingSwallowPool =
+          _swallowMode == SwallowMode.forbidden && swallowPool.isNotEmpty;
       final pool =
-          (_swallowMode == SwallowMode.forbidden && swallowPool.isNotEmpty)
-              ? swallowPool
-              : _punishmentBundle.failPhrases;
-      final raw = _pickRandom(pool);
+          usingSwallowPool ? swallowPool : _punishmentBundle.failPhrases;
+      // Phase 4 — coach audible : si le « je peux pas » est imputable à un axe
+      // poussé au-delà de sa zone de confort (§6, attribution non ambiguë grâce
+      // à la surcharge isolée) et que le dé ∝ niveau tombe juste, on remplace la
+      // phrase de fail standard par une variante DOUCE « limite reconnue » (tier
+      // `tapout`). Jamais sur le pool « avalement interdit transgressé »
+      // (indiscipline ≠ limite légitime).
+      final tapoutPhrase = usingSwallowPool ? null : _tapoutPhraseOrNull();
+      final raw = tapoutPhrase ?? _pickRandom(pool);
       _currentFailPhrase = raw == null ? null : _tts.resolveText(raw);
       notifyListeners();
       if (_currentFailPhrase != null) {

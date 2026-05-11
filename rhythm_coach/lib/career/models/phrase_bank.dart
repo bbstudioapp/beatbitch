@@ -184,6 +184,16 @@ class PhraseBank {
   /// post-finished). Retourne null si la banque est vide.
   String? pickEncore(Random rng) => pickPhraseEntry(_encore, rng);
 
+  /// Tire une phrase de progression du **profil de capacités** (Phase 4 —
+  /// coach audible parcimonieux) pour un axe (clé = `CapabilityAxis.storageKey`,
+  /// ex. `"gorge.apnee_streak"`) et un tier (`attempt` / `record` / `tapout`).
+  /// La banque globale n'en porte jamais → retourne toujours `null` (l'appelant
+  /// reste alors silencieux) ; seul le pack d'un coach déclarant une section
+  /// `progressPhrases` peut renvoyer du texte (override dans
+  /// `_CoachComposedPhraseBank`).
+  String? pickProgressPhrase(String axisStorageKey, String tier, Random rng) =>
+      null;
+
   /// Tire une phrase de transition pour un changement de vitesse ou de
   /// profondeur. Retourne null si la banque ne contient rien pour ce kind.
   String? pickTransition(TransitionKind kind, Random rng) {

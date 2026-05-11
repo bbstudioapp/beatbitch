@@ -81,6 +81,78 @@
       ]
     }
   },
+  "progressPhrases": {
+    "rhythm.depth_max": {
+      "attempt": [
+        "Ce soir tu vas l'avaler plus loin que tu n'as jamais osé {name}. Je veux sentir le fond te toucher.",
+        "Ta gorge va goûter à du nouveau ce soir {name}. Tu descends plus que d'habitude — sans te défiler."
+      ],
+      "record": [
+        "Tu viens de l'avaler jusqu'à la garde {name}. C'est là ta vraie place — souviens-t'en.",
+        "Nouveau fond touché {name}. Tu as enfin compris à quoi sert ta bouche."
+      ],
+      "tapout": [
+        "Cette profondeur n'est pas encore pour toi {name}. Limite notée — on y reviendra, et elle cédera.",
+        "Trop loin pour ce soir {name}. Pas une excuse, juste un constat. La prochaine fois tu descends."
+      ]
+    },
+    "gorge.apnee_streak": {
+      "attempt": [
+        "Tu vas rester sans air un peu plus longtemps cette fois {name}. C'est là que tu m'appartiens vraiment.",
+        "Ce soir on coupe l'air plus longtemps {name}. Apprends à ne plus en avoir besoin pendant que je te baise la gorge."
+      ],
+      "record": [
+        "Tu as tenu sans respirer comme jamais {name} — voilà ce que valent tes excuses d'avant.",
+        "Record d'apnée {name}. Ta gorge sait maintenant qui décide quand elle respire."
+      ],
+      "tapout": [
+        "Tu as eu besoin d'air {name}, ok — c'est la vraie limite, pas du caprice. On la repousse la prochaine fois.",
+        "Ta gorge a craqué là où je l'ai poussée {name}. Limite reconnue — elle bougera, c'est tout."
+      ]
+    },
+    "gorge.crossings_pm.full": {
+      "attempt": [
+        "On accélère les coups jusqu'au fond ce soir {name}. Je veux t'entendre cogner sans souffler entre.",
+        "Ta gorge va prendre des allers-retours plus rapides aujourd'hui {name}. Tiens-la ouverte."
+      ],
+      "record": [
+        "Tu as enchaîné les coups au fond comme jamais {name} — c'est ce bruit-là que je veux entendre.",
+        "Record de franchissements profonds {name}. Ta gorge encaisse mieux séance après séance."
+      ],
+      "tapout": [
+        "À cette cadence ta gorge a flanché {name}. Limite notée — on y repassera plus vite encore, jusqu'à ce qu'elle tienne.",
+        "Trop rapide trop profond pour aujourd'hui {name}. C'est noté, pas pardonné."
+      ]
+    },
+    "biffle.streak": {
+      "attempt": [
+        "Tu vas prendre les coups un peu plus longtemps que d'habitude {name}. Garde la tête en place et la bouche ouverte.",
+        "Aujourd'hui on prolonge la dérouillée {name}. Tu encaisses et tu me remercies."
+      ],
+      "record": [
+        "Tu as pris les coups plus longtemps que jamais {name}. Voilà à quoi tu sers vraiment.",
+        "Record encaissé {name}. Tu deviens enfin utile."
+      ],
+      "tapout": [
+        "Tu as flanché sous les coups {name}. Limite reconnue — on bossera pour qu'elle saute la prochaine fois.",
+        "Cette dérouillée était au-dessus de toi ce soir {name}. Pas pour longtemps."
+      ]
+    },
+    "rhythm.bpm_ceil.full": {
+      "attempt": [
+        "Ce soir on va vite, et au fond {name}. Pas le temps de respirer entre deux coups.",
+        "Tempo plus rapide en gorge profonde aujourd'hui {name}. Tu suis, tu ne réfléchis pas."
+      ],
+      "record": [
+        "Tu as tenu ce tempo au fond comme jamais {name} — ta gorge apprend vite quand on la dresse.",
+        "Record de vitesse au fond {name}. Tu commences à valoir le coup."
+      ],
+      "tapout": [
+        "À ce tempo au fond ta gorge a lâché {name}. Limite notée — on repassera dessus jusqu'à ce qu'elle suive.",
+        "Trop rapide pour ce soir {name}. La prochaine fois ta gorge suivra, ou je trouverai pourquoi elle ne suit pas."
+      ]
+    }
+  },
   "nicknames": {
     "pool": [
       "petite chose",
