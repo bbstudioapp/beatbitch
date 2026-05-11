@@ -282,6 +282,87 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileStatModesUsed => 'Modes used';
 
   @override
+  String get profileCapabilitiesSection => 'CAPABILITIES';
+
+  @override
+  String get profileCapabilitiesEmpty =>
+      'Nothing to show yet — your capabilities reveal themselves as you play.';
+
+  @override
+  String profileCapBpm(int n) {
+    return '$n BPM';
+  }
+
+  @override
+  String get profileCapApnea => 'Apnea';
+
+  @override
+  String get profileCapEngagement => 'Throat engaged';
+
+  @override
+  String get profileCapCrossingsThroat => 'Throat barrier';
+
+  @override
+  String get profileCapCrossingsFull => 'Throat barrier (deep)';
+
+  @override
+  String get profileCapCrossingsLifetime => 'Crossings (total)';
+
+  @override
+  String get profileCapRhythmFastShallow => 'Mouth rhythm — fast';
+
+  @override
+  String get profileCapRhythmFastThroat => 'Throat rhythm — fast';
+
+  @override
+  String get profileCapRhythmFastFull => 'Deep rhythm — fast';
+
+  @override
+  String get profileCapRhythmSlowShallow => 'Mouth rhythm — slow';
+
+  @override
+  String get profileCapRhythmSlowThroat => 'Throat rhythm — slow';
+
+  @override
+  String get profileCapRhythmSlowFull => 'Deep rhythm — slow';
+
+  @override
+  String get profileCapRhythmDepth => 'Rhythm depth';
+
+  @override
+  String get profileCapRhythmMotion => 'Unbroken motion';
+
+  @override
+  String get profileCapHoldThroat => 'Throat hold';
+
+  @override
+  String get profileCapHoldFull => 'Deep hold';
+
+  @override
+  String get profileCapNoSwallow => 'No swallowing';
+
+  @override
+  String get profileCapBiffle => 'Biffle';
+
+  @override
+  String get profileCapBiffleFast => 'Biffle — fast';
+
+  @override
+  String get profileCapEffortNoBreath => 'Effort without a break';
+
+  @override
+  String get profileCapBreathMinDose => 'Shortest breather';
+
+  @override
+  String get profileCapLickDepth => 'Tongue depth';
+
+  @override
+  String get profileCapLickStreak => 'Unbroken tongue';
+
+  @override
+  String get profileCapHandStreak => 'Unbroken hand';
+
+  @override
   String get profileResetSection => 'DANGER ZONE';
 
   @override
@@ -292,7 +373,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileResetDialogMessage =>
-      'This wipes all your stats, badges, career progression and specialization points. Irreversible.';
+      'This wipes all your stats, capabilities, badges, career progression and specialization points. Irreversible.';
 
   @override
   String get profileResetCancel => 'Cancel';
