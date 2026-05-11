@@ -8,6 +8,7 @@ import '../career/models/level_milestone.dart';
 import '../career/models/phrase_bank.dart';
 import '../career/models/specialization.dart';
 import '../career/models/unlock_key.dart';
+import '../career/services/career_session_generator.dart';
 import '../l10n/app_localizations.dart';
 import '../main.dart' show milestoneService;
 import '../models/punishment.dart';
@@ -85,6 +86,19 @@ class SessionController extends ChangeNotifier {
   /// et à détecter un record battu (phrase `record`, en comparant `reached`
   /// au `best` pré-séance). `null` hors carrière.
   final CapabilityProfile? _capabilityProfile;
+
+  /// `UnlockKey` acquittés à l'ouverture de la séance — passés tel quels au
+  /// `CareerSessionGenerator` quand on lui demande de produire une punition
+  /// carrière (Phase 5). Vide hors carrière → la génération de punition est
+  /// inhibée par `_generateCareerPunishmentOrNull` de toute façon, mais on
+  /// reste cohérent : pas de set partiel.
+  final Set<UnlockKey> _unlockedKeys;
+
+  /// Mirroir du toggle `hand` propagé au générateur principal — repassé au
+  /// générateur de punition carrière (Phase 5) pour exclure les compositions
+  /// qui impliquent la main (`biffle_burst`) si la joueuse a désactivé hand
+  /// pour la séance.
+  final bool _includeHand;
 
   final HumiliationEngine _humiliation = HumiliationEngine();
   HumiliationEngine get humiliation => _humiliation;
@@ -306,6 +320,8 @@ class SessionController extends ChangeNotifier {
     int careerLevel = 0,
     CapabilityAxis? capabilityOverloadAxis,
     CapabilityProfile? capabilityProfile,
+    Set<UnlockKey> unlockedKeys = const {},
+    bool includeHand = true,
   })  : _session = session,
         _tts = tts,
         _beep = beep,
@@ -323,7 +339,9 @@ class SessionController extends ChangeNotifier {
         _seedHumiliationSession = seedHumiliationSession,
         _careerLevel = careerLevel,
         _capabilityOverloadAxis = capabilityOverloadAxis,
-        _capabilityProfile = capabilityProfile {
+        _capabilityProfile = capabilityProfile,
+        _unlockedKeys = unlockedKeys,
+        _includeHand = includeHand {
     _beep.onBeat = _handleBeat;
   }
 
@@ -1525,8 +1543,12 @@ class SessionController extends ChangeNotifier {
       await _waitInterruptible(Duration(seconds: breathSeconds), gen: myGen);
       if (!_isFailFlowAlive(myGen)) return;
 
-      // 4) Punition aléatoire.
-      _currentPunishment = _pickRandom(_punishmentBundle.punishments);
+      // 4) Punition. En carrière, on génère une composition contextuelle
+      //    bornée par le profil de capacités (§7 — Phase 5). Hors carrière
+      //    (Custom, scénarios JSON), on retombe sur le tirage statique dans
+      //    `punishments.json` — comportement historique.
+      _currentPunishment = _generateCareerPunishmentOrNull() ??
+          _pickRandom(_punishmentBundle.punishments);
       _failPhase = FailPhase.punishment;
       notifyListeners();
       if (_currentPunishment != null) {
@@ -1735,6 +1757,36 @@ class SessionController extends ChangeNotifier {
         notifyListeners();
       }
     }
+  }
+
+  /// Génère une punition carrière contextuelle (Phase 5, §7) via
+  /// `CareerSessionGenerator.generatePunishment`. Renvoie `null` hors
+  /// carrière (pas de profil de capacités ou pas de banque coach) — le
+  /// caller retombe alors sur le tirage statique dans `punishments.json`.
+  ///
+  /// On reconstruit un générateur à la volée (pas d'état conservé entre
+  /// fails) : la classe est suffisamment légère, le `Random()` interne
+  /// suffit pour la variation et on évite de propager une référence partagée
+  /// avec la chaîne de génération de session principale.
+  Punishment? _generateCareerPunishmentOrNull() {
+    final profile = _capabilityProfile;
+    final bank = _phraseBank;
+    if (profile == null || bank == null) return null;
+    final generator = CareerSessionGenerator();
+    return generator.generatePunishment(
+      level: _careerLevel,
+      bank: bank,
+      unlockedKeys: _unlockedKeys,
+      capabilityProfile: profile,
+      capabilitySessionCeilings:
+          _capabilityTracker?.sessionCeilings ?? const {},
+      capabilityOverloadAxis: _capabilityOverloadAxis,
+      specialization: _specialization,
+      humiliationCareer: _humiliation.careerScore,
+      humiliationSession: _humiliation.sessionScore,
+      obedience: _obedience.score,
+      includeHand: _includeHand,
+    );
   }
 
   /// Restaure le loop de bips qui tournait avant le fail (ou no-op
