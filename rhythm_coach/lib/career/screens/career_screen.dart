@@ -11,6 +11,7 @@ import '../../screens/session_screen.dart';
 import '../../services/ambience_engine.dart';
 import '../../services/beep_engine.dart';
 import '../../services/camera_motion_service.dart';
+import '../../services/capability_service.dart';
 import '../../services/coach_phrases_loader.dart';
 import '../../services/punishment_loader.dart';
 import '../../services/random_comments_loader.dart';
@@ -97,6 +98,7 @@ class _CareerScreenState extends State<CareerScreen> {
       _specService.load(),
       _stats.getHumiliationLevel(),
       _stats.getObedienceLevel(),
+      CapabilityService().snapshotProfile(),
     ]);
     final maxLevel = results[3] as int;
     // Synchronise le palier de coach avec le niveau global avant que
@@ -113,6 +115,7 @@ class _CareerScreenState extends State<CareerScreen> {
       specialization: results[7] as SpecializationAllocation,
       humiliationScore: results[8] as double,
       obedienceScore: results[9] as double,
+      capabilityProfile: results[10] as CapabilityProfile,
     );
   }
 
@@ -246,6 +249,10 @@ class _CareerScreenState extends State<CareerScreen> {
       humiliationCareer: humiliationScore,
       humiliationSession: 0.0,
       obedience: obedienceScore,
+      // 2ᵉ enveloppe : profil de capacités persisté. Pas de
+      // `capabilitySessionCeilings` ici — la séance démarre, aucun fail
+      // n'a encore figé de plafond.
+      capabilityProfile: bundle.capabilityProfile,
       milestone: milestone,
       finalMilestone: finalMilestone,
       unlockedKeys: unlockedKeys,
@@ -511,6 +518,12 @@ class _CareerScreenState extends State<CareerScreen> {
       humiliationCareer: humiliationCareer,
       humiliationSession: humiliationSession,
       obedience: obedienceScore,
+      // 2ᵉ enveloppe : profil persisté + plafonds figés sur les fails déjà
+      // subis cette séance (live, comme l'obédiance ci-dessus) → la régen
+      // « niveau supérieur » respecte quand même ce que la joueuse vient
+      // de prouver ne pas tenir.
+      capabilityProfile: bundle.capabilityProfile,
+      capabilitySessionCeilings: ctrl.capabilitySessionCeilings,
       unlockedKeys: milestoneService.acquiredUnlockKeys(),
       coachModeWeights: activeCoach.modeWeights,
       sessionName: t.careerSessionName(newLevel),
@@ -582,6 +595,12 @@ class _CareerScreenState extends State<CareerScreen> {
       humiliationCareer: humiliationCareer,
       humiliationSession: humiliationSession,
       obedience: obedienceScore,
+      // 2ᵉ enveloppe : profil persisté + plafonds figés par le fail qui
+      // vient de déclencher ce retry (figés par `triggerFail` AVANT le
+      // callback, cf. SessionController) → le retry ne re-pousse pas
+      // l'axe qui a craqué.
+      capabilityProfile: bundle.capabilityProfile,
+      capabilitySessionCeilings: ctrl.capabilitySessionCeilings,
       milestone: milestone,
       // Plan pessimiste : pour le retry, on ne suppose plus que la
       // milestone est acquittée — son unlock n'est pas dans le set, le
@@ -628,12 +647,15 @@ class _CareerScreenState extends State<CareerScreen> {
     required bool quickie,
   }) async {
     final t = AppLocalizations.of(context);
-    // Capture la chauffe (`sessionScore` d'humiliation) AVANT de détacher
-    // / disposer le previousController : sinon la valeur est perdue et la
+    // Capture la chauffe (`sessionScore` d'humiliation) ET les plafonds de
+    // capacité figés sur les fails de la séance, AVANT de détacher /
+    // disposer le previousController : sinon les valeurs sont perdues et la
     // session-encore démarre froide. C'est exactement le levier qui fait
     // qu'on « repart d'où on était » au lieu de tout réinitialiser.
     final previousSessionHumiliation =
         previousController.humiliation.sessionScore;
+    final previousSessionCeilings =
+        previousController.capabilitySessionCeilings;
 
     // Détache l'ancien controller des services audio partagés AVANT que
     // pushReplacement ne déclenche son dispose() — sinon un `tts.stop()` /
@@ -682,6 +704,13 @@ class _CareerScreenState extends State<CareerScreen> {
       humiliationCareer: humiliationCareer,
       humiliationSession: previousSessionHumiliation,
       obedience: obedienceScore,
+      // 2ᵉ enveloppe : profil persisté + plafonds figés par les fails de la
+      // séance qu'on prolonge (l'encore est une continuation — comme on lui
+      // repasse la chauffe `seedHumiliationSession`, on lui repasse les
+      // plafonds de capacité). Le nouveau contrôleur repart sinon sur un
+      // tracker vide.
+      capabilityProfile: bundle.capabilityProfile,
+      capabilitySessionCeilings: previousSessionCeilings,
       unlockedKeys: milestoneService.acquiredUnlockKeys(),
       coachModeWeights: activeCoach.modeWeights,
       sessionName: t.careerSessionName(level),
@@ -1216,6 +1245,12 @@ class _CareerBundle {
   /// filtre milestone (`humilTolerance = 1 + obedience/50`).
   final double obedienceScore;
 
+  /// Profil de capacités persisté (2ᵉ enveloppe de difficulté, carrière
+  /// uniquement). Passé tel quel aux `generate(...)` pour borner les steps
+  /// au `comfort` (= `best` naïf en Phase 2) de chaque axe pilotant. Vide
+  /// (mais non null) pour une joueuse neuve → aucun gating capacité.
+  final CapabilityProfile capabilityProfile;
+
   const _CareerBundle({
     required this.bank,
     required this.punishments,
@@ -1227,5 +1262,6 @@ class _CareerBundle {
     required this.specialization,
     required this.humiliationScore,
     required this.obedienceScore,
+    required this.capabilityProfile,
   });
 }

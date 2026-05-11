@@ -71,6 +71,13 @@ class CapabilityTracker {
   final Map<CapabilityAxis, double> _reached = {};
   final Map<CapabilityAxis, double> _ceilings = {};
 
+  /// Plafonds figés sur les appuis FAIL de la session en cours (§6) — vue
+  /// non modifiable, lue par `SessionController.capabilitySessionCeilings`
+  /// pour borner les régénérations en cours de séance. Vide tant qu'aucun
+  /// fail n'a eu lieu.
+  Map<CapabilityAxis, double> get sessionCeilings =>
+      Map.unmodifiable(_ceilings);
+
   /// Reset complet — appelé au démarrage d'une session (le tracker est créé
   /// frais par session, mais `start()` peut être rejoué depuis idle/finished).
   void onSessionStart() {

@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import '../../models/final_category.dart';
 import '../../models/session.dart';
 import '../../models/session_step.dart';
+import '../../services/capability_axis.dart';
+import '../../services/capability_service.dart';
 import '../../services/humiliation_engine.dart';
 import '../../services/saliva_engine.dart';
 import '../models/career_level.dart';
@@ -181,6 +183,19 @@ class CareerSessionGenerator {
   /// `recoveryThreshold` (plus c'est élevé, plus on respecte l'endurance).
   double _obedience = 0.0;
 
+  /// Profil de capacités (2ᵉ enveloppe de difficulté, carrière uniquement).
+  /// `null` = pas de gating capacité (mode Custom, scénarios JSON, tests
+  /// hérités) — convention parallèle à `_unlockedKeys.isEmpty`. En Phase 2
+  /// on lit `comfort` (= `best` naïf, posé par `CapabilityService.commit`)
+  /// pour borner les steps ; aucun ratchet/decay encore (Phase 3).
+  CapabilityProfile? _capProfile;
+
+  /// Plafonds figés sur un appui FAIL pendant la session courante (§6 de la
+  /// spec) — propagés par `SessionController.capabilitySessionCeilings` aux
+  /// régénérations en cours de séance (Supplier / retry milestone) et au
+  /// premier maillon d'un encore enchaîné. Vide hors carrière.
+  Map<CapabilityAxis, double> _capCeilings = const {};
+
   CareerSessionGenerator({int? seed})
       : _rng = seed != null ? Random(seed) : Random();
 
@@ -201,6 +216,150 @@ class CareerSessionGenerator {
     final session =
         (_humiliationSession + added).clamp(0.0, HumiliationEngine.sessionCap);
     return _humiliationCareer + session;
+  }
+
+  // ─── Profil de capacités — 2ᵉ enveloppe de difficulté ────────────────────
+
+  static double? _minNullable(double? a, double? b) {
+    if (a == null) return b;
+    if (b == null) return a;
+    return a < b ? a : b;
+  }
+
+  /// Axe « plafond BPM rhythm » correspondant à la bande de profondeur de
+  /// `to` (`≤ mid` / `throat` / `full`). Aligné sur `_rhythmBand` du
+  /// `CapabilityTracker`.
+  static CapabilityAxis _rhythmBpmCeilAxisFor(Position to) {
+    if (to.index <= Position.mid.index) {
+      return CapabilityAxis.rhythmBpmCeilShallow;
+    }
+    if (to == Position.throat) return CapabilityAxis.rhythmBpmCeilThroat;
+    return CapabilityAxis.rhythmBpmCeilFull;
+  }
+
+  /// Plafond effectif (= le plus contraignant) d'un axe de capacité pour la
+  /// génération en cours : minimum de `comfort` (Phase 2 : `comfort = best`
+  /// naïf, posé par `CapabilityService.commit`) et du plafond figé sur un
+  /// FAIL de cette session (`sessionCeilings`, cf. §6). `null` si aucune
+  /// donnée — l'enveloppe ne contraint alors rien (joueuse neuve ou axe
+  /// jamais sollicité ; le profil prend le relais après ~3-5 sessions).
+  double? _capabilityCapFor(CapabilityAxis axis) {
+    final profile = _capProfile;
+    if (profile == null) return null;
+    return _minNullable(profile.comfortOf(axis), _capCeilings[axis]);
+  }
+
+  /// Borne un draft à l'enveloppe « profil de capacités » : profondeur, BPM
+  /// et durée ne dépassent pas ce que la joueuse a *prouvé* tenir. 2ᵉ
+  /// enveloppe orthogonale à l'humiliation — un step n'est jouable que si
+  /// **les deux** passent. No-op hors carrière (`_capProfile == null`).
+  ///
+  /// Modes hors gating : `hand` (exclu de tout axe de difficulté — cf. règle
+  /// « hand n'est jamais un levier »), `lick` (enregistré seulement, pas
+  /// pilotant), `breath` / `freestyle` (aucun axe). Les steps scriptés
+  /// (séquences milestone, beg insistant du Supplier) passent par d'autres
+  /// chemins et ne sont pas clampés — comme ils ne sont pas gatés par
+  /// l'humiliation non plus.
+  _StepDraft _clampToCapability(_StepDraft d) {
+    if (_capProfile == null) return d;
+    final clampedChain =
+        d.chainNext == null ? null : _clampToCapability(d.chainNext!);
+    var from = d.from;
+    var to = d.to;
+    var bpm = d.bpm;
+    var bpmEnd = d.bpmEnd;
+    var dur = d.duration;
+    switch (d.mode) {
+      case SessionMode.rhythm:
+        // Profondeur (cran). Plancher `head` : un rhythm a besoin d'au
+        // moins une amplitude tip↔head, jamais tip↔tip.
+        final depthCap = _capabilityCapFor(CapabilityAxis.rhythmDepthMax);
+        if (depthCap != null && to != null) {
+          final capIdx = max(Position.head.index,
+              depthCap.round().clamp(0, Position.values.length - 1));
+          if (to.index > capIdx) to = Position.values[capIdx];
+        }
+        // Garde-fou amplitude `from < to` strict après abaissement de `to`.
+        if (from != null && to != null && from.index >= to.index) {
+          from = to.index > 0 ? Position.values[to.index - 1] : null;
+        }
+        // BPM : plafond de bande + plafond franchissement si pattern
+        // franchissant (`from ≤ mid` ET `to ≥ throat`).
+        if (to != null && (bpm != null || bpmEnd != null)) {
+          var bpmCap = _capabilityCapFor(_rhythmBpmCeilAxisFor(to));
+          if (from != null &&
+              from.index <= Position.mid.index &&
+              to.index >= Position.throat.index) {
+            bpmCap = _minNullable(
+              bpmCap,
+              _capabilityCapFor(to == Position.throat
+                  ? CapabilityAxis.gorgeCrossingsBpmThroat
+                  : CapabilityAxis.gorgeCrossingsBpmFull),
+            );
+          }
+          if (bpmCap != null) {
+            final cap = bpmCap.round();
+            if (bpm != null && bpm > cap) bpm = cap;
+            if (bpmEnd != null && bpmEnd > cap) bpmEnd = cap;
+          }
+        }
+        // Apnée : un stroke airless (`from ≥ throat`) borne sa durée à
+        // l'apnée prouvée.
+        if (from != null &&
+            from.index >= Position.throat.index &&
+            dur != null) {
+          final apneaCap = _capabilityCapFor(CapabilityAxis.gorgeApneeStreak);
+          if (apneaCap != null && dur > apneaCap) {
+            dur = max(2, apneaCap.floor());
+          }
+        }
+      case SessionMode.hold:
+      case SessionMode.beg:
+        // Convention hold/beg : position tenue dans `to` (repli `from`).
+        final held = to ?? from;
+        if (held == Position.throat || held == Position.full) {
+          final cap = _minNullable(
+            _capabilityCapFor(held == Position.throat
+                ? CapabilityAxis.holdThroatStreak
+                : CapabilityAxis.holdFullStreak),
+            _capabilityCapFor(CapabilityAxis.gorgeApneeStreak),
+          );
+          if (cap != null && dur != null && dur > cap) {
+            dur = max(2, cap.floor());
+          }
+        }
+      case SessionMode.biffle:
+        final durCap = _capabilityCapFor(CapabilityAxis.biffleStreak);
+        if (durCap != null && dur != null && dur > durCap) {
+          dur = max(2, durCap.floor());
+        }
+        final bpmCap = _capabilityCapFor(CapabilityAxis.biffleBpmMax);
+        if (bpmCap != null && bpm != null && bpm > bpmCap) {
+          bpm = bpmCap.round();
+        }
+      case SessionMode.hand:
+      case SessionMode.lick:
+      case SessionMode.breath:
+      case SessionMode.freestyle:
+        break; // pas de cap de difficulté pour ces modes
+    }
+    if (from == d.from &&
+        to == d.to &&
+        bpm == d.bpm &&
+        bpmEnd == d.bpmEnd &&
+        dur == d.duration &&
+        identical(clampedChain, d.chainNext)) {
+      return d;
+    }
+    return _StepDraft(
+      mode: d.mode,
+      bpm: bpm,
+      bpmEnd: bpmEnd,
+      from: from,
+      to: to,
+      duration: dur,
+      chainNext: clampedChain,
+    );
   }
 
   CareerGenerationResult generate({
@@ -236,6 +395,18 @@ class CareerSessionGenerator {
     /// Si true, la `Session` générée est marquée `noStats` → le
     /// `SessionController` n'écrit rien dans `StatsService`.
     bool noStats = false,
+    // ─── Profil de capacités (2ᵉ enveloppe de difficulté, carrière only) ──
+    /// Profil persisté lu pour borner les steps : profondeur, BPM et durée
+    /// ne dépassent pas le `comfort` (= `best` naïf en Phase 2) de chaque
+    /// axe pilotant. `null` → aucun gating capacité (Custom, scénarios JSON).
+    CapabilityProfile? capabilityProfile,
+
+    /// Plafonds figés sur un FAIL de la session en cours (§6) — encore plus
+    /// contraignants que `comfort` quand présents. Passés par les
+    /// régénérations en cours de séance (Supplier / retry milestone) et le
+    /// premier maillon d'un encore enchaîné via
+    /// `SessionController.capabilitySessionCeilings`.
+    Map<CapabilityAxis, double> capabilitySessionCeilings = const {},
   }) {
     assert(
       finalMilestone == null ||
@@ -273,6 +444,8 @@ class CareerSessionGenerator {
     _humiliationCareer = humiliationCareer;
     _humiliationSession = humiliationSession;
     _obedience = obedience;
+    _capProfile = capabilityProfile;
+    _capCeilings = capabilitySessionCeilings;
     // Mode "Session bâclée" : 6 min par défaut, intense tout du long. Floor
     // d'intensité appliqué au tirage de difficulté + on saute l'intro douce
     // et la pré-finition. Une durée explicite reste prioritaire (cas de la
@@ -378,10 +551,10 @@ class CareerSessionGenerator {
     if (milestoneReplacesIntro) {
       insertMilestoneNow();
     } else {
-      final first = _firstStep(
+      final first = _clampToCapability(_firstStep(
         quickie: quickie,
         intense: intense,
-      );
+      ));
       final firstText =
           openingPhrase ?? _pickPhraseForDraft(bank, first, 'soft');
       steps.add(_draftToStep(first, time: 0, text: firstText));
@@ -569,6 +742,11 @@ class CareerSessionGenerator {
       // montée / descente sur la durée. Skip throat/full pour ne pas
       // violer le cap pulses (cf. `_capRhythmDurationByPulses`).
       draft = _maybeApplyBpmRamp(draft, progress);
+      // 2ᵉ enveloppe (profil de capacités) : dernier mot après les
+      // diversifications BPM/amplitude qui ont pu remonter au-dessus du
+      // `comfort` prouvé. `_diversifyLongSegment` derrière ne fait que
+      // varier « égal ou plus doux », donc pas besoin de re-clamper.
+      draft = _clampToCapability(draft);
 
       // Sas breath conditionnel : on insère un breath UNIQUEMENT si le
       // draft retenu provoquerait un déficit d'endurance (stamina projetée
@@ -604,8 +782,11 @@ class CareerSessionGenerator {
       // Diversification interne : si la step dure plus de 40s et qu'elle
       // est rythmique (rhythm/lick/hand), on la split en 2-3 sous-segments
       // avec une variation BPM/profondeur entre chaque, pour qu'une longue
-      // phase ne sonne pas comme un loop monotone.
-      final emitDrafts = _diversifyLongSegment(draft);
+      // phase ne sonne pas comme un loop monotone. Les sous-segments
+      // s'autorisent un léger dépassement BPM (≤ +10) — on re-borne donc
+      // chacun au profil de capacités.
+      final emitDrafts =
+          _diversifyLongSegment(draft).map(_clampToCapability).toList();
 
       final tier = diff < 0.33
           ? 'soft'
@@ -815,13 +996,13 @@ class CareerSessionGenerator {
     if (isLowLevel) {
       final preDur = 22 + _rng.nextInt(9); // [22, 30]
       final preBpm = 62 + _rng.nextInt(9); // [62, 70]
-      final preDraft = _StepDraft(
+      final preDraft = _clampToCapability(_StepDraft(
         mode: SessionMode.rhythm,
         bpm: preBpm,
         from: Position.head,
         to: preFinisherTarget,
         duration: preDur,
-      );
+      ));
       final preText = _pickPhraseForDraft(bank, preDraft, 'medium');
       steps.add(_draftToStep(preDraft, time: time, text: preText));
       _lastMode = SessionMode.rhythm;
@@ -831,10 +1012,10 @@ class CareerSessionGenerator {
       final staminaBeforePre = stamina;
       stamina =
           _applyStaminaChange(stamina, preDraft, time / effectiveDuration, cfg);
-      _fillProfile(profile, time, preDur, stamina,
+      _fillProfile(profile, time, preDraft.duration ?? preDur, stamina,
           valueStart: staminaBeforePre);
       _advanceSalivaSim(preDraft);
-      time += preDur;
+      time += preDraft.duration ?? preDur;
     }
 
     // Choix du template de finish : `hand_burst` (non humiliant, pure
@@ -1192,10 +1373,11 @@ class CareerSessionGenerator {
     }
     // Garde au minimum 2 steps : si la cascade a tout aplati (cas humil
     // très basse en début de niveau 5), on retombe sur les 2 premiers
-    // steps de `raw` sans filtre, qui sont volontairement modérés
-    // (head→mid 100/120 — req mécanique très basse).
+    // steps de `raw` sans filtre humil, qui sont volontairement modérés
+    // (head→mid 100/120 — req mécanique très basse). On les borne quand
+    // même au profil de capacités.
     if (out.length < 2) {
-      return raw.take(2).toList();
+      return raw.take(2).map(_clampToCapability).toList();
     }
     return out;
   }
@@ -3016,6 +3198,7 @@ class CareerSessionGenerator {
     if (valid.isEmpty) {
       // Fallback dur : hand head→mid 50 BPM. Toujours unlocked, req=0,
       // garanti même si la palette change ou si humilCap est négatif.
+      // Hand n'a pas d'axe de capacité → `_clampToCapability` no-op.
       return _StepDraft(
         mode: SessionMode.hand,
         bpm: 50,
@@ -3025,7 +3208,9 @@ class CareerSessionGenerator {
       );
     }
     valid.sort((a, b) => a.$2.compareTo(b.$2));
-    return valid.last.$1;
+    // 2ᵉ enveloppe : on tronque le final retenu au profil de capacités —
+    // un hold throat/full d'apothéose ne dépasse pas la tenue prouvée.
+    return _clampToCapability(valid.last.$1);
   }
 
   /// Tronque la durée d'un hold final pour qu'elle reste finançable par
@@ -3414,7 +3599,10 @@ class CareerSessionGenerator {
   /// chose de plus doux) jusqu'à acceptation. Fallback ultime sur un
   /// lick tip→head.
   _StepDraft _enforceHumiliationRequired(_StepDraft draft, double available) {
-    var current = draft;
+    // 2ᵉ enveloppe : on borne d'abord aux capacités prouvées (profondeur /
+    // BPM / durée), puis la cascade humiliation ne fait que dégrader plus —
+    // baisser `to`/`bpm`/`duration` ne peut jamais re-violer le cap capacité.
+    var current = _clampToCapability(draft);
     for (var i = 0; i < 12; i++) {
       final r = HumiliationScale.requiredFor(
         mode: current.mode,
