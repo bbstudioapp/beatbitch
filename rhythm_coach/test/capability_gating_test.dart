@@ -7,12 +7,22 @@ import 'package:beat_bitch/models/session_step.dart';
 import 'package:beat_bitch/services/capability_axis.dart';
 import 'package:beat_bitch/services/capability_service.dart';
 
-/// Tests du **gating Phase 2** : le générateur consomme un `CapabilityProfile`
+/// Tests du **gating** : le générateur consomme un `CapabilityProfile`
 /// (+ d'éventuels `sessionCeilings`) comme 2ᵉ enveloppe de difficulté — un
 /// step n'est jouable que si profondeur / BPM / durée ne dépassent pas le
-/// `comfort` (= `best` naïf en Phase 2) de chaque axe pilotant, ni les
-/// plafonds figés sur un fail de la session. `hand`/`lick`/`breath`/`freestyle`
-/// ne sont pas concernés.
+/// `comfort` de chaque axe pilotant, ni les plafonds figés sur un fail de la
+/// session. `hand`/`lick`/`breath`/`freestyle` ne sont pas concernés.
+///
+/// Note Phase 3 : le générateur **surcharge un axe par séance** (`comfort ×
+/// surcharge`, surcharge ≤ `kSurchargeMax`). On ne sait pas lequel ici (choix
+/// pondéré interne), donc les bornes « durée/BPM » tolèrent ce surplus ; un
+/// `sessionCeiling`, lui, prime *même* sur l'axe surchargé (verrou §6) et la
+/// borne reste stricte. Le comportement précis de la surcharge est couvert par
+/// `capability_overload_test.dart`.
+
+/// Plafond toléré pour un axe potentiellement surchargé cette séance.
+int _withSurcharge(num comfort) =>
+    (comfort * CapabilityRegulator.kSurchargeMax).ceil();
 
 List<PhraseEntry> _p(List<String> texts) =>
     texts.map((t) => PhraseEntry(text: t)).toList();
@@ -141,9 +151,9 @@ void main() {
                   'seed=$seed ${s.mode!.name} throat $dur s (t=${s.time}) > '
                   'plafond session 5 s');
         } else if (held == Position.full) {
-          expect(dur, lessThanOrEqualTo(25),
+          expect(dur, lessThanOrEqualTo(_withSurcharge(25)),
               reason: 'seed=$seed ${s.mode!.name} full $dur s (t=${s.time}) > '
-                  'comfort 25 s');
+                  'comfort 25 s (+ surcharge éventuelle)');
         }
       }
       // Le step final (apothéose) est inclus dans la boucle : s'il s'agit
@@ -180,20 +190,20 @@ void main() {
             s.to != null &&
             s.to!.index <= Position.mid.index) {
           if (s.bpm != null) {
-            expect(s.bpm, lessThanOrEqualTo(90),
+            expect(s.bpm, lessThanOrEqualTo(_withSurcharge(90)),
                 reason: 'seed=$seed rhythm shallow bpm=${s.bpm} (t=${s.time}) '
-                    '> comfort 90');
+                    '> comfort 90 (+ surcharge éventuelle)');
           }
           if (s.bpmEnd != null) {
-            expect(s.bpmEnd, lessThanOrEqualTo(90),
+            expect(s.bpmEnd, lessThanOrEqualTo(_withSurcharge(90)),
                 reason: 'seed=$seed rhythm shallow bpmEnd=${s.bpmEnd} '
-                    '(t=${s.time}) > comfort 90');
+                    '(t=${s.time}) > comfort 90 (+ surcharge éventuelle)');
           }
         }
         if (s.mode == SessionMode.biffle && s.bpm != null) {
-          expect(s.bpm, lessThanOrEqualTo(75),
+          expect(s.bpm, lessThanOrEqualTo(_withSurcharge(75)),
               reason: 'seed=$seed biffle bpm=${s.bpm} (t=${s.time}) > '
-                  'comfort 75');
+                  'comfort 75 (+ surcharge éventuelle)');
         }
       }
     }

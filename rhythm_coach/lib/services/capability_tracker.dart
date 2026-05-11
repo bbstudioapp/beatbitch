@@ -8,10 +8,11 @@ import 'saliva_engine.dart';
 
 /// Suivi **live** du profil de capacités sur une session carrière.
 ///
-/// Phase 1 — télémétrie pure : on accumule des streaks à la seconde, on fige
-/// des records de durée / vitesse / profondeur, on snapshot des plafonds sur
-/// fail, et on produit un [SessionCapabilityReport] à la fin. Aucun pilotage
-/// du générateur n'en dépend encore. Le tracker n'est câblé QUE pour les
+/// On accumule des streaks à la seconde, on fige des records de durée /
+/// vitesse / profondeur, on snapshot les plafonds sur fail (`sessionCeilings`,
+/// §6 — consommés par le générateur pour borner le reste de la séance et par
+/// `CapabilityRegulator` pour le ratchet ↓), et on produit un
+/// [SessionCapabilityReport] à la fin. Le tracker n'est câblé QUE pour les
 /// sessions carrière — Custom et scénarios JSON ne l'instancient pas.
 ///
 /// Intégration côté `SessionController` :
@@ -26,8 +27,7 @@ import 'saliva_engine.dart';
 /// - `finalizeReport()` au `_finish` — clôt proprement les streaks encore
 ///   actifs et retourne le rapport à committer.
 ///
-/// Simplifications assumées en Phase 1 (à raffiner quand ces axes piloteront
-/// vraiment, cf. spec) :
+/// Simplifications assumées (à raffiner si besoin, cf. spec) :
 /// - les changements de config en moins d'une seconde sont invisibles
 ///   (les steps font ≥ ~7 s en pratique) ;
 /// - `breath.min_dose` est enregistrée dès la reprise, sans attendre de
@@ -38,7 +38,7 @@ import 'saliva_engine.dart';
 /// - les axes dérivés `rhythm.to[X]` / `rhythm.from[X]` ne sont pas
 ///   matérialisés — P2/P3 (`engagement`/`apnée`) couvrent l'essentiel ;
 /// - les fenêtres BPM lick et les 10 paires `rhythm.pair[from→to]` ne sont
-///   pas suivies (enregistrées seulement, faible valeur en Phase 1) ;
+///   pas suivies (enregistrées seulement, faible valeur) ;
 /// - un `breath` recovery du flow fail n'est jamais vu (le ticker est arrêté
 ///   pendant le fail), donc jamais compté comme dose.
 class CapabilityTracker {
@@ -201,9 +201,13 @@ class CapabilityTracker {
 
   /// Un débordement de salive a été traité — le streak « sans avaler » en
   /// cours ne pourra plus produire de record propre (un débordement = elle
-  /// n'a pas tenu).
+  /// n'a pas tenu) ET on fige la valeur live dans les plafonds de session :
+  /// un débordement est un signal de plafond imputé à `noswallow` (§5.3 / §6).
   void onSalivaOverflow() {
-    if (_noswallow > 0) _noswallowHadOverflow = true;
+    if (_noswallow > 0) {
+      _noswallowHadOverflow = true;
+      _ceilFrom(CapabilityAxis.noswallowStreak, _noswallow);
+    }
   }
 
   /// Appui sur FAIL : on fige la valeur live de tous les streaks actifs dans
@@ -220,6 +224,30 @@ class CapabilityTracker {
     _ceilFrom(CapabilityAxis.handStreak, _handStreak);
     _ceilFrom(CapabilityAxis.effortNoBreathStreak, _effortNoBreath);
     _ceilFrom(CapabilityAxis.noswallowStreak, _noswallow);
+
+    // Params du step courant figés aussi (§6) — pour les axes « config » qui
+    // ne sont pas des streaks (profondeur rhythm, BPM de bande, BPM d'un
+    // pattern franchissant / biffle) : sans ça, un tap-out sur un step trop
+    // rapide ou trop profond ne serait pas attribuable et le bornage de
+    // session ne plafonnerait pas la vitesse/profondeur.
+    final c = _config;
+    if (c != null) {
+      if (c.mode == SessionMode.rhythm && c.to != null) {
+        _ceilFrom(CapabilityAxis.rhythmDepthMax, c.to!.index.toDouble());
+        final bpm = (c.bpm ?? 60).toDouble();
+        _ceilFrom(_rhythmBand(c.to!).$1, bpm);
+        if (c.isCrossingPattern) {
+          _ceilFrom(
+            c.to == Position.throat
+                ? CapabilityAxis.gorgeCrossingsBpmThroat
+                : CapabilityAxis.gorgeCrossingsBpmFull,
+            bpm,
+          );
+        }
+      } else if (c.isBiffle) {
+        _ceilFrom(CapabilityAxis.biffleBpmMax, (c.bpm ?? 80).toDouble());
+      }
+    }
 
     _apnea = _engagement = _motion = 0;
     _holdThroat = _holdFull = 0;
