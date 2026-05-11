@@ -129,6 +129,56 @@ void main() {
       expect(report.reached[CapabilityAxis.handStreak], 14.0);
     });
 
+    test('un fail fige aussi les params « config » du step courant (§6)', () {
+      final t = CapabilityTracker()..onSessionStart();
+      // Fail pendant un rhythm mid→full rapide : profondeur, BPM de bande et
+      // BPM de franchissement sont figés (même si le step n'a pas tenu 3 s).
+      t.onStepApplied(
+          mode: SessionMode.rhythm,
+          from: Position.mid,
+          to: Position.full,
+          bpm: 140,
+          duration: 16);
+      _tick(t, 2);
+      t.onFail();
+      // Reprise anodine pour clore proprement.
+      t.onStepApplied(
+          mode: SessionMode.hand,
+          from: Position.head,
+          to: Position.mid,
+          bpm: 50,
+          duration: 14);
+      _tick(t, 14);
+      final report = t.finalizeReport();
+      expect(report.sessionCeilings[CapabilityAxis.rhythmDepthMax],
+          Position.full.index.toDouble());
+      expect(report.sessionCeilings[CapabilityAxis.rhythmBpmCeilFull], 140.0);
+      expect(
+          report.sessionCeilings[CapabilityAxis.gorgeCrossingsBpmFull], 140.0);
+      // Pas de record propre pour ces axes (le step a été interrompu).
+      expect(
+          report.reached.containsKey(CapabilityAxis.rhythmDepthMax), isFalse);
+      expect(report.reached.containsKey(CapabilityAxis.rhythmBpmCeilFull),
+          isFalse);
+    });
+
+    test('un fail pendant un biffle rapide fige biffle.bpm_max (§6)', () {
+      final t = CapabilityTracker()..onSessionStart();
+      t.onStepApplied(mode: SessionMode.biffle, bpm: 150, duration: 12);
+      _tick(t, 1);
+      t.onFail();
+      t.onStepApplied(
+          mode: SessionMode.hand,
+          from: Position.head,
+          to: Position.mid,
+          bpm: 50,
+          duration: 14);
+      _tick(t, 14);
+      final report = t.finalizeReport();
+      expect(report.sessionCeilings[CapabilityAxis.biffleBpmMax], 150.0);
+      expect(report.reached.containsKey(CapabilityAxis.biffleBpmMax), isFalse);
+    });
+
     test('noswallow : streak enregistré, mais voidé par un débordement', () {
       final t = CapabilityTracker()..onSessionStart();
       t.onStepApplied(
@@ -145,6 +195,9 @@ void main() {
       _tick(t, 1, swallow: SwallowMode.allowed); // ce streak-ci est voidé
       final report = t.finalizeReport();
       expect(report.reached[CapabilityAxis.noswallowStreak], 20.0);
+      // Le débordement fige aussi un plafond de session sur noswallow (= signal
+      // négatif imputé de plein droit, §5.3).
+      expect(report.sessionCeilings[CapabilityAxis.noswallowStreak], 10.0);
     });
   });
 

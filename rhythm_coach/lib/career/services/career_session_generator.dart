@@ -16,14 +16,19 @@ import '../models/specialization.dart';
 import '../models/unlock_key.dart';
 
 /// Résultat d'une génération : la session figée à passer au controller +
-/// le profil d'endurance projeté (utile à l'overlay debug `StaminaBar`).
+/// le profil d'endurance projeté (utile à l'overlay debug `StaminaBar`) +
+/// l'axe de capacité surchargé sur cette séance (`null` hors carrière / profil
+/// neuf) — consommé par le coach (Phase 4) pour ses phrases « on bat ton
+/// record de … ».
 class CareerGenerationResult {
   final Session session;
   final List<double> staminaProfile;
+  final CapabilityAxis? overloadAxis;
 
   const CareerGenerationResult({
     required this.session,
     required this.staminaProfile,
+    this.overloadAxis,
   });
 }
 
@@ -185,9 +190,9 @@ class CareerSessionGenerator {
 
   /// Profil de capacités (2ᵉ enveloppe de difficulté, carrière uniquement).
   /// `null` = pas de gating capacité (mode Custom, scénarios JSON, tests
-  /// hérités) — convention parallèle à `_unlockedKeys.isEmpty`. En Phase 2
-  /// on lit `comfort` (= `best` naïf, posé par `CapabilityService.commit`)
-  /// pour borner les steps ; aucun ratchet/decay encore (Phase 3).
+  /// hérités) — convention parallèle à `_unlockedKeys.isEmpty`. On lit
+  /// `comfort` (rendu adaptatif par `CapabilityRegulator`) pour borner les
+  /// steps, et `successRate` pour moduler la surcharge.
   CapabilityProfile? _capProfile;
 
   /// Plafonds figés sur un appui FAIL pendant la session courante (§6 de la
@@ -195,6 +200,36 @@ class CareerSessionGenerator {
   /// régénérations en cours de séance (Supplier / retry milestone) et au
   /// premier maillon d'un encore enchaîné. Vide hors carrière.
   Map<CapabilityAxis, double> _capCeilings = const {};
+
+  /// Axe surchargé cette session (surcharge **isolée** : un seul axe est
+  /// poussé au-delà de son `comfort`, les autres restent clampés — c'est ce
+  /// qui rend un « je peux pas » attribuable, cf. §5/§6). `null` hors carrière
+  /// ou si le profil n'a aucune donnée exploitable (joueuse neuve).
+  CapabilityAxis? _overloadAxis;
+
+  /// Facteur de surcharge appliqué au `comfort` de [_overloadAxis] (1.03→1.15,
+  /// modulé par sa `successRate`). 1.0 pour tout autre axe.
+  double _overloadFactor = 1.0;
+
+  /// Axes éligibles à la surcharge : pilotants, hors `hand`/`lick`/`breath`
+  /// (jamais des leviers de difficulté) et hors floors BPM / souffle (rien ne
+  /// les consomme encore côté générateur — les surcharger ne ferait rien).
+  static const Set<CapabilityAxis> _overloadableAxes = {
+    CapabilityAxis.gorgeApneeStreak,
+    CapabilityAxis.gorgeEngagementStreak,
+    CapabilityAxis.gorgeCrossingsBpmThroat,
+    CapabilityAxis.gorgeCrossingsBpmFull,
+    CapabilityAxis.rhythmBpmCeilShallow,
+    CapabilityAxis.rhythmBpmCeilThroat,
+    CapabilityAxis.rhythmBpmCeilFull,
+    CapabilityAxis.rhythmDepthMax,
+    CapabilityAxis.rhythmMotionStreak,
+    CapabilityAxis.holdThroatStreak,
+    CapabilityAxis.holdFullStreak,
+    CapabilityAxis.noswallowStreak,
+    CapabilityAxis.biffleStreak,
+    CapabilityAxis.biffleBpmMax,
+  };
 
   CareerSessionGenerator({int? seed})
       : _rng = seed != null ? Random(seed) : Random();
@@ -238,15 +273,85 @@ class CareerSessionGenerator {
   }
 
   /// Plafond effectif (= le plus contraignant) d'un axe de capacité pour la
-  /// génération en cours : minimum de `comfort` (Phase 2 : `comfort = best`
-  /// naïf, posé par `CapabilityService.commit`) et du plafond figé sur un
-  /// FAIL de cette session (`sessionCeilings`, cf. §6). `null` si aucune
-  /// donnée — l'enveloppe ne contraint alors rien (joueuse neuve ou axe
-  /// jamais sollicité ; le profil prend le relais après ~3-5 sessions).
+  /// génération en cours : minimum de `comfort` (éventuellement **surchargé**
+  /// si c'est [_overloadAxis] de la séance) et du plafond figé sur un FAIL de
+  /// cette session (`sessionCeilings`, cf. §6 — qui plafonne *même* l'axe
+  /// surchargé : pas de re-fail dans la même séance). `null` si aucune donnée
+  /// — l'enveloppe ne contraint alors rien (joueuse neuve ou axe jamais
+  /// sollicité ; le profil prend le relais après ~3-5 sessions).
   double? _capabilityCapFor(CapabilityAxis axis) {
     final profile = _capProfile;
     if (profile == null) return null;
-    return _minNullable(profile.comfortOf(axis), _capCeilings[axis]);
+    var comfort = profile.comfortOf(axis);
+    if (comfort != null && axis == _overloadAxis) {
+      if (axis == CapabilityAxis.rhythmDepthMax) {
+        // Profondeur = cran discret : on autorise +1 cran, et seulement si la
+        // confiance au cran courant est là (cf. asymétries §5). « Humiliation
+        // l'autorise » + « milestone d'unlock acquittée » sont déjà garantis
+        // par `_maxDepthIndex` (qui borne `to` en amont).
+        if (profile.stateOf(axis).successRate >=
+            CapabilityRegulator.kDepthCranGate) {
+          comfort = comfort + 1;
+        }
+      } else {
+        comfort = comfort * _overloadFactor;
+      }
+    }
+    return _minNullable(comfort, _capCeilings[axis]);
+  }
+
+  /// Renvoie le facteur de surcharge applicable à [axis] (1.0 hors surcharge).
+  /// Pour `rhythmDepthMax` la surcharge est un cran, pas un facteur — utiliser
+  /// `_capabilityCapFor` directement.
+  double _overloadFactorFor(CapabilityAxis axis) =>
+      axis == _overloadAxis ? _overloadFactor : 1.0;
+
+  /// Choisit l'axe à surcharger pour la séance (surcharge isolée, §5). Priorité
+  /// aux axes pas vus depuis longtemps (à reprouver avant que le decay ne les
+  /// érode), aux axes confiants (`successRate` haut, prêts à monter), évitement
+  /// des axes fragiles. Exclut les axes déjà figés cette session (`_capCeilings`
+  /// = verrou §6) et ceux sans donnée. No-op hors carrière.
+  void _pickOverloadAxis() {
+    _overloadAxis = null;
+    _overloadFactor = 1.0;
+    final profile = _capProfile;
+    if (profile == null) return;
+    // On ne connaît pas l'index de session courant ici : on prend le plus
+    // grand `lastSeenSession` du profil comme pseudo-horloge (≈ session
+    // précédente) et l'ancienneté = écart à ce repère.
+    var pseudoNow = 0;
+    for (final a in CapabilityAxis.values) {
+      final s = profile.stateOf(a).lastSeenSession;
+      if (s > pseudoNow) pseudoNow = s;
+    }
+    CapabilityAxis? best;
+    var bestScore = double.negativeInfinity;
+    for (final axis in _overloadableAxes) {
+      final st = profile.stateOf(axis);
+      if (st.comfort == null) continue; // rien de prouvé → rien à pousser
+      if (_capCeilings.containsKey(axis)) continue; // déjà calé cette séance
+      final staleness =
+          st.lastSeenSession < 0 ? 0 : (pseudoNow - st.lastSeenSession);
+      final stalenessNorm = (staleness / 6.0).clamp(0.0, 1.0);
+      final sr = st.successRate;
+      final score = 0.45 * stalenessNorm +
+          0.45 * sr -
+          0.10 * (1 - sr) +
+          _rng.nextDouble() * 0.05;
+      if (score > bestScore) {
+        bestScore = score;
+        best = axis;
+      }
+    }
+    if (best == null) return;
+    _overloadAxis = best;
+    _overloadFactor =
+        CapabilityRegulator.surchargeFactor(profile.stateOf(best).successRate);
+    if (kDebugMode) {
+      debugPrint('[career-gen] overload axis=${best.storageKey} '
+          'factor=${_overloadFactor.toStringAsFixed(3)} '
+          'sr=${profile.stateOf(best).successRate.toStringAsFixed(2)}');
+    }
   }
 
   /// Borne un draft à l'enveloppe « profil de capacités » : profondeur, BPM
@@ -446,6 +551,7 @@ class CareerSessionGenerator {
     _obedience = obedience;
     _capProfile = capabilityProfile;
     _capCeilings = capabilitySessionCeilings;
+    _pickOverloadAxis();
     // Mode "Session bâclée" : 6 min par défaut, intense tout du long. Floor
     // d'intensité appliqué au tirage de difficulté + on saute l'intro douce
     // et la pré-finition. Une durée explicite reste prioritaire (cas de la
@@ -983,6 +1089,7 @@ class CareerSessionGenerator {
           noStats: noStats,
         ),
         staminaProfile: trimmedProfile,
+        overloadAxis: _overloadAxis,
       );
     }
 
@@ -1289,6 +1396,7 @@ class CareerSessionGenerator {
         noStats: noStats,
       ),
       staminaProfile: trimmedProfile,
+      overloadAxis: _overloadAxis,
     );
   }
 
@@ -2248,11 +2356,18 @@ class CareerSessionGenerator {
   /// transparente : ils ne touchent ni le tracking de type ni le buffer
   /// `_recentEmits` — un breath de récup au milieu d'une série rythmée ne
   /// doit pas remettre le compteur à zéro côté détection de monotonie.
-  /// Plafond (en secondes) de la chaîne `rhythm` consécutive sans
-  /// `rhythmHeadMidSustained`. La milestone `intro_rhythm_sustained` ouvre
-  /// la possibilité de pomper plus d'une minute d'affilée — sans elle, le
-  /// générateur force une rupture (autre mode ou breath).
+  /// Plafond (en secondes) de la chaîne `rhythm` consécutive — comportement
+  /// **historique**, utilisé tant que le profil de capacités n'a pas de donnée
+  /// `motion_streak` : tant que `rhythmHeadMidSustained` n'est pas acquis, le
+  /// générateur force une rupture au-delà ; la milestone `intro_rhythm_sustained`
+  /// lève ce mur. En carrière avec un profil renseigné, c'est l'endurance
+  /// **prouvée par la joueuse** (`motion_streak.comfort`) qui gouverne — cf.
+  /// `_effectiveRhythmChainCapSeconds`.
   static const int _rhythmChainCapSeconds = 60;
+
+  /// Borne basse du cap de chaîne rythme dérivé du profil — qu'une donnée
+  /// `motion_streak` anormalement courte ne hache pas tout le rythme.
+  static const int _rhythmChainCapFloorSeconds = 24;
 
   /// Plancher de durée d'un step `rhythm` poussé via `_mapDifficultyToStep`.
   /// Sert à éviter qu'un step soit tronqué à 1-2 s par `_capRhythmConsecutive`
@@ -2260,21 +2375,35 @@ class CareerSessionGenerator {
   /// candidats au tirage (`_canChainRhythm`).
   static const int _minRhythmStepSeconds = 8;
 
+  /// Cap effectif (en secondes) de la chaîne `rhythm` consécutive :
+  /// - profil renseigné (carrière) → `motion_streak.comfort` (surchargé si
+  ///   `motion_streak` est l'axe poussé), planché à `_rhythmChainCapFloorSeconds` ;
+  /// - sinon → comportement historique (`_rhythmChainCapSeconds`, levé par
+  ///   l'unlock `rhythmHeadMidSustained`).
+  int get _effectiveRhythmChainCapSeconds {
+    final c = _capProfile?.comfortOf(CapabilityAxis.rhythmMotionStreak);
+    if (c != null) {
+      final v =
+          (c * _overloadFactorFor(CapabilityAxis.rhythmMotionStreak)).round();
+      return v < _rhythmChainCapFloorSeconds ? _rhythmChainCapFloorSeconds : v;
+    }
+    return _unlockedKeys.contains(UnlockKey.rhythmHeadMidSustained)
+        ? 1 << 20 // de fait illimité
+        : _rhythmChainCapSeconds;
+  }
+
   /// Vrai si on peut encore ajouter un step `rhythm` à la chaîne sans
-  /// dépasser le cap (ou si l'unlock `rhythmHeadMidSustained` est acquis,
-  /// auquel cas le cap est désactivé).
+  /// dépasser le cap (cf. `_effectiveRhythmChainCapSeconds`).
   bool _canChainRhythm() {
-    if (_unlockedKeys.contains(UnlockKey.rhythmHeadMidSustained)) return true;
     return _consecutiveRhythmSeconds + _minRhythmStepSeconds <=
-        _rhythmChainCapSeconds;
+        _effectiveRhythmChainCapSeconds;
   }
 
   /// Tronque la durée d'un step `rhythm` pour respecter le cap chaîne
-  /// consécutive. No-op si l'unlock est acquis ou si la marge restante
-  /// est suffisante.
+  /// consécutive. No-op si la marge restante est suffisante.
   int _capRhythmConsecutive(int dur) {
-    if (_unlockedKeys.contains(UnlockKey.rhythmHeadMidSustained)) return dur;
-    final remaining = _rhythmChainCapSeconds - _consecutiveRhythmSeconds;
+    final remaining =
+        _effectiveRhythmChainCapSeconds - _consecutiveRhythmSeconds;
     if (remaining <= 0) return dur; // _canChainRhythm aurait dû filtrer
     return min(dur, remaining);
   }
