@@ -138,6 +138,20 @@ class SessionScreen extends StatefulWidget {
   /// (phrase `tapout`) et la détection des records (phrase `record`).
   final CapabilityProfile? capabilityProfile;
 
+  /// `UnlockKey` acquittés à l'ouverture de la séance — transmis tel quel au
+  /// [SessionController] qui les passe au `CareerSessionGenerator` pour
+  /// générer des punitions carrière contextuelles (Phase 5). Null hors
+  /// carrière → set vide côté contrôleur → pas de génération de punition.
+  final Set<UnlockKey>? unlockedKeys;
+
+  /// Toggle joueuse « inclure le mode hand » — mirroir de la valeur passée au
+  /// `CareerSessionGenerator.generate(...)` pour le tirage initial. Transmis
+  /// tel quel au [SessionController] pour exclure les compositions de
+  /// punition impliquant la main (`biffle_burst`) quand la joueuse a
+  /// désactivé hand. Default `true` → comportement historique inchangé hors
+  /// carrière.
+  final bool includeHand;
+
   /// Si false, la session ne peut pas faire progresser le niveau global
   /// même si toutes les autres conditions sont réunies. Utilisé pour
   /// gater le level-up sur le système de coachs : seules les sessions
@@ -189,6 +203,8 @@ class SessionScreen extends StatefulWidget {
     this.careerLevel,
     this.capabilityOverloadAxis,
     this.capabilityProfile,
+    this.unlockedKeys,
+    this.includeHand = true,
     this.coachAdvancesTier = true,
     this.specialization,
     this.seedHumiliationSession = 0.0,
@@ -225,6 +241,8 @@ class _SessionScreenState extends State<SessionScreen>
       careerLevel: widget.careerLevel ?? 0,
       capabilityOverloadAxis: widget.capabilityOverloadAxis,
       capabilityProfile: widget.capabilityProfile,
+      unlockedKeys: widget.unlockedKeys ?? const {},
+      includeHand: widget.includeHand,
     );
     _controller.onMilestoneRetry = widget.onMilestoneRetry;
     if (widget.isCareer) {

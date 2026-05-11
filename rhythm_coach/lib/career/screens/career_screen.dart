@@ -297,6 +297,11 @@ class _CareerScreenState extends State<CareerScreen> {
           // record/tapout) côté SessionController.
           capabilityOverloadAxis: result.overloadAxis,
           capabilityProfile: bundle.capabilityProfile,
+          // Phase 5 : punitions carrière générées par le `SessionController`
+          // ont besoin du même set d'unlocks et du même toggle hand que le
+          // générateur initial pour filtrer leur palette.
+          unlockedKeys: unlockedKeys,
+          includeHand: includeHand,
           introText: introText,
           phraseBank: coachBank,
           holdVerifier: verifier,
@@ -698,6 +703,10 @@ class _CareerScreenState extends State<CareerScreen> {
       humiliationScore: humiliationCareer,
       obedienceScore: obedienceScore,
     );
+    // Snapshot des unlocks au démarrage de l'encore — partagé entre le
+    // générateur de session et le `SessionController` (qui les repasse au
+    // générateur de punition carrière en cas de fail, Phase 5).
+    final encoreUnlockedKeys = milestoneService.acquiredUnlockKeys();
     final result = CareerSessionGenerator().generate(
       level: level,
       bank: coachBank,
@@ -716,7 +725,7 @@ class _CareerScreenState extends State<CareerScreen> {
       // tracker vide.
       capabilityProfile: bundle.capabilityProfile,
       capabilitySessionCeilings: previousSessionCeilings,
-      unlockedKeys: milestoneService.acquiredUnlockKeys(),
+      unlockedKeys: encoreUnlockedKeys,
       coachModeWeights: activeCoach.modeWeights,
       sessionName: t.careerSessionName(level),
       sessionNameQuickie: t.careerSessionNameQuickie(level),
@@ -741,6 +750,11 @@ class _CareerScreenState extends State<CareerScreen> {
           staminaProfile: result.staminaProfile,
           capabilityOverloadAxis: result.overloadAxis,
           capabilityProfile: bundle.capabilityProfile,
+          // Phase 5 — punitions carrière côté SessionController utilisent
+          // les mêmes unlocks et le même toggle hand que le générateur
+          // principal.
+          unlockedKeys: encoreUnlockedKeys,
+          includeHand: includeHand,
           // Pas d'introText : on saute le panel d'intro et le décompte.
           // L'opening phrase est déjà jointe au step #0 de la session.
           phraseBank: coachBank,
