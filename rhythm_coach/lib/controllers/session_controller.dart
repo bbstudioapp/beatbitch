@@ -17,6 +17,7 @@ import '../services/ambience_engine.dart';
 import '../services/backgrounds_service.dart';
 import '../services/badge_service.dart';
 import '../services/beep_engine.dart';
+import '../services/capability_axis.dart';
 import '../services/capability_service.dart';
 import '../services/capability_tracker.dart';
 import '../services/hold_verifier.dart';
@@ -57,9 +58,16 @@ class SessionController extends ChangeNotifier {
 
   /// Suivi live du profil de capacités — non null UNIQUEMENT sur les
   /// sessions carrière (`trackCapabilities`). Custom et scénarios JSON ne
-  /// l'instancient pas (sandbox / hors carrière). Phase 1 : télémétrie pure,
-  /// aucun effet sur le gameplay.
+  /// l'instancient pas (sandbox / hors carrière).
   final CapabilityTracker? _capabilityTracker;
+
+  /// Plafonds figés sur les appuis FAIL de la session en cours (§6 de la
+  /// spec) — le mode carrière les relit pour les passer aux régénérations
+  /// (Supplier / retry milestone) et au premier maillon d'un encore
+  /// enchaîné, comme il relit l'obédiance live. Vide hors carrière ou tant
+  /// qu'aucun fail n'a eu lieu.
+  Map<CapabilityAxis, double> get capabilitySessionCeilings =>
+      _capabilityTracker?.sessionCeilings ?? const {};
 
   final HumiliationEngine _humiliation = HumiliationEngine();
   HumiliationEngine get humiliation => _humiliation;
@@ -1313,7 +1321,14 @@ class SessionController extends ChangeNotifier {
     // regénère + appelle requestUpgrade). Si le callback prend la main,
     // on saute entièrement le flow fail standard — pas de pénalités, pas
     // de phrase fail, pas de punition. La milestone est juste rejouée.
+    //
+    // Le profil de capacités, lui, voit ce fail : on fige les plafonds de
+    // session AVANT le callback pour que la régénération du retry lise des
+    // `capabilitySessionCeilings` à jour. `onFail` est idempotent (streaks
+    // remis à 0), donc le ré-appel du flow standard plus bas (cas retry non
+    // pris en charge) est sans effet.
     if (_isInMilestoneWindow() && onMilestoneRetry != null) {
+      _capabilityTracker?.onFail();
       final handled = await onMilestoneRetry!(this);
       if (handled) return;
     }
