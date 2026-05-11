@@ -2618,6 +2618,348 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Calibrer'**
   String get sessionCameraInactiveAction;
+
+  /// No description provided for @modeSelectionCustomTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'CUSTOM'**
+  String get modeSelectionCustomTitle;
+
+  /// No description provided for @modeSelectionCustomSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sessions sur mesure : durée, dosage des modes, difficulté, non-stop.'**
+  String get modeSelectionCustomSubtitle;
+
+  /// No description provided for @customAppBarTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sessions custom'**
+  String get customAppBarTitle;
+
+  /// No description provided for @customListEmptyTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune config enregistrée'**
+  String get customListEmptyTitle;
+
+  /// No description provided for @customListEmptyBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Crée ta première config pour générer des séances sur mesure.'**
+  String get customListEmptyBody;
+
+  /// No description provided for @customNewConfig.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouvelle config'**
+  String get customNewConfig;
+
+  /// No description provided for @customLaunchLastTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Relancer la dernière config'**
+  String get customLaunchLastTitle;
+
+  /// No description provided for @customUnnamed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sans nom'**
+  String get customUnnamed;
+
+  /// No description provided for @customNonStopBadge.
+  ///
+  /// In fr, this message translates to:
+  /// **'Non-stop'**
+  String get customNonStopBadge;
+
+  /// No description provided for @customDeleteConfirmTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer cette config ?'**
+  String get customDeleteConfirmTitle;
+
+  /// No description provided for @customDeleteConfirmBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'« {name} » sera définitivement supprimée.'**
+  String customDeleteConfirmBody(String name);
+
+  /// No description provided for @customDuplicateSuffix.
+  ///
+  /// In fr, this message translates to:
+  /// **' (copie)'**
+  String get customDuplicateSuffix;
+
+  /// No description provided for @customActionEdit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifier'**
+  String get customActionEdit;
+
+  /// No description provided for @customActionDuplicate.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dupliquer'**
+  String get customActionDuplicate;
+
+  /// No description provided for @customActionDelete.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer'**
+  String get customActionDelete;
+
+  /// No description provided for @customActionLaunch.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lancer'**
+  String get customActionLaunch;
+
+  /// No description provided for @customConfigSavedSnack.
+  ///
+  /// In fr, this message translates to:
+  /// **'Config enregistrée.'**
+  String get customConfigSavedSnack;
+
+  /// No description provided for @customSessionName.
+  ///
+  /// In fr, this message translates to:
+  /// **'Custom — {name}'**
+  String customSessionName(String name);
+
+  /// No description provided for @customEditorTitleNew.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouvelle config custom'**
+  String get customEditorTitleNew;
+
+  /// No description provided for @customEditorTitleEdit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifier la config'**
+  String get customEditorTitleEdit;
+
+  /// No description provided for @customFieldNameLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom de la config'**
+  String get customFieldNameLabel;
+
+  /// No description provided for @customFieldNameHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'ex. Marathon profond'**
+  String get customFieldNameHint;
+
+  /// No description provided for @customSectionCoach.
+  ///
+  /// In fr, this message translates to:
+  /// **'Coach'**
+  String get customSectionCoach;
+
+  /// No description provided for @customCoachDefaultVoice.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voix par défaut (sans coach)'**
+  String get customCoachDefaultVoice;
+
+  /// No description provided for @customCoachPickerTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir un coach'**
+  String get customCoachPickerTitle;
+
+  /// No description provided for @customCoachPickerDefaultSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'PhraseBank générique, voix TTS système'**
+  String get customCoachPickerDefaultSubtitle;
+
+  /// No description provided for @customSectionDuration.
+  ///
+  /// In fr, this message translates to:
+  /// **'Durée'**
+  String get customSectionDuration;
+
+  /// No description provided for @customNonStopToggle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mode non-stop'**
+  String get customNonStopToggle;
+
+  /// No description provided for @customNonStopDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enchaîne des cycles complets (boosts + final) sans fin. Le bouton « Termine-moi » sort un boost final puis termine vraiment.'**
+  String get customNonStopDescription;
+
+  /// No description provided for @customCycleDurationLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Durée d\'un cycle'**
+  String get customCycleDurationLabel;
+
+  /// No description provided for @customProgressiveDifficultyToggle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Difficulté progressive'**
+  String get customProgressiveDifficultyToggle;
+
+  /// No description provided for @customProgressiveDifficultyDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Chaque cycle est un peu plus dur et plus long que le précédent.'**
+  String get customProgressiveDifficultyDescription;
+
+  /// No description provided for @customDurationMinutes.
+  ///
+  /// In fr, this message translates to:
+  /// **'{minutes} min'**
+  String customDurationMinutes(int minutes);
+
+  /// No description provided for @customSectionDifficulty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Difficulté globale'**
+  String get customSectionDifficulty;
+
+  /// No description provided for @customSectionDoses.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dosage des modes'**
+  String get customSectionDoses;
+
+  /// No description provided for @customDosesHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'« Aucun » exclut le mode. « Fréquent » le favorise.'**
+  String get customDosesHint;
+
+  /// No description provided for @customDangerNoMouthMode.
+  ///
+  /// In fr, this message translates to:
+  /// **'Garde au moins un mode bouche actif (rythme, lick ou hold).'**
+  String get customDangerNoMouthMode;
+
+  /// No description provided for @customSectionAxes.
+  ///
+  /// In fr, this message translates to:
+  /// **'Axes d\'orientation'**
+  String get customSectionAxes;
+
+  /// No description provided for @customAxesHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Répartis des points pour orienter le générateur. N\'affecte pas ta spécialisation de carrière.'**
+  String get customAxesHint;
+
+  /// No description provided for @customAxesSpent.
+  ///
+  /// In fr, this message translates to:
+  /// **'{spent} pts répartis'**
+  String customAxesSpent(int spent);
+
+  /// No description provided for @customSectionAdvanced.
+  ///
+  /// In fr, this message translates to:
+  /// **'Avancé'**
+  String get customSectionAdvanced;
+
+  /// No description provided for @customIncludeHandToggle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Inclure la stimulation à la main'**
+  String get customIncludeHandToggle;
+
+  /// No description provided for @customIncludeHandDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Active les modes main et biffle dans la génération.'**
+  String get customIncludeHandDescription;
+
+  /// No description provided for @customMaxDepthLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Profondeur maximale'**
+  String get customMaxDepthLabel;
+
+  /// No description provided for @customSaveAndLaunch.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer et lancer'**
+  String get customSaveAndLaunch;
+
+  /// No description provided for @customSaveOnly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer'**
+  String get customSaveOnly;
+
+  /// No description provided for @customHostLoadError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger la session custom : {error}'**
+  String customHostLoadError(String error);
+
+  /// No description provided for @customFinishNowButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'Termine-moi'**
+  String get customFinishNowButton;
+
+  /// No description provided for @customFinishNowSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'boost final puis fin'**
+  String get customFinishNowSubtitle;
+
+  /// No description provided for @customDifficultyFacile.
+  ///
+  /// In fr, this message translates to:
+  /// **'Facile'**
+  String get customDifficultyFacile;
+
+  /// No description provided for @customDifficultyNormal.
+  ///
+  /// In fr, this message translates to:
+  /// **'Normal'**
+  String get customDifficultyNormal;
+
+  /// No description provided for @customDifficultyDifficile.
+  ///
+  /// In fr, this message translates to:
+  /// **'Difficile'**
+  String get customDifficultyDifficile;
+
+  /// No description provided for @customDifficultyExtreme.
+  ///
+  /// In fr, this message translates to:
+  /// **'Extrême'**
+  String get customDifficultyExtreme;
+
+  /// No description provided for @customDoseNone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun'**
+  String get customDoseNone;
+
+  /// No description provided for @customDoseRare.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rare'**
+  String get customDoseRare;
+
+  /// No description provided for @customDoseNormal.
+  ///
+  /// In fr, this message translates to:
+  /// **'Normal'**
+  String get customDoseNormal;
+
+  /// No description provided for @customDoseFrequent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fréquent'**
+  String get customDoseFrequent;
 }
 
 class _AppLocalizationsDelegate

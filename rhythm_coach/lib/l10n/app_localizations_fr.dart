@@ -1466,4 +1466,194 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get sessionCameraInactiveAction => 'Calibrer';
+
+  @override
+  String get modeSelectionCustomTitle => 'CUSTOM';
+
+  @override
+  String get modeSelectionCustomSubtitle =>
+      'Sessions sur mesure : durée, dosage des modes, difficulté, non-stop.';
+
+  @override
+  String get customAppBarTitle => 'Sessions custom';
+
+  @override
+  String get customListEmptyTitle => 'Aucune config enregistrée';
+
+  @override
+  String get customListEmptyBody =>
+      'Crée ta première config pour générer des séances sur mesure.';
+
+  @override
+  String get customNewConfig => 'Nouvelle config';
+
+  @override
+  String get customLaunchLastTitle => 'Relancer la dernière config';
+
+  @override
+  String get customUnnamed => 'Sans nom';
+
+  @override
+  String get customNonStopBadge => 'Non-stop';
+
+  @override
+  String get customDeleteConfirmTitle => 'Supprimer cette config ?';
+
+  @override
+  String customDeleteConfirmBody(String name) {
+    return '« $name » sera définitivement supprimée.';
+  }
+
+  @override
+  String get customDuplicateSuffix => ' (copie)';
+
+  @override
+  String get customActionEdit => 'Modifier';
+
+  @override
+  String get customActionDuplicate => 'Dupliquer';
+
+  @override
+  String get customActionDelete => 'Supprimer';
+
+  @override
+  String get customActionLaunch => 'Lancer';
+
+  @override
+  String get customConfigSavedSnack => 'Config enregistrée.';
+
+  @override
+  String customSessionName(String name) {
+    return 'Custom — $name';
+  }
+
+  @override
+  String get customEditorTitleNew => 'Nouvelle config custom';
+
+  @override
+  String get customEditorTitleEdit => 'Modifier la config';
+
+  @override
+  String get customFieldNameLabel => 'Nom de la config';
+
+  @override
+  String get customFieldNameHint => 'ex. Marathon profond';
+
+  @override
+  String get customSectionCoach => 'Coach';
+
+  @override
+  String get customCoachDefaultVoice => 'Voix par défaut (sans coach)';
+
+  @override
+  String get customCoachPickerTitle => 'Choisir un coach';
+
+  @override
+  String get customCoachPickerDefaultSubtitle =>
+      'PhraseBank générique, voix TTS système';
+
+  @override
+  String get customSectionDuration => 'Durée';
+
+  @override
+  String get customNonStopToggle => 'Mode non-stop';
+
+  @override
+  String get customNonStopDescription =>
+      'Enchaîne des cycles complets (boosts + final) sans fin. Le bouton « Termine-moi » sort un boost final puis termine vraiment.';
+
+  @override
+  String get customCycleDurationLabel => 'Durée d\'un cycle';
+
+  @override
+  String get customProgressiveDifficultyToggle => 'Difficulté progressive';
+
+  @override
+  String get customProgressiveDifficultyDescription =>
+      'Chaque cycle est un peu plus dur et plus long que le précédent.';
+
+  @override
+  String customDurationMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String get customSectionDifficulty => 'Difficulté globale';
+
+  @override
+  String get customSectionDoses => 'Dosage des modes';
+
+  @override
+  String get customDosesHint =>
+      '« Aucun » exclut le mode. « Fréquent » le favorise.';
+
+  @override
+  String get customDangerNoMouthMode =>
+      'Garde au moins un mode bouche actif (rythme, lick ou hold).';
+
+  @override
+  String get customSectionAxes => 'Axes d\'orientation';
+
+  @override
+  String get customAxesHint =>
+      'Répartis des points pour orienter le générateur. N\'affecte pas ta spécialisation de carrière.';
+
+  @override
+  String customAxesSpent(int spent) {
+    return '$spent pts répartis';
+  }
+
+  @override
+  String get customSectionAdvanced => 'Avancé';
+
+  @override
+  String get customIncludeHandToggle => 'Inclure la stimulation à la main';
+
+  @override
+  String get customIncludeHandDescription =>
+      'Active les modes main et biffle dans la génération.';
+
+  @override
+  String get customMaxDepthLabel => 'Profondeur maximale';
+
+  @override
+  String get customSaveAndLaunch => 'Enregistrer et lancer';
+
+  @override
+  String get customSaveOnly => 'Enregistrer';
+
+  @override
+  String customHostLoadError(String error) {
+    return 'Impossible de charger la session custom : $error';
+  }
+
+  @override
+  String get customFinishNowButton => 'Termine-moi';
+
+  @override
+  String get customFinishNowSubtitle => 'boost final puis fin';
+
+  @override
+  String get customDifficultyFacile => 'Facile';
+
+  @override
+  String get customDifficultyNormal => 'Normal';
+
+  @override
+  String get customDifficultyDifficile => 'Difficile';
+
+  @override
+  String get customDifficultyExtreme => 'Extrême';
+
+  @override
+  String get customDoseNone => 'Aucun';
+
+  @override
+  String get customDoseRare => 'Rare';
+
+  @override
+  String get customDoseNormal => 'Normal';
+
+  @override
+  String get customDoseFrequent => 'Fréquent';
 }

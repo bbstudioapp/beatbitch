@@ -137,6 +137,13 @@ class SessionController extends ChangeNotifier {
   /// joués pendant le step final.
   bool _finalChimePlayed = false;
 
+  /// True quand le `finale_chime` **sonne réellement** (après l'attente de
+  /// la fin de la phrase d'action du step final). Distinct de
+  /// [_finalChimePlayed] qui est posé dès l'identification du step final
+  /// (donc avant le speak). Consommé par l'overlay de finale pour caler le
+  /// halo blanc crémeux pile sur le chime.
+  bool _finaleChimeStarted = false;
+
   // ─── État du flow fail ─────────────────────────────────────────────────
 
   FailPhase? _failPhase;
@@ -473,6 +480,12 @@ class SessionController extends ChangeNotifier {
   bool get isIdle => _state == SessionState.idle;
   bool get isFailing => _state == SessionState.failing;
 
+  /// True quand le `finale_chime` retentit (après la phrase d'action du
+  /// step final). Consommé par l'overlay de finale (halo blanc crémeux) :
+  /// combiné à `isRunning`, ça ne s'allume que pour les sessions à step
+  /// final dédié (carrière + custom), pile au moment du chime.
+  bool get finaleChimeStarted => _finaleChimeStarted;
+
   FailPhase? get failPhase => _failPhase;
   String? get currentFailPhrase => _currentFailPhrase;
   Punishment? get currentPunishment => _currentPunishment;
@@ -520,6 +533,7 @@ class SessionController extends ChangeNotifier {
         _configApplied = false;
         _hadFailThisSession = false;
         _finalChimePlayed = false;
+        _finaleChimeStarted = false;
         _sessionBadgeUnlocks = const [];
         _sessionMilestoneUnlocks = const [];
         _currentHoldFullDuration = 0;
@@ -946,6 +960,10 @@ class SessionController extends ChangeNotifier {
       }
     }
     if (_released) return;
+    // Le chime sonne maintenant : on le signale (l'overlay de finale s'y
+    // accroche pour démarrer le halo pile sur le son).
+    _finaleChimeStarted = true;
+    notifyListeners();
     await _beep.playFinaleChime(category: session.finalCategory);
   }
 
@@ -1228,6 +1246,7 @@ class SessionController extends ChangeNotifier {
     // rare où Supplier est cliqué pile entre final et fin), on doit
     // pouvoir rejouer le chime de la nouvelle.
     _finalChimePlayed = false;
+    _finaleChimeStarted = false;
 
     // Force le déclenchement immédiat du beg (time = start ≤ elapsedSeconds).
     _checkSteps();

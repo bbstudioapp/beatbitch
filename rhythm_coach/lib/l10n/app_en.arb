@@ -737,5 +737,87 @@
   },
   "profileAboutOffline": "100% offline — no telemetry, nothing sent over the network.",
   "sessionCameraInactiveWarning": "Camera check inactive — recalibrate",
-  "sessionCameraInactiveAction": "Calibrate"
+  "sessionCameraInactiveAction": "Calibrate",
+  "modeSelectionCustomTitle": "CUSTOM",
+  "modeSelectionCustomSubtitle": "Tailor-made sessions: duration, mode mix, difficulty, non-stop.",
+  "customAppBarTitle": "Custom sessions",
+  "customListEmptyTitle": "No saved config yet",
+  "customListEmptyBody": "Create your first config to generate tailor-made sessions.",
+  "customNewConfig": "New config",
+  "customLaunchLastTitle": "Relaunch last config",
+  "customUnnamed": "Untitled",
+  "customNonStopBadge": "Non-stop",
+  "customDeleteConfirmTitle": "Delete this config?",
+  "customDeleteConfirmBody": "\"{name}\" will be permanently deleted.",
+  "@customDeleteConfirmBody": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "customDuplicateSuffix": " (copy)",
+  "customActionEdit": "Edit",
+  "customActionDuplicate": "Duplicate",
+  "customActionDelete": "Delete",
+  "customActionLaunch": "Launch",
+  "customConfigSavedSnack": "Config saved.",
+  "customSessionName": "Custom — {name}",
+  "@customSessionName": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "customEditorTitleNew": "New custom config",
+  "customEditorTitleEdit": "Edit config",
+  "customFieldNameLabel": "Config name",
+  "customFieldNameHint": "e.g. Deep marathon",
+  "customSectionCoach": "Coach",
+  "customCoachDefaultVoice": "Default voice (no coach)",
+  "customCoachPickerTitle": "Pick a coach",
+  "customCoachPickerDefaultSubtitle": "Generic phrase bank, system TTS voice",
+  "customSectionDuration": "Duration",
+  "customNonStopToggle": "Non-stop mode",
+  "customNonStopDescription": "Chains full cycles (boosts + finale) endlessly. The \"Finish me\" button triggers a final boost then really ends.",
+  "customCycleDurationLabel": "Cycle duration",
+  "customProgressiveDifficultyToggle": "Progressive difficulty",
+  "customProgressiveDifficultyDescription": "Each cycle is a bit harder and longer than the previous one.",
+  "customDurationMinutes": "{minutes} min",
+  "@customDurationMinutes": {
+    "placeholders": {
+      "minutes": { "type": "int" }
+    }
+  },
+  "customSectionDifficulty": "Global difficulty",
+  "customSectionDoses": "Mode mix",
+  "customDosesHint": "\"None\" excludes the mode. \"Frequent\" favours it.",
+  "customDangerNoMouthMode": "Keep at least one mouth mode active (rhythm, lick or hold).",
+  "customSectionAxes": "Focus axes",
+  "customAxesHint": "Spend points to bias the generator. Does not affect your career specialization.",
+  "customAxesSpent": "{spent} pts spent",
+  "@customAxesSpent": {
+    "placeholders": {
+      "spent": { "type": "int" }
+    }
+  },
+  "customSectionAdvanced": "Advanced",
+  "customIncludeHandToggle": "Include hand stimulation",
+  "customIncludeHandDescription": "Enables the hand and biffle modes in the generation.",
+  "customMaxDepthLabel": "Maximum depth",
+  "customSaveAndLaunch": "Save and launch",
+  "customSaveOnly": "Save",
+  "customHostLoadError": "Could not load the custom session: {error}",
+  "@customHostLoadError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "customFinishNowButton": "Finish me",
+  "customFinishNowSubtitle": "final boost then end",
+  "customDifficultyFacile": "Easy",
+  "customDifficultyNormal": "Normal",
+  "customDifficultyDifficile": "Hard",
+  "customDifficultyExtreme": "Extreme",
+  "customDoseNone": "None",
+  "customDoseRare": "Rare",
+  "customDoseNormal": "Normal",
+  "customDoseFrequent": "Frequent"
 }
