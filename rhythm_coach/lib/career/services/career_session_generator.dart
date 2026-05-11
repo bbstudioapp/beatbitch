@@ -2182,7 +2182,11 @@ class CareerSessionGenerator {
             0.60 * _pts(SpecializationBranch.endurance) +
             0.40 * _pts(SpecializationBranch.profondeur);
       case SessionMode.lick:
-        return 1.0 + 0.70 * _pts(SpecializationBranch.sloppy);
+        // Base abaissée (retour utilisateur « moins de lèche ») : sans
+        // point sloppy, le lick pèse ~0.6 contre ~1.0 pour un mode neutre.
+        // Le boost sloppy (+0.70/pt) reste pleinement effectif → une
+        // joueuse spé sloppy en voit toujours beaucoup (×4.1 à 5 pts).
+        return 0.6 + 0.70 * _pts(SpecializationBranch.sloppy);
       case SessionMode.beg:
         return 1.0 +
             0.90 * _pts(SpecializationBranch.obeissance) +
@@ -2815,7 +2819,8 @@ class CareerSessionGenerator {
   /// — sauce sur la langue, le visage, dans la bouche, jusqu'au fond de la
   /// gorge — qui n'est pas dans l'action mécanique elle-même).
   ///
-  /// - hand head→mid 40-60 BPM 14s — req 0 (baseline universelle)
+  /// - hand head→mid 40-60 BPM 14s — req 0 (baseline, candidat normal aux
+  ///   niveaux 1-3 seulement ; niveau ≥ 4 = simple fallback technique)
   /// - hold tip ~12s — req 5 (sauce sur la langue)
   /// - lick tip→head 60 BPM 16s — req 8 (sauce sur la bouche en lent)
   /// - hold head ~12s — req 8 (sauce sur le gland/bouche)
@@ -2854,18 +2859,29 @@ class CareerSessionGenerator {
     // Hand baseline : non humiliant, BPM tiré dans [40, 60] pour rester
     // dans la zone "lent contemplatif". Pas de gate dédiée — c'est le
     // fallback universel quand aucun autre final n'est unlocké.
-    final handBpm = 40 + _rng.nextInt(21);
-    candidates.add((
-      _StepDraft(
-        mode: SessionMode.hand,
-        bpm: handBpm,
-        from: Position.head,
-        to: Position.mid,
-        duration: fastDur,
-      ),
-      0.0,
-      null,
-    ));
+    //
+    // Niveaux 1-3 : candidat NORMAL — le finish bas niveau a besoin de
+    // cette baseline (req 0) tant que les finals gated (hold tip / lick
+    // tip→head / hold head…) ne sont pas acquittés.
+    // Niveau ≥ 4 : retiré des candidats normaux (un hand-final est trop
+    // anodin pour clôturer une séance à ce stade). Il ne subsiste alors
+    // que (a) comme fallback technique ultime si AUCUN autre candidat ne
+    // passe (cf. `valid.isEmpty` plus bas), ou (b) si une milestone-final
+    // venait à le scripter explicitement (placement "final", backlog).
+    if (_level < 4) {
+      final handBpm = 40 + _rng.nextInt(21);
+      candidates.add((
+        _StepDraft(
+          mode: SessionMode.hand,
+          bpm: handBpm,
+          from: Position.head,
+          to: Position.mid,
+          duration: fastDur,
+        ),
+        0.0,
+        null,
+      ));
+    }
 
     // Hold tip : surcote 5 (faible profondeur mais sauce sur la langue).
     // Gate : intro_final_hold_tip (niveau 2).
