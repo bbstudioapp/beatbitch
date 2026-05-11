@@ -17,6 +17,8 @@ import '../services/ambience_engine.dart';
 import '../services/backgrounds_service.dart';
 import '../services/badge_service.dart';
 import '../services/beep_engine.dart';
+import '../services/capability_service.dart';
+import '../services/capability_tracker.dart';
 import '../services/hold_verifier.dart';
 import '../services/humiliation_engine.dart';
 import '../services/obedience_engine.dart';
@@ -47,6 +49,18 @@ class SessionController extends ChangeNotifier {
   final RandomCommentsBundle _randomComments;
   final StatsService _stats;
   final BadgeService _badges;
+
+  /// Persistance du profil de capacités. Toujours instancié, mais n'écrit
+  /// que si [_capabilityTracker] a produit un rapport — donc en pratique
+  /// uniquement sur les sessions carrière (cf. [_capabilityTracker]).
+  final CapabilityService _capabilities;
+
+  /// Suivi live du profil de capacités — non null UNIQUEMENT sur les
+  /// sessions carrière (`trackCapabilities`). Custom et scénarios JSON ne
+  /// l'instancient pas (sandbox / hors carrière). Phase 1 : télémétrie pure,
+  /// aucun effet sur le gameplay.
+  final CapabilityTracker? _capabilityTracker;
+
   final HumiliationEngine _humiliation = HumiliationEngine();
   HumiliationEngine get humiliation => _humiliation;
   final ObedienceEngine _obedience = ObedienceEngine();
@@ -257,6 +271,8 @@ class SessionController extends ChangeNotifier {
     required RandomCommentsBundle randomComments,
     StatsService? stats,
     BadgeService? badges,
+    CapabilityService? capabilities,
+    bool trackCapabilities = false,
     PhraseBank? phraseBank,
     List<double>? staminaProfile,
     HoldVerifier? holdVerifier,
@@ -270,6 +286,8 @@ class SessionController extends ChangeNotifier {
         _randomComments = randomComments,
         _stats = stats ?? StatsService(),
         _badges = badges ?? BadgeService(),
+        _capabilities = capabilities ?? CapabilityService(),
+        _capabilityTracker = trackCapabilities ? CapabilityTracker() : null,
         _phraseBank = phraseBank,
         _staminaProfile = staminaProfile,
         _holdVerifier = holdVerifier,
@@ -541,6 +559,7 @@ class SessionController extends ChangeNotifier {
         _resilienceTickAccumulator = 0;
         _miniPunishmentsTriggered = 0;
         _announcedProgressMarkers.clear();
+        _capabilityTracker?.onSessionStart();
         // Seed neutre : remplacé par les valeurs persistées dès que la
         // lecture async (plus bas) revient. `seedHumiliationSession`
         // transporte la chauffe d'une session précédente lors d'un
@@ -713,6 +732,7 @@ class SessionController extends ChangeNotifier {
     final now = elapsedSeconds;
     if (now == _lastHoldTickAtSecond) return;
     _lastHoldTickAtSecond = now;
+    _capabilityTracker?.onTickSecond(swallowMode: _swallowMode);
     _obedience.onTickSecond();
     // L'humil tick est accéléré par l'obédiance courante : plus elle obéit
     // bien, plus on accepte qu'elle ait droit à plus d'humiliation par
@@ -733,6 +753,7 @@ class SessionController extends ChangeNotifier {
     );
     final overflows = _saliva.popOverflowEvents();
     if (overflows > 0) {
+      _capabilityTracker?.onSalivaOverflow();
       final remaining = _salivaOverflowsCap - _salivaOverflowsThisSession;
       final apply = overflows > remaining ? remaining : overflows;
       for (var i = 0; i < apply; i++) {
@@ -866,6 +887,16 @@ class SessionController extends ChangeNotifier {
         _configApplied = true;
         _lastConfigStep = step;
         modeChanged = true;
+        // Télémétrie capacités : on signale le changement de config avec les
+        // valeurs du step (career sessions uniquement — `_capabilityTracker`
+        // est null sinon).
+        _capabilityTracker?.onStepApplied(
+          mode: resolvedMode,
+          from: step.from,
+          to: step.to,
+          bpm: step.bpm,
+          duration: step.duration,
+        );
         _armHoldVerifierIfHoldStep(step);
         // Rotation aléatoire à chaque step de config — anti-doublon
         // immédiat dans le service. Un override `step.background`
@@ -1064,6 +1095,20 @@ class SessionController extends ChangeNotifier {
       final snap = await _stats.snapshot();
       final unlocks = await _badges.reconcileAndDetectUnlocks(snap);
       _pendingBadgeUnlocks = unlocks;
+
+      // Profil de capacités : clôt les streaks encore actifs (la session
+      // s'est terminée proprement) et persiste le rapport. `sessionIndex` =
+      // nombre de sessions complétées (déjà incrémenté par
+      // `recordSessionCompleted` plus haut) → sert d'horloge de decay aux
+      // phases ultérieures. Phase 1 : `comfort` est posé naïvement = `best`.
+      final tracker = _capabilityTracker;
+      if (tracker != null && !_released) {
+        final report = tracker.finalizeReport();
+        if (!report.isEmpty) {
+          await _capabilities.commit(report,
+              sessionIndex: snap.sessionsCompleted);
+        }
+      }
     }
 
     // Apothéose AVANT le bascule en `finished`. Deux cas :
@@ -1285,6 +1330,10 @@ class SessionController extends ChangeNotifier {
     _hadFailThisSession = true;
     _stamina.onFail();
     _saliva.onFail();
+    // Capacités : fige les plafonds de session sur la valeur live des
+    // streaks, puis les vide — un streak interrompu par un fail ne devient
+    // jamais un record propre (cf. §3/§6 de la spec).
+    _capabilityTracker?.onFail();
     // Le mode forbidden est levé par le fail : la salope a craqué, on
     // repart sur des bases neutres. Si la session veut re-imposer le
     // forbidden après reprise, c'est au scénario de poser un step le
@@ -1578,6 +1627,13 @@ class SessionController extends ChangeNotifier {
     final last = _lastConfigStep;
     if (last == null) return;
     await _beep.applyStep(last, session.defaultMode);
+    _capabilityTracker?.onStepApplied(
+      mode: last.mode ?? session.defaultMode,
+      from: last.from,
+      to: last.to,
+      bpm: last.bpm,
+      duration: last.duration,
+    );
     await _syncAmbienceToCurrentMode();
   }
 

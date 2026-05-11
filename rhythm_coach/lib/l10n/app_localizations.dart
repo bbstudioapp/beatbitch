@@ -602,6 +602,162 @@ abstract class AppLocalizations {
   /// **'Modes utilisés'**
   String get profileStatModesUsed;
 
+  /// No description provided for @profileCapabilitiesSection.
+  ///
+  /// In fr, this message translates to:
+  /// **'CAPACITÉS'**
+  String get profileCapabilitiesSection;
+
+  /// No description provided for @profileCapabilitiesEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rien à montrer pour l\'instant — tes capacités se découvrent en jouant.'**
+  String get profileCapabilitiesEmpty;
+
+  /// No description provided for @profileCapBpm.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n} BPM'**
+  String profileCapBpm(int n);
+
+  /// No description provided for @profileCapApnea.
+  ///
+  /// In fr, this message translates to:
+  /// **'Apnée'**
+  String get profileCapApnea;
+
+  /// No description provided for @profileCapEngagement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Gorge engagée'**
+  String get profileCapEngagement;
+
+  /// No description provided for @profileCapCrossingsThroat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Barrière de gorge'**
+  String get profileCapCrossingsThroat;
+
+  /// No description provided for @profileCapCrossingsFull.
+  ///
+  /// In fr, this message translates to:
+  /// **'Barrière de gorge (au fond)'**
+  String get profileCapCrossingsFull;
+
+  /// No description provided for @profileCapCrossingsLifetime.
+  ///
+  /// In fr, this message translates to:
+  /// **'Franchissements (cumul)'**
+  String get profileCapCrossingsLifetime;
+
+  /// No description provided for @profileCapRhythmFastShallow.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rythme bouche — rapide'**
+  String get profileCapRhythmFastShallow;
+
+  /// No description provided for @profileCapRhythmFastThroat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rythme gorge — rapide'**
+  String get profileCapRhythmFastThroat;
+
+  /// No description provided for @profileCapRhythmFastFull.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rythme au fond — rapide'**
+  String get profileCapRhythmFastFull;
+
+  /// No description provided for @profileCapRhythmSlowShallow.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rythme bouche — lent'**
+  String get profileCapRhythmSlowShallow;
+
+  /// No description provided for @profileCapRhythmSlowThroat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rythme gorge — lent'**
+  String get profileCapRhythmSlowThroat;
+
+  /// No description provided for @profileCapRhythmSlowFull.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rythme au fond — lent'**
+  String get profileCapRhythmSlowFull;
+
+  /// No description provided for @profileCapRhythmDepth.
+  ///
+  /// In fr, this message translates to:
+  /// **'Profondeur rythme'**
+  String get profileCapRhythmDepth;
+
+  /// No description provided for @profileCapRhythmMotion.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mouvement continu'**
+  String get profileCapRhythmMotion;
+
+  /// No description provided for @profileCapHoldThroat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Gorge tenue'**
+  String get profileCapHoldThroat;
+
+  /// No description provided for @profileCapHoldFull.
+  ///
+  /// In fr, this message translates to:
+  /// **'Au fond tenu'**
+  String get profileCapHoldFull;
+
+  /// No description provided for @profileCapNoSwallow.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sans avaler'**
+  String get profileCapNoSwallow;
+
+  /// No description provided for @profileCapBiffle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Biffle'**
+  String get profileCapBiffle;
+
+  /// No description provided for @profileCapBiffleFast.
+  ///
+  /// In fr, this message translates to:
+  /// **'Biffle — rapide'**
+  String get profileCapBiffleFast;
+
+  /// No description provided for @profileCapEffortNoBreath.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effort sans pause'**
+  String get profileCapEffortNoBreath;
+
+  /// No description provided for @profileCapBreathMinDose.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sas de souffle mini'**
+  String get profileCapBreathMinDose;
+
+  /// No description provided for @profileCapLickDepth.
+  ///
+  /// In fr, this message translates to:
+  /// **'Profondeur langue'**
+  String get profileCapLickDepth;
+
+  /// No description provided for @profileCapLickStreak.
+  ///
+  /// In fr, this message translates to:
+  /// **'Langue continue'**
+  String get profileCapLickStreak;
+
+  /// No description provided for @profileCapHandStreak.
+  ///
+  /// In fr, this message translates to:
+  /// **'Main continue'**
+  String get profileCapHandStreak;
+
   /// No description provided for @profileResetSection.
   ///
   /// In fr, this message translates to:
@@ -623,7 +779,7 @@ abstract class AppLocalizations {
   /// No description provided for @profileResetDialogMessage.
   ///
   /// In fr, this message translates to:
-  /// **'Cette action efface toutes tes statistiques, badges, progression carrière et points de spécialisation. Irréversible.'**
+  /// **'Cette action efface toutes tes statistiques, capacités, badges, progression carrière et points de spécialisation. Irréversible.'**
   String get profileResetDialogMessage;
 
   /// No description provided for @profileResetCancel.

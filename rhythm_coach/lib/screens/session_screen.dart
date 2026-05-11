@@ -205,6 +205,9 @@ class _SessionScreenState extends State<SessionScreen>
       holdVerifier: widget.holdVerifier,
       specialization: widget.specialization,
       seedHumiliationSession: widget.seedHumiliationSession,
+      // Profil de capacités : suivi uniquement en carrière (Custom = sandbox,
+      // scénarios JSON = hors carrière).
+      trackCapabilities: widget.isCareer,
     );
     _controller.onMilestoneRetry = widget.onMilestoneRetry;
     if (widget.isCareer) {

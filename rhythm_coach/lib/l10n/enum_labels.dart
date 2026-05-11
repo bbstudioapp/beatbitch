@@ -5,7 +5,9 @@ import '../career/models/specialization.dart';
 import '../models/badge.dart';
 import '../models/session.dart';
 import '../models/session_step.dart';
+import '../services/capability_axis.dart';
 import 'app_localizations.dart';
+import 'format_helpers.dart';
 
 extension SessionModeL10n on SessionMode {
   String shortLabel(BuildContext context) {
@@ -136,6 +138,52 @@ extension ModeDoseL10n on ModeDose {
       ModeDose.normal => t.customDoseNormal,
       ModeDose.frequent => t.customDoseFrequent,
     };
+  }
+}
+
+extension CapabilityAxisL10n on CapabilityAxis {
+  String localizedLabel(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return switch (this) {
+      CapabilityAxis.gorgeApneeStreak => t.profileCapApnea,
+      CapabilityAxis.gorgeEngagementStreak => t.profileCapEngagement,
+      CapabilityAxis.gorgeCrossingsBpmThroat => t.profileCapCrossingsThroat,
+      CapabilityAxis.gorgeCrossingsBpmFull => t.profileCapCrossingsFull,
+      CapabilityAxis.gorgeCrossingsLifetime => t.profileCapCrossingsLifetime,
+      CapabilityAxis.rhythmBpmCeilShallow => t.profileCapRhythmFastShallow,
+      CapabilityAxis.rhythmBpmCeilThroat => t.profileCapRhythmFastThroat,
+      CapabilityAxis.rhythmBpmCeilFull => t.profileCapRhythmFastFull,
+      CapabilityAxis.rhythmBpmFloorShallow => t.profileCapRhythmSlowShallow,
+      CapabilityAxis.rhythmBpmFloorThroat => t.profileCapRhythmSlowThroat,
+      CapabilityAxis.rhythmBpmFloorFull => t.profileCapRhythmSlowFull,
+      CapabilityAxis.rhythmDepthMax => t.profileCapRhythmDepth,
+      CapabilityAxis.rhythmMotionStreak => t.profileCapRhythmMotion,
+      CapabilityAxis.holdThroatStreak => t.profileCapHoldThroat,
+      CapabilityAxis.holdFullStreak => t.profileCapHoldFull,
+      CapabilityAxis.noswallowStreak => t.profileCapNoSwallow,
+      CapabilityAxis.biffleStreak => t.profileCapBiffle,
+      CapabilityAxis.biffleBpmMax => t.profileCapBiffleFast,
+      CapabilityAxis.effortNoBreathStreak => t.profileCapEffortNoBreath,
+      CapabilityAxis.breathMinDose => t.profileCapBreathMinDose,
+      CapabilityAxis.lickDepthMax => t.profileCapLickDepth,
+      CapabilityAxis.lickStreak => t.profileCapLickStreak,
+      CapabilityAxis.handStreak => t.profileCapHandStreak,
+    };
+  }
+
+  /// Valeur formatée pour l'affichage profil, à partir d'un `best` brut.
+  String formatValue(BuildContext context, double best) {
+    switch (unit) {
+      case CapabilityUnit.seconds:
+        return formatDurationDetailed(context, best.round());
+      case CapabilityUnit.bpm:
+        return AppLocalizations.of(context).profileCapBpm(best.round());
+      case CapabilityUnit.depthCran:
+        final i = best.round().clamp(0, Position.values.length - 1);
+        return Position.values[i].localizedLabel(context);
+      case CapabilityUnit.count:
+        return formatLocalizedNumber(context, best.round());
+    }
   }
 }
 

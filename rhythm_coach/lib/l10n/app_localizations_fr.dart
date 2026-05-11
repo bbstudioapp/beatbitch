@@ -282,6 +282,87 @@ class AppLocalizationsFr extends AppLocalizations {
   String get profileStatModesUsed => 'Modes utilisés';
 
   @override
+  String get profileCapabilitiesSection => 'CAPACITÉS';
+
+  @override
+  String get profileCapabilitiesEmpty =>
+      'Rien à montrer pour l\'instant — tes capacités se découvrent en jouant.';
+
+  @override
+  String profileCapBpm(int n) {
+    return '$n BPM';
+  }
+
+  @override
+  String get profileCapApnea => 'Apnée';
+
+  @override
+  String get profileCapEngagement => 'Gorge engagée';
+
+  @override
+  String get profileCapCrossingsThroat => 'Barrière de gorge';
+
+  @override
+  String get profileCapCrossingsFull => 'Barrière de gorge (au fond)';
+
+  @override
+  String get profileCapCrossingsLifetime => 'Franchissements (cumul)';
+
+  @override
+  String get profileCapRhythmFastShallow => 'Rythme bouche — rapide';
+
+  @override
+  String get profileCapRhythmFastThroat => 'Rythme gorge — rapide';
+
+  @override
+  String get profileCapRhythmFastFull => 'Rythme au fond — rapide';
+
+  @override
+  String get profileCapRhythmSlowShallow => 'Rythme bouche — lent';
+
+  @override
+  String get profileCapRhythmSlowThroat => 'Rythme gorge — lent';
+
+  @override
+  String get profileCapRhythmSlowFull => 'Rythme au fond — lent';
+
+  @override
+  String get profileCapRhythmDepth => 'Profondeur rythme';
+
+  @override
+  String get profileCapRhythmMotion => 'Mouvement continu';
+
+  @override
+  String get profileCapHoldThroat => 'Gorge tenue';
+
+  @override
+  String get profileCapHoldFull => 'Au fond tenu';
+
+  @override
+  String get profileCapNoSwallow => 'Sans avaler';
+
+  @override
+  String get profileCapBiffle => 'Biffle';
+
+  @override
+  String get profileCapBiffleFast => 'Biffle — rapide';
+
+  @override
+  String get profileCapEffortNoBreath => 'Effort sans pause';
+
+  @override
+  String get profileCapBreathMinDose => 'Sas de souffle mini';
+
+  @override
+  String get profileCapLickDepth => 'Profondeur langue';
+
+  @override
+  String get profileCapLickStreak => 'Langue continue';
+
+  @override
+  String get profileCapHandStreak => 'Main continue';
+
+  @override
   String get profileResetSection => 'ZONE DANGER';
 
   @override
@@ -292,7 +373,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get profileResetDialogMessage =>
-      'Cette action efface toutes tes statistiques, badges, progression carrière et points de spécialisation. Irréversible.';
+      'Cette action efface toutes tes statistiques, capacités, badges, progression carrière et points de spécialisation. Irréversible.';
 
   @override
   String get profileResetCancel => 'Annuler';
