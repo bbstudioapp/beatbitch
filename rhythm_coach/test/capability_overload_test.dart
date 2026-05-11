@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:beat_bitch/career/models/coach.dart';
+import 'package:beat_bitch/career/models/coach_catalog.dart';
 import 'package:beat_bitch/career/models/phrase_bank.dart';
 import 'package:beat_bitch/career/models/unlock_key.dart';
 import 'package:beat_bitch/career/services/career_session_generator.dart';
@@ -207,5 +209,62 @@ void main() {
         reason: 'un cap motion bas doit écourter le rythme du main loop au '
             'moins une fois — sinon `motion_streak.comfort` n\'est pas '
             'consommé par `_canChainRhythm`');
+  });
+
+  test(
+      'Phase 4 — phrase « attempt » injectée comme texte du step #0 quand le dé '
+      '∝ niveau gagne ; jamais aux niv ≤ 4 / quickie / openingPhrase imposée',
+      () {
+    // Un seul axe consolidé → `overloadAxis == holdFullStreak` à chaque séance.
+    final profile = CapabilityProfile({
+      CapabilityAxis.holdFullStreak: _s(25, sr: 0.5),
+    });
+    final coachBank = CoachCatalog.defaults.first
+        .withPhrases(const CoachPhrasePack(progressPhrases: {
+          'hold.full.streak': {
+            'attempt': [PhraseEntry(text: 'ATTEMPT_HF')],
+          },
+        }))
+        .toPhraseBank(fallback: _bank());
+
+    String step0(int seed,
+        {int level = 14, bool quickie = false, String? openingPhrase}) {
+      final r = CareerSessionGenerator(seed: seed).generate(
+        level: level,
+        bank: coachBank,
+        includeHand: true,
+        quickie: quickie,
+        openingPhrase: openingPhrase,
+        humiliationCareer: 100.0,
+        unlockedKeys: _allUnlocks,
+        capabilityProfile: profile,
+      );
+      return r.session.steps
+          .firstWhere((s) => !s.isTextOnly && s.time == 0)
+          .text;
+    }
+
+    final seeds = List.generate(40, (i) => i);
+    // Niveau élevé (chance ~40 %) : la phrase attempt apparaît au moins une
+    // fois, et certaines séances gardent l'ouverture générique ('s').
+    final step0sHigh = seeds.map(step0).toList();
+    expect(step0sHigh.where((t) => t == 'ATTEMPT_HF'), isNotEmpty,
+        reason: 'la phrase attempt doit apparaître au moins une fois');
+    expect(step0sHigh.where((t) => t != 'ATTEMPT_HF'), isNotEmpty,
+        reason: 'toutes les séances ne posent pas la phrase attempt');
+    // Niveau ≤ 4 : chance 0 → jamais.
+    for (final s in seeds) {
+      expect(step0(s, level: 4), isNot('ATTEMPT_HF'), reason: 'niv 4 seed=$s');
+    }
+    // Quickie : step #0 dramaturgique préservé → jamais la phrase attempt.
+    for (final s in seeds) {
+      expect(step0(s, quickie: true), isNot('ATTEMPT_HF'),
+          reason: 'quickie seed=$s');
+    }
+    // `openingPhrase` imposée (Supplier / encore) → jamais la phrase attempt.
+    for (final s in seeds) {
+      expect(step0(s, openingPhrase: 'OPENING'), 'OPENING',
+          reason: 'openingPhrase seed=$s');
+    }
   });
 }

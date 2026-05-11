@@ -26,6 +26,8 @@ import '../models/session.dart';
 import '../services/ambience_engine.dart';
 import '../services/badge_service.dart';
 import '../services/beep_engine.dart';
+import '../services/capability_axis.dart';
+import '../services/capability_service.dart';
 import '../services/coach_phrases_loader.dart';
 import '../services/hold_verifier.dart';
 import '../services/platform_capabilities.dart';
@@ -126,6 +128,16 @@ class SessionScreen extends StatefulWidget {
   /// level-up à la complétion). Null pour sessions hors carrière.
   final int? careerLevel;
 
+  /// Axe de capacité surchargé sur cette séance (mode carrière). Null sinon.
+  /// Transmis tel quel au [SessionController] pour les phrases `record` du
+  /// coach (Phase 4 — on annonce l'exploit qu'on a poussé exprès).
+  final CapabilityAxis? capabilityOverloadAxis;
+
+  /// Snapshot du profil de capacités au début de la séance (mode carrière).
+  /// Null sinon. Transmis au [SessionController] pour l'attribution du tap-out
+  /// (phrase `tapout`) et la détection des records (phrase `record`).
+  final CapabilityProfile? capabilityProfile;
+
   /// Si false, la session ne peut pas faire progresser le niveau global
   /// même si toutes les autres conditions sont réunies. Utilisé pour
   /// gater le level-up sur le système de coachs : seules les sessions
@@ -175,6 +187,8 @@ class SessionScreen extends StatefulWidget {
     this.holdVerifier,
     this.canSave = false,
     this.careerLevel,
+    this.capabilityOverloadAxis,
+    this.capabilityProfile,
     this.coachAdvancesTier = true,
     this.specialization,
     this.seedHumiliationSession = 0.0,
@@ -208,6 +222,9 @@ class _SessionScreenState extends State<SessionScreen>
       // Profil de capacités : suivi uniquement en carrière (Custom = sandbox,
       // scénarios JSON = hors carrière).
       trackCapabilities: widget.isCareer,
+      careerLevel: widget.careerLevel ?? 0,
+      capabilityOverloadAxis: widget.capabilityOverloadAxis,
+      capabilityProfile: widget.capabilityProfile,
     );
     _controller.onMilestoneRetry = widget.onMilestoneRetry;
     if (widget.isCareer) {

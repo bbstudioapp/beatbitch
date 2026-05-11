@@ -32,6 +32,10 @@ class ObedienceEngine {
   static const double bumpPerInterval = 1.0;
   static const double bumpPunishmentCompleted = 2.0;
   static const double bumpSessionClean = 3.0;
+
+  /// Bump quand un record du profil de capacités est battu (Phase 4) —
+  /// l'exploit accepté est un acte de soumission (§9 de la spec).
+  static const double bumpCapabilityRecord = 2.0;
   static const double malusFail = 2.0;
   static const double malusPunishmentAbandoned = 5.0;
 
@@ -62,6 +66,7 @@ class ObedienceEngine {
 
   void onPunishmentCompleted() => _bump(bumpPunishmentCompleted);
   void onSessionCleanFinish() => _bump(bumpSessionClean);
+  void onCapabilityRecord() => _bump(bumpCapabilityRecord);
   void onFail({double multiplier = 1.0}) => _bump(-malusFail * multiplier);
   void onPunishmentAbandoned({double multiplier = 1.0}) =>
       _bump(-malusPunishmentAbandoned * multiplier);

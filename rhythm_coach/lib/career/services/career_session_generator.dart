@@ -661,8 +661,25 @@ class CareerSessionGenerator {
         quickie: quickie,
         intense: intense,
       ));
-      final firstText =
-          openingPhrase ?? _pickPhraseForDraft(bank, first, 'soft');
+      // Phase 4 — coach audible : si un axe est surchargé cette séance et qu'on
+      // est sur un démarrage de séance normale (pas Supplier/encore = pas
+      // d'`openingPhrase` imposée, pas bâclée), une chance ∝ niveau de poser une
+      // phrase « attempt » (« aujourd'hui on bat ton record de gorge ») à la
+      // place de l'ouverture générique. Coach sans `progressPhrases` pour cet
+      // axe → `null` → on retombe sur l'ouverture habituelle (silence par défaut).
+      String? attemptPhrase;
+      if (_overloadAxis != null &&
+          openingPhrase == null &&
+          !quickie &&
+          _rng.nextDouble() <
+              CapabilityRegulator.progressPhraseChanceForLevel(level)) {
+        final raw =
+            bank.pickProgressPhrase(_overloadAxis!.storageKey, 'attempt', _rng);
+        if (raw != null && raw.isNotEmpty) attemptPhrase = raw;
+      }
+      final firstText = attemptPhrase ??
+          openingPhrase ??
+          _pickPhraseForDraft(bank, first, 'soft');
       steps.add(_draftToStep(first, time: 0, text: firstText));
       _lastMode = first.mode;
       _lastText = firstText;

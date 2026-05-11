@@ -152,10 +152,57 @@ class CapabilityRegulator {
   /// du `comfort` (absorbe les arrondis BPM/durée du clamp générateur).
   static const double kOvershootMargin = 1.02;
 
+  /// Probabilité de déclencher une `progressPhrase` (Phase 4 — coach audible) :
+  /// 0 tant que `level ≤ kProgressPhraseLevelGate`, puis montée linéaire de
+  /// `kProgressPhraseChancePerLevel`/niveau, plafonnée à `kProgressPhraseChanceMax`.
+  /// Quasi-muet aux premiers paliers — et de toute façon silencieux tant
+  /// qu'aucun axe n'est consolidé (pas d'axe surchargé sur un profil neuf).
+  static const int kProgressPhraseLevelGate = 4;
+  static const double kProgressPhraseChancePerLevel = 0.05;
+  static const double kProgressPhraseChanceMax = 0.40;
+
   /// Facteur de surcharge pour l'axe poussé, en fonction de sa `successRate`.
   static double surchargeFactor(double successRate) =>
       kSurchargeMin +
       (kSurchargeMax - kSurchargeMin) * successRate.clamp(0.0, 1.0);
+
+  /// Probabilité de prononcer une `progressPhrase` au niveau [level]
+  /// (cf. `kProgressPhrase*`). `level ≤ 4 → 0`.
+  static double progressPhraseChanceForLevel(int level) =>
+      ((level - kProgressPhraseLevelGate) * kProgressPhraseChancePerLevel)
+          .clamp(0.0, kProgressPhraseChanceMax);
+
+  /// Attribution du tap-out (§6) : parmi les axes figés sur un FAIL ([ceilings]),
+  /// celui le plus surchargé relativement à son `comfort` (ratio `figé/comfort`
+  /// > 1 ⇒ poussé au-delà de sa zone de confort ; inversé pour les axes
+  /// `minimize` — un floor « trop lent » a `figé < comfort`). Grâce à la
+  /// surcharge isolée du générateur, en pratique un seul axe dépasse son comfort
+  /// → attribution non ambiguë. Retourne `null` si le fail s'est produit *dans*
+  /// la zone de confort de tous les axes figés (= « fail-flemme », pas un
+  /// tap-out de limite légitime).
+  ///
+  /// Fonction **pure** : ré-utilisée par `CapabilityService.commit` (ratchet ↓
+  /// en fin de séance) ET par `SessionController` mid-session (choix d'une
+  /// phrase `tapout` du coach, Phase 4).
+  static CapabilityAxis? attributeTapOut(
+    Map<CapabilityAxis, double> ceilings,
+    CapabilityProfile profile,
+  ) {
+    CapabilityAxis? attributed;
+    double bestRatio = 1.0;
+    ceilings.forEach((axis, ceiling) {
+      final comfort = profile.comfortOf(axis);
+      if (comfort == null || comfort <= 0 || ceiling <= 0) return;
+      final ratio = axis.recordKind == CapabilityRecordKind.minimize
+          ? comfort / ceiling
+          : ceiling / comfort;
+      if (ratio > bestRatio) {
+        bestRatio = ratio;
+        attributed = axis;
+      }
+    });
+    return attributed;
+  }
 
   /// Recalcule l'état d'un axe en fin de session carrière.
   ///
@@ -392,24 +439,14 @@ class CapabilityService {
       for (final axis in CapabilityAxis.values) axis: _readState(prefs, axis),
     };
 
-    // Attribution du tap-out : parmi les axes figés sur un FAIL, celui le plus
-    // surchargé relativement à son `comfort` (ratio > 1 ⇒ poussé au-delà de sa
-    // zone de confort). Grâce à la surcharge isolée du générateur, en pratique
-    // un seul axe dépasse son comfort → attribution non ambiguë.
-    CapabilityAxis? attributed;
-    double bestRatio = 1.0;
-    report.sessionCeilings.forEach((axis, ceiling) {
-      final comfort = prevStates[axis]?.comfort;
-      if (comfort == null || comfort <= 0 || ceiling <= 0) return;
-      final ratio = axis.recordKind == CapabilityRecordKind.minimize
-          ? comfort /
-              ceiling // floor : « trop lent » ⇒ figé < comfort ⇒ ratio > 1
-          : ceiling / comfort;
-      if (ratio > bestRatio) {
-        bestRatio = ratio;
-        attributed = axis;
-      }
-    });
+    // Attribution du tap-out (cf. CapabilityRegulator.attributeTapOut) : parmi
+    // les axes figés sur un FAIL, celui le plus surchargé relativement à son
+    // `comfort`. Grâce à la surcharge isolée du générateur, en pratique un seul
+    // axe dépasse son comfort → attribution non ambiguë.
+    final attributed = CapabilityRegulator.attributeTapOut(
+      report.sessionCeilings,
+      CapabilityProfile(prevStates),
+    );
 
     for (final axis in CapabilityAxis.values) {
       final prev = prevStates[axis]!;
