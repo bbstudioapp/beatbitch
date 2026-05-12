@@ -4,6 +4,10 @@
 
 ## [Non publié]
 
+## [0.2.1] — 2026-05-12
+
+Ajout de l'allemand (3ᵉ langue) et regroupement des réglages perso dans l'écran Profil.
+
 ### Ajouté
 - **Localisation allemande complète** — l'app est désormais livrée en FR + EN + DE : UI (`app_de.arb`), phrases coach système, contenu éditorial (surnoms, punitions, commentaires aléatoires, ambiances), banque de phrases carrière, overrides texte des 37 milestones, les 6 packs de coachs et les 4 sessions scénario. `de` ajouté à `kSupportedLocales` + voix TTS allemandes préférées. Le sélecteur de langue, le repli système et l'offre « disponible en X » s'adaptent automatiquement.
 
@@ -48,7 +52,8 @@ Grosse mise à jour du mode carrière : nouvelle enveloppe de difficulté, nouve
 ## [0.1.0] — 2026-05-08
 - Premier release public : coach vocal rythmique hors-ligne pour Android, adult gate 18+, onboarding, mode carrière + scénarios, badges, profil/réputation.
 
-[Non publié]: https://github.com/bbstudioapp/beatbitch/compare/v0.2.0...develop
+[Non publié]: https://github.com/bbstudioapp/beatbitch/compare/v0.2.1...develop
+[0.2.1]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.2.1
 [0.2.0]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.2.0
 [0.1.3]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.1.3
 [0.1.2]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.1.2
