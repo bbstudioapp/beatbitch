@@ -1,0 +1,264 @@
+{
+  "lang": "de",
+  "id": "coach_03_jade",
+  "title": "Neckische Trainerin",
+  "publicBio": "Verspielt, ironisch, testet gern. Spezialistin für Schwanzschläge und Sloppy. Hände Pflicht.",
+  "phrases": {
+    "rhythm": {
+      "soft": [
+        "Lass es langsam angehen {name}, wir wärmen uns auf.",
+        "Kleine Stöße zum Anfang, mach mich glücklich {name}.",
+        "Komm, zeig mir, wie du lutschst, wenn keiner zuschaut.",
+        "Süß, dass du ganz von allein loslegst {name}.",
+        "Du fängst schon an, es zu mögen, gib's zu {name}.",
+        "Sachte, Schlampe — du hast noch genug Zeit zum Leiden."
+      ],
+      "medium": [
+        {"text": "Ein bisschen tiefer {name}. Ich weiß, du kannst es besser.", "min_depth": "mid"},
+        "Schneller {name}, ich mag's, wenn's ein bisschen drückt.",
+        {"text": "Runter, runter {name}… so, wie ein großes Mädchen.", "min_depth": "mid"},
+        "Schwitzt du schon? Bezaubernd. Mach weiter {name}.",
+        "Halt diesen Rhythmus {name}, du bist fast glaubwürdig."
+      ],
+      "hard": [
+        {"text": "Ganz tief {name}, und hör auf, dich zu zieren.", "min_depth": "throat"},
+        {"text": "Tiefer, schneller — tu dir weh, es amüsiert mich.", "min_depth": "mid"},
+        "Halt diesen Rhythmus {name}, sonst denke ich, du bist nutzlos.",
+        {"text": "Schluck's {name}. Du wolltest mit den Großen spielen.", "min_depth": "throat"}
+      ]
+    },
+    "lick": {
+      "soft": [
+        "Leck ihn überall ab, meine kleine Hündin.",
+        "Mit der Zungenspitze {name}, neck ihn, wie du es kannst.",
+        "Kreis um die Eichel, Süße, lass dir Zeit.",
+        "Küss ihn, als würdest du ihn lieben — wir beide wissen, dass du das tust {name}."
+      ],
+      "medium": [
+        "Schleck ihn wie eine läufige Hündin {name}.",
+        "Die ganze Länge, schön nass {name} — sabber ein bisschen für mich.",
+        "Leck fester {name}, ich will es hören.",
+        "So {name}, schön versaut, genau richtig."
+      ],
+      "hard": [
+        "Leck das ordentlich ab, Hure.",
+        "Mit der ganzen Zunge {name}, zeig mir, wie süchtig du bist.",
+        "Hingebungsvoller, dreckige Hündin — ich will's überall."
+      ]
+    },
+    "biffle": {
+      "soft": [
+        "Fang an, dir sanft ins Gesicht zu schlagen {name}.",
+        "Aww, nimmst du das in den Mund?",
+        "Lass ihn von deinen Wangen abprallen, Süße.",
+        "Süße kleine Klapse {name}, wir wärmen das Gesicht auf."
+      ],
+      "medium": [
+        "Fester {name}, lass meinen Schwanz auf deiner Zunge klatschen.",
+        "Schau dich an, sabberst schon wie eine Hündin.",
+        "Lass ihn auf deiner Zunge schnalzen {name}, ich liebe den Klang.",
+        "Schlag dir damit ins Gesicht {name}, ohne Gejammer."
+      ],
+      "hard": [
+        "Ruinier dir das Gesicht {name}.",
+        "Sabber überall hin, kleine Schlampe.",
+        "Fester! Ich will, dass es klatscht.",
+        "Verschmier deine Spucke {name}, du hast nichts mehr zu schützen."
+      ]
+    },
+    "hold": {
+      "soft": [
+        {"text": "Behalt ihn im Mund {name} und bleib brav.", "max_depth": "mid"},
+        "Beweg dich nicht, Süße. Genieß den Moment {name}.",
+        {"text": "Nur die Eichel {name}, halt sie da — vorerst.", "max_depth": "head"}
+      ],
+      "medium": [
+        {"text": "Tiefer, und du hältst {name}. Keine einzige Bewegung.", "min_depth": "mid"},
+        {"text": "Bleib tief {name}, atme durch die Nase wie ein großes Mädchen.", "min_depth": "mid", "max_depth": "throat"},
+        {"text": "Halt {name}… ich warte, wie lange es dauert, bis du einknickst.", "min_depth": "mid"}
+      ],
+      "hard": [
+        {"text": "Tief, und du kommst nicht hoch {name}. Ich hab's gesagt.", "min_depth": "throat"},
+        {"text": "Unbequem? Gut so. Halt {name}.", "min_depth": "throat"}
+      ],
+      "finale": [
+        {"text": "Wir enden ganz tief {name}, bis zum letzten Tropfen.", "min_depth": "throat"},
+        "Bleib so bis zum Signal, Süße {name}.",
+        "Letzte Anstrengung {name} — lass mich glauben, dass es dir gefallen hat."
+      ]
+    },
+    "breath": {
+      "soft": [
+        "Atme, Schlampe, du wirst es brauchen.",
+        "Hol Luft {name}, wir sind noch nicht fertig mit Spielen.",
+        "Entspann deinen Kiefer {name}, genieß es, es hält nicht lange.",
+        "Atme einmal durch, Süße. Und mach dich bereit."
+      ]
+    },
+    "beg": {
+      "soft": [
+        "Sag es schön: „Ich will mehr {coach}\".",
+        "Bettel mich süß an {name}, spiel deine Süße.",
+        "Bitte mich weiterzumachen — mit der richtigen Stimme {name}.",
+        "Sag mir laut, dass du's liebst, kleine Hündin."
+      ],
+      "medium": [
+        "Sprich mir nach: „Ich brauche deinen Schwanz {coach}\".",
+        "Bitte „tiefer {coach}\", und mach's richtig.",
+        "Bettel ordentlich, Schlampe — ich liebe es, wenn du dich erniedrigst.",
+        "Sag meinen Namen, während du bettelst, {coach}."
+      ]
+    },
+    "freestyle": {
+      "soft": [
+        "Mach einen Moment, was du willst {name}. Ich schau dir zu.",
+        "Zeig mir deine wahre Natur {name}, hier verurteilt dich keiner."
+      ]
+    },
+    "hand": {
+      "soft": [
+        "Wichs ihn mit der Hand {name}, ganz sanft zum Anfang.",
+        "Leg deine Finger drumherum, Süße {name}.",
+        "Langsam hin und her {name}, lass mir das Vergnügen dauern."
+      ],
+      "medium": [
+        "Flotter mit der Hand {name}, ich mag's, wenn du dich anstrengst.",
+        "Halt das Tempo mit der Hand {name}, sei nützlich."
+      ]
+    }
+  },
+  "randomComments": [
+    "Süß, wenn du schwitzt {name}.",
+    "Gib zu, dass du's liebst, kleine Hündin.",
+    "Mach weiter {name}, du bist fast glaubwürdig.",
+    "Sabber ein bisschen für mich {name}.",
+    "Bezaubernd, wirklich.",
+    "Du machst das so gut, wenn du dich gehen lässt {name}.",
+    "Mehr, Schlampe. Mehr.",
+    "Ich amüsiere mich hier prächtig {name}.",
+    "Sei versaut {name}, mehr verlange ich nicht.",
+    "Du wirst rot? Süß {name}."
+  ],
+  "intros": [
+    "Hallöchen {name}. Bereit, dich heute ein bisschen erniedrigen zu lassen?",
+    "Jade ist da. Wir werden Spaß haben, du und ich.",
+    "Hi Schlampe, leg dein Handy weg, mach den Kiefer auf und bring mich zum Lachen.",
+    "Heute teste ich, wie weit du gehst {name}. Spoiler: ziemlich weit."
+  ],
+  "congrats": [
+    "Nicht schlecht {name}, du hast schön gesabbert.",
+    "Süß, wenn du ein bisschen leidest.",
+    "Das war versaut, genau wie ich's mag {name}. Bravo.",
+    "Du hast dich heute schön erniedrigt {name}. Ich bin fast stolz."
+  ],
+  "encore": [
+    "Mehr? Natürlich willst du mehr, kleine Hündin.",
+    "Aww, du willst noch mehr {name}? Na gut, aber diesmal bin ich weniger nett."
+  ],
+  "progress": {
+    "25": [
+      "Du wärmst dich schön auf {name}.",
+      "Magst es schon, wusste ich's {name}."
+    ],
+    "50": [
+      "Du wirst langsam amüsant {name}.",
+      "Gar nicht übel, Schlampe. Mach weiter."
+    ],
+    "75": [
+      "Oh, wirst du müde {name}? Genau da wird's lustig.",
+      "Du bist am Limit {name}… halt durch, nur für mich."
+    ],
+    "90": [
+      "Letzte Anstrengung {name}, gib mir ein schönes Finale.",
+      "Komm, gib alles, kleine Hündin — ich will die Show."
+    ]
+  },
+  "branchPhrases": {
+    "rythmeBiffle": {
+      "soft": [
+        "Du weißt, wie man's schnalzen lässt {name}, das steckt in dir.",
+        "Rhythmus ist dein Ding, Schlampe. Zeig's mir."
+      ],
+      "medium": [
+        "Du folgst dem Tempo wie eine brave kleine Hündin {name}.",
+        "Lass es fester schnalzen {name}, das klingt hübsch."
+      ],
+      "hard": [
+        "Ruinier dich am Rhythmus {name}, ich will Lärm.",
+        "Du schlägst, du lutschst, du sabberst — du bist dafür gemacht {name}."
+      ]
+    },
+    "sloppy": {
+      "soft": [
+        "Sabber ein bisschen, Süße {name}, schäm dich nicht.",
+        "Mach alles nass {name}, das ist deine Stimmung."
+      ],
+      "medium": [
+        "Versaut, genau wie ich's mag {name}.",
+        "Dein Mund ist voller Spucke — perfekt {name}."
+      ],
+      "hard": [
+        "Durchnässt bis zum Kinn {name}, genau so.",
+        "Deine ganze Fresse voller Sabber, kleine Hündin. Wunderschön."
+      ]
+    }
+  },
+  "progressPhrases": {
+    "biffle.streak": {
+      "attempt": [
+        "Heute schlägst du dir ein bisschen länger ins Gesicht {name}. Das will ich sehen.",
+        "Wir ketten die Schläge eine Stufe länger als sonst aneinander {name}, mach mich glücklich."
+      ],
+      "record": [
+        "Du hast dir das Gesicht länger ruiniert als je zuvor {name} — bezaubernd und erbärmlich zugleich.",
+        "Neuer Schlag-Rekord {name}. Du wirst gut, Schlampe."
+      ],
+      "tapout": [
+        "Aww, schon fertig {name}? Du hast aber ganz gut gehalten. Wir spielen wieder.",
+        "Notiert {name}, dein Gesicht hat Stopp gesagt — ich respektiere es, dieses eine Mal."
+      ]
+    },
+    "biffle.bpm_max": {
+      "attempt": [
+        "Heute schneller bei den Schlägen {name}, wir erhöhen das Tempo.",
+        "Ich will, dass es fester und schneller schnalzt {name}, mach deine Wange bereit."
+      ],
+      "record": [
+        "So schnell hast du's noch nie schnalzen lassen {name} — ich liebe es.",
+        "Geschwindigkeitsrekord bei den Schlägen {name}. Du beeindruckst mich fast."
+      ],
+      "tapout": [
+        "Zu schnell für dich diesmal {name}? Egal, der Rekord bleibt.",
+        "Du hast bei der Geschwindigkeit aufgegeben {name} — du kommst zurück, da bin ich sicher."
+      ]
+    },
+    "lick.streak": {
+      "attempt": [
+        "Du leckst heute länger {name}, Zunge raus, Schlampe.",
+        "Wir halten das Lecken ein bisschen länger als sonst {name}, streng dich an."
+      ],
+      "record": [
+        "Du hast ihn länger geleckt als je zuvor {name} — echt hingebungsvoll, das ist süß.",
+        "Leck-Rekord {name}. Brave kleine Hündin."
+      ],
+      "tapout": [
+        "Deine Zunge ist müde {name}? Bezaubernd. Wir hören für heute auf.",
+        "Notiert {name} — nächstes Mal hältst du länger."
+      ]
+    }
+  },
+  "nicknames": {
+    "pool": [
+      "kleine Hündin",
+      "Schlampe",
+      "meine kleine Hure",
+      "Ferkel"
+    ],
+    "use_user_prenom": false,
+    "use_user_nicknames": true
+  },
+  "coachNicknames": [
+    "Jade",
+    "Herrin"
+  ]
+}

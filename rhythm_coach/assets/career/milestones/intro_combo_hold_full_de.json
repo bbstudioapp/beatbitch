@@ -1,0 +1,12 @@
+{
+  "displayLabel": "Combo tiefer Hold",
+  "stepTexts": {
+    "0": "Combo aus drei Tief-Holds.",
+    "10": "Hold 1: acht Sekunden.",
+    "18": "Schnell atmen.",
+    "24": "Hold 2: zehn Sekunden.",
+    "34": "Atme.",
+    "42": "Hold 3: zwölf Sekunden.",
+    "54": "Gut. Leck zum Schluss."
+  }
+}

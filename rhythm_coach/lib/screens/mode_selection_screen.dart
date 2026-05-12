@@ -23,6 +23,7 @@ import '../services/tts_service.dart';
 import '../services/user_profile_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/adult_gate_dialog.dart';
+import '../widgets/language_picker_dialog.dart';
 import '../widgets/onboarding_sheet.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
@@ -89,14 +90,22 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _runFirstRunFlow();
       if (!mounted) return;
+      await _maybeOfferNewLocale();
+      if (!mounted) return;
       _maybeLaunchSurprise();
     });
   }
 
-  /// Adult gate (18+) puis onboarding 3 étapes. Bloque le reste du flow
-  /// (notifs surprise comprises) tant que le consent n'est pas donné.
+  /// Sélecteur de langue (1er lancement, OS non supporté) → adult gate (18+)
+  /// → onboarding 3 étapes. Bloque le reste du flow (notifs surprise
+  /// comprises) tant que le consent n'est pas donné. La langue passe d'abord
+  /// pour que l'adult gate et l'onboarding s'affichent dans la bonne langue.
   Future<void> _runFirstRunFlow() async {
     if (!mounted) return;
+    if (LocaleService.instance.needsLanguageSelection) {
+      await LanguagePickerDialog.show(context);
+      if (!mounted) return;
+    }
     if (!AdultConsentService.instance.isAccepted) {
       final accepted = await AdultGateDialog.show(context);
       if (!mounted || !accepted) return;
@@ -110,6 +119,23 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
           _openSoundDemo();
         },
       );
+    }
+  }
+
+  /// Si une langue ajoutée dans une version ultérieure correspond maintenant
+  /// à la langue du téléphone, propose (une seule fois, refus possible) de
+  /// basculer dessus. Inerte tant qu'aucune langue n'a été ajoutée après le
+  /// dernier choix explicite de l'utilisatrice.
+  Future<void> _maybeOfferNewLocale() async {
+    final offered = await LocaleService.instance.pendingNewLocaleOffer();
+    if (offered == null || !mounted) return;
+    final switchNow = await NewLocaleOfferDialog.show(context, offered);
+    if (!mounted) return;
+    if (switchNow == true) {
+      await LocaleService.instance.setLocale(offered);
+    } else {
+      // Refus (ou dialogue ignoré) → on fige le choix courant : plus reproposé.
+      await LocaleService.instance.keepCurrentLocale();
     }
   }
 

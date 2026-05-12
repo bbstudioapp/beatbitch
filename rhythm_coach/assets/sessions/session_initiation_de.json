@@ -1,0 +1,30 @@
+{
+  "lang": "de",
+  "id": "initiation",
+  "name": "Einführungs-Session",
+  "description": "Sanfter Start, allmähliche Steigerung über 8 Minuten.",
+  "duration_seconds": 480,
+  "mode": "rhythm",
+  "intro": "Willkommen. Das ist dein erster Schritt, wir gehen es langsam an. Leg dein Handy flach auf die Seite, du musst nicht mehr draufschauen. Acht Minuten lang folgst du meiner Stimme und dem Rhythmus der Beeps — anfangs langsam, dann werden wir schneller und erweitern den Hub. Atme ruhig, verkrampf dich nicht. Wenn du bereit bist, bestätige.",
+  "steps": [
+    {"time": 0,   "text": "Wir fangen an. Mach es dir bequem, atme tief. Find einen langsamen, gleichmäßigen Rhythmus.",
+                  "mode": "rhythm", "from": "tip", "to": "head", "bpm": 50},
+    {"time": 30,  "text": "Gut. Halt dieses Tempo. Konzentrier dich auf deinen Atem."},
+    {"time": 60,  "text": "Werd ein bisschen schneller. Sei präzise bei jeder Bewegung.",
+                  "mode": "rhythm", "from": "head", "to": "mid", "bpm": 75},
+    {"time": 120, "text": "Halt diesen Rhythmus. Du hast die Kontrolle."},
+    {"time": 180, "text": "Noch ein bisschen schneller. Halt den Hub.",
+                  "mode": "rhythm", "from": "head", "to": "mid", "bpm": 95},
+    {"time": 240, "text": "Ausgezeichnet. Halt dieses Niveau eine ganze Minute.",
+                  "mode": "rhythm", "from": "head", "to": "throat", "bpm": 105},
+    {"time": 300, "text": "Werd allmählich langsamer. Erhol dich, ohne aufzuhören.",
+                  "mode": "lick", "from": "tip", "to": "head", "bpm": 55},
+    {"time": 360, "text": "Werd wieder schneller. Ein letzter Schub kommt.",
+                  "mode": "rhythm", "from": "head", "to": "throat", "bpm": 120},
+    {"time": 420, "text": "Gib alles, was dir noch bleibt. Lass nicht los.",
+                  "mode": "rhythm", "from": "head", "to": "full", "bpm": 135},
+    {"time": 465, "text": "Werd sanft langsamer. Die Session geht zu Ende.",
+                  "mode": "rhythm", "from": "tip", "to": "head", "bpm": 65},
+    {"time": 478, "text": "Fertig. Gut gemacht."}
+  ]
+}

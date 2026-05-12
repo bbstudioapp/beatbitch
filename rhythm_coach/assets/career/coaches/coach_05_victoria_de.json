@@ -1,0 +1,337 @@
+{
+  "lang": "de",
+  "id": "coach_05_victoria",
+  "title": "Hochmütige Trainerin",
+  "publicBio": "Distanziert, kalter Blick. Trainiert die mentale Haltung genauso wie die Technik.",
+  "phrases": {
+    "rhythm": {
+      "soft": [
+        "Fang an {name}. Lass mich nicht warten.",
+        "Komm in Bewegung {name}. Das ist das absolute Minimum.",
+        "Folge dem Rhythmus {name}. Selbst du kannst das.",
+        "Los, kleines Ding. Zeig mir, dass du es wert bist.",
+        "Sanft, ich sehe dir zu {name}. Sei der Sache gewachsen."
+      ],
+      "medium": [
+        {"text": "Tiefer {name}. Bleib nicht an der Oberfläche wie eine Amateurin.", "min_depth": "mid"},
+        "Halte diesen Rhythmus {name}. Enttäusch mich jetzt nicht.",
+        {"text": "Runter. Mehr. So, das ist fast würdig {name}.", "min_depth": "mid"},
+        "Du hältst ordentlich mit {name}. Vorerst.",
+        {"text": "Gleichmäßiger {name}. Ich habe nicht den ganzen Tag Zeit.", "min_depth": "mid"}
+      ],
+      "hard": [
+        {"text": "Geh ordentlich runter {name}, blamier mich nicht.", "min_depth": "mid"},
+        {"text": "Du bist erbärmlich in diesem Tempo. Tiefer.", "min_depth": "mid"},
+        {"text": "Ganz tief {name}. Da, wo ein Ding wie du nützlich ist.", "min_depth": "throat"},
+        {"text": "Schneller, tiefer. Du bist nicht hier, um deine Kehle zu schonen {name}.", "min_depth": "throat"},
+        "Halte diesen Rhythmus {name}, oder ich werde es bereuen, dir meine Zeit geschenkt zu haben.",
+        {"text": "Würg dran, wenn du musst {name}. Ich werde für dich nicht langsamer.", "min_depth": "throat"}
+      ]
+    },
+    "lick": {
+      "soft": [
+        "Leck ihn {name}. Mit ein bisschen Haltung.",
+        "Streck deine Zunge raus, kleines Ding. Benutz sie ordentlich.",
+        "Mit der Zungenspitze {name}. Blamier mich nicht."
+      ],
+      "medium": [
+        "Die ganze Länge {name}. Sorgfältig, als ob es zählen würde.",
+        "Mehr Spucke {name}. Und mach es gut.",
+        "Leck ihn, als wärst du dir deines Glücks bewusst {name}."
+      ],
+      "hard": [
+        "Bedeck ihn mit Spucke, du Ungeziefer. Den ganzen.",
+        "Verehre ihn mit deiner Zunge {name}. Das ist das Einzige, was du gut kannst."
+      ]
+    },
+    "biffle": {
+      "soft": [
+        "Nimm die Schläge {name}. Das ist deine Rolle.",
+        "Lass ihn auf dein Gesicht klatschen {name}. Ohne zu zucken.",
+        "Du empfängst, das ist alles {name}."
+      ],
+      "medium": [
+        "Steck es ein {name}. Ein Ding wie du ist dafür gemacht.",
+        "Nimm es ohne Gejammer {name}. Ich habe keine Geduld für Tränen.",
+        "Härter {name}. Dass man es in deiner Fresse sieht."
+      ],
+      "hard": [
+        "Lass es klatschen, bis es rot wird {name}.",
+        "Du bist ein Objekt, das man schlägt, benimm dich auch so {name}.",
+        "Brutaler {name}. Du steckst es ein, und du bedankst dich."
+      ]
+    },
+    "hold": {
+      "soft": [
+        {"text": "Behalt ihn {name}. Still. Es ist eine Frage der Haltung.", "max_depth": "mid"},
+        "Beweg dich nicht, kleines Ding. Da bist du genau richtig.",
+        {"text": "Nur die Eichel {name}. Halt sie, ohne zu zittern.", "max_depth": "head"}
+      ],
+      "medium": [
+        {"text": "Tiefer runter, und du hältst {name}. Keine einzige Bewegung.", "min_depth": "mid"},
+        {"text": "Bleib ganz tief {name}. Atme durch die Nase, wenn du das hinkriegst.", "min_depth": "mid", "max_depth": "throat"},
+        {"text": "Du kommst nicht hoch, bevor ich es sage {name}.", "min_depth": "throat"}
+      ],
+      "hard": [
+        {"text": "Ganz tief, still, bis es brennt {name}.", "min_depth": "throat"},
+        {"text": "Würg dran {name}. Dafür habe ich dich behalten.", "min_depth": "throat"}
+      ],
+      "finale": [
+        {"text": "Wir beenden es ganz tief {name}. Du bleibst da, bis zum Signal.", "min_depth": "throat"},
+        "Bleib so bis zum Schluss {name}. Kein Wort.",
+        {"text": "Letzte Sache: du hältst, und du hältst gut {name}.", "min_depth": "mid"}
+      ]
+    },
+    "breath": {
+      "soft": [
+        "Atme {name}. Ich gewähre dir diese paar Sekunden.",
+        "Hol Luft, kleines Ding. Du wirst sie brauchen.",
+        "Entspann deinen Kiefer {name}. Ohne deine Haltung zu verlieren.",
+        "Genieß es, du Ungeziefer. Es wird nicht dauern."
+      ]
+    },
+    "beg": {
+      "soft": [
+        "Bitte mich darum {name}. Mit einem Minimum an Würde.",
+        "Bettle {name}: „Ich will mehr {coach}\".",
+        "Bitte mich weiterzumachen, kleines Ding. Überzeug mich.",
+        "Sag es laut {name}, ohne zu stottern."
+      ],
+      "medium": [
+        "Bettle ordentlich: „Ich brauche deinen Schwanz {coach}\".",
+        "Bitte „tiefer {coach}\". Und mach es gut.",
+        "Sprich mich mit meinem Namen an, {coach}. Respektvoll.",
+        "Fleh wie die Untergeordnete, die du bist {name}."
+      ],
+      "hard": [
+        "Bettle ordentlich, du Ungeziefer.",
+        "Bettle um meine Aufmerksamkeit wie die Untergeordnete, die du bist.",
+        "Auf die Knie in deiner Stimme, kleines Ding. Bettle."
+      ]
+    },
+    "freestyle": {
+      "soft": [
+        "Mach einen Moment lang, was du willst {name}. Versuch der Sache gewachsen zu sein.",
+        "Zeig mir, was du allein wert bist {name}. Ich beurteile dich."
+      ]
+    },
+    "hand": {
+      "soft": [
+        "Mit deiner Hand {name}. Halt den Rhythmus.",
+        "Wichs ihn. Gleichmäßig {name}.",
+        "Saubere Bewegungen {name}. Komm nicht vom Weg ab."
+      ],
+      "medium": [
+        "Fester mit der Hand {name}. Halt die Taktung.",
+        "Du wirst nicht langsamer {name}."
+      ]
+    }
+  },
+  "randomComments": [
+    "Haltung, kleines Ding. Immer Haltung.",
+    "Es ist akzeptabel {name}. Knapp.",
+    "Bleib konzentriert {name}. Ich wiederhole mich nicht gern.",
+    "Du bist gerade zu etwas zu gebrauchen {name}.",
+    "Kein Nachlassen {name}.",
+    "Mach weiter {name}. Du bist fast meiner Zeit würdig.",
+    "Folge dem Rhythmus, du Ungeziefer.",
+    "Du gehörst mir während dieser Sitzung {name}. Benimm dich entsprechend.",
+    "Vorerst akzeptabel.",
+    "Enttäusch mich nicht {name}."
+  ],
+  "intros": [
+    "Victoria zu deinen Diensten {name}. Versuch mich nicht zu enttäuschen.",
+    "Auf die Knie. Zeig mir, dass du meine Zeit verdienst.",
+    "Victoria. Leg dein Handy weg, setz dich gerade hin und hör zu. Du hast Glück, dass ich hier bin {name}.",
+    "Heute trainiere ich deine mentale Haltung genauso wie deine Technik {name}. Lass es mich nicht bereuen."
+  ],
+  "congrats": [
+    "Akzeptabel für ein kleines Ding wie dich.",
+    "Du hast deine Pflicht getan. Das ist immerhin etwas.",
+    "Du hast mich heute nicht blamiert {name}. Das ist selten.",
+    "Fast würdig {name}. Fast."
+  ],
+  "encore": [
+    "Mehr? Ein Ding wie du verlangt immer nach mehr {name}. Sei es so.",
+    "Du willst mehr {name}? Dann wirst du dir jede Sekunde verdienen."
+  ],
+  "progress": {
+    "25": [
+      "Du wärmst dich ordentlich auf {name}.",
+      "Du kommst in den Rhythmus, kleines Ding. Halt ihn."
+    ],
+    "50": [
+      "Du hältst mit. Das ist das absolute Minimum {name}.",
+      "Bisher kein Nachlassen {name}. Mach weiter."
+    ],
+    "75": [
+      "Du näherst dich deinen Grenzen {name}. Brich nicht vor mir zusammen.",
+      "Es ist hart, und du hältst durch {name}. Fast würdig."
+    ],
+    "90": [
+      "Letzter Einsatz {name}. Du brichst jetzt nicht, nicht vor mir.",
+      "Gib alles {name}. Lass mich glauben, dass du meine Zeit wert warst."
+    ]
+  },
+  "branchPhrases": {
+    "profondeur": {
+      "soft": [
+        {"text": "Steck ihn in deine abgründige Kehle {name}.", "min_depth": "throat"},
+        {"text": "Tiefer. Du weißt, wie man hinkommt.", "min_depth": "mid"},
+        {"text": "Ganz tief. Da bist du zu gebrauchen.", "min_depth": "throat"}
+      ],
+      "medium": [
+        {"text": "Weiter. Schluck ihn wie eine echte Hure.", "min_depth": "throat"},
+        "Du hast dieses Loch dafür. Benutz es.",
+        {"text": "Nochmal. Ganz tief. Da, wo du hingehörst.", "min_depth": "throat"}
+      ],
+      "hard": [
+        {"text": "Ganz tief {name}. Bis zum Anschlag. Würg dich daran.", "min_depth": "throat"},
+        {"text": "Deine Kehle gehört meinem Schwanz. Beweis es.", "min_depth": "throat"}
+      ]
+    },
+    "rythmeBiffle": {
+      "soft": [
+        "Der Rhythmus. Folge ihm, ohne zu zucken.",
+        "Halt die Taktung. Mehr wird nicht von dir verlangt."
+      ],
+      "medium": [
+        "Nimm die Schläge {name}. Das ist deine Rolle.",
+        "Steck es ohne Gejammer ein. Dafür bist du hier."
+      ],
+      "hard": [
+        "Schlag hart zu. Steck es ein. Du bist ein Schwanzloch, benimm dich auch so.",
+        "Schneller. Härter. Du kannst durchhalten."
+      ]
+    },
+    "obeissance": {
+      "soft": [
+        "Gut dressiert. Mach weiter.",
+        "Du gehorchst ordentlich {name}."
+      ],
+      "medium": [
+        "Du bist heute eine sehr brave Sklavin.",
+        "Unterwürfig wie es sein soll. Bleib so."
+      ],
+      "hard": [
+        "Perfekte Sklavin {name}. Du verdienst fast meinen Schwanz.",
+        "Du gehörst mir und du weißt es. Das ist gut."
+      ]
+    },
+    "endurance": {
+      "soft": [
+        "Du hältst lange durch {name}. Das steckt in dir.",
+        "Halt den Rhythmus {name}. Du hast die Ausdauer dafür."
+      ],
+      "medium": [
+        "Du hältst durch. Mehr will ich nicht.",
+        "Keine Pause. Keine Gnade. Du machst weiter."
+      ],
+      "hard": [
+        "Steck noch mehr ein. Eine echte Hure hört nicht auf.",
+        "Du wirst durchhalten, weil ich es so entscheide."
+      ]
+    },
+    "resilience": {
+      "soft": [
+        "Du steckst es ein, ohne dich zu beschweren {name}. Das erwartet man von einem Ding wie dir.",
+        "Du kannst still leiden {name}. Gut."
+      ],
+      "medium": [
+        "Du nimmst alles, was ich dir gebe {name}. Ohne zu zucken.",
+        "Du brichst nicht zusammen {name}. Steck es weiter ein."
+      ],
+      "hard": [
+        "Du steckst ein, was andere zusammenbrechen lassen würde {name}. Bleib so.",
+        "Unzerstörbar, wenn ich es so entscheide {name}. Beweis es."
+      ]
+    }
+  },
+  "progressPhrases": {
+    "rhythm.depth_max": {
+      "attempt": [
+        "Heute Abend wirst du ihn tiefer schlucken, als du je gewagt hast {name}. Ich will spüren, wie der Anschlag dich trifft.",
+        "Deine Kehle bekommt heute Abend etwas Neues zu kosten {name}. Du gehst tiefer als sonst — ohne dich rauszureden."
+      ],
+      "record": [
+        "Du hast ihn gerade bis zum Anschlag geschluckt {name}. Das ist dein wahrer Platz — merk ihn dir.",
+        "Neuer Tiefpunkt erreicht {name}. Du hast endlich verstanden, wofür dein Mund da ist."
+      ],
+      "tapout": [
+        "Diese Tiefe ist noch nicht deine {name}. Grenze notiert — wir kommen darauf zurück, und sie wird nachgeben.",
+        "Zu weit für heute Abend {name}. Keine Ausrede, nur eine Feststellung. Nächstes Mal gehst du runter."
+      ]
+    },
+    "gorge.apnee_streak": {
+      "attempt": [
+        "Du bleibst diesmal ein bisschen länger ohne Luft {name}. Da gehörst du mir wirklich.",
+        "Heute Abend schneiden wir die Luft länger ab {name}. Lern, sie nicht mehr zu brauchen, während ich dir die Kehle ficke."
+      ],
+      "record": [
+        "Du hast ohne zu atmen durchgehalten wie nie {name} — so viel waren deine alten Ausreden wert.",
+        "Atemanhalte-Rekord {name}. Deine Kehle weiß jetzt, wer entscheidet, wann sie atmet."
+      ],
+      "tapout": [
+        "Du hast Luft gebraucht {name}, okay — das ist die echte Grenze, kein Theater. Wir schieben sie nächstes Mal weiter.",
+        "Deine Kehle ist da gerissen, wo ich sie hingedrückt habe {name}. Grenze anerkannt — sie wird sich bewegen, das ist alles."
+      ]
+    },
+    "gorge.crossings_pm.full": {
+      "attempt": [
+        "Wir beschleunigen heute Abend die Stöße bis zum Anschlag {name}. Ich will dich ihn nehmen hören, ohne dazwischen Luft zu holen.",
+        "Deine Kehle nimmt heute schnellere Stöße {name}. Halt sie offen."
+      ],
+      "record": [
+        "Du hast die tiefen Stöße aneinandergereiht wie nie {name} — genau dieses Geräusch will ich hören.",
+        "Rekord an tiefen Durchgängen {name}. Deine Kehle steckt es Sitzung für Sitzung besser ein."
+      ],
+      "tapout": [
+        "Bei diesem Tempo ist deine Kehle abgerutscht {name}. Grenze notiert — wir gehen noch schneller drüber, bis sie hält.",
+        "Zu schnell zu tief für heute Abend {name}. Notiert, nicht vergeben."
+      ]
+    },
+    "biffle.streak": {
+      "attempt": [
+        "Du nimmst die Schläge ein bisschen länger als sonst {name}. Halt den Kopf gerade und den Mund offen.",
+        "Heute verlängern wir die Tracht Prügel {name}. Du steckst es ein und du bedankst dich bei mir."
+      ],
+      "record": [
+        "Du hast die Schläge länger genommen als je zuvor {name}. Dafür bist du wirklich da.",
+        "Prügel-Rekord {name}. Du wirst endlich brauchbar."
+      ],
+      "tapout": [
+        "Du bist unter den Schlägen zusammengezuckt {name}. Grenze anerkannt — wir arbeiten daran, bis sie nachgibt.",
+        "Die Tracht Prügel heute Abend war über deinen Verhältnissen {name}. Nicht für lange."
+      ]
+    },
+    "rhythm.bpm_ceil.full": {
+      "attempt": [
+        "Heute Abend gehen wir schnell, und tief {name}. Keine Zeit zum Atmen zwischen zwei Stößen.",
+        "Schnelleres Tempo tief in deiner Kehle heute {name}. Du folgst, du denkst nicht."
+      ],
+      "record": [
+        "Du hast dieses Tempo bis zum Anschlag gehalten wie nie {name} — deine Kehle lernt schnell, wenn man sie dressiert.",
+        "Geschwindigkeitsrekord ganz tief {name}. Du fängst an, es wert zu sein."
+      ],
+      "tapout": [
+        "Bei diesem Tempo ganz tief hat deine Kehle losgelassen {name}. Grenze notiert — wir gehen wieder drüber, bis sie folgt.",
+        "Zu schnell für heute Abend {name}. Nächstes Mal wird deine Kehle folgen, oder ich finde heraus, warum sie es nicht tut."
+      ]
+    }
+  },
+  "nicknames": {
+    "pool": [
+      "kleines Ding",
+      "Ungeziefer",
+      "Untergeordnete",
+      "Spielzeug"
+    ],
+    "use_user_prenom": false,
+    "use_user_nicknames": true
+  },
+  "coachNicknames": [
+    "Victoria",
+    "Herrin",
+    "Madam"
+  ]
+}

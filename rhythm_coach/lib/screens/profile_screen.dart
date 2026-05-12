@@ -17,6 +17,8 @@ import '../services/tts_service.dart';
 import '../services/user_profile_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/identity_section.dart';
+import '../widgets/language_picker_row.dart';
+import '../widgets/voice_settings_section.dart';
 
 /// Écran Profil : affiche le score de réputation, les stats cumulées,
 /// et la grille des badges débloqués / en cours. Hôte aussi le bloc
@@ -174,6 +176,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 8),
                 _CapabilitiesBlock(profile: bundle.capabilities),
               ],
+              const SizedBox(height: 24),
+              _SectionLabel(t.settingsLanguageSection),
+              const SizedBox(height: 8),
+              const LanguagePickerRow(),
+              if (widget.tts != null) ...[
+                const SizedBox(height: 24),
+                _SectionLabel(t.soundsVoiceSection),
+                const SizedBox(height: 8),
+                VoiceSettingsSection(
+                  tts: widget.tts!,
+                  userProfile: widget.userProfile,
+                ),
+              ],
               const SizedBox(height: 32),
               _ResetSection(
                 resetting: _resetting,
@@ -181,6 +196,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               const SizedBox(height: 24),
               _AboutSection(info: bundle.packageInfo),
+              const SizedBox(height: 24),
+              _InfoTextSection(
+                label: t.profileUpdatesSection,
+                body: t.profileUpdatesBody,
+              ),
+              const SizedBox(height: 24),
+              _InfoTextSection(
+                label: t.profileDisclaimerSection,
+                body: t.profileDisclaimerBody,
+              ),
             ],
           );
         },
@@ -233,6 +258,43 @@ class _AboutSection extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Bloc générique « label + paragraphe » pour les sections informatives de
+/// bas de page (mises à jour, avertissement). Liens affichés en toutes
+/// lettres : pas de dépendance `url_launcher`, cohérent avec la ligne
+/// « hors ligne » de la section À PROPOS.
+class _InfoTextSection extends StatelessWidget {
+  final String label;
+  final String body;
+
+  const _InfoTextSection({required this.label, required this.body});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _SectionLabel(label),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: AppTheme.surface,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Text(
+            body,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppTheme.textMuted,
+              height: 1.5,
+            ),
           ),
         ),
       ],
