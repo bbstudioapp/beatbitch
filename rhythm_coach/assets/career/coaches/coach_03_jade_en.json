@@ -6,15 +6,15 @@
   "phrases": {
     "rhythm": {
       "soft": [
-        "Take it slow {name} ~ we're warming up.",
+        "Take it slow {name}, we're warming up.",
         "Little strokes to start, make me happy {name}.",
-        "Come on, show me how you suck when nobody's judging ~",
+        "Come on, show me how you suck when nobody's judging.",
         "Cute, getting to it all by yourself {name}.",
-        "You're already starting to like it, admit it {name} ~",
+        "You're already starting to like it, admit it {name}.",
         "Easy now, bitch — you'll have plenty of time to suffer later."
       ],
       "medium": [
-        {"text": "A little deeper {name} ~ I know you can do better.", "min_depth": "mid"},
+        {"text": "A little deeper {name}. I know you can do better.", "min_depth": "mid"},
         "Faster {name}, I like it when it forces a bit.",
         {"text": "Down, down {name}… there, like a big girl.", "min_depth": "mid"},
         "Sweating already? Adorable. Keep going {name}.",
@@ -30,7 +30,7 @@
     "lick": {
       "soft": [
         "Lick it everywhere, my little bitch.",
-        "With the tip of your tongue {name} ~ tease it like you know how.",
+        "With the tip of your tongue {name}, tease it like you know how.",
         "Circle around the head, cutie, take your time.",
         "Kiss it like you love it — we both know you do {name}."
       ],
@@ -48,9 +48,9 @@
     },
     "biffle": {
       "soft": [
-        "Start slapping your face gently {name} ~",
+        "Start slapping your face gently {name}.",
         "Aww, are you going to take that in your mouth?",
-        "Let it bounce off your cheeks, cutie ~",
+        "Let it bounce off your cheeks, cutie.",
         "Cute little taps {name}, we're warming up the face."
       ],
       "medium": [
@@ -68,7 +68,7 @@
     },
     "hold": {
       "soft": [
-        {"text": "Keep it in your mouth {name} ~ and stay good.", "max_depth": "mid"},
+        {"text": "Keep it in your mouth {name} and stay good.", "max_depth": "mid"},
         "Don't move, cutie. Enjoy the moment {name}.",
         {"text": "Just the head {name}, hold it there — for now.", "max_depth": "head"}
       ],
@@ -89,7 +89,7 @@
     },
     "breath": {
       "soft": [
-        "Breathe, bitch ~ you're going to need it.",
+        "Breathe, bitch, you're going to need it.",
         "Catch your breath {name}, we're not done playing.",
         "Relax your jaw {name}, enjoy it, it won't last.",
         "Take a breath, cutie. And get ready."
@@ -97,7 +97,7 @@
     },
     "beg": {
       "soft": [
-        "Say it nicely: \"I want more {coach}\" ~",
+        "Say it nicely: \"I want more {coach}\".",
         "Beg me sweetly {name}, do your cute act.",
         "Ask me to continue — with the right voice {name}.",
         "Tell me out loud you love it, little bitch."
@@ -111,13 +111,13 @@
     },
     "freestyle": {
       "soft": [
-        "Do what you want for a moment {name} ~ I'm watching you.",
+        "Do what you want for a moment {name}. I'm watching you.",
         "Show me your true nature {name}, nobody's judging you here."
       ]
     },
     "hand": {
       "soft": [
-        "Stroke it with your hand {name} ~ all soft to start.",
+        "Stroke it with your hand {name}, all soft to start.",
         "Wrap your fingers around it, cutie {name}.",
         "Slow strokes {name}, make my pleasure last."
       ],
@@ -130,7 +130,7 @@
   "randomComments": [
     "Cute when you sweat {name}.",
     "Admit you love it, little bitch.",
-    "Keep going {name} ~ you're almost believable.",
+    "Keep going {name}, you're almost believable.",
     "Drool a little for me {name}.",
     "Adorable, really.",
     "You do this so well when you let go {name}.",
@@ -140,9 +140,9 @@
     "You're blushing? Cute {name}."
   ],
   "intros": [
-    "Hey there {name} ~ Ready to get a little humiliated today?",
+    "Hey there {name}. Ready to get a little humiliated today?",
     "Jade is here. We're going to have fun, you and I.",
-    "Hi bitch ~ put your phone down, open that jaw, and make me laugh.",
+    "Hi bitch, put your phone down, open that jaw, and make me laugh.",
     "Today I'm testing how far you'll go {name}. Spoiler: pretty far."
   ],
   "congrats": [
@@ -152,12 +152,12 @@
     "You debased yourself nicely today {name}. I'm almost proud."
   ],
   "encore": [
-    "More? Of course you want more, little bitch ~",
+    "More? Of course you want more, little bitch.",
     "Aww, you're asking for more {name}? Alright, but this time I'm less nice."
   ],
   "progress": {
     "25": [
-      "You're warming up nicely {name} ~",
+      "You're warming up nicely {name}.",
       "Already liking it, knew it {name}."
     ],
     "50": [
@@ -176,7 +176,7 @@
   "branchPhrases": {
     "rythmeBiffle": {
       "soft": [
-        "You know how to make it snap {name}, it's in you ~",
+        "You know how to make it snap {name}, it's in you.",
         "Rhythm is your thing, bitch. Show me."
       ],
       "medium": [
@@ -206,7 +206,7 @@
   "progressPhrases": {
     "biffle.streak": {
       "attempt": [
-        "Today you slap your face a little longer {name} ~ I want to see that.",
+        "Today you slap your face a little longer {name}. I want to see that.",
         "We're chaining the slaps one notch more than usual {name}, make me happy."
       ],
       "record": [
@@ -220,7 +220,7 @@
     },
     "biffle.bpm_max": {
       "attempt": [
-        "Faster on the slaps today {name} ~ we're raising the tempo.",
+        "Faster on the slaps today {name}, we're raising the tempo.",
         "I want it to snap harder and faster {name}, get your cheek ready."
       ],
       "record": [
@@ -234,7 +234,7 @@
     },
     "lick.streak": {
       "attempt": [
-        "You're going to lick longer today {name} ~ tongue out, bitch.",
+        "You're going to lick longer today {name}, tongue out, bitch.",
         "We hold the licking a little more than usual {name}, apply yourself."
       ],
       "record": [

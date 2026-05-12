@@ -6,15 +6,15 @@
   "phrases": {
     "rhythm": {
       "soft": [
-        "Vas-y doucement {name} ~ on se chauffe.",
+        "Vas-y doucement {name}, on se chauffe.",
         "Petits coups pour commencer, fais-moi plaisir {name}.",
-        "Allez, montre-moi comment tu suces quand personne te juge ~",
+        "Allez, montre-moi comment tu suces quand personne te juge.",
         "Mignonne, tu t’y mets toute seule {name}.",
-        "Tu commences déjà à aimer ça, avoue {name} ~",
+        "Tu commences déjà à aimer ça, avoue {name}.",
         "Doucement la chienne, t’auras tout le temps de souffrir après."
       ],
       "medium": [
-        {"text": "Un peu plus profond {name} ~ je sais que tu peux faire mieux.", "min_depth": "mid"},
+        {"text": "Un peu plus profond {name}, je sais que tu peux faire mieux.", "min_depth": "mid"},
         "Plus vite {name}, j’aime quand ça force un peu.",
         {"text": "Descends, descends {name}… voilà, comme une grande.", "min_depth": "mid"},
         "Tu transpires déjà ? Adorable. Continue {name}.",
@@ -30,7 +30,7 @@
     "lick": {
       "soft": [
         "Lèche bien partout ma petite chienne.",
-        "Du bout de la langue {name} ~ taquine-le comme tu sais.",
+        "Du bout de la langue {name}, taquine-le comme tu sais.",
         "Tourne autour du gland, mignonne, prends ton temps.",
         "Embrasse-le comme si tu l’aimais — on sait toutes les deux que oui {name}."
       ],
@@ -48,9 +48,9 @@
     },
     "biffle": {
       "soft": [
-        "Commence à te taper le visage doucement {name} ~",
+        "Commence à te taper le visage doucement {name}.",
         "Aww, tu vas prendre ça dans ta bouche ?",
-        "Laisse-le rebondir sur tes joues, mignonne ~",
+        "Laisse-le rebondir sur tes joues, mignonne.",
         "Petits coups tout mignons {name}, on échauffe le visage."
       ],
       "medium": [
@@ -68,7 +68,7 @@
     },
     "hold": {
       "soft": [
-        {"text": "Garde-le en bouche {name} ~ et reste sage.", "max_depth": "mid"},
+        {"text": "Garde-le en bouche {name} et reste sage.", "max_depth": "mid"},
         "Ne bouge plus, mignonne. Apprécie le moment {name}.",
         {"text": "Juste le gland {name}, tiens-le là — pour l’instant.", "max_depth": "head"}
       ],
@@ -89,7 +89,7 @@
     },
     "breath": {
       "soft": [
-        "Respire, ma chienne ~ tu vas en avoir besoin.",
+        "Respire, ma chienne, tu vas en avoir besoin.",
         "Reprends ton souffle {name}, on n’a pas fini de jouer.",
         "Détends ta mâchoire {name}, profite, ça dure pas.",
         "Souffle un coup, mignonne. Et prépare-toi."
@@ -97,7 +97,7 @@
     },
     "beg": {
       "soft": [
-        "Dis-le-moi joliment : « j'en veux encore {coach} » ~",
+        "Dis-le-moi joliment : « j'en veux encore {coach} ».",
         "Supplie-moi gentiment {name}, fais ta mignonne.",
         "Demande-moi de continuer — avec la voix qui va bien {name}.",
         "Dis-moi à voix haute que t'aimes ça, petite chienne."
@@ -111,13 +111,13 @@
     },
     "freestyle": {
       "soft": [
-        "Fais ce que tu veux un moment {name} ~ je te regarde.",
+        "Fais ce que tu veux un moment {name}, je te regarde.",
         "Montre-moi ta vraie nature {name}, personne ne te juge ici."
       ]
     },
     "hand": {
       "soft": [
-        "Branle-le avec ta main {name} ~ tout doux pour commencer.",
+        "Branle-le avec ta main {name}, tout doux pour commencer.",
         "Enroule tes doigts autour, mignonne {name}.",
         "Va-et-vient lent {name}, fais-moi durer le plaisir."
       ],
@@ -130,7 +130,7 @@
   "randomComments": [
     "Mignonne quand tu transpires {name}.",
     "Avoue que t’aimes ça, petite chienne.",
-    "Continue {name} ~ t’es presque crédible.",
+    "Continue {name}, t’es presque crédible.",
     "Bave un peu pour moi {name}.",
     "Adorable, vraiment.",
     "Tu fais ça si bien quand tu te lâches {name}.",
@@ -140,9 +140,9 @@
     "Tu rougis ? Mignonne {name}."
   ],
   "intros": [
-    "Coucou {name} ~ Prête à te faire humilier un peu aujourd’hui ?",
+    "Coucou {name}. Prête à te faire humilier un peu aujourd’hui ?",
     "Jade est là. On va s’amuser toi et moi.",
-    "Salut ma chienne ~ pose ton téléphone, écarte la mâchoire, et fais-moi rire.",
+    "Salut ma chienne, pose ton téléphone, écarte la mâchoire, et fais-moi rire.",
     "Aujourd’hui je teste jusqu’où tu vas {name}. Spoiler : assez loin."
   ],
   "congrats": [
@@ -152,12 +152,12 @@
     "Tu t’es bien rabaissée aujourd’hui {name}. Je suis presque fière."
   ],
   "encore": [
-    "Encore ? Évidemment que tu en veux encore, petite chienne ~",
+    "Encore ? Évidemment que tu en veux encore, petite chienne.",
     "Aww, t’en redemandes {name} ? D’accord, mais cette fois je suis moins gentille."
   ],
   "progress": {
     "25": [
-      "Tu te chauffes bien {name} ~",
+      "Tu te chauffes bien {name}.",
       "Déjà en train d’aimer ça, j’le savais {name}."
     ],
     "50": [
@@ -176,7 +176,7 @@
   "branchPhrases": {
     "rythmeBiffle": {
       "soft": [
-        "Tu sais faire claquer {name}, c’est dans tes cordes ~",
+        "Tu sais faire claquer {name}, c’est dans tes cordes.",
         "Le rythme, c’est ton truc, ma chienne. Montre."
       ],
       "medium": [
@@ -206,7 +206,7 @@
   "progressPhrases": {
     "biffle.streak": {
       "attempt": [
-        "Aujourd'hui tu te tapes le visage un peu plus longtemps {name} ~ j'ai envie de voir ça.",
+        "Aujourd'hui tu te tapes le visage un peu plus longtemps {name}, j'ai envie de voir ça.",
         "On enchaîne les coups un cran de plus que d'habitude {name}, fais-moi plaisir."
       ],
       "record": [
@@ -220,7 +220,7 @@
     },
     "biffle.bpm_max": {
       "attempt": [
-        "Plus vite sur les coups aujourd'hui {name} ~ on monte le tempo.",
+        "Plus vite sur les coups aujourd'hui {name}, on monte le tempo.",
         "Je veux que ça claque plus fort et plus vite {name}, prépare ta joue."
       ],
       "record": [
@@ -234,7 +234,7 @@
     },
     "lick.streak": {
       "attempt": [
-        "Tu vas lécher plus longtemps aujourd'hui {name} ~ langue dehors, ma chienne.",
+        "Tu vas lécher plus longtemps aujourd'hui {name}, langue dehors, ma chienne.",
         "On tient le léchage un peu plus que d'habitude {name}, applique-toi."
       ],
       "record": [
