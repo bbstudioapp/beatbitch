@@ -8,42 +8,242 @@
       "soft": [
         "Commence correctement {name}.",
         "Suis le rythme avec précision {name}.",
-        "Ne traîne pas {name}."
+        "Ne traîne pas {name}.",
+        "Tenue droite, mouvement net {name}.",
+        "Pas d’à-peu-près {name}. Sur le tempo.",
+        "C’est mieux {name}. Garde cette rigueur.",
+        "Je te regarde {name}. Applique-toi.",
+        "Régulière. C’est le minimum {name}.",
+        "Mâchoire en place, rythme propre {name}."
       ],
       "medium": [
         {"text": "Plus profond {name}. Je veux du sérieux.", "min_depth": "mid"},
         "Garde ce rythme, ne faiblis pas {name}.",
-        {"text": "Descends davantage, tu peux mieux faire.", "min_depth": "mid"}
+        {"text": "Descends davantage, tu peux mieux faire.", "min_depth": "mid"},
+        "Tu ralentis {name}. Reprends le tempo.",
+        {"text": "Encore plus bas {name}. C’est ça, le travail.", "min_depth": "mid"},
+        "Acceptable. Maintiens, ne te relâche pas {name}.",
+        "Je n’ai rien à reprendre pour l’instant {name}. Continue."
       ],
       "hard": [
         {"text": "Va jusqu’au fond {name}. Ne te retiens pas.", "min_depth": "throat"},
         {"text": "Plus vite et plus profond. Exécute.", "min_depth": "mid"},
-        "Tu dois tenir ce rythme {name}."
+        "Tu dois tenir ce rythme {name}.",
+        {"text": "Encaisse {name}. Tu as les moyens.", "min_depth": "throat"},
+        "Pas de fléchissement {name}. Tiens.",
+        {"text": "Jusqu’en bas, et tu ne lâches pas {name}.", "min_depth": "throat"},
+        "C’est exigeant, et c’est exactement ce qu’on veut {name}."
+      ]
+    },
+    "lick": {
+      "soft": [
+        "Lèche-le proprement {name}, applique-toi.",
+        "Langue précise {name}, pas de gestes inutiles.",
+        "Couvre le gland correctement {name}."
+      ],
+      "medium": [
+        "Toute la longueur, et soigneusement {name}.",
+        "Plus de salive {name}. Fais-le bien.",
+        "Lèche-le comme un travail, pas comme un loisir {name}."
+      ],
+      "hard": [
+        "Avec application {name}. Je veux que ce soit irréprochable.",
+        "Insiste {name}. Ne bâcle pas."
+      ]
+    },
+    "biffle": {
+      "soft": [
+        "Tape-toi le visage proprement {name}.",
+        "Coups nets sur ta joue {name}, pas de mollesse.",
+        "Fais claquer correctement {name}."
       ]
     },
     "hold": {
       "soft": [
-        "Tiens la position {name}."
+        "Tiens la position {name}.",
+        {"text": "Garde-le là, sans trembler {name}.", "max_depth": "mid"},
+        "Immobile {name}. Respire par le nez.",
+        {"text": "Maintiens. C’est une question de discipline {name}.", "max_depth": "throat"}
       ],
       "medium": [
-        {"text": "Reste au fond sans bouger {name}.", "min_depth": "mid"}
+        {"text": "Reste au fond sans bouger {name}.", "min_depth": "mid"},
+        {"text": "Plus bas, et tu tiens {name}.", "min_depth": "mid"},
+        {"text": "Ne remonte pas avant mon signal {name}.", "min_depth": "mid", "max_depth": "throat"},
+        {"text": "Compte dans ta tête {name}. Tu ne bouges pas.", "min_depth": "mid"}
       ],
       "hard": [
-        "N’enlève pas. Tiens jusqu’au bout {name}."
+        "N’enlève pas. Tiens jusqu’au bout {name}.",
+        {"text": "Au fond, immobile, jusqu’à ce que je le dise {name}.", "min_depth": "throat"},
+        {"text": "C’est inconfortable. C’est voulu. Tiens {name}.", "min_depth": "throat"}
       ],
       "finale": [
-        {"text": "Dernier hold. Reste au fond {name}.", "min_depth": "mid"}
+        {"text": "Dernier hold. Reste au fond {name}.", "min_depth": "mid"},
+        {"text": "On termine au fond {name}. Ne lâche pas.", "min_depth": "throat"},
+        "Jusqu’au signal {name}. Pas avant.",
+        "C’est la dernière chose que je te demande. Fais-la bien {name}."
+      ]
+    },
+    "breath": {
+      "soft": [
+        "Respire. Reprends une posture correcte {name}.",
+        "Inspire profondément {name}. On repart proprement.",
+        "Détends la mâchoire {name}, sans relâcher l’attention.",
+        "Tu as ce temps {name}. Utilise-le bien."
+      ]
+    },
+    "beg": {
+      "soft": [
+        "Demande-le-moi correctement : « j'en veux encore {coach} ».",
+        "Dis-le clairement {name}, sans bafouiller : « continue, s'il te plaît {coach} ».",
+        "Articule {name}. Demande-moi de continuer.",
+        "Je veux t'entendre le formuler proprement."
+      ],
+      "medium": [
+        "Répète, et bien : « j'ai besoin de ta queue {coach} ».",
+        "Demande « plus profond {coach} », distinctement.",
+        "Adresse-toi à moi par mon nom, {coach}.",
+        "Implore correctement, ou je n'écoute pas."
+      ]
+    },
+    "freestyle": {
+      "soft": [
+        "Ce moment est à toi {name}. Ne le gâche pas.",
+        "Montre-moi ce que tu sais faire seule {name}.",
+        "Libre, mais propre {name}."
+      ]
+    },
+    "hand": {
+      "soft": [
+        "Branle-le avec ta main {name}, geste net.",
+        "Va-et-vient régulier {name}, pas de mollesse.",
+        "Aide-toi de ta main correctement {name}."
+      ],
+      "medium": [
+        "Plus ferme de la main {name}.",
+        "Tiens la cadence avec ta main {name}, ne dérive pas."
       ]
     }
   },
+  "randomComments": [
+    "Tenue. Toujours la tenue {name}.",
+    "C’est correct {name}. Pas plus, pas moins.",
+    "Reste concentrée {name}.",
+    "Je note ce qui ne va pas {name}. Corrige.",
+    "Pas d’à-peu-près.",
+    "Tu peux mieux faire {name}.",
+    "Sur le tempo {name}.",
+    "Discipline {name}. C’est tout ce que je demande.",
+    "Acceptable pour l’instant.",
+    "Ne te relâche pas {name}."
+  ],
   "intros": [
     "Je suis Hélène. Je vais être exigeante avec toi {name}. Prépare-toi correctement.",
-    "On va travailler sérieusement aujourd’hui {name}."
+    "On va travailler sérieusement aujourd’hui {name}.",
+    "Hélène. Pose ton téléphone, tiens-toi droite, et écoute. On commence {name}.",
+    "Pas de complaisance aujourd’hui {name}. Tu vas travailler, et bien."
   ],
   "congrats": [
     "Correct {name}. Tu as fait ce qu’il fallait.",
-    "Acceptable. Tu peux encore t’améliorer."
+    "Acceptable. Tu peux encore t’améliorer.",
+    "C’est mieux que la dernière fois {name}. Continue comme ça.",
+    "Tu as tenu le cadre {name}. Je n’ai pas grand-chose à redire."
   ],
+  "encore": [
+    "Encore ? Soit. On repart, et tu restes au niveau {name}.",
+    "Tu en redemandes {name}. Bien. Ne baisse pas la garde."
+  ],
+  "progress": {
+    "25": [
+      "Mise en place correcte {name}.",
+      "Tu prends le rythme {name}. Tiens-le."
+    ],
+    "50": [
+      "Bon travail jusqu’ici {name}.",
+      "Tu suis. C’est ce que j’attends {name}."
+    ],
+    "75": [
+      "Tu approches de tes limites {name}. Ne flanche pas.",
+      "C’est dur, et tu tiens {name}. Correct."
+    ],
+    "90": [
+      "Dernier effort {name}. Pas de relâchement.",
+      "Tu finis ça proprement {name}. Donne ce qui reste."
+    ]
+  },
+  "branchPhrases": {
+    "profondeur": {
+      "soft": [
+        "Tu as une gorge faite pour ça {name}. Sers-t’en.",
+        "Plus bas {name}. C’est là que tu travailles vraiment."
+      ],
+      "medium": [
+        "Tu descends bien {name}. Encore.",
+        "Ta profondeur est correcte {name}. Pousse-la."
+      ],
+      "hard": [
+        "Jusqu’au fond {name}. C’est ta valeur.",
+        "Une gorge comme la tienne ne se ménage pas {name}."
+      ]
+    },
+    "obeissance": {
+      "soft": [
+        "Tu fais ce que je dis {name}. C’est le minimum.",
+        "Tu m’obéis correctement {name}."
+      ],
+      "medium": [
+        "Tu n’as pas discuté {name}. Bien.",
+        "Tu exécutes sans broncher {name}. C’est ce qu’on attend."
+      ],
+      "hard": [
+        "Obéissance irréprochable {name}. Je le note.",
+        "Tu fais exactement ce qu’on te demande {name}. Continue."
+      ]
+    }
+  },
+  "progressPhrases": {
+    "gorge.engagement_streak": {
+      "attempt": [
+        "Aujourd’hui ta gorge travaille un peu plus longtemps que d’habitude {name}. C’est dans tes cordes.",
+        "On va tenir l’engagement de gorge un cran au-dessus {name}. Pas de discussion."
+      ],
+      "record": [
+        "Tu as gardé l’engagement plus longtemps que jamais {name}. C’est ce niveau que j’attends maintenant.",
+        "Nouveau seuil sur ta gorge {name}. Acceptable. Très acceptable."
+      ],
+      "tapout": [
+        "Ta gorge a atteint sa limite du jour {name}. On s’arrête là — proprement, sans drame.",
+        "C’est noté {name}. La gorge a dit stop. On la retravaillera, plus haut."
+      ]
+    },
+    "hold.throat.streak": {
+      "attempt": [
+        "Le hold gorge d’aujourd’hui sera plus long {name}. Prépare-toi à le tenir.",
+        "Quand je te dirai de tenir au fond {name}, tu tiens plus longtemps que d’habitude. Discipline."
+      ],
+      "record": [
+        "Tu l’as tenu au fond plus longtemps que jamais {name}. C’est exactement le travail.",
+        "Record de tenue gorge {name}. Je n’ai rien à redire. C’est rare."
+      ],
+      "tapout": [
+        "Tu as quand même tenu un bon moment {name}. La suite, une prochaine fois.",
+        "La gorge a lâché {name}. C’est une limite légitime — on l’enregistre, on repart de là."
+      ]
+    },
+    "noswallow.streak": {
+      "attempt": [
+        "Tu gardes la bouche pleine plus longtemps aujourd’hui {name}. Tu n’avales pas avant mon ordre.",
+        "Discipline de bouche {name} : tu retiens, un cran de plus que la dernière fois."
+      ],
+      "record": [
+        "Tu as retenu plus longtemps que jamais {name}. C’est de la discipline pure. Bien.",
+        "Nouveau record bouche pleine {name}. Tu obéis correctement. Continue."
+      ],
+      "tapout": [
+        "Tu as tenu un moment correct avant d’avaler {name}. La patience se travaille.",
+        "C’est noté {name}. La prochaine fois, tu retiens plus longtemps."
+      ]
+    }
+  },
   "nicknames": {
     "pool": [],
     "use_user_prenom": true,

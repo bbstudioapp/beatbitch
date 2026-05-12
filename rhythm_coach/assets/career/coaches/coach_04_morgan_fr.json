@@ -5,30 +5,245 @@
   "publicBio": "Direct, frontal, sans détour. Travaille les pics longs et la profondeur sans concession.",
   "phrases": {
     "rhythm": {
+      "soft": [
+        "Mets-toi au boulot {name}.",
+        "Démarre. Et fais pas semblant {name}.",
+        "Bouge {name}. C’est pour ça que t’es là.",
+        "Suis le rythme. Pas de discussion {name}.",
+        "Allez {name}. Échauffe ta gorge, tu vas en avoir besoin."
+      ],
+      "medium": [
+        {"text": "Plus profond {name}. T’es pas là pour rester en surface.", "min_depth": "mid"},
+        "Plus vite {name}. Tu peux encaisser ça.",
+        {"text": "Descends. Encore. Voilà {name}.", "min_depth": "mid"},
+        "Garde ce rythme {name}. Je veux pas voir une seconde de mou.",
+        {"text": "Tu commences à servir {name}. Continue.", "min_depth": "mid"}
+      ],
       "hard": [
         {"text": "Défonce ta gorge {name}.", "min_depth": "throat"},
         {"text": "Plus profond, trou à bite.", "min_depth": "mid"},
-        "Avale tout sans te plaindre."
+        "Avale tout sans te plaindre.",
+        {"text": "Jusqu’aux couilles {name}. Et tu restes.", "min_depth": "full"},
+        {"text": "Plus vite, plus profond. T’as voulu ça {name}.", "min_depth": "throat"},
+        "Tu encaisses. Point. Pas de pause {name}.",
+        {"text": "Étouffe dessus {name}. C’est le contrat.", "min_depth": "throat"}
+      ]
+    },
+    "lick": {
+      "soft": [
+        "Lèche {name}. Mouille-le.",
+        "Sors ta langue {name}. Sers-t’en.",
+        "Du bout de la langue, et applique-toi {name}."
+      ],
+      "medium": [
+        "Toute la longueur {name}. Bave dessus.",
+        "Plus fort {name}. Je veux que ça soit dégueulasse.",
+        "Lèche-le comme si t’avais quelque chose à prouver {name}."
+      ],
+      "hard": [
+        "Couvre-le de salive, salope. Tout.",
+        "Lèche-moi ça correctement {name}. Pas à moitié."
+      ]
+    },
+    "biffle": {
+      "soft": [
+        "Tape-toi le visage {name}. Vas-y.",
+        "Coups secs sur ta joue {name}.",
+        "Fais claquer ça {name}. Pas de pudeur."
+      ],
+      "medium": [
+        "Plus fort {name}. Que ça résonne.",
+        "Défonce ta gueule avec, salope.",
+        "Encore {name}. Plus violent."
+      ],
+      "hard": [
+        "Massacre-toi le visage {name}.",
+        "Que ça claque jusqu’à ce que ça pique, trou à bite.",
+        "Plus fort ! T’as voulu jouer dans la cour des grandes {name}."
       ]
     },
     "hold": {
+      "soft": [
+        {"text": "Garde-le. Bouge pas {name}.", "max_depth": "mid"},
+        "Tiens la position {name}. C’est pas négociable.",
+        {"text": "Au fond et immobile {name}.", "min_depth": "mid", "max_depth": "throat"}
+      ],
+      "medium": [
+        {"text": "Plus bas. Et tu tiens {name}.", "min_depth": "mid"},
+        {"text": "Reste plantée là {name}. Respire par le nez ou crève.", "min_depth": "mid", "max_depth": "throat"},
+        {"text": "Tu remontes pas avant mon signal {name}.", "min_depth": "throat"}
+      ],
       "hard": [
         {"text": "Reste au fond. Suffoque dessus {name}.", "min_depth": "throat"},
-        {"text": "Nez contre les couilles. Tiens.", "min_depth": "full"}
+        {"text": "Nez contre les couilles. Tiens.", "min_depth": "full"},
+        {"text": "Ça brûle ? Tant mieux. Tu bouges pas {name}.", "min_depth": "throat"}
       ],
       "finale": [
-        {"text": "Reste plantée jusqu’au bout {name}.", "min_depth": "mid"}
+        {"text": "Reste plantée jusqu’au bout {name}.", "min_depth": "mid"},
+        {"text": "Dernière chose : tu tiens au fond jusqu’au signal {name}.", "min_depth": "throat"},
+        "Crève dessus s’il le faut {name}. Mais tu tiens."
+      ]
+    },
+    "breath": {
+      "soft": [
+        "Respire. T’as dix secondes {name}.",
+        "Reprends ton souffle {name}. Ça va pas durer.",
+        "Inspire {name}. La suite va être pire.",
+        "Profite, salope. Après on reprend."
+      ]
+    },
+    "beg": {
+      "soft": [
+        "Demande. À voix haute : « j'en veux encore {coach} ».",
+        "Supplie {name}. Je veux l'entendre.",
+        "Dis-moi pourquoi t'en veux encore, salope.",
+        "Demande-moi de continuer {name}. Convaincs-moi."
+      ],
+      "medium": [
+        "Répète : « j'ai besoin de ta queue {coach} ».",
+        "Demande « plus profond {coach} ». Fort.",
+        "Implore correctement, trou à bite. Sinon j'arrête.",
+        "Dis mon nom en suppliant, {coach}."
+      ]
+    },
+    "freestyle": {
+      "soft": [
+        "Vas-y {name}. Montre ce que t’as dans le ventre.",
+        "Fais ce que tu veux un moment {name}. T’as pas intérêt à mollir."
+      ]
+    },
+    "hand": {
+      "soft": [
+        "Avec ta main {name}. Garde le rythme.",
+        "Branle-le. Régulier {name}.",
+        "Va-et-vient propre {name}. Tu lâches pas."
+      ],
+      "medium": [
+        "Plus vif de la main {name}. Tiens la cadence.",
+        "Tu ralentis pas {name}. Continue."
       ]
     }
   },
+  "randomComments": [
+    "Tu encaisses {name}. C’est tout ce que je demande.",
+    "Pas de mou {name}.",
+    "Continue {name}. T’es pas fatiguée, t’es paresseuse.",
+    "Plus profond. Toujours plus profond {name}.",
+    "Tu sers à quelque chose là {name}.",
+    "Bouge {name}.",
+    "Je veux pas voir une seconde de pause.",
+    "Tu tiens, ou tu casses {name}. Choisis.",
+    "Correct pour l’instant {name}.",
+    "Encaisse {name}."
+  ],
   "intros": [
-    "Je suis Morgan. Je ne serai pas doux avec toi {name}.",
-    "Prépare ta gorge. Je vais te briser aujourd’hui."
+    "Je suis Morgan. Je ne serai pas douce avec toi {name}.",
+    "Prépare ta gorge. Je vais te briser aujourd’hui.",
+    "Morgan. Pose ton téléphone. À partir de maintenant, t’encaisses {name}.",
+    "Aujourd’hui on travaille les pics longs et la profondeur {name}. Sans concession."
   ],
   "congrats": [
     "Tu as tenu. Pas mal pour un trou.",
-    "Correct {name}. Tu commences à servir à quelque chose."
+    "Correct {name}. Tu commences à servir à quelque chose.",
+    "T’as encaissé sans casser {name}. C’est déjà ça.",
+    "Tu t’es pas relâchée une seule fois {name}. Bien."
   ],
+  "encore": [
+    "Encore ? Évidemment. Un trou comme toi en redemande toujours {name}.",
+    "T’en veux plus {name} ? Alors tu vas en prendre plus."
+  ],
+  "progress": {
+    "25": [
+      "T’es échauffée {name}. On commence le vrai travail.",
+      "Tu prends le rythme {name}. Tiens-le."
+    ],
+    "50": [
+      "Tu sers à quelque chose {name}.",
+      "Pas de pause jusqu’ici {name}. Bien."
+    ],
+    "75": [
+      "Tu approches du mur {name}. Tu le franchis pas en t’arrêtant.",
+      "Ça fait mal {name} ? C’est exactement ce qu’on veut."
+    ],
+    "90": [
+      "Dernier effort {name}. Tu casses pas maintenant.",
+      "Donne tout {name}. Y’a pas d’après."
+    ]
+  },
+  "branchPhrases": {
+    "profondeur": {
+      "soft": [
+        "Ta gorge est faite pour encaisser {name}. Utilise-la.",
+        "Plus bas {name}. C’est là que tu vaux quelque chose."
+      ],
+      "medium": [
+        "Tu descends bien {name}. Encore plus bas.",
+        "Ta profondeur progresse {name}. Pousse-la jusqu’au bout."
+      ],
+      "hard": [
+        "Jusqu’aux couilles {name}. C’est ça, ta valeur.",
+        "Une gorge comme la tienne, ça se défonce, ça se ménage pas {name}."
+      ]
+    },
+    "resilience": {
+      "soft": [
+        "Tu encaisses sans broncher {name}. C’est ton truc.",
+        "Tu sais souffrir {name}. C’est utile."
+      ],
+      "medium": [
+        "Tu prends tout ce que je te donne {name}. Bien.",
+        "Tu casses pas {name}. Continue à encaisser."
+      ],
+      "hard": [
+        "Indestructible {name}. Prouve-le encore.",
+        "Tu encaisses ce qui ferait flancher les autres {name}. Reste comme ça."
+      ]
+    }
+  },
+  "progressPhrases": {
+    "rhythm.depth_max": {
+      "attempt": [
+        "Aujourd'hui tu descends plus profond que d'habitude {name}. Pas de discussion.",
+        "On va chercher un cran plus bas dans ta gorge {name}. T'es prête, que tu le saches ou non."
+      ],
+      "record": [
+        "T'es descendue plus profond que jamais {name}. C'est ce niveau que j'attends maintenant.",
+        "Nouveau plancher de profondeur {name}. Bien. Continue à creuser."
+      ],
+      "tapout": [
+        "T'es allée aussi loin que ton corps permettait aujourd'hui {name}. On enregistre. La suite, plus tard.",
+        "Trop profond cette fois {name}. C'est une limite — on la repousse, mais pas aujourd'hui."
+      ]
+    },
+    "gorge.apnee_streak": {
+      "attempt": [
+        "Aujourd'hui tu tiens l'apnée plus longtemps {name}. Sans air, et sans paniquer.",
+        "On va tenir au fond un peu plus que d'habitude {name}. Respire avant, t'en auras pas pendant."
+      ],
+      "record": [
+        "T'as tenu sans air plus longtemps que jamais {name}. Solide.",
+        "Record d'apnée {name}. T'encaisses ce que peu encaissent."
+      ],
+      "tapout": [
+        "T'as quand même tenu un bon moment {name}. Tes poumons ont dit stop — on l'écoute. Pour cette fois.",
+        "C'est noté {name}. La prochaine fois tu tiens plus longtemps sans air."
+      ]
+    },
+    "effort.no_breath_streak": {
+      "attempt": [
+        "Aujourd'hui on enchaîne plus longtemps avant ta pause {name}. Pas de cadeau.",
+        "Tu respires moins ce soir {name}. C'est comme ça qu'on construit ta résilience."
+      ],
+      "record": [
+        "T'as enchaîné sans pause plus longtemps que jamais {name}. T'es plus solide que tu crois.",
+        "Record d'effort sans souffle {name}. Bien. C'est ça, encaisser."
+      ],
+      "tapout": [
+        "Tu respires {name}. T'en avais besoin — j'aime pas, mais je le note.",
+        "C'est ok {name}. Tu t'arrêtes là côté souffle. T'as tenu loin."
+      ]
+    }
+  },
   "nicknames": {
     "pool": [
       "trou à bite",

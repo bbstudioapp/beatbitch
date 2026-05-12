@@ -12,7 +12,12 @@
         "Tu t’en sors très bien {name}, continue comme ça.",
         "Laisse-le glisser lentement dans ta bouche {name}.",
         "Tu es parfaite comme ça {name}, tout doux.",
-        "Doucement {name}, on a le temps."
+        "Doucement {name}, on a le temps.",
+        "Petits mouvements pour commencer {name}, juste pour t’habituer.",
+        "Voilà {name}, tu trouves ton rythme toute seule.",
+        "Aucune pression {name}, fais ça pour toi.",
+        "Garde la bouche bien souple {name}, c’est parfait.",
+        "Tu peux fermer les yeux si ça t’aide {name}, écoute-moi."
       ],
       "medium": [
         {"text": "Un peu plus profond maintenant {name}, si tu te sens prête.", "min_depth": "mid"},
@@ -20,12 +25,20 @@
         {"text": "Descends un peu plus, c’est bien {name}.", "min_depth": "mid"},
         "Tu contrôles bien ta respiration, je suis fière de toi {name}.",
         "Continue à ce rythme {name}, tu progresses vraiment.",
-        "C’est bon ce que tu fais {name}."
+        "C’est bon ce que tu fais {name}.",
+        "Tu peux accélérer un tout petit peu {name}, je te suis.",
+        "Reste régulière {name}, c’est exactement ça.",
+        {"text": "Encore un peu plus profond {name}, tu maîtrises.", "min_depth": "mid"},
+        "Belle constance {name}, je le sens à ton souffle."
       ],
       "hard": [
         {"text": "Va plus profond {name}, tu peux le faire.", "min_depth": "mid"},
         "Tiens ce rythme, je sais que tu en es capable {name}.",
-        {"text": "Descends encore un peu, doucement mais sûrement {name}.", "min_depth": "mid"}
+        {"text": "Descends encore un peu, doucement mais sûrement {name}.", "min_depth": "mid"},
+        "Encore quelques mouvements {name}, je sais que tu les as.",
+        {"text": "Va le chercher au fond {name}, doucement, tu peux.", "min_depth": "throat"},
+        "Tiens bon {name}, tu es plus solide que tu ne crois.",
+        "Je suis là {name}, ne lâche pas le rythme."
       ]
     },
     "lick": {
@@ -33,34 +46,59 @@
         "Lèche-le doucement avec le bout de ta langue {name}.",
         "Caresse-le tendrement {name}, prends ton temps.",
         "Tourne autour du gland, c’est très bien {name}.",
-        "Lèche-le comme si tu l’adorais {name}."
+        "Lèche-le comme si tu l’adorais {name}.",
+        "Du bout des lèvres aussi {name}, prends ton temps.",
+        "Embrasse le bout {name}, tout tendrement.",
+        "Promène ta langue où tu veux {name}, fais-toi plaisir."
       ],
       "medium": [
         "Lèche sur toute la longueur, bien mouillé {name}.",
         "Utilise bien ta langue {name}, couvre-le de salive.",
-        "Lèche avec plus d’envie, c’est bon {name}."
+        "Lèche avec plus d’envie, c’est bon {name}.",
+        "Reviens sur le gland {name}, insiste un peu.",
+        "Bien mouillée ta langue {name}, c’est ça.",
+        "Lèche-le lentement de bas en haut {name}."
       ],
       "hard": [
-        "Lèche-le plus intensément {name}, montre-moi ton désir."
+        "Lèche-le plus intensément {name}, montre-moi ton désir.",
+        "Avec toute ta langue {name}, montre-lui combien tu l’aimes.",
+        "Plus appliquée {name}, je veux t’entendre baver un peu."
+      ]
+    },
+    "biffle": {
+      "soft": [
+        "Laisse-le taper doucement ta joue {name}, comme un jeu.",
+        "Petits coups tout légers sur ton visage {name}.",
+        "Joue avec {name}, laisse-le rebondir sur tes lèvres."
       ]
     },
     "hold": {
       "soft": [
         {"text": "Garde-le en bouche, respire calmement {name}.", "max_depth": "mid"},
         "Tiens la position, c’est très bien {name}.",
-        "Reste comme ça {name}, tu gères parfaitement."
+        "Reste comme ça {name}, tu gères parfaitement.",
+        {"text": "Pose-le sur ta langue et reste {name}, tout calme.", "max_depth": "head"},
+        "Ne bouge plus {name}, respire, tout va bien.",
+        {"text": "Juste le gland, tiens-le là {name}.", "max_depth": "head"}
       ],
       "medium": [
         {"text": "Descends un peu plus profond et tiens {name}.", "min_depth": "mid"},
-        {"text": "Reste au fond, respire par le nez {name}.", "min_depth": "mid", "max_depth": "throat"}
+        {"text": "Reste au fond, respire par le nez {name}.", "min_depth": "mid", "max_depth": "throat"},
+        {"text": "Garde-le calé {name}, respire par le nez, je compte avec toi.", "min_depth": "mid", "max_depth": "throat"},
+        {"text": "Un peu plus loin {name}, et tu tiens là tranquillement.", "min_depth": "mid"},
+        {"text": "Reste {name}, je sais que c’est inconfortable, je suis là.", "min_depth": "mid"}
       ],
       "hard": [
-        {"text": "Reste bien au fond {name}, ne remonte pas.", "min_depth": "throat"}
+        {"text": "Reste bien au fond {name}, ne remonte pas.", "min_depth": "throat"},
+        {"text": "Encore un instant au fond {name}, ne remonte pas tout de suite.", "min_depth": "throat"},
+        {"text": "Tu y es {name}, tiens-le bien profond, je suis fière.", "min_depth": "throat"}
       ],
       "finale": [
         {"text": "Reste au plus profond jusqu’à la fin {name}.", "min_depth": "throat"},
         "Dernier effort, garde-le bien au fond {name}.",
-        "Magnifique {name}, reste comme ça jusqu’au signal."
+        "Magnifique {name}, reste comme ça jusqu’au signal.",
+        "Voilà {name}, on finit comme ça, tu es magnifique.",
+        {"text": "Garde-le bien au fond jusqu’au bout {name}, c’est ton moment.", "min_depth": "throat"}
       ]
     },
     "breath": {
@@ -68,7 +106,10 @@
         "Respire calmement {name}.",
         "Prends de grandes inspirations {name}.",
         "Détends ta mâchoire {name}, souffle doucement.",
-        "Reprends ton souffle {name}, tu as été très bien."
+        "Reprends ton souffle {name}, tu as été très bien.",
+        "Mâchoire relâchée {name}, tout le visage doux.",
+        "Bois une gorgée d’air {name}, on repart bientôt.",
+        "Ferme les yeux si tu veux {name}, respire."
       ]
     },
     "beg": {
@@ -77,24 +118,37 @@
         "Demande-moi gentiment « s'il te plaît, fais-moi continuer {coach} ».",
         "Dis-le moi avec ta voix de petite fille : « j'aime ça, ne t'arrête pas {coach} ».",
         "Demande-moi gentiment de continuer.",
-        "Dis-moi à voix haute pourquoi tu en veux encore."
+        "Dis-moi à voix haute pourquoi tu en veux encore.",
+        "Dis-moi tout bas « encore {coach}, s'il te plaît ».",
+        "Demande-le-moi joliment {name}, je veux l'entendre."
       ],
       "medium": [
         "Répète après moi : « j'ai besoin de ta queue {coach} ».",
         "Demande-moi clairement « plus profond s'il te plaît {coach} ».",
         "Demande-moi en disant mon nom, {coach}.",
-        "Implore-moi correctement, je veux entendre."
+        "Implore-moi correctement, je veux entendre.",
+        "Dis-moi « je suis à toi {coach} », clairement.",
+        "Demande, et dis-moi pourquoi tu en as besoin {name}."
       ]
     },
     "freestyle": {
       "soft": [
         "À toi de jouer un moment {name}, fais comme tu veux.",
-        "Profite {name}, montre-moi ce que tu sais faire."
+        "Profite {name}, montre-moi ce que tu sais faire.",
+        "Ce moment est à toi {name}, savoure-le.",
+        "Fais-toi du bien {name}, je te regarde."
       ]
     },
     "hand": {
       "soft": [
-        "Branle-le doucement avec ta main {name}."
+        "Branle-le doucement avec ta main {name}.",
+        "Enroule tes doigts autour {name}, tout en douceur.",
+        "Va-et-vient lent avec ta main {name}, prends ton temps.",
+        "Aide-toi de ta main {name}, c’est très bien."
+      ],
+      "medium": [
+        "Un peu plus vif de la main {name}, tu gères.",
+        "Garde la cadence avec ta main {name}, je te suis."
       ]
     }
   },
@@ -108,22 +162,31 @@
     "Suis le rythme {name}, tu fais ça très bien.",
     "Je suis fière de toi {name}.",
     "On prend le temps, ne te presse pas.",
-    "Tu es exactement où tu dois être {name}."
+    "Tu es exactement où tu dois être {name}.",
+    "Tu fais ça pour toi {name}, savoure.",
+    "Écoute ton corps {name}, je guide le reste.",
+    "C’est doux, c’est bien, continue {name}.",
+    "Tu te débrouilles très bien toute seule {name}.",
+    "Pas de précipitation {name}, on a le temps."
   ],
   "intros": [
     "Bonjour {name}. Je suis Lina, je vais t’accompagner doucement dans cette séance. Prends ton temps, écoute ma voix et suis le rythme.",
     "Salut {name}. On va y aller tranquillement aujourd’hui. Je suis là pour t’aider à progresser sans pression.",
-    "Bienvenue {name}. Je vais te guider pas à pas. Tu es en sécurité avec moi."
+    "Bienvenue {name}. Je vais te guider pas à pas. Tu es en sécurité avec moi.",
+    "Coucou {name}. C’est Lina. On va prendre soin de toi aujourd’hui, sans se presser. Suis ma voix, je m’occupe du reste."
   ],
   "congrats": [
     "Tu as été vraiment très bien {name}. Je suis fière de toi.",
     "C’est terminé {name}. Tu t’en es très bien sortie aujourd’hui.",
     "Bravo {name}, tu as fait une belle séance. Repose-toi maintenant.",
-    "Tu progresses vraiment bien {name}."
+    "Tu progresses vraiment bien {name}.",
+    "Voilà {name}, c’est fini. Tu peux être fière de toi, moi je le suis."
   ],
   "encore": [
     "Tu en veux encore {name} ? D’accord, on continue doucement.",
-    "Prête pour un autre round {name} ? On y va tranquillement."
+    "Prête pour un autre round {name} ? On y va tranquillement.",
+    "Encore un peu {name} ? Avec plaisir, on reste tout doux.",
+    "Tu m’en redemandes {name} ? D’accord, mais à ton rythme."
   ],
   "progress": {
     "25": [
@@ -147,39 +210,51 @@
     "endurance": {
       "soft": [
         "Tu sais tenir longtemps {name}, c'est ta force.",
-        "Garde le rythme {name}, tu as la patience pour."
+        "Garde le rythme {name}, tu as la patience pour.",
+        "Tu portes l'effort sans broncher {name}, c'est rare."
       ],
       "medium": [
         "Tu ne faiblis jamais {name}, j'aime ça chez toi.",
-        "C'est bien, continue à tenir {name}."
+        "C'est bien, continue à tenir {name}.",
+        "Tu tiens encore et encore {name}, je le vois."
       ],
       "hard": [
         "Tu peux encore {name}, je sais que tu peux.",
-        "Tiens encore un peu, tu es endurante."
+        "Tiens encore un peu, tu es endurante.",
+        "Ton souffle tient {name}, c'est ta force, fais-lui confiance."
       ]
     },
     "obeissance": {
       "soft": [
         "Tu es une bonne fille {name}.",
-        "Tu m'écoutes si bien {name}."
+        "Tu m'écoutes si bien {name}.",
+        "Tu fais exactement ce que je dis {name}, c'est parfait."
       ],
       "medium": [
         "Continue à m'obéir comme ça {name}, tu fais ça très bien.",
-        "Tu es docile, c'est ce que j'aime."
+        "Tu es docile, c'est ce que j'aime.",
+        "Tu n'hésites jamais quand je te demande quelque chose {name}."
       ],
       "hard": [
         "Bonne fille {name}. Vraiment bonne fille.",
-        "Tu m'obéis parfaitement, je suis fière."
+        "Tu m'obéis parfaitement, je suis fière.",
+        "Si docile {name}… continue, tu me rends fière."
       ]
     },
     "sloppy": {
       "soft": [
         "Laisse-toi aller {name}, salive un peu.",
-        "Mouille-le bien avec ta langue {name}."
+        "Mouille-le bien avec ta langue {name}.",
+        "N'aie pas peur d'en mettre partout {name}."
       ],
       "medium": [
         "Bave dessus {name}, n'aie pas peur.",
-        "C'est bien d'avoir la bouche pleine de salive."
+        "C'est bien d'avoir la bouche pleine de salive.",
+        "Laisse couler {name}, c'est joli quand tu baves."
+      ],
+      "hard": [
+        "Toute la bouche pleine {name}, n'aie aucune honte.",
+        "Trempée jusqu'au menton {name}, c'est exactement ça."
       ]
     }
   },
