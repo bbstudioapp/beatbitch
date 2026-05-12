@@ -31,7 +31,7 @@
 - **Mode Carrière** : 20+ niveaux, 6 branches de spécialisation, milestones d'apprentissage, encore enchaîné, sessions bâclées, badges de progression.
 - **Scénarios libres** : sessions JSON éditables, punitions et commentaires aléatoires extensibles sans toucher au code.
 - **Vérif caméra des holds** (expérimental, opt-in) : détection on-device via Google ML Kit, jamais d'image envoyée nulle part.
-- **Multi-langue** : infrastructure prête (FR livré, EN/autres langues = ajout d'assets).
+- **Multi-langue** : français, anglais et allemand livrés ; autres langues = simple ajout d'assets.
 - **Adult gate 18+** non-skippable au premier lancement, onboarding 3 écrans.
 
 ### 100 % offline · pas de télémétrie
@@ -124,7 +124,7 @@ Les binaires hors-repo (`assets/backgrounds/*.gif`, `assets/audio/ambience/*.mp3
 - **Career mode**: 20+ levels, 6 specialization branches, learning milestones, chained encore, quickie sessions, progression badges.
 - **Free scenarios**: editable JSON sessions, extensible punishments and random comments without touching code.
 - **Hold camera check** (experimental, opt-in): on-device detection via Google ML Kit — no image ever leaves the device.
-- **i18n infrastructure ready** (French shipped; English / other locales = asset drop-in).
+- **Multilingual**: French, English and German shipped; other locales = asset drop-in.
 - **18+ adult gate** non-skippable on first launch, 3-step onboarding.
 
 ### 100% offline · no telemetry
