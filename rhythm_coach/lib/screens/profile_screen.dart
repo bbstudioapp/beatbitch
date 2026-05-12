@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../career/services/career_progress_service.dart';
+import '../career/services/custom_config_service.dart';
 import '../career/services/specialization_service.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
@@ -9,6 +10,7 @@ import '../l10n/format_helpers.dart';
 import '../main.dart' show coachService, milestoneService;
 import '../models/badge.dart';
 import '../services/badge_service.dart';
+import '../services/capability_service.dart';
 import '../services/reputation_service.dart';
 import '../services/stats_service.dart';
 import '../services/tts_service.dart';
@@ -44,8 +46,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final ReputationService _rep = ReputationService();
   final BadgeService _badges = BadgeService();
   final StatsService _stats = StatsService();
+  final CapabilityService _capabilities = CapabilityService();
   final CareerProgressService _career = CareerProgressService();
   final SpecializationService _spec = SpecializationService();
+  final CustomConfigService _customConfigs = CustomConfigService();
   late Future<_ProfileBundle> _bundleFuture;
   bool _resetting = false;
 
@@ -62,10 +66,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<_ProfileBundle> _loadBundle() async {
     final repSnap = await _rep.snapshot();
     final badges = await _badges.currentStates(repSnap.stats);
+    final capabilities = await _capabilities.snapshotProfile();
     final packageInfo = await PackageInfo.fromPlatform();
     return _ProfileBundle(
       reputation: repSnap,
       badges: badges,
+      capabilities: capabilities,
       packageInfo: packageInfo,
     );
   }
@@ -95,10 +101,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await Future.wait([
       _stats.resetAll(),
       _badges.resetAll(),
+      _capabilities.resetAll(),
       _career.resetAll(),
       _spec.resetAll(),
       coachService.resetAll(),
       milestoneService.resetAll(),
+      _customConfigs.resetAll(),
     ]);
     if (!mounted) return;
     setState(() {
@@ -160,6 +168,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _SectionLabel(t.profileBadgesSection),
               const SizedBox(height: 8),
               _BadgesGrid(states: bundle.badges),
+              if (bundle.capabilities.hasAnyData) ...[
+                const SizedBox(height: 24),
+                _SectionLabel(t.profileCapabilitiesSection),
+                const SizedBox(height: 8),
+                _CapabilitiesBlock(profile: bundle.capabilities),
+              ],
               const SizedBox(height: 32),
               _ResetSection(
                 resetting: _resetting,
@@ -478,6 +492,76 @@ class _StatEntry {
   const _StatEntry(this.label, this.value, {required this.gateBy});
 }
 
+/// Panneau « Capacités » : les `best` des axes du profil de capacités,
+/// formulés en exploits. Le `comfort` reste caché (c'est le bouton de
+/// difficulté, pas un trophée). Seuls les axes porteurs de données sont
+/// affichés — la section entière est masquée par l'appelant tant que rien
+/// n'a été enregistré.
+class _CapabilitiesBlock extends StatelessWidget {
+  final CapabilityProfile profile;
+
+  const _CapabilitiesBlock({required this.profile});
+
+  @override
+  Widget build(BuildContext context) {
+    final axes = profile.axesWithData.toList(growable: false);
+    if (axes.isEmpty) {
+      final t = AppLocalizations.of(context);
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Text(
+          t.profileCapabilitiesEmpty,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+        ),
+      );
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        children: [
+          for (final axis in axes)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Flexible(
+                    child: Text(
+                      axis.localizedLabel(context),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    axis.formatValue(context, profile.bestOf(axis)!),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textPrimary,
+                      fontFeatures: [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _BadgesGrid extends StatelessWidget {
   final List<BadgeState> states;
 
@@ -606,11 +690,13 @@ class _BadgeCard extends StatelessWidget {
 class _ProfileBundle {
   final ReputationSnapshot reputation;
   final List<BadgeState> badges;
+  final CapabilityProfile capabilities;
   final PackageInfo packageInfo;
 
   const _ProfileBundle({
     required this.reputation,
     required this.badges,
+    required this.capabilities,
     required this.packageInfo,
   });
 }

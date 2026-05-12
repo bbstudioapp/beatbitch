@@ -67,6 +67,49 @@ void main() {
       expect(pack.isEmpty, isTrue);
     });
 
+    test('parse progressPhrases (clés = storageKeys d\'axes, 3 tiers)', () {
+      final pack = CoachPhrasePack.fromJson({
+        'progressPhrases': {
+          'gorge.apnee_streak': {
+            'attempt': ['a1', 'a2'],
+            'record': ['r1'],
+            'tapout': ['t1'],
+          },
+          'rhythm.depth_max': {
+            'attempt': ['da1'],
+          },
+          'cle.bidon.inconnue': {
+            'attempt': ['conservée telle quelle'],
+          },
+          'vide.partout': {
+            'attempt': [],
+          },
+          '   ': {
+            'attempt': ['clé blanche → ignorée'],
+          },
+        },
+      });
+      expect(pack.progressPhrases['gorge.apnee_streak']!['attempt']!.texts,
+          ['a1', 'a2']);
+      expect(
+          pack.progressPhrases['gorge.apnee_streak']!['record']!.texts, ['r1']);
+      expect(
+          pack.progressPhrases['gorge.apnee_streak']!['tapout']!.texts, ['t1']);
+      expect(
+          pack.progressPhrases['rhythm.depth_max']!['attempt']!.texts, ['da1']);
+      // Clé inconnue : conservée (jamais validée contre l'enum CapabilityAxis).
+      expect(pack.progressPhrases.containsKey('cle.bidon.inconnue'), isTrue);
+      // Axe sans aucun tier non vide → absent.
+      expect(pack.progressPhrases.containsKey('vide.partout'), isFalse);
+      // Clé blanche → ignorée.
+      expect(pack.progressPhrases.containsKey('   '), isFalse);
+    });
+
+    test('progressPhrases absent → map vide', () {
+      expect(CoachPhrasePack.fromJson({}).progressPhrases, isEmpty);
+      expect(CoachPhrasePack.empty.progressPhrases, isEmpty);
+    });
+
     test('parse un objet contraint avec min_depth/max_depth', () {
       final pack = CoachPhrasePack.fromJson({
         'phrases': {
@@ -200,6 +243,38 @@ void main() {
       expect(bank.pickCongrats(rng), 'G_congrats');
       expect(bank.pickEncore(rng), 'G_encore');
       expect(bank.pickProgress(50, rng), 'G_excit50');
+    });
+
+    test('pickProgressPhrase : coach prioritaire, null si axe/tier absent', () {
+      final coach = coachWith(const CoachPhrasePack(progressPhrases: {
+        'gorge.apnee_streak': {
+          'attempt': [PhraseEntry(text: 'C_apnee_attempt')],
+          'tapout': [PhraseEntry(text: 'C_apnee_tapout')],
+        },
+      }));
+      final bank = coach.toPhraseBank(fallback: globalBank());
+      expect(bank.pickProgressPhrase('gorge.apnee_streak', 'attempt', rng),
+          'C_apnee_attempt');
+      expect(bank.pickProgressPhrase('gorge.apnee_streak', 'tapout', rng),
+          'C_apnee_tapout');
+      // Tier absent pour cet axe → null (l'appelant reste silencieux).
+      expect(
+          bank.pickProgressPhrase('gorge.apnee_streak', 'record', rng), isNull);
+      // Axe absent → null.
+      expect(
+          bank.pickProgressPhrase('hold.full.streak', 'attempt', rng), isNull);
+    });
+
+    test('pickProgressPhrase : banque globale nue / coach sans section → null',
+        () {
+      expect(
+          globalBank().pickProgressPhrase('gorge.apnee_streak', 'attempt', rng),
+          isNull);
+      expect(
+          coachWith(CoachPhrasePack.empty)
+              .toPhraseBank(fallback: globalBank())
+              .pickProgressPhrase('gorge.apnee_streak', 'attempt', rng),
+          isNull);
     });
   });
 

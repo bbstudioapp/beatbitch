@@ -128,10 +128,41 @@
   "profileStatEncores": "Encores demandés",
   "profileStatQuickies": "Sessions bâclées",
   "profileStatModesUsed": "Modes utilisés",
+  "profileCapabilitiesSection": "CAPACITÉS",
+  "profileCapabilitiesEmpty": "Rien à montrer pour l'instant — tes capacités se découvrent en jouant.",
+  "profileCapBpm": "{n} BPM",
+  "@profileCapBpm": {
+    "placeholders": {
+      "n": { "type": "int" }
+    }
+  },
+  "profileCapApnea": "Apnée",
+  "profileCapEngagement": "Gorge engagée",
+  "profileCapCrossingsThroat": "Barrière de gorge",
+  "profileCapCrossingsFull": "Barrière de gorge (au fond)",
+  "profileCapCrossingsLifetime": "Franchissements (cumul)",
+  "profileCapRhythmFastShallow": "Rythme bouche — rapide",
+  "profileCapRhythmFastThroat": "Rythme gorge — rapide",
+  "profileCapRhythmFastFull": "Rythme au fond — rapide",
+  "profileCapRhythmSlowShallow": "Rythme bouche — lent",
+  "profileCapRhythmSlowThroat": "Rythme gorge — lent",
+  "profileCapRhythmSlowFull": "Rythme au fond — lent",
+  "profileCapRhythmDepth": "Profondeur rythme",
+  "profileCapRhythmMotion": "Mouvement continu",
+  "profileCapHoldThroat": "Gorge tenue",
+  "profileCapHoldFull": "Au fond tenu",
+  "profileCapNoSwallow": "Sans avaler",
+  "profileCapBiffle": "Biffle",
+  "profileCapBiffleFast": "Biffle — rapide",
+  "profileCapEffortNoBreath": "Effort sans pause",
+  "profileCapBreathMinDose": "Sas de souffle mini",
+  "profileCapLickDepth": "Profondeur langue",
+  "profileCapLickStreak": "Langue continue",
+  "profileCapHandStreak": "Main continue",
   "profileResetSection": "ZONE DANGER",
   "profileResetButton": "Tout remettre à zéro",
   "profileResetDialogTitle": "Tout remettre à zéro ?",
-  "profileResetDialogMessage": "Cette action efface toutes tes statistiques, badges, progression carrière et points de spécialisation. Irréversible.",
+  "profileResetDialogMessage": "Cette action efface toutes tes statistiques, capacités, badges, progression carrière et points de spécialisation. Irréversible.",
   "profileResetCancel": "Annuler",
   "profileResetConfirm": "Tout effacer",
   "profileResetDoneSnackbar": "Profil remis à zéro.",
@@ -737,5 +768,87 @@
   },
   "profileAboutOffline": "100 % hors ligne — aucune télémétrie, aucun envoi réseau.",
   "sessionCameraInactiveWarning": "Vérif caméra inactive — relancer la calibration",
-  "sessionCameraInactiveAction": "Calibrer"
+  "sessionCameraInactiveAction": "Calibrer",
+  "modeSelectionCustomTitle": "CUSTOM",
+  "modeSelectionCustomSubtitle": "Sessions sur mesure : durée, dosage des modes, difficulté, non-stop.",
+  "customAppBarTitle": "Sessions custom",
+  "customListEmptyTitle": "Aucune config enregistrée",
+  "customListEmptyBody": "Crée ta première config pour générer des séances sur mesure.",
+  "customNewConfig": "Nouvelle config",
+  "customLaunchLastTitle": "Relancer la dernière config",
+  "customUnnamed": "Sans nom",
+  "customNonStopBadge": "Non-stop",
+  "customDeleteConfirmTitle": "Supprimer cette config ?",
+  "customDeleteConfirmBody": "« {name} » sera définitivement supprimée.",
+  "@customDeleteConfirmBody": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "customDuplicateSuffix": " (copie)",
+  "customActionEdit": "Modifier",
+  "customActionDuplicate": "Dupliquer",
+  "customActionDelete": "Supprimer",
+  "customActionLaunch": "Lancer",
+  "customConfigSavedSnack": "Config enregistrée.",
+  "customSessionName": "Custom — {name}",
+  "@customSessionName": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "customEditorTitleNew": "Nouvelle config custom",
+  "customEditorTitleEdit": "Modifier la config",
+  "customFieldNameLabel": "Nom de la config",
+  "customFieldNameHint": "ex. Marathon profond",
+  "customSectionCoach": "Coach",
+  "customCoachDefaultVoice": "Voix par défaut (sans coach)",
+  "customCoachPickerTitle": "Choisir un coach",
+  "customCoachPickerDefaultSubtitle": "PhraseBank générique, voix TTS système",
+  "customSectionDuration": "Durée",
+  "customNonStopToggle": "Mode non-stop",
+  "customNonStopDescription": "Enchaîne des cycles complets (boosts + final) sans fin. Le bouton « Termine-moi » sort un boost final puis termine vraiment.",
+  "customCycleDurationLabel": "Durée d'un cycle",
+  "customProgressiveDifficultyToggle": "Difficulté progressive",
+  "customProgressiveDifficultyDescription": "Chaque cycle est un peu plus dur et plus long que le précédent.",
+  "customDurationMinutes": "{minutes} min",
+  "@customDurationMinutes": {
+    "placeholders": {
+      "minutes": { "type": "int" }
+    }
+  },
+  "customSectionDifficulty": "Difficulté globale",
+  "customSectionDoses": "Dosage des modes",
+  "customDosesHint": "« Aucun » exclut le mode. « Fréquent » le favorise.",
+  "customDangerNoMouthMode": "Garde au moins un mode bouche actif (rythme, lick ou hold).",
+  "customSectionAxes": "Axes d'orientation",
+  "customAxesHint": "Répartis des points pour orienter le générateur. N'affecte pas ta spécialisation de carrière.",
+  "customAxesSpent": "{spent} pts répartis",
+  "@customAxesSpent": {
+    "placeholders": {
+      "spent": { "type": "int" }
+    }
+  },
+  "customSectionAdvanced": "Avancé",
+  "customIncludeHandToggle": "Inclure la stimulation à la main",
+  "customIncludeHandDescription": "Active les modes main et biffle dans la génération.",
+  "customMaxDepthLabel": "Profondeur maximale",
+  "customSaveAndLaunch": "Enregistrer et lancer",
+  "customSaveOnly": "Enregistrer",
+  "customHostLoadError": "Impossible de charger la session custom : {error}",
+  "@customHostLoadError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "customFinishNowButton": "Termine-moi",
+  "customFinishNowSubtitle": "boost final puis fin",
+  "customDifficultyFacile": "Facile",
+  "customDifficultyNormal": "Normal",
+  "customDifficultyDifficile": "Difficile",
+  "customDifficultyExtreme": "Extrême",
+  "customDoseNone": "Aucun",
+  "customDoseRare": "Rare",
+  "customDoseNormal": "Normal",
+  "customDoseFrequent": "Fréquent"
 }

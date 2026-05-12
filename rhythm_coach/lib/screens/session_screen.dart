@@ -26,6 +26,8 @@ import '../models/session.dart';
 import '../services/ambience_engine.dart';
 import '../services/badge_service.dart';
 import '../services/beep_engine.dart';
+import '../services/capability_axis.dart';
+import '../services/capability_service.dart';
 import '../services/coach_phrases_loader.dart';
 import '../services/hold_verifier.dart';
 import '../services/platform_capabilities.dart';
@@ -39,6 +41,7 @@ import '../theme/app_theme.dart';
 import '../widgets/mode_badge_row.dart';
 import '../widgets/movement_animation.dart';
 import '../widgets/session_background.dart';
+import '../widgets/session_finale_overlay.dart';
 import '../widgets/timer_display.dart';
 
 class SessionScreen extends StatefulWidget {
@@ -66,6 +69,19 @@ class SessionScreen extends StatefulWidget {
   /// controller pour pouvoir appeler `requestUpgrade(...)` après avoir
   /// régénéré une suite plus dure. Si null, le bouton n'est pas affiché.
   final Future<void> Function(SessionController controller)? onRequestUpgrade;
+
+  /// Callback de l'action « Termine-moi » (mode Custom). Reçoit le
+  /// controller pour appeler `requestUpgrade(...)` avec une mini-session
+  /// « boosts + final » qui clôt la séance. Si null, le bouton n'est pas
+  /// affiché (carrière, scénario, …).
+  final Future<void> Function(SessionController controller)? onRequestFinishNow;
+
+  /// Mode « non-stop » (Custom) : quand la séance se termine, on appelle
+  /// automatiquement [onRequestEncore] après un court délai (le temps que
+  /// le chime sonne) pour enchaîner le cycle suivant — sauf si l'utilisateur
+  /// a déclenché « Termine-moi ». Le bouton « encore » de l'écran de fin
+  /// reste là (= « continuer tout de suite »).
+  final bool autoContinueOnFinish;
 
   /// Texte d'introduction lu par la coach avant le démarrage effectif
   /// (mode Carrière). Si non null, l'écran affiche d'abord la phase
@@ -112,6 +128,30 @@ class SessionScreen extends StatefulWidget {
   /// level-up à la complétion). Null pour sessions hors carrière.
   final int? careerLevel;
 
+  /// Axe de capacité surchargé sur cette séance (mode carrière). Null sinon.
+  /// Transmis tel quel au [SessionController] pour les phrases `record` du
+  /// coach (Phase 4 — on annonce l'exploit qu'on a poussé exprès).
+  final CapabilityAxis? capabilityOverloadAxis;
+
+  /// Snapshot du profil de capacités au début de la séance (mode carrière).
+  /// Null sinon. Transmis au [SessionController] pour l'attribution du tap-out
+  /// (phrase `tapout`) et la détection des records (phrase `record`).
+  final CapabilityProfile? capabilityProfile;
+
+  /// `UnlockKey` acquittés à l'ouverture de la séance — transmis tel quel au
+  /// [SessionController] qui les passe au `CareerSessionGenerator` pour
+  /// générer des punitions carrière contextuelles (Phase 5). Null hors
+  /// carrière → set vide côté contrôleur → pas de génération de punition.
+  final Set<UnlockKey>? unlockedKeys;
+
+  /// Toggle joueuse « inclure le mode hand » — mirroir de la valeur passée au
+  /// `CareerSessionGenerator.generate(...)` pour le tirage initial. Transmis
+  /// tel quel au [SessionController] pour exclure les compositions de
+  /// punition impliquant la main (`biffle_burst`) quand la joueuse a
+  /// désactivé hand. Default `true` → comportement historique inchangé hors
+  /// carrière.
+  final bool includeHand;
+
   /// Si false, la session ne peut pas faire progresser le niveau global
   /// même si toutes les autres conditions sont réunies. Utilisé pour
   /// gater le level-up sur le système de coachs : seules les sessions
@@ -150,6 +190,8 @@ class SessionScreen extends StatefulWidget {
     this.isQuickie = false,
     this.staminaProfile,
     this.onRequestUpgrade,
+    this.onRequestFinishNow,
+    this.autoContinueOnFinish = false,
     this.introText,
     this.phraseBank,
     this.endButtonLabel,
@@ -159,6 +201,10 @@ class SessionScreen extends StatefulWidget {
     this.holdVerifier,
     this.canSave = false,
     this.careerLevel,
+    this.capabilityOverloadAxis,
+    this.capabilityProfile,
+    this.unlockedKeys,
+    this.includeHand = true,
     this.coachAdvancesTier = true,
     this.specialization,
     this.seedHumiliationSession = 0.0,
@@ -189,6 +235,15 @@ class _SessionScreenState extends State<SessionScreen>
       holdVerifier: widget.holdVerifier,
       specialization: widget.specialization,
       seedHumiliationSession: widget.seedHumiliationSession,
+      // Profil de capacités : suivi uniquement en carrière (Custom = sandbox,
+      // scénarios JSON = hors carrière).
+      trackCapabilities: widget.isCareer,
+      careerLevel: widget.careerLevel ?? 0,
+      capabilityOverloadAxis: widget.capabilityOverloadAxis,
+      capabilityProfile: widget.capabilityProfile,
+      unlockedKeys: widget.unlockedKeys ?? const {},
+      includeHand: widget.includeHand,
+      isQuickie: widget.isQuickie,
     );
     _controller.onMilestoneRetry = widget.onMilestoneRetry;
     if (widget.isCareer) {
@@ -306,6 +361,8 @@ class _SessionScreenState extends State<SessionScreen>
         isCareer: widget.isCareer,
         staminaProfile: widget.staminaProfile,
         onRequestUpgrade: widget.onRequestUpgrade,
+        onRequestFinishNow: widget.onRequestFinishNow,
+        autoContinueOnFinish: widget.autoContinueOnFinish,
         introText: widget.introText,
         endButtonLabel: widget.endButtonLabel,
         onRequestEncore: widget.onRequestEncore,
@@ -322,6 +379,8 @@ class _SessionScreenContent extends StatefulWidget {
   final bool isCareer;
   final List<double>? staminaProfile;
   final Future<void> Function(SessionController controller)? onRequestUpgrade;
+  final Future<void> Function(SessionController controller)? onRequestFinishNow;
+  final bool autoContinueOnFinish;
   final String? introText;
   final String? endButtonLabel;
   final Future<void> Function(SessionController controller)? onRequestEncore;
@@ -337,6 +396,8 @@ class _SessionScreenContent extends StatefulWidget {
     required this.isCareer,
     required this.staminaProfile,
     required this.onRequestUpgrade,
+    required this.onRequestFinishNow,
+    required this.autoContinueOnFinish,
     required this.introText,
     required this.endButtonLabel,
     required this.onRequestEncore,
@@ -362,6 +423,13 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
   bool _showBackgroundMedia = true;
   bool _upgradeRequested = false;
   bool _upgradeInFlight = false;
+  bool _finishNowInFlight = false;
+  bool _finishNowDone = false;
+
+  /// Secondes restantes minimum pour que « Termine-moi » soit actif : en
+  /// dessous, la mini-session de finish n'aurait plus la place de jouer une
+  /// vraie apothéose (le contrôleur passe directement en `finished`).
+  static const int _finishNowMinRemainingSeconds = 75;
 
   /// True tant que l'utilisateur n'a pas validé « Je suis prête » sur l'écran
   /// d'intro. Reste à false si aucun introText n'a été fourni.
@@ -380,9 +448,25 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
 
   static const int _prepDurationSeconds = 7;
 
+  /// Délai après la fin de séance avant d'enchaîner le cycle suivant en
+  /// mode non-stop — laisse le `finale_chime` + le post-final sonner.
+  static const Duration _autoContinueDelay = Duration(seconds: 4);
+
+  /// Controller mémorisé pour le listener d'auto-enchaînement (mode
+  /// non-stop). Null si `autoContinueOnFinish == false`.
+  SessionController? _autoChainCtrl;
+
+  /// True dès qu'un auto-enchaînement a été programmé pour cette séance —
+  /// évite les doubles déclenchements.
+  bool _autoChainScheduled = false;
+
   @override
   void initState() {
     super.initState();
+    if (widget.autoContinueOnFinish) {
+      _autoChainCtrl = context.read<SessionController>();
+      _autoChainCtrl!.addListener(_maybeAutoChain);
+    }
     final debug = DebugSettingsService();
     if (widget.isCareer && widget.staminaProfile != null) {
       debug.getShowStaminaBar().then((value) {
@@ -439,7 +523,23 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
   @override
   void dispose() {
     _prepTimer?.cancel();
+    _autoChainCtrl?.removeListener(_maybeAutoChain);
     super.dispose();
+  }
+
+  /// Listener du controller en mode non-stop : à la fin de séance, programme
+  /// l'enchaînement automatique du cycle suivant via [onRequestEncore] —
+  /// sauf si l'utilisateur a tapé « Termine-moi » (`_finishNowDone`).
+  void _maybeAutoChain() {
+    final ctrl = _autoChainCtrl;
+    if (ctrl == null || !ctrl.isFinished) return;
+    if (_autoChainScheduled || _finishNowDone) return;
+    _autoChainScheduled = true;
+    Future.delayed(_autoContinueDelay, () async {
+      if (!mounted || _finishNowDone) return;
+      final cb = widget.onRequestEncore;
+      if (cb != null && ctrl.isFinished) await cb(ctrl);
+    });
   }
 
   Future<void> _speakIntro() async {
@@ -509,6 +609,22 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _upgradeInFlight = false);
+    }
+  }
+
+  Future<void> _onFinishNow() async {
+    final callback = widget.onRequestFinishNow;
+    if (callback == null || _finishNowInFlight || _finishNowDone) return;
+    final ctrl = context.read<SessionController>();
+    if (!ctrl.isRunning) return;
+    final remaining = ctrl.session.durationSeconds - ctrl.elapsedSeconds;
+    if (remaining < _finishNowMinRemainingSeconds) return;
+    setState(() => _finishNowInFlight = true);
+    try {
+      await callback(ctrl);
+      if (mounted) setState(() => _finishNowDone = true);
+    } finally {
+      if (mounted) setState(() => _finishNowInFlight = false);
     }
   }
 
@@ -623,7 +739,9 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                                         endButtonLabel: widget.endButtonLabel ??
                                             t.sessionFinishedDefaultEnd,
                                         onThanks: ctrl.revealBadgeUnlocks,
-                                        onEncore: widget.onRequestEncore == null
+                                        onEncore: (widget.onRequestEncore ==
+                                                    null ||
+                                                _finishNowDone)
                                             ? null
                                             : () =>
                                                 widget.onRequestEncore!(ctrl),
@@ -647,7 +765,8 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                                   onEnd: widget.closeAppOnEnd
                                       ? SystemNavigator.pop
                                       : () => Navigator.of(context).pop(),
-                                  onEncore: widget.onRequestEncore == null
+                                  onEncore: (widget.onRequestEncore == null ||
+                                          _finishNowDone)
                                       ? null
                                       : () => widget.onRequestEncore!(ctrl),
                                   onSave: widget.canSave
@@ -670,6 +789,15 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                                   ),
                               ],
                             ))),
+            ),
+            // Halo blanc crémeux du final : par-dessus tout le reste (sauf
+            // l'AppBar), s'allume pile quand le `finale_chime` retentit et
+            // que la séance tourne encore — quelques giclées irrégulières +
+            // pulses de vibration, puis une brume qui se résorbe.
+            Positioned.fill(
+              child: SessionFinaleOverlay(
+                active: ctrl.isRunning && ctrl.finaleChimeStarted,
+              ),
             ),
           ],
         ),
@@ -797,6 +925,17 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                         );
                       },
                     ),
+                  if (widget.onRequestFinishNow != null && !_finishNowDone) ...[
+                    _FinishNowButton(
+                      enabled: ctrl.isRunning &&
+                          !_finishNowInFlight &&
+                          (ctrl.session.durationSeconds -
+                                  ctrl.elapsedSeconds) >=
+                              _finishNowMinRemainingSeconds,
+                      onPressed: _onFinishNow,
+                    ),
+                    SizedBox(height: showBar ? 8 : 12),
+                  ],
                   _FailButton(controller: ctrl),
                   if (_showSkipSessionButton &&
                       (ctrl.isRunning || ctrl.isPaused)) ...[
@@ -1167,6 +1306,75 @@ class _SupplierButton extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                     letterSpacing: 3,
                     color: enabled ? Colors.black : Colors.white38,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Bouton « TERMINE-MOI » du mode Custom. Régénère une mini-session de
+/// finition (boosts + final + chime) qui clôt la séance pour de bon.
+class _FinishNowButton extends StatelessWidget {
+  static const Color _color = Color(0xFFE8B33A);
+  static const Color _colorMuted = Color(0xFF5A4715);
+
+  final bool enabled;
+  final VoidCallback onPressed;
+
+  const _FinishNowButton({required this.enabled, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return SizedBox(
+      width: double.infinity,
+      child: Material(
+        color: enabled ? _color : _colorMuted.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: enabled ? onPressed : null,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.bolt,
+                  color: enabled ? Colors.black : Colors.white38,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Flexible(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        t.customFinishNowButton,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 3,
+                          color: enabled ? Colors.black : Colors.white38,
+                        ),
+                      ),
+                      Text(
+                        t.customFinishNowSubtitle,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: enabled
+                              ? Colors.black.withValues(alpha: 0.65)
+                              : Colors.white30,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],

@@ -12,20 +12,33 @@
         "You're doing very well {name}, keep it up.",
         "Let it slide slowly into your mouth {name}.",
         "You're perfect like this {name}, all gentle.",
-        "Easy {name}, we have time."
+        "Easy {name}, we have time.",
+        "Small movements to start {name}, just to get used to it.",
+        "There you go {name}, you're finding your rhythm all on your own.",
+        "No pressure {name}, do this for yourself.",
+        "Keep your mouth nice and soft {name}, that's perfect.",
+        "You can close your eyes if it helps {name}, just listen to me."
       ],
       "medium": [
-        "A little deeper now {name}, if you feel ready.",
+        {"text": "A little deeper now {name}, if you feel ready.", "min_depth": "mid"},
         "Hold this rhythm, you're doing great {name}.",
-        "Go down a bit more, that's it {name}.",
+        {"text": "Go down a bit more, that's it {name}.", "min_depth": "mid"},
         "You're controlling your breath well, I'm proud of you {name}.",
         "Keep this rhythm {name}, you're really progressing.",
-        "It's good what you're doing {name}."
+        "It's good what you're doing {name}.",
+        "You can speed up just a touch {name}, I'm right with you.",
+        "Stay steady {name}, that's exactly it.",
+        {"text": "A little deeper still {name}, you've got this.", "min_depth": "mid"},
+        "Lovely consistency {name}, I can hear it in your breathing."
       ],
       "hard": [
-        "Go deeper {name}, you can do it.",
+        {"text": "Go deeper {name}, you can do it.", "min_depth": "mid"},
         "Hold this rhythm, I know you can {name}.",
-        "Go down a little more, slowly but surely {name}."
+        {"text": "Go down a little more, slowly but surely {name}.", "min_depth": "mid"},
+        "A few more strokes {name}, I know you've got them.",
+        {"text": "Go find it deep {name}, gently, you can.", "min_depth": "throat"},
+        "Hold on {name}, you're tougher than you think.",
+        "I'm right here {name}, don't drop the rhythm."
       ]
     },
     "lick": {
@@ -33,34 +46,59 @@
         "Lick it gently with the tip of your tongue {name}.",
         "Caress it tenderly {name}, take your time.",
         "Circle around the head, that's very good {name}.",
-        "Lick it like you adore it {name}."
+        "Lick it like you adore it {name}.",
+        "With the tip of your lips too {name}, take your time.",
+        "Kiss the tip {name}, all tenderly.",
+        "Run your tongue wherever you like {name}, enjoy yourself."
       ],
       "medium": [
         "Lick the whole length, nice and wet {name}.",
         "Use your tongue well {name}, cover it with spit.",
-        "Lick with more desire, that's good {name}."
+        "Lick with more desire, that's good {name}.",
+        "Come back to the head {name}, linger a bit.",
+        "Nice and wet, that tongue {name}, that's it.",
+        "Lick it slowly from base to tip {name}."
       ],
       "hard": [
-        "Lick it more intensely {name}, show me your desire."
+        "Lick it more intensely {name}, show me your desire.",
+        "With your whole tongue {name}, show him how much you love it.",
+        "More devoted {name}, I want to hear you drool a little."
+      ]
+    },
+    "biffle": {
+      "soft": [
+        "Let it tap your cheek gently {name}, like a game.",
+        "Little light taps on your face {name}.",
+        "Play with it {name}, let it bounce off your lips."
       ]
     },
     "hold": {
       "soft": [
-        "Keep it in your mouth, breathe calmly {name}.",
+        {"text": "Keep it in your mouth, breathe calmly {name}.", "max_depth": "mid"},
         "Hold the position, that's very good {name}.",
-        "Stay like this {name}, you're handling it perfectly."
+        "Stay like this {name}, you're handling it perfectly.",
+        {"text": "Rest it on your tongue and stay {name}, all calm.", "max_depth": "head"},
+        "Don't move {name}, breathe, everything's fine.",
+        {"text": "Just the head, hold it there {name}.", "max_depth": "head"}
       ],
       "medium": [
-        "Go a little deeper and hold {name}.",
-        "Stay deep, breathe through your nose {name}."
+        {"text": "Go a little deeper and hold {name}.", "min_depth": "mid"},
+        {"text": "Stay deep, breathe through your nose {name}.", "min_depth": "mid", "max_depth": "throat"},
+        {"text": "Keep it settled {name}, breathe through your nose, I'm counting with you.", "min_depth": "mid", "max_depth": "throat"},
+        {"text": "A little further {name}, and you hold there nice and easy.", "min_depth": "mid"},
+        {"text": "Stay {name}, I know it's uncomfortable, I'm here.", "min_depth": "mid"}
       ],
       "hard": [
-        "Stay deep {name}, don't come up."
+        {"text": "Stay deep {name}, don't come up.", "min_depth": "throat"},
+        {"text": "One more moment deep {name}, don't come up just yet.", "min_depth": "throat"},
+        {"text": "You're there {name}, hold it deep, I'm proud.", "min_depth": "throat"}
       ],
       "finale": [
-        "Stay all the way deep until the end {name}.",
+        {"text": "Stay all the way deep until the end {name}.", "min_depth": "throat"},
         "Last effort, keep it deep {name}.",
-        "Beautiful {name}, stay like this until the signal."
+        "Beautiful {name}, stay like this until the signal.",
+        "There you go {name}, we finish like this, you're beautiful.",
+        {"text": "Keep it deep all the way to the end {name}, this is your moment.", "min_depth": "throat"}
       ]
     },
     "breath": {
@@ -68,7 +106,10 @@
         "Breathe calmly {name}.",
         "Take big breaths {name}.",
         "Relax your jaw {name}, exhale slowly.",
-        "Catch your breath {name}, you've been very good."
+        "Catch your breath {name}, you've been very good.",
+        "Jaw loose {name}, the whole face soft.",
+        "Take a sip of air {name}, we'll start again soon.",
+        "Close your eyes if you want {name}, just breathe."
       ]
     },
     "beg": {
@@ -77,24 +118,37 @@
         "Ask me nicely, \"please, make me keep going {coach}\".",
         "Say it in your little-girl voice: \"I love this, don't stop {coach}\".",
         "Ask me kindly to continue.",
-        "Tell me out loud why you want more."
+        "Tell me out loud why you want more.",
+        "Whisper it to me, \"more {coach}, please\".",
+        "Ask me sweetly {name}, I want to hear it."
       ],
       "medium": [
         "Repeat after me: \"I need your cock {coach}\".",
         "Ask me clearly, \"deeper please {coach}\".",
         "Ask me by saying my name, {coach}.",
-        "Beg me properly, I want to hear it."
+        "Beg me properly, I want to hear it.",
+        "Tell me \"I'm yours {coach}\", clearly.",
+        "Ask, and tell me why you need it {name}."
       ]
     },
     "freestyle": {
       "soft": [
         "Your turn for a moment {name}, do what you want.",
-        "Enjoy {name}, show me what you can do."
+        "Enjoy {name}, show me what you can do.",
+        "This moment is yours {name}, savor it.",
+        "Treat yourself {name}, I'm watching you."
       ]
     },
     "hand": {
       "soft": [
-        "Stroke it gently with your hand {name}."
+        "Stroke it gently with your hand {name}.",
+        "Wrap your fingers around it {name}, all soft.",
+        "Slow strokes with your hand {name}, take your time.",
+        "Help yourself with your hand {name}, that's very good."
+      ],
+      "medium": [
+        "A bit quicker with your hand {name}, you've got this.",
+        "Keep the pace with your hand {name}, I'm right with you."
       ]
     }
   },
@@ -108,22 +162,31 @@
     "Follow the rhythm {name}, you're doing great.",
     "I'm proud of you {name}.",
     "We take our time, don't rush.",
-    "You're exactly where you need to be {name}."
+    "You're exactly where you need to be {name}.",
+    "Do this for yourself {name}, savor it.",
+    "Listen to your body {name}, I'll guide the rest.",
+    "It's soft, it's good, keep going {name}.",
+    "You're managing very well on your own {name}.",
+    "No rushing {name}, we have time."
   ],
   "intros": [
     "Hello {name}. I'm Lina, I'll guide you gently through this session. Take your time, listen to my voice and follow the rhythm.",
     "Hi {name}. We'll take it easy today. I'm here to help you progress without pressure.",
-    "Welcome {name}. I'll guide you step by step. You're safe with me."
+    "Welcome {name}. I'll guide you step by step. You're safe with me.",
+    "Hey {name}. It's Lina. We're going to take care of you today, no rushing. Follow my voice, I'll handle the rest."
   ],
   "congrats": [
     "You've been really very good {name}. I'm proud of you.",
     "That's it {name}. You did very well today.",
     "Bravo {name}, you had a beautiful session. Rest now.",
-    "You're really progressing well {name}."
+    "You're really progressing well {name}.",
+    "There you go {name}, it's over. You can be proud of yourself, I certainly am."
   ],
   "encore": [
     "You want more {name}? Alright, we keep going gently.",
-    "Ready for another round {name}? We'll take it easy."
+    "Ready for another round {name}? We'll take it easy.",
+    "A little more {name}? Gladly, we stay nice and soft.",
+    "You're asking me for more {name}? Alright, but at your own pace."
   ],
   "progress": {
     "25": [
@@ -147,39 +210,123 @@
     "endurance": {
       "soft": [
         "You know how to last {name}, that's your strength.",
-        "Hold the rhythm {name}, you have the patience for it."
+        "Hold the rhythm {name}, you have the patience for it.",
+        "You carry the effort without flinching {name}, that's rare."
       ],
       "medium": [
         "You never weaken {name}, I love that about you.",
-        "That's it, keep holding on {name}."
+        "That's it, keep holding on {name}.",
+        "You hold on and on {name}, I can see it."
       ],
       "hard": [
         "You can still go {name}, I know you can.",
-        "Hold on a little more, you're an endurance girl."
+        "Hold on a little more, you're an endurance girl.",
+        "Your breath holds {name}, that's your strength, trust it."
       ]
     },
     "obeissance": {
       "soft": [
         "You're a good girl {name}.",
-        "You listen to me so well {name}."
+        "You listen to me so well {name}.",
+        "You do exactly what I say {name}, that's perfect."
       ],
       "medium": [
         "Keep obeying me like this {name}, you're doing great.",
-        "You're docile, that's what I love."
+        "You're docile, that's what I love.",
+        "You never hesitate when I ask you for something {name}."
       ],
       "hard": [
         "Good girl {name}. Truly a good girl.",
-        "You obey me perfectly, I'm proud."
+        "You obey me perfectly, I'm proud.",
+        "So docile {name}… keep going, you make me proud."
       ]
     },
     "sloppy": {
       "soft": [
         "Let yourself go {name}, drool a little.",
-        "Get it nice and wet with your tongue {name}."
+        "Get it nice and wet with your tongue {name}.",
+        "Don't be afraid to get it everywhere {name}."
       ],
       "medium": [
         "Drool on it {name}, don't be shy.",
-        "It's good to have a mouth full of spit."
+        "It's good to have a mouth full of spit.",
+        "Let it run {name}, it's pretty when you drool."
+      ],
+      "hard": [
+        "Mouth completely full {name}, no shame at all.",
+        "Soaked down to your chin {name}, that's exactly it."
+      ]
+    }
+  },
+  "progressPhrases": {
+    "gorge.engagement_streak": {
+      "attempt": [
+        "Tonight I want your throat {name}, just a little longer than usual — let it get used to him.",
+        "We're taking our time going down your throat {name}, you'll feel the difference."
+      ],
+      "record": [
+        "You kept him down your throat longer than ever {name}, I'm proud of who you're becoming.",
+        "Your throat listens better than it used to {name}, look how far we've come."
+      ],
+      "tapout": [
+        "Easy sweetie, your throat already did a lot tonight — that's exactly what we're working on.",
+        "Noted {name}, we'll leave your throat here. You'll come back to it, we have time."
+      ]
+    },
+    "hold.throat.streak": {
+      "attempt": [
+        "Tonight you'll hold him down your throat a little longer {name}, you can do this.",
+        "When I tell you to hold deep {name}, hold a touch longer than usual, in confidence."
+      ],
+      "record": [
+        "You held him at the back of your throat like never before {name}, I knew you could.",
+        "Nobody holds it like that {name} — not even you before tonight. Truly good girl."
+      ],
+      "tapout": [
+        "You did keep him down there a good while {name}, we'll work on the rest gently.",
+        "It's okay sweetie, your throat said no — we listen to that. The record will come."
+      ]
+    },
+    "noswallow.streak": {
+      "attempt": [
+        "Keep him in your mouth a little longer tonight {name}, don't swallow anything until I say so.",
+        "You're going to let my mess pool in your mouth {name}, no swallowing — a bit longer than last time."
+      ],
+      "record": [
+        "You held your mouth full without swallowing like never before {name}, you obey me so well.",
+        "New full-mouth record {name} — patient, obedient, exactly how I like you."
+      ],
+      "tapout": [
+        "You did hold it a good while before swallowing {name}, that's already a lot. Patience will come.",
+        "It's okay sweetie, your mouth was honest — next time we hold a bit more."
+      ]
+    },
+    "effort.no_breath_streak": {
+      "attempt": [
+        "We're going to keep going a little longer before your break tonight {name}, at your own pace.",
+        "Tonight we breathe a little less {name} — not out of cruelty, just to see what you really carry."
+      ],
+      "record": [
+        "You took it without a break like never before tonight {name}, you're tougher than you think.",
+        "You carried the effort further than ever {name}, and it shows on your face."
+      ],
+      "tapout": [
+        "Breathe sweetie, you needed it — your body spoke, I listen.",
+        "It's okay {name}, we'll stop there on the breath. You held beautifully, truly."
+      ]
+    },
+    "rhythm.motion_streak": {
+      "attempt": [
+        "You'll keep the motion a little longer tonight {name}, without breaking a thing — I'll guide you.",
+        "Hold the rhythm a touch longer than usual {name}, in confidence — you know how."
+      ],
+      "record": [
+        "You didn't drop the rhythm like never before tonight {name}, that's exactly it.",
+        "Stamina record {name} — good girl, really good girl."
+      ],
+      "tapout": [
+        "You slipped a bit early on the rhythm {name}, it's nothing — next time we hold longer.",
+        "No worries sweetie, we'll shorten the chain. You're getting close, I can see it."
       ]
     }
   },

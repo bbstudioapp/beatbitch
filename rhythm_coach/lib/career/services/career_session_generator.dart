@@ -3,8 +3,11 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 
 import '../../models/final_category.dart';
+import '../../models/punishment.dart';
 import '../../models/session.dart';
 import '../../models/session_step.dart';
+import '../../services/capability_axis.dart';
+import '../../services/capability_service.dart';
 import '../../services/humiliation_engine.dart';
 import '../../services/saliva_engine.dart';
 import '../models/career_level.dart';
@@ -14,14 +17,19 @@ import '../models/specialization.dart';
 import '../models/unlock_key.dart';
 
 /// Résultat d'une génération : la session figée à passer au controller +
-/// le profil d'endurance projeté (utile à l'overlay debug `StaminaBar`).
+/// le profil d'endurance projeté (utile à l'overlay debug `StaminaBar`) +
+/// l'axe de capacité surchargé sur cette séance (`null` hors carrière / profil
+/// neuf) — consommé par le coach (Phase 4) pour ses phrases « on bat ton
+/// record de … ».
 class CareerGenerationResult {
   final Session session;
   final List<double> staminaProfile;
+  final CapabilityAxis? overloadAxis;
 
   const CareerGenerationResult({
     required this.session,
     required this.staminaProfile,
+    this.overloadAxis,
   });
 }
 
@@ -181,6 +189,49 @@ class CareerSessionGenerator {
   /// `recoveryThreshold` (plus c'est élevé, plus on respecte l'endurance).
   double _obedience = 0.0;
 
+  /// Profil de capacités (2ᵉ enveloppe de difficulté, carrière uniquement).
+  /// `null` = pas de gating capacité (mode Custom, scénarios JSON, tests
+  /// hérités) — convention parallèle à `_unlockedKeys.isEmpty`. On lit
+  /// `comfort` (rendu adaptatif par `CapabilityRegulator`) pour borner les
+  /// steps, et `successRate` pour moduler la surcharge.
+  CapabilityProfile? _capProfile;
+
+  /// Plafonds figés sur un appui FAIL pendant la session courante (§6 de la
+  /// spec) — propagés par `SessionController.capabilitySessionCeilings` aux
+  /// régénérations en cours de séance (Supplier / retry milestone) et au
+  /// premier maillon d'un encore enchaîné. Vide hors carrière.
+  Map<CapabilityAxis, double> _capCeilings = const {};
+
+  /// Axe surchargé cette session (surcharge **isolée** : un seul axe est
+  /// poussé au-delà de son `comfort`, les autres restent clampés — c'est ce
+  /// qui rend un « je peux pas » attribuable, cf. §5/§6). `null` hors carrière
+  /// ou si le profil n'a aucune donnée exploitable (joueuse neuve).
+  CapabilityAxis? _overloadAxis;
+
+  /// Facteur de surcharge appliqué au `comfort` de [_overloadAxis] (1.03→1.15,
+  /// modulé par sa `successRate`). 1.0 pour tout autre axe.
+  double _overloadFactor = 1.0;
+
+  /// Axes éligibles à la surcharge : pilotants, hors `hand`/`lick`/`breath`
+  /// (jamais des leviers de difficulté) et hors floors BPM / souffle (rien ne
+  /// les consomme encore côté générateur — les surcharger ne ferait rien).
+  static const Set<CapabilityAxis> _overloadableAxes = {
+    CapabilityAxis.gorgeApneeStreak,
+    CapabilityAxis.gorgeEngagementStreak,
+    CapabilityAxis.gorgeCrossingsBpmThroat,
+    CapabilityAxis.gorgeCrossingsBpmFull,
+    CapabilityAxis.rhythmBpmCeilShallow,
+    CapabilityAxis.rhythmBpmCeilThroat,
+    CapabilityAxis.rhythmBpmCeilFull,
+    CapabilityAxis.rhythmDepthMax,
+    CapabilityAxis.rhythmMotionStreak,
+    CapabilityAxis.holdThroatStreak,
+    CapabilityAxis.holdFullStreak,
+    CapabilityAxis.noswallowStreak,
+    CapabilityAxis.biffleStreak,
+    CapabilityAxis.biffleBpmMax,
+  };
+
   CareerSessionGenerator({int? seed})
       : _rng = seed != null ? Random(seed) : Random();
 
@@ -203,6 +254,220 @@ class CareerSessionGenerator {
     return _humiliationCareer + session;
   }
 
+  // ─── Profil de capacités — 2ᵉ enveloppe de difficulté ────────────────────
+
+  static double? _minNullable(double? a, double? b) {
+    if (a == null) return b;
+    if (b == null) return a;
+    return a < b ? a : b;
+  }
+
+  /// Axe « plafond BPM rhythm » correspondant à la bande de profondeur de
+  /// `to` (`≤ mid` / `throat` / `full`). Aligné sur `_rhythmBand` du
+  /// `CapabilityTracker`.
+  static CapabilityAxis _rhythmBpmCeilAxisFor(Position to) {
+    if (to.index <= Position.mid.index) {
+      return CapabilityAxis.rhythmBpmCeilShallow;
+    }
+    if (to == Position.throat) return CapabilityAxis.rhythmBpmCeilThroat;
+    return CapabilityAxis.rhythmBpmCeilFull;
+  }
+
+  /// Plafond effectif (= le plus contraignant) d'un axe de capacité pour la
+  /// génération en cours : minimum de `comfort` (éventuellement **surchargé**
+  /// si c'est [_overloadAxis] de la séance) et du plafond figé sur un FAIL de
+  /// cette session (`sessionCeilings`, cf. §6 — qui plafonne *même* l'axe
+  /// surchargé : pas de re-fail dans la même séance). `null` si aucune donnée
+  /// — l'enveloppe ne contraint alors rien (joueuse neuve ou axe jamais
+  /// sollicité ; le profil prend le relais après ~3-5 sessions).
+  double? _capabilityCapFor(CapabilityAxis axis) {
+    final profile = _capProfile;
+    if (profile == null) return null;
+    var comfort = profile.comfortOf(axis);
+    if (comfort != null && axis == _overloadAxis) {
+      if (axis == CapabilityAxis.rhythmDepthMax) {
+        // Profondeur = cran discret : on autorise +1 cran, et seulement si la
+        // confiance au cran courant est là (cf. asymétries §5). « Humiliation
+        // l'autorise » + « milestone d'unlock acquittée » sont déjà garantis
+        // par `_maxDepthIndex` (qui borne `to` en amont).
+        if (profile.stateOf(axis).successRate >=
+            CapabilityRegulator.kDepthCranGate) {
+          comfort = comfort + 1;
+        }
+      } else {
+        comfort = comfort * _overloadFactor;
+      }
+    }
+    return _minNullable(comfort, _capCeilings[axis]);
+  }
+
+  /// Renvoie le facteur de surcharge applicable à [axis] (1.0 hors surcharge).
+  /// Pour `rhythmDepthMax` la surcharge est un cran, pas un facteur — utiliser
+  /// `_capabilityCapFor` directement.
+  double _overloadFactorFor(CapabilityAxis axis) =>
+      axis == _overloadAxis ? _overloadFactor : 1.0;
+
+  /// Choisit l'axe à surcharger pour la séance (surcharge isolée, §5). Priorité
+  /// aux axes pas vus depuis longtemps (à reprouver avant que le decay ne les
+  /// érode), aux axes confiants (`successRate` haut, prêts à monter), évitement
+  /// des axes fragiles. Exclut les axes déjà figés cette session (`_capCeilings`
+  /// = verrou §6) et ceux sans donnée. No-op hors carrière.
+  void _pickOverloadAxis() {
+    _overloadAxis = null;
+    _overloadFactor = 1.0;
+    final profile = _capProfile;
+    if (profile == null) return;
+    // On ne connaît pas l'index de session courant ici : on prend le plus
+    // grand `lastSeenSession` du profil comme pseudo-horloge (≈ session
+    // précédente) et l'ancienneté = écart à ce repère.
+    var pseudoNow = 0;
+    for (final a in CapabilityAxis.values) {
+      final s = profile.stateOf(a).lastSeenSession;
+      if (s > pseudoNow) pseudoNow = s;
+    }
+    CapabilityAxis? best;
+    var bestScore = double.negativeInfinity;
+    for (final axis in _overloadableAxes) {
+      final st = profile.stateOf(axis);
+      if (st.comfort == null) continue; // rien de prouvé → rien à pousser
+      if (_capCeilings.containsKey(axis)) continue; // déjà calé cette séance
+      final staleness =
+          st.lastSeenSession < 0 ? 0 : (pseudoNow - st.lastSeenSession);
+      final stalenessNorm = (staleness / 6.0).clamp(0.0, 1.0);
+      final sr = st.successRate;
+      final score = 0.45 * stalenessNorm +
+          0.45 * sr -
+          0.10 * (1 - sr) +
+          _rng.nextDouble() * 0.05;
+      if (score > bestScore) {
+        bestScore = score;
+        best = axis;
+      }
+    }
+    if (best == null) return;
+    _overloadAxis = best;
+    _overloadFactor =
+        CapabilityRegulator.surchargeFactor(profile.stateOf(best).successRate);
+    if (kDebugMode) {
+      debugPrint('[career-gen] overload axis=${best.storageKey} '
+          'factor=${_overloadFactor.toStringAsFixed(3)} '
+          'sr=${profile.stateOf(best).successRate.toStringAsFixed(2)}');
+    }
+  }
+
+  /// Borne un draft à l'enveloppe « profil de capacités » : profondeur, BPM
+  /// et durée ne dépassent pas ce que la joueuse a *prouvé* tenir. 2ᵉ
+  /// enveloppe orthogonale à l'humiliation — un step n'est jouable que si
+  /// **les deux** passent. No-op hors carrière (`_capProfile == null`).
+  ///
+  /// Modes hors gating : `hand` (exclu de tout axe de difficulté — cf. règle
+  /// « hand n'est jamais un levier »), `lick` (enregistré seulement, pas
+  /// pilotant), `breath` / `freestyle` (aucun axe). Les steps scriptés
+  /// (séquences milestone, beg insistant du Supplier) passent par d'autres
+  /// chemins et ne sont pas clampés — comme ils ne sont pas gatés par
+  /// l'humiliation non plus.
+  _StepDraft _clampToCapability(_StepDraft d) {
+    if (_capProfile == null) return d;
+    final clampedChain =
+        d.chainNext == null ? null : _clampToCapability(d.chainNext!);
+    var from = d.from;
+    var to = d.to;
+    var bpm = d.bpm;
+    var bpmEnd = d.bpmEnd;
+    var dur = d.duration;
+    switch (d.mode) {
+      case SessionMode.rhythm:
+        // Profondeur (cran). Plancher `head` : un rhythm a besoin d'au
+        // moins une amplitude tip↔head, jamais tip↔tip.
+        final depthCap = _capabilityCapFor(CapabilityAxis.rhythmDepthMax);
+        if (depthCap != null && to != null) {
+          final capIdx = max(Position.head.index,
+              depthCap.round().clamp(0, Position.values.length - 1));
+          if (to.index > capIdx) to = Position.values[capIdx];
+        }
+        // Garde-fou amplitude `from < to` strict après abaissement de `to`.
+        if (from != null && to != null && from.index >= to.index) {
+          from = to.index > 0 ? Position.values[to.index - 1] : null;
+        }
+        // BPM : plafond de bande + plafond franchissement si pattern
+        // franchissant (`from ≤ mid` ET `to ≥ throat`).
+        if (to != null && (bpm != null || bpmEnd != null)) {
+          var bpmCap = _capabilityCapFor(_rhythmBpmCeilAxisFor(to));
+          if (from != null &&
+              from.index <= Position.mid.index &&
+              to.index >= Position.throat.index) {
+            bpmCap = _minNullable(
+              bpmCap,
+              _capabilityCapFor(to == Position.throat
+                  ? CapabilityAxis.gorgeCrossingsBpmThroat
+                  : CapabilityAxis.gorgeCrossingsBpmFull),
+            );
+          }
+          if (bpmCap != null) {
+            final cap = bpmCap.round();
+            if (bpm != null && bpm > cap) bpm = cap;
+            if (bpmEnd != null && bpmEnd > cap) bpmEnd = cap;
+          }
+        }
+        // Apnée : un stroke airless (`from ≥ throat`) borne sa durée à
+        // l'apnée prouvée.
+        if (from != null &&
+            from.index >= Position.throat.index &&
+            dur != null) {
+          final apneaCap = _capabilityCapFor(CapabilityAxis.gorgeApneeStreak);
+          if (apneaCap != null && dur > apneaCap) {
+            dur = max(2, apneaCap.floor());
+          }
+        }
+      case SessionMode.hold:
+      case SessionMode.beg:
+        // Convention hold/beg : position tenue dans `to` (repli `from`).
+        final held = to ?? from;
+        if (held == Position.throat || held == Position.full) {
+          final cap = _minNullable(
+            _capabilityCapFor(held == Position.throat
+                ? CapabilityAxis.holdThroatStreak
+                : CapabilityAxis.holdFullStreak),
+            _capabilityCapFor(CapabilityAxis.gorgeApneeStreak),
+          );
+          if (cap != null && dur != null && dur > cap) {
+            dur = max(2, cap.floor());
+          }
+        }
+      case SessionMode.biffle:
+        final durCap = _capabilityCapFor(CapabilityAxis.biffleStreak);
+        if (durCap != null && dur != null && dur > durCap) {
+          dur = max(2, durCap.floor());
+        }
+        final bpmCap = _capabilityCapFor(CapabilityAxis.biffleBpmMax);
+        if (bpmCap != null && bpm != null && bpm > bpmCap) {
+          bpm = bpmCap.round();
+        }
+      case SessionMode.hand:
+      case SessionMode.lick:
+      case SessionMode.breath:
+      case SessionMode.freestyle:
+        break; // pas de cap de difficulté pour ces modes
+    }
+    if (from == d.from &&
+        to == d.to &&
+        bpm == d.bpm &&
+        bpmEnd == d.bpmEnd &&
+        dur == d.duration &&
+        identical(clampedChain, d.chainNext)) {
+      return d;
+    }
+    return _StepDraft(
+      mode: d.mode,
+      bpm: bpm,
+      bpmEnd: bpmEnd,
+      from: from,
+      to: to,
+      duration: dur,
+      chainNext: clampedChain,
+    );
+  }
+
   CareerGenerationResult generate({
     required int level,
     required PhraseBank bank,
@@ -223,6 +488,31 @@ class CareerSessionGenerator {
     Map<SessionMode, double> coachModeWeights = const {},
     String? sessionName,
     String? sessionNameQuickie,
+    // ─── Surcharges pour le mode « Custom » (rétrocompat : tous null /
+    //     false par défaut = comportement carrière inchangé) ───────────────
+    /// Plancher de difficulté appliqué au tirage dès le début de séance
+    /// (prime sur la valeur dérivée de quickie/intense).
+    double? intensityFloorOverride,
+
+    /// Plafond de profondeur (index `Position`) qui prime sur celui du
+    /// `CareerLevel`. Permet au mode custom de borner rhythm/hold.
+    int? maxDepthIndexOverride,
+
+    /// Si true, la `Session` générée est marquée `noStats` → le
+    /// `SessionController` n'écrit rien dans `StatsService`.
+    bool noStats = false,
+    // ─── Profil de capacités (2ᵉ enveloppe de difficulté, carrière only) ──
+    /// Profil persisté lu pour borner les steps : profondeur, BPM et durée
+    /// ne dépassent pas le `comfort` (= `best` naïf en Phase 2) de chaque
+    /// axe pilotant. `null` → aucun gating capacité (Custom, scénarios JSON).
+    CapabilityProfile? capabilityProfile,
+
+    /// Plafonds figés sur un FAIL de la session en cours (§6) — encore plus
+    /// contraignants que `comfort` quand présents. Passés par les
+    /// régénérations en cours de séance (Supplier / retry milestone) et le
+    /// premier maillon d'un encore enchaîné via
+    /// `SessionController.capabilitySessionCeilings`.
+    Map<CapabilityAxis, double> capabilitySessionCeilings = const {},
   }) {
     assert(
       finalMilestone == null ||
@@ -235,7 +525,7 @@ class CareerSessionGenerator {
     );
     final cfg = CareerLevel.forLevel(level);
     _includeHand = includeHand;
-    _maxDepthIndex = cfg.maxDepthIndex;
+    _maxDepthIndex = maxDepthIndexOverride ?? cfg.maxDepthIndex;
     _deepProbability = cfg.deepProbability;
     _spec = specialization ?? SpecializationAllocation.empty();
     _level = level;
@@ -260,6 +550,9 @@ class CareerSessionGenerator {
     _humiliationCareer = humiliationCareer;
     _humiliationSession = humiliationSession;
     _obedience = obedience;
+    _capProfile = capabilityProfile;
+    _capCeilings = capabilitySessionCeilings;
+    _pickOverloadAxis();
     // Mode "Session bâclée" : 6 min par défaut, intense tout du long. Floor
     // d'intensité appliqué au tirage de difficulté + on saute l'intro douce
     // et la pré-finition. Une durée explicite reste prioritaire (cas de la
@@ -270,7 +563,8 @@ class CareerSessionGenerator {
     // de difficulté solide pour que la suite ressente vraiment le level up.
     final effectiveDuration =
         durationSeconds ?? (quickie ? 6 * 60 : cfg.durationSeconds);
-    final intensityFloor = quickie ? 0.65 : (intense ? 0.55 : 0.0);
+    final intensityFloor =
+        intensityFloorOverride ?? (quickie ? 0.65 : (intense ? 0.55 : 0.0));
     // Nombre de boosts en phase finish : table par niveau + bonus encore
     // (chaîne encore = +2 boosts par cran, sans plafond explicite côté
     // générateur). Le caller borne le nombre d'encores enchaînés via le
@@ -364,12 +658,29 @@ class CareerSessionGenerator {
     if (milestoneReplacesIntro) {
       insertMilestoneNow();
     } else {
-      final first = _firstStep(
+      final first = _clampToCapability(_firstStep(
         quickie: quickie,
         intense: intense,
-      );
-      final firstText =
-          openingPhrase ?? _pickPhraseForDraft(bank, first, 'soft');
+      ));
+      // Phase 4 — coach audible : si un axe est surchargé cette séance et qu'on
+      // est sur un démarrage de séance normale (pas Supplier/encore = pas
+      // d'`openingPhrase` imposée, pas bâclée), une chance ∝ niveau de poser une
+      // phrase « attempt » (« aujourd'hui on bat ton record de gorge ») à la
+      // place de l'ouverture générique. Coach sans `progressPhrases` pour cet
+      // axe → `null` → on retombe sur l'ouverture habituelle (silence par défaut).
+      String? attemptPhrase;
+      if (_overloadAxis != null &&
+          openingPhrase == null &&
+          !quickie &&
+          _rng.nextDouble() <
+              CapabilityRegulator.progressPhraseChanceForLevel(level)) {
+        final raw =
+            bank.pickProgressPhrase(_overloadAxis!.storageKey, 'attempt', _rng);
+        if (raw != null && raw.isNotEmpty) attemptPhrase = raw;
+      }
+      final firstText = attemptPhrase ??
+          openingPhrase ??
+          _pickPhraseForDraft(bank, first, 'soft');
       steps.add(_draftToStep(first, time: 0, text: firstText));
       _lastMode = first.mode;
       _lastText = firstText;
@@ -555,6 +866,11 @@ class CareerSessionGenerator {
       // montée / descente sur la durée. Skip throat/full pour ne pas
       // violer le cap pulses (cf. `_capRhythmDurationByPulses`).
       draft = _maybeApplyBpmRamp(draft, progress);
+      // 2ᵉ enveloppe (profil de capacités) : dernier mot après les
+      // diversifications BPM/amplitude qui ont pu remonter au-dessus du
+      // `comfort` prouvé. `_diversifyLongSegment` derrière ne fait que
+      // varier « égal ou plus doux », donc pas besoin de re-clamper.
+      draft = _clampToCapability(draft);
 
       // Sas breath conditionnel : on insère un breath UNIQUEMENT si le
       // draft retenu provoquerait un déficit d'endurance (stamina projetée
@@ -590,8 +906,11 @@ class CareerSessionGenerator {
       // Diversification interne : si la step dure plus de 40s et qu'elle
       // est rythmique (rhythm/lick/hand), on la split en 2-3 sous-segments
       // avec une variation BPM/profondeur entre chaque, pour qu'une longue
-      // phase ne sonne pas comme un loop monotone.
-      final emitDrafts = _diversifyLongSegment(draft);
+      // phase ne sonne pas comme un loop monotone. Les sous-segments
+      // s'autorisent un léger dépassement BPM (≤ +10) — on re-borne donc
+      // chacun au profil de capacités.
+      final emitDrafts =
+          _diversifyLongSegment(draft).map(_clampToCapability).toList();
 
       final tier = diff < 0.33
           ? 'soft'
@@ -785,8 +1104,10 @@ class CareerSessionGenerator {
           finalCategory: finalCategory,
           silentFinishStartTime: silentFinishStartTime,
           finalStepTime: finalStepStartTime,
+          noStats: noStats,
         ),
         staminaProfile: trimmedProfile,
+        overloadAxis: _overloadAxis,
       );
     }
 
@@ -800,13 +1121,13 @@ class CareerSessionGenerator {
     if (isLowLevel) {
       final preDur = 22 + _rng.nextInt(9); // [22, 30]
       final preBpm = 62 + _rng.nextInt(9); // [62, 70]
-      final preDraft = _StepDraft(
+      final preDraft = _clampToCapability(_StepDraft(
         mode: SessionMode.rhythm,
         bpm: preBpm,
         from: Position.head,
         to: preFinisherTarget,
         duration: preDur,
-      );
+      ));
       final preText = _pickPhraseForDraft(bank, preDraft, 'medium');
       steps.add(_draftToStep(preDraft, time: time, text: preText));
       _lastMode = SessionMode.rhythm;
@@ -816,10 +1137,10 @@ class CareerSessionGenerator {
       final staminaBeforePre = stamina;
       stamina =
           _applyStaminaChange(stamina, preDraft, time / effectiveDuration, cfg);
-      _fillProfile(profile, time, preDur, stamina,
+      _fillProfile(profile, time, preDraft.duration ?? preDur, stamina,
           valueStart: staminaBeforePre);
       _advanceSalivaSim(preDraft);
-      time += preDur;
+      time += preDraft.duration ?? preDur;
     }
 
     // Choix du template de finish : `hand_burst` (non humiliant, pure
@@ -1090,8 +1411,10 @@ class CareerSessionGenerator {
         finalCategory: finalCategory,
         silentFinishStartTime: silentFinishStartTime,
         finalStepTime: finalStepStartTime,
+        noStats: noStats,
       ),
       staminaProfile: trimmedProfile,
+      overloadAxis: _overloadAxis,
     );
   }
 
@@ -1176,10 +1499,11 @@ class CareerSessionGenerator {
     }
     // Garde au minimum 2 steps : si la cascade a tout aplati (cas humil
     // très basse en début de niveau 5), on retombe sur les 2 premiers
-    // steps de `raw` sans filtre, qui sont volontairement modérés
-    // (head→mid 100/120 — req mécanique très basse).
+    // steps de `raw` sans filtre humil, qui sont volontairement modérés
+    // (head→mid 100/120 — req mécanique très basse). On les borne quand
+    // même au profil de capacités.
     if (out.length < 2) {
-      return raw.take(2).toList();
+      return raw.take(2).map(_clampToCapability).toList();
     }
     return out;
   }
@@ -2050,11 +2374,18 @@ class CareerSessionGenerator {
   /// transparente : ils ne touchent ni le tracking de type ni le buffer
   /// `_recentEmits` — un breath de récup au milieu d'une série rythmée ne
   /// doit pas remettre le compteur à zéro côté détection de monotonie.
-  /// Plafond (en secondes) de la chaîne `rhythm` consécutive sans
-  /// `rhythmHeadMidSustained`. La milestone `intro_rhythm_sustained` ouvre
-  /// la possibilité de pomper plus d'une minute d'affilée — sans elle, le
-  /// générateur force une rupture (autre mode ou breath).
+  /// Plafond (en secondes) de la chaîne `rhythm` consécutive — comportement
+  /// **historique**, utilisé tant que le profil de capacités n'a pas de donnée
+  /// `motion_streak` : tant que `rhythmHeadMidSustained` n'est pas acquis, le
+  /// générateur force une rupture au-delà ; la milestone `intro_rhythm_sustained`
+  /// lève ce mur. En carrière avec un profil renseigné, c'est l'endurance
+  /// **prouvée par la joueuse** (`motion_streak.comfort`) qui gouverne — cf.
+  /// `_effectiveRhythmChainCapSeconds`.
   static const int _rhythmChainCapSeconds = 60;
+
+  /// Borne basse du cap de chaîne rythme dérivé du profil — qu'une donnée
+  /// `motion_streak` anormalement courte ne hache pas tout le rythme.
+  static const int _rhythmChainCapFloorSeconds = 24;
 
   /// Plancher de durée d'un step `rhythm` poussé via `_mapDifficultyToStep`.
   /// Sert à éviter qu'un step soit tronqué à 1-2 s par `_capRhythmConsecutive`
@@ -2062,21 +2393,35 @@ class CareerSessionGenerator {
   /// candidats au tirage (`_canChainRhythm`).
   static const int _minRhythmStepSeconds = 8;
 
+  /// Cap effectif (en secondes) de la chaîne `rhythm` consécutive :
+  /// - profil renseigné (carrière) → `motion_streak.comfort` (surchargé si
+  ///   `motion_streak` est l'axe poussé), planché à `_rhythmChainCapFloorSeconds` ;
+  /// - sinon → comportement historique (`_rhythmChainCapSeconds`, levé par
+  ///   l'unlock `rhythmHeadMidSustained`).
+  int get _effectiveRhythmChainCapSeconds {
+    final c = _capProfile?.comfortOf(CapabilityAxis.rhythmMotionStreak);
+    if (c != null) {
+      final v =
+          (c * _overloadFactorFor(CapabilityAxis.rhythmMotionStreak)).round();
+      return v < _rhythmChainCapFloorSeconds ? _rhythmChainCapFloorSeconds : v;
+    }
+    return _unlockedKeys.contains(UnlockKey.rhythmHeadMidSustained)
+        ? 1 << 20 // de fait illimité
+        : _rhythmChainCapSeconds;
+  }
+
   /// Vrai si on peut encore ajouter un step `rhythm` à la chaîne sans
-  /// dépasser le cap (ou si l'unlock `rhythmHeadMidSustained` est acquis,
-  /// auquel cas le cap est désactivé).
+  /// dépasser le cap (cf. `_effectiveRhythmChainCapSeconds`).
   bool _canChainRhythm() {
-    if (_unlockedKeys.contains(UnlockKey.rhythmHeadMidSustained)) return true;
     return _consecutiveRhythmSeconds + _minRhythmStepSeconds <=
-        _rhythmChainCapSeconds;
+        _effectiveRhythmChainCapSeconds;
   }
 
   /// Tronque la durée d'un step `rhythm` pour respecter le cap chaîne
-  /// consécutive. No-op si l'unlock est acquis ou si la marge restante
-  /// est suffisante.
+  /// consécutive. No-op si la marge restante est suffisante.
   int _capRhythmConsecutive(int dur) {
-    if (_unlockedKeys.contains(UnlockKey.rhythmHeadMidSustained)) return dur;
-    final remaining = _rhythmChainCapSeconds - _consecutiveRhythmSeconds;
+    final remaining =
+        _effectiveRhythmChainCapSeconds - _consecutiveRhythmSeconds;
     if (remaining <= 0) return dur; // _canChainRhythm aurait dû filtrer
     return min(dur, remaining);
   }
@@ -2166,7 +2511,11 @@ class CareerSessionGenerator {
             0.60 * _pts(SpecializationBranch.endurance) +
             0.40 * _pts(SpecializationBranch.profondeur);
       case SessionMode.lick:
-        return 1.0 + 0.70 * _pts(SpecializationBranch.sloppy);
+        // Base abaissée (retour utilisateur « moins de lèche ») : sans
+        // point sloppy, le lick pèse ~0.6 contre ~1.0 pour un mode neutre.
+        // Le boost sloppy (+0.70/pt) reste pleinement effectif → une
+        // joueuse spé sloppy en voit toujours beaucoup (×4.1 à 5 pts).
+        return 0.6 + 0.70 * _pts(SpecializationBranch.sloppy);
       case SessionMode.beg:
         return 1.0 +
             0.90 * _pts(SpecializationBranch.obeissance) +
@@ -2799,7 +3148,8 @@ class CareerSessionGenerator {
   /// — sauce sur la langue, le visage, dans la bouche, jusqu'au fond de la
   /// gorge — qui n'est pas dans l'action mécanique elle-même).
   ///
-  /// - hand head→mid 40-60 BPM 14s — req 0 (baseline universelle)
+  /// - hand head→mid 40-60 BPM 14s — req 0 (baseline, candidat normal aux
+  ///   niveaux 1-3 seulement ; niveau ≥ 4 = simple fallback technique)
   /// - hold tip ~12s — req 5 (sauce sur la langue)
   /// - lick tip→head 60 BPM 16s — req 8 (sauce sur la bouche en lent)
   /// - hold head ~12s — req 8 (sauce sur le gland/bouche)
@@ -2838,18 +3188,29 @@ class CareerSessionGenerator {
     // Hand baseline : non humiliant, BPM tiré dans [40, 60] pour rester
     // dans la zone "lent contemplatif". Pas de gate dédiée — c'est le
     // fallback universel quand aucun autre final n'est unlocké.
-    final handBpm = 40 + _rng.nextInt(21);
-    candidates.add((
-      _StepDraft(
-        mode: SessionMode.hand,
-        bpm: handBpm,
-        from: Position.head,
-        to: Position.mid,
-        duration: fastDur,
-      ),
-      0.0,
-      null,
-    ));
+    //
+    // Niveaux 1-3 : candidat NORMAL — le finish bas niveau a besoin de
+    // cette baseline (req 0) tant que les finals gated (hold tip / lick
+    // tip→head / hold head…) ne sont pas acquittés.
+    // Niveau ≥ 4 : retiré des candidats normaux (un hand-final est trop
+    // anodin pour clôturer une séance à ce stade). Il ne subsiste alors
+    // que (a) comme fallback technique ultime si AUCUN autre candidat ne
+    // passe (cf. `valid.isEmpty` plus bas), ou (b) si une milestone-final
+    // venait à le scripter explicitement (placement "final", backlog).
+    if (_level < 4) {
+      final handBpm = 40 + _rng.nextInt(21);
+      candidates.add((
+        _StepDraft(
+          mode: SessionMode.hand,
+          bpm: handBpm,
+          from: Position.head,
+          to: Position.mid,
+          duration: fastDur,
+        ),
+        0.0,
+        null,
+      ));
+    }
 
     // Hold tip : surcote 5 (faible profondeur mais sauce sur la langue).
     // Gate : intro_final_hold_tip (niveau 2).
@@ -3000,6 +3361,7 @@ class CareerSessionGenerator {
     if (valid.isEmpty) {
       // Fallback dur : hand head→mid 50 BPM. Toujours unlocked, req=0,
       // garanti même si la palette change ou si humilCap est négatif.
+      // Hand n'a pas d'axe de capacité → `_clampToCapability` no-op.
       return _StepDraft(
         mode: SessionMode.hand,
         bpm: 50,
@@ -3009,7 +3371,263 @@ class CareerSessionGenerator {
       );
     }
     valid.sort((a, b) => a.$2.compareTo(b.$2));
-    return valid.last.$1;
+    // 2ᵉ enveloppe : on tronque le final retenu au profil de capacités —
+    // un hold throat/full d'apothéose ne dépasse pas la tenue prouvée.
+    return _clampToCapability(valid.last.$1);
+  }
+
+  // ─── Phase 5 — Punitions générées & bornées ────────────────────────────
+
+  /// Génère une punition contextuelle pour la séance carrière (cf. §7 de la
+  /// spec). À utiliser à la place du tirage dans `punishments.json` en mode
+  /// carrière. Hors carrière (Custom, scénarios JSON, mini-punition
+  /// résilience), le contrôleur garde le tirage statique.
+  ///
+  /// Algo : palette hardcodée de compositions « max humiliation qui passe »
+  /// (parité avec `_pickFinal`), bornée par les ceilings de session et le
+  /// `comfort` du profil de capacités via `_clampToCapability`. Fallback en
+  /// escalier (rythme `head→mid` rapide → hand ultime) pour rester jouable
+  /// même à humilCap quasi-nul.
+  ///
+  /// L'axe surchargé de la séance ([capabilityOverloadAxis]) est honoré côté
+  /// **clamp** (le `comfort` de cet axe est élargi du facteur de surcharge
+  /// dans `_clampToCapability` via `_capabilityCapFor`) — mais **pas côté
+  /// sélection** : on ne filtre pas par affinité d'axe, on prend strictement
+  /// le plus humiliant qui passe (décision projet).
+  Punishment generatePunishment({
+    required int level,
+    required PhraseBank bank,
+    required Set<UnlockKey> unlockedKeys,
+    required CapabilityProfile? capabilityProfile,
+    Map<CapabilityAxis, double> capabilitySessionCeilings = const {},
+    CapabilityAxis? capabilityOverloadAxis,
+    SpecializationAllocation? specialization,
+    double humiliationCareer = 0.0,
+    double humiliationSession = 0.0,
+    double obedience = 100.0,
+    bool includeHand = true,
+    Map<SessionMode, double> coachModeWeights = const {},
+  }) {
+    // Réinitialise l'état comme le ferait `generate`, pour que les helpers
+    // (`_clampToCapability`, `_isUnlocked`, `_pickPhrase`...) lisent les
+    // mêmes invariants. On ne touche pas aux champs spécifiques au tirage
+    // de session (`_lastMode`, `_consecutiveRhythmSeconds`, etc.) — sans
+    // objet ici.
+    _level = level;
+    _includeHand = includeHand;
+    _unlockedKeys = unlockedKeys;
+    _capProfile = capabilityProfile;
+    _capCeilings = capabilitySessionCeilings;
+    _spec = specialization ?? SpecializationAllocation.empty();
+    _humiliationCareer = humiliationCareer;
+    _humiliationSession = humiliationSession;
+    _obedience = obedience;
+    _coachModeWeights = coachModeWeights;
+    _lastText = '';
+    // Surcharge : on honore l'axe imposé par la séance (pas de re-tirage).
+    // Le facteur est reconstruit depuis la `successRate` du profil (même
+    // formule que `_pickOverloadAxis`). Si pas de profil → 1.0 (no-op).
+    _overloadAxis = capabilityOverloadAxis;
+    _overloadFactor =
+        (capabilityOverloadAxis != null && capabilityProfile != null)
+            ? CapabilityRegulator.surchargeFactor(
+                capabilityProfile.stateOf(capabilityOverloadAxis).successRate)
+            : 1.0;
+
+    final humilCap = _humiliationCareer + _humiliationSession;
+
+    // ─── Palette V1 (5 compos, parité dramaturgique avec `_pickFinal`) ───
+    final candidates = <_PunishmentCompo>[
+      // Biffle rapide court — le moins humiliant qui reste punitif. Gaté
+      // `includeHand` (biffle implique la main, comme dans `_pickFinal`).
+      const _PunishmentCompo(
+        id: 'biffle_burst',
+        drafts: [
+          _StepDraft(
+            mode: SessionMode.biffle,
+            bpm: 135,
+            from: null,
+            to: null,
+            duration: 25,
+          ),
+        ],
+        reqHumil: 13.0,
+        handRequired: true,
+      ),
+      // Franchissement `head→throat` rapide — axe « crossings BPM throat ».
+      const _PunishmentCompo(
+        id: 'crossings_burst',
+        drafts: [
+          _StepDraft(
+            mode: SessionMode.rhythm,
+            bpm: 110,
+            from: Position.head,
+            to: Position.throat,
+            duration: 25,
+          ),
+        ],
+        reqHumil: 14.0,
+      ),
+      // Torture lente profonde — rhythm `throat→full` BPM bas (= airless,
+      // pas de fenêtre de respiration) + hold full final.
+      const _PunishmentCompo(
+        id: 'slow_torture',
+        drafts: [
+          _StepDraft(
+            mode: SessionMode.rhythm,
+            bpm: 35,
+            from: Position.throat,
+            to: Position.full,
+            duration: 30,
+          ),
+          _StepDraft(
+            mode: SessionMode.hold,
+            bpm: null,
+            from: null,
+            to: Position.full,
+            duration: 8,
+          ),
+        ],
+        reqHumil: 16.0,
+      ),
+      // Throat sans pitié — rhythm `throat→full` rapide + hold final.
+      const _PunishmentCompo(
+        id: 'throat_relentless',
+        drafts: [
+          _StepDraft(
+            mode: SessionMode.rhythm,
+            bpm: 100,
+            from: Position.throat,
+            to: Position.full,
+            duration: 28,
+          ),
+          _StepDraft(
+            mode: SessionMode.hold,
+            bpm: null,
+            from: null,
+            to: Position.full,
+            duration: 8,
+          ),
+        ],
+        reqHumil: 18.0,
+      ),
+      // Chaîne de holds profonds avec courte fenêtre breath au milieu —
+      // la plus humiliante de la palette V1.
+      const _PunishmentCompo(
+        id: 'deep_hold_chain',
+        drafts: [
+          _StepDraft(
+            mode: SessionMode.hold,
+            bpm: null,
+            from: null,
+            to: Position.throat,
+            duration: 10,
+          ),
+          _StepDraft(
+            mode: SessionMode.breath,
+            bpm: null,
+            from: null,
+            to: null,
+            duration: 4,
+          ),
+          _StepDraft(
+            mode: SessionMode.hold,
+            bpm: null,
+            from: null,
+            to: Position.full,
+            duration: 12,
+          ),
+        ],
+        reqHumil: 20.0,
+      ),
+    ];
+
+    // Filtre humilCap + unlocks composants + gating hand. Sélection = max
+    // humiliant valide (parité `_pickFinal` : tri par `req` croissante,
+    // `valid.last`).
+    final valid = candidates.where((c) {
+      if (c.handRequired && !includeHand) return false;
+      if (c.reqHumil > humilCap) return false;
+      return c.drafts.every(_isUnlocked);
+    }).toList()
+      ..sort((a, b) => a.reqHumil.compareTo(b.reqHumil));
+    if (valid.isNotEmpty) {
+      return _materializePunishment(valid.last, bank);
+    }
+
+    // ─── Escalier fallback — ordre du plus exigeant au plus doux ──────────
+    // Étape 1 : rythme `head→mid` rapide (req≈5). Reste une vraie punition
+    // (BPM élevé) tant qu'on a un peu d'humil derrière. À niv. 2-3 c'est
+    // ici qu'on tombe en pratique pour une séance fragile.
+    const lastResort = _PunishmentCompo(
+      id: 'last_resort_rhythm',
+      drafts: [
+        _StepDraft(
+          mode: SessionMode.rhythm,
+          bpm: 120,
+          from: Position.head,
+          to: Position.mid,
+          duration: 22,
+        ),
+      ],
+      reqHumil: 5.0,
+    );
+    if (lastResort.reqHumil <= humilCap &&
+        lastResort.drafts.every(_isUnlocked)) {
+      return _materializePunishment(lastResort, bank);
+    }
+
+    // Étape 2 : filet ultime hand `head→mid` 50 BPM. req=0, toujours
+    // jouable. N'arrive qu'à humilCap≈0 + tous les autres bloqués — pas en
+    // pratique sur une joueuse carrière (mais évite tout crash).
+    const handFallback = _PunishmentCompo(
+      id: 'hand_fallback',
+      drafts: [
+        _StepDraft(
+          mode: SessionMode.hand,
+          bpm: 50,
+          from: Position.head,
+          to: Position.mid,
+          duration: 15,
+        ),
+      ],
+      reqHumil: 0.0,
+    );
+    return _materializePunishment(handFallback, bank);
+  }
+
+  /// Convertit une composition (drafts non-clampés) en [Punishment] runtime :
+  /// passe chaque draft par `_clampToCapability` (ceilings + comfort), injecte
+  /// un texte coach tiré dans le tier `hard` du mode (silencieux pour
+  /// `breath`, qui est une transition), et pose les `time` cumulés.
+  Punishment _materializePunishment(_PunishmentCompo compo, PhraseBank bank) {
+    final steps = <SessionStep>[];
+    var time = 0;
+    for (final raw in compo.drafts) {
+      final clamped = _clampToCapability(raw);
+      final dur = clamped.duration ?? 0;
+      String text = '';
+      if (clamped.mode != SessionMode.breath) {
+        text = _pickPhraseForDraft(bank, clamped, 'hard');
+      }
+      steps.add(SessionStep(
+        time: time,
+        text: text,
+        mode: clamped.mode,
+        bpm: clamped.bpm,
+        bpmEnd: clamped.bpmEnd,
+        from: clamped.from,
+        to: clamped.to,
+        duration: dur,
+      ));
+      time += dur;
+    }
+    return Punishment(
+      id: compo.id,
+      name: compo.id,
+      durationSeconds: time,
+      steps: steps,
+    );
   }
 
   /// Tronque la durée d'un hold final pour qu'elle reste finançable par
@@ -3398,7 +4016,10 @@ class CareerSessionGenerator {
   /// chose de plus doux) jusqu'à acceptation. Fallback ultime sur un
   /// lick tip→head.
   _StepDraft _enforceHumiliationRequired(_StepDraft draft, double available) {
-    var current = draft;
+    // 2ᵉ enveloppe : on borne d'abord aux capacités prouvées (profondeur /
+    // BPM / durée), puis la cascade humiliation ne fait que dégrader plus —
+    // baisser `to`/`bpm`/`duration` ne peut jamais re-violer le cap capacité.
+    var current = _clampToCapability(draft);
     for (var i = 0; i < 12; i++) {
       final r = HumiliationScale.requiredFor(
         mode: current.mode,
@@ -3743,4 +4364,25 @@ class _StepDraft {
         to: to,
         duration: duration,
       );
+}
+
+/// Composition de punition carrière (Phase 5). Tuple
+/// `(id, drafts, reqHumil, handRequired)` qui mime la palette de `_pickFinal`
+/// — drafts non-clampés (le clamp se fait au moment de la matérialisation
+/// via `_materializePunishment`).
+class _PunishmentCompo {
+  final String id;
+  final List<_StepDraft> drafts;
+  final double reqHumil;
+
+  /// Si vrai, la compo est exclue quand `includeHand == false` (compo qui
+  /// implique la main, comme `biffle_burst`).
+  final bool handRequired;
+
+  const _PunishmentCompo({
+    required this.id,
+    required this.drafts,
+    required this.reqHumil,
+    this.handRequired = false,
+  });
 }

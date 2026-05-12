@@ -4,41 +4,249 @@
   "title": "Coach taquine",
   "publicBio": "Joueuse, ironique, aime tester. Spécialiste des coups de queue et du sloppy. Mains obligatoires.",
   "phrases": {
-    "biffle": {
+    "rhythm": {
       "soft": [
-        "Commence à te taper le visage doucement {name} ~",
-        "Aww, tu vas prendre ça dans ta bouche ?"
+        "Vas-y doucement {name}, on se chauffe.",
+        "Petits coups pour commencer, fais-moi plaisir {name}.",
+        "Allez, montre-moi comment tu suces quand personne te juge.",
+        "Mignonne, tu t’y mets toute seule {name}.",
+        "Tu commences déjà à aimer ça, avoue {name}.",
+        "Doucement la chienne, t’auras tout le temps de souffrir après."
       ],
       "medium": [
-        "Plus fort {name}, fais claquer ma bite sur ta langue.",
-        "Regarde-toi, déjà en train de baver comme une chienne."
+        {"text": "Un peu plus profond {name}, je sais que tu peux faire mieux.", "min_depth": "mid"},
+        "Plus vite {name}, j’aime quand ça force un peu.",
+        {"text": "Descends, descends {name}… voilà, comme une grande.", "min_depth": "mid"},
+        "Tu transpires déjà ? Adorable. Continue {name}.",
+        "Garde ce rythme {name}, t’es presque crédible."
       ],
       "hard": [
-        "Défonce-toi le visage {name}.",
-        "Bave partout, petite salope.",
-        "Plus fort ! Je veux que ça claque."
+        {"text": "Au fond {name}, et arrête de faire ta délicate.", "min_depth": "throat"},
+        {"text": "Plus profond, plus vite — fais-toi mal, ça m’amuse.", "min_depth": "mid"},
+        "Tiens ce rythme {name}, ou je vais croire que t’es nulle.",
+        {"text": "Encaisse {name}. T’as voulu jouer dans la cour des grandes.", "min_depth": "throat"}
       ]
     },
     "lick": {
       "soft": [
-        "Lèche bien partout ma petite chienne."
+        "Lèche bien partout ma petite chienne.",
+        "Du bout de la langue {name}, taquine-le comme tu sais.",
+        "Tourne autour du gland, mignonne, prends ton temps.",
+        "Embrasse-le comme si tu l’aimais — on sait toutes les deux que oui {name}."
       ],
       "medium": [
-        "Lape-le comme une chienne en chaleur {name}."
+        "Lape-le comme une chienne en chaleur {name}.",
+        "Toute la longueur, et bien mouillé {name} — bave un peu pour moi.",
+        "Lèche plus fort {name}, je veux entendre ça.",
+        "Voilà {name}, dégueulasse comme il faut."
       ],
       "hard": [
-        "Lèche-moi ça correctement, pute."
+        "Lèche-moi ça correctement, pute.",
+        "Avec toute ta langue {name}, montre-moi à quel point t’es accro.",
+        "Plus appliquée, sale chienne — j’en veux partout."
+      ]
+    },
+    "biffle": {
+      "soft": [
+        "Commence à te taper le visage doucement {name}.",
+        "Aww, tu vas prendre ça dans ta bouche ?",
+        "Laisse-le rebondir sur tes joues, mignonne.",
+        "Petits coups tout mignons {name}, on échauffe le visage."
+      ],
+      "medium": [
+        "Plus fort {name}, fais claquer ma bite sur ta langue.",
+        "Regarde-toi, déjà en train de baver comme une chienne.",
+        "Fais claquer ça sur ta langue {name}, j’adore le son.",
+        "Tape-toi le visage avec {name}, sans pleurnicher."
+      ],
+      "hard": [
+        "Défonce-toi le visage {name}.",
+        "Bave partout, petite salope.",
+        "Plus fort ! Je veux que ça claque.",
+        "Étale ta salive {name}, t’as plus rien à protéger."
+      ]
+    },
+    "hold": {
+      "soft": [
+        {"text": "Garde-le en bouche {name} et reste sage.", "max_depth": "mid"},
+        "Ne bouge plus, mignonne. Apprécie le moment {name}.",
+        {"text": "Juste le gland {name}, tiens-le là — pour l’instant.", "max_depth": "head"}
+      ],
+      "medium": [
+        {"text": "Plus profond, et tu tiens {name}. Pas un mouvement.", "min_depth": "mid"},
+        {"text": "Reste au fond {name}, respire par le nez comme une grande.", "min_depth": "mid", "max_depth": "throat"},
+        {"text": "Tiens {name}… j’attends de voir combien de temps avant que tu craques.", "min_depth": "mid"}
+      ],
+      "hard": [
+        {"text": "Au fond, et tu ne remontes pas {name}. J’ai dit.", "min_depth": "throat"},
+        {"text": "C’est inconfortable ? Tant mieux. Tiens {name}.", "min_depth": "throat"}
+      ],
+      "finale": [
+        {"text": "On finit au fond {name}, jusqu’à la dernière goutte.", "min_depth": "throat"},
+        "Reste comme ça jusqu’au signal, mignonne {name}.",
+        "Dernier effort {name} — fais-moi croire que t’as aimé."
+      ]
+    },
+    "breath": {
+      "soft": [
+        "Respire, ma chienne, tu vas en avoir besoin.",
+        "Reprends ton souffle {name}, on n’a pas fini de jouer.",
+        "Détends ta mâchoire {name}, profite, ça dure pas.",
+        "Souffle un coup, mignonne. Et prépare-toi."
+      ]
+    },
+    "beg": {
+      "soft": [
+        "Dis-le-moi joliment : « j'en veux encore {coach} ».",
+        "Supplie-moi gentiment {name}, fais ta mignonne.",
+        "Demande-moi de continuer — avec la voix qui va bien {name}.",
+        "Dis-moi à voix haute que t'aimes ça, petite chienne."
+      ],
+      "medium": [
+        "Répète après moi : « j'ai besoin de ta queue {coach} ».",
+        "Demande « plus profond {coach} », et fais-le bien.",
+        "Implore correctement, salope — j'adore quand tu te rabaisses.",
+        "Dis mon nom en suppliant, {coach}."
+      ]
+    },
+    "freestyle": {
+      "soft": [
+        "Fais ce que tu veux un moment {name}, je te regarde.",
+        "Montre-moi ta vraie nature {name}, personne ne te juge ici."
+      ]
+    },
+    "hand": {
+      "soft": [
+        "Branle-le avec ta main {name}, tout doux pour commencer.",
+        "Enroule tes doigts autour, mignonne {name}.",
+        "Va-et-vient lent {name}, fais-moi durer le plaisir."
+      ],
+      "medium": [
+        "Plus vif de la main {name}, j’aime quand tu t’appliques.",
+        "Garde la cadence avec ta main {name}, sois utile."
       ]
     }
   },
+  "randomComments": [
+    "Mignonne quand tu transpires {name}.",
+    "Avoue que t’aimes ça, petite chienne.",
+    "Continue {name}, t’es presque crédible.",
+    "Bave un peu pour moi {name}.",
+    "Adorable, vraiment.",
+    "Tu fais ça si bien quand tu te lâches {name}.",
+    "Encore, ma chienne. Encore.",
+    "Je m’amuse beaucoup là {name}.",
+    "Sois sale {name}, c’est tout ce que je demande.",
+    "Tu rougis ? Mignonne {name}."
+  ],
   "intros": [
-    "Coucou {name} ~ Prête à te faire humilier un peu aujourd’hui ?",
-    "Jade est là. On va s’amuser toi et moi."
+    "Coucou {name}. Prête à te faire humilier un peu aujourd’hui ?",
+    "Jade est là. On va s’amuser toi et moi.",
+    "Salut ma chienne, pose ton téléphone, écarte la mâchoire, et fais-moi rire.",
+    "Aujourd’hui je teste jusqu’où tu vas {name}. Spoiler : assez loin."
   ],
   "congrats": [
     "Pas mal {name}, tu as bien bavé.",
-    "Mignonne quand tu souffres un peu."
+    "Mignonne quand tu souffres un peu.",
+    "C’était dégueulasse comme j’aime {name}. Bravo.",
+    "Tu t’es bien rabaissée aujourd’hui {name}. Je suis presque fière."
   ],
+  "encore": [
+    "Encore ? Évidemment que tu en veux encore, petite chienne.",
+    "Aww, t’en redemandes {name} ? D’accord, mais cette fois je suis moins gentille."
+  ],
+  "progress": {
+    "25": [
+      "Tu te chauffes bien {name}.",
+      "Déjà en train d’aimer ça, j’le savais {name}."
+    ],
+    "50": [
+      "Tu commences à être amusante {name}.",
+      "Pas mal du tout, ma chienne. Continue."
+    ],
+    "75": [
+      "Oh, tu fatigues {name} ? C’est là que ça devient drôle.",
+      "T’es au bord {name}… tiens, juste pour moi."
+    ],
+    "90": [
+      "Dernier effort {name}, fais-moi un beau final.",
+      "Allez, donne tout, petite chienne — je veux le spectacle."
+    ]
+  },
+  "branchPhrases": {
+    "rythmeBiffle": {
+      "soft": [
+        "Tu sais faire claquer {name}, c’est dans tes cordes.",
+        "Le rythme, c’est ton truc, ma chienne. Montre."
+      ],
+      "medium": [
+        "Tu suis le tempo comme une bonne petite chienne {name}.",
+        "Fais claquer ça plus fort {name}, c’est joli à entendre."
+      ],
+      "hard": [
+        "Défonce-toi sur le rythme {name}, je veux du bruit.",
+        "Tu tapes, tu suces, tu baves — t’es faite pour ça {name}."
+      ]
+    },
+    "sloppy": {
+      "soft": [
+        "Bave un peu, mignonne {name}, n’aie pas honte.",
+        "Mouille tout {name}, c’est ton ambiance."
+      ],
+      "medium": [
+        "Dégueulasse comme j’aime {name}.",
+        "T’as la bouche pleine de salive — parfait {name}."
+      ],
+      "hard": [
+        "Trempée jusqu’au menton {name}, c’est exactement ça.",
+        "Toute ta gueule pleine de bave, petite chienne. Magnifique."
+      ]
+    }
+  },
+  "progressPhrases": {
+    "biffle.streak": {
+      "attempt": [
+        "Aujourd'hui tu te tapes le visage un peu plus longtemps {name}, j'ai envie de voir ça.",
+        "On enchaîne les coups un cran de plus que d'habitude {name}, fais-moi plaisir."
+      ],
+      "record": [
+        "Tu t'es défoncé le visage plus longtemps que jamais {name} — adorable et pathétique à la fois.",
+        "Nouveau record de claques {name}. Tu deviens douée, ma chienne."
+      ],
+      "tapout": [
+        "Aww, déjà fini {name} ? T'as quand même bien tenu. On rejouera.",
+        "C'est noté {name}, ton visage a dit stop — je le respecte, pour cette fois."
+      ]
+    },
+    "biffle.bpm_max": {
+      "attempt": [
+        "Plus vite sur les coups aujourd'hui {name}, on monte le tempo.",
+        "Je veux que ça claque plus fort et plus vite {name}, prépare ta joue."
+      ],
+      "record": [
+        "Tu n'as jamais fait claquer aussi vite {name} — j'adore.",
+        "Record de vitesse sur les coups {name}. Tu m'impressionnes presque."
+      ],
+      "tapout": [
+        "Trop rapide pour toi cette fois {name} ? Pas grave, on garde le record.",
+        "Tu as lâché sur la vitesse {name} — t'y reviendras, j'en suis sûre."
+      ]
+    },
+    "lick.streak": {
+      "attempt": [
+        "Tu vas lécher plus longtemps aujourd'hui {name}, langue dehors, ma chienne.",
+        "On tient le léchage un peu plus que d'habitude {name}, applique-toi."
+      ],
+      "record": [
+        "Tu l'as léché plus longtemps que jamais {name} — vraiment dévouée, c'est mignon.",
+        "Record de léchage {name}. Bonne petite chienne."
+      ],
+      "tapout": [
+        "Ta langue fatigue {name} ? Adorable. On s'arrête là pour aujourd'hui.",
+        "C'est noté {name} — la prochaine fois tu tiens plus longtemps."
+      ]
+    }
+  },
   "nicknames": {
     "pool": [
       "petite chienne",

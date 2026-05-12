@@ -1,6 +1,6 @@
 # BeatBitch
 
-![version](https://img.shields.io/badge/version-0.1.3-orange)
+![version](https://img.shields.io/badge/version-0.2.0-orange)
 ![platform](https://img.shields.io/badge/platform-Android%20%7C%20Windows-blue)
 ![offline](https://img.shields.io/badge/100%25-offline-blue)
 

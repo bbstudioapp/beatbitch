@@ -61,6 +61,20 @@ void main() {
       expect(CoachMeta.fromJson({'isPrincipal': 'true'}).isPrincipal, isNull);
       expect(CoachMeta.fromJson({'isPrincipal': 1}).isPrincipal, isNull);
     });
+
+    test('portrait : clé `portrait` ou `portraitAsset`, trimée', () {
+      expect(
+        CoachMeta.fromJson({'portrait': '  assets/x/coach.png '}).portraitAsset,
+        'assets/x/coach.png',
+      );
+      expect(
+        CoachMeta.fromJson({'portraitAsset': 'assets/y.png'}).portraitAsset,
+        'assets/y.png',
+      );
+      expect(CoachMeta.fromJson({'portrait': ''}).portraitAsset, isNull);
+      expect(CoachMeta.fromJson({'portrait': '   '}).portraitAsset, isNull);
+      expect(CoachMeta.fromJson({}).portraitAsset, isNull);
+    });
   });
 
   group('Coach.withMeta — merge override', () {
@@ -102,6 +116,21 @@ void main() {
       expect(updated.name, base.name);
       expect(updated.tier, base.tier);
       expect(updated.requirements, base.requirements);
+      expect(updated.portraitAsset, base.portraitAsset);
+    });
+
+    test('portrait : meta surcharge, null garde le défaut', () {
+      final base = CoachCatalog.defaults.first;
+      expect(base.portraitAsset, isNotNull,
+          reason: 'les 6 coachs livrés ont un portrait par défaut');
+      final overridden =
+          base.withMeta(const CoachMeta(portraitAsset: 'assets/custom.png'));
+      expect(overridden.portraitAsset, 'assets/custom.png');
+      final kept = base.withMeta(const CoachMeta(tier: 3));
+      expect(kept.portraitAsset, base.portraitAsset);
+      // withPhrases ne touche pas au portrait.
+      expect(base.withPhrases(const CoachPhrasePack(title: 'X')).portraitAsset,
+          base.portraitAsset);
     });
   });
 

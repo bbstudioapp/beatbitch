@@ -11,6 +11,7 @@ import '../../screens/session_screen.dart';
 import '../../services/ambience_engine.dart';
 import '../../services/beep_engine.dart';
 import '../../services/camera_motion_service.dart';
+import '../../services/capability_service.dart';
 import '../../services/coach_phrases_loader.dart';
 import '../../services/punishment_loader.dart';
 import '../../services/random_comments_loader.dart';
@@ -30,6 +31,7 @@ import '../services/career_progress_service.dart';
 import '../services/career_session_generator.dart';
 import '../services/phrase_bank_loader.dart';
 import '../services/specialization_service.dart';
+import '../widgets/coach_portrait.dart';
 import '../widgets/free_spec_points_banner.dart';
 import '../widgets/free_training_banner.dart';
 import 'coach_picker_screen.dart';
@@ -97,6 +99,7 @@ class _CareerScreenState extends State<CareerScreen> {
       _specService.load(),
       _stats.getHumiliationLevel(),
       _stats.getObedienceLevel(),
+      CapabilityService().snapshotProfile(),
     ]);
     final maxLevel = results[3] as int;
     // Synchronise le palier de coach avec le niveau global avant que
@@ -113,6 +116,7 @@ class _CareerScreenState extends State<CareerScreen> {
       specialization: results[7] as SpecializationAllocation,
       humiliationScore: results[8] as double,
       obedienceScore: results[9] as double,
+      capabilityProfile: results[10] as CapabilityProfile,
     );
   }
 
@@ -246,6 +250,10 @@ class _CareerScreenState extends State<CareerScreen> {
       humiliationCareer: humiliationScore,
       humiliationSession: 0.0,
       obedience: obedienceScore,
+      // 2ᵉ enveloppe : profil de capacités persisté. Pas de
+      // `capabilitySessionCeilings` ici — la séance démarre, aucun fail
+      // n'a encore figé de plafond.
+      capabilityProfile: bundle.capabilityProfile,
       milestone: milestone,
       finalMilestone: finalMilestone,
       unlockedKeys: unlockedKeys,
@@ -285,6 +293,16 @@ class _CareerScreenState extends State<CareerScreen> {
           isQuickie: quickie,
           careerLevel: clamped,
           staminaProfile: result.staminaProfile,
+          // 2ᵉ enveloppe de difficulté : axe surchargé de la séance + snapshot
+          // du profil — consommés par le coach (Phase 4 : phrases attempt/
+          // record/tapout) côté SessionController.
+          capabilityOverloadAxis: result.overloadAxis,
+          capabilityProfile: bundle.capabilityProfile,
+          // Phase 5 : punitions carrière générées par le `SessionController`
+          // ont besoin du même set d'unlocks et du même toggle hand que le
+          // générateur initial pour filtrer leur palette.
+          unlockedKeys: unlockedKeys,
+          includeHand: includeHand,
           introText: introText,
           phraseBank: coachBank,
           holdVerifier: verifier,
@@ -511,6 +529,12 @@ class _CareerScreenState extends State<CareerScreen> {
       humiliationCareer: humiliationCareer,
       humiliationSession: humiliationSession,
       obedience: obedienceScore,
+      // 2ᵉ enveloppe : profil persisté + plafonds figés sur les fails déjà
+      // subis cette séance (live, comme l'obédiance ci-dessus) → la régen
+      // « niveau supérieur » respecte quand même ce que la joueuse vient
+      // de prouver ne pas tenir.
+      capabilityProfile: bundle.capabilityProfile,
+      capabilitySessionCeilings: ctrl.capabilitySessionCeilings,
       unlockedKeys: milestoneService.acquiredUnlockKeys(),
       coachModeWeights: activeCoach.modeWeights,
       sessionName: t.careerSessionName(newLevel),
@@ -582,6 +606,12 @@ class _CareerScreenState extends State<CareerScreen> {
       humiliationCareer: humiliationCareer,
       humiliationSession: humiliationSession,
       obedience: obedienceScore,
+      // 2ᵉ enveloppe : profil persisté + plafonds figés par le fail qui
+      // vient de déclencher ce retry (figés par `triggerFail` AVANT le
+      // callback, cf. SessionController) → le retry ne re-pousse pas
+      // l'axe qui a craqué.
+      capabilityProfile: bundle.capabilityProfile,
+      capabilitySessionCeilings: ctrl.capabilitySessionCeilings,
       milestone: milestone,
       // Plan pessimiste : pour le retry, on ne suppose plus que la
       // milestone est acquittée — son unlock n'est pas dans le set, le
@@ -628,12 +658,15 @@ class _CareerScreenState extends State<CareerScreen> {
     required bool quickie,
   }) async {
     final t = AppLocalizations.of(context);
-    // Capture la chauffe (`sessionScore` d'humiliation) AVANT de détacher
-    // / disposer le previousController : sinon la valeur est perdue et la
+    // Capture la chauffe (`sessionScore` d'humiliation) ET les plafonds de
+    // capacité figés sur les fails de la séance, AVANT de détacher /
+    // disposer le previousController : sinon les valeurs sont perdues et la
     // session-encore démarre froide. C'est exactement le levier qui fait
     // qu'on « repart d'où on était » au lieu de tout réinitialiser.
     final previousSessionHumiliation =
         previousController.humiliation.sessionScore;
+    final previousSessionCeilings =
+        previousController.capabilitySessionCeilings;
 
     // Détache l'ancien controller des services audio partagés AVANT que
     // pushReplacement ne déclenche son dispose() — sinon un `tts.stop()` /
@@ -671,6 +704,10 @@ class _CareerScreenState extends State<CareerScreen> {
       humiliationScore: humiliationCareer,
       obedienceScore: obedienceScore,
     );
+    // Snapshot des unlocks au démarrage de l'encore — partagé entre le
+    // générateur de session et le `SessionController` (qui les repasse au
+    // générateur de punition carrière en cas de fail, Phase 5).
+    final encoreUnlockedKeys = milestoneService.acquiredUnlockKeys();
     final result = CareerSessionGenerator().generate(
       level: level,
       bank: coachBank,
@@ -682,7 +719,14 @@ class _CareerScreenState extends State<CareerScreen> {
       humiliationCareer: humiliationCareer,
       humiliationSession: previousSessionHumiliation,
       obedience: obedienceScore,
-      unlockedKeys: milestoneService.acquiredUnlockKeys(),
+      // 2ᵉ enveloppe : profil persisté + plafonds figés par les fails de la
+      // séance qu'on prolonge (l'encore est une continuation — comme on lui
+      // repasse la chauffe `seedHumiliationSession`, on lui repasse les
+      // plafonds de capacité). Le nouveau contrôleur repart sinon sur un
+      // tracker vide.
+      capabilityProfile: bundle.capabilityProfile,
+      capabilitySessionCeilings: previousSessionCeilings,
+      unlockedKeys: encoreUnlockedKeys,
       coachModeWeights: activeCoach.modeWeights,
       sessionName: t.careerSessionName(level),
       sessionNameQuickie: t.careerSessionNameQuickie(level),
@@ -705,6 +749,13 @@ class _CareerScreenState extends State<CareerScreen> {
           isQuickie: quickie,
           careerLevel: level,
           staminaProfile: result.staminaProfile,
+          capabilityOverloadAxis: result.overloadAxis,
+          capabilityProfile: bundle.capabilityProfile,
+          // Phase 5 — punitions carrière côté SessionController utilisent
+          // les mêmes unlocks et le même toggle hand que le générateur
+          // principal.
+          unlockedKeys: encoreUnlockedKeys,
+          includeHand: includeHand,
           // Pas d'introText : on saute le panel d'intro et le décompte.
           // L'opening phrase est déjà jointe au step #0 de la session.
           phraseBank: coachBank,
@@ -1024,10 +1075,12 @@ class _LevelPicker extends StatelessWidget {
           children: [
             const Icon(Icons.lock_open, color: AppTheme.accent, size: 18),
             const SizedBox(width: 12),
-            Text(
-              AppLocalizations.of(context).careerLevelLockedHint,
-              style:
-                  const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+            Expanded(
+              child: Text(
+                AppLocalizations.of(context).careerLevelLockedHint,
+                style: const TextStyle(
+                    fontSize: 13, color: AppTheme.textSecondary),
+              ),
             ),
           ],
         ),
@@ -1152,14 +1205,12 @@ class _CoachSummaryCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: accent.withValues(alpha: 0.18),
-                child: Icon(
-                  isPrincipal ? Icons.star : Icons.tune,
-                  color: accent,
-                  size: 22,
-                ),
+              CoachPortrait(
+                coach: coach,
+                height: 64,
+                width: 46,
+                borderRadius: BorderRadius.circular(10),
+                accent: accent,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1214,6 +1265,12 @@ class _CareerBundle {
   /// filtre milestone (`humilTolerance = 1 + obedience/50`).
   final double obedienceScore;
 
+  /// Profil de capacités persisté (2ᵉ enveloppe de difficulté, carrière
+  /// uniquement). Passé tel quel aux `generate(...)` pour borner les steps
+  /// au `comfort` (= `best` naïf en Phase 2) de chaque axe pilotant. Vide
+  /// (mais non null) pour une joueuse neuve → aucun gating capacité.
+  final CapabilityProfile capabilityProfile;
+
   const _CareerBundle({
     required this.bank,
     required this.punishments,
@@ -1225,5 +1282,6 @@ class _CareerBundle {
     required this.specialization,
     required this.humiliationScore,
     required this.obedienceScore,
+    required this.capabilityProfile,
   });
 }

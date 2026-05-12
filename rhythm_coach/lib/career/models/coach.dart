@@ -171,6 +171,12 @@ class CoachMeta {
   final bool? isPrincipal;
   final CoachRequirement? requirements;
 
+  /// Chemin de l'asset portrait (ex: `assets/career/coaches/portraits/coach_01_lina.png`).
+  /// Null = pas d'override, on garde le chemin codé dans `CoachCatalog.defaults`
+  /// (qui peut lui-même être null pour un coach sans portrait — l'UI affiche
+  /// alors un repli stylisé).
+  final String? portraitAsset;
+
   /// Préférences gameplay du coach : multiplicateur appliqué au poids
   /// de tirage de chaque mode (cf. `_modeWeight` dans le générateur).
   /// Valeurs entre 0.0 (« jamais ») et 2.0 (« doublé »). 1.0 = neutre.
@@ -189,6 +195,7 @@ class CoachMeta {
     this.tier,
     this.isPrincipal,
     this.requirements,
+    this.portraitAsset,
     this.modeWeights,
     this.voicePreset,
   });
@@ -202,6 +209,7 @@ class CoachMeta {
       tier == null &&
       isPrincipal == null &&
       requirements == null &&
+      portraitAsset == null &&
       modeWeights == null &&
       voicePreset == null;
 
@@ -214,7 +222,8 @@ class CoachMeta {
   ///   "specialties": ["endurance", "profondeur"],
   ///   "tier": 1,
   ///   "isPrincipal": true,
-  ///   "requirements": { "requiresHands": false, "minPlayerLevel": 1 }
+  ///   "requirements": { "requiresHands": false, "minPlayerLevel": 1 },
+  ///   "portrait": "assets/career/coaches/portraits/coach_01_lina.png"
   /// }
   /// ```
   /// Tout champ absent est laissé null.
@@ -273,6 +282,9 @@ class CoachMeta {
 
     final rawName = json['name']?.toString().trim();
 
+    final rawPortrait =
+        (json['portrait'] ?? json['portraitAsset'])?.toString().trim();
+
     final ttsNode = json['tts'];
     final voicePreset = ttsNode is Map<String, dynamic>
         ? CoachVoicePreset.fromJson(ttsNode)
@@ -286,6 +298,8 @@ class CoachMeta {
       isPrincipal:
           json['isPrincipal'] is bool ? json['isPrincipal'] as bool : null,
       requirements: requirements,
+      portraitAsset:
+          (rawPortrait != null && rawPortrait.isNotEmpty) ? rawPortrait : null,
       modeWeights: modeWeights,
       voicePreset:
           (voicePreset != null && !voicePreset.isEmpty) ? voicePreset : null,
@@ -374,6 +388,23 @@ class CoachPhrasePack {
   /// Vide / absent = pas de coloration, comportement historique.
   final Map<SpecializationBranch, Map<String, List<PhraseEntry>>> branchPhrases;
 
+  /// Phrases de progression du **profil de capacités** (Phase 4 — coach
+  /// audible parcimonieux). Pour chaque axe — clé = `CapabilityAxis.storageKey`
+  /// (ex. `"gorge.apnee_streak"`, `"rhythm.depth_max"`) — trois tiers :
+  ///
+  /// - `attempt` : annonce avant une surcharge (« aujourd'hui on bat ton
+  ///   record de gorge »), injectée comme texte du step #0 par le générateur.
+  /// - `record` : record battu sur l'axe poussé — phrase de reconnaissance,
+  ///   prononcée en fin de séance par `SessionController`.
+  /// - `tapout` : « je peux pas » reconnu comme limite légitime — variante
+  ///   DOUCE des phrases de fail, prononcée à la place de la phrase de fail
+  ///   standard quand le tap-out est imputable à un axe vraiment surchargé.
+  ///
+  /// Déclenchement RARE (∝ niveau, quasi-muet aux premiers paliers). Clé brute
+  /// (String) : une clé inconnue n'est juste jamais consultée. Vide / absent =
+  /// silence — comportement de tous les coachs sauf Lina + Victoria.
+  final Map<String, Map<String, List<PhraseEntry>>> progressPhrases;
+
   /// Commentaires aléatoires propres à ce coach. Si non vide, **remplacent**
   /// la liste globale de `random_comments.json` pendant la séance. Vide =
   /// fallback sur la liste globale (comportement historique). Sert à éviter
@@ -405,6 +436,7 @@ class CoachPhrasePack {
     this.encore = const [],
     this.progress = const {},
     this.branchPhrases = const {},
+    this.progressPhrases = const {},
     this.randomComments = const [],
     this.nicknames = CoachNicknamePool.empty,
     this.coachNicknames = const [],
@@ -421,6 +453,7 @@ class CoachPhrasePack {
       encore.isEmpty &&
       progress.isEmpty &&
       branchPhrases.isEmpty &&
+      progressPhrases.isEmpty &&
       randomComments.isEmpty &&
       nicknames.isEmpty &&
       coachNicknames.isEmpty &&
@@ -499,6 +532,23 @@ class CoachPhrasePack {
       });
     }
 
+    // progressPhrases : map storageKey-d'axe → tier → liste. Clé brute (String),
+    // pas de validation contre l'enum `CapabilityAxis` — une clé inconnue n'est
+    // simplement jamais consultée (cf. CoachPhrasePack.progressPhrases).
+    final progressPhrases = <String, Map<String, List<PhraseEntry>>>{};
+    final progressPhrasesNode = root['progressPhrases'];
+    if (progressPhrasesNode is Map<String, dynamic>) {
+      progressPhrasesNode.forEach((axisKey, tiersRaw) {
+        if (axisKey.trim().isEmpty || tiersRaw is! Map<String, dynamic>) return;
+        final tiers = <String, List<PhraseEntry>>{};
+        tiersRaw.forEach((tier, raw) {
+          final list = PhraseEntry.listFromJson(raw);
+          if (list.isNotEmpty) tiers[tier] = list;
+        });
+        if (tiers.isNotEmpty) progressPhrases[axisKey] = tiers;
+      });
+    }
+
     final nicknamesNode = root['nicknames'];
     final nicknames = nicknamesNode is Map<String, dynamic>
         ? CoachNicknamePool.fromJson(nicknamesNode)
@@ -517,6 +567,7 @@ class CoachPhrasePack {
       encore: PhraseEntry.listFromJson(root['encore']),
       progress: progress,
       branchPhrases: branchPhrases,
+      progressPhrases: progressPhrases,
       randomComments: stringList(root['randomComments']),
       nicknames: nicknames,
       coachNicknames: stringList(root['coachNicknames']),
@@ -563,6 +614,12 @@ class Coach {
   /// phrases prêtes à parler.
   final String publicBio;
 
+  /// Chemin de l'asset portrait du coach (ex:
+  /// `assets/career/coaches/portraits/coach_01_lina.png`), ratio source 2:3.
+  /// `null` = pas de portrait → l'UI affiche un repli stylisé (initiale).
+  /// Surchargeable via la clé `portrait` du JSON `coach_<id>.json`.
+  final String? portraitAsset;
+
   /// Branches de spécialisation que ce coach met en avant. Sert de hint
   /// éventuel pour le générateur (ex: pondérer la spé du coach principal).
   final List<SpecializationBranch> specialties;
@@ -597,6 +654,7 @@ class Coach {
     required this.specialties,
     required this.tier,
     required this.isPrincipal,
+    this.portraitAsset,
     this.requirements = CoachRequirement.none,
     this.phrases = CoachPhrasePack.empty,
     this.modeWeights = const {},
@@ -617,6 +675,7 @@ class Coach {
       specialties: specialties,
       tier: tier,
       isPrincipal: isPrincipal,
+      portraitAsset: portraitAsset,
       requirements: requirements,
       phrases: pack,
       modeWeights: modeWeights,
@@ -638,6 +697,7 @@ class Coach {
       specialties: meta.specialties ?? specialties,
       tier: meta.tier ?? tier,
       isPrincipal: meta.isPrincipal ?? isPrincipal,
+      portraitAsset: meta.portraitAsset ?? portraitAsset,
       requirements: meta.requirements ?? requirements,
       phrases: phrases,
       modeWeights: meta.modeWeights ?? modeWeights,
@@ -888,6 +948,16 @@ class _CoachComposedPhraseBank extends PhraseBank {
     final picked = pickPhraseEntry(coachPhrases.encore, rng);
     if (picked != null) return picked;
     return fallback.pickEncore(rng);
+  }
+
+  @override
+  String? pickProgressPhrase(String axisStorageKey, String tier, Random rng) {
+    final pool = coachPhrases.progressPhrases[axisStorageKey]?[tier];
+    if (pool != null && pool.isNotEmpty) {
+      final picked = pickPhraseEntry(pool, rng);
+      if (picked != null) return picked;
+    }
+    return fallback.pickProgressPhrase(axisStorageKey, tier, rng);
   }
 
   @override

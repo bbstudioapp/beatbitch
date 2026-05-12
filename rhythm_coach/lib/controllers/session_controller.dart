@@ -8,6 +8,7 @@ import '../career/models/level_milestone.dart';
 import '../career/models/phrase_bank.dart';
 import '../career/models/specialization.dart';
 import '../career/models/unlock_key.dart';
+import '../career/services/career_session_generator.dart';
 import '../l10n/app_localizations.dart';
 import '../main.dart' show milestoneService;
 import '../models/punishment.dart';
@@ -17,6 +18,9 @@ import '../services/ambience_engine.dart';
 import '../services/backgrounds_service.dart';
 import '../services/badge_service.dart';
 import '../services/beep_engine.dart';
+import '../services/capability_axis.dart';
+import '../services/capability_service.dart';
+import '../services/capability_tracker.dart';
 import '../services/hold_verifier.dart';
 import '../services/humiliation_engine.dart';
 import '../services/obedience_engine.dart';
@@ -47,6 +51,63 @@ class SessionController extends ChangeNotifier {
   final RandomCommentsBundle _randomComments;
   final StatsService _stats;
   final BadgeService _badges;
+
+  /// Persistance du profil de capacités. Toujours instancié, mais n'écrit
+  /// que si [_capabilityTracker] a produit un rapport — donc en pratique
+  /// uniquement sur les sessions carrière (cf. [_capabilityTracker]).
+  final CapabilityService _capabilities;
+
+  /// Suivi live du profil de capacités — non null UNIQUEMENT sur les
+  /// sessions carrière (`trackCapabilities`). Custom et scénarios JSON ne
+  /// l'instancient pas (sandbox / hors carrière).
+  final CapabilityTracker? _capabilityTracker;
+
+  /// Plafonds figés sur les appuis FAIL de la session en cours (§6 de la
+  /// spec) — le mode carrière les relit pour les passer aux régénérations
+  /// (Supplier / retry milestone) et au premier maillon d'un encore
+  /// enchaîné, comme il relit l'obédiance live. Vide hors carrière ou tant
+  /// qu'aucun fail n'a eu lieu.
+  Map<CapabilityAxis, double> get capabilitySessionCeilings =>
+      _capabilityTracker?.sessionCeilings ?? const {};
+
+  /// Niveau carrière de la séance — dose la fréquence des phrases du profil
+  /// de capacités (Phase 4, `CapabilityRegulator.progressPhraseChanceForLevel`).
+  /// 0 hors carrière (le profil n'y est de toute façon pas suivi).
+  final int _careerLevel;
+
+  /// Axe de capacité surchargé sur cette séance (`null` hors carrière / profil
+  /// neuf). Sert aux phrases `record` : l'exploit annoncé en fin de séance est
+  /// celui qu'on a poussé exprès (cohérent avec la phrase `attempt` injectée
+  /// par le générateur en début de séance).
+  final CapabilityAxis? _capabilityOverloadAxis;
+
+  /// Snapshot du profil de capacités pris au début de la séance (mode
+  /// carrière). Sert à l'attribution mid-session du tap-out (phrase `tapout`)
+  /// et à détecter un record battu (phrase `record`, en comparant `reached`
+  /// au `best` pré-séance). `null` hors carrière.
+  final CapabilityProfile? _capabilityProfile;
+
+  /// `UnlockKey` acquittés à l'ouverture de la séance — passés tel quels au
+  /// `CareerSessionGenerator` quand on lui demande de produire une punition
+  /// carrière (Phase 5). Vide hors carrière → la génération de punition est
+  /// inhibée par `_generateCareerPunishmentOrNull` de toute façon, mais on
+  /// reste cohérent : pas de set partiel.
+  final Set<UnlockKey> _unlockedKeys;
+
+  /// Mirroir du toggle `hand` propagé au générateur principal — repassé au
+  /// générateur de punition carrière (Phase 5) pour exclure les compositions
+  /// qui impliquent la main (`biffle_burst`) si la joueuse a désactivé hand
+  /// pour la séance.
+  final bool _includeHand;
+
+  /// Vrai si la séance est une **session bâclée** (mode quickie). Passé à
+  /// `CapabilityService.commit` au `_finish` : le `best` du profil de capacités
+  /// est enregistré normalement mais la cible adaptative `comfort` n'est pas
+  /// recalibrée (cf. §2 de la spec — une séance bâclée est de la niaque
+  /// ponctuelle, pas un palier consolidé). Sans effet hors carrière (pas de
+  /// tracker → pas de `commit`).
+  final bool _isQuickie;
+
   final HumiliationEngine _humiliation = HumiliationEngine();
   HumiliationEngine get humiliation => _humiliation;
   final ObedienceEngine _obedience = ObedienceEngine();
@@ -136,6 +197,13 @@ class SessionController extends ChangeNotifier {
   /// `_finish` de skipper la phrase finale + chime quand ils ont déjà été
   /// joués pendant le step final.
   bool _finalChimePlayed = false;
+
+  /// True quand le `finale_chime` **sonne réellement** (après l'attente de
+  /// la fin de la phrase d'action du step final). Distinct de
+  /// [_finalChimePlayed] qui est posé dès l'identification du step final
+  /// (donc avant le speak). Consommé par l'overlay de finale pour caler le
+  /// halo blanc crémeux pile sur le chime.
+  bool _finaleChimeStarted = false;
 
   // ─── État du flow fail ─────────────────────────────────────────────────
 
@@ -250,11 +318,19 @@ class SessionController extends ChangeNotifier {
     required RandomCommentsBundle randomComments,
     StatsService? stats,
     BadgeService? badges,
+    CapabilityService? capabilities,
+    bool trackCapabilities = false,
     PhraseBank? phraseBank,
     List<double>? staminaProfile,
     HoldVerifier? holdVerifier,
     SpecializationAllocation? specialization,
     double seedHumiliationSession = 0.0,
+    int careerLevel = 0,
+    CapabilityAxis? capabilityOverloadAxis,
+    CapabilityProfile? capabilityProfile,
+    Set<UnlockKey> unlockedKeys = const {},
+    bool includeHand = true,
+    bool isQuickie = false,
   })  : _session = session,
         _tts = tts,
         _beep = beep,
@@ -263,11 +339,19 @@ class SessionController extends ChangeNotifier {
         _randomComments = randomComments,
         _stats = stats ?? StatsService(),
         _badges = badges ?? BadgeService(),
+        _capabilities = capabilities ?? CapabilityService(),
+        _capabilityTracker = trackCapabilities ? CapabilityTracker() : null,
         _phraseBank = phraseBank,
         _staminaProfile = staminaProfile,
         _holdVerifier = holdVerifier,
         _specialization = specialization,
-        _seedHumiliationSession = seedHumiliationSession {
+        _seedHumiliationSession = seedHumiliationSession,
+        _careerLevel = careerLevel,
+        _capabilityOverloadAxis = capabilityOverloadAxis,
+        _capabilityProfile = capabilityProfile,
+        _unlockedKeys = unlockedKeys,
+        _includeHand = includeHand,
+        _isQuickie = isQuickie {
     _beep.onBeat = _handleBeat;
   }
 
@@ -473,6 +557,12 @@ class SessionController extends ChangeNotifier {
   bool get isIdle => _state == SessionState.idle;
   bool get isFailing => _state == SessionState.failing;
 
+  /// True quand le `finale_chime` retentit (après la phrase d'action du
+  /// step final). Consommé par l'overlay de finale (halo blanc crémeux) :
+  /// combiné à `isRunning`, ça ne s'allume que pour les sessions à step
+  /// final dédié (carrière + custom), pile au moment du chime.
+  bool get finaleChimeStarted => _finaleChimeStarted;
+
   FailPhase? get failPhase => _failPhase;
   String? get currentFailPhrase => _currentFailPhrase;
   Punishment? get currentPunishment => _currentPunishment;
@@ -520,6 +610,7 @@ class SessionController extends ChangeNotifier {
         _configApplied = false;
         _hadFailThisSession = false;
         _finalChimePlayed = false;
+        _finaleChimeStarted = false;
         _sessionBadgeUnlocks = const [];
         _sessionMilestoneUnlocks = const [];
         _currentHoldFullDuration = 0;
@@ -527,6 +618,7 @@ class SessionController extends ChangeNotifier {
         _resilienceTickAccumulator = 0;
         _miniPunishmentsTriggered = 0;
         _announcedProgressMarkers.clear();
+        _capabilityTracker?.onSessionStart();
         // Seed neutre : remplacé par les valeurs persistées dès que la
         // lecture async (plus bas) revient. `seedHumiliationSession`
         // transporte la chauffe d'une session précédente lors d'un
@@ -699,6 +791,7 @@ class SessionController extends ChangeNotifier {
     final now = elapsedSeconds;
     if (now == _lastHoldTickAtSecond) return;
     _lastHoldTickAtSecond = now;
+    _capabilityTracker?.onTickSecond(swallowMode: _swallowMode);
     _obedience.onTickSecond();
     // L'humil tick est accéléré par l'obédiance courante : plus elle obéit
     // bien, plus on accepte qu'elle ait droit à plus d'humiliation par
@@ -719,6 +812,7 @@ class SessionController extends ChangeNotifier {
     );
     final overflows = _saliva.popOverflowEvents();
     if (overflows > 0) {
+      _capabilityTracker?.onSalivaOverflow();
       final remaining = _salivaOverflowsCap - _salivaOverflowsThisSession;
       final apply = overflows > remaining ? remaining : overflows;
       for (var i = 0; i < apply; i++) {
@@ -852,6 +946,16 @@ class SessionController extends ChangeNotifier {
         _configApplied = true;
         _lastConfigStep = step;
         modeChanged = true;
+        // Télémétrie capacités : on signale le changement de config avec les
+        // valeurs du step (career sessions uniquement — `_capabilityTracker`
+        // est null sinon).
+        _capabilityTracker?.onStepApplied(
+          mode: resolvedMode,
+          from: step.from,
+          to: step.to,
+          bpm: step.bpm,
+          duration: step.duration,
+        );
         _armHoldVerifierIfHoldStep(step);
         // Rotation aléatoire à chaque step de config — anti-doublon
         // immédiat dans le service. Un override `step.background`
@@ -946,6 +1050,10 @@ class SessionController extends ChangeNotifier {
       }
     }
     if (_released) return;
+    // Le chime sonne maintenant : on le signale (l'overlay de finale s'y
+    // accroche pour démarrer le halo pile sur le son).
+    _finaleChimeStarted = true;
+    notifyListeners();
     await _beep.playFinaleChime(category: session.finalCategory);
   }
 
@@ -957,6 +1065,16 @@ class SessionController extends ChangeNotifier {
     await WakelockPlus.disable();
     _flushHoldFull();
     _disarmHoldVerifier();
+    // Profil de capacités : on clôt les streaks dès maintenant (la session
+    // s'est terminée proprement) — le rapport est réutilisé plus bas pour le
+    // commit ET sert tout de suite à détecter un record battu sur l'axe poussé
+    // cette séance (Phase 4 : bump + éventuelle phrase coach). `_capabilityTracker`
+    // est null hors carrière → `capReport == null`. `finalizeReport` est
+    // idempotent (re-flush de valeurs déjà figées = max d'elles-mêmes).
+    final capTracker = _capabilityTracker;
+    final SessionCapabilityReport? capReport =
+        (capTracker != null && !_released) ? capTracker.finalizeReport() : null;
+    final CapabilityAxis? recordAxis = _detectCapabilityRecord(capReport);
     if (!_session.noStats) {
       await _stats.addElapsedSeconds(elapsedSeconds);
       await _stats.recordSessionCompleted(hadFail: _hadFailThisSession);
@@ -972,6 +1090,15 @@ class SessionController extends ChangeNotifier {
       );
       if (!_hadFailThisSession) {
         _obedience.onSessionCleanFinish();
+        // Phase 4 : record battu sur l'axe poussé cette séance → petit bump
+        // permanent humiliation + obéissance (« l'exploit *est* une soumission
+        // acceptée », §9). Posé dès qu'un record est détecté — c'est seulement
+        // l'annonce vocale (en fin de _finish) qui est rare (∝ niveau). AVANT
+        // les persistances `setObedienceLevel` / `setHumiliationLevel`.
+        if (recordAxis != null) {
+          _humiliation.bumpCareer(HumiliationEngine.bumpProgressRecord);
+          _obedience.onCapabilityRecord();
+        }
         // Compteurs des badges de fin de séance (Bouche pleine / Repeinte /
         // Gobeuse / Nettoyeuse / Suppliante). On crédite uniquement sur
         // sessions sans fail : si elle s'est plantée en cours de route, le
@@ -1046,6 +1173,17 @@ class SessionController extends ChangeNotifier {
       final snap = await _stats.snapshot();
       final unlocks = await _badges.reconcileAndDetectUnlocks(snap);
       _pendingBadgeUnlocks = unlocks;
+
+      // Profil de capacités : persiste le rapport clôturé plus haut.
+      // `sessionIndex` = nombre de sessions complétées (déjà incrémenté par
+      // `recordSessionCompleted`) → horloge de decay du `CapabilityRegulator`.
+      // Renvoie l'axe imputé du tap-out — ignoré ici (le `tapout` a déjà été
+      // attribué live pour la phrase coach ; l'attribution de `commit` ne sert
+      // qu'au ratchet ↓).
+      if (capReport != null && !capReport.isEmpty) {
+        await _capabilities.commit(capReport,
+            sessionIndex: snap.sessionsCompleted, quickie: _isQuickie);
+      }
     }
 
     // Apothéose AVANT le bascule en `finished`. Deux cas :
@@ -1086,6 +1224,20 @@ class SessionController extends ChangeNotifier {
     final announce = milestoneAnnouncement;
     if (announce != null && announce.isNotEmpty) {
       await _tts.speak(announce);
+    } else if (recordAxis != null &&
+        _phraseBank != null &&
+        !_released &&
+        _random.nextDouble() <
+            CapabilityRegulator.progressPhraseChanceForLevel(_careerLevel)) {
+      // Phase 4 — phrase `record` parcimonieuse : seulement s'il n'y a pas eu
+      // d'annonce milestone cette séance (on n'empile pas deux annonces de fin)
+      // et avec une chance ∝ niveau (« record » pas systématiquement annoncé,
+      // §9). Même placement que l'annonce milestone : après le chime + le panel.
+      final phrase = _phraseBank.pickProgressPhrase(
+          recordAxis.storageKey, 'record', _random);
+      if (phrase != null && phrase.isNotEmpty) {
+        await _tts.speak(phrase);
+      }
     }
   }
 
@@ -1120,6 +1272,47 @@ class SessionController extends ChangeNotifier {
       if (s.time > finalT) return s;
     }
     return null;
+  }
+
+  /// Phrase `tapout` du coach (Phase 4) si le « je peux pas » est imputable à
+  /// un axe poussé au-delà de sa zone de confort (§6), avec une chance ∝ niveau.
+  /// Suppose `CapabilityTracker.onFail()` déjà appelé (les `sessionCeilings`
+  /// sont à jour). `null` = pas de phrase dédiée → l'appelant retombe sur le
+  /// tirage de fail standard.
+  String? _tapoutPhraseOrNull() {
+    final tracker = _capabilityTracker;
+    final profile = _capabilityProfile;
+    final bank = _phraseBank;
+    if (tracker == null || profile == null || bank == null) return null;
+    final axis =
+        CapabilityRegulator.attributeTapOut(tracker.sessionCeilings, profile);
+    if (axis == null) return null;
+    if (_random.nextDouble() >=
+        CapabilityRegulator.progressPhraseChanceForLevel(_careerLevel)) {
+      return null;
+    }
+    final phrase = bank.pickProgressPhrase(axis.storageKey, 'tapout', _random);
+    return (phrase != null && phrase.isNotEmpty) ? phrase : null;
+  }
+
+  /// Détecte si la séance vient de battre le `best` de l'axe poussé cette
+  /// séance (`_capabilityOverloadAxis`, axe pilotant `maximize`) en comparant
+  /// `reached` au snapshot pré-séance. Renvoie l'axe en cas de record propre,
+  /// `null` sinon — pas d'axe surchargé, pas d'amélioration, ou séance avec un
+  /// « je peux pas » (on ne célèbre pas un record juste après un tap-out, §9 ;
+  /// le `best` reste enregistré par `CapabilityService.commit` quoi qu'il arrive).
+  CapabilityAxis? _detectCapabilityRecord(SessionCapabilityReport? report) {
+    if (report == null || _hadFailThisSession) return null;
+    final axis = _capabilityOverloadAxis;
+    final profile = _capabilityProfile;
+    if (axis == null || profile == null) return null;
+    if (!axis.pilotant || axis.recordKind != CapabilityRecordKind.maximize) {
+      return null;
+    }
+    final reached = report.reached[axis];
+    if (reached == null) return null;
+    final before = profile.bestOf(axis);
+    return (before == null || reached > before) ? axis : null;
   }
 
   /// Liste des paliers nouvellement franchis, calculée par `_finish` mais
@@ -1228,6 +1421,7 @@ class SessionController extends ChangeNotifier {
     // rare où Supplier est cliqué pile entre final et fin), on doit
     // pouvoir rejouer le chime de la nouvelle.
     _finalChimePlayed = false;
+    _finaleChimeStarted = false;
 
     // Force le déclenchement immédiat du beg (time = start ≤ elapsedSeconds).
     _checkSteps();
@@ -1249,7 +1443,14 @@ class SessionController extends ChangeNotifier {
     // regénère + appelle requestUpgrade). Si le callback prend la main,
     // on saute entièrement le flow fail standard — pas de pénalités, pas
     // de phrase fail, pas de punition. La milestone est juste rejouée.
+    //
+    // Le profil de capacités, lui, voit ce fail : on fige les plafonds de
+    // session AVANT le callback pour que la régénération du retry lise des
+    // `capabilitySessionCeilings` à jour. `onFail` est idempotent (streaks
+    // remis à 0), donc le ré-appel du flow standard plus bas (cas retry non
+    // pris en charge) est sans effet.
     if (_isInMilestoneWindow() && onMilestoneRetry != null) {
+      _capabilityTracker?.onFail();
       final handled = await onMilestoneRetry!(this);
       if (handled) return;
     }
@@ -1266,6 +1467,10 @@ class SessionController extends ChangeNotifier {
     _hadFailThisSession = true;
     _stamina.onFail();
     _saliva.onFail();
+    // Capacités : fige les plafonds de session sur la valeur live des
+    // streaks, puis les vide — un streak interrompu par un fail ne devient
+    // jamais un record propre (cf. §3/§6 de la spec).
+    _capabilityTracker?.onFail();
     // Le mode forbidden est levé par le fail : la salope a craqué, on
     // repart sur des bases neutres. Si la session veut re-imposer le
     // forbidden après reprise, c'est au scénario de poser un step le
@@ -1304,11 +1509,18 @@ class SessionController extends ChangeNotifier {
       // que dans le pool générique. Fallback transparent au pool standard
       // si le pool dédié est vide (sécurité contre un JSON incomplet).
       final swallowPool = _punishmentBundle.failPhrasesSwallow;
+      final usingSwallowPool =
+          _swallowMode == SwallowMode.forbidden && swallowPool.isNotEmpty;
       final pool =
-          (_swallowMode == SwallowMode.forbidden && swallowPool.isNotEmpty)
-              ? swallowPool
-              : _punishmentBundle.failPhrases;
-      final raw = _pickRandom(pool);
+          usingSwallowPool ? swallowPool : _punishmentBundle.failPhrases;
+      // Phase 4 — coach audible : si le « je peux pas » est imputable à un axe
+      // poussé au-delà de sa zone de confort (§6, attribution non ambiguë grâce
+      // à la surcharge isolée) et que le dé ∝ niveau tombe juste, on remplace la
+      // phrase de fail standard par une variante DOUCE « limite reconnue » (tier
+      // `tapout`). Jamais sur le pool « avalement interdit transgressé »
+      // (indiscipline ≠ limite légitime).
+      final tapoutPhrase = usingSwallowPool ? null : _tapoutPhraseOrNull();
+      final raw = tapoutPhrase ?? _pickRandom(pool);
       _currentFailPhrase = raw == null ? null : _tts.resolveText(raw);
       notifyListeners();
       if (_currentFailPhrase != null) {
@@ -1341,8 +1553,12 @@ class SessionController extends ChangeNotifier {
       await _waitInterruptible(Duration(seconds: breathSeconds), gen: myGen);
       if (!_isFailFlowAlive(myGen)) return;
 
-      // 4) Punition aléatoire.
-      _currentPunishment = _pickRandom(_punishmentBundle.punishments);
+      // 4) Punition. En carrière, on génère une composition contextuelle
+      //    bornée par le profil de capacités (§7 — Phase 5). Hors carrière
+      //    (Custom, scénarios JSON), on retombe sur le tirage statique dans
+      //    `punishments.json` — comportement historique.
+      _currentPunishment = _generateCareerPunishmentOrNull() ??
+          _pickRandom(_punishmentBundle.punishments);
       _failPhase = FailPhase.punishment;
       notifyListeners();
       if (_currentPunishment != null) {
@@ -1553,12 +1769,49 @@ class SessionController extends ChangeNotifier {
     }
   }
 
+  /// Génère une punition carrière contextuelle (Phase 5, §7) via
+  /// `CareerSessionGenerator.generatePunishment`. Renvoie `null` hors
+  /// carrière (pas de profil de capacités ou pas de banque coach) — le
+  /// caller retombe alors sur le tirage statique dans `punishments.json`.
+  ///
+  /// On reconstruit un générateur à la volée (pas d'état conservé entre
+  /// fails) : la classe est suffisamment légère, le `Random()` interne
+  /// suffit pour la variation et on évite de propager une référence partagée
+  /// avec la chaîne de génération de session principale.
+  Punishment? _generateCareerPunishmentOrNull() {
+    final profile = _capabilityProfile;
+    final bank = _phraseBank;
+    if (profile == null || bank == null) return null;
+    final generator = CareerSessionGenerator();
+    return generator.generatePunishment(
+      level: _careerLevel,
+      bank: bank,
+      unlockedKeys: _unlockedKeys,
+      capabilityProfile: profile,
+      capabilitySessionCeilings:
+          _capabilityTracker?.sessionCeilings ?? const {},
+      capabilityOverloadAxis: _capabilityOverloadAxis,
+      specialization: _specialization,
+      humiliationCareer: _humiliation.careerScore,
+      humiliationSession: _humiliation.sessionScore,
+      obedience: _obedience.score,
+      includeHand: _includeHand,
+    );
+  }
+
   /// Restaure le loop de bips qui tournait avant le fail (ou no-op
   /// si aucune étape de config n'avait encore été appliquée).
   Future<void> _restorePreviousLoop() async {
     final last = _lastConfigStep;
     if (last == null) return;
     await _beep.applyStep(last, session.defaultMode);
+    _capabilityTracker?.onStepApplied(
+      mode: last.mode ?? session.defaultMode,
+      from: last.from,
+      to: last.to,
+      bpm: last.bpm,
+      duration: last.duration,
+    );
     await _syncAmbienceToCurrentMode();
   }
 
