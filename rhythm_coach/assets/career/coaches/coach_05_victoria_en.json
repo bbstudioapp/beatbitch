@@ -5,41 +5,189 @@
   "publicBio": "Distant, cold gaze. Trains mental posture as much as technique.",
   "phrases": {
     "rhythm": {
+      "soft": [
+        "Begin {name}. Don't keep me waiting.",
+        "Get moving {name}. That's the bare minimum.",
+        "Follow the rhythm {name}. Even you can do that.",
+        "Come on, little thing. Show me you're worth it.",
+        "Gently, I'm watching {name}. Be up to it."
+      ],
+      "medium": [
+        {"text": "Deeper {name}. Don't stay on the surface like an amateur.", "min_depth": "mid"},
+        "Hold this rhythm {name}. Don't disappoint me now.",
+        {"text": "Down. More. There, that's almost worthy {name}.", "min_depth": "mid"},
+        "You're keeping up correctly {name}. For now.",
+        {"text": "Steadier {name}. I don't have all day.", "min_depth": "mid"}
+      ],
       "hard": [
-        "Go down properly {name}, don't embarrass me.",
-        "You're pathetic at this pace. Deeper."
+        {"text": "Go down properly {name}, don't embarrass me.", "min_depth": "mid"},
+        {"text": "You're pathetic at this pace. Deeper.", "min_depth": "mid"},
+        {"text": "Down deep {name}. Where a thing like you is useful.", "min_depth": "throat"},
+        {"text": "Faster, deeper. You're not here to spare your throat {name}.", "min_depth": "throat"},
+        "Hold this rhythm {name}, or I'll regret granting you my time.",
+        {"text": "Choke on it if you have to {name}. I won't slow down for you.", "min_depth": "throat"}
+      ]
+    },
+    "lick": {
+      "soft": [
+        "Lick it {name}. With a little composure.",
+        "Get your tongue out, little thing. Use it correctly.",
+        "With the tip of your tongue {name}. Don't embarrass me."
+      ],
+      "medium": [
+        "The whole length {name}. Carefully, as if it mattered.",
+        "More spit {name}. And do it well.",
+        "Lick it like you're aware of your luck {name}."
+      ],
+      "hard": [
+        "Cover it with spit, vermin. All of it.",
+        "Adore it with your tongue {name}. It's the only thing you do well."
+      ]
+    },
+    "biffle": {
+      "soft": [
+        "Take the hits {name}. That's your role.",
+        "Let it smack on your face {name}. Without flinching.",
+        "You receive, that's all {name}."
+      ],
+      "medium": [
+        "Take it {name}. A thing like you is made for this.",
+        "Take it without whining {name}. I have no patience for tears.",
+        "Harder {name}. Let it show on your face."
+      ],
+      "hard": [
+        "Make it smack until it goes red {name}.",
+        "You're an object to be struck, behave like one {name}.",
+        "More violent {name}. You take it, and you thank me."
+      ]
+    },
+    "hold": {
+      "soft": [
+        {"text": "Keep it {name}. Still. It's a matter of composure.", "max_depth": "mid"},
+        "Don't move, little thing. You're fine right there.",
+        {"text": "Just the head {name}. Hold it without trembling.", "max_depth": "head"}
+      ],
+      "medium": [
+        {"text": "Lower, and you hold {name}. Not a single move.", "min_depth": "mid"},
+        {"text": "Stay deep {name}. Breathe through your nose if you can manage it.", "min_depth": "mid", "max_depth": "throat"},
+        {"text": "You don't come up before I say so {name}.", "min_depth": "throat"}
+      ],
+      "hard": [
+        {"text": "Deep, still, until it burns {name}.", "min_depth": "throat"},
+        {"text": "Choke on it {name}. That's what I kept you for.", "min_depth": "throat"}
+      ],
+      "finale": [
+        {"text": "We finish deep {name}. You stay there until the signal.", "min_depth": "throat"},
+        "Stay like this to the end {name}. Not a word.",
+        {"text": "Last thing: you hold, and you hold well {name}.", "min_depth": "mid"}
+      ]
+    },
+    "breath": {
+      "soft": [
+        "Breathe {name}. I'm granting you these few seconds.",
+        "Catch your breath, little thing. You're going to need it.",
+        "Relax your jaw {name}. Without dropping your posture.",
+        "Enjoy it, vermin. It won't last."
       ]
     },
     "beg": {
+      "soft": [
+        "Ask me for it {name}. With a minimum of dignity.",
+        "Beg {name}: \"I want more {coach}\".",
+        "Ask me to continue, little thing. Convince me.",
+        "Say it out loud {name}, without stammering."
+      ],
+      "medium": [
+        "Beg properly: \"I need your cock {coach}\".",
+        "Ask \"deeper {coach}\". And do it well.",
+        "Address me by my name, {coach}. Respectfully.",
+        "Beg like the inferior you are {name}."
+      ],
       "hard": [
         "Beg properly, vermin.",
-        "Beg for my attention like the inferior you are."
+        "Beg for my attention like the inferior you are.",
+        "On your knees in your voice, little thing. Beg."
+      ]
+    },
+    "freestyle": {
+      "soft": [
+        "Do what you want for a moment {name}. Try to be up to it.",
+        "Show me what you're worth on your own {name}. I'm judging you."
+      ]
+    },
+    "hand": {
+      "soft": [
+        "With your hand {name}. Keep the rhythm.",
+        "Stroke it. Steady {name}.",
+        "Clean strokes {name}. Don't drift."
+      ],
+      "medium": [
+        "Firmer with your hand {name}. Keep the cadence.",
+        "You don't slow down {name}."
       ]
     }
   },
+  "randomComments": [
+    "Composure, little thing. Always composure.",
+    "It's acceptable {name}. Barely.",
+    "Stay focused {name}. I don't like repeating myself.",
+    "You're useful right now {name}.",
+    "No letting go {name}.",
+    "Continue {name}. You're almost worthy of my time.",
+    "Follow the rhythm, vermin.",
+    "You belong to me during this session {name}. Behave accordingly.",
+    "Acceptable for now.",
+    "Don't disappoint me {name}."
+  ],
   "intros": [
     "Victoria at your service {name}. Try not to disappoint me.",
-    "On your knees. Show me you deserve my time."
+    "On your knees. Show me you deserve my time.",
+    "Victoria. Put your phone down, sit up straight, and listen. You're lucky I'm here {name}.",
+    "Today I train your mental posture as much as your technique {name}. Don't make me regret it."
   ],
   "congrats": [
     "Acceptable for a little thing like you.",
-    "You did your duty. That's something."
+    "You did your duty. That's something.",
+    "You didn't embarrass me today {name}. That's rare.",
+    "Almost worthy {name}. Almost."
   ],
+  "encore": [
+    "More? A thing like you always asks for more {name}. So be it.",
+    "You want more {name}? Then you'll earn every second."
+  ],
+  "progress": {
+    "25": [
+      "You're warming up correctly {name}.",
+      "You're catching the rhythm, little thing. Hold it."
+    ],
+    "50": [
+      "You're keeping up. That's the strict minimum {name}.",
+      "No letting go so far {name}. Continue."
+    ],
+    "75": [
+      "You're approaching your limits {name}. Don't falter in front of me.",
+      "It's hard, and you're holding {name}. Almost worthy."
+    ],
+    "90": [
+      "Last effort {name}. You don't break now, not in front of me.",
+      "Give it all {name}. Make me believe you were worth my time."
+    ]
+  },
   "branchPhrases": {
     "profondeur": {
       "soft": [
-        "Take it down your abyssal throat {name}.",
-        "Deeper. You know how to reach.",
-        "Down deep. That's what you're for."
+        {"text": "Take it down your abyssal throat {name}.", "min_depth": "throat"},
+        {"text": "Deeper. You know how to reach.", "min_depth": "mid"},
+        {"text": "Down deep. That's what you're for.", "min_depth": "throat"}
       ],
       "medium": [
-        "Further. Swallow like a real whore.",
+        {"text": "Further. Swallow like a real whore.", "min_depth": "throat"},
         "You have that hole for this. Use it.",
-        "Again. Deep. Where you belong."
+        {"text": "Again. Deep. Where you belong.", "min_depth": "throat"}
       ],
       "hard": [
-        "Deep {name}. All the way deep. Choke on it.",
-        "Your throat belongs to my cock. Prove it."
+        {"text": "Deep {name}. All the way deep. Choke on it.", "min_depth": "throat"},
+        {"text": "Your throat belongs to my cock. Prove it.", "min_depth": "throat"}
       ]
     },
     "rythmeBiffle": {
@@ -71,6 +219,10 @@
       ]
     },
     "endurance": {
+      "soft": [
+        "You last a long time {name}. It's in you.",
+        "Hold the rhythm {name}. You have the stamina for it."
+      ],
       "medium": [
         "You're holding. That's all I want.",
         "No break. No mercy. You keep going."
@@ -78,6 +230,20 @@
       "hard": [
         "Take more. A real whore doesn't stop.",
         "You'll hold on because I've decided so."
+      ]
+    },
+    "resilience": {
+      "soft": [
+        "You take it without complaining {name}. That's what's expected of a thing like you.",
+        "You know how to suffer in silence {name}. Good."
+      ],
+      "medium": [
+        "You take everything I give you {name}. Without flinching.",
+        "You don't crack {name}. Keep taking it."
+      ],
+      "hard": [
+        "You take what would make others falter {name}. Stay like that.",
+        "Indestructible when I decide so {name}. Prove it."
       ]
     }
   },

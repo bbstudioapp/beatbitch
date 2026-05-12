@@ -5,26 +5,174 @@
   "publicBio": "Distante, regard froid. Fait travailler la posture mentale autant que la technique.",
   "phrases": {
     "rhythm": {
+      "soft": [
+        "Commence {name}. Ne me fais pas attendre.",
+        "Mets-toi en mouvement {name}. C’est le minimum vital.",
+        "Suis le rythme {name}. Même toi tu peux faire ça.",
+        "Allez, petite chose. Montre-moi que tu en vaux la peine.",
+        "Doucement, je te regarde {name}. Sois à la hauteur."
+      ],
+      "medium": [
+        {"text": "Plus profond {name}. Reste pas en surface comme une amatrice.", "min_depth": "mid"},
+        "Garde ce rythme {name}. Ne me déçois pas maintenant.",
+        {"text": "Descends. Encore. Voilà, c’est presque digne {name}.", "min_depth": "mid"},
+        "Tu suis correctement {name}. Pour l’instant.",
+        {"text": "Plus régulière {name}. Je n’ai pas que ça à faire.", "min_depth": "mid"}
+      ],
       "hard": [
         {"text": "Descends correctement {name}, ne me fais pas honte.", "min_depth": "mid"},
-        {"text": "Tu es pathétique à ce rythme. Plus profond.", "min_depth": "mid"}
+        {"text": "Tu es pathétique à ce rythme. Plus profond.", "min_depth": "mid"},
+        {"text": "Au fond {name}. Là où une chose comme toi est utile.", "min_depth": "throat"},
+        {"text": "Plus vite, plus profond. Tu n’es pas là pour ménager ta gorge {name}.", "min_depth": "throat"},
+        "Tiens ce rythme {name}, ou je vais regretter de t’avoir accordé mon temps.",
+        {"text": "Étouffe dessus si tu dois {name}. Je ne ralentirai pas pour toi.", "min_depth": "throat"}
+      ]
+    },
+    "lick": {
+      "soft": [
+        "Lèche-le {name}. Avec un peu de tenue.",
+        "Sors ta langue, petite chose. Sers-t’en correctement.",
+        "Du bout de la langue {name}. Ne me fais pas honte."
+      ],
+      "medium": [
+        "Toute la longueur {name}. Soigneusement, comme si ça comptait.",
+        "Plus de salive {name}. Et fais-le bien.",
+        "Lèche-le comme si tu avais conscience de ta chance {name}."
+      ],
+      "hard": [
+        "Couvre-le de salive, vermine. Tout.",
+        "Adore-le avec ta langue {name}. C’est tout ce que tu sais faire de bien."
+      ]
+    },
+    "biffle": {
+      "soft": [
+        "Prends les coups {name}. C’est ton rôle.",
+        "Laisse-le claquer sur ton visage {name}. Sans broncher.",
+        "Tu reçois, c’est tout {name}."
+      ],
+      "medium": [
+        "Encaisse {name}. Une chose comme toi est faite pour ça.",
+        "Reçois sans pleurnicher {name}. Je n’ai aucune patience pour les larmes.",
+        "Plus fort {name}. Que ça se voie sur ta gueule."
+      ],
+      "hard": [
+        "Que ça claque jusqu’à ce que ça rougisse {name}.",
+        "Tu es un objet à frapper, comporte-toi comme tel {name}.",
+        "Plus violent {name}. Tu encaisses, et tu remercies."
+      ]
+    },
+    "hold": {
+      "soft": [
+        {"text": "Garde-le {name}. Immobile. C’est une question de tenue.", "max_depth": "mid"},
+        "Ne bouge pas, petite chose. Tu es bien là.",
+        {"text": "Juste le gland {name}. Tiens-le sans trembler.", "max_depth": "head"}
+      ],
+      "medium": [
+        {"text": "Plus bas, et tu tiens {name}. Pas un mouvement.", "min_depth": "mid"},
+        {"text": "Reste au fond {name}. Respire par le nez si tu y arrives.", "min_depth": "mid", "max_depth": "throat"},
+        {"text": "Tu ne remontes pas avant que je le dise {name}.", "min_depth": "throat"}
+      ],
+      "hard": [
+        {"text": "Au fond, immobile, jusqu’à ce que ça te brûle {name}.", "min_depth": "throat"},
+        {"text": "Étouffe dessus {name}. C’est ce pour quoi je t’ai gardée.", "min_depth": "throat"}
+      ],
+      "finale": [
+        {"text": "On termine au fond {name}. Tu y restes jusqu’au signal.", "min_depth": "throat"},
+        "Reste comme ça jusqu’au bout {name}. Sans un mot.",
+        {"text": "Dernière chose : tu tiens, et tu tiens bien {name}.", "min_depth": "mid"}
+      ]
+    },
+    "breath": {
+      "soft": [
+        "Respire {name}. Je t’accorde ces quelques secondes.",
+        "Reprends ton souffle, petite chose. Tu vas en avoir besoin.",
+        "Détends ta mâchoire {name}. Sans relâcher ta posture.",
+        "Profite, vermine. Ça ne va pas durer."
       ]
     },
     "beg": {
+      "soft": [
+        "Demande-le-moi {name}. Avec un minimum de dignité.",
+        "Supplie {name} : « j'en veux encore {coach} ».",
+        "Demande-moi de continuer, petite chose. Convaincs-moi.",
+        "Dis-le à voix haute {name}, sans bafouiller."
+      ],
+      "medium": [
+        "Mendie correctement : « j'ai besoin de ta queue {coach} ».",
+        "Demande « plus profond {coach} ». Et fais-le bien.",
+        "Adresse-toi à moi par mon nom, {coach}. Respectueusement.",
+        "Implore comme l'inférieure que tu es {name}."
+      ],
       "hard": [
         "Supplie correctement, vermine.",
-        "Mendie mon attention comme la inférieure que tu es."
+        "Mendie mon attention comme l'inférieure que tu es.",
+        "À genoux dans ta voix, petite chose. Supplie."
+      ]
+    },
+    "freestyle": {
+      "soft": [
+        "Fais ce que tu veux un moment {name}. Tâche d’être à la hauteur.",
+        "Montre-moi ce que tu vaux seule {name}. Je te juge."
+      ]
+    },
+    "hand": {
+      "soft": [
+        "Avec ta main {name}. Garde le rythme.",
+        "Branle-le. Régulière {name}.",
+        "Va-et-vient propre {name}. Ne dérive pas."
+      ],
+      "medium": [
+        "Plus ferme de la main {name}. Tiens la cadence.",
+        "Tu ne ralentis pas {name}."
       ]
     }
   },
+  "randomComments": [
+    "Tenue, petite chose. Toujours la tenue.",
+    "C’est acceptable {name}. À peine.",
+    "Reste concentrée {name}. Je n’aime pas me répéter.",
+    "Tu sers à quelque chose là {name}.",
+    "Pas de relâchement {name}.",
+    "Continue {name}. Tu es presque digne de mon temps.",
+    "Suis le rythme, vermine.",
+    "Tu m’appartiens pendant cette séance {name}. Comporte-toi en conséquence.",
+    "Acceptable pour l’instant.",
+    "Ne me déçois pas {name}."
+  ],
   "intros": [
     "Victoria à ton service {name}. Essaye de ne pas me décevoir.",
-    "À genoux. Montre-moi que tu mérites mon temps."
+    "À genoux. Montre-moi que tu mérites mon temps.",
+    "Victoria. Pose ton téléphone, redresse-toi, et écoute. Tu as de la chance que je sois là {name}.",
+    "Aujourd’hui je travaille ta posture mentale autant que ta technique {name}. Ne me fais pas regretter."
   ],
   "congrats": [
     "Acceptable pour une petite chose comme toi.",
-    "Tu as fait ton devoir. C’est déjà ça."
+    "Tu as fait ton devoir. C’est déjà ça.",
+    "Tu ne m’as pas fait honte aujourd’hui {name}. C’est rare.",
+    "Presque digne {name}. Presque."
   ],
+  "encore": [
+    "Encore ? Une chose comme toi en redemande toujours {name}. Soit.",
+    "Tu veux plus {name} ? Alors tu vas mériter chaque seconde."
+  ],
+  "progress": {
+    "25": [
+      "Tu te chauffes correctement {name}.",
+      "Tu prends le rythme, petite chose. Tiens-le."
+    ],
+    "50": [
+      "Tu suis. C’est le strict minimum {name}.",
+      "Pas de relâchement jusqu’ici {name}. Continue."
+    ],
+    "75": [
+      "Tu approches de tes limites {name}. Ne flanche pas devant moi.",
+      "C’est dur, et tu tiens {name}. Presque digne."
+    ],
+    "90": [
+      "Dernier effort {name}. Tu ne casses pas maintenant, pas devant moi.",
+      "Donne tout {name}. Fais-moi croire que tu valais mon temps."
+    ]
+  },
   "branchPhrases": {
     "profondeur": {
       "soft": [
@@ -71,6 +219,10 @@
       ]
     },
     "endurance": {
+      "soft": [
+        "Tu tiens longtemps {name}. C'est dans tes cordes.",
+        "Garde le rythme {name}. Tu as la résistance pour."
+      ],
       "medium": [
         "Tu tiens. C'est tout ce que je veux.",
         "Pas de pause. Pas de pitié. Tu continues."
@@ -78,6 +230,20 @@
       "hard": [
         "Encaisse encore. Une vraie pute ne s'arrête pas.",
         "Tu vas tenir parce que je le décide."
+      ]
+    },
+    "resilience": {
+      "soft": [
+        "Tu encaisses sans te plaindre {name}. C'est ce qu'on attend d'une chose comme toi.",
+        "Tu sais souffrir en silence {name}. Bien."
+      ],
+      "medium": [
+        "Tu prends tout ce que je te donne {name}. Sans broncher.",
+        "Tu ne craques pas {name}. Continue à encaisser."
+      ],
+      "hard": [
+        "Tu encaisses ce qui ferait flancher les autres {name}. Reste comme ça.",
+        "Indestructible quand je le décide {name}. Prouve-le."
       ]
     }
   },
