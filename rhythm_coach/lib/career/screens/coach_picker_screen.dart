@@ -5,6 +5,7 @@ import '../../theme/app_theme.dart';
 import '../models/coach.dart';
 import '../models/specialization.dart';
 import '../services/coach_service.dart';
+import '../widgets/coach_portrait.dart';
 
 /// Écran de sélection du coach. Renvoie le `Coach` choisi via `Navigator.pop`,
 /// ou `null` si l'utilisateur revient en arrière sans choisir.
@@ -217,100 +218,113 @@ class _CoachCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: borderColor, width: 1.2),
             ),
-            child: Column(
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppTheme.accent.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(6),
+                CoachPortrait(
+                  coach: coach,
+                  height: 112,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppTheme.accent.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              t.coachPickerTierLabel(coach.tier),
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.2,
+                                color: AppTheme.accent,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          if (isCurrentPrincipal)
+                            _Badge(
+                              icon: Icons.star,
+                              label: t.coachBadgePrincipal,
+                              color: AppTheme.accent,
+                            )
+                          else if (unlocked && coach.isPrincipal)
+                            _Badge(
+                              icon: Icons.history_edu,
+                              label: t.coachBadgePalierAcquis,
+                              color: AppTheme.textMuted,
+                            )
+                          else if (unlocked && !coach.isPrincipal)
+                            _Badge(
+                              icon: Icons.tune,
+                              label: t.coachBadgeFreeTraining,
+                              color: const Color(0xFFE8B33A),
+                            )
+                          else
+                            _Badge(
+                              icon: Icons.lock_outline,
+                              label: t.coachBadgeLocked,
+                              color: AppTheme.textMuted,
+                            ),
+                          const Spacer(),
+                          if (isSelected)
+                            const Icon(Icons.check_circle,
+                                color: AppTheme.accent, size: 20),
+                        ],
                       ),
-                      child: Text(
-                        t.coachPickerTierLabel(coach.tier),
+                      const SizedBox(height: 10),
+                      Text(
+                        coach.name,
                         style: const TextStyle(
-                          fontSize: 10,
+                          fontSize: 18,
                           fontWeight: FontWeight.w700,
-                          letterSpacing: 1.2,
-                          color: AppTheme.accent,
+                          color: AppTheme.textPrimary,
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    if (isCurrentPrincipal)
-                      _Badge(
-                        icon: Icons.star,
-                        label: t.coachBadgePrincipal,
-                        color: AppTheme.accent,
-                      )
-                    else if (unlocked && coach.isPrincipal)
-                      _Badge(
-                        icon: Icons.history_edu,
-                        label: t.coachBadgePalierAcquis,
-                        color: AppTheme.textMuted,
-                      )
-                    else if (unlocked && !coach.isPrincipal)
-                      _Badge(
-                        icon: Icons.tune,
-                        label: t.coachBadgeFreeTraining,
-                        color: const Color(0xFFE8B33A),
-                      )
-                    else
-                      _Badge(
-                        icon: Icons.lock_outline,
-                        label: t.coachBadgeLocked,
-                        color: AppTheme.textMuted,
-                      ),
-                    const Spacer(),
-                    if (isSelected)
-                      const Icon(Icons.check_circle,
-                          color: AppTheme.accent, size: 20),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  coach.name,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-                Text(
-                  coach.title,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.textMuted,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  coach.publicBio,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppTheme.textSecondary,
-                    height: 1.35,
-                  ),
-                ),
-                if (coach.requirements.requiresHands) ...[
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(Icons.pan_tool_alt,
-                          size: 14, color: AppTheme.textMuted),
-                      const SizedBox(width: 6),
                       Text(
-                        t.coachRequiresHands,
+                        coach.title,
                         style: const TextStyle(
-                            fontSize: 11, color: AppTheme.textMuted),
+                          fontSize: 12,
+                          color: AppTheme.textMuted,
+                          letterSpacing: 0.5,
+                        ),
                       ),
+                      const SizedBox(height: 8),
+                      Text(
+                        coach.publicBio,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppTheme.textSecondary,
+                          height: 1.35,
+                        ),
+                      ),
+                      if (coach.requirements.requiresHands) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(Icons.pan_tool_alt,
+                                size: 14, color: AppTheme.textMuted),
+                            const SizedBox(width: 6),
+                            Text(
+                              t.coachRequiresHands,
+                              style: const TextStyle(
+                                  fontSize: 11, color: AppTheme.textMuted),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
-                ],
+                ),
               ],
             ),
           ),

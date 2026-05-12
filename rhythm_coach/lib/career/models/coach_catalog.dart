@@ -10,6 +10,11 @@ import 'specialization.dart';
 /// `CoachPhrasesLoader`. Les bios peuvent être étoffées dans le même JSON
 /// (clé `bio`) si besoin de les modifier sans recompilation.
 class CoachCatalog {
+  /// Dossier des portraits des coachs (ratio source 2:3). Co-localisé avec
+  /// les JSON des coachs. Un coach peut surcharger ce chemin via la clé
+  /// `portrait` de son `coach_<id>.json`.
+  static const String _portraitDir = 'assets/career/coaches/portraits';
+
   static const List<Coach> defaults = [
     Coach(
       id: 'coach_01_lina',
@@ -25,6 +30,7 @@ class CoachCatalog {
       ],
       tier: 1,
       isPrincipal: true,
+      portraitAsset: '$_portraitDir/coach_01_lina.png',
     ),
     Coach(
       id: 'coach_02_helene',
@@ -41,6 +47,7 @@ class CoachCatalog {
       tier: 2,
       isPrincipal: true,
       requirements: CoachRequirement(minPlayerLevel: 7),
+      portraitAsset: '$_portraitDir/coach_02_helene.png',
     ),
     Coach(
       id: 'coach_03_jade',
@@ -57,6 +64,7 @@ class CoachCatalog {
       tier: 3,
       isPrincipal: true,
       requirements: CoachRequirement(requiresHands: true, minPlayerLevel: 13),
+      portraitAsset: '$_portraitDir/coach_03_jade.png',
     ),
     Coach(
       id: 'coach_04_morgan',
@@ -72,6 +80,7 @@ class CoachCatalog {
       tier: 4,
       isPrincipal: true,
       requirements: CoachRequirement(minPlayerLevel: 19),
+      portraitAsset: '$_portraitDir/coach_04_morgan.png',
     ),
     Coach(
       id: 'coach_05_victoria',
@@ -87,6 +96,7 @@ class CoachCatalog {
       tier: 5,
       isPrincipal: true,
       requirements: CoachRequirement(minPlayerLevel: 25),
+      portraitAsset: '$_portraitDir/coach_05_victoria.png',
     ),
     Coach(
       id: 'coach_06_nyx',
@@ -99,6 +109,7 @@ class CoachCatalog {
       tier: 6,
       isPrincipal: true,
       requirements: CoachRequirement(minPlayerLevel: 31),
+      portraitAsset: '$_portraitDir/coach_06_nyx.png',
     ),
   ];
 }
