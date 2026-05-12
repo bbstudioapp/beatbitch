@@ -647,6 +647,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsLanguageEnglish => 'English';
 
   @override
+  String get settingsLanguageGerman => 'Deutsch';
+
+  @override
   String get languagePickerTitle => 'Choisis ta langue';
 
   @override

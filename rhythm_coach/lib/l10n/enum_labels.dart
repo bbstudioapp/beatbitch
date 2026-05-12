@@ -212,6 +212,7 @@ String localizedLanguageName(BuildContext context, Locale locale) {
   return switch (locale.languageCode) {
     'fr' => t.settingsLanguageFrench,
     'en' => t.settingsLanguageEnglish,
+    'de' => t.settingsLanguageGerman,
     _ => locale.languageCode.toUpperCase(),
   };
 }

@@ -328,6 +328,7 @@
   "settingsLanguageSystem": "Follow system",
   "settingsLanguageFrench": "Français",
   "settingsLanguageEnglish": "English",
+  "settingsLanguageGerman": "Deutsch",
   "languagePickerTitle": "Choose your language",
   "languagePickerBody": "Your phone's language isn't available in BeatBitch (yet). Pick the one you'd like to use — you can change it later in the settings (equalizer icon).",
   "languageNewlyAvailableTitle": "Available in {language}",
