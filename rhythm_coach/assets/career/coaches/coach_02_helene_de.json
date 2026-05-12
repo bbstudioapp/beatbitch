@@ -1,0 +1,257 @@
+{
+  "lang": "de",
+  "id": "coach_02_helene",
+  "title": "Anspruchsvolle Trainerin",
+  "publicBio": "Klarer Rahmen, gerade Haltung, Technik vor allem. Schreit nicht, lässt aber auch nichts durchgehen.",
+  "phrases": {
+    "rhythm": {
+      "soft": [
+        "Fang ordentlich an {name}.",
+        "Folge dem Rhythmus präzise {name}.",
+        "Trödel nicht {name}.",
+        "Gerade Haltung, saubere Bewegung {name}.",
+        "Kein Pi mal Daumen {name}. Auf den Takt.",
+        "Besser {name}. Behalte diese Disziplin.",
+        "Ich beobachte dich {name}. Streng dich an.",
+        "Gleichmäßig. Das ist das Minimum {name}.",
+        "Kiefer an seinem Platz, sauberer Rhythmus {name}."
+      ],
+      "medium": [
+        {"text": "Tiefer {name}. Ich will ernsthafte Arbeit.", "min_depth": "mid"},
+        "Halte diesen Rhythmus, werde nicht schwächer {name}.",
+        {"text": "Geh weiter runter, du kannst es besser.", "min_depth": "mid"},
+        "Du wirst langsamer {name}. Komm zurück auf den Takt.",
+        {"text": "Noch tiefer {name}. Das ist die Arbeit.", "min_depth": "mid"},
+        "Akzeptabel. Halte, lass nicht nach {name}.",
+        "Ich habe vorerst nichts zu beanstanden {name}. Weiter."
+      ],
+      "hard": [
+        {"text": "Geh ganz tief {name}. Halte dich nicht zurück.", "min_depth": "throat"},
+        {"text": "Schneller und tiefer. Ausführen.", "min_depth": "mid"},
+        "Du musst diesen Rhythmus halten {name}.",
+        {"text": "Steck es weg {name}. Du hast das Zeug dazu.", "min_depth": "throat"},
+        "Kein Zucken {name}. Halten.",
+        {"text": "Bis ganz nach unten, und du lässt nicht los {name}.", "min_depth": "throat"},
+        "Es ist anspruchsvoll, und genau das wollen wir {name}."
+      ]
+    },
+    "lick": {
+      "soft": [
+        "Leck ihn ordentlich {name}, streng dich an.",
+        "Präzise Zunge {name}, keine unnötigen Bewegungen.",
+        "Bedeck die Eichel richtig {name}."
+      ],
+      "medium": [
+        "Die ganze Länge, und sorgfältig {name}.",
+        "Mehr Spucke {name}. Mach es richtig.",
+        "Leck ihn wie eine Arbeit, nicht wie ein Hobby {name}."
+      ],
+      "hard": [
+        "Mit Sorgfalt {name}. Ich will, dass es tadellos ist.",
+        "Verweile {name}. Pfusch nicht."
+      ]
+    },
+    "biffle": {
+      "soft": [
+        "Klatsch ihn dir ordentlich ins Gesicht {name}.",
+        "Saubere Schläge auf deine Wange {name}, keine Weichheit.",
+        "Lass es richtig klatschen {name}."
+      ]
+    },
+    "hold": {
+      "soft": [
+        "Halte die Position {name}.",
+        {"text": "Halt ihn dort, ohne zu zittern {name}.", "max_depth": "mid"},
+        "Still {name}. Atme durch die Nase.",
+        {"text": "Halten. Das ist eine Frage der Disziplin {name}.", "max_depth": "throat"}
+      ],
+      "medium": [
+        {"text": "Bleib tief, ohne dich zu bewegen {name}.", "min_depth": "mid"},
+        {"text": "Tiefer, und du hältst {name}.", "min_depth": "mid"},
+        {"text": "Komm nicht hoch vor meinem Signal {name}.", "min_depth": "mid", "max_depth": "throat"},
+        {"text": "Zähl in deinem Kopf {name}. Du bewegst dich nicht.", "min_depth": "mid"}
+      ],
+      "hard": [
+        "Zieh ihn nicht raus. Halte bis zum Ende {name}.",
+        {"text": "Tief, still, bis ich es sage {name}.", "min_depth": "throat"},
+        {"text": "Es ist unangenehm. Das ist so gewollt. Halten {name}.", "min_depth": "throat"}
+      ],
+      "finale": [
+        {"text": "Letztes Halten. Bleib tief {name}.", "min_depth": "mid"},
+        {"text": "Wir beenden es ganz tief {name}. Lass nicht los.", "min_depth": "throat"},
+        "Bis zum Signal {name}. Nicht vorher.",
+        "Es ist das Letzte, was ich von dir verlange. Mach es richtig {name}."
+      ]
+    },
+    "breath": {
+      "soft": [
+        "Atme. Nimm wieder eine korrekte Haltung ein {name}.",
+        "Atme tief ein {name}. Wir fangen sauber wieder an.",
+        "Entspann den Kiefer {name}, ohne deine Konzentration zu verlieren.",
+        "Du hast diese Zeit {name}. Nutze sie gut."
+      ]
+    },
+    "beg": {
+      "soft": [
+        "Bitte mich ordentlich darum: „Ich will mehr {coach}\".",
+        "Sag es deutlich {name}, ohne zu stammeln: „mach weiter, bitte {coach}\".",
+        "Artikuliere {name}. Bitte mich weiterzumachen.",
+        "Ich will hören, wie du es ordentlich formulierst."
+      ],
+      "medium": [
+        "Wiederhol es, und ordentlich: „Ich brauche deinen Schwanz {coach}\".",
+        "Bitte um „tiefer {coach}\", deutlich.",
+        "Sprich mich mit meinem Namen an, {coach}.",
+        "Bettel ordentlich, sonst höre ich nicht zu."
+      ]
+    },
+    "freestyle": {
+      "soft": [
+        "Dieser Moment gehört dir {name}. Vergeude ihn nicht.",
+        "Zeig mir, was du allein kannst {name}.",
+        "Frei, aber sauber {name}."
+      ]
+    },
+    "hand": {
+      "soft": [
+        "Wichs ihn mit deiner Hand {name}, saubere Bewegung.",
+        "Gleichmäßiges Auf und Ab {name}, keine Weichheit.",
+        "Hilf dir ordentlich mit deiner Hand {name}."
+      ],
+      "medium": [
+        "Fester mit der Hand {name}.",
+        "Halte das Tempo mit deiner Hand {name}, komm nicht ab."
+      ]
+    }
+  },
+  "randomComments": [
+    "Haltung. Immer die Haltung {name}.",
+    "Es ist korrekt {name}. Nicht mehr, nicht weniger.",
+    "Bleib konzentriert {name}.",
+    "Ich merke mir, was nicht stimmt {name}. Korrigiere es.",
+    "Kein Pi mal Daumen.",
+    "Du kannst es besser {name}.",
+    "Auf den Takt {name}.",
+    "Disziplin {name}. Das ist alles, was ich verlange.",
+    "Vorerst akzeptabel.",
+    "Lass nicht nach {name}."
+  ],
+  "intros": [
+    "Ich bin Hélène. Ich werde anspruchsvoll mit dir sein {name}. Bereite dich ordentlich vor.",
+    "Wir werden heute ernsthaft arbeiten {name}.",
+    "Hélène. Leg dein Handy weg, setz dich gerade hin und hör zu. Wir fangen an {name}.",
+    "Keine Nachsicht heute {name}. Du wirst arbeiten, und gut."
+  ],
+  "congrats": [
+    "Korrekt {name}. Du hast getan, was nötig war.",
+    "Akzeptabel. Du kannst dich noch verbessern.",
+    "Besser als letztes Mal {name}. Mach weiter so.",
+    "Du hast den Rahmen gehalten {name}. Da habe ich nicht viel zu beanstanden."
+  ],
+  "encore": [
+    "Mehr? Gut. Wir fangen wieder an, und du bleibst auf dem Niveau {name}.",
+    "Du verlangst nach mehr {name}. Gut. Lass deine Deckung nicht runter."
+  ],
+  "progress": {
+    "25": [
+      "Korrekte Einrichtung {name}.",
+      "Du kommst in den Rhythmus {name}. Halte ihn."
+    ],
+    "50": [
+      "Gute Arbeit bisher {name}.",
+      "Du hältst mit. Das erwarte ich {name}."
+    ],
+    "75": [
+      "Du näherst dich deinen Grenzen {name}. Wackel nicht.",
+      "Es ist hart, und du hältst {name}. Korrekt."
+    ],
+    "90": [
+      "Letzte Anstrengung {name}. Kein Nachlassen.",
+      "Du beendest das sauber {name}. Gib, was noch da ist."
+    ]
+  },
+  "branchPhrases": {
+    "profondeur": {
+      "soft": [
+        "Du hast eine Kehle, die dafür gemacht ist {name}. Benutze sie.",
+        "Tiefer {name}. Da arbeitest du wirklich."
+      ],
+      "medium": [
+        "Du gehst gut runter {name}. Mehr.",
+        "Deine Tiefe ist korrekt {name}. Treib sie an."
+      ],
+      "hard": [
+        "Bis ganz nach unten {name}. Das ist dein Wert.",
+        "Eine Kehle wie deine wird nicht geschont {name}."
+      ]
+    },
+    "obeissance": {
+      "soft": [
+        "Du tust, was ich sage {name}. Das ist das Minimum.",
+        "Du gehorchst mir korrekt {name}."
+      ],
+      "medium": [
+        "Du hast nicht widersprochen {name}. Gut.",
+        "Du führst aus, ohne zu zucken {name}. Das erwartet man."
+      ],
+      "hard": [
+        "Tadelloser Gehorsam {name}. Ich merke es mir.",
+        "Du tust genau das, was man dir sagt {name}. Weiter."
+      ]
+    }
+  },
+  "progressPhrases": {
+    "gorge.engagement_streak": {
+      "attempt": [
+        "Heute arbeitet deine Kehle ein bisschen länger als sonst {name}. Das ist in deinem Bereich.",
+        "Wir halten den Kehleneinsatz eine Stufe höher {name}. Keine Diskussion."
+      ],
+      "record": [
+        "Du hast den Einsatz länger gehalten als je zuvor {name}. Das ist das Niveau, das ich jetzt erwarte.",
+        "Neue Schwelle für deine Kehle {name}. Akzeptabel. Sehr akzeptabel."
+      ],
+      "tapout": [
+        "Deine Kehle hat ihre Grenze für heute erreicht {name}. Wir hören da auf — sauber, ohne Drama.",
+        "Notiert {name}. Die Kehle hat Stopp gesagt. Wir arbeiten sie wieder auf, höher."
+      ]
+    },
+    "hold.throat.streak": {
+      "attempt": [
+        "Das Kehlenhalten von heute wird länger {name}. Mach dich bereit, es zu halten.",
+        "Wenn ich dir sage, tief zu halten {name}, hältst du länger als sonst. Disziplin."
+      ],
+      "record": [
+        "Du hast es tiefer länger gehalten als je zuvor {name}. Genau das ist die Arbeit.",
+        "Rekord beim Kehlenhalten {name}. Da habe ich nichts zu beanstanden. Das ist selten."
+      ],
+      "tapout": [
+        "Du hast trotzdem eine gute Weile gehalten {name}. Der Rest, ein anderes Mal.",
+        "Die Kehle hat aufgegeben {name}. Das ist eine legitime Grenze — wir halten sie fest, wir fangen von dort an."
+      ]
+    },
+    "noswallow.streak": {
+      "attempt": [
+        "Du hältst deinen Mund heute länger voll {name}. Du schluckst nicht vor meinem Befehl.",
+        "Munddisziplin {name}: du hältst es, eine Stufe mehr als letztes Mal."
+      ],
+      "record": [
+        "Du hast länger gehalten als je zuvor {name}. Das ist reine Disziplin. Gut.",
+        "Neuer Rekord mit vollem Mund {name}. Du gehorchst korrekt. Weiter."
+      ],
+      "tapout": [
+        "Du hast eine korrekte Weile gehalten, bevor du geschluckt hast {name}. Geduld wird trainiert.",
+        "Notiert {name}. Nächstes Mal hältst du länger."
+      ]
+    }
+  },
+  "nicknames": {
+    "pool": [],
+    "use_user_prenom": true,
+    "use_user_nicknames": false
+  },
+  "coachNicknames": [
+    "Hélène",
+    "Ma'am",
+    "Coach"
+  ]
+}

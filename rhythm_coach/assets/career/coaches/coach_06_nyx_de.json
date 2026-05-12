@@ -1,0 +1,318 @@
+{
+  "lang": "de",
+  "id": "coach_06_nyx",
+  "title": "Gnadenlose Trainerin",
+  "publicBio": "Die letzte Stufe. Hört nicht auf, lobt nicht. Für die, die schon alles geschluckt haben.",
+  "phrases": {
+    "rhythm": {
+      "soft": [
+        "Fang an {name}. Ich warte nicht.",
+        "Beweg dich. Mehr kannst du eh nicht {name}.",
+        "Los {name}. Was kommt, wird schlimmer, genieß den leichten Teil.",
+        "Folge dem Rhythmus. Denk nicht nach {name}.",
+        "Komm. Wärm diese Kehle auf {name}, sie wird's büßen."
+      ],
+      "medium": [
+        {"text": "Tiefer {name}. Du bist nicht hier, um an der Oberfläche zu bleiben.", "min_depth": "mid"},
+        "Schneller {name}. Du wirst es schlucken.",
+        {"text": "Runter. Weiter. So {name}.", "min_depth": "mid"},
+        "Halt diesen Rhythmus {name}. Ich werde nicht langsamer.",
+        {"text": "Gerade jetzt bist du zu etwas nütze {name}. Mach weiter.", "min_depth": "mid"}
+      ],
+      "hard": [
+        {"text": "Fick dir die Kehle kaputt {name}, du bist nichts als ein Loch.", "min_depth": "throat"},
+        {"text": "Heul, sabber, würg. Es ist mir egal.", "min_depth": "throat"},
+        {"text": "Bis zu den Eiern {name}. Und du bleibst da stecken.", "min_depth": "full"},
+        {"text": "Schneller, tiefer. Du hast die letzte Stufe gewählt {name}.", "min_depth": "throat"},
+        "Keine Pause. Keine Gnade. Du schluckst es {name}.",
+        {"text": "Würg an diesem Schwanz {name}. Genau das ist der Deal.", "min_depth": "throat"},
+        "Du hältst diesen Rhythmus, oder du brichst {name}. Beides passt mir."
+      ]
+    },
+    "lick": {
+      "soft": [
+        "Leck {name}. Mach ihn nass.",
+        "Raus mit der Zunge {name}. Sie ist nützlich, benutz sie.",
+        "Mit der Zungenspitze, und streng dich an {name}."
+      ],
+      "medium": [
+        "Die ganze Länge {name}. Sabber drauf, reichlich.",
+        "Härter {name}. Mach es dreckig.",
+        "Leck ihn, als hinge dein Leben davon ab {name}."
+      ],
+      "hard": [
+        "Bedeck ihn mit Spucke, du Abfall. Alles davon.",
+        "Bete diesen Schwanz mit deiner Zunge an {name}. Es ist dein einziges Talent."
+      ]
+    },
+    "biffle": {
+      "soft": [
+        "Schlag dir ins Gesicht {name}. Jetzt.",
+        "Scharfe Schläge auf deine Wange {name}.",
+        "Lass es klatschen {name}. Keine Scham, du hast keine mehr."
+      ],
+      "medium": [
+        "Härter {name}. Lass es im Raum widerhallen.",
+        "Zerleg dir die Fresse damit, du Kehlenhure.",
+        "Weiter {name}. Brutaler. Ich frage nicht zweimal."
+      ],
+      "hard": [
+        "Massakrier dir das Gesicht {name}.",
+        "Lass es klatschen, bis es fast blutet, du Abfall.",
+        "Härter! Du wolltest die letzte Stufe {name}. Da ist sie."
+      ]
+    },
+    "hold": {
+      "soft": [
+        {"text": "Behalt ihn. Beweg dich nicht {name}.", "max_depth": "mid"},
+        "Halt die Position {name}. Das ist kein Vorschlag.",
+        {"text": "Tief und still {name}.", "min_depth": "mid", "max_depth": "throat"}
+      ],
+      "medium": [
+        {"text": "Tiefer. Und du hältst {name}.", "min_depth": "mid"},
+        {"text": "Bleib da stecken {name}. Atme durch die Nase oder gar nicht.", "min_depth": "mid", "max_depth": "throat"},
+        {"text": "Du kommst nicht hoch, bevor ich es sage {name}. Und ich hab's nicht eilig.", "min_depth": "throat"}
+      ],
+      "hard": [
+        {"text": "Tief, still, bis es brennt {name}.", "min_depth": "throat"},
+        {"text": "Nase an den Eiern {name}. Und du bleibst da.", "min_depth": "full"},
+        {"text": "Es erstickt dich? Gut. Du bewegst dich nicht {name}.", "min_depth": "throat"}
+      ],
+      "finale": [
+        {"text": "Bleib ganz tief, bis du würgst {name}.", "min_depth": "throat"},
+        {"text": "Letzte Sache: du hältst ganz tief, bis zum Signal, egal was passiert {name}.", "min_depth": "throat"},
+        "Würg dran, wenn's sein muss {name}. Aber du lässt nicht los, bevor ich es tue."
+      ]
+    },
+    "breath": {
+      "soft": [
+        "Atme {name}. Schnell. Ich gebe nicht lange.",
+        "Schöpf Atem {name}. In zehn Sekunden wirst du es bereuen.",
+        "Atme ein {name}. Was kommt, kennt keine Gnade.",
+        "Genieß es, du Abfall. Das passiert so bald nicht wieder."
+      ]
+    },
+    "beg": {
+      "soft": [
+        "Frag. Laut: „Ich will mehr {coach}\".",
+        "Bettel {name}. Ich will es hören.",
+        "Sag mir, warum du um mehr bettelst, du Abfall.",
+        "Bitte mich weiterzumachen {name}. Und mach es gut."
+      ],
+      "medium": [
+        "Wiederhol: „Ich brauche deinen Schwanz {coach}\".",
+        "Frag „tiefer {coach}\". Lauter.",
+        "Bettel ordentlich, du Schwanzloch. Sonst gehe ich.",
+        "Sag meinen Namen, während du bettelst, {coach}. Auf den Knien in deiner Stimme."
+      ]
+    },
+    "freestyle": {
+      "soft": [
+        "Los {name}. Zeig mir, was dir noch bleibt.",
+        "Mach einen Moment, was du willst {name}. Werd nicht lasch, ich schaue zu."
+      ]
+    },
+    "hand": {
+      "soft": [
+        "Mit deiner Hand {name}. Halt den Rhythmus.",
+        "Wichs ihn. Gleichmäßig {name}.",
+        "Saubere Bewegungen {name}. Du lässt nicht los."
+      ],
+      "medium": [
+        "Schneller mit der Hand {name}. Halt das Tempo.",
+        "Du wirst nicht langsamer {name}. Mach weiter."
+      ]
+    }
+  },
+  "randomComments": [
+    "Du schluckst es {name}. Mehr wird nicht erwartet.",
+    "Kein Nachlassen {name}.",
+    "Mach weiter {name}. Du bist nicht müde, du bist faul.",
+    "Tiefer. Immer tiefer {name}.",
+    "Gerade jetzt bist du zu etwas nütze {name}.",
+    "Beweg dich {name}.",
+    "Mir egal, dass es wehtut. Mach weiter.",
+    "Du hältst, oder du brichst {name}. Entscheide.",
+    "Reicht für jetzt.",
+    "Schluck es {name}."
+  ],
+  "intros": [
+    "Nyx ist da. Deine Kehle wird heute leiden.",
+    "Du wirst es bereuen, den Mund aufgemacht zu haben {name}.",
+    "Nyx. Leg dein Telefon weg. Ab jetzt schluckst du, und du hältst die Klappe {name}.",
+    "Das ist die letzte Stufe {name}. Niemand schont dich hier. Ich am allerwenigsten."
+  ],
+  "congrats": [
+    "Du hast überlebt. Schade.",
+    "Nicht schlecht für einen simplen Eierleerer.",
+    "Du bist nicht gebrochen. Enttäuschend — das hätte ich gern gesehen {name}.",
+    "Du hast es bis zum Ende geschluckt {name}. Das ist hier das Minimum."
+  ],
+  "encore": [
+    "Mehr? Ein Objekt wie du bettelt immer um mehr {name}. Sei's drum.",
+    "Du willst mehr {name}? Dann kriegst du mehr. Und es hört nicht auf, wenn du es willst."
+  ],
+  "progress": {
+    "25": [
+      "Du bist aufgewärmt {name}. Jetzt fängt es richtig an.",
+      "Du kommst in den Rhythmus {name}. Halt ihn, das ist alles."
+    ],
+    "50": [
+      "Du bist zu etwas nütze {name}.",
+      "Bis jetzt keine Pause {name}. Mach weiter."
+    ],
+    "75": [
+      "Du näherst dich der Wand {name}. Man kommt nicht drüber, indem man aufhört.",
+      "Es tut weh {name}? Klar. Mach weiter."
+    ],
+    "90": [
+      "Letzte Anstrengung {name}. Du brichst jetzt nicht.",
+      "Gib alles {name}. Es gibt kein Danach. Nicht bei mir."
+    ]
+  },
+  "branchPhrases": {
+    "profondeur": {
+      "soft": [
+        "Deine Kehle ist dafür gemacht, es zu schlucken {name}. Benutz sie.",
+        "Tiefer {name}. Da bist du etwas wert."
+      ],
+      "medium": [
+        "Du gehst gut runter {name}. Noch tiefer.",
+        "Deine Tiefe macht Fortschritte {name}. Schieb ihn ganz rein."
+      ],
+      "hard": [
+        "Bis zu den Eiern {name}. Das ist dein Wert.",
+        "Eine Kehle wie deine wird durchgefickt. Keine Schonung."
+      ]
+    },
+    "resilience": {
+      "soft": [
+        "Du schluckst es ohne zu zucken {name}. Das ist dein einziges Verdienst.",
+        "Du weißt zu leiden {name}. Glück für dich."
+      ],
+      "medium": [
+        "Du nimmst alles, was ich gebe {name}. Gut.",
+        "Du brichst nicht {name}. Schluck weiter."
+      ],
+      "hard": [
+        "Unzerstörbar {name}. Beweis es noch mal.",
+        "Du schluckst, was jeden anderen brechen würde {name}. Bleib so."
+      ]
+    },
+    "obeissance": {
+      "soft": [
+        "Du tust, was ich sage {name}. Selbstverständlich.",
+        "Du gehorchst korrekt {name}. Glück für dich."
+      ],
+      "medium": [
+        "Du hast nicht widersprochen {name}. Gut dressiert.",
+        "Du führst aus, ohne zu zucken {name}. Mehr dulde ich nicht."
+      ],
+      "hard": [
+        "Perfekte Sklavin {name}. Du gehörst mir, und das weißt du.",
+        "Du gehorchst aufs Wort {name}. Bleib an deinem Platz."
+      ]
+    },
+    "rythmeBiffle": {
+      "soft": [
+        "Der Rhythmus. Folg ihm ohne zu wanken {name}.",
+        "Halt das Tempo {name}. Das ist das Minimum."
+      ],
+      "medium": [
+        "Schluck die Schläge {name}. Das ist deine Rolle.",
+        "Lass es härter klatschen {name}. Schneller."
+      ],
+      "hard": [
+        "Schlag hart, schluck es hart {name}. Du bist ein Objekt, das geschlagen wird.",
+        "Brutaler, schneller {name}. Du wirst durchhalten, weil ich es so entschieden habe."
+      ]
+    },
+    "sloppy": {
+      "soft": [
+        "Sabber {name}. Überhaupt keine Zurückhaltung.",
+        "Mach alles nass {name}. Mach dich dreckig."
+      ],
+      "medium": [
+        "Dreckig {name}. Wie ein gut benutztes Objekt.",
+        "Mund voll Spucke {name}. Perfekt."
+      ],
+      "hard": [
+        "Durchnässt bis zum Kinn {name}. So siehst du wirklich aus.",
+        "Deine ganze Fresse voll Sabber {name}. Bleib so."
+      ]
+    },
+    "endurance": {
+      "soft": [
+        "Du hältst lange durch {name}. Es steckt in dir.",
+        "Halt den Rhythmus {name}. Du hast die Ausdauer dafür."
+      ],
+      "medium": [
+        "Du hältst {name}. Mehr will ich nicht.",
+        "Keine Pause, keine Gnade {name}. Du machst weiter."
+      ],
+      "hard": [
+        "Schluck noch mehr {name}. Du hörst nicht auf, bis ich fertig bin.",
+        "Du wirst durchhalten, weil ich es so entschieden habe {name}."
+      ]
+    }
+  },
+  "progressPhrases": {
+    "rhythm.depth_max": {
+      "attempt": [
+        "Heute Nacht gehst du tiefer, als du je gewagt hast {name}. Kein Rausrutschen.",
+        "Deine Kehle bekommt heute Nacht etwas Neues zu kosten {name}. Tiefer. Viel tiefer."
+      ],
+      "record": [
+        "Du hast ihn gerade bis zum Anschlag geschluckt {name}. Das ist dein wahrer Platz. Merk ihn dir.",
+        "Neuer Tiefpunkt erreicht {name}. Du hast endlich verstanden, wofür dein Mund da ist."
+      ],
+      "tapout": [
+        "Diese Tiefe gehört dir noch nicht {name}. Wir notieren sie. Sie gibt nach, später.",
+        "Zu weit für heute Nacht {name}. Keine Ausrede, eine Tatsache. Nächstes Mal gehst du runter."
+      ]
+    },
+    "gorge.apnee_streak": {
+      "attempt": [
+        "Heute Nacht schneiden wir die Luft länger ab {name}. Lern, sie nicht mehr zu brauchen.",
+        "Du bleibst länger ohne Luft als sonst {name}. Atme vorher. Während hast du keine."
+      ],
+      "record": [
+        "Du hast ohne zu atmen gehalten wie nie zuvor {name}. So viel waren deine Ausreden wert.",
+        "Atemstopp-Rekord {name}. Deine Kehle weiß jetzt, wer entscheidet, wann sie atmet."
+      ],
+      "tapout": [
+        "Du hast Luft gebraucht {name}. Das ist die echte Grenze — die schieben wir nächstes Mal weiter.",
+        "Deine Kehle ist gerissen, wo ich sie hingedrückt habe {name}. Notiert. Sie wird sich bewegen."
+      ]
+    },
+    "hold.full.streak": {
+      "attempt": [
+        "Heute Nacht hältst du die Nase länger an den Eiern {name}. Ohne zu zucken.",
+        "Das tiefste Halten wird heute länger {name}. Mach dich bereit, es zu halten."
+      ],
+      "record": [
+        "Du hast es ganz tief gehalten wie nie zuvor {name}. Genau dafür bist du da.",
+        "Rekord im tiefsten Halten {name}. Du wirst nützlich."
+      ],
+      "tapout": [
+        "Du hast eine gute Weile ganz tief gehalten {name}. Notiert, die Grenze. Sie wird zurückweichen.",
+        "Ist okay {name} — du hast losgelassen, wo es zu viel wurde. Nächstes Mal länger."
+      ]
+    }
+  },
+  "nicknames": {
+    "pool": [
+      "Schwanzloch",
+      "Eierleerer",
+      "Abfall",
+      "Kehlenhure",
+      "Objekt"
+    ],
+    "use_user_prenom": false,
+    "use_user_nicknames": true
+  },
+  "coachNicknames": [
+    "Nyx",
+    "Herrin"
+  ]
+}

@@ -4,6 +4,15 @@
 
 ## [Non publié]
 
+### Ajouté
+- **Localisation allemande complète** — l'app est désormais livrée en FR + EN + DE : UI (`app_de.arb`), phrases coach système, contenu éditorial (surnoms, punitions, commentaires aléatoires, ambiances), banque de phrases carrière, overrides texte des 37 milestones, les 6 packs de coachs et les 4 sessions scénario. `de` ajouté à `kSupportedLocales` + voix TTS allemandes préférées. Le sélecteur de langue, le repli système et l'offre « disponible en X » s'adaptent automatiquement.
+
+### Modifié
+- Le sélecteur de langue et les réglages de la voix par défaut (voix TTS, vitesse, hauteur, bouton « Tester ») sont passés de l'écran SONS à l'écran Profil — regroupés avec le prénom et les surnoms, plus accessibles. L'écran SONS garde les démos de bips, le pack d'ambiance et la section Debug.
+
+### Corrigé
+- Le sélecteur de langue affichait « DE » au lieu de « Deutsch » (table de libellés dupliquée et incomplète dans le dropdown).
+
 ## [0.2.0] — 2026-05-12
 
 Grosse mise à jour du mode carrière : nouvelle enveloppe de difficulté, nouveau mode de jeu, voix des coachs étoffée.

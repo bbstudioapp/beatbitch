@@ -1,0 +1,83 @@
+{
+  "lang": "de",
+  "fail_phrases": [
+    "Gibst du schon auf, kleine Schlampe?",
+    "Erbärmlich. Das kannst du besser.",
+    "Ernsthaft? So früh? Das korrigieren wir sofort.",
+    "Diese Schwäche wird dich teuer zu stehen kommen.",
+    "Du glaubst, das reicht? Falsch.",
+    "Eine echte Schlampe gibt nicht so auf.",
+    "Atme… denn jetzt kriegst du's richtig."
+  ],
+  "fail_phrases_swallow": [
+    "Du hast geschluckt. Ohne Erlaubnis. Du weißt, was dich erwartet.",
+    "Ich hab dir gesagt, du sollst es behalten. Du hast es nicht geschafft. Das wirst du büßen.",
+    "Du ungehorsames kleines Ding. Du hast geschluckt, obwohl ich es verboten habe.",
+    "Du kannst nicht mal deine Spucke halten, wenn man dich bittet. Jämmerlich.",
+    "Du hast versagt. Du hast geschluckt. Wir bringen dir wieder bei, wie man gehorcht.",
+    "Eine einzige Anweisung: nicht schlucken. Und du hast es nicht geschafft. Schäm dich."
+  ],
+  "punishments": [
+    {
+      "id": "extra_throat",
+      "name": "Extra Throat",
+      "duration_seconds": 45,
+      "steps": [
+        {"time": 0, "text": "Strafe. Vierzig Sekunden in der Kehle, ohne Gnade.", "mode": "rhythm", "from": "throat", "to": "full", "bpm": 100},
+        {"time": 20, "text": "Tiefer. Nimm alles."},
+        {"time": 35, "text": "Letzter Hold.", "mode": "hold", "to": "full", "duration": 8}
+      ]
+    },
+    {
+      "id": "biffle_burst",
+      "name": "Schlag-Salve",
+      "duration_seconds": 30,
+      "steps": [
+        {"time": 0, "text": "Schnelle Strafe. Dreißig Sekunden Schwanzschläge.", "mode": "biffle", "bpm": 135},
+        {"time": 12, "text": "Sabber überall, Schlampe."},
+        {"time": 25, "text": "Härter."}
+      ]
+    },
+    {
+      "id": "deep_hold_chain",
+      "name": "Hold-Kette",
+      "duration_seconds": 55,
+      "steps": [
+        {"time": 0, "text": "Drei Holds hintereinander. Der erste in der Kehle.", "mode": "hold", "to": "throat", "duration": 10},
+        {"time": 12, "text": "Atme.", "mode": "breath", "duration": 4},
+        {"time": 17, "text": "Der zweite, tiefer.", "mode": "hold", "to": "throat", "duration": 12},
+        {"time": 31, "text": "Atme.", "mode": "breath", "duration": 4},
+        {"time": 36, "text": "Der letzte, bis zum Anschlag.", "mode": "hold", "to": "full", "duration": 15}
+      ]
+    },
+    {
+      "id": "slow_torture",
+      "name": "Langsame Folter",
+      "duration_seconds": 50,
+      "steps": [
+        {"time": 0, "text": "Langsame Strafe. Ganz langsam und ganz tief.", "mode": "rhythm", "from": "throat", "to": "full", "bpm": 40},
+        {"time": 25, "text": "Spür jeden Zentimeter."},
+        {"time": 45, "text": "Hold.", "mode": "hold", "to": "full", "duration": 10}
+      ]
+    },
+    {
+      "id": "lick_humiliation",
+      "name": "Leck-Erniedrigung",
+      "duration_seconds": 40,
+      "steps": [
+        {"time": 0, "text": "Leck wie eine läufige Hündin.", "mode": "lick", "from": "tip", "to": "full", "bpm": 70},
+        {"time": 20, "text": "Spuck drauf und leck nochmal."},
+        {"time": 35, "text": "Sag „ich bin dein Loch“."}
+      ]
+    },
+    {
+      "id": "rapid_full",
+      "name": "Schnell bis ganz",
+      "duration_seconds": 35,
+      "steps": [
+        {"time": 0, "text": "Strafe. Geh ganz runter und bleib schnell.", "mode": "rhythm", "from": "full", "to": "full", "bpm": 120},
+        {"time": 18, "text": "Schneller, Schlampe."}
+      ]
+    }
+  ]
+}

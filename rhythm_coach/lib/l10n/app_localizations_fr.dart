@@ -647,6 +647,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsLanguageEnglish => 'English';
 
   @override
+  String get settingsLanguageGerman => 'Deutsch';
+
+  @override
   String get languagePickerTitle => 'Choisis ta langue';
 
   @override
@@ -1540,7 +1543,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get onboardingStep3Body =>
-      'Sur l\'écran SONS (icône équaliseur) : règle la voix par défaut (vitesse, timbre) et écoute un exemple. Les coachs de carrière ont leur propre voix figée — seule la voix par défaut, utilisée hors-carrière, est paramétrable.\n\nSur l\'écran Profil (icône silhouette) : indique ton prénom et choisis tes surnoms. La coach pourra t\'appeler par ton nom.';
+      'Sur l\'écran Profil (icône silhouette) : indique ton prénom, choisis tes surnoms, ta langue d\'interface et règle la voix par défaut (vitesse, timbre) — écoute un exemple. Les coachs de carrière ont leur propre voix figée ; seule la voix par défaut, utilisée hors-carrière, est paramétrable. La coach pourra t\'appeler par ton nom.';
 
   @override
   String get onboardingNext => 'Suivant';

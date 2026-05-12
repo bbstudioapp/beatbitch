@@ -1,0 +1,880 @@
+{
+  "@@locale": "de",
+
+  "appTitle": "BeatBitch",
+  "@appTitle": {
+    "description": "Anwendungsname, der vom Android-System angezeigt wird."
+  },
+
+  "modeSelectionAppBarTitle": "BEATBITCH",
+  "modeSelectionProfileTooltip": "Profil & Abzeichen",
+  "modeSelectionSoundsTooltip": "Die Sounds lernen",
+  "modeSelectionHeaderTitle": "Wähl deinen Modus",
+  "modeSelectionHeaderSubtitle": "Leg dein Handy weg, hör zu, gehorch.",
+  "modeSelectionScenarioTitle": "SZENARIO",
+  "modeSelectionScenarioSubtitle": "Vorgeschriebene Sessions.",
+  "modeSelectionCareerTitle": "KARRIERE",
+  "modeSelectionCareerSubtitle": "Generierte Sessions. Beende sie, um die nächste Stufe freizuschalten.",
+
+  "homeAppBarTitle": "SZENARIO",
+  "homeCameraTestTooltip": "Kamera-Test (Holds)",
+  "homeDeleteSessionTitle": "Diese Session löschen?",
+  "homeDeleteSessionContent": "„{sessionName}“ wird aus deinen Szenarien entfernt.",
+  "@homeDeleteSessionContent": {
+    "placeholders": {
+      "sessionName": { "type": "String" }
+    }
+  },
+  "commonCancel": "Abbrechen",
+  "commonDelete": "Löschen",
+  "commonContinue": "Weiter",
+  "commonAdd": "Hinzufügen",
+  "homeLoadError": "Fehler beim Laden der Sessions:\n{error}",
+  "@homeLoadError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "homeEmpty": "Keine Session verfügbar.",
+  "homeMySessions": "Meine Sessions",
+  "homeBuiltinSessions": "Integrierte Sessions",
+  "homeHeaderTitle": "Wähl deine Session",
+  "homeHeaderSubtitle": "Leg dein Handy weg, hör zu, gehorch.",
+
+  "sessionStopTitle": "Session beenden?",
+  "sessionStopContent": "Der Fortschritt geht verloren.",
+  "sessionStopConfirm": "Beenden",
+  "sessionVoiceLabel": "Stimme",
+  "sessionAmbienceLabel": "Ambiente",
+  "sessionBegRequestLabel": "GEFORDERT",
+  "sessionBegSupplicateLabel": "BETTLE",
+  "sessionStateIdle": "BEREIT",
+  "sessionStateRunning": "LÄUFT",
+  "sessionStatePaused": "PAUSE",
+  "sessionStateFinished": "FERTIG",
+  "sessionStateFailing": "FAIL",
+  "sessionFailPhasePhrase": "Fail-Satz",
+  "sessionFailPhaseBreath": "Atmen",
+  "sessionFailPhasePunishment": "Strafe",
+  "sessionStartPrompt": "Starte die Session, um die Anweisungen zu hören.",
+  "sessionFailButton": "ICH KANN NICHT",
+  "sessionIntroBriefing": "BRIEFING",
+  "sessionIntroReplay": "Nochmal hören",
+  "sessionIntroReady": "ICH BIN BEREIT",
+  "sessionPausedIndicator": "PAUSIERT",
+  "sessionPrepInPlace": "IN POSITION",
+  "sessionPrepInstruction": "Leg dein Handy weg, geh in Position.",
+  "sessionFinishedTitle": "SESSION ABGESCHLOSSEN",
+  "sessionFinishedDuration": "Dauer: {duration}",
+  "@sessionFinishedDuration": {
+    "placeholders": {
+      "duration": { "type": "String" }
+    }
+  },
+  "sessionFinishedDefaultEnd": "Danke!",
+  "sessionFinishedBadgesTitle": "Neue Abzeichen-Stufen",
+  "sessionFinishedNoNewBadges": "Diesmal keine neue Stufe — die nächste wird's.",
+  "sessionFinishedMilestonesTitle": "Gelerntes",
+  "sessionFinishedEncore": "ICH WILL MEHR…",
+  "sessionFinishedSaved": "GESPEICHERT",
+  "sessionFinishedSaving": "SPEICHERN…",
+  "sessionFinishedSaveButton": "DIESE SESSION SPEICHERN",
+  "sessionFinishedSavedSnack": "„{name}“ in deinen Szenarien gespeichert.",
+  "@sessionFinishedSavedSnack": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "sessionSaveDefaultName": "Meine Session {day}.{month}",
+  "@sessionSaveDefaultName": {
+    "placeholders": {
+      "day": { "type": "int" },
+      "month": { "type": "int" }
+    }
+  },
+  "sessionSaveDialogTitle": "Session speichern",
+  "sessionSaveDialogContent": "Gib ihr einen Namen — sie erscheint in der SZENARIO-Liste.",
+  "sessionSaveDialogHint": "Name der Session",
+  "sessionSaveDialogConfirm": "Speichern",
+  "cameraTestEndButton": "Zurück",
+
+  "profileAppBarTitle": "PROFIL",
+  "profileLoadError": "Fehler:\n{error}",
+  "@profileLoadError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "profileStatsSection": "STATISTIKEN",
+  "profileStatsEmpty": "Noch keine Statistiken. Beende ein paar Sessions, um deine Zähler zu enthüllen.",
+  "profileBadgesSection": "ABZEICHEN",
+  "profileBadgesEmpty": "Noch kein Abzeichen freigeschaltet.",
+  "profileLevel": "Stufe {level}",
+  "@profileLevel": {
+    "placeholders": {
+      "level": { "type": "int" }
+    }
+  },
+  "profileReputationUnit": "Reputationspunkte",
+  "profileStatSessionsCompleted": "Abgeschlossene Sessions",
+  "profileStatNoFailStreak": "Serie ohne Fail",
+  "profileStatDailyStreak": "Tägliche Serie",
+  "profileStatTotalTime": "Gesamtzeit",
+  "profileStatThroatfucks": "Throatfucks",
+  "profileStatBiffles": "Schwanzschläge",
+  "profileStatHoldFullMax": "Längster Tief-Hold",
+  "profileStatHoldThroatTotal": "Kehlen-Hold (gesamt)",
+  "profileStatHoldFullTotal": "Tief-Hold (gesamt)",
+  "profileStatEncores": "Geforderte Zugaben",
+  "profileStatQuickies": "Abgeschlossene Quickies",
+  "profileStatModesUsed": "Benutzte Modi",
+  "profileCapabilitiesSection": "FÄHIGKEITEN",
+  "profileCapabilitiesEmpty": "Noch nichts zu zeigen — deine Fähigkeiten zeigen sich beim Spielen.",
+  "profileCapBpm": "{n} BPM",
+  "@profileCapBpm": {
+    "placeholders": {
+      "n": { "type": "int" }
+    }
+  },
+  "profileCapApnea": "Atemstillstand",
+  "profileCapEngagement": "Kehle geöffnet",
+  "profileCapCrossingsThroat": "Kehlenbarriere",
+  "profileCapCrossingsFull": "Kehlenbarriere (tief)",
+  "profileCapCrossingsLifetime": "Durchstöße (gesamt)",
+  "profileCapRhythmFastShallow": "Mund-Rhythmus — schnell",
+  "profileCapRhythmFastThroat": "Kehlen-Rhythmus — schnell",
+  "profileCapRhythmFastFull": "Tiefer Rhythmus — schnell",
+  "profileCapRhythmSlowShallow": "Mund-Rhythmus — langsam",
+  "profileCapRhythmSlowThroat": "Kehlen-Rhythmus — langsam",
+  "profileCapRhythmSlowFull": "Tiefer Rhythmus — langsam",
+  "profileCapRhythmDepth": "Rhythmus-Tiefe",
+  "profileCapRhythmMotion": "Ununterbrochene Bewegung",
+  "profileCapHoldThroat": "Kehlen-Hold",
+  "profileCapHoldFull": "Tief-Hold",
+  "profileCapNoSwallow": "Ohne Schlucken",
+  "profileCapBiffle": "Klatschen",
+  "profileCapBiffleFast": "Klatschen — schnell",
+  "profileCapEffortNoBreath": "Anstrengung ohne Pause",
+  "profileCapBreathMinDose": "Kürzeste Verschnaufpause",
+  "profileCapLickDepth": "Zungentiefe",
+  "profileCapLickStreak": "Ununterbrochene Zunge",
+  "profileCapHandStreak": "Ununterbrochene Hand",
+  "profileResetSection": "GEFAHRENZONE",
+  "profileResetButton": "Alles zurücksetzen",
+  "profileResetDialogTitle": "Alles zurücksetzen?",
+  "profileResetDialogMessage": "Das löscht alle deine Statistiken, Fähigkeiten, Abzeichen, den Karrierefortschritt und die Spezialisierungspunkte. Unwiderruflich.",
+  "profileResetCancel": "Abbrechen",
+  "profileResetConfirm": "Alles löschen",
+  "profileResetDoneSnackbar": "Profil zurückgesetzt.",
+
+  "careerAppBarTitle": "KARRIERE",
+  "careerSpecializationTooltip": "Spezialisierung",
+  "careerLoadError": "Fehler beim Laden:\n{error}",
+  "@careerLoadError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "careerLevelSection": "Stufe",
+  "careerMaxLevel": "max. {level}",
+  "@careerMaxLevel": {
+    "placeholders": {
+      "level": { "type": "int" }
+    }
+  },
+  "careerQuickieToggle": "Quickie",
+  "careerQuickieSubtitle": "6 Min. — intensiv",
+  "careerQuickieDescription": "6 Min., durchgehend intensiv. Für wenn du keine Zeit hast.",
+  "careerIncludeHandToggle": "Handstimulation einbeziehen",
+  "careerIncludeHandSubtitle": "Deaktiviert auch die Schwanzschläge (Biffle) — beide brauchen die Hand.",
+  "careerIncludeHandMilestoneLocked": "Für diese Session gesperrt — der Lern-Meilenstein nutzt die Hand.",
+  "specPointsBannerTitle": "{count, plural, =1{1 freier Punkt} other{{count} freie Punkte}}",
+  "@specPointsBannerTitle": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "specPointsBannerSubtitle": "Du hast Spezialisierungspunkte verdient. Vergib sie, bevor du startest.",
+  "specPointsBannerCta": "ZUWEISEN",
+  "careerStartButton": "STARTEN",
+  "careerCompletedSessions": "Abgeschlossene Sessions: {count}",
+  "@careerCompletedSessions": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "careerLevelLockedHint": "Stufe 1 (beende eine Session, um die nächste freizuschalten)",
+
+  "careerSessionName": "Karriere Stufe {level}",
+  "@careerSessionName": {
+    "placeholders": {
+      "level": { "type": "int" }
+    }
+  },
+  "careerSessionNameQuickie": "Karriere Stufe {level} — Quickie",
+  "@careerSessionNameQuickie": {
+    "placeholders": {
+      "level": { "type": "int" }
+    }
+  },
+
+  "careerMilestonesBranchesPrefix": "Zweig: ",
+  "careerMilestonesBranchesPrefixPlural": "Zweige: ",
+
+  "cameraTestAppBarTitle": "KAMERA-TEST",
+  "cameraPreviewUnavailable": "Vorschau nicht verfügbar",
+  "cameraStartSession": "Session starten",
+  "cameraPermissionDenied": "Kamera-Berechtigung verweigert oder Init fehlgeschlagen. Aktiviere die Kamera in den Android-Einstellungen.",
+  "cameraUnknownError": "Unbekannter Fehler.",
+  "cameraInitializing": "Kamera wird initialisiert…",
+  "cameraRecalibrate": "Neu kalibrieren",
+  "cameraCalibrate": "Kalibrieren (10 s)",
+  "cameraAxisLabel": "Achse: {axis}",
+  "@cameraAxisLabel": {
+    "placeholders": { "axis": { "type": "String" } }
+  },
+  "cameraAxisHorizontal": "horizontal",
+  "cameraAxisVertical": "vertikal",
+  "cameraLivePositionLabel": "Live-Position: {position}",
+  "@cameraLivePositionLabel": {
+    "placeholders": { "position": { "type": "String" } }
+  },
+  "cameraCalibrationTitle": "Kalibrierung",
+  "cameraCalibrationInstructions": "Mach 10 Sekunden lang 3 oder 4 langsame, weite Bewegungen — von der höchsten Position (Spitze) bis zur tiefsten (ganz). Die App leitet daraus die Achse und die Grenzen der 5 Stufen ab.",
+  "cameraCalibratingMessage": "Kalibrierung läuft… mach langsame, tiefe Bewegungen.",
+  "cameraCalibratedTitle": "Kalibrierung OK",
+  "cameraCalibrationSummary": "Achse: {axis} — Bereich {range} ({samples} Messwerte)",
+  "@cameraCalibrationSummary": {
+    "placeholders": {
+      "axis": { "type": "String" },
+      "range": { "type": "String" },
+      "samples": { "type": "int" }
+    }
+  },
+  "cameraCalibratedHint": "Du kannst die Session starten. Wenn die Polarität vertauscht ist (Spitze ↔ ganz), kalibriere in der richtigen Richtung neu.",
+  "cameraCalibrationFailedRange": "Bereich zu klein ({range}). Mach weitere Bewegungen.",
+  "@cameraCalibrationFailedRange": {
+    "placeholders": { "range": { "type": "String" } }
+  },
+  "cameraCalibrationFailed": "Kalibrierung fehlgeschlagen: {error}",
+  "@cameraCalibrationFailed": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "cameraReturnButton": "Zurück",
+
+  "specAppBarTitle": "SPEZIALISIERUNG",
+  "specLoadError": "Fehler:\n{error}",
+  "@specLoadError": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "specNotEnoughPoints": "Nicht genug Punkte verfügbar.",
+  "specRespecConfirmTitle": "Spezialisierung neu vergeben?",
+  "specRespecConfirmContent": "Alle deine Spezialisierungspunkte werden zurückgesetzt, du verlierst 1 globale Stufe und du kannst 3 Tage lang keinen Respec mehr machen.",
+  "specRespecConfirmAction": "Respec",
+  "specIntro": "Vergib deine Punkte, um der Engine zu sagen, was du magst. Je mehr du in einen Zweig investierst, desto stärker geht der Generator in diesen Stil — ohne deine Stats aus dem Gleichgewicht zu bringen.",
+  "specPointsAvailableLabel": "verfügbare Punkte",
+  "specLevelLabel": "Stufe {level}",
+  "@specLevelLabel": {
+    "placeholders": { "level": { "type": "int" } }
+  },
+  "specSpentLabel": "{spent} / {cap} vergeben",
+  "@specSpentLabel": {
+    "placeholders": {
+      "spent": { "type": "int" },
+      "cap": { "type": "int" }
+    }
+  },
+  "specPointsUnit": "Pkt.",
+  "specRespecActiveLabel": "Spezialisierung zurücksetzen (-1 Stufe)",
+  "specRespecCooldownLabel": "Respec in {hours} Std.",
+  "@specRespecCooldownLabel": {
+    "placeholders": { "hours": { "type": "int" } }
+  },
+
+  "formatDurationSeconds": "{s} s",
+  "@formatDurationSeconds": {
+    "placeholders": { "s": { "type": "int" } }
+  },
+  "formatDurationMinutes": "{m} Min.",
+  "@formatDurationMinutes": {
+    "placeholders": { "m": { "type": "int" } }
+  },
+  "formatDurationMinutesSeconds": "{m} Min. {s} s",
+  "@formatDurationMinutesSeconds": {
+    "placeholders": {
+      "m": { "type": "int" },
+      "s": { "type": "int" }
+    }
+  },
+  "formatDurationHours": "{h} Std.",
+  "@formatDurationHours": {
+    "placeholders": { "h": { "type": "int" } }
+  },
+  "formatDurationHoursMinutes": "{h} Std. {mm}",
+  "@formatDurationHoursMinutes": {
+    "placeholders": {
+      "h": { "type": "int" },
+      "mm": { "type": "String" }
+    }
+  },
+  "formatDaysShort": "{d} T",
+  "@formatDaysShort": {
+    "placeholders": { "d": { "type": "int" } }
+  },
+
+  "settingsAppBarTitle": "EINSTELLUNGEN",
+  "settingsLanguageSection": "Sprache",
+  "settingsLanguageSubtitle": "Sprache der Oberfläche, der Coach-Sätze und der redaktionellen Inhalte.",
+  "settingsLanguageSystem": "System folgen",
+  "settingsLanguageFrench": "Français",
+  "settingsLanguageEnglish": "English",
+  "settingsLanguageGerman": "Deutsch",
+  "languagePickerTitle": "Wähl deine Sprache",
+  "languagePickerBody": "Die Sprache deines Handys ist (noch) nicht in BeatBitch verfügbar. Wähl die, die du nutzen willst — du kannst sie später in den Einstellungen (Equalizer-Symbol) ändern.",
+  "languageNewlyAvailableTitle": "Verfügbar auf {language}",
+  "@languageNewlyAvailableTitle": {
+    "placeholders": {
+      "language": { "type": "String" }
+    }
+  },
+  "languageNewlyAvailableBody": "BeatBitch ist jetzt auf {language} übersetzt, der Sprache deines Handys. Du kannst umschalten oder die aktuelle Sprache behalten (jederzeit in den Einstellungen änderbar).",
+  "@languageNewlyAvailableBody": {
+    "placeholders": {
+      "language": { "type": "String" }
+    }
+  },
+  "languageNewlyAvailableSwitch": "Auf {language} umschalten",
+  "@languageNewlyAvailableSwitch": {
+    "placeholders": {
+      "language": { "type": "String" }
+    }
+  },
+  "languageNewlyAvailableKeep": "Aktuelle Sprache behalten",
+
+  "soundsAppBarTitle": "SOUNDS",
+  "soundsStopLoopTooltip": "Loop stoppen",
+  "soundsIdentitySection": "Identität",
+  "soundsIdentitySubtitle": "Der Platzhalter „{token}“ in den Sätzen wird durch eine Zufallsauswahl zwischen deinem Vornamen (falls eingegeben) und der Spitznamenliste unten ersetzt.",
+  "@soundsIdentitySubtitle": {
+    "placeholders": {
+      "token": { "type": "String" }
+    }
+  },
+  "soundsFirstNameLabel": "Vorname (optional)",
+  "soundsFirstNameHelper": "Leer = kein Vorname im Pool. Netzwerkstimmen sprechen Vornamen ungleichmäßig aus.",
+  "soundsTestSubstitution": "Ersetzung testen",
+  "soundsDefaultNicknames": "Standard-Spitznamen",
+  "soundsCustomNicknames": "Eigene Spitznamen",
+  "soundsNoCustomNicknames": "Noch kein eigener Spitzname.",
+  "soundsAddNicknameLabel": "Spitznamen hinzufügen",
+  "soundsRemoveNicknameTooltip": "Entfernen",
+  "soundsVoiceSection": "Stimme",
+  "soundsVoiceSubtitle": "Wähl die Stimme und die Geschwindigkeit. Der Knopf „Testen“ spricht einen Beispielsatz.",
+  "soundsRateLabel": "Geschwindigkeit",
+  "soundsPitchLabel": "Tonhöhe",
+  "soundsTestVoice": "Stimme testen",
+  "soundsNoVoiceDetected": "Keine passende Stimme auf diesem Gerät gefunden.",
+  "soundsAmbienceSection": "Ambiente",
+  "soundsAmbienceSubtitle": "Hintergrund-Pack, das während der Sessions läuft. Auswahl wird mit dem Spielbildschirm geteilt. Tippe einen Modus an, um ihn anzuhören.",
+  "soundsPackLabel": "Pack",
+  "soundsPackNoneLabel": "Keins",
+  "soundsModeLabel": "Modus {name}",
+  "@soundsModeLabel": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "soundsNoTrack": "kein Track für diesen Modus",
+  "soundsRhythmPositionsSection": "Positionen (Rhythmus)",
+  "soundsRhythmPositionsSubtitle": "Beep-Ton je nach Tiefe. Vom höchsten zum tiefsten Ton.",
+  "soundsLickPositionsSection": "Positionen (Lecken)",
+  "soundsLickPositionsSubtitle": "Gleiche Positionen, geringere Lautstärke für das „leichtere“ Gefühl.",
+  "soundsLickPositionLabel": "{name} · Lecken",
+  "@soundsLickPositionLabel": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "soundsLickPositionSubtitle": "Position {name} im Leck-Modus",
+  "@soundsLickPositionSubtitle": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "soundsHoldSection": "Hold (Position + Overlay-Schicht)",
+  "soundsHoldSubtitle": "Positions-Beep, der gleichzeitig mit der Hold-Schicht (dicker) gespielt wird.",
+  "soundsHoldButton": "Hold {position}",
+  "@soundsHoldButton": {
+    "placeholders": {
+      "position": { "type": "String" }
+    }
+  },
+  "soundsHoldPositionSubtitle": "{name} + Hold-Schicht",
+  "@soundsHoldPositionSubtitle": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "soundsSpecificSounds": "Spezifische Sounds",
+  "soundsBiffleOneShot": "Schwanzschlag (One-Shot)",
+  "soundsBiffleOneShotSubtitle": "Kurzer, perkussiver Sound. Im Loop folgt er den BPM.",
+  "soundsBreath": "Breath",
+  "soundsBreathSubtitle": "Langer, tiefer Ton, „Erlösungs“-Effekt.",
+  "soundsLoopsDemoSection": "Loop-Demos",
+  "soundsLoopsDemoSubtitle": "BPM einstellen, Loop starten, anhören, stoppen.",
+  "soundsBpmLabel": "BPM",
+  "soundsLoopActive": "LÄUFT",
+  "soundsLoopRhythmHeadMid": "Rhythmus Eichel→Mitte",
+  "soundsLoopRhythmThroatFull": "Rhythmus Kehle→ganz",
+  "soundsLoopLickTipHead": "Lecken Spitze→Eichel",
+  "soundsLoopBiffle": "Schwanzschlag",
+  "soundsPosDescTip": "Sehr hoch, leicht",
+  "soundsPosDescHead": "Hoch",
+  "soundsPosDescMid": "Mittel",
+  "soundsPosDescThroat": "Tief",
+  "soundsPosDescFull": "Sehr tief, schwer",
+  "soundsDebugSection": "Debug",
+  "soundsDebugSubtitle": "Technische Optionen für die Entwicklung.",
+  "soundsDebugShowTimer": "Timer anzeigen",
+  "soundsDebugShowTimerSubtitle": "Ersetzt die Bewegungsanimation während der Session durch den mm:ss-Zähler.",
+  "soundsDebugShowStaminaBar": "Ausdauerleiste anzeigen",
+  "soundsDebugShowStaminaBarSubtitle": "Zeigt das projizierte Ausdauerprofil während einer Karriere-Session.",
+  "soundsDebugShowHumiliationBar": "Erniedrigungs-Anzeige einblenden",
+  "soundsDebugShowHumiliationBarSubtitle": "Zeigt den kumulierten Erniedrigungswert während der Session.",
+  "soundsDebugShowObedienceBar": "Gehorsamswert anzeigen",
+  "soundsDebugShowObedienceBarSubtitle": "Zeigt den Gehorsamswert von 0–100 (sinkt bei jedem Fail, steigt mit Strafen).",
+  "soundsDebugShowSalivaBar": "Speichel-Anzeige einblenden",
+  "soundsDebugShowSalivaBarSubtitle": "Zeigt die Speichelanzeige von 0–max., die sich während der Session ansammelt. Steigt mit tiefem Lecken/Rhythmus/Hold, sinkt mit Breath/Hand. Auto-Schlucken bei 75, wenn Schlucken erlaubt ist.",
+  "soundsDebugShowSessionControls": "Pause / Stop anzeigen",
+  "soundsDebugShowSessionControlsSubtitle": "Nur Debug: im Produktivbetrieb läuft die Session ohne Interaktion (Handy weggelegt), nur der FAIL-Knopf bleibt nützlich.",
+  "soundsDebugShowModeBadge": "Modus / BPM / Position anzeigen",
+  "soundsDebugShowModeBadgeSubtitle": "Nur Debug: im Produktivbetrieb reicht die Animation, um anzuzeigen, was passiert.",
+  "debugBarLabelHumiliation": "ERNIEDR.",
+  "debugBarLabelObedience": "GEHORS.",
+  "debugBarLabelSaliva": "SPEICHEL",
+  "soundsDebugCameraHoldCheck": "Kamera-Hold-Prüfung",
+  "soundsDebugCameraHoldCheckSubtitle": "Während der Holds prüft die Frontkamera, ob die Position gehalten wird. Der Coach gibt einen kurzen Hinweis, wenn du abdriftest. Erfordert eine kalibrierte Kamera (Kamera-Symbol im SZENARIO-Bildschirm).",
+  "soundsDebugSkipSession": "Knopf „als Erfolg beenden“",
+  "soundsDebugSkipSessionSubtitle": "Zeigt einen Knopf in der Session, der sie sofort als vollen Erfolg beendet (Abzeichen, Meilensteine, Stufe). Praktisch, um an Inhalten zu feilen, ohne alles durchzuspielen.",
+  "soundsShowBackgroundMedia": "Hintergrundmedien in der Session",
+  "soundsShowBackgroundMediaSubtitle": "Zeigt die Bilder/GIFs aus assets/backgrounds/ im Hintergrund, mit Wechsel bei jedem Step. Deaktivieren, um nur den Ambiente-Verlauf zu sehen.",
+  "sessionDebugFinishButton": "DEBUG: als Erfolg beenden",
+
+  "soundsDebugScenarioButton": "Debug — Karriere-Szenario",
+  "soundsDebugScenarioSubtitle": "Visualisiere eine generierte Session, ohne sie zu spielen: Stufe, Erniedr., Gehors., Meilensteine, Unlocks und Bettel-/Fail-Simulation.",
+
+  "careerDebugTitle": "Debug — Karriere-Szenario",
+  "careerDebugSectionParams": "Parameter",
+  "careerDebugSectionScenario": "Szenario",
+  "careerDebugLevel": "Stufe",
+  "careerDebugHumiliation": "Erniedrigung",
+  "careerDebugObedience": "Gehorsam",
+  "careerDebugIncludeHand": "Handstimulation einbeziehen",
+  "careerDebugQuickie": "Quickie-Modus",
+  "careerDebugIntense": "Intensiv-Modus (nach dem Betteln)",
+  "careerDebugDurationOverride": "Dauer-Override",
+  "careerDebugMilestoneBody": "Meilenstein-Körper",
+  "careerDebugMilestoneFinal": "Meilenstein-Finale",
+  "careerDebugUnlocks": "Unlocks",
+  "careerDebugUnlocksLoadCurrent": "Erworben",
+  "careerDebugUnlocksClear": "Keine",
+  "careerDebugUnlocksAll": "Alle",
+  "careerDebugAuto": "Auto",
+  "careerDebugNone": "Keine",
+  "careerDebugRegenerate": "Neu generieren",
+  "careerDebugShowTtsTexts": "TTS-Texte anzeigen",
+  "careerDebugStatStamina": "Ausdauer am Ende",
+  "careerDebugStatHumilCap": "Erniedr.-Cap am Ende",
+  "careerDebugTagMilestoneBody": "MEILENSTEIN",
+  "careerDebugTagMilestoneFinal": "MEILENSTEIN-FINALE",
+  "careerDebugTagBoost": "BOOST",
+  "careerDebugTagFinal": "FINALE",
+  "careerDebugTagPostFinal": "NACH-FINALE",
+  "careerDebugTextOnly": "NUR-TEXT",
+  "careerDebugHumilReq": "Anf.",
+  "careerDebugStepActionsTitle": "Step",
+  "careerDebugSimulateFail": "Hier einen Fail simulieren",
+  "careerDebugSimulateSupplier": "Hier ein Betteln simulieren",
+  "careerDebugClearFork": "Zweig löschen",
+  "careerDebugClearAnnotation": "Anmerkung löschen",
+  "careerDebugForkBanner": "BETTEL-ZWEIG",
+  "careerDebugForkFrom": "Ab",
+  "careerDebugForkSteps": "Steps",
+  "careerDebugFailSnapshotTitle": "Simulierter FAIL",
+  "careerDebugFailSnapshotNext": "Setzt fort bei Step",
+  "careerDebugFailSnapshotNoNext": "Kein spielbarer Step nach diesem Fail (Session-Ende).",
+
+  "positionTip": "Spitze",
+  "positionHead": "Eichel",
+  "positionMid": "Mitte",
+  "positionThroat": "Kehle",
+  "positionFull": "Ganz",
+
+  "modeShortRhythm": "LUTSCH",
+  "modeShortHold": "TIEF",
+  "modeShortLick": "LECK",
+  "modeShortBiffle": "KLATSCH",
+  "modeShortBreath": "ATME",
+  "modeShortBeg": "BETTLE",
+  "modeShortFreestyle": "FREI",
+  "modeShortHand": "WICHS",
+
+  "badgeTierBronze": "Bronze",
+  "badgeTierSilver": "Silber",
+  "badgeTierGold": "Gold",
+  "badgeTierPlatinium": "Platin",
+
+  "badgeUnlockAnnouncement": "Abzeichen freigeschaltet: {name}, Stufe {tier}.",
+  "@badgeUnlockAnnouncement": {
+    "description": "TTS-Satz, der am Session-Ende beim Freischalten einer neuen Abzeichen-Stufe abgespielt wird. {name} = lokalisierter Abzeichenname, {tier} = lokalisierte Stufenbezeichnung.",
+    "placeholders": {
+      "name": { "type": "String" },
+      "tier": { "type": "String" }
+    }
+  },
+
+  "badgeNameMarathonien": "Marathonläuferin",
+  "badgeNameThroatQueen": "Throat Queen",
+  "badgeNameIronLungs": "Stahllunge",
+  "badgeNameToutTerrain": "Allrounderin",
+  "badgeNameSansBroncher": "Unerschütterlich",
+  "badgeNameReguliere": "Regelmäßig",
+  "badgeNameJamaisRassasiee": "Nie genug",
+  "badgeNameVideCouilles": "Eierleererin",
+  "badgeNameBouchePleine": "Mundvoll",
+  "badgeNameRepeinte": "Glasiert",
+  "badgeNameGobeuse": "Schluckerin",
+  "badgeNameNettoyeuse": "Saubermacherin",
+  "badgeNameSuppliante": "Bettlerin",
+
+  "badgeUnitMarathonien": "Minuten gesamt",
+  "badgeUnitThroatQueen": "Throatfucks gesamt",
+  "badgeUnitIronLungs": "Sekunden des längsten Tief-Holds",
+  "badgeUnitToutTerrain": "verschiedene benutzte Modi",
+  "badgeUnitSansBroncher": "komplette Sessions hintereinander ohne Fail",
+  "badgeUnitReguliere": "aufeinanderfolgende Tage mit Session",
+  "badgeUnitJamaisRassasiee": "Male, in denen du um „mehr“ gebettelt hast",
+  "badgeUnitVideCouilles": "abgeschlossene Quickies",
+  "badgeUnitBouchePleine": "Abspritzer in den Mund",
+  "badgeUnitRepeinte": "Abspritzer ins Gesicht",
+  "badgeUnitGobeuse": "Abspritzer auf die Zunge",
+  "badgeUnitNettoyeuse": "sauber geleckte Reste danach",
+  "badgeUnitSuppliante": "Betteleien nach dem Orgasmus",
+
+  "careerLevelTitleDebutante": "Anfängerin",
+  "careerLevelTitleApprentieSuceuse": "Lutsch-Lehrling",
+  "careerLevelTitlePetiteSalopeConfirmee": "Bestätigte kleine Schlampe",
+  "careerLevelTitleBoucheAPipe": "Blasmaul",
+  "careerLevelTitleAvaleuse": "Schluckerin",
+  "careerLevelTitleThroatQueen": "Throat Queen",
+  "careerLevelTitleReineDuSloppy": "Sloppy-Queen",
+  "careerLevelTitleTrouABiteOfficiel": "Offizielles Schwanzloch",
+  "careerLevelTitleVideCouillesPro": "Profi-Eierleererin",
+  "careerLevelTitleReineDesPutes": "Königin der Huren",
+
+  "specBranchEnduranceLabel": "Ausdauer",
+  "specBranchEnduranceDesc": "Lange durchhalten. Mehr Holds, längere Dauern.",
+  "specBranchProfondeurLabel": "Tiefe",
+  "specBranchProfondeurDesc": "Tief runtergehen. Tendenz zu Kehle / ganz.",
+  "specBranchRythmeBiffleLabel": "Rhythmus & Klatschen",
+  "specBranchRythmeBiffleDesc": "Höhere BPM, häufigere Schwanzschläge.",
+  "specBranchObeissanceLabel": "Gehorsam",
+  "specBranchObeissanceDesc": "Eindringliches Betteln, anhaltendes Flehen.",
+  "specBranchSloppyLabel": "Sloppy",
+  "specBranchSloppyDesc": "Feuchtes Lecken, tiefe Schläge, mehr Sabber.",
+  "specBranchResilienceLabel": "Resilienz",
+  "specBranchResilienceDesc": "Fails einstecken. Härtere Strafen.",
+
+  "coachPickerTitle": "Coach wählen",
+  "coachPickerSection": "COACH",
+  "coachPickerTierLabel": "STUFE {tier}",
+  "@coachPickerTierLabel": {
+    "placeholders": { "tier": { "type": "int" } }
+  },
+  "coachBadgePrincipal": "HAUPT",
+  "coachBadgePalierAcquis": "STUFE FREIGESCHALTET",
+  "coachBadgeFreeTraining": "FREIES TRAINING",
+  "coachBadgeLocked": "GESPERRT",
+  "coachRequiresHands": "Hände erforderlich",
+  "coachSummaryPrincipal": "{title} · Haupt-Stufe {tier}",
+  "@coachSummaryPrincipal": {
+    "placeholders": {
+      "title": { "type": "String" },
+      "tier": { "type": "int" }
+    }
+  },
+  "coachSummaryFree": "{title} · freies Training",
+  "@coachSummaryFree": {
+    "placeholders": { "title": { "type": "String" } }
+  },
+
+  "coachFreeTrainingDialogTitle": "Freies Training",
+  "coachFreeTrainingDialogBody": "Du trainierst mit {coachName}. Du machst Fortschritte bei deinen Fähigkeiten, aber deine Stufenanzeige bewegt sich nicht.",
+  "@coachFreeTrainingDialogBody": {
+    "placeholders": { "coachName": { "type": "String" } }
+  },
+  "coachFreeTrainingDialogHint": "Um in deiner Stufe voranzukommen, wähl {principalName}.",
+  "@coachFreeTrainingDialogHint": {
+    "placeholders": { "principalName": { "type": "String" } }
+  },
+  "coachFreeTrainingDialogChoosePrincipal": "{principalName} wählen",
+  "@coachFreeTrainingDialogChoosePrincipal": {
+    "placeholders": { "principalName": { "type": "String" } }
+  },
+  "coachFreeTrainingDialogContinueAnyway": "Trotzdem fortfahren",
+
+  "coachPrenomGateTitle": "{coachName} will dich kennenlernen",
+  "@coachPrenomGateTitle": {
+    "placeholders": { "coachName": { "type": "String" } }
+  },
+  "coachPrenomGateBody": "Bevor du die Session mit {coachName} startest, gib mir deinen Vornamen — sie spricht dich nicht mehr anonym an.",
+  "@coachPrenomGateBody": {
+    "placeholders": { "coachName": { "type": "String" } }
+  },
+  "coachPrenomGateField": "Dein Vorname",
+  "coachPrenomGateConfirm": "Weiter",
+
+  "coachFreeTrainingBannerTitle": "Freie Session mit {coachName}",
+  "@coachFreeTrainingBannerTitle": {
+    "placeholders": { "coachName": { "type": "String" } }
+  },
+  "coachFreeTrainingBannerBodyWithPrincipal": "Du machst Fortschritte bei deinen Fähigkeiten. Deine Stufe bewegt sich nicht — dafür wähl {principalName}.",
+  "@coachFreeTrainingBannerBodyWithPrincipal": {
+    "placeholders": { "principalName": { "type": "String" } }
+  },
+  "coachFreeTrainingBannerBodyNoPrincipal": "Du machst Fortschritte bei deinen Fähigkeiten. Deine Stufe bewegt sich nicht.",
+  "coachFreeTrainingBannerSwitchAction": "WECHSELN",
+
+  "coachErrorLockedTier": "Dieser Coach ist noch gesperrt — erreiche Stufe {tier}, um ihn freizuschalten.",
+  "@coachErrorLockedTier": {
+    "placeholders": { "tier": { "type": "int" } }
+  },
+  "coachErrorRequiresHands": "{coachName} braucht, dass du die Hand in den Optionen aktivierst.",
+  "@coachErrorRequiresHands": {
+    "placeholders": { "coachName": { "type": "String" } }
+  },
+  "coachErrorMinLevel": "{coachName} erfordert mindestens Stufe {minLevel}.",
+  "@coachErrorMinLevel": {
+    "placeholders": {
+      "coachName": { "type": "String" },
+      "minLevel": { "type": "int" }
+    }
+  },
+  "coachErrorMissingSpecialization": "Dieser Coach erfordert mindestens 1 Punkt in einer Spezialisierung, in die du nicht investiert hast.",
+  "coachErrorInsufficientBranchPoints": "{coachName} erfordert: {requirements}. Vergib deine Spezialisierungspunkte.",
+  "@coachErrorInsufficientBranchPoints": {
+    "placeholders": {
+      "coachName": { "type": "String" },
+      "requirements": { "type": "String" }
+    }
+  },
+
+  "unlockAnnouncementSloppyDroolBasic": "Ab jetzt hält dein Mund mehr Spucke, und dein Lecken erzeugt mehr davon. Sabber auf mich, sei dreckig.",
+  "@unlockAnnouncementSloppyDroolBasic": {
+    "description": "TTS-Ansage nach dem finale_chime, wenn der Meilenstein, der sloppy_drool_basic freischaltet, bestätigt wird."
+  },
+
+  "unlockAnnouncementSloppyBiffleSlow": "Die Schwanzschläge bringen dich jetzt zum Sabbern. Nimm sie mit weit offenem Mund entgegen.",
+  "@unlockAnnouncementSloppyBiffleSlow": {
+    "description": "TTS-Ansage nach dem finale_chime, wenn der Meilenstein, der sloppy_biffle_slow freischaltet, bestätigt wird."
+  },
+
+  "unlockAnnouncementSloppySwallowControl": "Du kannst deine Spucke jetzt auf Befehl zurückhalten. Wenn ich es dir sage, schluckst du nicht.",
+  "@unlockAnnouncementSloppySwallowControl": {
+    "description": "TTS-Ansage nach dem finale_chime, wenn der Meilenstein, der sloppy_swallow_control freischaltet, bestätigt wird."
+  },
+
+  "unlockAnnouncementSloppySpit": "Du weißt jetzt, wie du für mich spuckst. Wenn ich darum bitte, lässt du alles raus.",
+  "@unlockAnnouncementSloppySpit": {
+    "description": "TTS-Ansage nach dem finale_chime, wenn der Meilenstein, der sloppy_spit freischaltet, bestätigt wird."
+  },
+
+  "unlockAnnouncementSloppyDroolDeep": "Wenn du tief gehst, läuft dein Mund noch mehr über. Genieß es.",
+  "@unlockAnnouncementSloppyDroolDeep": {
+    "description": "TTS-Ansage nach dem finale_chime, wenn der Meilenstein, der sloppy_drool_deep freischaltet, bestätigt wird."
+  },
+
+  "unlockAnnouncementRhythmHeadMidSustained": "Du kannst das Tempo jetzt länger als eine Minute halten, ohne Pause. Ich werde danach verlangen.",
+  "@unlockAnnouncementRhythmHeadMidSustained": {
+    "description": "TTS-Ansage nach dem finale_chime, wenn der Meilenstein, der rhythm_head_mid_sustained freischaltet, bestätigt wird."
+  },
+
+  "modeSelectionSurpriseTooltip": "Überraschungs-Erinnerungen",
+  "@modeSelectionSurpriseTooltip": {
+    "description": "Tooltip des Benachrichtigungssymbols in der AppBar des ModeSelectionScreen."
+  },
+
+  "surpriseNotifTitle": "Es ist Zeit",
+  "@surpriseNotifTitle": {
+    "description": "Titel der Überraschungs-Benachrichtigung (kurz, sperrbildschirmtauglich)."
+  },
+  "surpriseNotifBody1": "Lutsch mich, sofort",
+  "@surpriseNotifBody1": {
+    "description": "Roher Text der Überraschungs-Benachrichtigung, Variante 1. Zufallsauswahl zum Zeitpunkt der Planung."
+  },
+  "surpriseNotifBody2": "Ich will dir den Mund vollmachen, JETZT",
+  "@surpriseNotifBody2": {
+    "description": "Roher Text der Überraschungs-Benachrichtigung, Variante 2."
+  },
+  "surpriseNotifBody3": "Auf die Knie, es ist Zeit!",
+  "@surpriseNotifBody3": {
+    "description": "Roher Text der Überraschungs-Benachrichtigung, Variante 3."
+  },
+
+  "surpriseSettingsAppBarTitle": "Überraschungs-Erinnerung",
+  "surpriseSettingsHeaderSubtitle": "Während des Zeitfensters kann die App zu zufälligen Zeitpunkten Benachrichtigungen senden. Beim Antippen öffnet sie eine kurze Session.",
+  "surpriseSettingsEnableLabel": "Erinnerungen aktivieren",
+  "surpriseSettingsEnableSubtitle": "Zufällige Benachrichtigungen während des Zeitfensters.",
+  "surpriseSettingsWindowLabel": "Zeitfenster",
+  "surpriseSettingsWindowValue": "{minutes} Min.",
+  "@surpriseSettingsWindowValue": {
+    "placeholders": {
+      "minutes": { "type": "int" }
+    }
+  },
+  "surpriseSettingsAlertCountLabel": "Anzahl der Erinnerungen",
+  "surpriseSettingsAlertCountValue": "{count, plural, one{1 Erinnerung} other{{count} Erinnerungen}}",
+  "@surpriseSettingsAlertCountValue": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "surpriseSettingsDurationLabel": "Dauer der Sessions",
+  "surpriseSettingsDurationValue": "{minSec} s – {maxSec} s",
+  "@surpriseSettingsDurationValue": {
+    "placeholders": {
+      "minSec": { "type": "int" },
+      "maxSec": { "type": "int" }
+    }
+  },
+  "surpriseSettingsActiveStatus": "Aktiv bis {endTime}",
+  "@surpriseSettingsActiveStatus": {
+    "placeholders": {
+      "endTime": { "type": "String" }
+    }
+  },
+  "surpriseSettingsActiveAlertsLeft": "{count, plural, one{1 Alarm übrig} other{{count} Alarme übrig}}",
+  "@surpriseSettingsActiveAlertsLeft": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "surpriseSettingsInactiveStatus": "Keine Erinnerung geplant",
+  "surpriseSettingsPermissionMissing": "Erlaube Benachrichtigungen in den Systemeinstellungen.",
+  "surpriseSettingsExactAlarmMissing": "Exakte Alarme werden vom System verweigert.",
+  "surpriseSettingsBatteryHintTitle": "Akku-Optimierung",
+  "surpriseSettingsBatteryHintBody": "Auf manchen Handys (Xiaomi, Huawei, Samsung) solltest du die Akku-Optimierung für BeatBitch deaktivieren, um die Erinnerungen zu garantieren.",
+  "surpriseSettingsOpenBatterySettings": "Einstellungen öffnen",
+  "adultGateTitle": "Nur für Erwachsene",
+  "adultGateBody": "BeatBitch enthält explizite sexuelle Inhalte: eine ordinäre, dominante Coach-Stimme, explizite Texte und Hintergrund-GIFs. Indem du fortfährst, bestätigst du:\n\n• dass du mindestens 18 bist (oder das Volljährigkeitsalter in deinem Land);\n• dass du die App im privaten Rahmen nutzt — Audio und Bild eignen sich nicht für den Gebrauch in der Öffentlichkeit;\n• dass dir bewusst ist, dass die Sätze ordinär und dominant sein können.",
+  "adultGateAccept": "Ich bin 18+, ich stimme zu",
+  "adultGateLeave": "Verlassen",
+  "onboardingStep1Title": "Behalte den Bildschirm anfangs im Auge",
+  "onboardingStep1Body": "Behalte das Handy bei deinen ersten Sessions im Blick: die Animation und die Balken helfen dir, Positionen und Rhythmus zu treffen. Wenn du dich sicher fühlst, kannst du es seitlich ablegen und blind spielen, geführt von Stimme und Beeps.",
+  "onboardingStep2Title": "Dreh die Lautstärke auf",
+  "onboardingStep2Body": "Der Coach spricht leise und die Beeps sind dezent. Dreh die Medienlautstärke hoch oder nutze Kopfhörer/einen Lautsprecher. Die App schickt nichts ins Internet.",
+  "onboardingStep3Title": "Stell die Stimme ein, gib deinen Vornamen ein",
+  "onboardingStep3Body": "Im Profil-Bildschirm (Silhouette-Symbol): gib deinen Vornamen ein, wähl deine Spitznamen, deine Oberflächensprache und stell die Standardstimme ein (Geschwindigkeit, Klangfarbe) — hör dir ein Beispiel an. Die Karriere-Coaches haben ihre eigene feste Stimme; nur die Standardstimme, die außerhalb der Karriere genutzt wird, ist einstellbar. Der Coach kann dich dann beim Namen nennen.",
+  "onboardingNext": "Weiter",
+  "onboardingPrevious": "Zurück",
+  "onboardingTestVoice": "Meine Stimme testen",
+  "onboardingSkip": "Später",
+  "profileAboutSection": "ÜBER",
+  "profileAboutVersion": "{appName} v{version} (Build {build})",
+  "@profileAboutVersion": {
+    "placeholders": {
+      "appName": { "type": "String" },
+      "version": { "type": "String" },
+      "build": { "type": "String" }
+    }
+  },
+  "profileAboutOffline": "100 % offline — keine Telemetrie, nichts wird über das Netzwerk gesendet.",
+  "profileUpdatesSection": "UPDATES",
+  "profileUpdatesBody": "BeatBitch ist 100 % offline und sucht niemals von selbst nach Updates. Um benachrichtigt zu werden, sobald eine neue Version erscheint, installiere Obtainium — einen quelloffenen Android-Store, der GitHub-Releases-Seiten überwacht:\n\n• Obtainium: github.com/ImranR98/Obtainium\n• In Obtainium → „Add App“ einfügen: github.com/bbstudioapp/beatbitch\n\nVon BeatBitch geht kein Netzwerkverkehr aus: Obtainium fragt GitHub selbst ab, unabhängig von der App.",
+  "profileDisclaimerSection": "HAFTUNGSAUSSCHLUSS",
+  "profileDisclaimerBody": "BeatBitch ist ein Spiel für einwilligende Erwachsene, gedacht für den streng privaten Rahmen. Es sicher zu nutzen liegt bei dir, und nur bei dir: hör auf deinen Körper, halte niemals eine Position oder eine Dauer, die wehtut, und behalte jederzeit die Möglichkeit, sofort aufzuhören (der „Ich kann nicht“-Knopf oder einfach die App schließen). Nutze die App nicht unter dem Einfluss von etwas, das dein Urteilsvermögen beeinträchtigt.\n\nDie Stimmen, Texte und Szenarien sind spielerische Dominanzfiktion: kein Satz ist ein echter Befehl, und nichts, was der Coach sagt, sollte jemals an einer anderen Person getan werden ohne deren ausdrückliche, informierte Einwilligung.\n\nDer Herausgeber kann für keine Verletzung und keinen Schaden — körperlich oder psychisch — haftbar gemacht werden, der aus der Nutzung oder dem Missbrauch der App resultiert. Wenn du Zweifel an deiner Gesundheit hast, sprich mit einer Fachperson.",
+  "sessionCameraInactiveWarning": "Kamera-Prüfung inaktiv — neu kalibrieren",
+  "sessionCameraInactiveAction": "Kalibrieren",
+  "modeSelectionCustomTitle": "CUSTOM",
+  "modeSelectionCustomSubtitle": "Maßgeschneiderte Sessions: Dauer, Modus-Mix, Schwierigkeit, Non-Stop.",
+  "customAppBarTitle": "Custom-Sessions",
+  "customListEmptyTitle": "Noch keine gespeicherte Konfiguration",
+  "customListEmptyBody": "Erstelle deine erste Konfiguration, um maßgeschneiderte Sessions zu generieren.",
+  "customNewConfig": "Neue Konfiguration",
+  "customLaunchLastTitle": "Letzte Konfiguration erneut starten",
+  "customUnnamed": "Unbenannt",
+  "customNonStopBadge": "Non-Stop",
+  "customDeleteConfirmTitle": "Diese Konfiguration löschen?",
+  "customDeleteConfirmBody": "„{name}“ wird endgültig gelöscht.",
+  "@customDeleteConfirmBody": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "customDuplicateSuffix": " (Kopie)",
+  "customActionEdit": "Bearbeiten",
+  "customActionDuplicate": "Duplizieren",
+  "customActionDelete": "Löschen",
+  "customActionLaunch": "Starten",
+  "customConfigSavedSnack": "Konfiguration gespeichert.",
+  "customSessionName": "Custom — {name}",
+  "@customSessionName": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "customEditorTitleNew": "Neue Custom-Konfiguration",
+  "customEditorTitleEdit": "Konfiguration bearbeiten",
+  "customFieldNameLabel": "Name der Konfiguration",
+  "customFieldNameHint": "z. B. Tiefer Marathon",
+  "customSectionCoach": "Coach",
+  "customCoachDefaultVoice": "Standardstimme (ohne Coach)",
+  "customCoachPickerTitle": "Coach wählen",
+  "customCoachPickerDefaultSubtitle": "Generische Satzbank, System-TTS-Stimme",
+  "customSectionDuration": "Dauer",
+  "customNonStopToggle": "Non-Stop-Modus",
+  "customNonStopDescription": "Verkettet endlos ganze Zyklen (Boosts + Finale). Der Knopf „Bring mich zum Ende“ löst einen letzten Boost aus und beendet dann wirklich.",
+  "customCycleDurationLabel": "Dauer eines Zyklus",
+  "customProgressiveDifficultyToggle": "Progressive Schwierigkeit",
+  "customProgressiveDifficultyDescription": "Jeder Zyklus ist ein bisschen härter und länger als der vorherige.",
+  "customDurationMinutes": "{minutes} Min.",
+  "@customDurationMinutes": {
+    "placeholders": {
+      "minutes": { "type": "int" }
+    }
+  },
+  "customSectionDifficulty": "Globale Schwierigkeit",
+  "customSectionDoses": "Modus-Mix",
+  "customDosesHint": "„Keine“ schließt den Modus aus. „Häufig“ bevorzugt ihn.",
+  "customDangerNoMouthMode": "Lass mindestens einen Mund-Modus aktiv (Rhythmus, Lecken oder Hold).",
+  "customSectionAxes": "Orientierungsachsen",
+  "customAxesHint": "Vergib Punkte, um den Generator zu lenken. Beeinflusst nicht deine Karriere-Spezialisierung.",
+  "customAxesSpent": "{spent} Pkt. vergeben",
+  "@customAxesSpent": {
+    "placeholders": {
+      "spent": { "type": "int" }
+    }
+  },
+  "customSectionAdvanced": "Erweitert",
+  "customIncludeHandToggle": "Handstimulation einbeziehen",
+  "customIncludeHandDescription": "Aktiviert die Modi Hand und Biffle in der Generierung.",
+  "customMaxDepthLabel": "Maximale Tiefe",
+  "customSaveAndLaunch": "Speichern und starten",
+  "customSaveOnly": "Speichern",
+  "customHostLoadError": "Die Custom-Session konnte nicht geladen werden: {error}",
+  "@customHostLoadError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "customFinishNowButton": "Bring mich zum Ende",
+  "customFinishNowSubtitle": "letzter Boost, dann Schluss",
+  "customDifficultyFacile": "Leicht",
+  "customDifficultyNormal": "Normal",
+  "customDifficultyDifficile": "Schwer",
+  "customDifficultyExtreme": "Extrem",
+  "customDoseNone": "Keine",
+  "customDoseRare": "Selten",
+  "customDoseNormal": "Normal",
+  "customDoseFrequent": "Häufig"
+}

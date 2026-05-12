@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 const List<Locale> kSupportedLocales = [
   Locale('fr'),
   Locale('en'),
+  Locale('de'),
 ];
 
 /// Locale de repli si aucune préférence persistée et que la locale système

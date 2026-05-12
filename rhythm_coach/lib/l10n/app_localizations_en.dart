@@ -646,6 +646,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsLanguageEnglish => 'English';
 
   @override
+  String get settingsLanguageGerman => 'Deutsch';
+
+  @override
   String get languagePickerTitle => 'Choose your language';
 
   @override
@@ -1534,7 +1537,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingStep3Body =>
-      'On the SOUNDS screen (equalizer icon): tune the default voice (speed, timbre) and play a sample. Career coaches use their own fixed voices — only the default (non-career) voice is adjustable.\n\nOn the Profile screen (silhouette icon): enter your first name and pick your nicknames. The coach can call you by name.';
+      'On the Profile screen (silhouette icon): enter your first name, pick your nicknames, choose your interface language and tune the default voice (speed, timbre) — play a sample. Career coaches use their own fixed voices; only the default (non-career) voice is adjustable. The coach can then call you by name.';
 
   @override
   String get onboardingNext => 'Next';
