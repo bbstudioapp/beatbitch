@@ -100,7 +100,6 @@ extension SpecializationBranchL10n on SpecializationBranch {
       SpecializationBranch.rythmeBiffle => t.specBranchRythmeBiffleLabel,
       SpecializationBranch.obeissance => t.specBranchObeissanceLabel,
       SpecializationBranch.sloppy => t.specBranchSloppyLabel,
-      SpecializationBranch.resilience => t.specBranchResilienceLabel,
     };
   }
 
@@ -112,7 +111,6 @@ extension SpecializationBranchL10n on SpecializationBranch {
       SpecializationBranch.rythmeBiffle => t.specBranchRythmeBiffleDesc,
       SpecializationBranch.obeissance => t.specBranchObeissanceDesc,
       SpecializationBranch.sloppy => t.specBranchSloppyDesc,
-      SpecializationBranch.resilience => t.specBranchResilienceDesc,
     };
   }
 }

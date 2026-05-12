@@ -233,19 +233,19 @@ void main() {
         tier: 1,
         isPrincipal: true,
         requirements: CoachRequirement(
-          requiredBranchPoints: {SpecializationBranch.resilience: 3},
+          requiredBranchPoints: {SpecializationBranch.endurance: 3},
         ),
       );
       final s = CoachService(
           coaches: [phantomTier1, ...CoachCatalog.defaults.skip(1)]);
       await s.load();
 
-      // 0 point en résilience → blocked.
+      // 0 point en endurance → blocked.
       var status = s.evaluate(
         phantomTier1,
         playerMaxLevel: 1,
         handsEnabled: true,
-        branchPoints: const {SpecializationBranch.resilience: 1},
+        branchPoints: const {SpecializationBranch.endurance: 1},
       );
       expect(status, CoachSelectionStatus.blockedInsufficientBranchPoints,
           reason: '1 < 3');
@@ -255,7 +255,7 @@ void main() {
         phantomTier1,
         playerMaxLevel: 1,
         handsEnabled: true,
-        branchPoints: const {SpecializationBranch.resilience: 3},
+        branchPoints: const {SpecializationBranch.endurance: 3},
       );
       expect(status, CoachSelectionStatus.selectedAdvancing);
     });

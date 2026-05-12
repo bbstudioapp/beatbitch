@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 
-/// Six branches de spécialisation. Le joueur investit des points dans
+/// Cinq branches de spécialisation. Le joueur investit des points dans
 /// une ou plusieurs branches pour signaler au générateur procédural ce
 /// dans quoi il/elle s'estime « bon ». Le générateur s'en sert pour
 /// pondérer les candidats de step et adapter les paramètres (BPM,
-/// profondeur, durées, fréquence punitions).
+/// profondeur, durées).
 ///
-/// Phase A : seul le modèle + UI de répartition. La conso côté
-/// générateur est branchée en Phase B.
+/// Note : la branche `resilience` historique a été retirée — l'endurance
+/// couvre déjà « tenir quand c'est dur », et les mini-punitions inopinées
+/// sont désormais pilotées par la personnalité du coach
+/// (`Coach.miniPunishmentRate`), pas par une branche de spé. Les points
+/// investis dans `resilience` par une joueuse existante sont automatiquement
+/// reversés au pool libre (cf. `SpecializationService.load`).
 enum SpecializationBranch {
   /// Tenir longtemps : durées de step allongées, plus de holds.
   endurance,
@@ -23,9 +27,6 @@ enum SpecializationBranch {
 
   /// Lick humide, biffle bas, drool — moins de discipline, plus de bave.
   sloppy,
-
-  /// Encaisser les fails : punitions plus fréquentes / plus longues.
-  resilience,
 }
 
 /// Métadonnées affichables d'une branche : libellé + description courte
@@ -75,19 +76,13 @@ class SpecializationBranchMeta {
       description: 'Lick humide, biffle bas, plus de bave.',
       icon: Icons.water_drop,
     ),
-    SpecializationBranchMeta(
-      branch: SpecializationBranch.resilience,
-      label: 'Résilience',
-      description: 'Encaisser les fails. Punitions plus dures.',
-      icon: Icons.shield,
-    ),
   ];
 
   static SpecializationBranchMeta forBranch(SpecializationBranch b) =>
       all.firstWhere((m) => m.branch == b);
 }
 
-/// État immuable d'allocation des points sur les 6 branches. Un score 0
+/// État immuable d'allocation des points sur les 5 branches. Un score 0
 /// par branche par défaut. La somme des `points.values` ne peut pas
 /// dépasser le total disponible (cf. `SpecializationService`).
 class SpecializationAllocation {

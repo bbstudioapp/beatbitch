@@ -116,9 +116,9 @@ void main() {
       // Smoke test : on s'assure juste que la structure est correcte ;
       // l'évaluation côté CoachService est testée dans coach_service_test.
       const r = CoachRequirement(
-        requiredBranchPoints: {SpecializationBranch.resilience: 3},
+        requiredBranchPoints: {SpecializationBranch.endurance: 3},
       );
-      expect(r.requiredBranchPoints[SpecializationBranch.resilience], 3);
+      expect(r.requiredBranchPoints[SpecializationBranch.endurance], 3);
     });
   });
 }

@@ -263,19 +263,25 @@ class SessionController extends ChangeNotifier {
   /// le flow fail standard). Set depuis `SessionScreen`.
   Future<bool> Function(SessionController controller)? onMilestoneRetry;
 
-  /// Allocation de spécialisation courante. Quand la branche `resilience`
-  /// est investie, le tick déclenche une mini-punition inopinée environ
-  /// `0.05 × pts(resilience)` fois par minute (ex: 25 %/min à 5 pts).
-  /// Null = pas de spé connue (sessions hors carrière) → jamais de mini.
-  SpecializationAllocation? _specialization;
+  /// Allocation de spécialisation courante. Consommée par la génération de
+  /// punition carrière contextuelle (`_generateCareerPunishmentOrNull` →
+  /// `CareerSessionGenerator.generatePunishment`). Null = pas de spé connue
+  /// (sessions hors carrière).
+  final SpecializationAllocation? _specialization;
 
-  /// Compteur en secondes pour cadencer le tirage de mini-punition résilience
+  /// Probabilité par minute qu'une mini-punition inopinée se déclenche en
+  /// cours de séance. Dérivée de la personnalité du coach (cf.
+  /// `Coach.miniPunishmentRate`) ; 0 = jamais (sessions hors carrière /
+  /// voix par défaut → le caller ne le passe pas).
+  final double _miniPunishmentRate;
+
+  /// Compteur en secondes pour cadencer le tirage de mini-punition
   /// (1 tirage par minute).
-  int _resilienceTickAccumulator = 0;
+  int _miniPunishmentTickAccumulator = 0;
 
   /// RNG dédié aux mini-punitions. Injectable en test via
-  /// [debugSetResilienceRng] pour forcer le tirage.
-  Random _resilienceRng = Random();
+  /// [debugSetMiniPunishmentRng] pour forcer le tirage.
+  Random _miniPunishmentRng = Random();
 
   /// Compteur de mini-punitions effectivement déclenchées dans la session
   /// courante. Non persisté — observé par les tests.
@@ -283,30 +289,21 @@ class SessionController extends ChangeNotifier {
   @visibleForTesting
   int get miniPunishmentsTriggered => _miniPunishmentsTriggered;
 
-  /// Configure l'allocation de spé consommée par le tick résilience.
-  /// Appelé par `SessionScreen` au démarrage et après chaque
-  /// `requestUpgrade` côté carrière.
-  void setSpecialization(SpecializationAllocation? alloc) {
-    _specialization = alloc;
-  }
-
   @visibleForTesting
-  void debugSetResilienceRng(Random rng) {
-    _resilienceRng = rng;
+  void debugSetMiniPunishmentRng(Random rng) {
+    _miniPunishmentRng = rng;
   }
 
-  /// Décide si le tick résilience doit déclencher une mini-punition cette
+  /// Décide si le tick courant doit déclencher une mini-punition cette
   /// minute. Pure : pas de side-effect, pas de lecture d'état controller.
   /// Exposée pour le test unitaire.
   @visibleForTesting
   static bool computeMiniPunishmentTrigger({
-    required SpecializationAllocation? specialization,
+    required double rate,
     required double rngValue,
   }) {
-    final pts = specialization?.pointsIn(SpecializationBranch.resilience) ?? 0;
-    if (pts <= 0) return false;
-    final probability = 0.05 * pts;
-    return rngValue < probability;
+    if (rate <= 0) return false;
+    return rngValue < rate;
   }
 
   SessionController({
@@ -324,6 +321,7 @@ class SessionController extends ChangeNotifier {
     List<double>? staminaProfile,
     HoldVerifier? holdVerifier,
     SpecializationAllocation? specialization,
+    double miniPunishmentRate = 0.0,
     double seedHumiliationSession = 0.0,
     int careerLevel = 0,
     CapabilityAxis? capabilityOverloadAxis,
@@ -345,6 +343,7 @@ class SessionController extends ChangeNotifier {
         _staminaProfile = staminaProfile,
         _holdVerifier = holdVerifier,
         _specialization = specialization,
+        _miniPunishmentRate = miniPunishmentRate,
         _seedHumiliationSession = seedHumiliationSession,
         _careerLevel = careerLevel,
         _capabilityOverloadAxis = capabilityOverloadAxis,
@@ -615,7 +614,7 @@ class SessionController extends ChangeNotifier {
         _sessionMilestoneUnlocks = const [];
         _currentHoldFullDuration = 0;
         _lastHoldTickAtSecond = -1;
-        _resilienceTickAccumulator = 0;
+        _miniPunishmentTickAccumulator = 0;
         _miniPunishmentsTriggered = 0;
         _announcedProgressMarkers.clear();
         _capabilityTracker?.onSessionStart();
@@ -633,7 +632,6 @@ class SessionController extends ChangeNotifier {
         // "compétence acquise = effet immédiat dès la séance suivante".
         // - sloppyDroolBasic : production lick ×1.5, plafond 100
         // - sloppyBiffleSlow : production biffle ×3
-        // - sloppyDroolDeep : hold throat/full ×1.5, plafond +20
         if (milestoneService.hasUnlock(UnlockKey.sloppyDroolBasic)) {
           _saliva.setLickProductionMultiplier(1.5);
           _saliva.setMax(SalivaEngine.sloppyBaseMax);
@@ -642,10 +640,6 @@ class SessionController extends ChangeNotifier {
         }
         if (milestoneService.hasUnlock(UnlockKey.sloppyBiffleSlow)) {
           _saliva.setBiffleProductionMultiplier(3.0);
-        }
-        if (milestoneService.hasUnlock(UnlockKey.sloppyDroolDeep)) {
-          _saliva.setHoldDepthProductionMultiplier(1.5);
-          _saliva.setMax(_saliva.maxValue + SalivaEngine.sloppyDeepBonus);
         }
         _stamina.reset();
         // Lectures async tolérées : si pas finies au premier beat, on est
@@ -820,7 +814,7 @@ class SessionController extends ChangeNotifier {
       }
       _salivaOverflowsThisSession += apply;
     }
-    _accrueResilienceTick();
+    _accrueMiniPunishmentTick();
     if (_beep.currentMode != SessionMode.hold) return;
     final pos = _beep.currentFrom;
     if (pos == Position.throat || pos == Position.full) {
@@ -1695,35 +1689,35 @@ class SessionController extends ChangeNotifier {
     }
   }
 
-  /// Tick résilience : 1 tirage par minute. Si la branche `resilience`
-  /// est investie et que l'état autorise une mini-punition (pas en
-  /// milestone, pas dernière minute, pas en finish), tente de déclencher
+  /// Tick mini-punition : 1 tirage par minute. Si le coach a un
+  /// `miniPunishmentRate` > 0 et que l'état autorise une mini-punition (pas
+  /// en milestone, pas dernière minute, pas en finish), tente de déclencher
   /// `_runMiniPunishmentFlow`. Pas de garde sur `_state == running` ici
   /// — `_accrueHoldSecond` ne s'appelle que sous le ticker, qui ne tourne
   /// que pendant `running`.
-  void _accrueResilienceTick() {
-    _resilienceTickAccumulator++;
-    if (_resilienceTickAccumulator < 60) return;
-    _resilienceTickAccumulator = 0;
-    if (_specialization == null) return;
+  void _accrueMiniPunishmentTick() {
+    _miniPunishmentTickAccumulator++;
+    if (_miniPunishmentTickAccumulator < 60) return;
+    _miniPunishmentTickAccumulator = 0;
+    if (_miniPunishmentRate <= 0) return;
     if (_isInMilestoneWindow()) return;
     if (_isInLastMinute()) return;
     final shouldFire = computeMiniPunishmentTrigger(
-      specialization: _specialization,
-      rngValue: _resilienceRng.nextDouble(),
+      rate: _miniPunishmentRate,
+      rngValue: _miniPunishmentRng.nextDouble(),
     );
     if (!shouldFire) return;
     final shortPool = _punishmentBundle.punishments
         .where((p) => p.durationSeconds < 20)
         .toList();
     if (shortPool.isEmpty) return;
-    final p = shortPool[_resilienceRng.nextInt(shortPool.length)];
+    final p = shortPool[_miniPunishmentRng.nextInt(shortPool.length)];
     _miniPunishmentsTriggered++;
     // Fire-and-forget : on ne bloque pas le ticker.
     unawaited(_runMiniPunishmentFlow(p));
   }
 
-  /// Joue une mini-punition inopinée déclenchée par le tick résilience.
+  /// Joue une mini-punition inopinée déclenchée par le tick coach.
   /// Variante allégée du flow fail : pas de phrase fail, pas de breath de
   /// récup, pas de saut de section. On enchaîne directement la punition
   /// puis on restaure le loop précédent.
@@ -1949,6 +1943,7 @@ class SessionController extends ChangeNotifier {
       mode: _beep.currentMode,
       bpm: _beep.currentBpm,
       depth: _beep.currentTo ?? _beep.currentFrom,
+      saliva: _saliva.ratio,
       rng: _random,
       unlockedKeys: unlockedKeys,
     );

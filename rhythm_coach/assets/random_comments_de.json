@@ -56,6 +56,18 @@
     {"text": "Bettle mich an {name}.", "modes": ["beg"]},
     {"text": "Fleh darum, dass ich weitermache.", "modes": ["beg"]},
     {"text": "Atme {name}, ich bin noch nicht fertig mit dir.", "modes": ["breath"]},
-    {"text": "Genieß diese paar Sekunden, es geht gleich wieder los.", "modes": ["breath"]}
+    {"text": "Genieß diese paar Sekunden, es geht gleich wieder los.", "modes": ["breath"]},
+    {"text": "Spuck auf meinen Schwanz {name}. Laut, schamlos.", "modes": ["lick", "hold", "rhythm"], "requires_unlock": "sloppy_spit", "min_saliva": 0.55},
+    {"text": "Los, spuck {name}. Ich will es hören.", "modes": ["lick", "hold"], "requires_unlock": "sloppy_spit", "min_saliva": 0.55},
+    {"text": "Dein Mund ist voll {name} — spuck es aus und verteil es.", "modes": ["lick", "hold"], "requires_unlock": "sloppy_spit", "min_saliva": 0.6},
+    {"text": "Spuck, Schlampe. Auf meinen Schwanz, überall.", "modes": ["lick", "rhythm"], "requires_unlock": "sloppy_spit", "min_saliva": 0.55},
+    {"text": "Mehr Lärm {name}. Ich will dich saugen hören.", "modes": ["rhythm", "lick"], "requires_unlock": "sloppy_loud_suck"},
+    {"text": "Sei dreckig {name}, sei laut.", "modes": ["rhythm", "lick"], "requires_unlock": "sloppy_loud_suck"},
+    {"text": "Mach Lärm, Schlampe. Halt dich nicht zurück.", "modes": ["rhythm", "lick", "biffle"], "requires_unlock": "sloppy_loud_suck"},
+    {"text": "Ich liebe es, wenn es schmatzt {name}. Lauter.", "modes": ["rhythm", "lick"], "requires_unlock": "sloppy_loud_suck"},
+    {"text": "Lass es überlaufen {name}. Lass es tropfen.", "modes": ["rhythm", "hold", "lick"], "requires_unlock": "sloppy_overflow", "min_saliva": 0.7},
+    {"text": "Es läuft überall {name} — lass es zu.", "modes": ["rhythm", "lick"], "requires_unlock": "sloppy_overflow", "min_saliva": 0.7},
+    {"text": "Schluck nichts runter {name}. Lass alles raus.", "modes": ["rhythm", "hold", "lick"], "requires_unlock": "sloppy_overflow", "min_saliva": 0.65},
+    {"text": "Dein Mund läuft über {name}. Genau so.", "modes": ["hold", "rhythm"], "requires_unlock": "sloppy_overflow", "min_saliva": 0.7}
   ]
 }

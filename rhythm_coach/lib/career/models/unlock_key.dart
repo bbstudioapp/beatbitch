@@ -1,21 +1,24 @@
 /// Identifiants typés des compétences/actions débloquées via les milestones.
 ///
-/// Une action sans `UnlockKey` est ouverte par défaut (modes basiques :
-/// rythme superficiel, lick, hand). Les actions avec une `UnlockKey` ne
-/// peuvent apparaître dans une session que si la milestone correspondante
-/// a été acquittée avec succès (cf. `MilestoneService.hasUnlock`).
+/// **Invariant** : une milestone du catalogue accorde **exactement une**
+/// `UnlockKey`, et cette clé est consommée quelque part — gate de step dans
+/// le générateur, comportement runtime dans `SessionController`, filtre de
+/// contenu `requires_unlock`, ou prérequis `requires` d'une autre milestone.
+/// Vérifié par `test/milestone_unlock_invariants_test.dart`.
+///
+/// Une action sans `UnlockKey` est ouverte par défaut : hand, lick tip→head,
+/// rythme superficiel tip→head, holds tip/head, breath. Le final de repli
+/// (hand/head/mid) est lui aussi libre (aucune clé).
 enum UnlockKey {
-  // Bases (intro_basics, niveau 1)
-  handBasic,
-  lickTipBasic,
-  rhythmTipHead,
-  holdTip,
-  holdHead,
-  // Bases niveau 2
+  /// Socle de base — accordé par la milestone tuto (`intro_basics`). Ne
+  /// gate **aucune** action de step ; c'est la clé « exception » : elle
+  /// sert de prérequis (`requires`) aux milestones racines de chaque
+  /// piste, pour qu'aucune ne tombe avant le tutoriel.
+  basics,
+  // Bases « profondeur en bouche »
   rhythmMidBasic,
   lickFull,
   // Holds simples
-  holdHeadShort,
   holdMidShort,
   throatHoldShort,
   throatHoldLong,
@@ -34,36 +37,20 @@ enum UnlockKey {
   begLibre,
   begThroat,
   begFull,
-  // Bases sloppy / résilience (tags de progression — pas de gating en
-  // V1, juste pour signaler la complétion des milestones thématiques)
+  // Sloppy — chacune gate un sous-pool de commentaires coach (cf.
+  // `assets/random_comments.json` : filtre `requires_unlock` + contexte /
+  // barre de salive `min_saliva`). Trois ont en plus un effet runtime :
+  //   - sloppyDroolBasic     : production salive lick ×1.5, plafond barre 100
+  //   - sloppyBiffleSlow     : production salive biffle ×3
+  //   - sloppySwallowControl : autorise le toggle `SwallowMode.forbidden`
   sloppyDroolBasic,
   sloppyBiffleSlow,
   sloppyLoudSuck,
   sloppyOverflow,
-  // Compétences sloppy V2 liées à la barre de salive (cf. SalivaEngine).
-  // Gates effectifs côté SessionController + générateur :
-  //   - sloppySwallowControl : autorise le toggle SwallowMode.forbidden
-  //     dans une session (sans, le toggle est forcé à allowed).
-  //   - sloppySpit : autorise l'ordre coach « crache ».
-  //   - sloppyDroolDeep : multiplicateur production hold throat/full +
-  //     plafond barre +20.
-  //   - sloppyJarCollect : collecte externe (V2).
-  //   - sloppyShareLube : combo générateur exploitant la lubrification (V2).
   sloppySwallowControl,
   sloppySpit,
-  sloppyDroolDeep,
-  sloppyJarCollect,
-  sloppyShareLube,
-  resilienceEndureBasic,
-  resilienceRecovery,
-  resilienceOneMore,
-  resilienceCount,
-  // Combos
-  comboHoldFullChained,
-  // Finals dédiés — chaque step terminal (final de séance) a son
-  // unlock pour qu'il ne puisse apparaître qu'après la milestone
-  // d'introduction correspondante. `finalHandHeadMid` reste libre :
-  // c'est le fallback universel (req 0, hand baseline).
+  // Finals dédiés — chaque step terminal d'apothéose a son unlock pour
+  // n'apparaître qu'après la milestone d'introduction correspondante.
   finalHoldTip,
   finalLickTipHead,
   finalHoldHead,
@@ -71,20 +58,15 @@ enum UnlockKey {
   finalBiffle,
   finalHoldThroat,
   finalHoldFull,
-  // Carrière — option encore (J'en veux encore) en fin de session.
-  // Débloquée par la milestone intro_encore (niveau 5) OU par une
-  // obédiance ≥ 80 (voie alternative côté career_screen). Cf. doc.
+  // Carrière — option « j'en veux encore » en fin de session. Débloquée
+  // par la milestone `intro_encore` OU par une obédiance ≥ 80 (voie
+  // alternative côté career_screen). Cf. doc.
   encore;
 
   String get serialized => switch (this) {
-        UnlockKey.handBasic => 'hand_basic',
-        UnlockKey.lickTipBasic => 'lick_tip_basic',
-        UnlockKey.rhythmTipHead => 'rhythm_tip_head',
-        UnlockKey.holdTip => 'hold_tip',
-        UnlockKey.holdHead => 'hold_head',
+        UnlockKey.basics => 'basics',
         UnlockKey.rhythmMidBasic => 'rhythm_mid_basic',
         UnlockKey.lickFull => 'lick_full',
-        UnlockKey.holdHeadShort => 'hold_head_short',
         UnlockKey.holdMidShort => 'hold_mid_short',
         UnlockKey.throatHoldShort => 'throat_hold_short',
         UnlockKey.throatHoldLong => 'throat_hold_long',
@@ -106,14 +88,6 @@ enum UnlockKey {
         UnlockKey.sloppyOverflow => 'sloppy_overflow',
         UnlockKey.sloppySwallowControl => 'sloppy_swallow_control',
         UnlockKey.sloppySpit => 'sloppy_spit',
-        UnlockKey.sloppyDroolDeep => 'sloppy_drool_deep',
-        UnlockKey.sloppyJarCollect => 'sloppy_jar_collect',
-        UnlockKey.sloppyShareLube => 'sloppy_share_lube',
-        UnlockKey.resilienceEndureBasic => 'resilience_endure_basic',
-        UnlockKey.resilienceRecovery => 'resilience_recovery',
-        UnlockKey.resilienceOneMore => 'resilience_one_more',
-        UnlockKey.resilienceCount => 'resilience_count',
-        UnlockKey.comboHoldFullChained => 'combo_hold_full_chained',
         UnlockKey.finalHoldTip => 'final_hold_tip',
         UnlockKey.finalLickTipHead => 'final_lick_tip_head',
         UnlockKey.finalHoldHead => 'final_hold_head',

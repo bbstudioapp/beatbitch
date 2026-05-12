@@ -160,10 +160,14 @@ class SessionScreen extends StatefulWidget {
   /// (mode scénario, démos…) qui n'ont pas la notion de coach.
   final bool coachAdvancesTier;
 
-  /// Allocation de spécialisation. Consommée par le SessionController
-  /// pour cadencer les mini-punitions inopinées de la branche `resilience`.
-  /// Null = pas de carrière → pas de mini-punition.
+  /// Allocation de spécialisation. Consommée par le SessionController pour
+  /// la génération de punition carrière contextuelle. Null = hors carrière.
   final SpecializationAllocation? specialization;
+
+  /// Probabilité par minute qu'une mini-punition inopinée se déclenche en
+  /// cours de séance (cf. `Coach.miniPunishmentRate`, dérivé de l'archétype
+  /// du coach). 0 = jamais — valeur des écrans sans notion de coach.
+  final double miniPunishmentRate;
 
   /// Valeur initiale du `sessionScore` d'humiliation au start. Vaut 0
   /// pour une session normale. Sur encore enchaîné, le caller transmet
@@ -207,6 +211,7 @@ class SessionScreen extends StatefulWidget {
     this.includeHand = true,
     this.coachAdvancesTier = true,
     this.specialization,
+    this.miniPunishmentRate = 0.0,
     this.seedHumiliationSession = 0.0,
     this.closeAppOnEnd = false,
   });
@@ -234,6 +239,7 @@ class _SessionScreenState extends State<SessionScreen>
       phraseBank: widget.phraseBank,
       holdVerifier: widget.holdVerifier,
       specialization: widget.specialization,
+      miniPunishmentRate: widget.miniPunishmentRate,
       seedHumiliationSession: widget.seedHumiliationSession,
       // Profil de capacités : suivi uniquement en carrière (Custom = sandbox,
       // scénarios JSON = hors carrière).

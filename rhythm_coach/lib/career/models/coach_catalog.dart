@@ -75,7 +75,7 @@ class CoachCatalog {
           'et la profondeur sans concession.',
       specialties: [
         SpecializationBranch.profondeur,
-        SpecializationBranch.resilience,
+        SpecializationBranch.endurance,
       ],
       tier: 4,
       isPrincipal: true,
@@ -91,7 +91,7 @@ class CoachCatalog {
           'autant que la technique.',
       specialties: [
         SpecializationBranch.obeissance,
-        SpecializationBranch.resilience,
+        SpecializationBranch.endurance,
       ],
       tier: 5,
       isPrincipal: true,

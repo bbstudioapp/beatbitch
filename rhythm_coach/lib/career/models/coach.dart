@@ -832,6 +832,21 @@ class Coach {
     );
   }
 
+  /// Probabilité par minute qu'une mini-punition inopinée se déclenche en
+  /// cours de séance, dérivée de l'archétype du coach (sa « personnalité »).
+  /// Un coach bienveillant n'en glisse presque jamais ; une coach brutale /
+  /// sans pitié les multiplie. Consommée par `SessionController` via
+  /// `SessionScreen` (sessions carrière uniquement — hors carrière, le
+  /// caller ne le passe pas → 0). À 0.20, ~20 %/min de mini-punition.
+  double get miniPunishmentRate => switch (archetype) {
+        CoachArchetype.bienveillant => 0.04,
+        CoachArchetype.strict => 0.10,
+        CoachArchetype.hautain => 0.11,
+        CoachArchetype.taquinSadique => 0.14,
+        CoachArchetype.brutal => 0.18,
+        CoachArchetype.sansPitie => 0.22,
+      };
+
   /// Branche dominante d'une allocation : celle avec le plus de points
   /// investis, **à condition** d'avoir au moins 3 pts (sinon trop diffuse
   /// pour justifier une coloration). Renvoie null si aucune branche
