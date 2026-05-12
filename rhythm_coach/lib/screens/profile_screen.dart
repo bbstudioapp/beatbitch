@@ -181,6 +181,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               const SizedBox(height: 24),
               _AboutSection(info: bundle.packageInfo),
+              const SizedBox(height: 24),
+              _InfoTextSection(
+                label: t.profileUpdatesSection,
+                body: t.profileUpdatesBody,
+              ),
+              const SizedBox(height: 24),
+              _InfoTextSection(
+                label: t.profileDisclaimerSection,
+                body: t.profileDisclaimerBody,
+              ),
             ],
           );
         },
@@ -233,6 +243,43 @@ class _AboutSection extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Bloc générique « label + paragraphe » pour les sections informatives de
+/// bas de page (mises à jour, avertissement). Liens affichés en toutes
+/// lettres : pas de dépendance `url_launcher`, cohérent avec la ligne
+/// « hors ligne » de la section À PROPOS.
+class _InfoTextSection extends StatelessWidget {
+  final String label;
+  final String body;
+
+  const _InfoTextSection({required this.label, required this.body});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _SectionLabel(label),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: AppTheme.surface,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Text(
+            body,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppTheme.textMuted,
+              height: 1.5,
+            ),
           ),
         ),
       ],

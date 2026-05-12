@@ -647,6 +647,31 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsLanguageEnglish => 'English';
 
   @override
+  String get languagePickerTitle => 'Choisis ta langue';
+
+  @override
+  String get languagePickerBody =>
+      'La langue de ton téléphone n\'est pas (encore) disponible dans BeatBitch. Choisis celle que tu veux utiliser — tu pourras en changer plus tard dans les réglages (icône équaliseur).';
+
+  @override
+  String languageNewlyAvailableTitle(String language) {
+    return 'Disponible en $language';
+  }
+
+  @override
+  String languageNewlyAvailableBody(String language) {
+    return 'BeatBitch est maintenant traduite en $language, la langue de ton téléphone. Tu peux basculer dessus, ou garder la langue actuelle (modifiable à tout moment dans les réglages).';
+  }
+
+  @override
+  String languageNewlyAvailableSwitch(String language) {
+    return 'Passer en $language';
+  }
+
+  @override
+  String get languageNewlyAvailableKeep => 'Garder la langue actuelle';
+
+  @override
   String get soundsAppBarTitle => 'SONS';
 
   @override
@@ -1540,6 +1565,20 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get profileAboutOffline =>
       '100 % hors ligne — aucune télémétrie, aucun envoi réseau.';
+
+  @override
+  String get profileUpdatesSection => 'MISES À JOUR';
+
+  @override
+  String get profileUpdatesBody =>
+      'BeatBitch est 100 % hors ligne et ne va jamais chercher de mise à jour toute seule. Pour être prévenue dès qu\'une nouvelle version sort, installe Obtainium — un store Android open-source qui surveille les pages GitHub Releases :\n\n• Obtainium : github.com/ImranR98/Obtainium\n• Dans Obtainium → « Add App », colle : github.com/bbstudioapp/beatbitch\n\nAucun trafic réseau ne vient de BeatBitch : c\'est Obtainium qui interroge GitHub, indépendamment de l\'app.';
+
+  @override
+  String get profileDisclaimerSection => 'AVERTISSEMENT';
+
+  @override
+  String get profileDisclaimerBody =>
+      'BeatBitch est un jeu pour adultes consentants, à utiliser dans un cadre strictement privé. C\'est à toi, et à toi seule, qu\'il revient de l\'utiliser de façon sûre : écoute ton corps, ne tiens jamais une position ou une durée qui te fait mal, et garde à tout moment la possibilité de t\'arrêter (bouton « Je peux pas », ou simplement fermer l\'app). N\'utilise pas l\'app sous l\'effet de substances qui altèrent ton jugement.\n\nLes voix, textes et scénarios relèvent de la fiction de domination ludique : aucune phrase n\'est un ordre réel, et rien de ce que dit la coach ne doit être reproduit sur une autre personne sans son consentement explicite et éclairé.\n\nL\'éditeur ne pourra être tenu responsable d\'aucune blessure ni d\'aucun dommage — physique ou psychologique — résultant de l\'usage ou du mésusage de l\'application. En cas de doute sur ta santé, parles-en à un professionnel.';
 
   @override
   String get sessionCameraInactiveWarning =>
