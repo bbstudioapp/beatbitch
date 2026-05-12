@@ -646,6 +646,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsLanguageEnglish => 'English';
 
   @override
+  String get languagePickerTitle => 'Choose your language';
+
+  @override
+  String get languagePickerBody =>
+      'Your phone\'s language isn\'t available in BeatBitch (yet). Pick the one you\'d like to use — you can change it later in the settings (equalizer icon).';
+
+  @override
+  String languageNewlyAvailableTitle(String language) {
+    return 'Available in $language';
+  }
+
+  @override
+  String languageNewlyAvailableBody(String language) {
+    return 'BeatBitch is now translated into $language, your phone\'s language. You can switch to it, or keep your current language (changeable any time in the settings).';
+  }
+
+  @override
+  String languageNewlyAvailableSwitch(String language) {
+    return 'Switch to $language';
+  }
+
+  @override
+  String get languageNewlyAvailableKeep => 'Keep current language';
+
+  @override
   String get soundsAppBarTitle => 'SOUNDS';
 
   @override
@@ -1534,6 +1559,20 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get profileAboutOffline =>
       '100% offline — no telemetry, nothing sent over the network.';
+
+  @override
+  String get profileUpdatesSection => 'UPDATES';
+
+  @override
+  String get profileUpdatesBody =>
+      'BeatBitch is 100% offline and never checks for updates on its own. To get notified when a new version ships, install Obtainium — an open-source Android store that watches GitHub Releases pages:\n\n• Obtainium: github.com/ImranR98/Obtainium\n• In Obtainium → \"Add App\", paste: github.com/bbstudioapp/beatbitch\n\nNo network traffic comes from BeatBitch: Obtainium queries GitHub on its own, independently of the app.';
+
+  @override
+  String get profileDisclaimerSection => 'DISCLAIMER';
+
+  @override
+  String get profileDisclaimerBody =>
+      'BeatBitch is a game for consenting adults, meant to be used in a strictly private setting. Using it safely is on you, and you alone: listen to your body, never hold a position or a duration that hurts, and always keep the ability to stop right away (the \"I can\'t\" button, or simply closing the app). Don\'t use the app under the influence of anything that impairs your judgement.\n\nThe voices, texts and scenarios are playful domination fiction: no line is a real order, and nothing the coach says should ever be done to another person without their explicit, informed consent.\n\nThe publisher cannot be held liable for any injury or harm — physical or psychological — resulting from the use, or misuse, of the app. If you have any doubt about your health, talk to a professional.';
 
   @override
   String get sessionCameraInactiveWarning =>

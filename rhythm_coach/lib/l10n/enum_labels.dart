@@ -203,3 +203,15 @@ String localizedCareerLevelTitle(BuildContext context, int level) {
   if (level <= 19) return t.careerLevelTitleVideCouillesPro;
   return t.careerLevelTitleReineDesPutes;
 }
+
+/// Nom affiché d'une locale supportée (dans la langue active). Replie sur le
+/// code en majuscules pour une locale ajoutée sans clé dédiée — penser à
+/// ajouter `settingsLanguageXxx` en même temps que la locale.
+String localizedLanguageName(BuildContext context, Locale locale) {
+  final t = AppLocalizations.of(context);
+  return switch (locale.languageCode) {
+    'fr' => t.settingsLanguageFrench,
+    'en' => t.settingsLanguageEnglish,
+    _ => locale.languageCode.toUpperCase(),
+  };
+}
