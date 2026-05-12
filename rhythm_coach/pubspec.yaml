@@ -58,11 +58,15 @@ flutter:
     - assets/coach/
     - assets/punishments.json
     - assets/punishments_en.json
+    - assets/punishments_de.json
     - assets/random_comments.json
     - assets/random_comments_en.json
+    - assets/random_comments_de.json
     - assets/ambience_packs.json
     - assets/ambience_packs_en.json
+    - assets/ambience_packs_de.json
     - assets/nicknames.json
     - assets/nicknames_en.json
+    - assets/nicknames_de.json
     - assets/icon/app_icon.png
     - assets/backgrounds/

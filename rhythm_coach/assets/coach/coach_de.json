@@ -1,0 +1,31 @@
+{
+  "lang": "de",
+  "hold_nudges": {
+    "go_deeper": [
+      "tiefer",
+      "weiter runter",
+      "noch tiefer",
+      "weiter",
+      "hol's dir"
+    ],
+    "go_up": [
+      "komm hoch",
+      "weniger tief",
+      "komm ein Stück hoch",
+      "nicht so tief"
+    ],
+    "lost": [
+      "wo bist du",
+      "bleib im Bild",
+      "geh zurück in Position"
+    ]
+  },
+  "system": {
+    "prep_countdown": "In Position. Es geht los in {seconds} Sekunden.",
+    "encore_fallback": "Nochmal. Zurück an die Arbeit."
+  },
+  "test_phrases": {
+    "voice": "Los, zeig mir, was du kannst. Tiefer, langsamer.",
+    "identity": "Weiter so, {name}. Du schaffst das, {name}."
+  }
+}
