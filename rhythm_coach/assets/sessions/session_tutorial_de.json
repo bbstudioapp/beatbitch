@@ -1,0 +1,76 @@
+{
+  "lang": "de",
+  "id": "tutorial",
+  "name": "Tutorial — Alle Sounds",
+  "description": "Entdecke jeden Sound und jedes Signal. Die Stimme erklärt alles, Schritt für Schritt.",
+  "duration_seconds": 460,
+  "mode": "beg",
+  "no_stats": true,
+  "intro": "Willkommen. Bevor wir in eine echte Session einsteigen, gehen wir alle Sounds und Signale durch. Leg dein Handy auf die Seite, du musst nicht draufschauen. Während dieses Tutorials hast du nichts zu tun — du musst nicht lutschen, musst dich nicht in Position bringen. Du hörst zu, das ist alles. Sieben Minuten, kein Druck, kein Fail zu befürchten. Wenn du bereit bist, bestätige.",
+  "steps": [
+    {"time": 0, "text": "Wir fangen mit den Positionen an. Es gibt fünf, von der sanftesten bis zur tiefsten. Hör dir jeden Sound an, so findest du dich in den echten Sessions zurecht. Du hast nichts zu tun, einfach zuhören."},
+
+    {"time": 16, "text": "Erste Position — die Spitze. Der höchste, leichteste Sound.",
+                 "mode": "hold", "to": "tip", "duration": 3},
+
+    {"time": 25, "text": "Zweite Position — die Eichel. Eine Stufe tiefer.",
+                 "mode": "hold", "to": "head", "duration": 3},
+
+    {"time": 34, "text": "Dritte Position — die Mitte, kurz vor der Kehle. Noch tiefer.",
+                 "mode": "hold", "to": "mid", "duration": 3},
+
+    {"time": 44, "text": "Vierte Position — der Kehleneingang. Da fängt es an, richtig nach unten zu gehen.",
+                 "mode": "hold", "to": "throat", "duration": 3},
+
+    {"time": 54, "text": "Fünfte Position — ganz tief, Nase an den Eiern. Der tiefste Sound. Merk dir: je tiefer der Sound, desto tiefer musst du gehen.",
+                 "mode": "hold", "to": "full", "duration": 3},
+
+    {"time": 70, "text": "Jetzt die acht Arten von Signalen, die ich dir gebe. Wir gehen sie eins nach dem anderen durch. Immer noch nichts zu tun, einfach zuhören."},
+
+    {"time": 82, "text": "Erstes Signal — Lutschen im Rhythmus. Das Basis-Metronom. Eine Bewegung pro Beep. Langsames Tempo, auf der Eichel."},
+
+    {"time": 92, "mode": "rhythm", "from": "tip", "to": "head", "bpm": 55, "duration": 22},
+
+    {"time": 112, "text": "Jetzt mit echtem Hub — von der Eichel bis zum Kehleneingang, schneller.",
+                  "mode": "rhythm", "from": "head", "to": "throat", "bpm": 80, "duration": 28},
+
+    {"time": 130, "text": "Hörst du den Wechsel zwischen den beiden Tönen? Das ist dein Leitfaden für den Hub der Bewegung, vom höchsten zum tiefsten."},
+
+    {"time": 158, "text": "Zweites Signal — Lecken. Nur Lecken. Zunge raus, du fährst über die Spitze und die Eichel, aber du nimmst nichts in den Mund. Die Lautstärke ist niedriger, es ist sanfter, dezenter.",
+                  "mode": "lick", "from": "tip", "to": "head", "bpm": 75, "duration": 22},
+
+    {"time": 178, "text": "Siehst du den Unterschied? Leichter, andeutender. Keine Penetration, nur die Zunge."},
+
+    {"time": 192, "text": "Drittes Signal — tief halten. Ein einzelner Beep, von einer tiefen Schicht gestützt. Du nimmst die Position ein und bewegst dich für die angesagte Dauer nicht. Hier wäre es ganz tief, zehn Sekunden.",
+                  "mode": "hold", "to": "full", "duration": 10},
+
+    {"time": 210, "text": "Viertes Signal — atmen. Ein einzelner, sanfter Sound. Das ist dein Signal zum Ausatmen, dich setzen lassen, erholen.",
+                  "mode": "breath"},
+
+    {"time": 222, "text": "Immer nach einer Anstrengung, das Atmen. Lass es nicht aus."},
+
+    {"time": 236, "text": "Fünftes Signal — Schwanzschläge ins Gesicht nehmen. Ein eigener schneller Beep, keine Positionsangabe. Du streckst die Zunge raus, du hältst die Wange hin, die Stirn, und lässt dich bei jedem Beep vom Schwanz schlagen. Nichts im Mund.",
+                  "mode": "biffle", "bpm": 130, "duration": 22},
+
+    {"time": 264, "text": "Sechstes Signal — betteln. Kein Beep, nur meine Stimme. Ich gebe dir einen Befehl — bettle mich an, wiederhol einen Satz, eine Handlung — und du machst es laut. Wenn ich eine Position angebe, hältst du sie, während du sprichst."},
+
+    {"time": 282, "text": "Siebtes Signal — die Hand. Du lässt den Mund los, du arbeitest mit der Hand. Der Sound ist matter, der Rhythmus gemessener. So kann sich deine Kehle erholen, während es weiter aufbaut.",
+                  "mode": "hand", "from": "head", "to": "mid", "bpm": 80, "duration": 14},
+
+    {"time": 302, "text": "Achtes und letztes — die freie Phase. Zwei Beeps rahmen einen Moment ein, in dem du machst, was du willst. Kein Signal, der gehört dir.",
+                  "mode": "freestyle", "duration": 8},
+
+    {"time": 318, "text": "Das sind die acht Signale. Jetzt noch zwei, drei praktische Dinge."},
+
+    {"time": 332, "text": "Der rote Knopf unten — ich kann nicht — das ist dein Sicherheitsknopf. Du drückst ihn, wenn du wirklich nicht weitermachen kannst. Ich sage dir, was ich von dir halte, ich lasse dich atmen, ich gebe dir eine kleine Strafe, und wir springen zum nächsten Abschnitt. Du verlierst deine Session nicht, du machst weiter unten weiter."},
+
+    {"time": 364, "text": "Das Equalizer-Symbol oben im Startbildschirm öffnet die Sounds-Seite. Da kannst du meine Stimme wählen, mein Tempo, und ein Ambiente-Pack aktivieren. Auf der Karriere-Seite kannst du außerdem die Handstimulation deaktivieren, wenn du sie nicht willst — das deaktiviert auch die Schwanzschläge."},
+
+    {"time": 392, "text": "Und während du deine Sessions durchspielst, schaltest du Abzeichen frei — Marathonläuferin, Throat Queen, Stahllunge und andere. Ich kündige sie am Session-Ende an, wenn du ein neues freischaltest. Es misst deinen Weg."},
+
+    {"time": 420, "text": "Zum Schluss ein echtes Bettel-Beispiel. Diesmal darfst du mitmachen, wenn du willst. Die Mitte, zehn Sekunden — du sprichst mir nach, laut: ich bin nur eine brave kleine Schwanzlutscherin, und ich will mehr.",
+                  "mode": "beg", "to": "mid", "duration": 10},
+
+    {"time": 444, "text": "Du weißt alles. Du bist dran."}
+  ]
+}
