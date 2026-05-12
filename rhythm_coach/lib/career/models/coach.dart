@@ -171,6 +171,12 @@ class CoachMeta {
   final bool? isPrincipal;
   final CoachRequirement? requirements;
 
+  /// Chemin de l'asset portrait (ex: `assets/career/coaches/portraits/coach_01_lina.png`).
+  /// Null = pas d'override, on garde le chemin codé dans `CoachCatalog.defaults`
+  /// (qui peut lui-même être null pour un coach sans portrait — l'UI affiche
+  /// alors un repli stylisé).
+  final String? portraitAsset;
+
   /// Préférences gameplay du coach : multiplicateur appliqué au poids
   /// de tirage de chaque mode (cf. `_modeWeight` dans le générateur).
   /// Valeurs entre 0.0 (« jamais ») et 2.0 (« doublé »). 1.0 = neutre.
@@ -189,6 +195,7 @@ class CoachMeta {
     this.tier,
     this.isPrincipal,
     this.requirements,
+    this.portraitAsset,
     this.modeWeights,
     this.voicePreset,
   });
@@ -202,6 +209,7 @@ class CoachMeta {
       tier == null &&
       isPrincipal == null &&
       requirements == null &&
+      portraitAsset == null &&
       modeWeights == null &&
       voicePreset == null;
 
@@ -214,7 +222,8 @@ class CoachMeta {
   ///   "specialties": ["endurance", "profondeur"],
   ///   "tier": 1,
   ///   "isPrincipal": true,
-  ///   "requirements": { "requiresHands": false, "minPlayerLevel": 1 }
+  ///   "requirements": { "requiresHands": false, "minPlayerLevel": 1 },
+  ///   "portrait": "assets/career/coaches/portraits/coach_01_lina.png"
   /// }
   /// ```
   /// Tout champ absent est laissé null.
@@ -273,6 +282,9 @@ class CoachMeta {
 
     final rawName = json['name']?.toString().trim();
 
+    final rawPortrait =
+        (json['portrait'] ?? json['portraitAsset'])?.toString().trim();
+
     final ttsNode = json['tts'];
     final voicePreset = ttsNode is Map<String, dynamic>
         ? CoachVoicePreset.fromJson(ttsNode)
@@ -286,6 +298,8 @@ class CoachMeta {
       isPrincipal:
           json['isPrincipal'] is bool ? json['isPrincipal'] as bool : null,
       requirements: requirements,
+      portraitAsset:
+          (rawPortrait != null && rawPortrait.isNotEmpty) ? rawPortrait : null,
       modeWeights: modeWeights,
       voicePreset:
           (voicePreset != null && !voicePreset.isEmpty) ? voicePreset : null,
@@ -600,6 +614,12 @@ class Coach {
   /// phrases prêtes à parler.
   final String publicBio;
 
+  /// Chemin de l'asset portrait du coach (ex:
+  /// `assets/career/coaches/portraits/coach_01_lina.png`), ratio source 2:3.
+  /// `null` = pas de portrait → l'UI affiche un repli stylisé (initiale).
+  /// Surchargeable via la clé `portrait` du JSON `coach_<id>.json`.
+  final String? portraitAsset;
+
   /// Branches de spécialisation que ce coach met en avant. Sert de hint
   /// éventuel pour le générateur (ex: pondérer la spé du coach principal).
   final List<SpecializationBranch> specialties;
@@ -634,6 +654,7 @@ class Coach {
     required this.specialties,
     required this.tier,
     required this.isPrincipal,
+    this.portraitAsset,
     this.requirements = CoachRequirement.none,
     this.phrases = CoachPhrasePack.empty,
     this.modeWeights = const {},
@@ -654,6 +675,7 @@ class Coach {
       specialties: specialties,
       tier: tier,
       isPrincipal: isPrincipal,
+      portraitAsset: portraitAsset,
       requirements: requirements,
       phrases: pack,
       modeWeights: modeWeights,
@@ -675,6 +697,7 @@ class Coach {
       specialties: meta.specialties ?? specialties,
       tier: meta.tier ?? tier,
       isPrincipal: meta.isPrincipal ?? isPrincipal,
+      portraitAsset: meta.portraitAsset ?? portraitAsset,
       requirements: meta.requirements ?? requirements,
       phrases: phrases,
       modeWeights: meta.modeWeights ?? modeWeights,

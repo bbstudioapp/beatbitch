@@ -10,8 +10,11 @@ Chaque coach est défini par **deux fichiers** dans ce dossier :
 Exemple :
 - `coach_03_jade.json` — préférences globales de Jade (mêmes pour FR/EN/…)
 - `coach_03_jade_fr.json` — phrases françaises de Jade
+- `portraits/coach_03_jade.png` — portrait de Jade (ratio source 2:3, voir plus bas)
 
 L'`id` du fichier doit correspondre à un coach déclaré dans `lib/career/models/coach_catalog.dart` (qui sert de **défauts** : si un fichier manque, l'app retombe sur les valeurs codées).
+
+Les **portraits** des coachs vivent dans le sous-dossier `portraits/` (cf. la section [Portraits des coachs](#portraits-des-coachs)).
 
 ---
 
@@ -26,6 +29,8 @@ L'`id` du fichier doit correspondre à un coach déclaré dans `lib/career/model
 
   "tier":        3,                       // palier de coach (1..6) — détermine le déblocage
   "isPrincipal": true,                    // si true, c'est le Coach Principal du palier
+
+  "portrait":    "assets/career/coaches/portraits/coach_03_jade.png",  // chemin du portrait (override ; défaut codé)
 
   "requirements": {
     "requiresHands":            true,                          // toggle « inclure la main » actif
@@ -49,8 +54,22 @@ Défauts à ne pas répéter :
 - `requirements.requiresHands` → `false`
 - `requirements.minPlayerLevel` → `1`
 - `requirements.mustHaveUnlockedBranches` → `[]`
+- `portrait` → le chemin codé dans `CoachCatalog.defaults` (par convention `assets/career/coaches/portraits/<id>.png` pour les 6 coachs livrés). N'écrire la clé que pour pointer ailleurs.
 
 > ⚠ **Ne jamais renommer un `id`** : il sert de clé pour la sélection persistée des joueurs ET de nom de fichier asset. Le renommer = perdre toutes les sélections existantes.
+
+---
+
+## Portraits des coachs
+
+Chaque coach a un **portrait** affiché dans le sélecteur de coach (carrière + mode Custom) et sur la carte du coach actif de l'écran Carrière.
+
+- **Emplacement** : `assets/career/coaches/portraits/<id>.png` — co-localisé avec les JSON, sous le sous-dossier `portraits/` (déclaré dans `pubspec.yaml` pour que Flutter bundle ce qu'il y trouve).
+- **Assets externalisés** (comme `assets/backgrounds/` et `assets/audio/ambience/`) : les `.png`/`.jpg`/`.jpeg`/`.webp` du dossier sont **gitignorés**, pas versionnés. Seul un `.gitkeep` est suivi (pour que le dossier existe au build). La CI les rapatrie depuis le bucket R2 (préfixe `coach-portraits/v1/`, cf. `.github/workflows/release.yml`) ; un build sans accès R2 part avec le dossier vide → repli stylisé en jeu (cf. ci-dessous). Voir aussi `CLAUDE.md` → « Assets binaires externalisés ».
+- **Format** : PNG (ou tout format géré par `Image.asset`), ratio source **2:3** (les portraits actuels font 512×768). L'UI recadre en `BoxFit.cover`, donc un autre ratio fonctionne mais sera rogné.
+- **Mapping** : le chemin attendu est codé dans `CoachCatalog.defaults` (champ `portraitAsset`, par convention `'$_portraitDir/<id>.png'`). Pour pointer ailleurs, ajouter la clé `"portrait": "..."` au `coach_<id>.json` (langue-indépendant — un portrait ne se traduit pas). Un coach sans portrait (`portraitAsset == null`, **ou** asset déclaré mais absent du bundle) affiche un **repli stylisé** : l'initiale du nom sur un cadre teinté (cf. `CoachPortrait` dans `lib/career/widgets/coach_portrait.dart`). La feature ne casse jamais si l'image manque — même esprit que `SessionBackground`.
+
+> ⚠ **NSFW** : ces portraits sont des images explicites, au même titre que les `assets/backgrounds/`. À garder à l'esprit pour les captures marketing / stores.
 
 ---
 
@@ -319,10 +338,11 @@ Pour livrer le coach Jade en anglais :
 
 ## Ajouter un coach
 
-1. Ajouter une entrée minimale à `CoachCatalog.defaults` dans `lib/career/models/coach_catalog.dart` (au moins l'`id` — le reste peut venir du JSON).
-2. Créer `coach_<id>.json` (préférences gameplay).
-3. Créer `coach_<id>_fr.json` (contenu localisé) à partir d'un squelette existant.
-4. (Optionnel) Si c'est un nouveau Coach Principal d'un nouveau palier, vérifier que `CoachTierMap` couvre bien le palier visé.
+1. Ajouter une entrée minimale à `CoachCatalog.defaults` dans `lib/career/models/coach_catalog.dart` (au moins l'`id` — le reste peut venir du JSON). Renseigner `portraitAsset` (par convention `'$_portraitDir/<id>.png'`).
+2. Portrait : déposer `portraits/<id>.png` en local (ratio 2:3) **et** l'uploader sur R2 (`coach-portraits/v1/<id>.png`) pour qu'il soit bundlé par la CI — c'est un asset externalisé, pas versionné. Optionnel : sans portrait, l'UI montre le repli initiale.
+3. Créer `coach_<id>.json` (préférences gameplay).
+4. Créer `coach_<id>_fr.json` (contenu localisé) à partir d'un squelette existant.
+5. (Optionnel) Si c'est un nouveau Coach Principal d'un nouveau palier, vérifier que `CoachTierMap` couvre bien le palier visé.
 
 Aucun autre code à modifier — le `CoachService` détecte automatiquement les nouvelles entrées.
 

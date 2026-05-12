@@ -55,6 +55,10 @@ assets/backgrounds/*.jpg
 assets/backgrounds/*.jpeg
 assets/backgrounds/*.webp
 assets/audio/ambience/*.mp3
+assets/career/coaches/portraits/*.png
+assets/career/coaches/portraits/*.jpg
+assets/career/coaches/portraits/*.jpeg
+assets/career/coaches/portraits/*.webp
 
 # Captures marketing — pèsent et changent souvent, hors historique code.
 screenshots/

@@ -102,7 +102,7 @@ jobs:
         run: |
           if [ -z "$R2_ACCESS_KEY_ID" ] || [ -z "$R2_SECRET_ACCESS_KEY" ] || [ -z "$R2_ENDPOINT" ] || [ -z "$R2_BUCKET" ]; then
             echo "R2 secrets not configured — skipping external assets fetch."
-            echo "Build will proceed with empty backgrounds/ambience folders (graceful fallback in app)."
+            echo "Build will proceed with empty backgrounds / ambience / coach-portraits folders (graceful fallback in app)."
             exit 0
           fi
 
@@ -110,7 +110,7 @@ jobs:
           export AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY"
           export AWS_DEFAULT_REGION="auto"
 
-          mkdir -p assets/backgrounds assets/audio/ambience
+          mkdir -p assets/backgrounds assets/audio/ambience assets/career/coaches/portraits
 
           echo "Fetching backgrounds from s3://$R2_BUCKET/backgrounds/v1/ ..."
           aws s3 sync "s3://$R2_BUCKET/backgrounds/v1/" assets/backgrounds/ \
@@ -122,11 +122,18 @@ jobs:
             --endpoint-url "$R2_ENDPOINT" \
             --no-progress || echo "(ambience prefix empty or missing, continuing)"
 
+          echo "Fetching coach portraits from s3://$R2_BUCKET/coach-portraits/v1/ ..."
+          aws s3 sync "s3://$R2_BUCKET/coach-portraits/v1/" assets/career/coaches/portraits/ \
+            --endpoint-url "$R2_ENDPOINT" \
+            --no-progress || echo "(coach-portraits prefix empty or missing, continuing)"
+
           echo "--- Fetched assets ---"
           echo "Backgrounds:"
           ls -lh assets/backgrounds/ 2>/dev/null || echo "  (empty)"
           echo "Ambience:"
           ls -lh assets/audio/ambience/ 2>/dev/null || echo "  (empty)"
+          echo "Coach portraits:"
+          ls -lh assets/career/coaches/portraits/ 2>/dev/null || echo "  (empty)"
 
       - name: Build signed release APK
         if: steps.gate.outputs.skip != 'true'
@@ -185,7 +192,7 @@ jobs:
 
             ## ⚠ Assets binaires
 
-            Si la CI a accès au bucket R2, les fonds animés et MP3 d'ambiance sont bundlés dans les builds. Sinon (fork, premier setup), le build dégrade gracieusement — fonds = dégradé animé, ambiance = silence.
+            Si la CI a accès au bucket R2, les fonds animés, MP3 d'ambiance et portraits des coachs sont bundlés dans les builds. Sinon (fork, premier setup), le build dégrade gracieusement — fonds = dégradé animé, ambiance = silence, portraits = initiale du coach sur cadre teinté.
           generate_release_notes: true
           files: |
             ${{ steps.pkg.outputs.apk_path }}
@@ -230,7 +237,7 @@ jobs:
         run: |
           if [ -z "$R2_ACCESS_KEY_ID" ] || [ -z "$R2_SECRET_ACCESS_KEY" ] || [ -z "$R2_ENDPOINT" ] || [ -z "$R2_BUCKET" ]; then
             echo "R2 secrets not configured — skipping external assets fetch."
-            echo "Build will proceed with empty backgrounds/ambience folders (graceful fallback in app)."
+            echo "Build will proceed with empty backgrounds / ambience / coach-portraits folders (graceful fallback in app)."
             exit 0
           fi
 
@@ -238,7 +245,7 @@ jobs:
           export AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY"
           export AWS_DEFAULT_REGION="auto"
 
-          mkdir -p assets/backgrounds assets/audio/ambience
+          mkdir -p assets/backgrounds assets/audio/ambience assets/career/coaches/portraits
 
           echo "Fetching backgrounds from s3://$R2_BUCKET/backgrounds/v1/ ..."
           aws s3 sync "s3://$R2_BUCKET/backgrounds/v1/" assets/backgrounds/ \
@@ -249,6 +256,11 @@ jobs:
           aws s3 sync "s3://$R2_BUCKET/ambience/v1/" assets/audio/ambience/ \
             --endpoint-url "$R2_ENDPOINT" \
             --no-progress || echo "(ambience prefix empty or missing, continuing)"
+
+          echo "Fetching coach portraits from s3://$R2_BUCKET/coach-portraits/v1/ ..."
+          aws s3 sync "s3://$R2_BUCKET/coach-portraits/v1/" assets/career/coaches/portraits/ \
+            --endpoint-url "$R2_ENDPOINT" \
+            --no-progress || echo "(coach-portraits prefix empty or missing, continuing)"
 
       - name: Enable Windows desktop
         run: flutter config --enable-windows-desktop

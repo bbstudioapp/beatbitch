@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../../theme/app_theme.dart';
 import '../services/coach_service.dart';
+import '../widgets/coach_portrait.dart';
 
 /// Sélecteur de coach pour le mode Custom : ligne « Voix par défaut » en
 /// tête (= pas de coach : PhraseBank globale + voix TTS système), puis tous
@@ -52,6 +53,15 @@ class CustomCoachPickerScreen extends StatelessWidget {
               title: c.name,
               subtitle: '${c.title} · ${t.coachPickerTierLabel(c.tier)}',
               icon: Icons.school_outlined,
+              leading: CoachPortrait(
+                coach: c,
+                height: 56,
+                width: 40,
+                borderRadius: BorderRadius.circular(9),
+                accent: selectedCoachId == c.id
+                    ? AppTheme.accent
+                    : AppTheme.textMuted,
+              ),
               selected: selectedCoachId == c.id,
               onTap: () => Navigator.of(context).pop(_CoachPickerResult(c.id)),
             ),
@@ -91,6 +101,10 @@ class _PickerCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final IconData icon;
+
+  /// Vignette à gauche. `null` = pastille ronde avec [icon] (cas « voix par
+  /// défaut »). Pour un coach, on passe ici son [CoachPortrait].
+  final Widget? leading;
   final bool selected;
   final VoidCallback onTap;
 
@@ -98,6 +112,7 @@ class _PickerCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.icon,
+    this.leading,
     required this.selected,
     required this.onTap,
   });
@@ -123,11 +138,12 @@ class _PickerCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: accent.withValues(alpha: 0.16),
-                child: Icon(icon, color: accent, size: 20),
-              ),
+              leading ??
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor: accent.withValues(alpha: 0.16),
+                    child: Icon(icon, color: accent, size: 20),
+                  ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(

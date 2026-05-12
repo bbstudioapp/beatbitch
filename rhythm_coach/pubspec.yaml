@@ -53,6 +53,7 @@ flutter:
     - assets/audio/finale_chimes.json
     - assets/career/
     - assets/career/coaches/
+    - assets/career/coaches/portraits/
     - assets/career/milestones/
     - assets/coach/
     - assets/punishments.json

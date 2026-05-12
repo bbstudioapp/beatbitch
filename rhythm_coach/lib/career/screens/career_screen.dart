@@ -31,6 +31,7 @@ import '../services/career_progress_service.dart';
 import '../services/career_session_generator.dart';
 import '../services/phrase_bank_loader.dart';
 import '../services/specialization_service.dart';
+import '../widgets/coach_portrait.dart';
 import '../widgets/free_spec_points_banner.dart';
 import '../widgets/free_training_banner.dart';
 import 'coach_picker_screen.dart';
@@ -1204,14 +1205,12 @@ class _CoachSummaryCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: accent.withValues(alpha: 0.18),
-                child: Icon(
-                  isPrincipal ? Icons.star : Icons.tune,
-                  color: accent,
-                  size: 22,
-                ),
+              CoachPortrait(
+                coach: coach,
+                height: 64,
+                width: 46,
+                borderRadius: BorderRadius.circular(10),
+                accent: accent,
               ),
               const SizedBox(width: 12),
               Expanded(
