@@ -1,0 +1,349 @@
+{
+  "lang": "de",
+  "id": "coach_01_lina",
+  "title": "Einsteiger-Coach",
+  "publicBio": "Sanfte und geduldige Begleiterin. Führt dich durch die ersten Schritte, lobt jeden Fortschritt. Keine Beschimpfungen, keine Härte: Wir lassen uns Zeit.",
+  "phrases": {
+    "rhythm": {
+      "soft": [
+        "Fang ganz sanft an {name}, ganz weich.",
+        "Nimm es locker {name}, folge dem Rhythmus.",
+        "Genau so {name}, atme ruhig.",
+        "Du machst das sehr gut {name}, weiter so.",
+        "Lass ihn langsam in deinen Mund gleiten {name}.",
+        "Du bist perfekt so {name}, ganz sanft.",
+        "Langsam {name}, wir haben Zeit.",
+        "Kleine Bewegungen für den Anfang {name}, nur zum Gewöhnen.",
+        "So ist es {name}, du findest deinen Rhythmus ganz von allein.",
+        "Kein Druck {name}, mach das für dich.",
+        "Halt deinen Mund schön weich {name}, das ist perfekt.",
+        "Du kannst die Augen schließen, wenn es dir hilft {name}, hör einfach auf mich."
+      ],
+      "medium": [
+        {"text": "Jetzt ein bisschen tiefer {name}, wenn du dich bereit fühlst.", "min_depth": "mid"},
+        "Halt diesen Rhythmus, du machst das großartig {name}.",
+        {"text": "Geh ein bisschen tiefer runter, genau so {name}.", "min_depth": "mid"},
+        "Du kontrollierst deinen Atem gut, ich bin stolz auf dich {name}.",
+        "Bleib bei diesem Rhythmus {name}, du machst echt Fortschritte.",
+        "Das ist gut, was du machst {name}.",
+        "Du kannst ein kleines bisschen schneller werden {name}, ich bin direkt bei dir.",
+        "Bleib gleichmäßig {name}, genau so ist es richtig.",
+        {"text": "Noch ein bisschen tiefer {name}, du hast das im Griff.", "min_depth": "mid"},
+        "Schöne Beständigkeit {name}, ich höre es an deinem Atem."
+      ],
+      "hard": [
+        {"text": "Geh tiefer {name}, du schaffst das.", "min_depth": "mid"},
+        "Halt diesen Rhythmus, ich weiß, dass du es kannst {name}.",
+        {"text": "Geh noch ein bisschen tiefer runter, langsam aber sicher {name}.", "min_depth": "mid"},
+        "Noch ein paar Bewegungen {name}, ich weiß, dass du sie hast.",
+        {"text": "Hol ihn dir ganz tief {name}, sanft, du kannst es.", "min_depth": "throat"},
+        "Halt durch {name}, du bist stärker, als du denkst.",
+        "Ich bin hier {name}, lass den Rhythmus nicht los."
+      ]
+    },
+    "lick": {
+      "soft": [
+        "Leck ihn sanft mit der Zungenspitze {name}.",
+        "Streichle ihn zärtlich {name}, lass dir Zeit.",
+        "Kreis um die Eichel herum, das ist sehr gut {name}.",
+        "Leck ihn, als würdest du ihn anbeten {name}.",
+        "Auch mit den Lippenspitzen {name}, lass dir Zeit.",
+        "Küss die Spitze {name}, ganz zärtlich.",
+        "Lass deine Zunge wandern, wohin du willst {name}, genieß es."
+      ],
+      "medium": [
+        "Leck über die ganze Länge, schön nass {name}.",
+        "Setz deine Zunge gut ein {name}, bedeck ihn mit Spucke.",
+        "Leck mit mehr Lust, das ist gut {name}.",
+        "Komm zurück zur Eichel {name}, verweil ein bisschen.",
+        "Schön nass, deine Zunge {name}, genau so.",
+        "Leck ihn langsam von unten nach oben {name}."
+      ],
+      "hard": [
+        "Leck ihn intensiver {name}, zeig mir deine Lust.",
+        "Mit deiner ganzen Zunge {name}, zeig ihm, wie sehr du ihn liebst.",
+        "Hingebungsvoller {name}, ich will dich ein bisschen sabbern hören."
+      ]
+    },
+    "biffle": {
+      "soft": [
+        "Lass ihn sanft gegen deine Wange klopfen {name}, wie ein Spiel.",
+        "Kleine leichte Klapser auf dein Gesicht {name}.",
+        "Spiel mit ihm {name}, lass ihn von deinen Lippen abprallen."
+      ]
+    },
+    "hold": {
+      "soft": [
+        {"text": "Behalt ihn im Mund, atme ruhig {name}.", "max_depth": "mid"},
+        "Halt die Position, das ist sehr gut {name}.",
+        "Bleib so {name}, du machst das perfekt.",
+        {"text": "Leg ihn auf deine Zunge und bleib so {name}, ganz ruhig.", "max_depth": "head"},
+        "Beweg dich nicht mehr {name}, atme, alles ist gut.",
+        {"text": "Nur die Eichel, halt sie da {name}.", "max_depth": "head"}
+      ],
+      "medium": [
+        {"text": "Geh ein bisschen tiefer und halt {name}.", "min_depth": "mid"},
+        {"text": "Bleib ganz tief, atme durch die Nase {name}.", "min_depth": "mid", "max_depth": "throat"},
+        {"text": "Halt ihn fest sitzen {name}, atme durch die Nase, ich zähle mit dir.", "min_depth": "mid", "max_depth": "throat"},
+        {"text": "Ein bisschen weiter {name}, und du hältst da ganz entspannt.", "min_depth": "mid"},
+        {"text": "Bleib {name}, ich weiß, dass es unbequem ist, ich bin hier.", "min_depth": "mid"}
+      ],
+      "hard": [
+        {"text": "Bleib schön tief {name}, komm nicht hoch.", "min_depth": "throat"},
+        {"text": "Noch einen Moment tief {name}, komm noch nicht hoch.", "min_depth": "throat"},
+        {"text": "Du bist da {name}, halt ihn schön tief, ich bin stolz.", "min_depth": "throat"}
+      ],
+      "finale": [
+        {"text": "Bleib ganz tief bis zum Ende {name}.", "min_depth": "throat"},
+        "Letzte Anstrengung, halt ihn schön tief {name}.",
+        "Wunderschön {name}, bleib so bis zum Signal.",
+        "So ist es {name}, wir beenden es so, du bist wunderschön.",
+        {"text": "Halt ihn schön tief bis ganz zum Schluss {name}, das ist dein Moment.", "min_depth": "throat"}
+      ]
+    },
+    "breath": {
+      "soft": [
+        "Atme ruhig {name}.",
+        "Hol tief Luft {name}.",
+        "Entspann deinen Kiefer {name}, atme langsam aus.",
+        "Komm zu Atem {name}, du warst sehr brav.",
+        "Kiefer locker {name}, das ganze Gesicht weich.",
+        "Nimm einen Schluck Luft {name}, gleich geht es weiter.",
+        "Schließ die Augen, wenn du willst {name}, atme einfach."
+      ]
+    },
+    "beg": {
+      "soft": [
+        "Sag laut „Ich will mehr {coach}“, ganz sanft.",
+        "Bitte mich lieb darum, „bitte, lass mich weitermachen {coach}“.",
+        "Sag es mit deiner kleinen Mädchenstimme: „Ich liebe das, hör nicht auf {coach}“.",
+        "Bitte mich lieb darum, weiterzumachen.",
+        "Sag mir laut, warum du mehr willst.",
+        "Flüster es mir zu, „mehr {coach}, bitte“.",
+        "Bitte mich süß darum {name}, ich will es hören."
+      ],
+      "medium": [
+        "Sprich mir nach: „Ich brauche deinen Schwanz {coach}“.",
+        "Bitte mich deutlich, „tiefer bitte {coach}“.",
+        "Bitte mich, indem du meinen Namen sagst, {coach}.",
+        "Fleh mich richtig an, ich will es hören.",
+        "Sag mir „Ich gehöre dir {coach}“, deutlich.",
+        "Bitte mich, und sag mir, warum du es brauchst {name}."
+      ]
+    },
+    "freestyle": {
+      "soft": [
+        "Du bist einen Moment dran {name}, mach, was du willst.",
+        "Genieß es {name}, zeig mir, was du kannst.",
+        "Dieser Moment gehört dir {name}, koste ihn aus.",
+        "Tu dir was Gutes {name}, ich schau dir zu."
+      ]
+    },
+    "hand": {
+      "soft": [
+        "Wichs ihn sanft mit deiner Hand {name}.",
+        "Leg deine Finger um ihn {name}, ganz weich.",
+        "Langsames Auf und Ab mit deiner Hand {name}, lass dir Zeit.",
+        "Hilf dir mit deiner Hand {name}, das ist sehr gut."
+      ],
+      "medium": [
+        "Ein bisschen flotter mit der Hand {name}, du hast das im Griff.",
+        "Halt das Tempo mit deiner Hand {name}, ich bin direkt bei dir."
+      ]
+    }
+  },
+  "randomComments": [
+    "Weiter {name}, ganz sanft.",
+    "Genau so {name}.",
+    "Atme, ich bin bei dir {name}.",
+    "Entspann deinen Kiefer {name}.",
+    "Du machst gute Fortschritte {name}.",
+    "Bleib konzentriert, hör auf meine Stimme.",
+    "Folge dem Rhythmus {name}, du machst das sehr gut.",
+    "Ich bin stolz auf dich {name}.",
+    "Wir lassen uns Zeit, hetz dich nicht.",
+    "Du bist genau da, wo du sein sollst {name}.",
+    "Du machst das für dich {name}, koste es aus.",
+    "Hör auf deinen Körper {name}, den Rest leite ich.",
+    "Es ist sanft, es ist gut, weiter {name}.",
+    "Du kommst ganz allein sehr gut zurecht {name}.",
+    "Keine Eile {name}, wir haben Zeit."
+  ],
+  "intros": [
+    "Hallo {name}. Ich bin Lina, ich werde dich sanft durch diese Sitzung führen. Lass dir Zeit, hör auf meine Stimme und folge dem Rhythmus.",
+    "Hi {name}. Wir gehen es heute ganz ruhig an. Ich bin hier, um dir zu helfen, ohne Druck Fortschritte zu machen.",
+    "Willkommen {name}. Ich führe dich Schritt für Schritt. Bei mir bist du sicher.",
+    "Hey {name}. Hier ist Lina. Wir kümmern uns heute um dich, ganz ohne Eile. Folge meiner Stimme, um den Rest kümmere ich mich."
+  ],
+  "congrats": [
+    "Du warst echt sehr brav {name}. Ich bin stolz auf dich.",
+    "Das war's {name}. Du hast das heute sehr gut gemacht.",
+    "Bravo {name}, das war eine schöne Sitzung. Ruh dich jetzt aus.",
+    "Du machst echt gute Fortschritte {name}.",
+    "So ist es {name}, es ist vorbei. Du kannst stolz auf dich sein, ich bin es jedenfalls."
+  ],
+  "encore": [
+    "Du willst mehr {name}? Gut, wir machen sanft weiter.",
+    "Bereit für eine weitere Runde {name}? Wir gehen es ruhig an.",
+    "Noch ein bisschen {name}? Gern, wir bleiben schön sanft.",
+    "Du bittest mich um mehr {name}? Gut, aber in deinem eigenen Tempo."
+  ],
+  "progress": {
+    "25": [
+      "Du fängst gut an {name}, ich spüre, wie du dich entspannst.",
+      "Genau so {name}, du kommst in den Rhythmus."
+    ],
+    "50": [
+      "Du machst das sehr gut {name}.",
+      "Ich sehe, wie du Fortschritte machst {name}."
+    ],
+    "75": [
+      "Du bist fast an deinen Grenzen {name}… du hältst durch.",
+      "Das ist beeindruckend {name}."
+    ],
+    "90": [
+      "Letzte Anstrengung {name}, du bist fast da.",
+      "Gib alles, was du noch hast {name}, ich bin bei dir."
+    ]
+  },
+  "branchPhrases": {
+    "endurance": {
+      "soft": [
+        "Du weißt lange durchzuhalten {name}, das ist deine Stärke.",
+        "Halt den Rhythmus {name}, du hast die Geduld dafür.",
+        "Du trägst die Anstrengung ohne mit der Wimper zu zucken {name}, das ist selten."
+      ],
+      "medium": [
+        "Du wirst nie schwach {name}, das liebe ich an dir.",
+        "Genau so, halt weiter durch {name}.",
+        "Du hältst durch und durch {name}, ich sehe es."
+      ],
+      "hard": [
+        "Du kannst noch {name}, ich weiß, dass du es kannst.",
+        "Halt noch ein bisschen durch, du bist ein Ausdauer-Mädchen.",
+        "Dein Atem hält {name}, das ist deine Stärke, vertrau ihm."
+      ]
+    },
+    "obeissance": {
+      "soft": [
+        "Du bist ein braves Mädchen {name}.",
+        "Du hörst so gut auf mich {name}.",
+        "Du machst genau das, was ich sage {name}, das ist perfekt."
+      ],
+      "medium": [
+        "Gehorch mir weiter so {name}, du machst das großartig.",
+        "Du bist fügsam, das ist es, was ich liebe.",
+        "Du zögerst nie, wenn ich dich um etwas bitte {name}."
+      ],
+      "hard": [
+        "Braves Mädchen {name}. Wirklich ein braves Mädchen.",
+        "Du gehorchst mir perfekt, ich bin stolz.",
+        "So fügsam {name}… mach weiter, du machst mich stolz."
+      ]
+    },
+    "sloppy": {
+      "soft": [
+        "Lass dich gehen {name}, sabber ein bisschen.",
+        "Mach ihn schön nass mit deiner Zunge {name}.",
+        "Hab keine Angst, alles vollzukleckern {name}."
+      ],
+      "medium": [
+        "Sabber drauf {name}, sei nicht schüchtern.",
+        "Es ist gut, einen Mund voller Spucke zu haben.",
+        "Lass es laufen {name}, es ist hübsch, wenn du sabberst."
+      ],
+      "hard": [
+        "Mund komplett voll {name}, schäm dich überhaupt nicht.",
+        "Bis zum Kinn durchnässt {name}, genau so ist es richtig."
+      ]
+    }
+  },
+  "progressPhrases": {
+    "gorge.engagement_streak": {
+      "attempt": [
+        "Heute Abend will ich deine Kehle {name}, nur ein bisschen länger als sonst — lass sie sich an ihn gewöhnen.",
+        "Wir lassen uns Zeit, in deine Kehle runterzugehen {name}, du wirst den Unterschied spüren."
+      ],
+      "record": [
+        "Du hast ihn länger in deiner Kehle behalten als je zuvor {name}, ich bin stolz auf das, was du wirst.",
+        "Deine Kehle hört besser auf dich als früher {name}, schau, wie weit wir gekommen sind."
+      ],
+      "tapout": [
+        "Sachte Süße, deine Kehle hat heute Abend schon viel geleistet — genau daran arbeiten wir.",
+        "Notiert {name}, wir lassen es hier mit deiner Kehle. Du wirst darauf zurückkommen, wir haben Zeit."
+      ]
+    },
+    "hold.throat.streak": {
+      "attempt": [
+        "Heute Abend hältst du ihn ein bisschen länger in deiner Kehle {name}, du schaffst das.",
+        "Wenn ich dir sage, du sollst tief halten {name}, halt einen Tick länger als sonst, im Vertrauen."
+      ],
+      "record": [
+        "Du hast ihn hinten in deiner Kehle gehalten wie nie zuvor {name}, ich wusste, dass du es kannst.",
+        "Niemand hält das so {name} — nicht mal du vor heute Abend. Wirklich braves Mädchen."
+      ],
+      "tapout": [
+        "Du hast ihn trotzdem eine gute Weile da unten behalten {name}, am Rest arbeiten wir sanft.",
+        "Ist okay Süße, deine Kehle hat nein gesagt — darauf hören wir. Der Rekord kommt noch."
+      ]
+    },
+    "noswallow.streak": {
+      "attempt": [
+        "Behalt ihn heute Abend ein bisschen länger im Mund {name}, schluck nichts, bis ich es dir sage.",
+        "Du lässt meine Sauce in deinem Mund sammeln {name}, ohne zu schlucken — ein bisschen länger als letztes Mal."
+      ],
+      "record": [
+        "Du hast deinen Mund voll behalten, ohne zu schlucken, wie nie zuvor {name}, du gehorchst mir so gut.",
+        "Neuer Rekord mit vollem Mund {name} — geduldig, gehorsam, genau wie ich dich mag."
+      ],
+      "tapout": [
+        "Du hast ihn schon eine gute Weile behalten, bevor du geschluckt hast {name}, das ist schon viel. Die Geduld kommt noch.",
+        "Ist okay Süße, dein Mund war ehrlich — nächstes Mal halten wir ein bisschen länger."
+      ]
+    },
+    "effort.no_breath_streak": {
+      "attempt": [
+        "Wir machen heute Abend ein bisschen länger weiter vor deiner Pause {name}, in deinem eigenen Tempo.",
+        "Heute Abend atmen wir ein bisschen weniger {name} — nicht aus Grausamkeit, nur um zu sehen, was du wirklich trägst."
+      ],
+      "record": [
+        "Du hast es heute Abend ohne Pause weggesteckt wie nie zuvor {name}, du bist stärker, als du denkst.",
+        "Du hast die Anstrengung weiter getragen als je zuvor {name}, und man sieht es dir an."
+      ],
+      "tapout": [
+        "Atme Süße, du hast es gebraucht — dein Körper hat gesprochen, ich höre.",
+        "Ist okay {name}, wir hören hier mit dem Atem auf. Du hast wunderschön durchgehalten, wirklich."
+      ]
+    },
+    "rhythm.motion_streak": {
+      "attempt": [
+        "Du hältst die Bewegung heute Abend ein bisschen länger {name}, ohne irgendwas zu vermasseln — ich führe dich.",
+        "Halt den Rhythmus einen Tick länger als sonst {name}, im Vertrauen — du weißt, wie das geht."
+      ],
+      "record": [
+        "Du hast den Rhythmus heute Abend nicht losgelassen wie nie zuvor {name}, genau so ist es richtig.",
+        "Ausdauer-Rekord {name} — braves Mädchen, wirklich braves Mädchen."
+      ],
+      "tapout": [
+        "Du bist beim Rhythmus ein bisschen früh ausgerutscht {name}, das ist nichts — nächstes Mal halten wir länger.",
+        "Keine Sorge Süße, wir kürzen die Kette. Du kommst nah ran, ich sehe es."
+      ]
+    }
+  },
+  "nicknames": {
+    "pool": [
+      "meine Schöne",
+      "Süße",
+      "Schatz",
+      "meine Sanfte",
+      "mein Engel"
+    ],
+    "use_user_prenom": true,
+    "use_user_nicknames": false
+  },
+  "coachNicknames": [
+    "Lina",
+    "Coach",
+    "gnädige Frau"
+  ]
+}
