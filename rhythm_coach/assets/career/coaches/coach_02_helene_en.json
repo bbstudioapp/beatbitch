@@ -8,42 +8,242 @@
       "soft": [
         "Start properly {name}.",
         "Follow the rhythm with precision {name}.",
-        "Don't drag your feet {name}."
+        "Don't drag your feet {name}.",
+        "Straight posture, clean motion {name}.",
+        "No half-measures {name}. On the tempo.",
+        "Better {name}. Keep that rigor.",
+        "I'm watching {name}. Apply yourself.",
+        "Steady. That's the minimum {name}.",
+        "Jaw in place, clean rhythm {name}."
       ],
       "medium": [
-        "Deeper {name}. I want serious work.",
+        {"text": "Deeper {name}. I want serious work.", "min_depth": "mid"},
         "Hold this rhythm, don't weaken {name}.",
-        "Go down further, you can do better."
+        {"text": "Go down further, you can do better.", "min_depth": "mid"},
+        "You're slowing down {name}. Get back on tempo.",
+        {"text": "Lower still {name}. That's the work.", "min_depth": "mid"},
+        "Acceptable. Maintain, don't relax {name}.",
+        "I have nothing to correct for now {name}. Continue."
       ],
       "hard": [
-        "Go all the way down {name}. Don't hold back.",
-        "Faster and deeper. Execute.",
-        "You have to hold this rhythm {name}."
+        {"text": "Go all the way down {name}. Don't hold back.", "min_depth": "throat"},
+        {"text": "Faster and deeper. Execute.", "min_depth": "mid"},
+        "You have to hold this rhythm {name}.",
+        {"text": "Take it {name}. You have what it takes.", "min_depth": "throat"},
+        "No flinching {name}. Hold.",
+        {"text": "All the way down, and you don't let go {name}.", "min_depth": "throat"},
+        "It's demanding, and that's exactly what we want {name}."
+      ]
+    },
+    "lick": {
+      "soft": [
+        "Lick it properly {name}, apply yourself.",
+        "Precise tongue {name}, no wasted motion.",
+        "Cover the head properly {name}."
+      ],
+      "medium": [
+        "The whole length, and carefully {name}.",
+        "More spit {name}. Do it right.",
+        "Lick it like a job, not a hobby {name}."
+      ],
+      "hard": [
+        "With application {name}. I want this flawless.",
+        "Linger {name}. Don't rush it."
+      ]
+    },
+    "biffle": {
+      "soft": [
+        "Tap your face properly {name}.",
+        "Clean strikes on your cheek {name}, no softness.",
+        "Make it snap properly {name}."
       ]
     },
     "hold": {
       "soft": [
-        "Hold the position {name}."
+        "Hold the position {name}.",
+        {"text": "Keep it there, without trembling {name}.", "max_depth": "mid"},
+        "Still {name}. Breathe through your nose.",
+        {"text": "Maintain. It's a matter of discipline {name}.", "max_depth": "throat"}
       ],
       "medium": [
-        "Stay deep without moving {name}."
+        {"text": "Stay deep without moving {name}.", "min_depth": "mid"},
+        {"text": "Lower, and you hold {name}.", "min_depth": "mid"},
+        {"text": "Don't come up before my signal {name}.", "min_depth": "mid", "max_depth": "throat"},
+        {"text": "Count in your head {name}. You don't move.", "min_depth": "mid"}
       ],
       "hard": [
-        "Don't pull off. Hold to the end {name}."
+        "Don't pull off. Hold to the end {name}.",
+        {"text": "Deep, still, until I say so {name}.", "min_depth": "throat"},
+        {"text": "It's uncomfortable. That's intended. Hold {name}.", "min_depth": "throat"}
       ],
       "finale": [
-        "Last hold. Stay deep {name}."
+        {"text": "Last hold. Stay deep {name}.", "min_depth": "mid"},
+        {"text": "We finish deep {name}. Don't let go.", "min_depth": "throat"},
+        "Until the signal {name}. Not before.",
+        "It's the last thing I'm asking of you. Do it right {name}."
+      ]
+    },
+    "breath": {
+      "soft": [
+        "Breathe. Reset to a correct posture {name}.",
+        "Inhale deeply {name}. We start again cleanly.",
+        "Relax the jaw {name}, without dropping your focus.",
+        "You have this time {name}. Use it well."
+      ]
+    },
+    "beg": {
+      "soft": [
+        "Ask me for it properly: \"I want more {coach}\".",
+        "Say it clearly {name}, no stammering: \"keep going, please {coach}\".",
+        "Enunciate {name}. Ask me to continue.",
+        "I want to hear you phrase it properly."
+      ],
+      "medium": [
+        "Repeat it, and well: \"I need your cock {coach}\".",
+        "Ask \"deeper {coach}\", distinctly.",
+        "Address me by my name, {coach}.",
+        "Beg properly, or I won't listen."
+      ]
+    },
+    "freestyle": {
+      "soft": [
+        "This moment is yours {name}. Don't waste it.",
+        "Show me what you can do on your own {name}.",
+        "Free, but clean {name}."
+      ]
+    },
+    "hand": {
+      "soft": [
+        "Stroke it with your hand {name}, clean motion.",
+        "Steady strokes {name}, no softness.",
+        "Help yourself with your hand properly {name}."
+      ],
+      "medium": [
+        "Firmer with your hand {name}.",
+        "Keep the pace with your hand {name}, don't drift."
       ]
     }
   },
+  "randomComments": [
+    "Posture. Always the posture {name}.",
+    "It's correct {name}. No more, no less.",
+    "Stay focused {name}.",
+    "I note what's wrong {name}. Correct it.",
+    "No half-measures.",
+    "You can do better {name}.",
+    "On the tempo {name}.",
+    "Discipline {name}. That's all I ask.",
+    "Acceptable for now.",
+    "Don't relax {name}."
+  ],
   "intros": [
     "I'm Hélène. I'll be demanding with you {name}. Prepare properly.",
-    "We'll work seriously today {name}."
+    "We'll work seriously today {name}.",
+    "Hélène. Put your phone down, sit up straight, and listen. We begin {name}.",
+    "No leniency today {name}. You're going to work, and work well."
   ],
   "congrats": [
     "Correct {name}. You did what was needed.",
-    "Acceptable. You can still improve."
+    "Acceptable. You can still improve.",
+    "Better than last time {name}. Keep it up.",
+    "You held the frame {name}. I don't have much to say against it."
   ],
+  "encore": [
+    "More? Fine. We start again, and you stay at level {name}.",
+    "You're asking for more {name}. Good. Don't drop your guard."
+  ],
+  "progress": {
+    "25": [
+      "Correct setup {name}.",
+      "You're catching the rhythm {name}. Hold it."
+    ],
+    "50": [
+      "Good work so far {name}.",
+      "You're keeping up. That's what I expect {name}."
+    ],
+    "75": [
+      "You're approaching your limits {name}. Don't falter.",
+      "It's hard, and you're holding {name}. Correct."
+    ],
+    "90": [
+      "Last effort {name}. No letting go.",
+      "You finish this cleanly {name}. Give what's left."
+    ]
+  },
+  "branchPhrases": {
+    "profondeur": {
+      "soft": [
+        "You have a throat made for this {name}. Use it.",
+        "Lower {name}. That's where you actually work."
+      ],
+      "medium": [
+        "You go down well {name}. More.",
+        "Your depth is correct {name}. Push it."
+      ],
+      "hard": [
+        "All the way down {name}. That's your worth.",
+        "A throat like yours doesn't get spared {name}."
+      ]
+    },
+    "obeissance": {
+      "soft": [
+        "You do what I say {name}. That's the minimum.",
+        "You obey me correctly {name}."
+      ],
+      "medium": [
+        "You didn't argue {name}. Good.",
+        "You execute without flinching {name}. That's what's expected."
+      ],
+      "hard": [
+        "Flawless obedience {name}. I note it.",
+        "You do exactly what you're told {name}. Continue."
+      ]
+    }
+  },
+  "progressPhrases": {
+    "gorge.engagement_streak": {
+      "attempt": [
+        "Today your throat works a little longer than usual {name}. It's within your range.",
+        "We're holding the throat engagement a notch higher {name}. No discussion."
+      ],
+      "record": [
+        "You held the engagement longer than ever {name}. That's the level I expect now.",
+        "New threshold on your throat {name}. Acceptable. Very acceptable."
+      ],
+      "tapout": [
+        "Your throat reached its limit for the day {name}. We stop there — cleanly, no drama.",
+        "Noted {name}. The throat said stop. We'll rework it, higher."
+      ]
+    },
+    "hold.throat.streak": {
+      "attempt": [
+        "Today's throat hold will be longer {name}. Prepare to hold it.",
+        "When I tell you to hold deep {name}, you hold longer than usual. Discipline."
+      ],
+      "record": [
+        "You held it deep longer than ever {name}. That's exactly the work.",
+        "Throat hold record {name}. I have nothing to say against it. That's rare."
+      ],
+      "tapout": [
+        "You still held a good while {name}. The rest, another time.",
+        "The throat gave out {name}. That's a legitimate limit — we log it, we start from there."
+      ]
+    },
+    "noswallow.streak": {
+      "attempt": [
+        "You keep your mouth full longer today {name}. You don't swallow before my order.",
+        "Mouth discipline {name}: you hold it, one notch more than last time."
+      ],
+      "record": [
+        "You held longer than ever {name}. That's pure discipline. Good.",
+        "New full-mouth record {name}. You obey correctly. Continue."
+      ],
+      "tapout": [
+        "You held a correct while before swallowing {name}. Patience is trained.",
+        "Noted {name}. Next time, you hold longer."
+      ]
+    }
+  },
   "nicknames": {
     "pool": [],
     "use_user_prenom": true,
