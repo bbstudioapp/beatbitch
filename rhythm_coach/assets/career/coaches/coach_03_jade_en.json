@@ -4,41 +4,249 @@
   "title": "Teasing coach",
   "publicBio": "Playful, ironic, loves to test. Specialist of cock slaps and sloppy work. Hands required.",
   "phrases": {
-    "biffle": {
+    "rhythm": {
       "soft": [
-        "Start slapping your face gently {name} ~",
-        "Aww, are you going to take that in your mouth?"
+        "Take it slow {name} ~ we're warming up.",
+        "Little strokes to start, make me happy {name}.",
+        "Come on, show me how you suck when nobody's judging ~",
+        "Cute, getting to it all by yourself {name}.",
+        "You're already starting to like it, admit it {name} ~",
+        "Easy now, bitch — you'll have plenty of time to suffer later."
       ],
       "medium": [
-        "Harder {name}, make my cock smack on your tongue.",
-        "Look at you, already drooling like a bitch."
+        {"text": "A little deeper {name} ~ I know you can do better.", "min_depth": "mid"},
+        "Faster {name}, I like it when it forces a bit.",
+        {"text": "Down, down {name}… there, like a big girl.", "min_depth": "mid"},
+        "Sweating already? Adorable. Keep going {name}.",
+        "Hold this rhythm {name}, you're almost believable."
       ],
       "hard": [
-        "Wreck your face {name}.",
-        "Drool everywhere, little slut.",
-        "Harder! I want it to smack."
+        {"text": "All the way down {name}, and stop being delicate.", "min_depth": "throat"},
+        {"text": "Deeper, faster — hurt yourself, it amuses me.", "min_depth": "mid"},
+        "Hold this rhythm {name}, or I'll think you're useless.",
+        {"text": "Take it {name}. You wanted to play with the big girls.", "min_depth": "throat"}
       ]
     },
     "lick": {
       "soft": [
-        "Lick it everywhere, my little bitch."
+        "Lick it everywhere, my little bitch.",
+        "With the tip of your tongue {name} ~ tease it like you know how.",
+        "Circle around the head, cutie, take your time.",
+        "Kiss it like you love it — we both know you do {name}."
       ],
       "medium": [
-        "Lap it up like a bitch in heat {name}."
+        "Lap it up like a bitch in heat {name}.",
+        "The whole length, nice and wet {name} — drool a little for me.",
+        "Lick harder {name}, I want to hear it.",
+        "There you go {name}, filthy just right."
       ],
       "hard": [
-        "Lick it properly, whore."
+        "Lick it properly, whore.",
+        "With your whole tongue {name}, show me how hooked you are.",
+        "More devoted, dirty bitch — I want it everywhere."
+      ]
+    },
+    "biffle": {
+      "soft": [
+        "Start slapping your face gently {name} ~",
+        "Aww, are you going to take that in your mouth?",
+        "Let it bounce off your cheeks, cutie ~",
+        "Cute little taps {name}, we're warming up the face."
+      ],
+      "medium": [
+        "Harder {name}, make my cock smack on your tongue.",
+        "Look at you, already drooling like a bitch.",
+        "Make it snap on your tongue {name}, I love the sound.",
+        "Slap your face with it {name}, no whining."
+      ],
+      "hard": [
+        "Wreck your face {name}.",
+        "Drool everywhere, little slut.",
+        "Harder! I want it to smack.",
+        "Smear your spit {name}, you've got nothing left to protect."
+      ]
+    },
+    "hold": {
+      "soft": [
+        {"text": "Keep it in your mouth {name} ~ and stay good.", "max_depth": "mid"},
+        "Don't move, cutie. Enjoy the moment {name}.",
+        {"text": "Just the head {name}, hold it there — for now.", "max_depth": "head"}
+      ],
+      "medium": [
+        {"text": "Deeper, and you hold {name}. Not a single move.", "min_depth": "mid"},
+        {"text": "Stay deep {name}, breathe through your nose like a big girl.", "min_depth": "mid", "max_depth": "throat"},
+        {"text": "Hold {name}… I'm waiting to see how long before you crack.", "min_depth": "mid"}
+      ],
+      "hard": [
+        {"text": "Deep, and you don't come up {name}. I said so.", "min_depth": "throat"},
+        {"text": "Uncomfortable? Good. Hold {name}.", "min_depth": "throat"}
+      ],
+      "finale": [
+        {"text": "We finish deep {name}, down to the last drop.", "min_depth": "throat"},
+        "Stay like this until the signal, cutie {name}.",
+        "Last effort {name} — make me believe you liked it."
+      ]
+    },
+    "breath": {
+      "soft": [
+        "Breathe, bitch ~ you're going to need it.",
+        "Catch your breath {name}, we're not done playing.",
+        "Relax your jaw {name}, enjoy it, it won't last.",
+        "Take a breath, cutie. And get ready."
+      ]
+    },
+    "beg": {
+      "soft": [
+        "Say it nicely: \"I want more {coach}\" ~",
+        "Beg me sweetly {name}, do your cute act.",
+        "Ask me to continue — with the right voice {name}.",
+        "Tell me out loud you love it, little bitch."
+      ],
+      "medium": [
+        "Repeat after me: \"I need your cock {coach}\".",
+        "Ask \"deeper {coach}\", and do it right.",
+        "Beg properly, slut — I love it when you debase yourself.",
+        "Say my name while begging, {coach}."
+      ]
+    },
+    "freestyle": {
+      "soft": [
+        "Do what you want for a moment {name} ~ I'm watching you.",
+        "Show me your true nature {name}, nobody's judging you here."
+      ]
+    },
+    "hand": {
+      "soft": [
+        "Stroke it with your hand {name} ~ all soft to start.",
+        "Wrap your fingers around it, cutie {name}.",
+        "Slow strokes {name}, make my pleasure last."
+      ],
+      "medium": [
+        "Quicker with your hand {name}, I like it when you apply yourself.",
+        "Keep the pace with your hand {name}, be useful."
       ]
     }
   },
+  "randomComments": [
+    "Cute when you sweat {name}.",
+    "Admit you love it, little bitch.",
+    "Keep going {name} ~ you're almost believable.",
+    "Drool a little for me {name}.",
+    "Adorable, really.",
+    "You do this so well when you let go {name}.",
+    "More, bitch. More.",
+    "I'm having a lot of fun here {name}.",
+    "Be filthy {name}, that's all I ask.",
+    "You're blushing? Cute {name}."
+  ],
   "intros": [
     "Hey there {name} ~ Ready to get a little humiliated today?",
-    "Jade is here. We're going to have fun, you and I."
+    "Jade is here. We're going to have fun, you and I.",
+    "Hi bitch ~ put your phone down, open that jaw, and make me laugh.",
+    "Today I'm testing how far you'll go {name}. Spoiler: pretty far."
   ],
   "congrats": [
     "Not bad {name}, you drooled nicely.",
-    "Cute when you suffer a little."
+    "Cute when you suffer a little.",
+    "That was filthy just how I like it {name}. Bravo.",
+    "You debased yourself nicely today {name}. I'm almost proud."
   ],
+  "encore": [
+    "More? Of course you want more, little bitch ~",
+    "Aww, you're asking for more {name}? Alright, but this time I'm less nice."
+  ],
+  "progress": {
+    "25": [
+      "You're warming up nicely {name} ~",
+      "Already liking it, knew it {name}."
+    ],
+    "50": [
+      "You're starting to be fun {name}.",
+      "Not bad at all, bitch. Keep going."
+    ],
+    "75": [
+      "Oh, getting tired {name}? That's when it gets funny.",
+      "You're on the edge {name}… hold on, just for me."
+    ],
+    "90": [
+      "Last effort {name}, give me a pretty finale.",
+      "Come on, give it all, little bitch — I want the show."
+    ]
+  },
+  "branchPhrases": {
+    "rythmeBiffle": {
+      "soft": [
+        "You know how to make it snap {name}, it's in you ~",
+        "Rhythm is your thing, bitch. Show me."
+      ],
+      "medium": [
+        "You follow the tempo like a good little bitch {name}.",
+        "Make it snap harder {name}, it's pretty to hear."
+      ],
+      "hard": [
+        "Wreck yourself on the rhythm {name}, I want noise.",
+        "You slap, you suck, you drool — you were made for this {name}."
+      ]
+    },
+    "sloppy": {
+      "soft": [
+        "Drool a little, cutie {name}, no shame.",
+        "Get it all wet {name}, that's your vibe."
+      ],
+      "medium": [
+        "Filthy just how I like it {name}.",
+        "Your mouth's full of spit — perfect {name}."
+      ],
+      "hard": [
+        "Soaked down to your chin {name}, that's exactly it.",
+        "Your whole face full of drool, little bitch. Beautiful."
+      ]
+    }
+  },
+  "progressPhrases": {
+    "biffle.streak": {
+      "attempt": [
+        "Today you slap your face a little longer {name} ~ I want to see that.",
+        "We're chaining the slaps one notch more than usual {name}, make me happy."
+      ],
+      "record": [
+        "You wrecked your face longer than ever {name} — adorable and pathetic at once.",
+        "New slapping record {name}. You're getting good, bitch."
+      ],
+      "tapout": [
+        "Aww, done already {name}? You held pretty well though. We'll play again.",
+        "Noted {name}, your face said stop — I respect it, for this once."
+      ]
+    },
+    "biffle.bpm_max": {
+      "attempt": [
+        "Faster on the slaps today {name} ~ we're raising the tempo.",
+        "I want it to snap harder and faster {name}, get your cheek ready."
+      ],
+      "record": [
+        "You've never made it snap that fast {name} — I love it.",
+        "Speed record on the slaps {name}. You almost impress me."
+      ],
+      "tapout": [
+        "Too fast for you this time {name}? No matter, we keep the record.",
+        "You dropped on the speed {name} — you'll come back to it, I'm sure."
+      ]
+    },
+    "lick.streak": {
+      "attempt": [
+        "You're going to lick longer today {name} ~ tongue out, bitch.",
+        "We hold the licking a little more than usual {name}, apply yourself."
+      ],
+      "record": [
+        "You licked it longer than ever {name} — really devoted, it's cute.",
+        "Licking record {name}. Good little bitch."
+      ],
+      "tapout": [
+        "Your tongue's tired {name}? Adorable. We stop there for today.",
+        "Noted {name} — next time you hold longer."
+      ]
+    }
+  },
   "nicknames": {
     "pool": [
       "little bitch",
