@@ -17,6 +17,8 @@ import '../services/tts_service.dart';
 import '../services/user_profile_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/identity_section.dart';
+import '../widgets/language_picker_row.dart';
+import '../widgets/voice_settings_section.dart';
 
 /// Écran Profil : affiche le score de réputation, les stats cumulées,
 /// et la grille des badges débloqués / en cours. Hôte aussi le bloc
@@ -173,6 +175,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _SectionLabel(t.profileCapabilitiesSection),
                 const SizedBox(height: 8),
                 _CapabilitiesBlock(profile: bundle.capabilities),
+              ],
+              const SizedBox(height: 24),
+              _SectionLabel(t.settingsLanguageSection),
+              const SizedBox(height: 8),
+              const LanguagePickerRow(),
+              if (widget.tts != null) ...[
+                const SizedBox(height: 24),
+                _SectionLabel(t.soundsVoiceSection),
+                const SizedBox(height: 8),
+                VoiceSettingsSection(
+                  tts: widget.tts!,
+                  userProfile: widget.userProfile,
+                ),
               ],
               const SizedBox(height: 32),
               _ResetSection(

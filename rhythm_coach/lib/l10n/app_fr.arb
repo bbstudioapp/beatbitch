@@ -774,7 +774,7 @@
   "onboardingStep2Title": "Monte le volume",
   "onboardingStep2Body": "La coach parle bas et les bips sont fins. Mets le média à fond ou utilise un casque/enceinte. L'app n'envoie rien sur Internet.",
   "onboardingStep3Title": "Règle la voix, mets ton prénom",
-  "onboardingStep3Body": "Sur l'écran SONS (icône équaliseur) : règle la voix par défaut (vitesse, timbre) et écoute un exemple. Les coachs de carrière ont leur propre voix figée — seule la voix par défaut, utilisée hors-carrière, est paramétrable.\n\nSur l'écran Profil (icône silhouette) : indique ton prénom et choisis tes surnoms. La coach pourra t'appeler par ton nom.",
+  "onboardingStep3Body": "Sur l'écran Profil (icône silhouette) : indique ton prénom, choisis tes surnoms, ta langue d'interface et règle la voix par défaut (vitesse, timbre) — écoute un exemple. Les coachs de carrière ont leur propre voix figée ; seule la voix par défaut, utilisée hors-carrière, est paramétrable. La coach pourra t'appeler par ton nom.",
   "onboardingNext": "Suivant",
   "onboardingPrevious": "Précédent",
   "onboardingTestVoice": "Tester ma voix",

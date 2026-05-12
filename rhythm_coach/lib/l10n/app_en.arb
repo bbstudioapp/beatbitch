@@ -774,7 +774,7 @@
   "onboardingStep2Title": "Crank the volume",
   "onboardingStep2Body": "The coach speaks low and the beeps are subtle. Push media volume up or use headphones/a speaker. The app sends nothing to the Internet.",
   "onboardingStep3Title": "Set up voice and name",
-  "onboardingStep3Body": "On the SOUNDS screen (equalizer icon): tune the default voice (speed, timbre) and play a sample. Career coaches use their own fixed voices — only the default (non-career) voice is adjustable.\n\nOn the Profile screen (silhouette icon): enter your first name and pick your nicknames. The coach can call you by name.",
+  "onboardingStep3Body": "On the Profile screen (silhouette icon): enter your first name, pick your nicknames, choose your interface language and tune the default voice (speed, timbre) — play a sample. Career coaches use their own fixed voices; only the default (non-career) voice is adjustable. The coach can then call you by name.",
   "onboardingNext": "Next",
   "onboardingPrevious": "Back",
   "onboardingTestVoice": "Test my voice",

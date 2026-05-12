@@ -9,8 +9,6 @@ import '../models/session.dart';
 import '../models/session_step.dart';
 import '../services/ambience_engine.dart';
 import '../services/beep_engine.dart';
-import '../services/coach_phrases_loader.dart';
-import '../services/locale_service.dart';
 import '../services/platform_capabilities.dart';
 import '../services/tts_service.dart';
 import '../services/user_profile_service.dart';
@@ -44,12 +42,6 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
   String? _looping;
   int _bpm = 70;
 
-  // Réglages voix — on initialise avec la valeur par défaut du TtsService.
-  double _rate = TtsService.defaultRate;
-  double _pitch = TtsService.defaultPitch;
-  List<Map<String, String>> _voices = const [];
-  String? _selectedVoiceName;
-
   // Ambiance : asset en cours d'écoute (test page SONS uniquement).
   String? _ambienceTestingAsset;
 
@@ -73,7 +65,6 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
       widget.beep.ensureReady(),
       widget.tts.init(),
     ]).then((_) async {
-      final voices = await widget.tts.listVoicesForLocale(widget.tts.locale);
       final showBar = await _debug.getShowStaminaBar();
       final showTimer = await _debug.getShowTimer();
       final showHumil = await _debug.getShowHumiliationBar();
@@ -87,11 +78,6 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
       if (!mounted) return;
       setState(() {
         _ready = true;
-        _voices = voices;
-        _selectedVoiceName = widget.tts.currentVoiceName ??
-            (voices.isNotEmpty ? voices.first['name'] : null);
-        _rate = widget.tts.currentRate;
-        _pitch = widget.tts.currentPitch;
         _showStaminaBar = showBar;
         _showTimer = showTimer;
         _showHumiliationBar = showHumil;
@@ -124,17 +110,6 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
     if (_looping != null) widget.beep.stop();
     start();
     setState(() => _looping = label);
-  }
-
-  Future<void> _testVoice() async {
-    await widget.tts.stop();
-    final prenom = widget.userProfile.prenom?.trim();
-    if (prenom != null && prenom.isNotEmpty) {
-      await widget.tts.speak(prenom);
-      return;
-    }
-    await widget.tts
-        .speak(CoachPhrasesService.instance.current.testVoicePhrase);
   }
 
   Future<void> _previewAmbience(SessionMode mode) async {
@@ -171,50 +146,6 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                _buildSection(
-                  title: t.soundsVoiceSection,
-                  subtitle: t.soundsVoiceSubtitle,
-                  children: [
-                    _VoicePicker(
-                      voices: _voices,
-                      selectedName: _selectedVoiceName,
-                      onChanged: (name) async {
-                        if (name == null) return;
-                        final voice =
-                            _voices.firstWhere((v) => v['name'] == name);
-                        await widget.tts
-                            .setVoiceByName(name, voice['locale'] ?? 'fr-FR');
-                        setState(() => _selectedVoiceName = name);
-                      },
-                    ),
-                    _LabeledSlider(
-                      label: t.soundsRateLabel,
-                      value: _rate,
-                      min: 0.3,
-                      max: 0.8,
-                      onChanged: (v) {
-                        setState(() => _rate = v);
-                        widget.tts.setRate(v);
-                      },
-                    ),
-                    _LabeledSlider(
-                      label: t.soundsPitchLabel,
-                      value: _pitch,
-                      min: 0.5,
-                      max: 2.0,
-                      onChanged: (v) {
-                        setState(() => _pitch = v);
-                        widget.tts.setPitch(v);
-                      },
-                    ),
-                    _SoundButton(
-                      label: t.soundsTestVoice,
-                      subtitle:
-                          '« ${CoachPhrasesService.instance.current.testVoicePhrase} »',
-                      onTap: _testVoice,
-                    ),
-                  ],
-                ),
                 _buildSection(
                   title: t.soundsAmbienceSection,
                   subtitle: t.soundsAmbienceSubtitle,
@@ -355,20 +286,6 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
                         () => widget.beep.startBiffleDemo(bpm: _bpm),
                       ),
                       onStop: _stopLoop,
-                    ),
-                  ],
-                ),
-                _buildSection(
-                  title: t.settingsLanguageSection,
-                  subtitle: t.settingsLanguageSubtitle,
-                  children: [
-                    _LanguagePicker(
-                      current: LocaleService.instance.current,
-                      onChanged: (locale) async {
-                        await LocaleService.instance.setLocale(locale);
-                        if (!mounted) return;
-                        setState(() {});
-                      },
                     ),
                   ],
                 ),
@@ -872,123 +789,6 @@ class _BpmControl extends StatelessWidget {
   }
 }
 
-class _LabeledSlider extends StatelessWidget {
-  final String label;
-  final double value;
-  final double min;
-  final double max;
-  final ValueChanged<double> onChanged;
-
-  const _LabeledSlider({
-    required this.label,
-    required this.value,
-    required this.min,
-    required this.max,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 64,
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppTheme.textMuted,
-              letterSpacing: 1,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Slider(
-            value: value.clamp(min, max),
-            min: min,
-            max: max,
-            onChanged: onChanged,
-          ),
-        ),
-        SizedBox(
-          width: 44,
-          child: Text(
-            value.toStringAsFixed(2),
-            textAlign: TextAlign.right,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppTheme.textPrimary,
-              fontFeatures: [FontFeature.tabularFigures()],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _VoicePicker extends StatelessWidget {
-  final List<Map<String, String>> voices;
-  final String? selectedName;
-  final ValueChanged<String?> onChanged;
-
-  const _VoicePicker({
-    required this.voices,
-    required this.selectedName,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context);
-    if (voices.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Text(
-          t.soundsNoVoiceDetected,
-          style: const TextStyle(fontSize: 13, color: AppTheme.textMuted),
-        ),
-      );
-    }
-    final value = voices.any((v) => v['name'] == selectedName)
-        ? selectedName
-        : voices.first['name'];
-    return Row(
-      children: [
-        SizedBox(
-          width: 64,
-          child: Text(
-            t.soundsVoiceSection,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppTheme.textMuted,
-              letterSpacing: 1,
-            ),
-          ),
-        ),
-        Expanded(
-          child: DropdownButton<String>(
-            value: value,
-            isExpanded: true,
-            underline: const SizedBox.shrink(),
-            items: voices
-                .map((v) => DropdownMenuItem(
-                      value: v['name'],
-                      child: Text(
-                        '${v['name']}  ·  ${v['locale']}',
-                        style: const TextStyle(fontSize: 13),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ))
-                .toList(),
-            onChanged: onChanged,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _AmbiencePackPicker extends StatelessWidget {
   final List<AmbiencePack> packs;
   final String selectedId;
@@ -1106,62 +906,6 @@ class _AmbiencePreviewButton extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _LanguagePicker extends StatelessWidget {
-  final Locale current;
-  final ValueChanged<Locale> onChanged;
-
-  const _LanguagePicker({required this.current, required this.onChanged});
-
-  String _labelFor(BuildContext context, Locale locale) {
-    final t = AppLocalizations.of(context);
-    return switch (locale.languageCode) {
-      'fr' => t.settingsLanguageFrench,
-      'en' => t.settingsLanguageEnglish,
-      _ => locale.languageCode.toUpperCase(),
-    };
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final value =
-        kSupportedLocales.any((l) => l.languageCode == current.languageCode)
-            ? current.languageCode
-            : kSupportedLocales.first.languageCode;
-    final disabled = kSupportedLocales.length <= 1;
-    return Row(
-      children: [
-        const SizedBox(
-          width: 64,
-          child: Icon(Icons.language, color: AppTheme.accent, size: 20),
-        ),
-        Expanded(
-          child: DropdownButton<String>(
-            value: value,
-            isExpanded: true,
-            underline: const SizedBox.shrink(),
-            onChanged: disabled
-                ? null
-                : (code) {
-                    if (code == null) return;
-                    onChanged(Locale(code));
-                  },
-            items: [
-              for (final l in kSupportedLocales)
-                DropdownMenuItem(
-                  value: l.languageCode,
-                  child: Text(
-                    _labelFor(context, l),
-                    style: const TextStyle(fontSize: 14),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

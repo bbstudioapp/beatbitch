@@ -1542,7 +1542,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get onboardingStep3Body =>
-      'Im SOUNDS-Bildschirm (Equalizer-Symbol): stell die Standardstimme ein (Geschwindigkeit, Klangfarbe) und hör dir ein Beispiel an. Die Karriere-Coaches haben ihre eigene feste Stimme — nur die Standardstimme, die außerhalb der Karriere genutzt wird, ist einstellbar.\n\nIm Profil-Bildschirm (Silhouette-Symbol): gib deinen Vornamen ein und wähl deine Spitznamen. Der Coach kann dich beim Namen nennen.';
+      'Im Profil-Bildschirm (Silhouette-Symbol): gib deinen Vornamen ein, wähl deine Spitznamen, deine Oberflächensprache und stell die Standardstimme ein (Geschwindigkeit, Klangfarbe) — hör dir ein Beispiel an. Die Karriere-Coaches haben ihre eigene feste Stimme; nur die Standardstimme, die außerhalb der Karriere genutzt wird, ist einstellbar. Der Coach kann dich dann beim Namen nennen.';
 
   @override
   String get onboardingNext => 'Weiter';
