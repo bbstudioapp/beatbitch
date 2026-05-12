@@ -1,0 +1,415 @@
+{
+  "lang": "de",
+  "rhythm": {
+    "soft": [
+      "Fang langsam an, kleines Spielzeug.",
+      "Streichel die Eichel mit deinen Lippen, brav.",
+      "Folg dem Rhythmus, du machst das sehr gut.",
+      "Mach ihn schön nass, langsam.",
+      "Leck ihn von oben bis unten ab wie ein liebes kleines Hündchen.",
+      "Das fühlt sich gut an, was du machst… mach weiter.",
+      "Du bist süß, wenn du sanft lutschst."
+    ],
+    "medium": [
+      {"text": "Jetzt tiefer. Brav.", "min_depth": "mid"},
+      "Du fängst an, mich richtig zu nehmen.",
+      "Mach so weiter, du machst mich geil.",
+      "Sabber schön drauf, das ist perfekt.",
+      "Du wirst immer gehorsamer.",
+      "Ich spür, dass ich kommen werde, wenn du so weitermachst."
+    ],
+    "hard": [
+      {"text": "Fick dir die Kehle kaputt, Schlampe.", "min_depth": "throat"},
+      {"text": "Härter. Tiefer. Ich werde kommen.", "min_depth": "mid"},
+      {"text": "Würg dran. Nimm alles.", "min_depth": "throat"},
+      {"text": "Nase an den Eiern bei jedem Stoß.", "min_depth": "full"},
+      "Du willst mein Sperma? Dann lutsch besser.",
+      {"text": "Würg dir die Kehle dran auf. Ich will abladen.", "min_depth": "throat"},
+      "Du bist nichts als ein Schwanzloch.",
+      {"text": "Ich füll dir die Kehle, wenn du so weitermachst.", "min_depth": "throat"},
+      "Wein, sabber, aber hör nicht auf."
+    ],
+    "boost": [
+      "Wir werden schneller, das ist der Endspurt — bring mich zum Abspritzen.",
+      "Endspurt, Schlampe. Lutsch schnell, ich lad gleich ab.",
+      "Gib alles, ich will jetzt kommen.",
+      "Schneller, härter, jetzt ist der Moment.",
+      "Letzte Gerade. Fick dich richtig dran.",
+      "Jetzt komm ich. Halt dieses Tempo bis zum Schluss.",
+      "Mach weiter, ich komme.",
+      "Hör nicht auf, ich komme gleich.",
+      "Halt das Tempo, ich bin kurz davor zu kommen.",
+      "Das ist gut, das ist gut, ich lad gleich ab."
+    ],
+    "finale": [
+      "Mach weiter, ich komme dir in den Mund.",
+      "Lass nicht los, ich komme.",
+      "Schluck ihn schön runter, ich lad ab.",
+      "Halt ihn tief drin, ich komme.",
+      "Da, ich spritz ab — hör nicht auf."
+    ]
+  },
+  "lick": {
+    "soft": [
+      "Leck sanft um die Eichel herum, brav.",
+      "Streichel ihn mit deiner Zunge, kleines Spielzeug.",
+      "Du machst das sehr gut.",
+      "Leck langsam, das mag ich."
+    ],
+    "medium": [
+      "Leck die ganze Länge ab wie ein braves Hündchen.",
+      "Bedeck ihn schön mit Spucke.",
+      "Du machst mir Lust zu kommen mit deiner Zunge.",
+      "Schleck ihn überall ab, das ist perfekt."
+    ],
+    "hard": [
+      "Leck härter, Schlampe.",
+      "Sabber drauf wie eine richtige Hure.",
+      "Ich werde kommen, wenn du so weiterleckst.",
+      "Leck jeden Zentimeter, kleine Spermaschlampe."
+    ],
+    "finale": [
+      "Leck weiter, ich komme dir auf die Zunge.",
+      "Halt die Zunge raus, ich lad ab.",
+      "Leck ihn schön ab, ich komme."
+    ]
+  },
+  "biffle": {
+    "soft": [
+      "Schlag dir sanft damit ins Gesicht, brav.",
+      "Nimm ihn schön entgegen."
+    ],
+    "medium": [
+      "Steck mehr ein, härter.",
+      "Bleib offen, kleines Spielzeug."
+    ],
+    "hard": [
+      "Nimm das in die Fresse.",
+      "Ich mal dir das Gesicht an, wenn du so weitermachst.",
+      "Bleib schön offen, ich werde kommen.",
+      "Du bist nichts als ein Fickloch."
+    ],
+    "finale": [
+      "Bleib schön offen, ich mal dir das Gesicht an.",
+      "Steck die letzten ein, ich komme.",
+      "Nimm sie weiter entgegen, ich spritz ab."
+    ]
+  },
+  "hold": {
+    "soft": [
+      "Halt ihn tief drin. Brav.",
+      "Bleib da, kleines Spielzeug."
+    ],
+    "medium": [
+      "Bleib tief. Du machst das sehr gut.",
+      "Halt ihn schön tief drin."
+    ],
+    "hard": [
+      {"text": "Bleib tief drin, Schlampe. Ich werde kommen.", "min_depth": "throat"},
+      {"text": "Nase angedrückt. Beweg dich bloß nicht.", "min_depth": "full"},
+      "Du kriegst mein Sperma, wenn du durchhältst.",
+      {"text": "Würg dran, ich bin nah dran.", "min_depth": "throat"}
+    ],
+    "finale": [
+      {"text": "So tief wie's geht. Halt durch bis zum Schluss.", "min_depth": "throat"},
+      {"text": "Bleib eingerammt, ich werde kommen.", "min_depth": "throat"},
+      {"text": "Nase angedrückt. Letzte Anstrengung.", "min_depth": "full"},
+      "Halt ihn schön, du wirst dir meinen Saft verdienen."
+    ]
+  },
+  "breath": {
+    "any": [
+      "Atme, Schlampe. Schnapp dir Luft.",
+      "Atme tief ein.",
+      "Atme aus. Du warst brav.",
+      "Atme schön, du hast es verdient.",
+      "Beruhig dich… ich bin noch nicht fertig mit dir."
+    ],
+    "fake_breath": [
+      "Eine Sekunde. Mehr nicht.",
+      "Schnell einatmen, weiter geht's.",
+      "Du glaubst, wir hören auf? Los.",
+      "Schnell, zwei Sekunden, nicht mehr.",
+      "Du träumst von einer Pause? Nein.",
+      "Reiß dich zusammen, ich bin nicht fertig.",
+      "Einmal durchatmen, und dann weiter.",
+      "Du dachtest, du hast dir eine echte Pause verdient?"
+    ]
+  },
+  "beg": {
+    "soft": [
+      "Bitt brav um mein Sperma.",
+      "Bettle darum, dass ich dich vollmache."
+    ],
+    "medium": [
+      "Bettle mich ordentlich an.",
+      "Sag mir, dass du meinen Saft willst."
+    ],
+    "hard": [
+      "Bettle um mein Sperma wie eine Hündin.",
+      "Bettle darum, dass ich dir in die Kehle ablade.",
+      "Wiederhol: ich will dein Sperma, bitte.",
+      "Fleh mich an, dich vollzumachen."
+    ],
+    "insistent": [
+      "Du willst meinen Saft? Dann bettle besser.",
+      "Bettle wie die kleine Spermaschlampe, die du bist."
+    ]
+  },
+  "hand": {
+    "soft": [
+      "Wichs ihn sanft, brav.",
+      "Streichel ihn in Ruhe, lass dir Zeit.",
+      "Gleit mit deiner Handfläche drumherum, ganz sanft.",
+      "Halt ihn schön in deiner Hand, massier ihn ganz zart."
+    ],
+    "medium": [
+      "Wichs mich weiter so, lass nicht los.",
+      "Los, wir machen das Tempo mit der Hand schneller.",
+      "Wichs mich gleichmäßig, halt die Kadenz.",
+      "Gute Hand, genau so."
+    ],
+    "hard": [
+      "Wichs mich hart, ich will dir ins Gesicht kommen.",
+      "Schneller mit der Hand, ich bin nah dran.",
+      "Wichs mich richtig durch, ich will abladen.",
+      "Du spürst, dass ich kommen werde, wenn du so weitermachst.",
+      "Druck zu, schneller, ich bin ganz nah dran."
+    ],
+    "boost": [
+      "Wichs mich richtig durch für den Endspurt.",
+      "Hör nicht auf, ich werde kommen.",
+      "Schneller mit der Hand, bring mich zum Abspritzen.",
+      "Mach weiter, ich komme.",
+      "Gib alles, was dir noch bleibt, wichs mich zu Ende.",
+      "Jetzt ist es so weit. Wichs mich schnell, ich komme gleich."
+    ],
+    "finale": [
+      "Mach so weiter, ich komme dir in die Hand.",
+      "Lass nicht los, ich komme.",
+      "Halt das Tempo, mach den Mund auf, ich spritz gleich ab.",
+      "Da, ich komme — wichs mich bis zum Schluss.",
+      "Bleib da, halt ihn schön — ich lad ab."
+    ]
+  },
+  "freestyle": {
+    "any": [
+      "Du bist dran. Zeig mir, was du kannst.",
+      "Überrasch mich, Schlampe."
+    ]
+  },
+  "encore": [
+    "Noch mehr? Du unersättliche kleine Hündin. Halt dich fest, diesmal geh ich weiter.",
+    "Du willst noch mehr? Gut. Wir machen das nochmal, und diesmal gibst du noch mehr.",
+    "Du bist wirklich nie satt. Mach den Mund auf, wir fangen von vorn an — härter.",
+    "Nicht genug für dich? Na schön, kleine Spermaschlampe. Diese Session wird dich zeichnen.",
+    "Noch mehr. Natürlich. Los, wir legen wieder los, und du wirst mich vor dem Ende anbetteln.",
+    "Du willst mehr? Perfekt. Diesmal will ich dich brechen sehen."
+  ],
+  "progress": {
+    "25": [
+      "Du fängst gut an, kleines Spielzeug.",
+      "Das ist gut, was du machst."
+    ],
+    "50": [
+      "Du machst mich steinhart.",
+      "Mach so weiter, du bringst mich zum Kommen."
+    ],
+    "75": [
+      "Ich bin nah dran… hör nicht auf.",
+      "Du kriegst bald mein Sperma."
+    ],
+    "90": [
+      "Ich werde kommen, Schlampe.",
+      "Mach deine Kehle bereit, ich lad gleich ab.",
+      "Du wirst alles schlucken, bis zum letzten Tropfen."
+    ]
+  },
+  "congrats": [
+    "Gut gemacht, kleines Spielzeug.",
+    "Du warst eine sehr brave Schlampe.",
+    "Das ist gut… du verdienst mein Sperma beim nächsten Mal.",
+    "Du hast mich heute schön leergemacht.",
+    "Bravo, meine kleine Spermaschlampe.",
+    "Session beendet. Du hast dir die Ruhe verdient."
+  ],
+  "intros": [
+    "Auf die Knie, kleine Schlampe. Du weißt, was ich will. Bestätige, wenn du bereit bist.",
+    "Du wirst mich lutschen, bis ich dir die Kehle vollmache. Bereit?"
+  ],
+  "finish_orgasm": [
+    "So, leergemacht wie eine brave Hure.",
+    "Du darfst jetzt kommen. Du hast es verdient.",
+    "Es ist vorbei. Du hast mir alles gegeben.",
+    "Gut gemacht, kleine Spermaschlampe.",
+    "Du darfst dich ausruhen. Für dieses Mal."
+  ],
+  "final_announce": {
+    "hand_to_lick": [
+      "Streck deine Zunge raus, ich komme drauf.",
+      "Zunge raus, kleines Spielzeug, ich komme gleich.",
+      "Halt mir deine Zunge hin, da lad ich ab."
+    ],
+    "hand_to_biffle": [
+      "Mach dein Gesicht bereit.",
+      "Halt dein Gesicht hin, ich mal dich an.",
+      "Halt mir deine Fresse hin, ich spritz drauf."
+    ],
+    "hand_to_hold": [
+      "Mach den Mund auf, halt ihn da, wo ich ihn hinsetze.",
+      "Mach auf, und beweg dich nicht mehr.",
+      "Lippen drum, erstarr, ich lad da rein ab."
+    ],
+    "rhythm_to_hand": [
+      "Werd langsamer, mach mich mit der Hand fertig.",
+      "Stopp. Deine Hände erledigen den Rest.",
+      "Lass deinen Mund los, wichs mich zu Ende."
+    ],
+    "rhythm_to_lick": [
+      "Stopp. Gib mir deine Zunge, da komme ich.",
+      "Werd langsamer, Zunge raus, ich lad ab.",
+      "Zieh dich zurück, streck die Zunge raus, ich komme drauf."
+    ],
+    "rhythm_to_biffle": [
+      "Nimm ihn raus, mach dein Gesicht bereit.",
+      "Stopp. Halt mir dein Gesicht hin, ich spritz drauf.",
+      "Zieh dich zurück, ich will dir die Fresse anmalen."
+    ],
+    "rhythm_to_hold": [
+      "Stopp. Beweg dich nicht mehr, halt ihn genau da, wo er ist.",
+      "Stopp. Mach auf, und erstarr.",
+      "Zieh dich zurück, halt ihn zwischen deinen Lippen, beweg dich nicht mehr."
+    ]
+  },
+  "final_action": {
+    "hand": [
+      "Mach dich bereit, ich lad ab.",
+      "Da, ich komme, wichs mich bis zum Schluss.",
+      "Mach weiter, härter, ich spritz ab."
+    ],
+    "lick": [
+      "Streck deine Zunge raus.",
+      "Zunge raus, beweg dich nicht mehr.",
+      "Zunge raus, fang ihn auf."
+    ],
+    "biffle": [
+      "Halt dein Gesicht hin.",
+      "Halt deine Fresse hin.",
+      "Gesicht her, nimm alles."
+    ],
+    "hold_tip": [
+      "Halt ihn auf der Zunge.",
+      "Mach auf, Zunge raus, warte.",
+      "Spitze auf der Zunge, erstarr."
+    ],
+    "hold_head": [
+      "Lippen um die Eichel, beweg dich nicht mehr.",
+      "Halt ihn zwischen deinen Lippen.",
+      "Mach den Mund auf, halt ihn da."
+    ],
+    "hold_mid": [
+      "Schluck alles.",
+      "Halt ihn tief drin, erstarr.",
+      "Nimm alles mitten in den Mund, beweg dich nicht mehr."
+    ],
+    "hold_throat": [
+      "Schluck alles, bis ganz nach unten.",
+      "Halt ihn in deiner Kehle, beweg dich nicht mehr.",
+      "Tief in der Kehle, trink alles."
+    ],
+    "hold_full": [
+      "Trink alles bis zum Schluss, beweg dich nicht mehr.",
+      "Schluck alles, ganz tief, bis zum letzten Tropfen.",
+      "Halt ihn ganz tief drin, erstarr."
+    ]
+  },
+  "post_final_beg": [
+    "Jetzt bedank dich laut bei mir.",
+    "Sag's, sag mir Danke für das, was ich dir gerade gegeben hab.",
+    "Bettle mich um mehr an. Fleh.",
+    "Sag mir, wie sehr du das liebst.",
+    "Bettle mich an, dich zu behalten. Laut.",
+    "Wiederhol: „Danke, dass du mich leergemacht hast.“",
+    "Bitt mich, wiederzukommen und dir den Mund zu ficken.",
+    "Sag mir, was du für mich bist.",
+    "Versprich mir, dass du morgen wieder darum bettelst.",
+    "Bitt mich um Verzeihung, dass du mich zu schnell zum Kommen gebracht hast."
+  ],
+  "swallow_order": [
+    "Schluck alles. Jetzt.",
+    "Schluck mich runter. Auf einmal.",
+    "Schluck, was du im Mund hast. Ohne wieder auszuspucken.",
+    "Schluck, mach den Mund zu, mach es sauber.",
+    "Zu viel Spucke. Schluck alles, ich will es hören.",
+    "Schluck alles, lass keinen Tropfen aus.",
+    "Schluck. Alles geht runter.",
+    "Schluck, Schlampe. Du weißt, warum.",
+    "Mach deinen Mund leer. Schluck alles."
+  ],
+  "post_final_lick": [
+    "Leck mich sauber. Kein Tropfen vergessen.",
+    "Mach mich mit deiner Zunge sauber. Schön ordentlich.",
+    "Wasch mich mit deiner Zunge ab. Langsam.",
+    "Leck, um die Arbeit zu beenden, Schlampe.",
+    "Sammel alles ein. Mit der Zunge. Mogel nicht.",
+    "Deine Zunge, überall. Mach mich schön sauber.",
+    "Polier ihn schön mit deiner Zunge. Du kennst deinen Job.",
+    "Leck, bis ich trocken bin. Das ist deine Rolle.",
+    "Putz weg, was du aus mir rausgespritzt hast. Brave.",
+    "Leck, und schluck den Rest. Keine Verschwendung."
+  ],
+  "post_final": [
+    "So, das ist gut. Beruhig dich jetzt.",
+    "Sehr gut. Bleib da, genieß es.",
+    "Ganz sanft jetzt. Du hast mir alles gegeben.",
+    "Gut gemacht. Genieß das Ende.",
+    "Ganz langsam, wir kommen zusammen runter.",
+    "Bleib ruhig, lass dich erholen.",
+    "Mach ganz langsam weiter, lass noch nicht gleich los.",
+    "Leck ihn noch ein bisschen ab, mach ihn schön sauber.",
+    "Behalt ihn im Mund, genieß, was ich dir gegeben hab.",
+    "Brave. Bleib da, ganz ruhig.",
+    "Genau so, langsam. Du hast mich schön zum Kommen gebracht.",
+    "Atme. Du hast es dir verdient.",
+    "So ist's recht, meine Spermaschlampe. Hör sanft auf.",
+    "Streichel ihn noch ein bisschen, ganz zärtlich. Tu ihm gut.",
+    "Behalt mich noch einen Moment in dir. Spürst du, was du gemacht hast?",
+    "Du warst perfekt. Genieß es, wir haben Zeit.",
+    "Langsam, lass ihn nicht zu schnell abkühlen.",
+    "Leck mich weiter ab, genieß den Geschmack.",
+    "Nicht so schnell, bleib an ihm dran. Das ist deine Trophäe.",
+    "Brave Schlampe. Genieß deine Belohnung.",
+    "Noch ein paar Sekunden mit mir. Du verdienst es.",
+    "Bleib brav, du hast mich so schön gelutscht.",
+    "Du darfst langsamer werden, meine Hübsche.",
+    "Entspann dich jetzt. Es ist vorbei, du hast alles genommen."
+  ],
+  "transitions": {
+    "speed_up": [
+      "Schneller, Schlampe.",
+      "Schneller.",
+      "Los, schneller!",
+      "Schneller, ich will kommen.",
+      "Beweg deinen Kopf schneller."
+    ],
+    "speed_down": [
+      "Werd langsamer, lass es dauern.",
+      "Langsamer, ich will dich auskosten.",
+      "Sanft jetzt.",
+      "Drossel das Tempo ein bisschen."
+    ],
+    "depth_up": [
+      "Tiefer.",
+      "Geh weiter runter.",
+      "Noch tiefer.",
+      "Stoß dich weiter rein.",
+      "Geh ganz bis nach unten."
+    ],
+    "depth_down": [
+      "Komm ein bisschen hoch.",
+      "Geh eine Stufe hoch.",
+      "Weniger tief, so.",
+      "Bleib weiter oben."
+    ]
+  }
+}
