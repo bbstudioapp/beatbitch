@@ -243,6 +243,7 @@ class _SessionScreenState extends State<SessionScreen>
       capabilityProfile: widget.capabilityProfile,
       unlockedKeys: widget.unlockedKeys ?? const {},
       includeHand: widget.includeHand,
+      isQuickie: widget.isQuickie,
     );
     _controller.onMilestoneRetry = widget.onMilestoneRetry;
     if (widget.isCareer) {

@@ -100,6 +100,14 @@ class SessionController extends ChangeNotifier {
   /// pour la séance.
   final bool _includeHand;
 
+  /// Vrai si la séance est une **session bâclée** (mode quickie). Passé à
+  /// `CapabilityService.commit` au `_finish` : le `best` du profil de capacités
+  /// est enregistré normalement mais la cible adaptative `comfort` n'est pas
+  /// recalibrée (cf. §2 de la spec — une séance bâclée est de la niaque
+  /// ponctuelle, pas un palier consolidé). Sans effet hors carrière (pas de
+  /// tracker → pas de `commit`).
+  final bool _isQuickie;
+
   final HumiliationEngine _humiliation = HumiliationEngine();
   HumiliationEngine get humiliation => _humiliation;
   final ObedienceEngine _obedience = ObedienceEngine();
@@ -322,6 +330,7 @@ class SessionController extends ChangeNotifier {
     CapabilityProfile? capabilityProfile,
     Set<UnlockKey> unlockedKeys = const {},
     bool includeHand = true,
+    bool isQuickie = false,
   })  : _session = session,
         _tts = tts,
         _beep = beep,
@@ -341,7 +350,8 @@ class SessionController extends ChangeNotifier {
         _capabilityOverloadAxis = capabilityOverloadAxis,
         _capabilityProfile = capabilityProfile,
         _unlockedKeys = unlockedKeys,
-        _includeHand = includeHand {
+        _includeHand = includeHand,
+        _isQuickie = isQuickie {
     _beep.onBeat = _handleBeat;
   }
 
@@ -1172,7 +1182,7 @@ class SessionController extends ChangeNotifier {
       // qu'au ratchet ↓).
       if (capReport != null && !capReport.isEmpty) {
         await _capabilities.commit(capReport,
-            sessionIndex: snap.sessionsCompleted);
+            sessionIndex: snap.sessionsCompleted, quickie: _isQuickie);
       }
     }
 

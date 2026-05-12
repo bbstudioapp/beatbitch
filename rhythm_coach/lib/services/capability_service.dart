@@ -213,6 +213,16 @@ class CapabilityRegulator {
   /// attribué, ou débordement de salive pour `noswallow`) → ratchet ↓ dur ;
   /// sinon un `sessionCeiling` non nul ne fait qu'un soft-cap.
   /// [sessionIndex] : index de la session courante (horloge de decay).
+  /// [quickie] : la session est une **séance bâclée** (§2). Dans ce cas le
+  /// `best` est mis à jour normalement (l'exploit a eu lieu, il compte pour
+  /// l'affichage / le classement), mais la **cible adaptative `comfort` n'est
+  /// pas recalibrée** : ni ratchet ↑ sur réussite surchargée, ni ratchet ↓ /
+  /// soft-cap sur fail, et `successRate` est figé. Une séance bâclée est de la
+  /// niaque ponctuelle, pas un palier consolidé — la session *normale* suivante
+  /// ne doit pas repartir d'un palier atteint en sprint, et un tap-out en
+  /// quickie ne saccage pas le `comfort` lifetime (le verrou se limite à la
+  /// session, porté par les `sessionCeilings` du tracker). Le decay « use it or
+  /// lose it » des axes *non sollicités* reste actif (orthogonal au quickie).
   static CapabilityAxisState regulate({
     required CapabilityAxis axis,
     required CapabilityAxisState prev,
@@ -220,6 +230,7 @@ class CapabilityRegulator {
     double? sessionCeiling,
     bool hardNegative = false,
     required int sessionIndex,
+    bool quickie = false,
   }) {
     final bool isMinimize = axis.recordKind == CapabilityRecordKind.minimize;
     final bool isAccumulate =
@@ -271,6 +282,22 @@ class CapabilityRegulator {
         (reached != null) ? sessionIndex : prev.lastSeenSession;
     final double bestRef = newBest ?? comfort;
     final double absFloor = _absoluteFloor(axis);
+
+    // ── Séance bâclée : on enregistre l'exploit, on ne recalibre pas la cible ──
+    // `best` et `lastSeenSession` (si record propre) sont à jour ; `comfort` et
+    // `successRate` restent ceux d'avant la séance. Un fail/tap-out en quickie
+    // ne porte aucun carry-over lifetime (le verrou de session est dans les
+    // `sessionCeilings` du tracker, pas ici). Cas `reached == null &&
+    // sessionCeiling == null` (axe pas sollicité) : on laisse la cascade ↓
+    // appliquer le decay normal — il est indépendant du quickie.
+    if (quickie && (reached != null || sessionCeiling != null)) {
+      return CapabilityAxisState(
+        best: newBest,
+        comfort: comfort,
+        successRate: sr,
+        lastSeenSession: lastSeen,
+      );
+    }
 
     if (sessionCeiling != null) {
       // Signal négatif (fail / débordement).
@@ -427,9 +454,13 @@ class CapabilityService {
   /// surchargé relativement à son `comfort` au moment du fail, cf. §6), ou
   /// `null` si la séance n'a connu aucun fail « parlant » — utile au coach
   /// (Phase 4) ; le ratchet, lui, est déjà appliqué en interne.
+  ///
+  /// [quickie] : séance bâclée → `best` enregistré normalement mais `comfort` /
+  /// `successRate` non recalibrés (cf. `CapabilityRegulator.regulate`).
   Future<CapabilityAxis?> commit(
     SessionCapabilityReport report, {
     required int sessionIndex,
+    bool quickie = false,
   }) async {
     if (report.isEmpty) return null;
     final prefs = await SharedPreferences.getInstance();
@@ -467,6 +498,7 @@ class CapabilityService {
         sessionCeiling: ceiling,
         hardNegative: hard,
         sessionIndex: sessionIndex,
+        quickie: quickie,
       );
       if (next.comfort == null || next.best == null) continue;
       _writeState(
