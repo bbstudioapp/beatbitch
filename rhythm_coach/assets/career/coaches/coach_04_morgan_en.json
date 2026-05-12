@@ -5,30 +5,245 @@
   "publicBio": "Direct, frontal, no detours. Works long peaks and depth with no concession.",
   "phrases": {
     "rhythm": {
+      "soft": [
+        "Get to work {name}.",
+        "Start. And don't fake it {name}.",
+        "Move {name}. That's what you're here for.",
+        "Follow the rhythm. No discussion {name}.",
+        "Come on {name}. Warm up your throat, you're going to need it."
+      ],
+      "medium": [
+        {"text": "Deeper {name}. You're not here to stay on the surface.", "min_depth": "mid"},
+        "Faster {name}. You can take that.",
+        {"text": "Down. More. There {name}.", "min_depth": "mid"},
+        "Hold this rhythm {name}. I don't want to see one second of slack.",
+        {"text": "You're starting to be useful {name}. Continue.", "min_depth": "mid"}
+      ],
       "hard": [
-        "Wreck your throat {name}.",
-        "Deeper, cock hole.",
-        "Take it all without complaining."
+        {"text": "Wreck your throat {name}.", "min_depth": "throat"},
+        {"text": "Deeper, cock hole.", "min_depth": "mid"},
+        "Take it all without complaining.",
+        {"text": "Down to the balls {name}. And you stay.", "min_depth": "full"},
+        {"text": "Faster, deeper. You wanted this {name}.", "min_depth": "throat"},
+        "You take it. Period. No break {name}.",
+        {"text": "Choke on it {name}. That's the deal.", "min_depth": "throat"}
+      ]
+    },
+    "lick": {
+      "soft": [
+        "Lick {name}. Wet it.",
+        "Get your tongue out {name}. Use it.",
+        "With the tip of your tongue, and apply yourself {name}."
+      ],
+      "medium": [
+        "The whole length {name}. Drool on it.",
+        "Harder {name}. I want it filthy.",
+        "Lick it like you've got something to prove {name}."
+      ],
+      "hard": [
+        "Cover it with spit, slut. All of it.",
+        "Lick it properly {name}. Not halfway."
+      ]
+    },
+    "biffle": {
+      "soft": [
+        "Slap your face {name}. Go.",
+        "Sharp strikes on your cheek {name}.",
+        "Make it snap {name}. No modesty."
+      ],
+      "medium": [
+        "Harder {name}. Let it resonate.",
+        "Wreck your face with it, slut.",
+        "More {name}. More violent."
+      ],
+      "hard": [
+        "Massacre your face {name}.",
+        "Make it snap until it stings, cock hole.",
+        "Harder! You wanted to play with the big girls {name}."
       ]
     },
     "hold": {
+      "soft": [
+        {"text": "Keep it. Don't move {name}.", "max_depth": "mid"},
+        "Hold the position {name}. It's not negotiable.",
+        {"text": "Deep and still {name}.", "min_depth": "mid", "max_depth": "throat"}
+      ],
+      "medium": [
+        {"text": "Lower. And you hold {name}.", "min_depth": "mid"},
+        {"text": "Stay buried there {name}. Breathe through your nose or choke.", "min_depth": "mid", "max_depth": "throat"},
+        {"text": "You don't come up before my signal {name}.", "min_depth": "throat"}
+      ],
       "hard": [
-        "Stay deep. Suffocate on it {name}.",
-        "Nose against the balls. Hold."
+        {"text": "Stay deep. Suffocate on it {name}.", "min_depth": "throat"},
+        {"text": "Nose against the balls. Hold.", "min_depth": "full"},
+        {"text": "It burns? Good. You don't move {name}.", "min_depth": "throat"}
       ],
       "finale": [
-        "Stay buried to the end {name}."
+        {"text": "Stay buried to the end {name}.", "min_depth": "mid"},
+        {"text": "Last thing: you hold deep until the signal {name}.", "min_depth": "throat"},
+        "Choke on it if you have to {name}. But you hold."
+      ]
+    },
+    "breath": {
+      "soft": [
+        "Breathe. You've got ten seconds {name}.",
+        "Catch your breath {name}. It won't last.",
+        "Inhale {name}. What's next will be worse.",
+        "Enjoy it, slut. Then we start again."
+      ]
+    },
+    "beg": {
+      "soft": [
+        "Ask. Out loud: \"I want more {coach}\".",
+        "Beg {name}. I want to hear it.",
+        "Tell me why you want more, slut.",
+        "Ask me to continue {name}. Convince me."
+      ],
+      "medium": [
+        "Repeat: \"I need your cock {coach}\".",
+        "Ask \"deeper {coach}\". Loud.",
+        "Beg properly, cock hole. Otherwise I stop.",
+        "Say my name while begging, {coach}."
+      ]
+    },
+    "freestyle": {
+      "soft": [
+        "Go on {name}. Show me what you've got.",
+        "Do what you want for a moment {name}. You'd better not go soft."
+      ]
+    },
+    "hand": {
+      "soft": [
+        "With your hand {name}. Keep the rhythm.",
+        "Stroke it. Steady {name}.",
+        "Clean strokes {name}. You don't let go."
+      ],
+      "medium": [
+        "Quicker with your hand {name}. Keep the pace.",
+        "You don't slow down {name}. Continue."
       ]
     }
   },
+  "randomComments": [
+    "You take it {name}. That's all I ask.",
+    "No slack {name}.",
+    "Continue {name}. You're not tired, you're lazy.",
+    "Deeper. Always deeper {name}.",
+    "You're useful right now {name}.",
+    "Move {name}.",
+    "I don't want to see one second of break.",
+    "You hold, or you break {name}. Choose.",
+    "Correct for now {name}.",
+    "Take it {name}."
+  ],
   "intros": [
     "I'm Morgan. I won't be soft on you {name}.",
-    "Get your throat ready. I'm going to break you today."
+    "Get your throat ready. I'm going to break you today.",
+    "Morgan. Put your phone down. From now on, you take it {name}.",
+    "Today we work long peaks and depth {name}. No concession."
   ],
   "congrats": [
     "You held on. Not bad for a hole.",
-    "Correct {name}. You're starting to be useful."
+    "Correct {name}. You're starting to be useful.",
+    "You took it without breaking {name}. That's something.",
+    "You didn't slack off once {name}. Good."
   ],
+  "encore": [
+    "More? Obviously. A hole like you always asks for more {name}.",
+    "You want more {name}? Then you're going to get more."
+  ],
+  "progress": {
+    "25": [
+      "You're warmed up {name}. Now the real work begins.",
+      "You're catching the rhythm {name}. Hold it."
+    ],
+    "50": [
+      "You're useful {name}.",
+      "No break so far {name}. Good."
+    ],
+    "75": [
+      "You're approaching the wall {name}. You don't get past it by stopping.",
+      "It hurts {name}? That's exactly what we want."
+    ],
+    "90": [
+      "Last effort {name}. You don't break now.",
+      "Give it all {name}. There's no after."
+    ]
+  },
+  "branchPhrases": {
+    "profondeur": {
+      "soft": [
+        "Your throat is made to take it {name}. Use it.",
+        "Lower {name}. That's where you're worth something."
+      ],
+      "medium": [
+        "You go down well {name}. Lower still.",
+        "Your depth is progressing {name}. Push it all the way."
+      ],
+      "hard": [
+        "Down to the balls {name}. That's your worth.",
+        "A throat like yours gets wrecked, not spared {name}."
+      ]
+    },
+    "resilience": {
+      "soft": [
+        "You take it without flinching {name}. That's your thing.",
+        "You know how to suffer {name}. That's useful."
+      ],
+      "medium": [
+        "You take everything I give you {name}. Good.",
+        "You don't break {name}. Keep taking it."
+      ],
+      "hard": [
+        "Indestructible {name}. Prove it again.",
+        "You take what would make others falter {name}. Stay like that."
+      ]
+    }
+  },
+  "progressPhrases": {
+    "rhythm.depth_max": {
+      "attempt": [
+        "Today you go deeper than usual {name}. No discussion.",
+        "We're going one notch lower in your throat {name}. You're ready, whether you know it or not."
+      ],
+      "record": [
+        "You went deeper than ever {name}. That's the level I expect now.",
+        "New depth floor {name}. Good. Keep digging."
+      ],
+      "tapout": [
+        "You went as far as your body allowed today {name}. We log it. The rest, later.",
+        "Too deep this time {name}. That's a limit — we push it back, but not today."
+      ]
+    },
+    "gorge.apnee_streak": {
+      "attempt": [
+        "Today you hold the apnea longer {name}. No air, and no panic.",
+        "We're going to hold deep a little more than usual {name}. Breathe before, you won't have any during."
+      ],
+      "record": [
+        "You held without air longer than ever {name}. Solid.",
+        "Apnea record {name}. You take what few can take."
+      ],
+      "tapout": [
+        "You still held a good while {name}. Your lungs said stop — we listen to that. For this once.",
+        "Noted {name}. Next time you hold longer without air."
+      ]
+    },
+    "effort.no_breath_streak": {
+      "attempt": [
+        "Today we chain longer before your break {name}. No gift.",
+        "You breathe less tonight {name}. That's how we build your resilience."
+      ],
+      "record": [
+        "You chained without a break longer than ever {name}. You're tougher than you think.",
+        "Effort-without-breath record {name}. Good. That's taking it."
+      ],
+      "tapout": [
+        "You breathe {name}. You needed it — I don't like it, but I note it.",
+        "It's okay {name}. You stop there on the breath. You held far."
+      ]
+    }
+  },
   "nicknames": {
     "pool": [
       "cock hole",
