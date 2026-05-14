@@ -280,19 +280,37 @@ class MilestoneService extends ChangeNotifier {
   /// `requiresCapability` (si [capabilityProfile] est fourni). Triées
   /// selon les mêmes critères que `pendingFor`.
   ///
-  /// **Tri** (cas standard, `allocation != null`) : `sortScore` desc, puis
-  /// `humilRequired` asc, puis id alpha. Le `sortScore` combine :
-  /// - `+branchScore` (points investis dans les branches du milestone) —
-  ///   privilégie le match spé,
-  /// - `+_agingWeight × candidacyAge` (vieillissement) — remonte
-  ///   progressivement les transverses ou milestones hors-spé candidates
-  ///   depuis longtemps mais jamais choisies,
-  /// - `−_lowestBranchWeight × lowestBranchPoints` (tie-break variété) —
-  ///   à match comparable, favorise la branche la moins investie.
+  /// **Tri** (placement `body`, cas standard `allocation != null`) :
+  /// 1. **`overdue` desc** — une milestone est *overdue* quand
+  ///    `playerLevel - (minLevel - branchAdvance) ≥ 3`. Les overdue
+  ///    passent en tête, peu importe `branchScore`/aging : si la joueuse
+  ///    a dépassé le palier d'apparition de 3 niveaux sans qu'on lui
+  ///    serve la milestone, on rattrape le retard avant tout. Le
+  ///    `branchAdvance` est intégré dans la formule pour ne pas cumuler
+  ///    deux accélérateurs (la spé a déjà rapproché la milestone).
+  /// 2. Si les deux candidats sont overdue : `lag` desc (la plus en
+  ///    retard d'abord), puis `humilRequired` asc, puis id alpha.
+  /// 3. À l'heure : `sortScore` desc, puis `humilRequired` asc, puis
+  ///    id alpha. Le `sortScore` combine :
+  ///    - `+branchScore` (points investis dans les branches du milestone)
+  ///      — privilégie le match spé,
+  ///    - `+_agingWeight × candidacyAge` (vieillissement) — remonte
+  ///      progressivement les transverses ou milestones hors-spé candidates
+  ///      depuis longtemps mais jamais choisies,
+  ///    - `−_lowestBranchWeight × lowestBranchPoints` (tie-break variété)
+  ///      — à match comparable, favorise la branche la moins investie.
   ///
   /// **Mode hérité** (`allocation == null`) : pas de vieillissement,
-  /// `branchScore = 0` partout, le tri retombe sur `humilRequired` asc
-  /// puis id alpha (identique au comportement pré-aging).
+  /// `branchScore = 0` et `branchAdvance = 0` partout. La règle *overdue*
+  /// reste appliquée sur le `minLevel` brut (pas de spé pour rattraper
+  /// par avance, donc on rattrape par-derrière au lieu) ; à l'heure le
+  /// tri retombe sur `humilRequired` asc puis id alpha (identique au
+  /// comportement pré-aging).
+  ///
+  /// **Placement `finalApotheose`** : la règle *overdue* ne s'applique
+  /// pas — les finals ont leur propre chaînage `requires` (succession
+  /// dramaturgique), forcer un final juste parce qu'il est minLevel-en-
+  /// retard casserait la progression de l'apothéose.
   ///
   /// La première de la liste est celle qui sera effectivement insérée
   /// dans la prochaine session générée. Liste vide si aucune candidate.
@@ -398,23 +416,59 @@ class MilestoneService extends ChangeNotifier {
         .where(capabilityOk)
         .toList();
     if (candidates.isEmpty) return const [];
-    if (allocation == null) {
-      // Mode hérité : pas de score composite, on retombe sur l'ordre
-      // historique `humilRequired` asc puis id alpha. `branchScore` = 0
-      // partout aurait suffi mais on évite l'allocation d'un double inutile.
-      candidates.sort((a, b) {
-        final byHumil = a.humilRequired.compareTo(b.humilRequired);
-        if (byHumil != 0) return byHumil;
-        return a.id.compareTo(b.id);
-      });
-      return candidates;
+
+    final isBody = placement == MilestonePlacement.body;
+
+    /// Écart entre le `playerLevel` et le `minLevel` *effectif* (après
+    /// avance de spé). Une milestone à `minLevel=10` chez une joueuse
+    /// `playerLevel=14, branchAdvance=0` → lag=4. Si `branchAdvance=3` →
+    /// `effectiveMinLevel=7` et `lag = 14-7 = 7`. Toujours ≥ 0 quand on
+    /// arrive ici (filtre `effectiveMinLevel ≤ playerLevel` plus haut).
+    /// Pour `finalApotheose` on renvoie 0 pour neutraliser la règle :
+    /// les finals ne sont pas concernés (cf. doc-comment).
+    int lagOf(LevelMilestone m) {
+      if (!isBody) return 0;
+      return playerLevel - (m.minLevel - branchAdvance(m));
     }
-    candidates.sort((a, b) {
-      final byScore = sortScore(b).compareTo(sortScore(a));
-      if (byScore != 0) return byScore;
+
+    /// Une milestone est overdue quand son `lag` effectif atteint 3 niveaux.
+    /// **Garde** : si la spé avait déjà avancé `minLevel` de ≥ 3 niveaux
+    /// (`branchAdvance(m) ≥ 3`), on ne déclenche pas overdue — sinon la
+    /// spé cumulerait deux accélérateurs (rapprocher la candidature *et*
+    /// prioriser le pick), et chaque milestone matchée par une spé maxée
+    /// passerait overdue dès son apparition, écrasant la mécanique aging.
+    bool isOverdue(LevelMilestone m) {
+      if (!isBody) return false;
+      if (branchAdvance(m) >= 3) return false;
+      return lagOf(m) >= 3;
+    }
+
+    int compareStandard(LevelMilestone a, LevelMilestone b) {
+      if (allocation != null) {
+        final byScore = sortScore(b).compareTo(sortScore(a));
+        if (byScore != 0) return byScore;
+      }
       final byHumil = a.humilRequired.compareTo(b.humilRequired);
       if (byHumil != 0) return byHumil;
       return a.id.compareTo(b.id);
+    }
+
+    candidates.sort((a, b) {
+      if (isBody) {
+        final ao = isOverdue(a);
+        final bo = isOverdue(b);
+        if (ao != bo) return ao ? -1 : 1; // overdue d'abord
+        if (ao && bo) {
+          // Deux overdue : la plus en retard gagne, puis le palier le
+          // moins humiliant pour ne pas sauter de marche, puis id alpha.
+          final byLag = lagOf(b).compareTo(lagOf(a));
+          if (byLag != 0) return byLag;
+          final byHumil = a.humilRequired.compareTo(b.humilRequired);
+          if (byHumil != 0) return byHumil;
+          return a.id.compareTo(b.id);
+        }
+      }
+      return compareStandard(a, b);
     });
     return candidates;
   }

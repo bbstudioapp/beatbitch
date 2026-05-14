@@ -437,7 +437,37 @@ List<SimMilestone> _allPendingMilestones({
       .where((m) => _capabilitySatisfied(m, state))
       .toList();
   if (candidates.isEmpty) return const [];
+
+  final isBody = placement == MilestonePlace.body;
+
+  int lagOf(SimMilestone m) {
+    if (!isBody) return 0;
+    return state.level - (m.minLevel - _branchAdvance(m, profile));
+  }
+
+  bool isOverdue(SimMilestone m) {
+    if (!isBody) return false;
+    // Garde « anti double accélérateur » : si la spé avait déjà rapproché
+    // la milestone de ≥ 3 niveaux, overdue ne s'enclenche pas (sinon
+    // chaque milestone matchée par une spé maxée passerait overdue dès
+    // son apparition, écrasant aging). Aligné avec MilestoneService.
+    if (_branchAdvance(m, profile) >= 3) return false;
+    return lagOf(m) >= 3;
+  }
+
   candidates.sort((a, b) {
+    if (isBody) {
+      final ao = isOverdue(a);
+      final bo = isOverdue(b);
+      if (ao != bo) return ao ? -1 : 1;
+      if (ao && bo) {
+        final byLag = lagOf(b).compareTo(lagOf(a));
+        if (byLag != 0) return byLag;
+        final byHumil = a.humilRequired.compareTo(b.humilRequired);
+        if (byHumil != 0) return byHumil;
+        return a.id.compareTo(b.id);
+      }
+    }
     final byScore =
         _sortScore(b, profile, state).compareTo(_sortScore(a, profile, state));
     if (byScore != 0) return byScore;
@@ -732,6 +762,9 @@ class SimResult {
   final List<({String id, String reason})> unreachedMilestones;
   // n° session pour atteindre L5, L10, L15, L20 (ou null si jamais atteint)
   final Map<int, int?> sessionsForLevels;
+  // Catalogue complet (rétention faible — sert à calculer le lag à
+  // l'acquisition dans le rendu).
+  final List<SimMilestone> catalog;
   SimResult({
     required this.profile,
     required this.timeline,
@@ -739,6 +772,7 @@ class SimResult {
     required this.coherenceIssues,
     required this.unreachedMilestones,
     required this.sessionsForLevels,
+    required this.catalog,
   });
 }
 
@@ -1236,6 +1270,7 @@ SimResult _runSim({
     coherenceIssues: coherence,
     unreachedMilestones: unreached,
     sessionsForLevels: sessionsForLevels,
+    catalog: catalog,
   );
 }
 
@@ -1334,6 +1369,46 @@ String _renderMarkdown(SimResult r) {
     }
   }
   b.writeln();
+
+  // Lag à l'acquisition — métrique « overdue ». Pour chaque unlock
+  // acquis : delta entre la session d'acquisition et la 1ʳᵉ session où
+  // `playerLevel ≥ minLevel - branchAdvance` (= minLevel effectif après
+  // avance de spé). Un lag élevé signifie qu'une milestone candidate
+  // depuis longtemps est restée à la trappe.
+  final byId = {for (final m in r.catalog) m.id: m};
+  final lagsByMilestone = <({String id, int lag, int acquired})>[];
+  for (final h in r.finalState.unlockHistory) {
+    final m = byId[h.milestone];
+    if (m == null) continue;
+    if (m.placement != MilestonePlace.body) continue;
+    final advance = _branchAdvance(m, r.profile);
+    final effectiveMin = m.minLevel - advance;
+    int? firstReached;
+    for (final t in r.timeline) {
+      if (t.level >= effectiveMin) {
+        firstReached = t.session;
+        break;
+      }
+    }
+    if (firstReached == null) continue;
+    final lag = h.session - firstReached;
+    lagsByMilestone.add((id: m.id, lag: lag, acquired: h.session));
+  }
+  if (lagsByMilestone.isNotEmpty) {
+    final maxLag = lagsByMilestone.map((e) => e.lag).reduce(max);
+    final overdueCount =
+        lagsByMilestone.where((e) => e.lag >= 5).toList(growable: false);
+    b.writeln('## Lag à l\'acquisition');
+    b.writeln(
+        '- max lag (body) : $maxLag session(s) ; milestones avec lag ≥ 5 : '
+        '${overdueCount.length}');
+    if (overdueCount.isNotEmpty) {
+      for (final e in overdueCount) {
+        b.writeln('  - ${e.id} acquise s${e.acquired} (lag ${e.lag})');
+      }
+    }
+    b.writeln();
+  }
 
   // Cohérence
   b.writeln('## Rapport de cohérence');
