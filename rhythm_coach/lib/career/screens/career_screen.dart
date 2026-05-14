@@ -201,6 +201,7 @@ class _CareerScreenState extends State<CareerScreen> {
             obedience: obedienceScore,
             playerLevel: bundle.maxLevel,
             allocation: bundle.specialization,
+            capabilityProfile: bundle.capabilityProfile,
           );
     final finalMilestone = quickie
         ? null
@@ -209,6 +210,7 @@ class _CareerScreenState extends State<CareerScreen> {
             obedience: obedienceScore,
             playerLevel: bundle.maxLevel,
             allocation: bundle.specialization,
+            capabilityProfile: bundle.capabilityProfile,
           );
     // Force includeHand=true si le milestone pending l'exige (séquence
     // scriptée comportant du hand/biffle). Sinon respecte la préférence
@@ -954,6 +956,7 @@ class _CareerScreenState extends State<CareerScreen> {
                   obedience: bundle.obedienceScore,
                   playerLevel: bundle.maxLevel,
                   allocation: bundle.specialization,
+                  capabilityProfile: bundle.capabilityProfile,
                 );
                 final milestoneLocksHand =
                     pendingMilestone?.requiresHands ?? false;

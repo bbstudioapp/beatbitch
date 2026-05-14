@@ -61,7 +61,12 @@ enum UnlockKey {
   // Carrière — option « j'en veux encore » en fin de session. Débloquée
   // par la milestone `intro_encore` OU par une obédiance ≥ 80 (voie
   // alternative côté career_screen). Cf. doc.
-  encore;
+  encore,
+  // Réglages des notifications surprise (Android only). L'icône de
+  // raccourci sur l'AppBar de ModeSelectionScreen et l'accès à l'écran
+  // de configuration sont gatés par cette clé. Débloquée par la
+  // milestone `intro_surprise_notifs`.
+  surpriseNotifs;
 
   String get serialized => switch (this) {
         UnlockKey.basics => 'basics',
@@ -96,6 +101,7 @@ enum UnlockKey {
         UnlockKey.finalHoldThroat => 'final_hold_throat',
         UnlockKey.finalHoldFull => 'final_hold_full',
         UnlockKey.encore => 'encore',
+        UnlockKey.surpriseNotifs => 'surprise_notifs',
       };
 
   static UnlockKey? fromString(String? raw) {

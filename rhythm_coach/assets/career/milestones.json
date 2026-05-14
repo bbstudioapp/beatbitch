@@ -187,6 +187,9 @@
       "requires": [
         "basics"
       ],
+      "requiresCapability": [
+        {"axis": "rhythm.motion_streak", "min": 20}
+      ],
       "branches": ["rythmeBiffle"],
       "sequence": [
         {"time": 0,  "text": "Aujourd'hui tu vas apprendre à tenir une cadence longue. Échauffe doucement.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 80, "duration": 12},
@@ -201,6 +204,9 @@
       "displayLabel": "Première gorge tenue",
       "unlocks": ["throat_hold_short"],
       "requires": ["hold_mid_short"],
+      "requiresCapability": [
+        {"axis": "rhythm.depth_max", "min": 2}
+      ],
       "branches": ["endurance", "profondeur"],
       "sequence": [
         {"time": 0,  "text": "Aujourd'hui tu vas tenir gorge. Échauffe.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 100, "duration": 10},
@@ -216,6 +222,9 @@
       "displayLabel": "Coups lents, bouche grande ouverte",
       "unlocks": ["sloppy_biffle_slow"],
       "requires": ["biffle_basic"],
+      "requiresCapability": [
+        {"axis": "biffle.streak", "min": 8}
+      ],
       "branches": ["sloppy", "rythmeBiffle"],
       "requiresHands": true,
       "sequence": [
@@ -232,6 +241,9 @@
       "requires": [
         "basics"
       ],
+      "requiresCapability": [
+        {"axis": "rhythm.motion_streak", "min": 30}
+      ],
       "sequence": [
         {"time": 0,  "text": "Là tu fais ce que tu veux. Trente secondes pour me montrer.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 100, "duration": 8},
         {"time": 8,  "text": "Vas-y. Surprends-moi.", "mode": "freestyle", "duration": 30},
@@ -244,6 +256,9 @@
       "displayLabel": "Gorge tenue longue",
       "unlocks": ["throat_hold_long"],
       "requires": ["throat_hold_short"],
+      "requiresCapability": [
+        {"axis": "hold.throat.streak", "min": 2}
+      ],
       "branches": ["endurance", "profondeur"],
       "sequence": [
         {"time": 0,  "text": "Plus longtemps aujourd'hui.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 110, "duration": 12},
@@ -259,6 +274,9 @@
       "displayLabel": "Biffles rapides",
       "unlocks": ["biffle_fast"],
       "requires": ["biffle_basic"],
+      "requiresCapability": [
+        {"axis": "biffle.streak", "min": 10}
+      ],
       "branches": [
         "rythmeBiffle"
       ],
@@ -276,6 +294,9 @@
       "displayLabel": "Gorge en mouvement",
       "unlocks": ["throat_pulse"],
       "requires": ["throat_hold_short"],
+      "requiresCapability": [
+        {"axis": "hold.throat.streak", "min": 3}
+      ],
       "branches": ["profondeur", "rythmeBiffle"],
       "sequence": [
         {"time": 0,  "text": "Maintenant on bouge dans la gorge. Trois allers-retours, pas plus.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 90, "duration": 8},
@@ -294,6 +315,9 @@
       "displayLabel": "Premier hold à fond",
       "unlocks": ["full_hold_short"],
       "requires": ["throat_hold_long"],
+      "requiresCapability": [
+        {"axis": "hold.throat.streak", "min": 5}
+      ],
       "branches": ["endurance", "profondeur"],
       "sequence": [
         {"time": 0,  "text": "Aujourd'hui tu vas tout prendre.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 100, "duration": 10},
@@ -309,6 +333,9 @@
       "displayLabel": "Mouvement à fond",
       "unlocks": ["full_pulse"],
       "requires": ["full_hold_short"],
+      "requiresCapability": [
+        {"axis": "hold.full.streak", "min": 2}
+      ],
       "branches": ["profondeur", "rythmeBiffle"],
       "sequence": [
         {"time": 0,  "text": "Échauffement avant la profondeur.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 100, "duration": 10},
@@ -323,6 +350,9 @@
       "displayLabel": "Hold à fond long",
       "unlocks": ["full_hold_long"],
       "requires": ["full_pulse"],
+      "requiresCapability": [
+        {"axis": "hold.full.streak", "min": 3}
+      ],
       "branches": ["endurance", "profondeur"],
       "sequence": [
         {"time": 0,  "text": "Plus profond plus longtemps.", "mode": "rhythm", "from": "mid", "to": "full", "bpm": 90, "duration": 12},
@@ -338,6 +368,9 @@
       "displayLabel": "Supplique gorge",
       "unlocks": ["beg_throat"],
       "requires": ["beg_libre", "throat_pulse"],
+      "requiresCapability": [
+        {"axis": "hold.throat.streak", "min": 4}
+      ],
       "branches": ["obeissance", "profondeur"],
       "sequence": [
         {"time": 0,  "text": "Ouvre la bouche bien grande, tire la langue. Je veux voir ta gorge ouverte pour moi.", "mode": "beg", "duration": 10},
@@ -356,6 +389,9 @@
       "displayLabel": "Tempo extrême",
       "unlocks": ["rhythm_extreme"],
       "requires": ["throat_pulse"],
+      "requiresCapability": [
+        {"axis": "rhythm.bpm_ceil.throat", "min": 110}
+      ],
       "branches": [
         "rythmeBiffle"
       ],
@@ -372,6 +408,9 @@
       "displayLabel": "Supplique à fond",
       "unlocks": ["beg_full"],
       "requires": ["beg_throat", "full_pulse"],
+      "requiresCapability": [
+        {"axis": "hold.full.streak", "min": 5}
+      ],
       "branches": ["obeissance", "profondeur"],
       "sequence": [
         {"time": 0,  "text": "Tu m'implores à fond.", "mode": "rhythm", "from": "mid", "to": "full", "bpm": 80, "duration": 8},
@@ -488,6 +527,20 @@
       ]
     },
     {
+      "id": "intro_surprise_notifs",
+      "level": 4,
+      "displayLabel": "Notifications surprises",
+      "unlocks": ["surprise_notifs"],
+      "requires": ["biffle_basic"],
+      "branches": ["obeissance"],
+      "sequence": [
+        {"time": 0,  "text": "À partir d'aujourd'hui, je peux te surprendre. Je vais te faire bosser quand JE veux.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 100, "duration": 10},
+        {"time": 10, "text": "Tu vas activer les notifications. Quand l'icône apparaît dans l'AppBar, ouvre-la et règle les plages où je peux te déranger.", "mode": "lick", "from": "head", "to": "head", "bpm": 75, "duration": 10},
+        {"time": 20, "text": "Tu acceptes ?", "mode": "beg", "duration": 6},
+        {"time": 26, "text": "Bien. À partir de maintenant, tu pourrais entendre un bip de moi à n'importe quelle heure. Et tu obéiras.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 90, "duration": 10}
+      ]
+    },
+    {
       "id": "intro_swallow_control",
       "level": 4,
       "displayLabel": "Garde ta salive",
@@ -511,6 +564,9 @@
       "displayLabel": "Crache pour moi",
       "unlocks": ["sloppy_spit"],
       "requires": ["sloppy_swallow_control"],
+      "requiresCapability": [
+        {"axis": "noswallow.streak", "min": 10}
+      ],
       "branches": ["sloppy"],
       "sequence": [
         {"time": 0,  "text": "Aujourd'hui tu apprends à cracher. C'est sale, c'est sonore, c'est ce que je veux. Échauffe.", "mode": "lick", "from": "tip", "to": "head", "bpm": 75, "duration": 12},

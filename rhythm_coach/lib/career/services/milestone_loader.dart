@@ -5,7 +5,9 @@ import 'package:flutter/services.dart' show rootBundle;
 
 import '../../models/session.dart';
 import '../../models/session_step.dart';
+import '../../services/capability_axis.dart';
 import '../../services/humiliation_engine.dart';
+import '../models/capability_requirement.dart';
 import '../models/level_milestone.dart';
 import '../models/specialization.dart';
 import '../models/milestone_text_override.dart';
@@ -103,6 +105,7 @@ class MilestoneLoader {
     final requiresHands = (raw['requiresHands'] as bool?) ?? false;
     final branches = _parseBranches(raw);
     final placement = _parsePlacement(raw['placement'] as String?);
+    final requiresCapability = _parseCapabilityRequirements(raw);
     return LevelMilestone(
       id: id,
       minLevel: minLevel,
@@ -112,6 +115,7 @@ class MilestoneLoader {
       durationSeconds: duration,
       unlocks: unlocks,
       requires: requires,
+      requiresCapability: requiresCapability,
       insertAtMinSeconds: insertMin,
       insertAtMaxSeconds: insertMax,
       maxRetry: maxRetry,
@@ -119,6 +123,40 @@ class MilestoneLoader {
       branches: branches,
       placement: placement,
     );
+  }
+
+  /// Parse la liste `requiresCapability` du JSON. Format attendu :
+  /// `[{"axis": "hold.throat.streak", "min": 3.0}, ...]`. Le `axis` doit
+  /// matcher une `CapabilityAxis.storageKey` ; sinon l'entrée est
+  /// silencieusement ignorée (compatibilité avant — ajouter un nouvel axe
+  /// ne casse pas le parse).
+  static List<CapabilityRequirement> _parseCapabilityRequirements(
+      Map<String, dynamic> raw) {
+    final list = raw['requiresCapability'] as List<dynamic>? ?? const [];
+    if (list.isEmpty) return const [];
+    final out = <CapabilityRequirement>[];
+    for (final entry in list) {
+      if (entry is! Map<String, dynamic>) continue;
+      final axisKey = entry['axis'] as String?;
+      final min = (entry['min'] as num?)?.toDouble();
+      if (axisKey == null || min == null) continue;
+      final axis = _axisFromStorageKey(axisKey);
+      if (axis == null) {
+        if (kDebugMode) {
+          debugPrint('[MilestoneLoader] unknown capability axis "$axisKey"');
+        }
+        continue;
+      }
+      out.add(CapabilityRequirement(axis: axis, min: min));
+    }
+    return out;
+  }
+
+  static CapabilityAxis? _axisFromStorageKey(String key) {
+    for (final a in CapabilityAxis.values) {
+      if (a.storageKey == key) return a;
+    }
+    return null;
   }
 
   /// Humiliation maximale requise par la séquence — sert de seuil de
