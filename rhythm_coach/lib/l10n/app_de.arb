@@ -867,6 +867,18 @@
       "error": { "type": "String" }
     }
   },
+  "customSaveError": "Die Konfiguration konnte nicht gespeichert werden: {error}",
+  "@customSaveError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "customLaunchError": "Die Sitzung konnte nicht gestartet werden: {error}",
+  "@customLaunchError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
   "customFinishNowButton": "Bring mich zum Ende",
   "customFinishNowSubtitle": "letzter Boost, dann Schluss",
   "customDifficultyFacile": "Leicht",

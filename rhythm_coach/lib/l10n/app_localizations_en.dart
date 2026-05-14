@@ -1745,6 +1745,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String customSaveError(String error) {
+    return 'Could not save the configuration: $error';
+  }
+
+  @override
+  String customLaunchError(String error) {
+    return 'Could not launch the session: $error';
+  }
+
+  @override
   String get customFinishNowButton => 'Finish me';
 
   @override

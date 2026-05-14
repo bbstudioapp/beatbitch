@@ -867,6 +867,18 @@
       "error": { "type": "String" }
     }
   },
+  "customSaveError": "Could not save the configuration: {error}",
+  "@customSaveError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "customLaunchError": "Could not launch the session: {error}",
+  "@customLaunchError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
   "customFinishNowButton": "Finish me",
   "customFinishNowSubtitle": "final boost then end",
   "customDifficultyFacile": "Easy",

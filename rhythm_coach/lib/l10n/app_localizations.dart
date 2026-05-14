@@ -3125,6 +3125,18 @@ abstract class AppLocalizations {
   /// **'Impossible de charger la session custom : {error}'**
   String customHostLoadError(String error);
 
+  /// No description provided for @customSaveError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'enregistrer la configuration : {error}'**
+  String customSaveError(String error);
+
+  /// No description provided for @customLaunchError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de lancer la séance : {error}'**
+  String customLaunchError(String error);
+
   /// No description provided for @customFinishNowButton.
   ///
   /// In fr, this message translates to:

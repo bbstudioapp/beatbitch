@@ -1751,6 +1751,16 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String customSaveError(String error) {
+    return 'Impossible d\'enregistrer la configuration : $error';
+  }
+
+  @override
+  String customLaunchError(String error) {
+    return 'Impossible de lancer la séance : $error';
+  }
+
+  @override
   String get customFinishNowButton => 'Termine-moi';
 
   @override

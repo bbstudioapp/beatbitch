@@ -867,6 +867,18 @@
       "error": { "type": "String" }
     }
   },
+  "customSaveError": "Impossible d'enregistrer la configuration : {error}",
+  "@customSaveError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "customLaunchError": "Impossible de lancer la séance : {error}",
+  "@customLaunchError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
   "customFinishNowButton": "Termine-moi",
   "customFinishNowSubtitle": "boost final puis fin",
   "customDifficultyFacile": "Facile",
