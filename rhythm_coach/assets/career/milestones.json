@@ -528,10 +528,10 @@
     },
     {
       "id": "intro_fake_breath",
-      "level": 7,
+      "level": 11,
       "displayLabel": "Une seconde, c'est tout",
       "unlocks": ["fake_breath"],
-      "requires": ["throat_hold_short"],
+      "requires": ["throat_pulse"],
       "branches": ["obeissance", "endurance"],
       "sequence": [
         {"time": 0,  "text": "Vas-y. Plus profond. Suis-moi.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 100, "duration": 12},
