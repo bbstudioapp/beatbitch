@@ -1864,7 +1864,14 @@ class CareerSessionGenerator {
     required int genUntil,
     required PhraseBank bank,
   }) {
-    if (_humiliationCareer < 20.0) return null;
+    // Convention `_unlockedKeys.isEmpty` = mode hérité (Custom / scénarios /
+    // debug) : pas de gating, le mécanisme reste actif. En carrière le
+    // déblocage passe par la milestone `intro_fake_breath` qui accorde la
+    // clé `fakeBreath` ; tant qu'elle n'est pas acquittée, rien ne sort.
+    if (_unlockedKeys.isNotEmpty &&
+        !_unlockedKeys.contains(UnlockKey.fakeBreath)) {
+      return null;
+    }
     if (genUntil - time < 30) return null; // pas trop près du finish
     if (currentStamina < 30) return null; // déjà en dette, vrai breath plus bas
     final isIntenseRhythm = (lastEmitted.mode == SessionMode.rhythm ||

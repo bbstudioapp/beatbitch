@@ -4,6 +4,11 @@
 
 ## [Non publié]
 
+### Ajouté
+- **Gating des milestones par profil de capacités** : les milestones de mi-/fin de carrière (rythme soutenu, holds gorge, holds full, gorge en mouvement, tempo extrême, supplique throat/full, biffle rapide…) ne tombent plus que si la joueuse a *prouvé* la capacité physique correspondante (hold throat tenu N s, biffle tenu N s, BPM franchi en throat…). Le `level` reste comme plancher mou, c'est la télémétrie qui pilote l'apparition.
+- **Tri « branche-la-plus-basse »** : à match spé égal, le sélecteur de milestone favorise désormais celle dont la branche la moins investie chez la joueuse est plus basse — un coup de pouce à la variété qui évite d'empiler dans le même couloir.
+- **Notifications surprises** : l'icône qui ouvre les réglages des notifs surprise (Android) est maintenant débloquée par une milestone dédiée `intro_surprise_notifs` au lieu d'un palier de niveau brut.
+
 ### Modifié
 - **Nettoyage des déblocages carrière** : chaque milestone débloque désormais exactement une chose, et chaque déblocage a un effet concret (gate d'action, comportement, ou commentaire coach). Conséquences :
   - La branche de spécialisation **Résilience** est retirée (l'Endurance couvre déjà « tenir quand c'est dur »). Les points investis dans Résilience par les joueuses existantes sont automatiquement reversés au pool libre à réattribuer. Les mini-punitions inopinées en cours de séance ne dépendent plus d'une branche de spé mais de la **personnalité du coach** (un coach brutal/sans pitié en glisse beaucoup plus qu'une coach bienveillante).

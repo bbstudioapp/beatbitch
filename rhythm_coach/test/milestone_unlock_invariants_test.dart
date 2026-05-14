@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:beat_bitch/career/models/unlock_key.dart';
+import 'package:beat_bitch/services/capability_axis.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Garde-fous structurels sur le couplage milestone → unlock (cf. doc de
@@ -68,6 +69,28 @@ void main() {
         expect(granters.containsKey(r), isTrue,
             reason: 'milestone "${m['id']}" requiert "$r" qu\'aucune '
                 'milestone n\'accorde');
+      }
+    }
+  });
+
+  test('chaque axis de requiresCapability correspond à un CapabilityAxis', () {
+    final validKeys = {
+      for (final a in CapabilityAxis.values) a.storageKey,
+    };
+    for (final m in milestones) {
+      final reqs = (m['requiresCapability'] as List? ?? const [])
+          .cast<Map<String, dynamic>>();
+      for (final r in reqs) {
+        final axis = r['axis'] as String?;
+        final min = r['min'];
+        expect(axis, isNotNull,
+            reason: 'milestone "${m['id']}" : requiresCapability sans axis');
+        expect(validKeys.contains(axis), isTrue,
+            reason: 'milestone "${m['id']}" : axis "$axis" inconnu — vérifier '
+                'CapabilityAxis.storageKey');
+        expect(min, isA<num>(),
+            reason:
+                'milestone "${m['id']}" : min de "$axis" doit être un nombre');
       }
     }
   });

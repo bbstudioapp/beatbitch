@@ -1,4 +1,5 @@
 import '../../models/session_step.dart';
+import 'capability_requirement.dart';
 import 'specialization.dart';
 import 'unlock_key.dart';
 
@@ -55,6 +56,17 @@ class LevelMilestone {
   /// pour que cette milestone soit candidate.
   final List<UnlockKey> requires;
 
+  /// Seuils de télémétrie à franchir pour que la milestone soit candidate
+  /// (gating capacité, 2ᵉ couche orthogonale à `humilRequired` et
+  /// `minLevel`). Chaque entrée exige `best ≥ min` (ou `best ≤ min` pour
+  /// les axes `minimize`) sur l'axe nommé. Liste vide = pas de gating
+  /// télémétrie (mode hérité — seuls humil/level pilotent).
+  ///
+  /// Cf. doc local `~/beatbitch_career_unlocks_handoff.md` (passe 2).
+  /// Quand `requiresCapability` est non vide, le `minLevel` devient un
+  /// plancher mou de secours — la capacité prouvée pilote l'apparition.
+  final List<CapabilityRequirement> requiresCapability;
+
   /// Plancher d'insertion : la milestone ne peut être insérée avant cette
   /// borne (en secondes depuis le début de la session). `null` → default 60.
   final int? insertAtMinSeconds;
@@ -101,6 +113,7 @@ class LevelMilestone {
     required this.unlocks,
     this.minLevel = 1,
     this.requires = const [],
+    this.requiresCapability = const [],
     this.insertAtMinSeconds,
     this.insertAtMaxSeconds,
     this.maxRetry = 1,

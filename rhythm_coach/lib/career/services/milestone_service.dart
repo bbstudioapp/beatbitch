@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../services/capability_service.dart';
 import '../../services/locale_service.dart';
 import '../models/level_milestone.dart';
 import '../models/milestone_text_override.dart';
@@ -143,32 +144,35 @@ class MilestoneService extends ChangeNotifier {
   /// **Critères** :
   /// - `m.humilRequired ≤ humiliationScore + humilTolerance(obedience)`
   /// - `requires` tous acquittés
+  /// - `requiresCapability` satisfait quand [capabilityProfile] est fourni
+  ///   (sinon la couche télémétrie est neutralisée — mode hérité)
   /// - non encore acquittée
   ///
   /// **Tri** :
   /// 1. **Score de match spé** : somme des points investis dans
   ///    *chacune* des branches listées par le milestone, **descendant**.
   ///    Une milestone qui touche plusieurs branches investies passe donc
-  ///    avant celle qui n'en touche qu'une — la priorité reflète la
-  ///    couverture totale des compétences choisies, pas seulement la
-  ///    branche la plus investie.
-  /// 2. À égalité : `humilRequired` **ascendant** (le palier le moins
-  ///    coûteux d'abord, pour ne pas sauter de marche).
-  /// 3. Tie-break final : id alphabétique (déterministe).
-  ///
-  /// Si [allocation] est null, on saute le critère 1 (tri par humil ASC
-  /// puis id) — utile pour les tests / appels sans accès aux points spé.
+  ///    avant celle qui n'en touche qu'une.
+  /// 2. **Équilibrage par branche basse** : à égalité de match,
+  ///    favoriser les milestones dont la branche la moins investie chez
+  ///    la joueuse est plus basse (variété, on n'empile pas dans le même
+  ///    couloir). Pas appliqué si [allocation] est nul.
+  /// 3. `humilRequired` **ascendant** (le palier le moins coûteux
+  ///    d'abord, pour ne pas sauter de marche).
+  /// 4. Tie-break final : id alphabétique (déterministe).
   LevelMilestone? pendingFor({
     required double humiliationScore,
     required double obedience,
     int playerLevel = 1,
     SpecializationAllocation? allocation,
+    CapabilityProfile? capabilityProfile,
   }) {
     final all = allPendingFor(
       humiliationScore: humiliationScore,
       obedience: obedience,
       playerLevel: playerLevel,
       allocation: allocation,
+      capabilityProfile: capabilityProfile,
     );
     return all.isEmpty ? null : all.first;
   }
@@ -181,19 +185,22 @@ class MilestoneService extends ChangeNotifier {
     required double obedience,
     int playerLevel = 1,
     SpecializationAllocation? allocation,
+    CapabilityProfile? capabilityProfile,
   }) {
     final all = allPendingFor(
       humiliationScore: humiliationScore,
       obedience: obedience,
       playerLevel: playerLevel,
       allocation: allocation,
+      capabilityProfile: capabilityProfile,
       placement: MilestonePlacement.finalApotheose,
     );
     return all.isEmpty ? null : all.first;
   }
 
   /// Toutes les milestones pending éligibles à `humiliationScore` +
-  /// tolérance d'obédiance, gated par `playerLevel ≥ minLevel`. Triées
+  /// tolérance d'obédiance, gated par `playerLevel ≥ minLevel` et par
+  /// `requiresCapability` (si [capabilityProfile] est fourni). Triées
   /// selon les mêmes critères que `pendingFor`. La première de la liste
   /// est celle qui sera effectivement insérée dans la prochaine session
   /// générée. Liste vide si aucune candidate.
@@ -202,6 +209,7 @@ class MilestoneService extends ChangeNotifier {
     required double obedience,
     int playerLevel = 1,
     SpecializationAllocation? allocation,
+    CapabilityProfile? capabilityProfile,
     MilestonePlacement placement = MilestonePlacement.body,
   }) {
     final cap = humiliationScore + humilTolerance(obedience);
@@ -238,17 +246,51 @@ class MilestoneService extends ChangeNotifier {
       return best.clamp(0, 3);
     }
 
+    /// Points investis dans la **branche la moins investie** d'un
+    /// milestone (ou 0 si transverse / pas d'allocation). Sert au
+    /// tie-break « équilibrage » : à égalité de match, favoriser les
+    /// milestones dont la branche la moins investie chez la joueuse est
+    /// la plus basse — un coup de pouce vers la variété, pas un
+    /// raz-de-marée. Pour `intro_hold_throat_short` (`endurance` +
+    /// `profondeur`) avec profondeur=0, endurance=2 → renvoie 0, donc
+    /// passe avant une milestone mono-branche endurance=2.
+    int lowestBranchPoints(LevelMilestone m) {
+      if (allocation == null || m.branches.isEmpty) return 0;
+      var lo = 1 << 30;
+      for (final b in m.branches) {
+        final pts = allocation.pointsIn(b);
+        if (pts < lo) lo = pts;
+      }
+      return lo == (1 << 30) ? 0 : lo;
+    }
+
+    bool capabilityOk(LevelMilestone m) {
+      if (m.requiresCapability.isEmpty) return true;
+      // Pas de profil fourni : mode hérité (tests, sessions hors carrière).
+      // On neutralise le gating capacité — humil/level prennent le relais.
+      if (capabilityProfile == null) return true;
+      for (final req in m.requiresCapability) {
+        if (!req.isSatisfiedBy(capabilityProfile)) return false;
+      }
+      return true;
+    }
+
     final candidates = _catalog
         .where((m) => m.placement == placement)
         .where((m) => (m.minLevel - branchAdvance(m)) <= playerLevel)
         .where((m) => m.humilRequired <= cap)
         .where((m) => !_completed.contains(m.id))
         .where((m) => m.requires.every(hasUnlock))
+        .where(capabilityOk)
         .toList();
     if (candidates.isEmpty) return const [];
     candidates.sort((a, b) {
       final byBranch = branchScore(b).compareTo(branchScore(a));
       if (byBranch != 0) return byBranch;
+      // À match spé égal : favoriser la branche la moins investie chez la
+      // joueuse (variété). N'a d'effet que si une allocation est fournie.
+      final byLow = lowestBranchPoints(a).compareTo(lowestBranchPoints(b));
+      if (byLow != 0) return byLow;
       final byHumil = a.humilRequired.compareTo(b.humilRequired);
       if (byHumil != 0) return byHumil;
       return a.id.compareTo(b.id);
