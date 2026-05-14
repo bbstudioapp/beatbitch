@@ -22,7 +22,7 @@
         {"text": "Go down further, you can do better.", "min_depth": "mid"},
         "You're slowing down {name}. Get back on tempo.",
         {"text": "Lower still {name}. That's the work.", "min_depth": "mid"},
-        "Acceptable. Maintain, don't relax {name}.",
+        "Acceptable. Keep tempo, don't relax {name}.",
         "I have nothing to correct for now {name}. Continue."
       ],
       "hard": [
@@ -30,7 +30,7 @@
         {"text": "Faster and deeper. Execute.", "min_depth": "mid"},
         "You have to hold this rhythm {name}.",
         {"text": "Take it {name}. You have what it takes.", "min_depth": "throat"},
-        "No flinching {name}. Hold.",
+        "No flinching {name}. Continue.",
         {"text": "All the way down, and you don't let go {name}.", "min_depth": "throat"},
         "It's demanding, and that's exactly what we want {name}."
       ]

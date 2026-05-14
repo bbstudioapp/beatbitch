@@ -132,7 +132,7 @@
     "Tu sers à quelque chose là {name}.",
     "Bouge {name}.",
     "Je m’en fous que ça fasse mal. Continue.",
-    "Tu tiens, ou tu casses {name}. Décide.",
+    "Tu encaisses, ou tu casses {name}. Décide.",
     "Suffisant pour l’instant.",
     "Encaisse {name}."
   ],
@@ -224,7 +224,7 @@
       ],
       "hard": [
         "Tape dur, encaisse dur {name}. Tu es un objet à frapper.",
-        "Plus violent, plus rapide {name}. Tu tiendras parce que je le décide."
+        "Plus violent, plus rapide {name}. Tu suivras parce que je le décide."
       ]
     },
     "sloppy": {
@@ -243,16 +243,16 @@
     },
     "endurance": {
       "soft": [
-        "Tu tiens longtemps {name}. C'est dans tes cordes.",
+        "Tu encaisses longtemps {name}. C'est dans tes cordes.",
         "Garde le rythme {name}. Tu as la résistance pour."
       ],
       "medium": [
-        "Tu tiens {name}. C'est tout ce que je veux.",
+        "Tu encaisses {name}. C'est tout ce que je veux.",
         "Pas de pause, pas de pitié {name}. Tu continues."
       ],
       "hard": [
         "Encaisse encore {name}. Tu ne t'arrêtes pas tant que je n'ai pas fini.",
-        "Tu tiendras parce que je le décide {name}."
+        "Tu encaisseras parce que je le décide {name}."
       ]
     }
   },

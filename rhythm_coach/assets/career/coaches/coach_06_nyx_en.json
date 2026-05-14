@@ -132,7 +132,7 @@
     "You're useful right now {name}.",
     "Move {name}.",
     "I don't care that it hurts. Continue.",
-    "You hold, or you break {name}. Decide.",
+    "You take it, or you break {name}. Decide.",
     "Sufficient for now.",
     "Take it {name}."
   ],
@@ -224,7 +224,7 @@
       ],
       "hard": [
         "Hit hard, take it hard {name}. You're an object to be struck.",
-        "More violent, faster {name}. You'll hold on because I've decided so."
+        "More violent, faster {name}. You'll take it because I've decided so."
       ]
     },
     "sloppy": {
@@ -247,12 +247,12 @@
         "Hold the rhythm {name}. You have the stamina for it."
       ],
       "medium": [
-        "You're holding {name}. That's all I want.",
+        "You're enduring {name}. That's all I want.",
         "No break, no mercy {name}. You keep going."
       ],
       "hard": [
         "Take more {name}. You don't stop until I'm done.",
-        "You'll hold on because I've decided so {name}."
+        "You'll endure because I've decided so {name}."
       ]
     }
   },

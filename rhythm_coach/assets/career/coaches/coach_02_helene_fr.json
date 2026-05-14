@@ -22,7 +22,7 @@
         {"text": "Descends davantage, tu peux mieux faire.", "min_depth": "mid"},
         "Tu ralentis {name}. Reprends le tempo.",
         {"text": "Encore plus bas {name}. C’est ça, le travail.", "min_depth": "mid"},
-        "Acceptable. Maintiens, ne te relâche pas {name}.",
+        "Acceptable. Garde le tempo, ne te relâche pas {name}.",
         "Je n’ai rien à reprendre pour l’instant {name}. Continue."
       ],
       "hard": [
@@ -30,7 +30,7 @@
         {"text": "Plus vite et plus profond. Exécute.", "min_depth": "mid"},
         "Tu dois tenir ce rythme {name}.",
         {"text": "Encaisse {name}. Tu as les moyens.", "min_depth": "throat"},
-        "Pas de fléchissement {name}. Tiens.",
+        "Pas de fléchissement {name}. Continue.",
         {"text": "Jusqu’en bas, et tu ne lâches pas {name}.", "min_depth": "throat"},
         "C’est exigeant, et c’est exactement ce qu’on veut {name}."
       ]

@@ -209,18 +209,18 @@
   "branchPhrases": {
     "endurance": {
       "soft": [
-        "Tu sais tenir longtemps {name}, c'est ta force.",
+        "Tu sais durer longtemps {name}, c'est ta force.",
         "Garde le rythme {name}, tu as la patience pour.",
         "Tu portes l'effort sans broncher {name}, c'est rare."
       ],
       "medium": [
         "Tu ne faiblis jamais {name}, j'aime ça chez toi.",
-        "C'est bien, continue à tenir {name}.",
-        "Tu tiens encore et encore {name}, je le vois."
+        "C'est bien, continue à encaisser {name}.",
+        "Tu encaisses encore et encore {name}, je le vois."
       ],
       "hard": [
         "Tu peux encore {name}, je sais que tu peux.",
-        "Tiens encore un peu, tu es endurante.",
+        "Continue encore un peu, tu es endurante.",
         "Ton souffle tient {name}, c'est ta force, fais-lui confiance."
       ]
     },
