@@ -13,8 +13,10 @@ import 'package:flutter/services.dart' show HapticFeedback;
 /// séance tourne encore (`SessionController.finaleChimeStarted && isRunning`).
 /// Le widget démarre alors sa séquence ; il la mène à terme tout seul, même si
 /// `active` repasse à `false` ensuite (séance terminée) — les résidus restent
-/// affichés jusqu'à ce que la route soit dépilée. `IgnorePointer` : ne capture
-/// aucun tap.
+/// affichés tant que le widget est monté. L'appelant le démonte quand il
+/// bascule sur le panel de fin Phase 2 (badges révélés), sinon les résidus
+/// blancs masquent le texte du panel (cf. issue #42). `IgnorePointer` : ne
+/// capture aucun tap.
 class SessionFinaleOverlay extends StatefulWidget {
   final bool active;
   const SessionFinaleOverlay({super.key, required this.active});
