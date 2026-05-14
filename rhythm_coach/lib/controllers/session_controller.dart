@@ -453,7 +453,7 @@ class SessionController extends ChangeNotifier {
 
   void _handleBeat(BeatEvent e) {
     if (!_session.noStats) {
-      _stats.recordBeat(mode: e.mode, to: e.to, from: e.from);
+      _stats.recordBeat(mode: e.mode, to: e.to);
       _stats.markModeUsed(e.mode);
     }
     _stamina.onBeat(e);

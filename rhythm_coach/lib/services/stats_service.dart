@@ -155,12 +155,10 @@ class StatsService {
     );
   }
 
-  /// Comptabilise un beat de rhythm/lick selon sa cible. Retourne le
-  /// type de beat compté (utile pour la jauge d'excitation).
+  /// Comptabilise un beat de rhythm/lick/hand/biffle selon sa cible.
   Future<void> recordBeat({
     required SessionMode mode,
     Position? to,
-    Position? from,
   }) async {
     if (mode != SessionMode.rhythm &&
         mode != SessionMode.lick &&
@@ -173,9 +171,11 @@ class StatsService {
       await prefs.setInt(_kBiffles, (prefs.getInt(_kBiffles) ?? 0) + 1);
       return;
     }
-    // Throatfuck = bip qui touche throat ou full (cible profonde).
-    final reaches = to ?? from;
-    if (reaches == Position.throat || reaches == Position.full) {
+    // Throatfuck = bip ciblant throat ou full (`to` du step, l'incursion
+    // profonde). Le `from` n'est jamais compté : un aller-retour qui *part*
+    // de throat/full pour remonter n'enfonce rien, et le compter doublait
+    // mécaniquement les throatfucks à chaque step d'amplitude.
+    if (to == Position.throat || to == Position.full) {
       await prefs.setInt(
         _kThroatfucks,
         (prefs.getInt(_kThroatfucks) ?? 0) + 1,
