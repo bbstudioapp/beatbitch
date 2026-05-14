@@ -219,7 +219,10 @@ jobs:
     name: Build and attach Windows portable zip
     runs-on: windows-latest
     needs: release
-    if: needs.release.outputs.skip != 'true'
+    # Skip when re-triggered on an existing tag, EXCEPT on workflow_dispatch
+    # where the operator may need to backfill a missing artifact on an
+    # already-published release (Android may succeed but Linux/Windows fail).
+    if: needs.release.outputs.skip != 'true' || github.event_name == 'workflow_dispatch'
     defaults:
       run:
         working-directory: rhythm_coach
@@ -307,9 +310,9 @@ jobs:
 
   release-linux:
     name: Build and attach Linux portable tar.gz
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: release
-    if: needs.release.outputs.skip != 'true'
+    if: needs.release.outputs.skip != 'true' || github.event_name == 'workflow_dispatch'
     defaults:
       run:
         working-directory: rhythm_coach
