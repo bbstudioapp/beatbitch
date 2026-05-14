@@ -1778,4 +1778,19 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get customDoseFrequent => 'Häufig';
+
+  @override
+  String get profileSessionDisplaySection => 'Sitzungsanzeige';
+
+  @override
+  String get profileShowRemainingTime => 'Restzeit anzeigen';
+
+  @override
+  String get profileShowRemainingTimeSubtitle =>
+      'Kleine mm:ss-Uhr oben auf dem Bildschirm während der Sitzung.';
+
+  @override
+  String sessionRemainingTimeLabel(String time) {
+    return 'Rest: $time';
+  }
 }

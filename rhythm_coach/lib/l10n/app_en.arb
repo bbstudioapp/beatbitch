@@ -876,5 +876,15 @@
   "customDoseNone": "None",
   "customDoseRare": "Rare",
   "customDoseNormal": "Normal",
-  "customDoseFrequent": "Frequent"
+  "customDoseFrequent": "Frequent",
+
+  "profileSessionDisplaySection": "Session display",
+  "profileShowRemainingTime": "Show remaining time",
+  "profileShowRemainingTimeSubtitle": "Small mm:ss clock at the top of the screen during the session.",
+  "sessionRemainingTimeLabel": "Left: {time}",
+  "@sessionRemainingTimeLabel": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  }
 }

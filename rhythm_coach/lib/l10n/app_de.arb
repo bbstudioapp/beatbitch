@@ -876,5 +876,15 @@
   "customDoseNone": "Keine",
   "customDoseRare": "Selten",
   "customDoseNormal": "Normal",
-  "customDoseFrequent": "Häufig"
+  "customDoseFrequent": "Häufig",
+
+  "profileSessionDisplaySection": "Sitzungsanzeige",
+  "profileShowRemainingTime": "Restzeit anzeigen",
+  "profileShowRemainingTimeSubtitle": "Kleine mm:ss-Uhr oben auf dem Bildschirm während der Sitzung.",
+  "sessionRemainingTimeLabel": "Rest: {time}",
+  "@sessionRemainingTimeLabel": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  }
 }

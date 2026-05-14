@@ -462,6 +462,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
   bool _showModeBadge = false;
   bool _showSkipSessionButton = false;
   bool _showBackgroundMedia = true;
+  bool _showRemainingTime = false;
   bool _upgradeRequested = false;
   bool _upgradeInFlight = false;
   bool _finishNowInFlight = false;
@@ -546,6 +547,10 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     debug.getShowBackgroundMedia().then((value) {
       if (!mounted) return;
       setState(() => _showBackgroundMedia = value);
+    });
+    debug.getShowSessionRemainingTime().then((value) {
+      if (!mounted) return;
+      setState(() => _showRemainingTime = value);
     });
     if (widget.introText != null && widget.introText!.trim().isNotEmpty) {
       _introPending = true;
@@ -743,6 +748,16 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
             ? null
             : AppBar(
                 title: Text(ctrl.session.name),
+                actions: [
+                  if (_showRemainingTime &&
+                      (ctrl.isRunning || ctrl.isPaused || ctrl.isFailing) &&
+                      ctrl.session.durationSeconds > 0)
+                    _RemainingTimeChip(
+                      remainingSeconds:
+                          (ctrl.session.durationSeconds - ctrl.elapsedSeconds)
+                              .clamp(0, ctrl.session.durationSeconds),
+                    ),
+                ],
               ),
         body: Stack(
           children: [
@@ -2479,6 +2494,36 @@ class _SaveSessionDialogState extends State<_SaveSessionDialog> {
           child: Text(t.sessionSaveDialogConfirm),
         ),
       ],
+    );
+  }
+}
+
+class _RemainingTimeChip extends StatelessWidget {
+  final int remainingSeconds;
+
+  const _RemainingTimeChip({required this.remainingSeconds});
+
+  String _format(int seconds) {
+    final m = (seconds ~/ 60).toString().padLeft(2, '0');
+    final s = (seconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(right: 12),
+      child: Center(
+        child: Text(
+          t.sessionRemainingTimeLabel(_format(remainingSeconds)),
+          style: const TextStyle(
+            fontSize: 13,
+            color: AppTheme.textSecondary,
+            fontFeatures: [FontFeature.tabularFigures()],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../career/services/career_progress_service.dart';
 import '../career/services/custom_config_service.dart';
+import '../career/services/debug_settings_service.dart';
 import '../career/services/specialization_service.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
@@ -189,6 +190,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   userProfile: widget.userProfile,
                 ),
               ],
+              const SizedBox(height: 24),
+              _SectionLabel(t.profileSessionDisplaySection),
+              const SizedBox(height: 8),
+              const _SessionDisplaySection(),
               const SizedBox(height: 32),
               _ResetSection(
                 resetting: _resetting,
@@ -298,6 +303,55 @@ class _InfoTextSection extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _SessionDisplaySection extends StatefulWidget {
+  const _SessionDisplaySection();
+
+  @override
+  State<_SessionDisplaySection> createState() => _SessionDisplaySectionState();
+}
+
+class _SessionDisplaySectionState extends State<_SessionDisplaySection> {
+  final DebugSettingsService _debug = DebugSettingsService();
+  bool _showRemainingTime = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _debug.getShowSessionRemainingTime().then((value) {
+      if (!mounted) return;
+      setState(() => _showRemainingTime = value);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return SwitchListTile(
+      contentPadding: EdgeInsets.zero,
+      title: Text(
+        t.profileShowRemainingTime,
+        style: const TextStyle(
+          fontSize: 14,
+          color: AppTheme.textPrimary,
+        ),
+      ),
+      subtitle: Text(
+        t.profileShowRemainingTimeSubtitle,
+        style: const TextStyle(
+          fontSize: 11,
+          color: AppTheme.textMuted,
+        ),
+      ),
+      value: _showRemainingTime,
+      onChanged: (v) async {
+        await _debug.setShowSessionRemainingTime(v);
+        if (!mounted) return;
+        setState(() => _showRemainingTime = v);
+      },
     );
   }
 }
