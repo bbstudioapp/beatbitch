@@ -1224,14 +1224,16 @@ class CareerSessionGenerator {
     // jauge — le sprint est entièrement déterministe.
     final totalBoosts = max(1, boostsCount);
     // **BPM cap qui scale par niveau ET par chaîne d'encore** : niveau 1
-    // plafonne à ~110 BPM (hand) / 130 (rhythm), niveau 18 à 170/180. Le
+    // plafonne à ~110 BPM (hand) / 130 (rhythm), +4 BPM/niveau jusqu'à un
+    // plafond de garde-fou à 300 (très haut — c'est le `comfort` du profil
+    // de capacités qui borne en pratique, via `_clampToCapability`). Le
     // mode encore ajoute +8 BPM par cran de chaîne pour intensifier le
     // sprint sans changer le nombre de boosts.
     final levelBpmBoost =
         ((level - 1) * 4 + max(0, encoreChainIndex) * 8).clamp(0, 70);
     final bpmCap = useHandBurst
-        ? (110 + levelBpmBoost).clamp(110, 170)
-        : (130 + levelBpmBoost).clamp(130, 180);
+        ? (110 + levelBpmBoost).clamp(110, 300)
+        : (130 + levelBpmBoost).clamp(130, 300);
     final bpmFloor = useHandBurst ? 80 : 100;
     // BPM "ancre" du burst : varie autour de bpmCap selon deficit. Chaque
     // step varie de ±15 par-dessus pour éviter de répéter exactement le
@@ -3353,18 +3355,21 @@ class CareerSessionGenerator {
       // courant + rampe de finish). Seuil d'introduction throat ≈ 10
       // d'humiliation (req intrinsèque hold throat 10s = 8, marge
       // de tolérance) : à humilCap=10 on tient le minimum (10s) ;
-      // +2s par tranche de 5 points d'humil au-dessus. Cap relâché
-      // à 40s pour laisser respirer la branche endurance maxée.
+      // +2s par tranche de 5 points d'humil au-dessus. Cap aligné sur
+      // full (80s) : en carrière, c'est le comfort du profil de capacités
+      // qui pilote la durée vécue (cf. `_clampToCapability`), pas ce cap
+      // — le cap ne mord qu'en mode hérité (Custom, scénarios) où le
+      // profil de capacités est désactivé.
       final humilOver = max(0.0, humilCap - 10.0);
       final targetDur =
-          (10 + (humilOver / 5).floor() * 2 + endPts * 2).clamp(10, 40);
+          (10 + (humilOver / 5).floor() * 2 + endPts * 2).clamp(10, 80);
       final dur = _trimHoldFinalDuration(
         target: targetDur,
         humilCap: humilCap,
         baseReq: 21.5, // hold throat 10s
         bonusPerSec: 1.5,
         finishMul: finishMul,
-        maxDur: 40,
+        maxDur: 80,
       );
       final req = 8.0 + (dur - 1) * 1.5;
       // Gate : intro_final_hold_throat (niveau 6, requires throat_hold_short).
@@ -3889,8 +3894,9 @@ class CareerSessionGenerator {
   /// a vraiment le temps de se lasser sans contraste de profondeur.
   ///
   /// **Bornes** : le BPM cible est clampé entre 50 (sinon on tombe dans
-  /// du quasi-statique) et le cap niveau pour le mode (170 hand / 180
-  /// rhythm pour les niveaux hauts, plus bas pour les débutantes).
+  /// du quasi-statique) et le cap niveau pour le mode (plafond très haut
+  /// à 300 — c'est le `comfort` du profil de capacités qui borne en
+  /// pratique, le cap n'est qu'un garde-fou pour les modes hors carrière).
   _StepDraft _maybeApplyBpmRamp(_StepDraft d, double progress) {
     if (d.mode != SessionMode.rhythm &&
         d.mode != SessionMode.lick &&
@@ -3912,8 +3918,8 @@ class CareerSessionGenerator {
     // (level-1)*4` pour hand, `130 + ...` pour rhythm). Lick suit rhythm
     // — c'est aussi un mode rythmé bouche.
     final hardCap = d.mode == SessionMode.hand
-        ? (110 + (_level - 1) * 4).clamp(60, 170)
-        : (130 + (_level - 1) * 4).clamp(60, 180);
+        ? (110 + (_level - 1) * 4).clamp(60, 300)
+        : (130 + (_level - 1) * 4).clamp(60, 300);
     final raw = goesUp ? bpm + delta : bpm - delta;
     final clamped = raw.clamp(50, hardCap);
     if (clamped == bpm) return d; // Rampe nulle = pas la peine.
