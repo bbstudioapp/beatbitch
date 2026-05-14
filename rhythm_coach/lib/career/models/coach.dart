@@ -602,6 +602,15 @@ class Coach {
   /// et de déconnecter les phrases.
   final String id;
 
+  /// Slug court extrait de l'`id` (`coach_NN_<slug>` → `<slug>`). Sert au
+  /// tagging des fonds (cf. `BackgroundTagVocabulary` côté
+  /// `backgrounds_loader.dart`) : un fichier `clip_lina.png` sera proposé
+  /// en priorité quand `slug == "lina"`.
+  String get slug {
+    final parts = id.split('_');
+    return parts.isEmpty ? id : parts.last;
+  }
+
   /// Nom affiché.
   final String name;
 

@@ -275,6 +275,14 @@ class SessionController extends ChangeNotifier {
   /// voix par défaut → le caller ne le passe pas).
   final double _miniPunishmentRate;
 
+  /// Slug court du coach actif (`lina`, `victoria`, …) — extrait de l'`id`
+  /// `coach_NN_<slug>` par le caller. Sert à orienter la sélection de fond
+  /// vers les images taguées au nom de la coach (cf. `BackgroundContext`
+  /// dans `BackgroundsService`). Null = pas de coach connue (voix par
+  /// défaut, scénarios JSON, démos) → aucun fond `_<coach>` ne sera
+  /// considéré comme matchant.
+  final String? _coachTag;
+
   /// Compteur en secondes pour cadencer le tirage de mini-punition
   /// (1 tirage par minute).
   int _miniPunishmentTickAccumulator = 0;
@@ -329,6 +337,7 @@ class SessionController extends ChangeNotifier {
     Set<UnlockKey> unlockedKeys = const {},
     bool includeHand = true,
     bool isQuickie = false,
+    String? coachTag,
   })  : _session = session,
         _tts = tts,
         _beep = beep,
@@ -350,7 +359,8 @@ class SessionController extends ChangeNotifier {
         _capabilityProfile = capabilityProfile,
         _unlockedKeys = unlockedKeys,
         _includeHand = includeHand,
-        _isQuickie = isQuickie {
+        _isQuickie = isQuickie,
+        _coachTag = coachTag {
     _beep.onBeat = _handleBeat;
   }
 
@@ -899,6 +909,37 @@ class SessionController extends ChangeNotifier {
     verifier.arm(expected);
   }
 
+  /// Compose le contexte poussé à `BackgroundsService.pickForContext` au
+  /// moment d'un step de config. Chaque champ alimente une catégorie de
+  /// tags du `BackgroundTagVocabulary` (cf. `backgrounds_loader.dart`) :
+  /// - `mode` : nom du mode résolu (`rhythm`, `hold`…).
+  /// - `position` : `step.to` (cible courante : le rythme alterne avec `to`
+  ///   comme point de tension), à défaut `step.from`. Null hors modes à
+  ///   position (breath/biffle/freestyle/hand-sans-from).
+  /// - `coach` : slug court de la coach active, transmis au constructeur.
+  /// - `phase` : `final` au step `finalStepTime`, `post-final` au-delà.
+  BackgroundContext _buildBackgroundContext(
+    SessionStep step,
+    SessionMode resolvedMode,
+  ) {
+    final pos = step.to ?? step.from;
+    String? phase;
+    final finalT = _session.finalStepTime;
+    if (finalT != null) {
+      if (step.time == finalT) {
+        phase = 'final';
+      } else if (step.time > finalT) {
+        phase = 'post-final';
+      }
+    }
+    return BackgroundContext(
+      mode: resolvedMode.name,
+      position: pos?.name,
+      coach: _coachTag,
+      phase: phase,
+    );
+  }
+
   /// Désarme la vérif et logue le rapport (V1 : juste un debugPrint).
   void _disarmHoldVerifier() {
     final verifier = _holdVerifier;
@@ -995,12 +1036,17 @@ class SessionController extends ChangeNotifier {
           duration: step.duration,
         );
         _armHoldVerifierIfHoldStep(step);
-        // Rotation aléatoire à chaque step de config — anti-doublon
-        // immédiat dans le service. Un override `step.background`
-        // éventuel est appliqué ci-dessous, après le bloc isTextOnly,
-        // parce qu'un step text-only peut aussi vouloir poser un fond
-        // précis sans pour autant changer de config bip.
-        BackgroundsService.instance.pickRandom();
+        // Sélection priorisée par tags du nom de fichier : on pousse au
+        // service le contexte courant (mode, profondeur, coach, phase) et
+        // il privilégie les fonds taggés en conséquence (cf.
+        // `BackgroundsService.pickForContext`). Anti-doublon immédiat dans
+        // le service. Un override `step.background` éventuel est appliqué
+        // ci-dessous, après le bloc isTextOnly, parce qu'un step text-only
+        // peut aussi vouloir poser un fond précis sans pour autant changer
+        // de config bip.
+        BackgroundsService.instance.pickForContext(
+          _buildBackgroundContext(step, resolvedMode),
+        );
         // Si la step n'a pas son propre texte scripté, on tente une phrase
         // de transition (« plus vite », « plus profond »…). Ça ne joue
         // que si on est resté dans le même mode et qu'un paramètre clé a
