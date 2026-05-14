@@ -527,6 +527,22 @@
       ]
     },
     {
+      "id": "intro_fake_breath",
+      "level": 7,
+      "displayLabel": "Une seconde, c'est tout",
+      "unlocks": ["fake_breath"],
+      "requires": ["throat_hold_short"],
+      "branches": ["obeissance", "endurance"],
+      "sequence": [
+        {"time": 0,  "text": "Vas-y. Plus profond. Suis-moi.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 100, "duration": 12},
+        {"time": 12, "text": "Une seconde.", "mode": "breath", "duration": 2},
+        {"time": 14, "text": "Encore. On n'a pas fini.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 100, "duration": 14},
+        {"time": 28, "text": "Souffle.", "mode": "breath", "duration": 2},
+        {"time": 30, "text": "Reprends. Tu tiens.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 100, "duration": 12},
+        {"time": 42, "text": "Voilà. Maintenant tu peux respirer.", "mode": "breath", "duration": 8}
+      ]
+    },
+    {
       "id": "intro_surprise_notifs",
       "level": 4,
       "displayLabel": "Notifications surprises",

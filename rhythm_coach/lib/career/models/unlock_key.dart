@@ -66,7 +66,14 @@ enum UnlockKey {
   // raccourci sur l'AppBar de ModeSelectionScreen et l'accès à l'écran
   // de configuration sont gatés par cette clé. Débloquée par la
   // milestone `intro_surprise_notifs`.
-  surpriseNotifs;
+  surpriseNotifs,
+  // Faux sas breath — `_maybeBuildFakeBreath` du générateur insère un
+  // mini-breath 2-3s après un step intense qui mime un repos sans
+  // vraiment regénérer la stamina. Désactivé tant que la milestone
+  // `intro_fake_breath` n'est pas acquittée (en carrière). En mode
+  // hérité — Custom / scénarios / debug, `_unlockedKeys.isEmpty` — le
+  // mécanisme reste actif sans gating.
+  fakeBreath;
 
   String get serialized => switch (this) {
         UnlockKey.basics => 'basics',
@@ -102,6 +109,7 @@ enum UnlockKey {
         UnlockKey.finalHoldFull => 'final_hold_full',
         UnlockKey.encore => 'encore',
         UnlockKey.surpriseNotifs => 'surprise_notifs',
+        UnlockKey.fakeBreath => 'fake_breath',
       };
 
   static UnlockKey? fromString(String? raw) {
