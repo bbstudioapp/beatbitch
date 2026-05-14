@@ -1740,6 +1740,30 @@ class AppLocalizationsFr extends AppLocalizations {
   String get customMaxDepthLabel => 'Profondeur maximale';
 
   @override
+  String get customBpmRangeLabel => 'Plage de BPM';
+
+  @override
+  String customBpmRangeValue(int min, int max) {
+    return '$min–$max BPM';
+  }
+
+  @override
+  String get customBpmRangeHint =>
+      'S\'applique aux rythmes (rythme, lèche, biffle, main).';
+
+  @override
+  String get customHoldDurationRangeLabel => 'Durée de maintien';
+
+  @override
+  String customHoldDurationRangeValue(int min, int max) {
+    return '$min–$max s';
+  }
+
+  @override
+  String get customHoldDurationRangeHint =>
+      'Borne la durée des holds et des supplications tenues.';
+
+  @override
   String get customSaveAndLaunch => 'Enregistrer et lancer';
 
   @override

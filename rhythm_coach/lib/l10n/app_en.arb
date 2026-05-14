@@ -859,6 +859,24 @@
   "customIncludeHandToggle": "Include hand stimulation",
   "customIncludeHandDescription": "Enables the hand and biffle modes in the generation.",
   "customMaxDepthLabel": "Maximum depth",
+  "customBpmRangeLabel": "BPM range",
+  "customBpmRangeValue": "{min}–{max} BPM",
+  "@customBpmRangeValue": {
+    "placeholders": {
+      "min": { "type": "int" },
+      "max": { "type": "int" }
+    }
+  },
+  "customBpmRangeHint": "Applies to rhythmic modes (rhythm, lick, biffle, hand).",
+  "customHoldDurationRangeLabel": "Hold duration",
+  "customHoldDurationRangeValue": "{min}–{max} s",
+  "@customHoldDurationRangeValue": {
+    "placeholders": {
+      "min": { "type": "int" },
+      "max": { "type": "int" }
+    }
+  },
+  "customHoldDurationRangeHint": "Bounds the duration of holds and held begs.",
   "customSaveAndLaunch": "Save and launch",
   "customSaveOnly": "Save",
   "customHostLoadError": "Could not load the custom session: {error}",

@@ -3107,6 +3107,42 @@ abstract class AppLocalizations {
   /// **'Profondeur maximale'**
   String get customMaxDepthLabel;
 
+  /// No description provided for @customBpmRangeLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plage de BPM'**
+  String get customBpmRangeLabel;
+
+  /// No description provided for @customBpmRangeValue.
+  ///
+  /// In fr, this message translates to:
+  /// **'{min}–{max} BPM'**
+  String customBpmRangeValue(int min, int max);
+
+  /// No description provided for @customBpmRangeHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'S\'applique aux rythmes (rythme, lèche, biffle, main).'**
+  String get customBpmRangeHint;
+
+  /// No description provided for @customHoldDurationRangeLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Durée de maintien'**
+  String get customHoldDurationRangeLabel;
+
+  /// No description provided for @customHoldDurationRangeValue.
+  ///
+  /// In fr, this message translates to:
+  /// **'{min}–{max} s'**
+  String customHoldDurationRangeValue(int min, int max);
+
+  /// No description provided for @customHoldDurationRangeHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Borne la durée des holds et des supplications tenues.'**
+  String get customHoldDurationRangeHint;
+
   /// No description provided for @customSaveAndLaunch.
   ///
   /// In fr, this message translates to:

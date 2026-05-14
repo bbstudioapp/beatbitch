@@ -859,6 +859,24 @@
   "customIncludeHandToggle": "Inclure la stimulation à la main",
   "customIncludeHandDescription": "Active les modes main et biffle dans la génération.",
   "customMaxDepthLabel": "Profondeur maximale",
+  "customBpmRangeLabel": "Plage de BPM",
+  "customBpmRangeValue": "{min}–{max} BPM",
+  "@customBpmRangeValue": {
+    "placeholders": {
+      "min": { "type": "int" },
+      "max": { "type": "int" }
+    }
+  },
+  "customBpmRangeHint": "S'applique aux rythmes (rythme, lèche, biffle, main).",
+  "customHoldDurationRangeLabel": "Durée de maintien",
+  "customHoldDurationRangeValue": "{min}–{max} s",
+  "@customHoldDurationRangeValue": {
+    "placeholders": {
+      "min": { "type": "int" },
+      "max": { "type": "int" }
+    }
+  },
+  "customHoldDurationRangeHint": "Borne la durée des holds et des supplications tenues.",
   "customSaveAndLaunch": "Enregistrer et lancer",
   "customSaveOnly": "Enregistrer",
   "customHostLoadError": "Impossible de charger la session custom : {error}",

@@ -44,6 +44,8 @@ class _CustomConfigEditorScreenState extends State<CustomConfigEditorScreen> {
   late Map<SessionMode, ModeDose> _doses;
   late CustomDifficulty _difficulty;
   late int _maxDepthIndex;
+  late RangeValues _bpmRange;
+  late RangeValues _holdRange;
 
   @override
   void initState() {
@@ -60,6 +62,11 @@ class _CustomConfigEditorScreenState extends State<CustomConfigEditorScreen> {
     };
     _difficulty = c.difficulty;
     _maxDepthIndex = c.maxDepthIndex;
+    _bpmRange = RangeValues(c.bpmMin.toDouble(), c.bpmMax.toDouble());
+    _holdRange = RangeValues(
+      c.holdDurationMin.toDouble(),
+      c.holdDurationMax.toDouble(),
+    );
   }
 
   @override
@@ -103,6 +110,10 @@ class _CustomConfigEditorScreenState extends State<CustomConfigEditorScreen> {
       doses: Map.of(_doses),
       difficulty: _difficulty,
       maxDepthIndex: _maxDepthIndex,
+      bpmMin: _bpmRange.start.round(),
+      bpmMax: _bpmRange.end.round(),
+      holdDurationMin: _holdRange.start.round(),
+      holdDurationMax: _holdRange.end.round(),
     );
   }
 
@@ -252,7 +263,7 @@ class _CustomConfigEditorScreenState extends State<CustomConfigEditorScreen> {
           ),
           const SizedBox(height: 24),
 
-          // ─── Profondeur max ──────────────────────────────────────────
+          // ─── Profondeur max + bornes BPM/hold ────────────────────────
           _SectionLabel(t.customSectionAdvanced),
           const SizedBox(height: 8),
           _LabeledValue(
@@ -267,6 +278,50 @@ class _CustomConfigEditorScreenState extends State<CustomConfigEditorScreen> {
             label: Position.values[_maxDepthIndex].localizedLabel(context),
             onChanged: (v) => setState(() => _maxDepthIndex = v.round()),
           ),
+          const SizedBox(height: 12),
+          _LabeledValue(
+            label: t.customBpmRangeLabel,
+            value: t.customBpmRangeValue(
+              _bpmRange.start.round(),
+              _bpmRange.end.round(),
+            ),
+          ),
+          RangeSlider(
+            values: _bpmRange,
+            min: CustomSessionConfig.minBpmLimit.toDouble(),
+            max: CustomSessionConfig.maxBpmLimit.toDouble(),
+            divisions: CustomSessionConfig.maxBpmLimit -
+                CustomSessionConfig.minBpmLimit,
+            labels: RangeLabels(
+              '${_bpmRange.start.round()}',
+              '${_bpmRange.end.round()}',
+            ),
+            onChanged: (v) => setState(() => _bpmRange = v),
+          ),
+          Text(t.customBpmRangeHint,
+              style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+          const SizedBox(height: 12),
+          _LabeledValue(
+            label: t.customHoldDurationRangeLabel,
+            value: t.customHoldDurationRangeValue(
+              _holdRange.start.round(),
+              _holdRange.end.round(),
+            ),
+          ),
+          RangeSlider(
+            values: _holdRange,
+            min: CustomSessionConfig.minHoldDurationLimit.toDouble(),
+            max: CustomSessionConfig.maxHoldDurationLimit.toDouble(),
+            divisions: CustomSessionConfig.maxHoldDurationLimit -
+                CustomSessionConfig.minHoldDurationLimit,
+            labels: RangeLabels(
+              '${_holdRange.start.round()}',
+              '${_holdRange.end.round()}',
+            ),
+            onChanged: (v) => setState(() => _holdRange = v),
+          ),
+          Text(t.customHoldDurationRangeHint,
+              style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
           const SizedBox(height: 24),
 
           // ─── Dosage des modes ────────────────────────────────────────
