@@ -1628,11 +1628,12 @@ double? _estComfortBpmThroat(int level) {
 }
 
 /// Comfort BPM biffle. Paliers :
-/// - L5 : `intro_biffle` joue biffle à 90 BPM → comfort=90.
-/// - L9 : `intro_biffle_fast` joue biffle à 140 BPM → comfort=140.
+/// - L5 : `intro_biffle` joue biffle à 45 BPM → comfort=45 (lent et appliqué,
+///   premiers coups de queue).
+/// - L9 : `intro_biffle_fast` joue biffle à 140 BPM → comfort=140 (saut).
 double? _estComfortBpmBiffle(int level) {
   if (level < 5) return null;
-  final base = level < 9 ? 90.0 : 140.0;
+  final base = level < 9 ? 45.0 : 140.0;
   final levelsSinceBump = level < 9 ? (level - 5) : (level - 9);
   final v = base * pow(1.10, levelsSinceBump);
   return v > 300.0 ? 300.0 : v.toDouble();
@@ -1657,7 +1658,7 @@ String _renderCapsTable() {
       ' (`CapabilityRegulator.regulate`). Bumps milestones :'
       ' throat 3 s (L6), 8 s (L8) ; full 3 s (L11), 10 s (L13) ;'
       ' BPM rhythme shallow 90 (L1), 110 (L3) ; BPM rhythme throat 80 (L10),'
-      ' 165 (L15) ; BPM biffle 90 (L5), 140 (L9).');
+      ' 165 (L15) ; BPM biffle 45 (L5), 140 (L9).');
   b.writeln();
   b.writeln('**Hypothèse joueuse perf** : 5 pts endurance, humil mature'
       ' (`humilCap = 30 + level × 8.5`), zéro fail, surcharge réussie à'
@@ -1734,8 +1735,9 @@ String _renderCapsTable() {
   b.writeln('- **Rhythm throat** (head→throat) : pas avant L10 (gate'
       ' `intro_throat_pulse`). Démarre à 80 BPM, ratchet jusqu\'à `intro_rhythm_extreme`'
       ' à L15 qui pousse à 165 BPM en un saut. Ensuite ratchet continue.');
-  b.writeln('- **Biffle** : démarre à 90 BPM à L5 (`intro_biffle`), bump à 140'
-      ' à L9 (`intro_biffle_fast`), ratchet ensuite.');
+  b.writeln('- **Biffle** : démarre à 45 BPM à L5 (`intro_biffle`, lent et'
+      ' appliqué pour les premiers coups), bump à 140 à L9 (`intro_biffle_fast`,'
+      ' saut massif x3), ratchet ensuite.');
   b.writeln();
   b.writeln('### Écart formule vs comfort');
   b.writeln();
