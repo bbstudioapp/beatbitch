@@ -2154,7 +2154,6 @@ class CareerSessionGenerator {
         var dur = _scaleDuration(
           _lerp(20.0, 60.0, durScore),
           enduranceFactor: 0.05,
-          resilienceFactor: 0.04,
         );
         // Cap par nombre d'aller-retours sur les profondeurs throat/full :
         // un step rythme à `to=throat` ne devrait pas enchaîner 30+ pulses
@@ -2188,7 +2187,6 @@ class CareerSessionGenerator {
         final dur = _scaleDuration(
           _lerp(8.0, 30.0, max(durScore, bpmScore)),
           enduranceFactor: 0.08,
-          resilienceFactor: 0.07,
         );
         return _StepDraft(
             mode: mode, bpm: null, from: null, to: to, duration: dur);
@@ -2517,9 +2515,7 @@ class CareerSessionGenerator {
         // joueuse spé sloppy en voit toujours beaucoup (×4.1 à 5 pts).
         return 0.6 + 0.70 * _pts(SpecializationBranch.sloppy);
       case SessionMode.beg:
-        return 1.0 +
-            0.90 * _pts(SpecializationBranch.obeissance) +
-            0.20 * _pts(SpecializationBranch.resilience);
+        return 1.0 + 0.90 * _pts(SpecializationBranch.obeissance);
       case SessionMode.hand:
         // Poids neutre + boost léger rythmeBiffle (hand est un mode
         // rythmé — cohérent qu'une joueuse rythmeBiffle en voie un peu
@@ -2541,19 +2537,15 @@ class CareerSessionGenerator {
   }
 
   /// Applique aux durées les multiplicateurs de spé, capés.
-  /// `enduranceFactor` = bonus par point Endurance ; `resilienceFactor` =
-  /// bonus par point Résilience (allonge les phases dures pour augmenter
-  /// la probabilité de fail → la coach a plus à punir, en ligne avec
-  /// l'esprit de la branche). `extraFactor` = bonus brut additionnel.
+  /// `enduranceFactor` = bonus par point Endurance ; `extraFactor` = bonus
+  /// brut additionnel.
   int _scaleDuration(
     double base, {
     double enduranceFactor = 0.0,
-    double resilienceFactor = 0.0,
     double extraFactor = 0.0,
   }) {
     final mul = 1.0 +
         enduranceFactor * _pts(SpecializationBranch.endurance) +
-        resilienceFactor * _pts(SpecializationBranch.resilience) +
         extraFactor;
     final capped = mul.clamp(1.0, 1.6);
     return (base * capped).round();
@@ -2841,13 +2833,15 @@ class CareerSessionGenerator {
   }
 
   /// Profondeur max débloquée pour un hold, basée sur les milestones :
-  /// fullHoldShort > throatHoldShort > holdMidShort > head/tip de base.
+  /// fullHoldShort > throatHoldShort > holdMidShort > head (socle de base).
   /// Capée aussi par `_maxDepthIndex` (cohérence niveau).
   ///
   /// Sémantique design : « le seul hold qui a du sens est le plus profond
   /// que tu sais tenir ». Aller moins profond perd le côté narratif —
   /// l'utilisatrice qui sait tenir gorge n'a aucune raison de tenir mid
   /// pendant une session normale, c'est juste de la baisse arbitraire.
+  /// Les holds tip/head n'ont pas de clé (socle ouvert par `intro_basics`)
+  /// → en carrière sans milestone hold acquise, le plancher est `head`.
   int _milestoneHoldCeilingIdx() {
     final int milestoneCap;
     if (_unlockedKeys.contains(UnlockKey.fullHoldShort)) {
@@ -2856,15 +2850,13 @@ class CareerSessionGenerator {
       milestoneCap = Position.throat.index;
     } else if (_unlockedKeys.contains(UnlockKey.holdMidShort)) {
       milestoneCap = Position.mid.index;
-    } else if (_unlockedKeys.contains(UnlockKey.holdHead) ||
-        _unlockedKeys.contains(UnlockKey.holdHeadShort)) {
-      milestoneCap = Position.head.index;
-    } else if (_unlockedKeys.contains(UnlockKey.holdTip)) {
-      milestoneCap = Position.tip.index;
-    } else {
-      // Hérité (sans unlocks renseignés) : on retombe sur le cap de niveau.
-      // Évite que le mode démo non-carrière se fige sur tip.
+    } else if (_unlockedKeys.isEmpty) {
+      // Hérité (mode démo / scénario non-carrière) : on retombe sur le cap
+      // de niveau. Évite que le mode démo se fige sur head.
       milestoneCap = _maxDepthIndex;
+    } else {
+      // Carrière, socle de base : head est le hold le plus profond libre.
+      milestoneCap = Position.head.index;
     }
     return min(milestoneCap, _maxDepthIndex);
   }
@@ -3921,10 +3913,12 @@ class CareerSessionGenerator {
   UnlockKey? _unlockKeyFor(_StepDraft d) {
     switch (d.mode) {
       case SessionMode.hold:
-        // Convention : hold/beg portent leur position dans `to`.
+        // Convention : hold/beg portent leur position dans `to`. Les holds
+        // tip/head sont du socle de base (pas de clé) ; mid+ sont gatés.
         final to = d.to;
-        if (to == null || to == Position.tip) return UnlockKey.holdTip;
-        if (to == Position.head) return UnlockKey.holdHead;
+        if (to == null || to == Position.tip || to == Position.head) {
+          return null;
+        }
         if (to == Position.mid) return UnlockKey.holdMidShort;
         final dur = d.duration ?? 0;
         if (to == Position.throat) {
@@ -3940,9 +3934,7 @@ class CareerSessionGenerator {
         if (d.to == Position.full) return UnlockKey.fullPulse;
         if (d.to == Position.throat) return UnlockKey.throatPulse;
         if (d.to == Position.mid) return UnlockKey.rhythmMidBasic;
-        if (d.to == Position.head && d.from == Position.tip) {
-          return UnlockKey.rhythmTipHead;
-        }
+        // Rythme superficiel (tip→head) = socle de base, pas de clé.
         if ((d.bpm ?? 0) >= 160) return UnlockKey.rhythmExtreme;
         return null;
       case SessionMode.biffle:
@@ -3963,13 +3955,12 @@ class CareerSessionGenerator {
         // introduits.
         return UnlockKey.begThroat;
       case SessionMode.lick:
-        // Lick X→full nécessite la milestone niveau 2. Sinon, lick from=tip
-        // (toutes amplitudes ≤ throat) est couvert par la base intro.
+        // Lick X→full nécessite la milestone `intro_lick_full`. Sinon, lick
+        // from=tip (toutes amplitudes ≤ throat) est du socle de base.
         if (d.to == Position.full) return UnlockKey.lickFull;
-        if (d.from == Position.tip) return UnlockKey.lickTipBasic;
         return null;
       case SessionMode.hand:
-        return UnlockKey.handBasic;
+        return null;
       case SessionMode.breath:
         return null;
     }

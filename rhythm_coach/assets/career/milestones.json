@@ -6,11 +6,7 @@
       "level": 1,
       "displayLabel": "Première séance — apprends les bases",
       "unlocks": [
-        "hand_basic",
-        "lick_tip_basic",
-        "rhythm_tip_head",
-        "hold_tip",
-        "hold_head"
+        "basics"
       ],
       "requires": [],
       "insertAtMinSeconds": 0,
@@ -41,7 +37,9 @@
       "level": 3,
       "displayLabel": "Plus profond — rythme en bouche",
       "unlocks": ["rhythm_mid_basic"],
-      "requires": [],
+      "requires": [
+        "basics"
+      ],
       "branches": ["profondeur", "rythmeBiffle"],
       "sequence": [
         {"time": 0,  "text": "Aujourd'hui tu prends plus profond. Suce-moi jusqu'au milieu, plus rapide.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 105, "duration": 14},
@@ -55,7 +53,9 @@
       "level": 4,
       "displayLabel": "Lèche-moi en entier",
       "unlocks": ["lick_full"],
-      "requires": [],
+      "requires": [
+        "basics"
+      ],
       "branches": ["sloppy"],
       "sequence": [
         {"time": 0,  "text": "Tu vas me lécher en entier aujourd'hui. Du bout jusqu'à la base, langue bien sortie. Lente.", "mode": "lick", "from": "tip", "to": "throat", "bpm": 55, "duration": 22},
@@ -70,7 +70,9 @@
       "level": 3,
       "displayLabel": "Première supplique",
       "unlocks": ["beg_libre"],
-      "requires": [],
+      "requires": [
+        "basics"
+      ],
       "branches": ["obeissance"],
       "sequence": [
         {"time": 0,  "text": "Aujourd'hui tu vas apprendre à supplier. Tu vas répéter exactement ce que je te dis.", "mode": "rhythm", "from": "tip", "to": "head", "bpm": 80, "duration": 7},
@@ -86,7 +88,9 @@
       "level": 3,
       "displayLabel": "Lèche humide — fais-moi baver",
       "unlocks": ["sloppy_drool_basic"],
-      "requires": [],
+      "requires": [
+        "basics"
+      ],
       "branches": ["sloppy"],
       "sequence": [
         {"time": 0,  "text": "Aujourd'hui on va salir. Sors la langue, lèche-le bien humide, ne te retiens pas.", "mode": "lick", "from": "tip", "to": "head", "bpm": 75, "duration": 14},
@@ -110,30 +114,13 @@
       ]
     },
     {
-      "id": "intro_resilience_one_more",
-      "level": 4,
-      "displayLabel": "Encore une de plus",
-      "unlocks": ["resilience_one_more"],
-      "requires": ["hold_mid_short"],
-      "branches": ["resilience", "endurance"],
-      "sequence": [
-        {"time": 0,  "text": "Aujourd'hui tu apprends à encaisser le 'encore'. Quand tu crois que c'est fini, ça ne l'est jamais. Échauffe-toi.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 95, "duration": 10},
-        {"time": 10, "text": "Tiens. Trois secondes.", "mode": "hold", "to": "mid", "duration": 3},
-        {"time": 13, "text": "Petite respiration.", "mode": "breath", "duration": 2},
-        {"time": 15, "text": "Encore — trois de plus.", "mode": "hold", "to": "mid", "duration": 3},
-        {"time": 18, "text": "Respire vite.", "mode": "breath", "duration": 2},
-        {"time": 20, "text": "Encore une. Cinq cette fois.", "mode": "hold", "to": "mid", "duration": 5},
-        {"time": 25, "text": "Souffle.", "mode": "breath", "duration": 2},
-        {"time": 27, "text": "Et la dernière. Sept. Tiens-la.", "mode": "hold", "to": "mid", "duration": 7},
-        {"time": 34, "text": "Récupère. Tu m'as bien obéi.", "mode": "lick", "from": "head", "to": "mid", "bpm": 65, "duration": 12}
-      ]
-    },
-    {
       "id": "intro_hold_mid",
       "level": 3,
       "displayLabel": "Hold position médiane",
       "unlocks": ["hold_mid_short"],
-      "requires": [],
+      "requires": [
+        "basics"
+      ],
       "branches": ["endurance", "profondeur"],
       "sequence": [
         {"time": 0,  "text": "Plus profond aujourd'hui. Tu vas aller toucher l'entrée de la gorge avec le bout de ma queue. Prends-la loin dans la bouche.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 90, "duration": 12},
@@ -150,7 +137,9 @@
       "level": 5,
       "displayLabel": "Premiers biffles",
       "unlocks": ["biffle_basic"],
-      "requires": [],
+      "requires": [
+        "basics"
+      ],
       "requiresHands": true,
       "branches": ["rythmeBiffle"],
       "sequence": [
@@ -191,28 +180,13 @@
       ]
     },
     {
-      "id": "intro_resilience_endure",
-      "level": 3,
-      "displayLabel": "Tiens malgré tout",
-      "unlocks": ["resilience_endure_basic"],
-      "requires": [],
-      "branches": ["resilience", "endurance"],
-      "sequence": [
-        {"time": 0,  "text": "Aujourd'hui on apprend à tenir quand c'est dur. Échauffe doucement.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 90, "duration": 12},
-        {"time": 12, "text": "Continue. Tu vas pomper longtemps, sans craquer.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 95, "duration": 25},
-        {"time": 37, "text": "Maintenant tu vas tenir. Va toucher l'entrée de ta gorge avec le bout, et reste là.", "mode": "hold", "to": "mid", "duration": 3},
-        {"time": 40, "text": "Respire. Tu vas y retourner.", "mode": "breath", "duration": 6},
-        {"time": 46, "text": "Repars, plus vite. Encore plus longtemps.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 100, "duration": 25},
-        {"time": 71, "text": "Encore une tenue, plus longue. Va toucher ta gorge, quatre secondes.", "mode": "hold", "to": "mid", "duration": 4},
-        {"time": 75, "text": "Tu as tenu jusqu'au bout. Reprends ton souffle.", "mode": "breath", "duration": 10}
-      ]
-    },
-    {
       "id": "intro_rhythm_sustained",
       "level": 3,
       "displayLabel": "Rythme soutenu — tiens la cadence",
       "unlocks": ["rhythm_head_mid_sustained"],
-      "requires": [],
+      "requires": [
+        "basics"
+      ],
       "branches": ["rythmeBiffle"],
       "sequence": [
         {"time": 0,  "text": "Aujourd'hui tu vas apprendre à tenir une cadence longue. Échauffe doucement.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 80, "duration": 12},
@@ -255,43 +229,13 @@
       "level": 7,
       "displayLabel": "Phase libre",
       "unlocks": ["freestyle"],
-      "requires": [],
+      "requires": [
+        "basics"
+      ],
       "sequence": [
         {"time": 0,  "text": "Là tu fais ce que tu veux. Trente secondes pour me montrer.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 100, "duration": 8},
         {"time": 8,  "text": "Vas-y. Surprends-moi.", "mode": "freestyle", "duration": 30},
         {"time": 38, "text": "Bien fait. Termine doucement.", "mode": "lick", "from": "head", "to": "mid", "bpm": 80, "duration": 10}
-      ]
-    },
-    {
-      "id": "intro_resilience_count",
-      "level": 7,
-      "displayLabel": "Compte à voix haute",
-      "unlocks": ["resilience_count", "beg_throat"],
-      "requires": ["throat_hold_short", "beg_libre", "throat_pulse"],
-      "branches": ["resilience", "obeissance"],
-      "sequence": [
-        {"time": 0,  "text": "Aujourd'hui tu vas supplier la gorge ouverte, en comptant. Ta voix t'aide à encaisser. Échauffe.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 100, "duration": 12},
-        {"time": 12, "text": "Gorge ouverte. Compte à voix haute jusqu'à cinq pendant que tu m'implores.", "mode": "beg", "to": "throat", "duration": 5},
-        {"time": 17, "text": "Bouche libre, redis-moi : « j'ai compté jusqu'à cinq pour toi ».", "mode": "beg", "duration": 8},
-        {"time": 25, "text": "Reprends gorge. Compte jusqu'à six cette fois, sans craquer.", "mode": "beg", "to": "throat", "duration": 6},
-        {"time": 31, "text": "Maintenant supplie : « laisse-moi compter encore plus longtemps ».", "mode": "beg", "duration": 8},
-        {"time": 39, "text": "Dernière. Gorge ouverte, compte jusqu'à dix.", "mode": "beg", "to": "throat", "duration": 10},
-        {"time": 49, "text": "Tu as tenu et parlé. Récupère.", "mode": "lick", "from": "head", "to": "mid", "bpm": 75, "duration": 12}
-      ]
-    },
-    {
-      "id": "intro_resilience_recovery",
-      "level": 8,
-      "displayLabel": "Récupère et reprends",
-      "unlocks": ["resilience_recovery"],
-      "requires": ["throat_hold_short"],
-      "branches": ["resilience", "endurance"],
-      "sequence": [
-        {"time": 0,  "text": "Aujourd'hui tu vas pousser fort, échouer presque, et te relever. Commence dur.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 105, "duration": 14},
-        {"time": 14, "text": "Tiens gorge. Quatre secondes.", "mode": "hold", "to": "throat", "duration": 4},
-        {"time": 18, "text": "Respire. Tu as failli craquer. Reprends ton calme.", "mode": "breath", "duration": 10},
-        {"time": 28, "text": "Plus doux maintenant. Lèche, récupère.", "mode": "lick", "from": "head", "to": "mid", "bpm": 70, "duration": 12},
-        {"time": 40, "text": "Et on repart. Tu peux le refaire, je le sais.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 90, "duration": 10}
       ]
     },
     {
@@ -315,7 +259,9 @@
       "displayLabel": "Biffles rapides",
       "unlocks": ["biffle_fast"],
       "requires": ["biffle_basic"],
-      "branches": ["rythmeBiffle", "resilience"],
+      "branches": [
+        "rythmeBiffle"
+      ],
       "requiresHands": true,
       "sequence": [
         {"time": 0,  "text": "Échauffement avant le tempo rapide.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 110, "duration": 10},
@@ -410,7 +356,9 @@
       "displayLabel": "Tempo extrême",
       "unlocks": ["rhythm_extreme"],
       "requires": ["throat_pulse"],
-      "branches": ["rythmeBiffle", "resilience"],
+      "branches": [
+        "rythmeBiffle"
+      ],
       "sequence": [
         {"time": 0,  "text": "Aujourd'hui c'est rapide.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 130, "duration": 10},
         {"time": 10, "text": "Plus vite encore.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 165, "duration": 30},
@@ -432,29 +380,14 @@
       ]
     },
     {
-      "id": "intro_combo_hold_full",
-      "level": 17,
-      "displayLabel": "Combo hold à fond",
-      "unlocks": ["combo_hold_full_chained"],
-      "requires": ["full_hold_long"],
-      "branches": ["endurance", "resilience"],
-      "sequence": [
-        {"time": 0,  "text": "Combo trois holds à fond.", "mode": "rhythm", "from": "mid", "to": "full", "bpm": 90, "duration": 10},
-        {"time": 10, "text": "Hold 1 : huit secondes.", "mode": "hold", "to": "full", "duration": 8},
-        {"time": 18, "text": "Respire vite.", "mode": "breath", "duration": 6},
-        {"time": 24, "text": "Hold 2 : dix secondes.", "mode": "hold", "to": "full", "duration": 10},
-        {"time": 34, "text": "Respire.", "mode": "breath", "duration": 8},
-        {"time": 42, "text": "Hold 3 : douze secondes.", "mode": "hold", "to": "full", "duration": 12},
-        {"time": 54, "text": "Bien. Lèche pour finir.", "mode": "lick", "from": "head", "to": "mid", "bpm": 80, "duration": 12}
-      ]
-    },
-    {
       "id": "intro_final_hold_tip",
       "level": 2,
       "displayLabel": "Apothéose — sauce sur la langue",
       "placement": "final",
       "unlocks": ["final_hold_tip"],
-      "requires": [],
+      "requires": [
+        "basics"
+      ],
       "branches": ["sloppy", "obeissance"],
       "sequence": [
         {"time": 0,  "text": "C'est le moment. Sors la langue, large, à plat.", "mode": "rhythm", "from": "tip", "to": "head", "bpm": 90, "duration": 6},
@@ -469,7 +402,9 @@
       "displayLabel": "Apothéose — langue lente jusqu'à la sauce",
       "placement": "final",
       "unlocks": ["final_lick_tip_head"],
-      "requires": [],
+      "requires": [
+        "basics"
+      ],
       "branches": ["sloppy"],
       "sequence": [
         {"time": 0,  "text": "Lèche. Lent. Bout au gland, sans t'arrêter.", "mode": "lick", "from": "tip", "to": "head", "bpm": 55, "duration": 10},
@@ -484,7 +419,9 @@
       "displayLabel": "Apothéose — gland tenu, bouche figée",
       "placement": "final",
       "unlocks": ["final_hold_head"],
-      "requires": [],
+      "requires": [
+        "basics"
+      ],
       "branches": ["obeissance"],
       "sequence": [
         {"time": 0,  "text": "Lèvres sous le gland. Tiens. Pas un mouvement.", "mode": "hold", "to": "head", "duration": 7},

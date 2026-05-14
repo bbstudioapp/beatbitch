@@ -4,6 +4,13 @@
 
 ## [Non publié]
 
+### Modifié
+- **Nettoyage des déblocages carrière** : chaque milestone débloque désormais exactement une chose, et chaque déblocage a un effet concret (gate d'action, comportement, ou commentaire coach). Conséquences :
+  - La branche de spécialisation **Résilience** est retirée (l'Endurance couvre déjà « tenir quand c'est dur »). Les points investis dans Résilience par les joueuses existantes sont automatiquement reversés au pool libre à réattribuer. Les mini-punitions inopinées en cours de séance ne dépendent plus d'une branche de spé mais de la **personnalité du coach** (un coach brutal/sans pitié en glisse beaucoup plus qu'une coach bienveillante).
+  - Les milestones « couleur » sloppy `intro_sloppy_loud_suck`, `intro_sloppy_overflow` et `intro_sloppy_spit` débloquent maintenant chacune un sous-pool de commentaires coach dédié (« fais du bruit », « laisse déborder », « crache sur ma queue ») — ces deux derniers ne sortant que quand la bouche est effectivement pleine de salive.
+  - 4 milestones Résilience et la milestone `intro_combo_hold_full` (combos pas encore implémentés) sont retirées du pool de carrière.
+  - La milestone tutoriel `intro_basics` débloque une clé `basics` unique, prérequis des milestones de premier palier de chaque piste ; les actions de base (main, lick superficiel, rythme tip→head, holds tip/head) sont ouvertes par défaut sans clé.
+
 ## [0.2.1] — 2026-05-12
 
 Ajout de l'allemand (3ᵉ langue) et regroupement des réglages perso dans l'écran Profil.

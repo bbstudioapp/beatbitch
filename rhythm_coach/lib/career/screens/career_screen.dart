@@ -309,6 +309,7 @@ class _CareerScreenState extends State<CareerScreen> {
           canSave: true,
           coachAdvancesTier: coachAdvances,
           specialization: bundle.specialization,
+          miniPunishmentRate: activeCoach.miniPunishmentRate,
           onRequestUpgrade: (ctrl) => _handleUpgrade(ctrl, bundle, clamped),
           onRequestEncore: !canEncore
               ? null
@@ -764,6 +765,7 @@ class _CareerScreenState extends State<CareerScreen> {
           canSave: true,
           coachAdvancesTier: coachAdvances,
           specialization: bundle.specialization,
+          miniPunishmentRate: activeCoach.miniPunishmentRate,
           // Conserve la chauffe accumulée par la session précédente : on
           // « repart d'où on était » côté humiliation intra-session.
           seedHumiliationSession: previousSessionHumiliation,

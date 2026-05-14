@@ -146,7 +146,7 @@ void main() {
       expect(pick!.id, 'intro_hold_mid');
     });
 
-    test('resilience: 2 → multi-branche resilience+endurance gagne biffle', () {
+    test('obeissance: 2 → multi-branche obeissance+endurance gagne biffle', () {
       final svc = MilestoneService();
       svc.seedForTest(
         catalog: [
@@ -156,10 +156,10 @@ void main() {
             branches: [SpecializationBranch.rythmeBiffle],
           ),
           _milestone(
-            id: 'intro_resilience_endure',
+            id: 'intro_beg_endure',
             sequence: [_stepLow()],
             branches: [
-              SpecializationBranch.resilience,
+              SpecializationBranch.obeissance,
               SpecializationBranch.endurance,
             ],
           ),
@@ -168,10 +168,10 @@ void main() {
       final pick = svc.pendingFor(
         humiliationScore: _humilFloor,
         obedience: _obedFloor,
-        allocation: _alloc({SpecializationBranch.resilience: 2}),
+        allocation: _alloc({SpecializationBranch.obeissance: 2}),
       );
       expect(pick, isNotNull);
-      expect(pick!.id, 'intro_resilience_endure');
+      expect(pick!.id, 'intro_beg_endure');
     });
 
     test(

@@ -77,6 +77,14 @@ class RandomComment {
   /// respiration nasale reste possible.
   final Position? maxDepth;
 
+  /// Si non null : ne sort que si la barre de salive courante (fraction
+  /// 0..1, cf. `SalivaEngine.ratio`) est au moins à ce niveau. Permet de
+  /// réserver une phrase « crache / laisse déborder » au moment où la
+  /// bouche est effectivement pleine, plutôt qu'à sec. Sans contexte de
+  /// salive (sessions hors carrière, ou caller qui ne le passe pas), la
+  /// fraction vaut 0 → ces phrases ne sortent pas (comportement voulu).
+  final double? minSaliva;
+
   /// Si non vide : la phrase n'est candidate que si **toutes** ces clés
   /// d'unlock (au format `UnlockKey.serialized`) sont acquises pour la
   /// session courante. Permet de scoper un sous-pool de phrases à une
@@ -92,6 +100,7 @@ class RandomComment {
     this.maxBpm,
     this.minDepth,
     this.maxDepth,
+    this.minSaliva,
     this.requiresUnlock = const [],
   });
 
@@ -120,6 +129,7 @@ class RandomComment {
         maxBpm: (raw['max_bpm'] as num?)?.toInt(),
         minDepth: Position.fromString(raw['min_depth'] as String?),
         maxDepth: Position.fromString(raw['max_depth'] as String?),
+        minSaliva: (raw['min_saliva'] as num?)?.toDouble(),
         requiresUnlock: requiresUnlock,
       );
     }
@@ -127,11 +137,13 @@ class RandomComment {
   }
 
   /// Vrai si ce commentaire s'applique au contexte courant ET que tous
-  /// ses [requiresUnlock] sont satisfaits par [unlockedKeys].
+  /// ses [requiresUnlock] sont satisfaits par [unlockedKeys]. [saliva] =
+  /// fraction de la barre de salive (0..1) ; 0 si inconnu.
   bool matches({
     required SessionMode mode,
     int? bpm,
     Position? depth,
+    double saliva = 0.0,
     Set<String> unlockedKeys = const {},
   }) {
     if (modes != null && !modes!.contains(mode)) return false;
@@ -143,21 +155,23 @@ class RandomComment {
     if (maxDepth != null && depth != null && depth.index > maxDepth!.index) {
       return false;
     }
+    if (minSaliva != null && saliva < minSaliva!) return false;
     for (final k in requiresUnlock) {
       if (!unlockedKeys.contains(k)) return false;
     }
     return true;
   }
 
-  /// Vrai si la phrase n'a aucun filtre contextuel (mode/bpm/depth) et que
-  /// ses prérequis d'unlock sont satisfaits — sert de fallback dans
+  /// Vrai si la phrase n'a aucun filtre contextuel (mode/bpm/depth/salive)
+  /// et que ses prérequis d'unlock sont satisfaits — sert de fallback dans
   /// `pickFor` quand aucune phrase contextuelle ne match.
   bool isContextlessFor(Set<String> unlockedKeys) {
     if (modes != null ||
         minBpm != null ||
         maxBpm != null ||
         minDepth != null ||
-        maxDepth != null) {
+        maxDepth != null ||
+        minSaliva != null) {
       return false;
     }
     for (final k in requiresUnlock) {
@@ -204,6 +218,7 @@ class RandomCommentsBundle {
     required SessionMode mode,
     int? bpm,
     Position? depth,
+    double saliva = 0.0,
     required Random rng,
     Set<String> unlockedKeys = const {},
   }) {
@@ -212,6 +227,7 @@ class RandomCommentsBundle {
               mode: mode,
               bpm: bpm,
               depth: depth,
+              saliva: saliva,
               unlockedKeys: unlockedKeys,
             ))
         .toList();
