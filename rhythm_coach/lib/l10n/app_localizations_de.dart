@@ -1750,6 +1750,16 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String customSaveError(String error) {
+    return 'Die Konfiguration konnte nicht gespeichert werden: $error';
+  }
+
+  @override
+  String customLaunchError(String error) {
+    return 'Die Sitzung konnte nicht gestartet werden: $error';
+  }
+
+  @override
   String get customFinishNowButton => 'Bring mich zum Ende';
 
   @override
