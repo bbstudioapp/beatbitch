@@ -263,19 +263,33 @@ class SessionController extends ChangeNotifier {
   /// le flow fail standard). Set depuis `SessionScreen`.
   Future<bool> Function(SessionController controller)? onMilestoneRetry;
 
-  /// Allocation de spécialisation courante. Quand la branche `resilience`
-  /// est investie, le tick déclenche une mini-punition inopinée environ
-  /// `0.05 × pts(resilience)` fois par minute (ex: 25 %/min à 5 pts).
-  /// Null = pas de spé connue (sessions hors carrière) → jamais de mini.
-  SpecializationAllocation? _specialization;
+  /// Allocation de spécialisation courante. Consommée par la génération de
+  /// punition carrière contextuelle (`_generateCareerPunishmentOrNull` →
+  /// `CareerSessionGenerator.generatePunishment`). Null = pas de spé connue
+  /// (sessions hors carrière).
+  final SpecializationAllocation? _specialization;
 
-  /// Compteur en secondes pour cadencer le tirage de mini-punition résilience
+  /// Probabilité par minute qu'une mini-punition inopinée se déclenche en
+  /// cours de séance. Dérivée de la personnalité du coach (cf.
+  /// `Coach.miniPunishmentRate`) ; 0 = jamais (sessions hors carrière /
+  /// voix par défaut → le caller ne le passe pas).
+  final double _miniPunishmentRate;
+
+  /// Slug court du coach actif (`lina`, `victoria`, …) — extrait de l'`id`
+  /// `coach_NN_<slug>` par le caller. Sert à orienter la sélection de fond
+  /// vers les images taguées au nom de la coach (cf. `BackgroundContext`
+  /// dans `BackgroundsService`). Null = pas de coach connue (voix par
+  /// défaut, scénarios JSON, démos) → aucun fond `_<coach>` ne sera
+  /// considéré comme matchant.
+  final String? _coachTag;
+
+  /// Compteur en secondes pour cadencer le tirage de mini-punition
   /// (1 tirage par minute).
-  int _resilienceTickAccumulator = 0;
+  int _miniPunishmentTickAccumulator = 0;
 
   /// RNG dédié aux mini-punitions. Injectable en test via
-  /// [debugSetResilienceRng] pour forcer le tirage.
-  Random _resilienceRng = Random();
+  /// [debugSetMiniPunishmentRng] pour forcer le tirage.
+  Random _miniPunishmentRng = Random();
 
   /// Compteur de mini-punitions effectivement déclenchées dans la session
   /// courante. Non persisté — observé par les tests.
@@ -283,30 +297,21 @@ class SessionController extends ChangeNotifier {
   @visibleForTesting
   int get miniPunishmentsTriggered => _miniPunishmentsTriggered;
 
-  /// Configure l'allocation de spé consommée par le tick résilience.
-  /// Appelé par `SessionScreen` au démarrage et après chaque
-  /// `requestUpgrade` côté carrière.
-  void setSpecialization(SpecializationAllocation? alloc) {
-    _specialization = alloc;
-  }
-
   @visibleForTesting
-  void debugSetResilienceRng(Random rng) {
-    _resilienceRng = rng;
+  void debugSetMiniPunishmentRng(Random rng) {
+    _miniPunishmentRng = rng;
   }
 
-  /// Décide si le tick résilience doit déclencher une mini-punition cette
+  /// Décide si le tick courant doit déclencher une mini-punition cette
   /// minute. Pure : pas de side-effect, pas de lecture d'état controller.
   /// Exposée pour le test unitaire.
   @visibleForTesting
   static bool computeMiniPunishmentTrigger({
-    required SpecializationAllocation? specialization,
+    required double rate,
     required double rngValue,
   }) {
-    final pts = specialization?.pointsIn(SpecializationBranch.resilience) ?? 0;
-    if (pts <= 0) return false;
-    final probability = 0.05 * pts;
-    return rngValue < probability;
+    if (rate <= 0) return false;
+    return rngValue < rate;
   }
 
   SessionController({
@@ -324,6 +329,7 @@ class SessionController extends ChangeNotifier {
     List<double>? staminaProfile,
     HoldVerifier? holdVerifier,
     SpecializationAllocation? specialization,
+    double miniPunishmentRate = 0.0,
     double seedHumiliationSession = 0.0,
     int careerLevel = 0,
     CapabilityAxis? capabilityOverloadAxis,
@@ -331,6 +337,7 @@ class SessionController extends ChangeNotifier {
     Set<UnlockKey> unlockedKeys = const {},
     bool includeHand = true,
     bool isQuickie = false,
+    String? coachTag,
   })  : _session = session,
         _tts = tts,
         _beep = beep,
@@ -345,13 +352,15 @@ class SessionController extends ChangeNotifier {
         _staminaProfile = staminaProfile,
         _holdVerifier = holdVerifier,
         _specialization = specialization,
+        _miniPunishmentRate = miniPunishmentRate,
         _seedHumiliationSession = seedHumiliationSession,
         _careerLevel = careerLevel,
         _capabilityOverloadAxis = capabilityOverloadAxis,
         _capabilityProfile = capabilityProfile,
         _unlockedKeys = unlockedKeys,
         _includeHand = includeHand,
-        _isQuickie = isQuickie {
+        _isQuickie = isQuickie,
+        _coachTag = coachTag {
     _beep.onBeat = _handleBeat;
   }
 
@@ -380,6 +389,18 @@ class SessionController extends ChangeNotifier {
   void _checkProgressMarkers() {
     final total = session.durationSeconds;
     if (total <= 0) return;
+    // Step final entamé → on a déjà déclenché le chime (climax). Les paliers
+    // pré-orgasme (« je vais décharger », « prépare ta gorge ») n'ont plus
+    // de sens à ce moment-là : marquer le palier comme annoncé mais ne pas
+    // parler. Cas typique : final hold long en custom, où le 90 % du temps
+    // écoulé tombe en plein dans la tenue post-chime (issue #65).
+    if (_finalChimePlayed) {
+      final percent = (elapsedSeconds * 100 / total).floor();
+      for (final marker in _progressMarkers) {
+        if (percent >= marker) _announcedProgressMarkers.add(marker);
+      }
+      return;
+    }
     final percent = (elapsedSeconds * 100 / total).floor();
     for (final marker in _progressMarkers) {
       if (percent >= marker && !_announcedProgressMarkers.contains(marker)) {
@@ -444,7 +465,7 @@ class SessionController extends ChangeNotifier {
 
   void _handleBeat(BeatEvent e) {
     if (!_session.noStats) {
-      _stats.recordBeat(mode: e.mode, to: e.to, from: e.from);
+      _stats.recordBeat(mode: e.mode, to: e.to);
       _stats.markModeUsed(e.mode);
     }
     _stamina.onBeat(e);
@@ -473,6 +494,29 @@ class SessionController extends ChangeNotifier {
   List<LevelMilestone> _sessionMilestoneUnlocks = const [];
   List<LevelMilestone> get sessionMilestoneUnlocks => _sessionMilestoneUnlocks;
 
+  /// True si au moins une milestone vient d'être acquittée pendant cette
+  /// séance (consulté après [_finish] par le caller pour décider du
+  /// level-up via `CareerProgressService.canLevelUp`).
+  bool get milestoneAcquittedThisSession => _sessionMilestoneUnlocks.isNotEmpty;
+
+  /// True si la séance avait au moins une milestone candidate planifiée
+  /// (body/body2/final) qui ne sera pas acquittée — utilisé par
+  /// [triggerFail] pour doubler les malus humil/obed (« tu pouvais avancer,
+  /// tu as raté »). Une milestone déjà complétée avant cette séance ne
+  /// compte pas (cas défensif : le générateur ne devrait pas en insérer).
+  bool _milestoneOpportunityMissed() {
+    final ids = <String?>[
+      _session.milestoneId,
+      _session.secondMilestoneId,
+      _session.finalMilestoneId,
+    ];
+    for (final id in ids) {
+      if (id == null) continue;
+      if (!milestoneService.isCompleted(id)) return true;
+    }
+    return false;
+  }
+
   /// Compteur interne de la durée passée dans la position courante (s)
   /// quand on est en mode hold throat/full. Sert à crediter chaque
   /// seconde au StatsService et à mémoriser le hold full le plus long
@@ -493,15 +537,36 @@ class SessionController extends ChangeNotifier {
     return remaining.inSeconds <= 60 && remaining.inSeconds >= 0;
   }
 
-  /// True si la position courante est à l'intérieur de la fenêtre milestone
-  /// de la session. Utilisé pour offrir un retry plutôt que le flow fail
-  /// standard quand l'utilisatrice rate pendant l'apprentissage.
-  bool _isInMilestoneWindow() {
-    final start = _session.milestoneStartTime;
-    final dur = _session.milestoneDurationSeconds;
-    if (start == null || dur == null) return false;
+  /// True si la position courante est à l'intérieur de la fenêtre d'une
+  /// des milestones body de la session. Utilisé pour offrir un retry
+  /// plutôt que le flow fail standard quand l'utilisatrice rate pendant
+  /// l'apprentissage. Couvre les deux body (sessions longues) + la final.
+  bool _isInMilestoneWindow() => currentMilestoneIdInWindow != null;
+
+  /// Id de la milestone dont la fenêtre temporelle contient `elapsedSeconds`,
+  /// ou `null` si on est hors de toute fenêtre. Cherche dans l'ordre :
+  /// body 1, body 2, final. Sert au callback `onMilestoneRetry` pour cibler
+  /// la bonne milestone quand la séance en contient plusieurs.
+  String? get currentMilestoneIdInWindow {
     final t = elapsedSeconds;
-    return t >= start && t < start + dur;
+    bool within(int? start, int? dur) {
+      if (start == null || dur == null) return false;
+      return t >= start && t < start + dur;
+    }
+
+    if (within(
+        _session.milestoneStartTime, _session.milestoneDurationSeconds)) {
+      return _session.milestoneId;
+    }
+    if (within(_session.secondMilestoneStartTime,
+        _session.secondMilestoneDurationSeconds)) {
+      return _session.secondMilestoneId;
+    }
+    if (within(_session.finalMilestoneStartTime,
+        _session.finalMilestoneDurationSeconds)) {
+      return _session.finalMilestoneId;
+    }
+    return null;
   }
 
   /// Endurance projetée à la seconde courante, ou `null` si pas de
@@ -615,7 +680,7 @@ class SessionController extends ChangeNotifier {
         _sessionMilestoneUnlocks = const [];
         _currentHoldFullDuration = 0;
         _lastHoldTickAtSecond = -1;
-        _resilienceTickAccumulator = 0;
+        _miniPunishmentTickAccumulator = 0;
         _miniPunishmentsTriggered = 0;
         _announcedProgressMarkers.clear();
         _capabilityTracker?.onSessionStart();
@@ -633,7 +698,6 @@ class SessionController extends ChangeNotifier {
         // "compétence acquise = effet immédiat dès la séance suivante".
         // - sloppyDroolBasic : production lick ×1.5, plafond 100
         // - sloppyBiffleSlow : production biffle ×3
-        // - sloppyDroolDeep : hold throat/full ×1.5, plafond +20
         if (milestoneService.hasUnlock(UnlockKey.sloppyDroolBasic)) {
           _saliva.setLickProductionMultiplier(1.5);
           _saliva.setMax(SalivaEngine.sloppyBaseMax);
@@ -642,10 +706,6 @@ class SessionController extends ChangeNotifier {
         }
         if (milestoneService.hasUnlock(UnlockKey.sloppyBiffleSlow)) {
           _saliva.setBiffleProductionMultiplier(3.0);
-        }
-        if (milestoneService.hasUnlock(UnlockKey.sloppyDroolDeep)) {
-          _saliva.setHoldDepthProductionMultiplier(1.5);
-          _saliva.setMax(_saliva.maxValue + SalivaEngine.sloppyDeepBonus);
         }
         _stamina.reset();
         // Lectures async tolérées : si pas finies au premier beat, on est
@@ -820,7 +880,7 @@ class SessionController extends ChangeNotifier {
       }
       _salivaOverflowsThisSession += apply;
     }
-    _accrueResilienceTick();
+    _accrueMiniPunishmentTick();
     if (_beep.currentMode != SessionMode.hold) return;
     final pos = _beep.currentFrom;
     if (pos == Position.throat || pos == Position.full) {
@@ -859,6 +919,37 @@ class SessionController extends ChangeNotifier {
     // ré-arme pas, donc rare).
     final expected = step.to ?? _beep.currentFrom;
     verifier.arm(expected);
+  }
+
+  /// Compose le contexte poussé à `BackgroundsService.pickForContext` au
+  /// moment d'un step de config. Chaque champ alimente une catégorie de
+  /// tags du `BackgroundTagVocabulary` (cf. `backgrounds_loader.dart`) :
+  /// - `mode` : nom du mode résolu (`rhythm`, `hold`…).
+  /// - `position` : `step.to` (cible courante : le rythme alterne avec `to`
+  ///   comme point de tension), à défaut `step.from`. Null hors modes à
+  ///   position (breath/biffle/freestyle/hand-sans-from).
+  /// - `coach` : slug court de la coach active, transmis au constructeur.
+  /// - `phase` : `final` au step `finalStepTime`, `post-final` au-delà.
+  BackgroundContext _buildBackgroundContext(
+    SessionStep step,
+    SessionMode resolvedMode,
+  ) {
+    final pos = step.to ?? step.from;
+    String? phase;
+    final finalT = _session.finalStepTime;
+    if (finalT != null) {
+      if (step.time == finalT) {
+        phase = 'final';
+      } else if (step.time > finalT) {
+        phase = 'post-final';
+      }
+    }
+    return BackgroundContext(
+      mode: resolvedMode.name,
+      position: pos?.name,
+      coach: _coachTag,
+      phase: phase,
+    );
   }
 
   /// Désarme la vérif et logue le rapport (V1 : juste un debugPrint).
@@ -957,12 +1048,17 @@ class SessionController extends ChangeNotifier {
           duration: step.duration,
         );
         _armHoldVerifierIfHoldStep(step);
-        // Rotation aléatoire à chaque step de config — anti-doublon
-        // immédiat dans le service. Un override `step.background`
-        // éventuel est appliqué ci-dessous, après le bloc isTextOnly,
-        // parce qu'un step text-only peut aussi vouloir poser un fond
-        // précis sans pour autant changer de config bip.
-        BackgroundsService.instance.pickRandom();
+        // Sélection priorisée par tags du nom de fichier : on pousse au
+        // service le contexte courant (mode, profondeur, coach, phase) et
+        // il privilégie les fonds taggés en conséquence (cf.
+        // `BackgroundsService.pickForContext`). Anti-doublon immédiat dans
+        // le service. Un override `step.background` éventuel est appliqué
+        // ci-dessous, après le bloc isTextOnly, parce qu'un step text-only
+        // peut aussi vouloir poser un fond précis sans pour autant changer
+        // de config bip.
+        BackgroundsService.instance.pickForContext(
+          _buildBackgroundContext(step, resolvedMode),
+        );
         // Si la step n'a pas son propre texte scripté, on tente une phrase
         // de transition (« plus vite », « plus profond »…). Ça ne joue
         // que si on est resté dans le même mode et qu'un paramètre clé a
@@ -1157,6 +1253,7 @@ class SessionController extends ChangeNotifier {
     }
 
     await markIfPresent(session.milestoneId, isFinal: false);
+    await markIfPresent(session.secondMilestoneId, isFinal: false);
     await markIfPresent(session.finalMilestoneId, isFinal: true);
     _sessionMilestoneUnlocks = List<LevelMilestone>.unmodifiable(newlyUnlocked);
 
@@ -1477,10 +1574,19 @@ class SessionController extends ChangeNotifier {
     // demandant explicitement.
     _swallowMode = SwallowMode.allowed;
     // Pénalités amplifiées si on craque dans la dernière minute (la
-    // session est presque terminée — c'est ruiné).
+    // session est presque terminée — c'est ruiné). Cumulable avec ×2 si
+    // une milestone candidate au niveau courant était présente et n'a pas
+    // été acquittée : « tu pouvais avancer, tu as raté ». Au pire ×4.
     final lastMinuteMul = _isInLastMinute() ? 2.0 : 1.0;
-    _obedience.onFail(multiplier: lastMinuteMul);
-    _humiliation.onFail(multiplier: lastMinuteMul);
+    final missedMilestone = _milestoneOpportunityMissed();
+    _obedience.onFail(
+      multiplier: lastMinuteMul,
+      milestoneOpportunityMissed: missedMilestone,
+    );
+    _humiliation.onFail(
+      multiplier: lastMinuteMul,
+      milestoneOpportunityMissed: missedMilestone,
+    );
     _punishmentAbandoned = false;
     // Le hold full en cours est interrompu : pas de crédit Iron Lungs.
     _currentHoldFullDuration = 0;
@@ -1695,35 +1801,35 @@ class SessionController extends ChangeNotifier {
     }
   }
 
-  /// Tick résilience : 1 tirage par minute. Si la branche `resilience`
-  /// est investie et que l'état autorise une mini-punition (pas en
-  /// milestone, pas dernière minute, pas en finish), tente de déclencher
+  /// Tick mini-punition : 1 tirage par minute. Si le coach a un
+  /// `miniPunishmentRate` > 0 et que l'état autorise une mini-punition (pas
+  /// en milestone, pas dernière minute, pas en finish), tente de déclencher
   /// `_runMiniPunishmentFlow`. Pas de garde sur `_state == running` ici
   /// — `_accrueHoldSecond` ne s'appelle que sous le ticker, qui ne tourne
   /// que pendant `running`.
-  void _accrueResilienceTick() {
-    _resilienceTickAccumulator++;
-    if (_resilienceTickAccumulator < 60) return;
-    _resilienceTickAccumulator = 0;
-    if (_specialization == null) return;
+  void _accrueMiniPunishmentTick() {
+    _miniPunishmentTickAccumulator++;
+    if (_miniPunishmentTickAccumulator < 60) return;
+    _miniPunishmentTickAccumulator = 0;
+    if (_miniPunishmentRate <= 0) return;
     if (_isInMilestoneWindow()) return;
     if (_isInLastMinute()) return;
     final shouldFire = computeMiniPunishmentTrigger(
-      specialization: _specialization,
-      rngValue: _resilienceRng.nextDouble(),
+      rate: _miniPunishmentRate,
+      rngValue: _miniPunishmentRng.nextDouble(),
     );
     if (!shouldFire) return;
     final shortPool = _punishmentBundle.punishments
         .where((p) => p.durationSeconds < 20)
         .toList();
     if (shortPool.isEmpty) return;
-    final p = shortPool[_resilienceRng.nextInt(shortPool.length)];
+    final p = shortPool[_miniPunishmentRng.nextInt(shortPool.length)];
     _miniPunishmentsTriggered++;
     // Fire-and-forget : on ne bloque pas le ticker.
     unawaited(_runMiniPunishmentFlow(p));
   }
 
-  /// Joue une mini-punition inopinée déclenchée par le tick résilience.
+  /// Joue une mini-punition inopinée déclenchée par le tick coach.
   /// Variante allégée du flow fail : pas de phrase fail, pas de breath de
   /// récup, pas de saut de section. On enchaîne directement la punition
   /// puis on restaure le loop précédent.
@@ -1949,6 +2055,7 @@ class SessionController extends ChangeNotifier {
       mode: _beep.currentMode,
       bpm: _beep.currentBpm,
       depth: _beep.currentTo ?? _beep.currentFrom,
+      saliva: _saliva.ratio,
       rng: _random,
       unlockedKeys: unlockedKeys,
     );

@@ -3107,6 +3107,42 @@ abstract class AppLocalizations {
   /// **'Profondeur maximale'**
   String get customMaxDepthLabel;
 
+  /// No description provided for @customBpmRangeLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plage de BPM'**
+  String get customBpmRangeLabel;
+
+  /// No description provided for @customBpmRangeValue.
+  ///
+  /// In fr, this message translates to:
+  /// **'{min}–{max} BPM'**
+  String customBpmRangeValue(int min, int max);
+
+  /// No description provided for @customBpmRangeHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'S\'applique aux rythmes (rythme, lèche, biffle, main).'**
+  String get customBpmRangeHint;
+
+  /// No description provided for @customHoldDurationRangeLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Durée de maintien'**
+  String get customHoldDurationRangeLabel;
+
+  /// No description provided for @customHoldDurationRangeValue.
+  ///
+  /// In fr, this message translates to:
+  /// **'{min}–{max} s'**
+  String customHoldDurationRangeValue(int min, int max);
+
+  /// No description provided for @customHoldDurationRangeHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Borne la durée des holds et des supplications tenues.'**
+  String get customHoldDurationRangeHint;
+
   /// No description provided for @customSaveAndLaunch.
   ///
   /// In fr, this message translates to:
@@ -3124,6 +3160,18 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Impossible de charger la session custom : {error}'**
   String customHostLoadError(String error);
+
+  /// No description provided for @customSaveError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'enregistrer la configuration : {error}'**
+  String customSaveError(String error);
+
+  /// No description provided for @customLaunchError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de lancer la séance : {error}'**
+  String customLaunchError(String error);
 
   /// No description provided for @customFinishNowButton.
   ///
@@ -3184,6 +3232,30 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Fréquent'**
   String get customDoseFrequent;
+
+  /// No description provided for @profileSessionDisplaySection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Affichage de session'**
+  String get profileSessionDisplaySection;
+
+  /// No description provided for @profileShowRemainingTime.
+  ///
+  /// In fr, this message translates to:
+  /// **'Afficher le temps restant'**
+  String get profileShowRemainingTime;
+
+  /// No description provided for @profileShowRemainingTimeSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Petite horloge mm:ss en haut de l\'écran pendant la séance.'**
+  String get profileShowRemainingTimeSubtitle;
+
+  /// No description provided for @sessionRemainingTimeLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Restant : {time}'**
+  String sessionRemainingTimeLabel(String time);
 }
 
 class _AppLocalizationsDelegate

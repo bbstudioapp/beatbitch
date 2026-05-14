@@ -215,12 +215,12 @@
       ],
       "medium": [
         "You never weaken {name}, I love that about you.",
-        "That's it, keep holding on {name}.",
-        "You hold on and on {name}, I can see it."
+        "That's it, keep taking it {name}.",
+        "You take it on and on {name}, I can see it."
       ],
       "hard": [
         "You can still go {name}, I know you can.",
-        "Hold on a little more, you're an endurance girl.",
+        "A little more, you're an endurance girl.",
         "Your breath holds {name}, that's your strength, trust it."
       ]
     },

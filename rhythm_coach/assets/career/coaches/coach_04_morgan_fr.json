@@ -132,7 +132,7 @@
     "Tu sers à quelque chose là {name}.",
     "Bouge {name}.",
     "Je veux pas voir une seconde de pause.",
-    "Tu tiens, ou tu casses {name}. Choisis.",
+    "Tu encaisses, ou tu casses {name}. Choisis.",
     "Correct pour l’instant {name}.",
     "Encaisse {name}."
   ],
@@ -185,7 +185,7 @@
         "Une gorge comme la tienne, ça se défonce, ça se ménage pas {name}."
       ]
     },
-    "resilience": {
+    "endurance": {
       "soft": [
         "Tu encaisses sans broncher {name}. C’est ton truc.",
         "Tu sais souffrir {name}. C’est utile."

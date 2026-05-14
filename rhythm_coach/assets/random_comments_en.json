@@ -56,6 +56,18 @@
     {"text": "Beg me {name}.", "modes": ["beg"]},
     {"text": "Beg for me to keep going.", "modes": ["beg"]},
     {"text": "Breathe {name}, I'm not done with you.", "modes": ["breath"]},
-    {"text": "Enjoy these few seconds, it's about to start again.", "modes": ["breath"]}
+    {"text": "Enjoy these few seconds, it's about to start again.", "modes": ["breath"]},
+    {"text": "Spit on my cock {name}. Loud, shameless.", "modes": ["lick", "hold", "rhythm"], "requires_unlock": "sloppy_spit", "min_saliva": 0.55},
+    {"text": "Come on, spit {name}. I want to hear it.", "modes": ["lick", "hold"], "requires_unlock": "sloppy_spit", "min_saliva": 0.55},
+    {"text": "Your mouth's full {name} — spit it out and spread it.", "modes": ["lick", "hold"], "requires_unlock": "sloppy_spit", "min_saliva": 0.6},
+    {"text": "Spit, slut. On my cock, everywhere.", "modes": ["lick", "rhythm"], "requires_unlock": "sloppy_spit", "min_saliva": 0.55},
+    {"text": "More noise {name}. I want to hear you suck.", "modes": ["rhythm", "lick"], "requires_unlock": "sloppy_loud_suck"},
+    {"text": "Be filthy {name}, be loud.", "modes": ["rhythm", "lick"], "requires_unlock": "sloppy_loud_suck"},
+    {"text": "Make noise, slut. Don't hold back.", "modes": ["rhythm", "lick", "biffle"], "requires_unlock": "sloppy_loud_suck"},
+    {"text": "I love it when it smacks {name}. Louder.", "modes": ["rhythm", "lick"], "requires_unlock": "sloppy_loud_suck"},
+    {"text": "Let it overflow {name}. Let it drip.", "modes": ["rhythm", "hold", "lick"], "requires_unlock": "sloppy_overflow", "min_saliva": 0.7},
+    {"text": "It's running everywhere {name} — let it.", "modes": ["rhythm", "lick"], "requires_unlock": "sloppy_overflow", "min_saliva": 0.7},
+    {"text": "Don't swallow {name}. Let it all out.", "modes": ["rhythm", "hold", "lick"], "requires_unlock": "sloppy_overflow", "min_saliva": 0.65},
+    {"text": "Your mouth's overflowing {name}. That's exactly right.", "modes": ["hold", "rhythm"], "requires_unlock": "sloppy_overflow", "min_saliva": 0.7}
   ]
 }

@@ -140,9 +140,10 @@ void main() {
       'fallback ultime : humil 0 + rhythmMidBasic non débloqué → hand_fallback',
       () {
     // Sans `rhythmMidBasic`, `last_resort_rhythm` (rhythm head→mid) est
-    // bloqué par `_isUnlocked` → on tombe sur le filet hand req 0.
-    // On garde `handBasic` débloqué pour que le filet passe.
-    final unlocks = {UnlockKey.handBasic};
+    // bloqué par `_isUnlocked` → on tombe sur le filet `hand_fallback`
+    // (mode hand = pas de clé). Set non vide (`basics`) pour ne pas
+    // basculer en mode hérité (= aucun gating).
+    final unlocks = {UnlockKey.basics};
     final r = _gen(1, humilCap: 0.0, unlocks: unlocks);
     expect(r.punishment.id, 'hand_fallback');
   });

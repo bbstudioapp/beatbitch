@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../services/capability_service.dart';
 import '../../services/locale_service.dart';
 import '../models/level_milestone.dart';
 import '../models/milestone_text_override.dart';
@@ -19,12 +20,25 @@ import 'unlock_announcements.dart';
 class MilestoneService extends ChangeNotifier {
   static const String _kCompletions = 'career.milestones_completed';
   static const String _kRetries = 'career.milestone_retries';
+  static const String _kCandidacySeen = 'career.milestone_candidacy_seen';
+
+  /// Poids du vieillissement dans `sortScore` (cf. [allPendingFor]). Chaque
+  /// session où la milestone est candidate sans être choisie ajoute cette
+  /// valeur à son score effectif — au bout d'une dizaine de sessions
+  /// « snobée », l'aging égale un `branchScore` mono-branche de 5 pts.
+  static const double _agingWeight = 0.5;
+
+  /// Poids du tie-break variété (`lowestBranchPoints`) dans `sortScore`.
+  /// Volontairement bien plus petit que les autres termes : départage à
+  /// `branchScore`+`age` comparables sans dominer.
+  static const double _lowestBranchWeight = 0.1;
 
   final MilestoneLoader _loader = MilestoneLoader();
 
   List<LevelMilestone> _catalog = const [];
   Set<String> _completed = <String>{};
   Map<String, int> _retries = <String, int>{};
+  Map<String, int> _candidacyAge = <String, int>{};
   Map<String, MilestoneTextOverride> _overrides =
       <String, MilestoneTextOverride>{};
   bool _loaded = false;
@@ -66,6 +80,20 @@ class MilestoneService extends ChangeNotifier {
       } catch (e) {
         if (kDebugMode) {
           debugPrint('[MilestoneService] retries parse error : $e');
+        }
+      }
+    }
+    final rawAge = prefs.getString(_kCandidacySeen);
+    if (rawAge != null && rawAge.isNotEmpty) {
+      try {
+        final decoded = json.decode(rawAge);
+        if (decoded is Map) {
+          _candidacyAge =
+              decoded.map((k, v) => MapEntry(k.toString(), (v as num).toInt()));
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('[MilestoneService] candidacy age parse error : $e');
         }
       }
     }
@@ -143,34 +171,87 @@ class MilestoneService extends ChangeNotifier {
   /// **Critères** :
   /// - `m.humilRequired ≤ humiliationScore + humilTolerance(obedience)`
   /// - `requires` tous acquittés
+  /// - `requiresCapability` satisfait quand [capabilityProfile] est fourni
+  ///   (sinon la couche télémétrie est neutralisée — mode hérité)
   /// - non encore acquittée
   ///
   /// **Tri** :
   /// 1. **Score de match spé** : somme des points investis dans
   ///    *chacune* des branches listées par le milestone, **descendant**.
   ///    Une milestone qui touche plusieurs branches investies passe donc
-  ///    avant celle qui n'en touche qu'une — la priorité reflète la
-  ///    couverture totale des compétences choisies, pas seulement la
-  ///    branche la plus investie.
-  /// 2. À égalité : `humilRequired` **ascendant** (le palier le moins
-  ///    coûteux d'abord, pour ne pas sauter de marche).
-  /// 3. Tie-break final : id alphabétique (déterministe).
-  ///
-  /// Si [allocation] est null, on saute le critère 1 (tri par humil ASC
-  /// puis id) — utile pour les tests / appels sans accès aux points spé.
+  ///    avant celle qui n'en touche qu'une.
+  /// 2. **Équilibrage par branche basse** : à égalité de match,
+  ///    favoriser les milestones dont la branche la moins investie chez
+  ///    la joueuse est plus basse (variété, on n'empile pas dans le même
+  ///    couloir). Pas appliqué si [allocation] est nul.
+  /// 3. `humilRequired` **ascendant** (le palier le moins coûteux
+  ///    d'abord, pour ne pas sauter de marche).
+  /// 4. Tie-break final : id alphabétique (déterministe).
   LevelMilestone? pendingFor({
     required double humiliationScore,
     required double obedience,
     int playerLevel = 1,
     SpecializationAllocation? allocation,
+    CapabilityProfile? capabilityProfile,
   }) {
     final all = allPendingFor(
       humiliationScore: humiliationScore,
       obedience: obedience,
       playerLevel: playerLevel,
       allocation: allocation,
+      capabilityProfile: capabilityProfile,
     );
     return all.isEmpty ? null : all.first;
+  }
+
+  /// Sélectionne jusqu'à [count] milestones **body** distinctes pour la
+  /// même séance. Pour chaque pick, retire la candidate du pool et marque
+  /// ses `unlocks` comme acquis simulés afin d'exclure :
+  ///
+  /// - les doublons (une milestone ne peut être insérée deux fois),
+  /// - les milestones dont `requires` inclut un unlock d'une milestone
+  ///   déjà pickée dans la même session (sinon on triche sur l'ordre
+  ///   pédagogique : la 2ᵉ ne pourrait être jouée qu'APRÈS l'acquittement
+  ///   de la 1ʳᵉ, ce qui n'arrive qu'à la fin de la séance).
+  ///
+  /// Retombe gracieusement à moins de [count] (voire `[]`) si le pool
+  /// est insuffisant — le générateur saura adapter l'insertion.
+  List<LevelMilestone> pendingForList({
+    required int count,
+    required double humiliationScore,
+    required double obedience,
+    int playerLevel = 1,
+    SpecializationAllocation? allocation,
+    CapabilityProfile? capabilityProfile,
+  }) {
+    if (count <= 0) return const [];
+    final picked = <LevelMilestone>[];
+    final simulatedUnlocks = <UnlockKey>{};
+    final pickedIds = <String>{};
+    for (var i = 0; i < count; i++) {
+      final candidates = allPendingFor(
+        humiliationScore: humiliationScore,
+        obedience: obedience,
+        playerLevel: playerLevel,
+        allocation: allocation,
+        capabilityProfile: capabilityProfile,
+      );
+      LevelMilestone? next;
+      for (final m in candidates) {
+        if (pickedIds.contains(m.id)) continue;
+        // Exclusion mutuelle : m dépend d'un unlock que la milestone
+        // précédemment pickée vient d'apporter → forcerait un ordre
+        // pédagogique strict dans la même séance.
+        if (m.requires.any(simulatedUnlocks.contains)) continue;
+        next = m;
+        break;
+      }
+      if (next == null) break;
+      picked.add(next);
+      pickedIds.add(next.id);
+      simulatedUnlocks.addAll(next.unlocks);
+    }
+    return picked;
   }
 
   /// Variante de [pendingFor] pour les milestones de placement
@@ -181,27 +262,64 @@ class MilestoneService extends ChangeNotifier {
     required double obedience,
     int playerLevel = 1,
     SpecializationAllocation? allocation,
+    CapabilityProfile? capabilityProfile,
   }) {
     final all = allPendingFor(
       humiliationScore: humiliationScore,
       obedience: obedience,
       playerLevel: playerLevel,
       allocation: allocation,
+      capabilityProfile: capabilityProfile,
       placement: MilestonePlacement.finalApotheose,
     );
     return all.isEmpty ? null : all.first;
   }
 
   /// Toutes les milestones pending éligibles à `humiliationScore` +
-  /// tolérance d'obédiance, gated par `playerLevel ≥ minLevel`. Triées
-  /// selon les mêmes critères que `pendingFor`. La première de la liste
-  /// est celle qui sera effectivement insérée dans la prochaine session
-  /// générée. Liste vide si aucune candidate.
+  /// tolérance d'obédiance, gated par `playerLevel ≥ minLevel` et par
+  /// `requiresCapability` (si [capabilityProfile] est fourni). Triées
+  /// selon les mêmes critères que `pendingFor`.
+  ///
+  /// **Tri** (placement `body`, cas standard `allocation != null`) :
+  /// 1. **`overdue` desc** — une milestone est *overdue* quand
+  ///    `playerLevel - (minLevel - branchAdvance) ≥ 3`. Les overdue
+  ///    passent en tête, peu importe `branchScore`/aging : si la joueuse
+  ///    a dépassé le palier d'apparition de 3 niveaux sans qu'on lui
+  ///    serve la milestone, on rattrape le retard avant tout. Le
+  ///    `branchAdvance` est intégré dans la formule pour ne pas cumuler
+  ///    deux accélérateurs (la spé a déjà rapproché la milestone).
+  /// 2. Si les deux candidats sont overdue : `lag` desc (la plus en
+  ///    retard d'abord), puis `humilRequired` asc, puis id alpha.
+  /// 3. À l'heure : `sortScore` desc, puis `humilRequired` asc, puis
+  ///    id alpha. Le `sortScore` combine :
+  ///    - `+branchScore` (points investis dans les branches du milestone)
+  ///      — privilégie le match spé,
+  ///    - `+_agingWeight × candidacyAge` (vieillissement) — remonte
+  ///      progressivement les transverses ou milestones hors-spé candidates
+  ///      depuis longtemps mais jamais choisies,
+  ///    - `−_lowestBranchWeight × lowestBranchPoints` (tie-break variété)
+  ///      — à match comparable, favorise la branche la moins investie.
+  ///
+  /// **Mode hérité** (`allocation == null`) : pas de vieillissement,
+  /// `branchScore = 0` et `branchAdvance = 0` partout. La règle *overdue*
+  /// reste appliquée sur le `minLevel` brut (pas de spé pour rattraper
+  /// par avance, donc on rattrape par-derrière au lieu) ; à l'heure le
+  /// tri retombe sur `humilRequired` asc puis id alpha (identique au
+  /// comportement pré-aging).
+  ///
+  /// **Placement `finalApotheose`** : la règle *overdue* ne s'applique
+  /// pas — les finals ont leur propre chaînage `requires` (succession
+  /// dramaturgique), forcer un final juste parce qu'il est minLevel-en-
+  /// retard casserait la progression de l'apothéose.
+  ///
+  /// La première de la liste est celle qui sera effectivement insérée
+  /// dans la prochaine session générée. Liste vide si aucune candidate.
   List<LevelMilestone> allPendingFor({
     required double humiliationScore,
     required double obedience,
     int playerLevel = 1,
     SpecializationAllocation? allocation,
+    CapabilityProfile? capabilityProfile,
     MilestonePlacement placement = MilestonePlacement.body,
   }) {
     final cap = humiliationScore + humilTolerance(obedience);
@@ -238,20 +356,119 @@ class MilestoneService extends ChangeNotifier {
       return best.clamp(0, 3);
     }
 
+    /// Points investis dans la **branche la moins investie** d'un
+    /// milestone (ou 0 si transverse / pas d'allocation). Sert au
+    /// tie-break « équilibrage » : à égalité de match, favoriser les
+    /// milestones dont la branche la moins investie chez la joueuse est
+    /// la plus basse — un coup de pouce vers la variété, pas un
+    /// raz-de-marée. Pour `intro_hold_throat_short` (`endurance` +
+    /// `profondeur`) avec profondeur=0, endurance=2 → renvoie 0, donc
+    /// passe avant une milestone mono-branche endurance=2.
+    int lowestBranchPoints(LevelMilestone m) {
+      if (allocation == null || m.branches.isEmpty) return 0;
+      var lo = 1 << 30;
+      for (final b in m.branches) {
+        final pts = allocation.pointsIn(b);
+        if (pts < lo) lo = pts;
+      }
+      return lo == (1 << 30) ? 0 : lo;
+    }
+
+    bool capabilityOk(LevelMilestone m) {
+      if (m.requiresCapability.isEmpty) return true;
+      // Pas de profil fourni : mode hérité (tests, sessions hors carrière).
+      // On neutralise le gating capacité — humil/level prennent le relais.
+      if (capabilityProfile == null) return true;
+      for (final req in m.requiresCapability) {
+        if (!req.isSatisfiedBy(capabilityProfile)) return false;
+      }
+      return true;
+    }
+
+    /// Score composite consommé par le tri principal (desc — plus grand =
+    /// plus prioritaire). N'a d'effet que si `allocation != null` — sans
+    /// allocation, `branchScore`+`lowestBranch` sont 0 partout et l'aging
+    /// est neutralisé (cf. plus bas) pour préserver le mode hérité (tests,
+    /// sessions hors carrière).
+    ///
+    /// - `+branchScore` : plus la milestone touche les branches investies,
+    ///   plus elle remonte.
+    /// - `+_agingWeight × age` : plus la milestone est candidate depuis
+    ///   longtemps sans être choisie, plus elle remonte (le poids 0.5
+    ///   donne à 10 sessions snobée le même boost qu'un mono-branche 5pts).
+    /// - `−_lowestBranchWeight × lowestBranchPoints` : à match comparable,
+    ///   pénalise la milestone dont la branche min chez la joueuse est
+    ///   investie — variété.
+    double sortScore(LevelMilestone m) {
+      if (allocation == null) return 0;
+      final age = _candidacyAge[m.id] ?? 0;
+      return branchScore(m).toDouble() +
+          _agingWeight * age -
+          _lowestBranchWeight * lowestBranchPoints(m);
+    }
+
     final candidates = _catalog
         .where((m) => m.placement == placement)
         .where((m) => (m.minLevel - branchAdvance(m)) <= playerLevel)
         .where((m) => m.humilRequired <= cap)
         .where((m) => !_completed.contains(m.id))
         .where((m) => m.requires.every(hasUnlock))
+        .where(capabilityOk)
         .toList();
     if (candidates.isEmpty) return const [];
-    candidates.sort((a, b) {
-      final byBranch = branchScore(b).compareTo(branchScore(a));
-      if (byBranch != 0) return byBranch;
+
+    final isBody = placement == MilestonePlacement.body;
+
+    /// Écart entre le `playerLevel` et le `minLevel` *effectif* (après
+    /// avance de spé). Une milestone à `minLevel=10` chez une joueuse
+    /// `playerLevel=14, branchAdvance=0` → lag=4. Si `branchAdvance=3` →
+    /// `effectiveMinLevel=7` et `lag = 14-7 = 7`. Toujours ≥ 0 quand on
+    /// arrive ici (filtre `effectiveMinLevel ≤ playerLevel` plus haut).
+    /// Pour `finalApotheose` on renvoie 0 pour neutraliser la règle :
+    /// les finals ne sont pas concernés (cf. doc-comment).
+    int lagOf(LevelMilestone m) {
+      if (!isBody) return 0;
+      return playerLevel - (m.minLevel - branchAdvance(m));
+    }
+
+    /// Une milestone est overdue quand son `lag` effectif atteint 3 niveaux.
+    /// **Garde** : si la spé avait déjà avancé `minLevel` de ≥ 3 niveaux
+    /// (`branchAdvance(m) ≥ 3`), on ne déclenche pas overdue — sinon la
+    /// spé cumulerait deux accélérateurs (rapprocher la candidature *et*
+    /// prioriser le pick), et chaque milestone matchée par une spé maxée
+    /// passerait overdue dès son apparition, écrasant la mécanique aging.
+    bool isOverdue(LevelMilestone m) {
+      if (!isBody) return false;
+      if (branchAdvance(m) >= 3) return false;
+      return lagOf(m) >= 3;
+    }
+
+    int compareStandard(LevelMilestone a, LevelMilestone b) {
+      if (allocation != null) {
+        final byScore = sortScore(b).compareTo(sortScore(a));
+        if (byScore != 0) return byScore;
+      }
       final byHumil = a.humilRequired.compareTo(b.humilRequired);
       if (byHumil != 0) return byHumil;
       return a.id.compareTo(b.id);
+    }
+
+    candidates.sort((a, b) {
+      if (isBody) {
+        final ao = isOverdue(a);
+        final bo = isOverdue(b);
+        if (ao != bo) return ao ? -1 : 1; // overdue d'abord
+        if (ao && bo) {
+          // Deux overdue : la plus en retard gagne, puis le palier le
+          // moins humiliant pour ne pas sauter de marche, puis id alpha.
+          final byLag = lagOf(b).compareTo(lagOf(a));
+          if (byLag != 0) return byLag;
+          final byHumil = a.humilRequired.compareTo(b.humilRequired);
+          if (byHumil != 0) return byHumil;
+          return a.id.compareTo(b.id);
+        }
+      }
+      return compareStandard(a, b);
     });
     return candidates;
   }
@@ -311,6 +528,33 @@ class MilestoneService extends ChangeNotifier {
     }
   }
 
+  /// Nombre de sessions où la milestone [id] a été candidate (a passé
+  /// tous les filtres `level/humil/requires/capability/non-completed`)
+  /// **sans être choisie**. Alimente le terme aging du `sortScore` (cf.
+  /// [allPendingFor]).
+  int getCandidacyAge(String id) => _candidacyAge[id] ?? 0;
+
+  /// Incrémente le compteur d'âge de toutes les milestones de [notChosen]
+  /// (= candidates passées au tri mais non sélectionnées). À appeler après
+  /// chaque tour de tri qui consomme une candidate (un par session,
+  /// typiquement). Persiste.
+  Future<void> incrementCandidacyAge(List<LevelMilestone> notChosen) async {
+    if (notChosen.isEmpty) return;
+    var changed = false;
+    for (final m in notChosen) {
+      _candidacyAge[m.id] = (_candidacyAge[m.id] ?? 0) + 1;
+      changed = true;
+    }
+    if (changed) await _persistCandidacyAge();
+  }
+
+  /// Remet à zéro le compteur d'âge de [id]. Persiste si modifié.
+  Future<void> resetCandidacyAge(String id) async {
+    if (_candidacyAge.remove(id) != null) {
+      await _persistCandidacyAge();
+    }
+  }
+
   /// Marque la milestone comme acquittée si pas de fail. Persiste.
   /// Notifie les listeners (utile pour rafraîchir UI).
   Future<void> markCompleted(String id, {required bool hadFail}) async {
@@ -318,6 +562,7 @@ class MilestoneService extends ChangeNotifier {
     if (_completed.add(id)) {
       await _persist();
       await resetRetryCount(id);
+      await resetCandidacyAge(id);
       notifyListeners();
     }
   }
@@ -337,9 +582,11 @@ class MilestoneService extends ChangeNotifier {
   void seedForTest({
     required List<LevelMilestone> catalog,
     Set<String> completed = const <String>{},
+    Map<String, int> candidacyAge = const <String, int>{},
   }) {
     _catalog = List<LevelMilestone>.unmodifiable(catalog);
     _completed = Set<String>.from(completed);
+    _candidacyAge = Map<String, int>.from(candidacyAge);
     _loaded = true;
   }
 
@@ -349,8 +596,10 @@ class MilestoneService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_kCompletions);
     await prefs.remove(_kRetries);
+    await prefs.remove(_kCandidacySeen);
     _completed = <String>{};
     _retries = <String, int>{};
+    _candidacyAge = <String, int>{};
     notifyListeners();
   }
 
@@ -362,5 +611,10 @@ class MilestoneService extends ChangeNotifier {
   Future<void> _persistRetries() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kRetries, json.encode(_retries));
+  }
+
+  Future<void> _persistCandidacyAge() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kCandidacySeen, json.encode(_candidacyAge));
   }
 }

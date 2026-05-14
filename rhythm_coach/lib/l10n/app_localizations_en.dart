@@ -1734,6 +1734,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customMaxDepthLabel => 'Maximum depth';
 
   @override
+  String get customBpmRangeLabel => 'BPM range';
+
+  @override
+  String customBpmRangeValue(int min, int max) {
+    return '$min–$max BPM';
+  }
+
+  @override
+  String get customBpmRangeHint =>
+      'Applies to rhythmic modes (rhythm, lick, biffle, hand).';
+
+  @override
+  String get customHoldDurationRangeLabel => 'Hold duration';
+
+  @override
+  String customHoldDurationRangeValue(int min, int max) {
+    return '$min–$max s';
+  }
+
+  @override
+  String get customHoldDurationRangeHint =>
+      'Bounds the duration of holds and held begs.';
+
+  @override
   String get customSaveAndLaunch => 'Save and launch';
 
   @override
@@ -1742,6 +1766,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String customHostLoadError(String error) {
     return 'Could not load the custom session: $error';
+  }
+
+  @override
+  String customSaveError(String error) {
+    return 'Could not save the configuration: $error';
+  }
+
+  @override
+  String customLaunchError(String error) {
+    return 'Could not launch the session: $error';
   }
 
   @override
@@ -1773,4 +1807,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get customDoseFrequent => 'Frequent';
+
+  @override
+  String get profileSessionDisplaySection => 'Session display';
+
+  @override
+  String get profileShowRemainingTime => 'Show remaining time';
+
+  @override
+  String get profileShowRemainingTimeSubtitle =>
+      'Small mm:ss clock at the top of the screen during the session.';
+
+  @override
+  String sessionRemainingTimeLabel(String time) {
+    return 'Left: $time';
+  }
 }

@@ -18,8 +18,6 @@ String? defaultAnnouncementFor(UnlockKey key, AppLocalizations l10n) {
       return l10n.unlockAnnouncementSloppySwallowControl;
     case UnlockKey.sloppySpit:
       return l10n.unlockAnnouncementSloppySpit;
-    case UnlockKey.sloppyDroolDeep:
-      return l10n.unlockAnnouncementSloppyDroolDeep;
     case UnlockKey.rhythmHeadMidSustained:
       return l10n.unlockAnnouncementRhythmHeadMidSustained;
     default:

@@ -170,7 +170,7 @@ void main() {
         ),
       ],
       durationSeconds: 10,
-      unlocks: [UnlockKey.holdHeadShort],
+      unlocks: [UnlockKey.holdMidShort],
     );
     const finalM = LevelMilestone(
       id: 'final_test',
@@ -192,7 +192,7 @@ void main() {
     final result = CareerSessionGenerator(seed: 1234).generate(
       level: 2,
       bank: _bank(),
-      milestone: body,
+      insertedBodies: [body],
       finalMilestone: finalM,
       unlockedKeys: _allUnlocks,
     );
@@ -218,11 +218,7 @@ void main() {
     // sans finalXxx dans `unlockedKeys`, le candidat valide unique est
     // hand head→mid → c'est lui qui doit clore la séance.
     final acquired = <UnlockKey>{
-      UnlockKey.handBasic,
-      UnlockKey.lickTipBasic,
-      UnlockKey.rhythmTipHead,
-      UnlockKey.holdTip,
-      UnlockKey.holdHead,
+      UnlockKey.basics,
       UnlockKey.rhythmMidBasic,
       UnlockKey.lickFull,
     };
@@ -318,11 +314,7 @@ void main() {
       unlocks: [UnlockKey.freestyle],
     );
     final initial = <UnlockKey>{
-      UnlockKey.handBasic,
-      UnlockKey.lickTipBasic,
-      UnlockKey.rhythmTipHead,
-      UnlockKey.holdTip,
-      UnlockKey.holdHead,
+      UnlockKey.basics,
       UnlockKey.rhythmMidBasic,
       UnlockKey.lickFull,
       UnlockKey.holdMidShort,
@@ -356,7 +348,7 @@ void main() {
       final r = CareerSessionGenerator(seed: seed).generate(
         level: 4,
         bank: _bank(),
-        milestone: milestone,
+        insertedBodies: [milestone],
         unlockedKeys: initial,
         humiliationCareer: 30.0,
       );

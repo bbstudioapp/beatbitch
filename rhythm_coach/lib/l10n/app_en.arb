@@ -859,10 +859,40 @@
   "customIncludeHandToggle": "Include hand stimulation",
   "customIncludeHandDescription": "Enables the hand and biffle modes in the generation.",
   "customMaxDepthLabel": "Maximum depth",
+  "customBpmRangeLabel": "BPM range",
+  "customBpmRangeValue": "{min}–{max} BPM",
+  "@customBpmRangeValue": {
+    "placeholders": {
+      "min": { "type": "int" },
+      "max": { "type": "int" }
+    }
+  },
+  "customBpmRangeHint": "Applies to rhythmic modes (rhythm, lick, biffle, hand).",
+  "customHoldDurationRangeLabel": "Hold duration",
+  "customHoldDurationRangeValue": "{min}–{max} s",
+  "@customHoldDurationRangeValue": {
+    "placeholders": {
+      "min": { "type": "int" },
+      "max": { "type": "int" }
+    }
+  },
+  "customHoldDurationRangeHint": "Bounds the duration of holds and held begs.",
   "customSaveAndLaunch": "Save and launch",
   "customSaveOnly": "Save",
   "customHostLoadError": "Could not load the custom session: {error}",
   "@customHostLoadError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "customSaveError": "Could not save the configuration: {error}",
+  "@customSaveError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "customLaunchError": "Could not launch the session: {error}",
+  "@customLaunchError": {
     "placeholders": {
       "error": { "type": "String" }
     }
@@ -876,5 +906,15 @@
   "customDoseNone": "None",
   "customDoseRare": "Rare",
   "customDoseNormal": "Normal",
-  "customDoseFrequent": "Frequent"
+  "customDoseFrequent": "Frequent",
+
+  "profileSessionDisplaySection": "Session display",
+  "profileShowRemainingTime": "Show remaining time",
+  "profileShowRemainingTimeSubtitle": "Small mm:ss clock at the top of the screen during the session.",
+  "sessionRemainingTimeLabel": "Left: {time}",
+  "@sessionRemainingTimeLabel": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  }
 }

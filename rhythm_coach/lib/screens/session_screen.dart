@@ -160,10 +160,21 @@ class SessionScreen extends StatefulWidget {
   /// (mode scénario, démos…) qui n'ont pas la notion de coach.
   final bool coachAdvancesTier;
 
-  /// Allocation de spécialisation. Consommée par le SessionController
-  /// pour cadencer les mini-punitions inopinées de la branche `resilience`.
-  /// Null = pas de carrière → pas de mini-punition.
+  /// Allocation de spécialisation. Consommée par le SessionController pour
+  /// la génération de punition carrière contextuelle. Null = hors carrière.
   final SpecializationAllocation? specialization;
+
+  /// Probabilité par minute qu'une mini-punition inopinée se déclenche en
+  /// cours de séance (cf. `Coach.miniPunishmentRate`, dérivé de l'archétype
+  /// du coach). 0 = jamais — valeur des écrans sans notion de coach.
+  final double miniPunishmentRate;
+
+  /// Slug court du coach actif (`lina`, `victoria`, …), extrait de l'`id`
+  /// `coach_NN_<slug>` par le caller. Sert à la sélection priorisée des
+  /// fonds taggés au nom de la coach (cf. `BackgroundsService.pickForContext`
+  /// et `BackgroundTagVocabulary`). Null = pas de coach (voix par défaut,
+  /// scénarios, démos).
+  final String? coachTag;
 
   /// Valeur initiale du `sessionScore` d'humiliation au start. Vaut 0
   /// pour une session normale. Sur encore enchaîné, le caller transmet
@@ -207,6 +218,8 @@ class SessionScreen extends StatefulWidget {
     this.includeHand = true,
     this.coachAdvancesTier = true,
     this.specialization,
+    this.miniPunishmentRate = 0.0,
+    this.coachTag,
     this.seedHumiliationSession = 0.0,
     this.closeAppOnEnd = false,
   });
@@ -234,6 +247,8 @@ class _SessionScreenState extends State<SessionScreen>
       phraseBank: widget.phraseBank,
       holdVerifier: widget.holdVerifier,
       specialization: widget.specialization,
+      miniPunishmentRate: widget.miniPunishmentRate,
+      coachTag: widget.coachTag,
       seedHumiliationSession: widget.seedHumiliationSession,
       // Profil de capacités : suivi uniquement en carrière (Custom = sandbox,
       // scénarios JSON = hors carrière).
@@ -344,10 +359,36 @@ class _SessionScreenState extends State<SessionScreen>
     final progress = CareerProgressService();
     final currentMax = await progress.getMaxLevel();
     final level = widget.careerLevel ?? 0;
-    final levelUp = !widget.isQuickie &&
-        !_controller.hadFailThisSession &&
-        level >= currentMax &&
-        widget.coachAdvancesTier;
+    final atMaxLevel = level >= currentMax;
+    // Level-up gaté par milestone : on n'autorise un palier qu'après
+    // l'acquittement d'une milestone candidate au niveau courant (ou si
+    // aucune ne l'était — catalogue épuisé, pas de piège). On consulte
+    // pendingFor avec les scores post-finish (≈ ceux que la séance suivante
+    // verra au start) pour rester cohérent avec ce que `pendingFor` choisirait
+    // la prochaine fois. Skip si le caller a déjà bloqué le palier (quickie /
+    // fail / niveau insuffisant / coach hors palier).
+    final cleanSession = !_controller.hadFailThisSession;
+    bool hasPendingAtCurrentLevel = false;
+    if (atMaxLevel &&
+        cleanSession &&
+        !widget.isQuickie &&
+        widget.coachAdvancesTier) {
+      final pending = milestoneService.pendingFor(
+        humiliationScore: _controller.humiliation.careerScore,
+        obedience: _controller.obedience.score,
+        playerLevel: currentMax,
+        allocation: widget.specialization,
+        capabilityProfile: widget.capabilityProfile,
+      );
+      hasPendingAtCurrentLevel = pending != null;
+    }
+    final gateOk = progress.canLevelUp(
+      cleanSession: cleanSession,
+      isQuickie: widget.isQuickie,
+      milestoneAcquittedThisSession: _controller.milestoneAcquittedThisSession,
+      hasPendingAtCurrentLevel: hasPendingAtCurrentLevel,
+    );
+    final levelUp = atMaxLevel && widget.coachAdvancesTier && gateOk;
     await progress.recordSessionCompleted(levelUp: levelUp);
   }
 
@@ -421,6 +462,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
   bool _showModeBadge = false;
   bool _showSkipSessionButton = false;
   bool _showBackgroundMedia = true;
+  bool _showRemainingTime = false;
   bool _upgradeRequested = false;
   bool _upgradeInFlight = false;
   bool _finishNowInFlight = false;
@@ -505,6 +547,10 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     debug.getShowBackgroundMedia().then((value) {
       if (!mounted) return;
       setState(() => _showBackgroundMedia = value);
+    });
+    debug.getShowSessionRemainingTime().then((value) {
+      if (!mounted) return;
+      setState(() => _showRemainingTime = value);
     });
     if (widget.introText != null && widget.introText!.trim().isNotEmpty) {
       _introPending = true;
@@ -702,6 +748,16 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
             ? null
             : AppBar(
                 title: Text(ctrl.session.name),
+                actions: [
+                  if (_showRemainingTime &&
+                      (ctrl.isRunning || ctrl.isPaused || ctrl.isFailing) &&
+                      ctrl.session.durationSeconds > 0)
+                    _RemainingTimeChip(
+                      remainingSeconds:
+                          (ctrl.session.durationSeconds - ctrl.elapsedSeconds)
+                              .clamp(0, ctrl.session.durationSeconds),
+                    ),
+                ],
               ),
         body: Stack(
           children: [
@@ -794,11 +850,17 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
             // l'AppBar), s'allume pile quand le `finale_chime` retentit et
             // que la séance tourne encore — quelques giclées irrégulières +
             // pulses de vibration, puis une brume qui se résorbe.
-            Positioned.fill(
-              child: SessionFinaleOverlay(
-                active: ctrl.isRunning && ctrl.finaleChimeStarted,
+            // Démonté dès qu'on bascule sur le panel de fin Phase 2 (badges
+            // révélés) : sinon les résidus blancs restent posés par-dessus
+            // et masquent le texte blanc du `_FinishedPanel` (issue #42).
+            // La Phase 1 (`_FinishedOverlay`) garde l'overlay : ses boutons
+            // ont déjà un voile sombre derrière eux et restent lisibles.
+            if (!ctrl.isFinished || ctrl.hasPendingBadges)
+              Positioned.fill(
+                child: SessionFinaleOverlay(
+                  active: ctrl.isRunning && ctrl.finaleChimeStarted,
+                ),
               ),
-            ),
           ],
         ),
       ),
@@ -2432,6 +2494,36 @@ class _SaveSessionDialogState extends State<_SaveSessionDialog> {
           child: Text(t.sessionSaveDialogConfirm),
         ),
       ],
+    );
+  }
+}
+
+class _RemainingTimeChip extends StatelessWidget {
+  final int remainingSeconds;
+
+  const _RemainingTimeChip({required this.remainingSeconds});
+
+  String _format(int seconds) {
+    final m = (seconds ~/ 60).toString().padLeft(2, '0');
+    final s = (seconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(right: 12),
+      child: Center(
+        child: Text(
+          t.sessionRemainingTimeLabel(_format(remainingSeconds)),
+          style: const TextStyle(
+            fontSize: 13,
+            color: AppTheme.textSecondary,
+            fontFeatures: [FontFeature.tabularFigures()],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -859,10 +859,40 @@
   "customIncludeHandToggle": "Inclure la stimulation à la main",
   "customIncludeHandDescription": "Active les modes main et biffle dans la génération.",
   "customMaxDepthLabel": "Profondeur maximale",
+  "customBpmRangeLabel": "Plage de BPM",
+  "customBpmRangeValue": "{min}–{max} BPM",
+  "@customBpmRangeValue": {
+    "placeholders": {
+      "min": { "type": "int" },
+      "max": { "type": "int" }
+    }
+  },
+  "customBpmRangeHint": "S'applique aux rythmes (rythme, lèche, biffle, main).",
+  "customHoldDurationRangeLabel": "Durée de maintien",
+  "customHoldDurationRangeValue": "{min}–{max} s",
+  "@customHoldDurationRangeValue": {
+    "placeholders": {
+      "min": { "type": "int" },
+      "max": { "type": "int" }
+    }
+  },
+  "customHoldDurationRangeHint": "Borne la durée des holds et des supplications tenues.",
   "customSaveAndLaunch": "Enregistrer et lancer",
   "customSaveOnly": "Enregistrer",
   "customHostLoadError": "Impossible de charger la session custom : {error}",
   "@customHostLoadError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "customSaveError": "Impossible d'enregistrer la configuration : {error}",
+  "@customSaveError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "customLaunchError": "Impossible de lancer la séance : {error}",
+  "@customLaunchError": {
     "placeholders": {
       "error": { "type": "String" }
     }
@@ -876,5 +906,15 @@
   "customDoseNone": "Aucun",
   "customDoseRare": "Rare",
   "customDoseNormal": "Normal",
-  "customDoseFrequent": "Fréquent"
+  "customDoseFrequent": "Fréquent",
+
+  "profileSessionDisplaySection": "Affichage de session",
+  "profileShowRemainingTime": "Afficher le temps restant",
+  "profileShowRemainingTimeSubtitle": "Petite horloge mm:ss en haut de l'écran pendant la séance.",
+  "sessionRemainingTimeLabel": "Restant : {time}",
+  "@sessionRemainingTimeLabel": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  }
 }

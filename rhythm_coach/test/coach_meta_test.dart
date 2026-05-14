@@ -83,7 +83,7 @@ void main() {
       const m = CoachMeta(
         name: 'NotLina',
         archetype: CoachArchetype.brutal,
-        specialties: [SpecializationBranch.resilience],
+        specialties: [SpecializationBranch.endurance],
         tier: 9,
         isPrincipal: false,
         requirements: CoachRequirement(minPlayerLevel: 50),
@@ -92,7 +92,7 @@ void main() {
       expect(updated.id, base.id, reason: 'id ne change jamais');
       expect(updated.name, 'NotLina');
       expect(updated.archetype, CoachArchetype.brutal);
-      expect(updated.specialties, [SpecializationBranch.resilience]);
+      expect(updated.specialties, [SpecializationBranch.endurance]);
       expect(updated.tier, 9);
       expect(updated.isPrincipal, isFalse);
       expect(updated.requirements.minPlayerLevel, 50);

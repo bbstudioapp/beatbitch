@@ -27,10 +27,10 @@ assignees: ''
 
 ## Environnement / Environment
 
-- **Version BeatBitch** : <!-- ex: 0.1.3 (Profil → bas de page) -->
-- **Plateforme / Platform** : <!-- coche / check : Android | Windows desktop | autre / other -->
-- **OS** : <!-- ex: Android 15 / Samsung Galaxy S21 — ou — Windows 11 23H2 -->
-- **Langue dans l'app / App language** : <!-- FR ou EN -->
+- **Version BeatBitch** : <!-- ex: 0.3.0 (Profil → bas de page) -->
+- **Plateforme / Platform** : <!-- coche / check : Android | Windows desktop | Linux desktop | autre / other -->
+- **OS** : <!-- ex: Android 15 / Samsung Galaxy S21 — ou — Windows 11 23H2 — ou — Ubuntu 24.04 -->
+- **Langue dans l'app / App language** : <!-- FR, EN, DE -->
 
 ## Logs / Captures
 
@@ -43,6 +43,9 @@ Logs Android :
 
 Logs Windows : lance `rhythm_coach.exe` depuis un terminal (cmd / PowerShell) →
 les `debugPrint` et exceptions catchées s'affichent en stdout/stderr.
+
+Logs Linux : lance `./BeatBitch-X.Y.Z-linux-x64/beat_bitch` depuis un terminal
+→ les `debugPrint` et exceptions catchées s'affichent en stdout/stderr.
 -->
 
 ## Notes

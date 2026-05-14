@@ -14,6 +14,7 @@ import '../../services/ambience_engine.dart';
 import '../../services/beep_engine.dart';
 import '../../services/camera_motion_service.dart';
 import '../../services/coach_phrases_loader.dart';
+import '../../services/hold_verifier.dart';
 import '../../services/punishment_loader.dart';
 import '../../services/random_comments_loader.dart';
 import '../../services/tts_service.dart';
@@ -77,7 +78,13 @@ class _CustomModeScreenState extends State<CustomModeScreen> {
 
   void _reloadList() {
     if (!mounted) return;
-    setState(() => _listFuture = _loadList());
+    // NB: callback `setState` synchrone explicite — un `() => x = future()`
+    // évalue l'assignation comme expression, sa valeur est le Future à
+    // droite, et `setState` jette « setState() callback argument returned a
+    // Future. » (cf. issue #63). Le bloc `{}` garantit un retour void.
+    setState(() {
+      _listFuture = _loadList();
+    });
   }
 
   Future<_RunBundle> _loadRunBundle() async {
@@ -190,6 +197,8 @@ class _CustomModeScreenState extends State<CustomModeScreen> {
       sessionName: _sessionName(cfg),
       intensityFloorOverride: cfg.resolveIntensityFloor(),
       maxDepthIndexOverride: cfg.maxDepthIndex < 4 ? cfg.maxDepthIndex : null,
+      bpmRange: (cfg.bpmMin, cfg.bpmMax),
+      holdDurationRange: (cfg.holdDurationMin, cfg.holdDurationMax),
       noStats: true,
     );
   }
@@ -197,68 +206,86 @@ class _CustomModeScreenState extends State<CustomModeScreen> {
   // ─── Lancement / cycles / Termine-moi ──────────────────────────────────
 
   Future<void> _launchConfig(CustomSessionConfig cfg) async {
-    await _service.setLastUsed(cfg.id);
-    _runBundleFuture ??= _loadRunBundle();
-    final _RunBundle b;
+    HoldVerifier? verifier;
     try {
-      b = await _runBundleFuture!;
-    } catch (e) {
-      _runBundleFuture = null;
+      await _service.setLastUsed(cfg.id);
+      _runBundleFuture ??= _loadRunBundle();
+      final _RunBundle b;
+      try {
+        b = await _runBundleFuture!;
+      } catch (e) {
+        _runBundleFuture = null;
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content:
+                  Text(AppLocalizations.of(context).customHostLoadError('$e'))),
+        );
+        return;
+      }
+      if (!mounted) return;
+
+      final coach = _resolveCoach(cfg.coachId);
+      final bank = _resolveBank(b, cfg, coach);
+      _installCoachNameResolver(coach);
+      await _applyCoachVoicePreset(coach);
+
+      final result = _generate(bank, cfg, cycleIndex: 0);
+      final introText = bank.pickIntro(Random());
+
+      final camService = CameraMotionService();
+      verifier = await camService.buildVerifierIfEnabled(widget.tts);
+
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => SessionScreen(
+            session: result.session,
+            tts: widget.tts,
+            beep: widget.beep,
+            ambience: widget.ambience,
+            punishmentBundle: b.punishments,
+            randomComments: _resolveComments(b, coach),
+            isCareer: false,
+            staminaProfile: result.staminaProfile,
+            introText: introText,
+            // Pas d'intro disponible (ex. voix par défaut, coach sans intro)
+            // → on démarre direct, sinon l'écran reste bloqué en idle sans
+            // bouton play en mode prod.
+            autoStart: introText == null,
+            phraseBank: bank,
+            holdVerifier: verifier,
+            canSave: true,
+            coachAdvancesTier: false,
+            coachTag: coach?.slug,
+            specialization: cfg.resolveSpecialization(),
+            autoContinueOnFinish: cfg.nonStop,
+            onRequestEncore: cfg.nonStop
+                ? (ctrl) => _handleCycle(b, bank, coach, cfg, ctrl, 1)
+                : null,
+            onRequestFinishNow: (ctrl) => _handleFinishNow(bank, cfg, ctrl, 0),
+          ),
+        ),
+      );
+
+      if (verifier != null) CameraMotionService().stopSessionDetection();
+      await _restoreTtsIfBackHere();
+      _reloadList();
+    } catch (e, stack) {
+      // Toute exception inattendue dans le flow de lancement (génération,
+      // TTS preset, push de la route, init du SessionScreen) — sans ce
+      // garde-fou, l'erreur remontait au Future de `_openEditor` et l'écran
+      // restait silencieusement sur CustomModeScreen sans feedback (cf.
+      // issue #63).
+      debugPrint('[custom] _launchConfig failed: $e\n$stack');
+      if (verifier != null) CameraMotionService().stopSessionDetection();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content:
-                Text(AppLocalizations.of(context).customHostLoadError('$e'))),
+                Text(AppLocalizations.of(context).customLaunchError('$e'))),
       );
-      return;
     }
-    if (!mounted) return;
-
-    final coach = _resolveCoach(cfg.coachId);
-    final bank = _resolveBank(b, cfg, coach);
-    _installCoachNameResolver(coach);
-    await _applyCoachVoicePreset(coach);
-
-    final result = _generate(bank, cfg, cycleIndex: 0);
-    final introText = bank.pickIntro(Random());
-
-    final camService = CameraMotionService();
-    final verifier = await camService.buildVerifierIfEnabled(widget.tts);
-
-    if (!mounted) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => SessionScreen(
-          session: result.session,
-          tts: widget.tts,
-          beep: widget.beep,
-          ambience: widget.ambience,
-          punishmentBundle: b.punishments,
-          randomComments: _resolveComments(b, coach),
-          isCareer: false,
-          staminaProfile: result.staminaProfile,
-          introText: introText,
-          // Pas d'intro disponible (ex. voix par défaut, coach sans intro)
-          // → on démarre direct, sinon l'écran reste bloqué en idle sans
-          // bouton play en mode prod.
-          autoStart: introText == null,
-          phraseBank: bank,
-          holdVerifier: verifier,
-          canSave: true,
-          coachAdvancesTier: false,
-          specialization: cfg.resolveSpecialization(),
-          autoContinueOnFinish: cfg.nonStop,
-          onRequestEncore: cfg.nonStop
-              ? (ctrl) => _handleCycle(b, bank, coach, cfg, ctrl, 1)
-              : null,
-          onRequestFinishNow: (ctrl) => _handleFinishNow(bank, cfg, ctrl, 0),
-        ),
-      ),
-    );
-
-    if (verifier != null) camService.stopSessionDetection();
-    await _restoreTtsIfBackHere();
-    _reloadList();
   }
 
   Future<void> _handleCycle(
@@ -300,6 +327,7 @@ class _CustomModeScreenState extends State<CustomModeScreen> {
           holdVerifier: verifier,
           canSave: true,
           coachAdvancesTier: false,
+          coachTag: coach?.slug,
           specialization: cfg.resolveSpecialization(),
           autoContinueOnFinish: true,
           onRequestEncore: (ctrl) =>
@@ -343,6 +371,8 @@ class _CustomModeScreenState extends State<CustomModeScreen> {
           intensityFloorOverride: 0.8,
           maxDepthIndexOverride:
               cfg.maxDepthIndex < 4 ? cfg.maxDepthIndex : null,
+          bpmRange: (cfg.bpmMin, cfg.bpmMax),
+          holdDurationRange: (cfg.holdDurationMin, cfg.holdDurationMax),
           noStats: true,
           sessionName: ctrl.session.name,
         )
@@ -368,7 +398,17 @@ class _CustomModeScreenState extends State<CustomModeScreen> {
       ),
     );
     if (result == null || !mounted) return;
-    await _service.save(result.config);
+    try {
+      await _service.save(result.config);
+    } catch (e, stack) {
+      debugPrint('[custom] save failed: $e\n$stack');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(AppLocalizations.of(context).customSaveError('$e'))),
+      );
+      return;
+    }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

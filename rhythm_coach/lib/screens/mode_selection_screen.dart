@@ -4,9 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../l10n/app_localizations.dart';
+import '../career/models/unlock_key.dart';
 import '../career/screens/career_screen.dart';
 import '../career/screens/custom_mode_screen.dart';
-import '../career/services/career_progress_service.dart';
+import '../main.dart' show milestoneService;
 import '../models/ambience_pack.dart';
 import '../services/adult_consent_service.dart';
 import '../services/ambience_engine.dart';
@@ -42,22 +43,11 @@ class ModeSelectionScreen extends StatefulWidget {
 
 class _ModeSelectionScreenState extends State<ModeSelectionScreen>
     with WidgetsBindingObserver {
-  /// Niveau carrière minimum pour débloquer les notifications surprise.
-  /// Niveau 5 = palier "Petite Salope Confirmée" — premier palier
-  /// non-débutant. Cohérent avec _includeHandUnlockLevel (4) et plus
-  /// strict que _quickieUnlockLevel (8).
-  static const int _surpriseUnlockLevel = 5;
-
   late final TtsService _tts;
   late final BeepEngine _beep;
   late final AmbienceEngine _ambience;
   late final UserProfileService _userProfile;
-  late final CareerProgressService _careerProgress;
   late final Future<List<AmbiencePack>> _ambiencePacksFuture;
-
-  /// Niveau max persisté. Null tant que pas chargé → on cache l'icône
-  /// surprise par défaut (état pessimiste, évite un flash de l'icône).
-  int? _maxLevel;
 
   /// Garde-fou pour éviter de pousser deux fois la SessionScreen surprise
   /// (entre le tap et l'arrivée du resumed sur la même action).
@@ -70,14 +60,12 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
     _beep = BeepEngine();
     _ambience = AmbienceEngine();
     _userProfile = UserProfileService();
-    _careerProgress = CareerProgressService();
     _tts.attachProfile(_userProfile);
     LocaleService.instance.addListener(_handleLocaleChanged);
     // Chargement asynchrone du profil — pas besoin d'await ici, le service
     // expose un `notifyListeners` et la résolution `{name}` se contente du
     // fallback tant que le load n'est pas terminé.
     _userProfile.load();
-    unawaited(_refreshMaxLevel());
     _ambiencePacksFuture = AmbiencePackLoader().load();
     // Catalogue des fonds média poussé dans le singleton dédié. Bundle
     // vide possible (= JSON sans entrées) → le widget retombe sur le
@@ -159,16 +147,7 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
       // Warm tap : l'utilisatrice a tapé une notif et l'app revient au
       // foreground. Le callback top-level a déjà posé le flag d'intent.
       _maybeLaunchSurprise();
-      // Le niveau peut avoir bougé pendant que l'app était en background
-      // (ex. session terminée par un share intent ou autre flow).
-      unawaited(_refreshMaxLevel());
     }
-  }
-
-  Future<void> _refreshMaxLevel() async {
-    final lvl = await _careerProgress.getMaxLevel();
-    if (!mounted) return;
-    if (_maxLevel != lvl) setState(() => _maxLevel = lvl);
   }
 
   Future<void> _showAbout() async {
@@ -254,18 +233,16 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
   }
 
   void _openCareer() {
-    Navigator.of(context)
-        .push(
-          MaterialPageRoute(
-            builder: (_) => CareerScreen(
-              tts: _tts,
-              beep: _beep,
-              ambience: _ambience,
-              userProfile: _userProfile,
-            ),
-          ),
-        )
-        .then((_) => _refreshMaxLevel());
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CareerScreen(
+          tts: _tts,
+          beep: _beep,
+          ambience: _ambience,
+          userProfile: _userProfile,
+        ),
+      ),
+    );
   }
 
   void _openCustom() {
@@ -305,12 +282,23 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
           ),
         ),
         actions: [
-          if (PlatformCapabilities.supportsSurpriseNotifications &&
-              (_maxLevel ?? 1) >= _surpriseUnlockLevel)
-            IconButton(
-              tooltip: t.modeSelectionSurpriseTooltip,
-              icon: const Icon(Icons.notifications_active_outlined),
-              onPressed: _openSurpriseSettings,
+          if (PlatformCapabilities.supportsSurpriseNotifications)
+            // Apparaît dès que la milestone `intro_surprise_notifs` est
+            // acquittée. ListenableBuilder écoute le service singleton pour
+            // un rebuild immédiat à la complétion (sans attendre un
+            // changement de niveau).
+            ListenableBuilder(
+              listenable: milestoneService,
+              builder: (context, _) {
+                if (!milestoneService.hasUnlock(UnlockKey.surpriseNotifs)) {
+                  return const SizedBox.shrink();
+                }
+                return IconButton(
+                  tooltip: t.modeSelectionSurpriseTooltip,
+                  icon: const Icon(Icons.notifications_active_outlined),
+                  onPressed: _openSurpriseSettings,
+                );
+              },
             ),
           IconButton(
             tooltip: t.modeSelectionProfileTooltip,

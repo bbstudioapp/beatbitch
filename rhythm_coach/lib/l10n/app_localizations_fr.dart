@@ -1740,6 +1740,30 @@ class AppLocalizationsFr extends AppLocalizations {
   String get customMaxDepthLabel => 'Profondeur maximale';
 
   @override
+  String get customBpmRangeLabel => 'Plage de BPM';
+
+  @override
+  String customBpmRangeValue(int min, int max) {
+    return '$min–$max BPM';
+  }
+
+  @override
+  String get customBpmRangeHint =>
+      'S\'applique aux rythmes (rythme, lèche, biffle, main).';
+
+  @override
+  String get customHoldDurationRangeLabel => 'Durée de maintien';
+
+  @override
+  String customHoldDurationRangeValue(int min, int max) {
+    return '$min–$max s';
+  }
+
+  @override
+  String get customHoldDurationRangeHint =>
+      'Borne la durée des holds et des supplications tenues.';
+
+  @override
   String get customSaveAndLaunch => 'Enregistrer et lancer';
 
   @override
@@ -1748,6 +1772,16 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String customHostLoadError(String error) {
     return 'Impossible de charger la session custom : $error';
+  }
+
+  @override
+  String customSaveError(String error) {
+    return 'Impossible d\'enregistrer la configuration : $error';
+  }
+
+  @override
+  String customLaunchError(String error) {
+    return 'Impossible de lancer la séance : $error';
   }
 
   @override
@@ -1779,4 +1813,19 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get customDoseFrequent => 'Fréquent';
+
+  @override
+  String get profileSessionDisplaySection => 'Affichage de session';
+
+  @override
+  String get profileShowRemainingTime => 'Afficher le temps restant';
+
+  @override
+  String get profileShowRemainingTimeSubtitle =>
+      'Petite horloge mm:ss en haut de l\'écran pendant la séance.';
+
+  @override
+  String sessionRemainingTimeLabel(String time) {
+    return 'Restant : $time';
+  }
 }

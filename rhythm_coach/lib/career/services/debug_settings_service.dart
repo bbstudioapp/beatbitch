@@ -12,6 +12,8 @@ class DebugSettingsService {
   static const String _kCameraHoldCheck = 'debug.camera_hold_check';
   static const String _kSkipSessionButton = 'debug.skip_session_button';
   static const String _kShowBackgroundMedia = 'pref.show_background_media';
+  static const String _kShowSessionRemainingTime =
+      'pref.show_session_remaining_time';
 
   Future<bool> getShowStaminaBar() async {
     final prefs = await SharedPreferences.getInstance();
@@ -139,5 +141,20 @@ class DebugSettingsService {
   Future<void> setShowBackgroundMedia(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kShowBackgroundMedia, value);
+  }
+
+  /// Quand true, l'écran de session affiche une petite horloge avec le temps
+  /// restant jusqu'à la fin de séance (mm:ss). Off par défaut : le téléphone
+  /// est posé sur le côté, l'utilisatrice n'a pas à lire l'écran. Toggle
+  /// proposé pour les usages où regarder l'écran reste pertinent (sessions
+  /// courtes, premiers essais, etc.).
+  Future<bool> getShowSessionRemainingTime() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_kShowSessionRemainingTime) ?? false;
+  }
+
+  Future<void> setShowSessionRemainingTime(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kShowSessionRemainingTime, value);
   }
 }

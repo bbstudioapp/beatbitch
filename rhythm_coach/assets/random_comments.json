@@ -56,6 +56,18 @@
     {"text": "Supplie-moi {name}.", "modes": ["beg"]},
     {"text": "Implore pour que je continue.", "modes": ["beg"]},
     {"text": "Respire {name}, j’en ai pas fini avec toi.", "modes": ["breath"]},
-    {"text": "Profite de ces secondes, ça va recommencer.", "modes": ["breath"]}
+    {"text": "Profite de ces secondes, ça va recommencer.", "modes": ["breath"]},
+    {"text": "Crache sur ma queue {name}. Fort, sans pudeur.", "modes": ["lick", "hold", "rhythm"], "requires_unlock": "sloppy_spit", "min_saliva": 0.55},
+    {"text": "Allez, crache {name}. Je veux l'entendre.", "modes": ["lick", "hold"], "requires_unlock": "sloppy_spit", "min_saliva": 0.55},
+    {"text": "Tu en as plein la bouche {name} — crache, et étale-le.", "modes": ["lick", "hold"], "requires_unlock": "sloppy_spit", "min_saliva": 0.6},
+    {"text": "Crache, salope. Sur ma queue, partout.", "modes": ["lick", "rhythm"], "requires_unlock": "sloppy_spit", "min_saliva": 0.55},
+    {"text": "Plus de bruit {name}. Je veux t'entendre sucer.", "modes": ["rhythm", "lick"], "requires_unlock": "sloppy_loud_suck"},
+    {"text": "Sois sale {name}, sois sonore.", "modes": ["rhythm", "lick"], "requires_unlock": "sloppy_loud_suck"},
+    {"text": "Fais du bruit, salope. Ne te retiens pas.", "modes": ["rhythm", "lick", "biffle"], "requires_unlock": "sloppy_loud_suck"},
+    {"text": "J'aime quand ça claque {name}. Plus fort.", "modes": ["rhythm", "lick"], "requires_unlock": "sloppy_loud_suck"},
+    {"text": "Laisse déborder {name}. Que ça coule.", "modes": ["rhythm", "hold", "lick"], "requires_unlock": "sloppy_overflow", "min_saliva": 0.7},
+    {"text": "Ça coule de partout {name} — laisse faire.", "modes": ["rhythm", "lick"], "requires_unlock": "sloppy_overflow", "min_saliva": 0.7},
+    {"text": "Ne ravale rien {name}. Laisse tout sortir.", "modes": ["rhythm", "hold", "lick"], "requires_unlock": "sloppy_overflow", "min_saliva": 0.65},
+    {"text": "Ta bouche déborde {name}. C'est parfait comme ça.", "modes": ["hold", "rhythm"], "requires_unlock": "sloppy_overflow", "min_saliva": 0.7}
   ]
 }

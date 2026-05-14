@@ -169,7 +169,22 @@ class CareerSessionGenerator {
   /// Multiplicateur de poids par mode, fourni par le coach actif. Combiné
   /// **multiplicativement** par-dessus la pondération spé dans `_modeWeight`.
   /// Mode absent = 1.0 (neutre). Cf. CoachMeta.modeWeights.
+  ///
+  /// **Convention** : un poids strictement à 0 est lu comme une exclusion
+  /// dure (utilisé par le Mode Custom — dose `none` ⇒ 0.0). `_isModeForbidden`
+  /// l'expose et est consulté par tous les call sites qui tirent ou
+  /// hardcodent un mode pour ne jamais émettre un mode exclu.
   Map<SessionMode, double> _coachModeWeights = const {};
+
+  /// True si le mode est exclu par le caller via `coachModeWeights[m] == 0`.
+  /// Un coach normal ne pose jamais 0 (cf. CoachMeta) → toujours false hors
+  /// Custom. En Custom, c'est le dosage `none` de `CustomSessionConfig` qui
+  /// pose le 0 et qui doit être honoré partout (palette finale, mini-vagues,
+  /// pré-finisher, intro, recovery…), pas seulement dans `_pickWeightedMode`.
+  bool _isModeForbidden(SessionMode m) {
+    final w = _coachModeWeights[m];
+    return w != null && w <= 0;
+  }
 
   /// Score career d'humiliation (persisté lifetime) au démarrage de la
   /// session. Sert au tirage spécifique de certains modes (lick :
@@ -211,6 +226,20 @@ class CareerSessionGenerator {
   /// Facteur de surcharge appliqué au `comfort` de [_overloadAxis] (1.03→1.15,
   /// modulé par sa `successRate`). 1.0 pour tout autre axe.
   double _overloadFactor = 1.0;
+
+  /// Bornes BPM imposées par l'utilisateur en mode Custom (cf. `generate(
+  /// bpmRange:)`). `null` = pas de bornage utilisateur (carrière, scénario,
+  /// custom à valeurs par défaut). Le `_clampToCapability` final passe par
+  /// `_clampToCustomLimits` qui force le BPM des modes rythmés (rhythm /
+  /// lick / biffle / hand) dans cet intervalle.
+  (int, int)? _bpmRange;
+
+  /// Bornes de durée pour les steps tenus (hold + beg avec position) imposées
+  /// par l'utilisateur en mode Custom. `null` = pas de bornage. Appliqué
+  /// après `_clampToCapability` — donc compatible avec les caps profil de
+  /// capacité, qui peuvent encore raboter par-dessus (mais en pratique le
+  /// profil est null pour Custom).
+  (int, int)? _holdDurationRange;
 
   /// Axes éligibles à la surcharge : pilotants, hors `hand`/`lick`/`breath`
   /// (jamais des leviers de difficulté) et hors floors BPM / souffle (rien ne
@@ -367,7 +396,7 @@ class CareerSessionGenerator {
   /// chemins et ne sont pas clampés — comme ils ne sont pas gatés par
   /// l'humiliation non plus.
   _StepDraft _clampToCapability(_StepDraft d) {
-    if (_capProfile == null) return d;
+    if (_capProfile == null) return _clampToCustomLimits(d);
     final clampedChain =
         d.chainNext == null ? null : _clampToCapability(d.chainNext!);
     var from = d.from;
@@ -455,9 +484,9 @@ class CareerSessionGenerator {
         bpmEnd == d.bpmEnd &&
         dur == d.duration &&
         identical(clampedChain, d.chainNext)) {
-      return d;
+      return _clampToCustomLimits(d);
     }
-    return _StepDraft(
+    return _clampToCustomLimits(_StepDraft(
       mode: d.mode,
       bpm: bpm,
       bpmEnd: bpmEnd,
@@ -465,7 +494,87 @@ class CareerSessionGenerator {
       to: to,
       duration: dur,
       chainNext: clampedChain,
+    ));
+  }
+
+  /// Borne un draft aux limites utilisateur du mode Custom (`bpmRange` /
+  /// `holdDurationRange` de [generate]). Appliqué après [_clampToCapability]
+  /// pour rester compatible avec le profil de capacités (qui ne sert qu'en
+  /// carrière, désactivé en Custom). `chainNext` est récursé. No-op si
+  /// aucune borne n'est fournie (carrière / scénario JSON).
+  _StepDraft _clampToCustomLimits(_StepDraft d) {
+    final bpmRange = _bpmRange;
+    final holdRange = _holdDurationRange;
+    if (bpmRange == null && holdRange == null) return d;
+    final clampedChain =
+        d.chainNext == null ? null : _clampToCustomLimits(d.chainNext!);
+    var bpm = d.bpm;
+    var bpmEnd = d.bpmEnd;
+    var dur = d.duration;
+    if (bpmRange != null) {
+      final (lo, hi) = bpmRange;
+      if (bpm != null) bpm = bpm.clamp(lo, hi);
+      if (bpmEnd != null) bpmEnd = bpmEnd.clamp(lo, hi);
+    }
+    if (holdRange != null && dur != null) {
+      // S'applique aux modes qui *tiennent* une position : hold et beg avec
+      // position (`from` ou `to` renseigné). Les autres modes ont aussi un
+      // `duration`, mais c'est la durée totale du step rythmé, pas un temps
+      // de maintien — on ne touche pas pour éviter de tronquer les phases.
+      final held = d.to ?? d.from;
+      final isHeld = d.mode == SessionMode.hold ||
+          (d.mode == SessionMode.beg && held != null);
+      if (isHeld) {
+        final (lo, hi) = holdRange;
+        dur = dur.clamp(lo, hi);
+      }
+    }
+    if (bpm == d.bpm &&
+        bpmEnd == d.bpmEnd &&
+        dur == d.duration &&
+        identical(clampedChain, d.chainNext)) {
+      return d;
+    }
+    return _StepDraft(
+      mode: d.mode,
+      bpm: bpm,
+      bpmEnd: bpmEnd,
+      from: d.from,
+      to: d.to,
+      duration: dur,
+      chainNext: clampedChain,
     );
+  }
+
+  /// Normalise une plage BPM utilisateur : trie `(min, max)` et borne aux
+  /// limites globales (`CustomSessionConfig.minBpmLimit`/`maxBpmLimit`). Si
+  /// la plage est nulle ou couvre tout le spectre par défaut, on la retourne
+  /// telle quelle (un range hors-bornes ne sera jamais atteint par le
+  /// générateur, c'est OK — pas la peine de masquer).
+  (int, int)? _normalizeBpmRange((int, int)? raw) {
+    if (raw == null) return null;
+    var (lo, hi) = raw;
+    if (lo > hi) {
+      final tmp = lo;
+      lo = hi;
+      hi = tmp;
+    }
+    return (lo, hi);
+  }
+
+  (int, int)? _normalizeHoldRange((int, int)? raw) {
+    if (raw == null) return null;
+    var (lo, hi) = raw;
+    if (lo > hi) {
+      final tmp = lo;
+      lo = hi;
+      hi = tmp;
+    }
+    // Plancher à 1s : un hold à 0s n'a aucun sens (le step est consommé en un
+    // tick, c'est juste un bip).
+    if (lo < 1) lo = 1;
+    if (hi < 1) hi = 1;
+    return (lo, hi);
   }
 
   CareerGenerationResult generate({
@@ -481,7 +590,7 @@ class CareerSessionGenerator {
     double obedience = 100.0,
     double humiliationCareer = 0.0,
     double humiliationSession = 0.0,
-    LevelMilestone? milestone,
+    List<LevelMilestone> insertedBodies = const [],
     LevelMilestone? finalMilestone,
     Set<UnlockKey> unlockedKeys = const {},
     String? Function(String milestoneId, int stepTime)? milestoneTextResolver,
@@ -497,6 +606,15 @@ class CareerSessionGenerator {
     /// Plafond de profondeur (index `Position`) qui prime sur celui du
     /// `CareerLevel`. Permet au mode custom de borner rhythm/hold.
     int? maxDepthIndexOverride,
+
+    /// Bornes BPM utilisateur (mode Custom). Tuple `(min, max)`. Appliquées
+    /// à la fin du bornage à tous les modes rythmés (rhythm / lick / biffle /
+    /// hand). `null` = pas de bornage.
+    (int, int)? bpmRange,
+
+    /// Bornes de durée pour les steps tenus (hold + beg avec position),
+    /// imposées par l'utilisateur (mode Custom). `null` = pas de bornage.
+    (int, int)? holdDurationRange,
 
     /// Si true, la `Session` générée est marquée `noStats` → le
     /// `SessionController` n'écrit rien dans `StatsService`.
@@ -520,8 +638,12 @@ class CareerSessionGenerator {
       'finalMilestone doit avoir placement=finalApotheose',
     );
     assert(
-      milestone == null || milestone.placement == MilestonePlacement.body,
-      'milestone (paramètre body) doit avoir placement=body',
+      insertedBodies.every((m) => m.placement == MilestonePlacement.body),
+      'insertedBodies doivent avoir placement=body',
+    );
+    assert(
+      insertedBodies.length <= 2,
+      'insertedBodies : au plus 2 milestones body par séance pour l\'instant',
     );
     final cfg = CareerLevel.forLevel(level);
     _includeHand = includeHand;
@@ -552,6 +674,8 @@ class CareerSessionGenerator {
     _obedience = obedience;
     _capProfile = capabilityProfile;
     _capCeilings = capabilitySessionCeilings;
+    _bpmRange = _normalizeBpmRange(bpmRange);
+    _holdDurationRange = _normalizeHoldRange(holdDurationRange);
     _pickOverloadAxis();
     // Mode "Session bâclée" : 6 min par défaut, intense tout du long. Floor
     // d'intensité appliqué au tirage de difficulté + on saute l'intro douce
@@ -578,32 +702,56 @@ class CareerSessionGenerator {
     var time = 0;
     var stamina = _staminaMax;
 
-    // Insertion différée de la milestone d'apprentissage. Pour permettre
-    // une chauffe avant de tomber sur la séquence pédagogique, on insère
-    // au plus tôt à `insertAtMinSeconds` (default 60s) et au plus tard à
-    // `insertAtMaxSeconds` (default 0.4 × durée totale). L'insertion se
-    // fait dans la boucle main dès que `time` entre dans la fenêtre.
+    // Insertion différée des milestones d'apprentissage. Pour permettre
+    // une chauffe avant de tomber sur la séquence pédagogique, chaque
+    // milestone vise une position de séance (par défaut `insertAtMinSeconds`
+    // = 60s, `insertAtMaxSeconds` = 0.4 × durée pour la 1ʳᵉ ; 0.75 × durée
+    // pour la 2ᵉ). L'insertion se fait dans la boucle main dès que `time`
+    // atteint la target, ou en urgence dès que `time >= maxInsert`.
     //
-    // Cas spécial `insertAtMinSeconds <= 0` : la milestone EST l'intro,
-    // on remplace le first step classique. Utile pour la milestone
-    // niveau 1 qui guide depuis t=0.
+    // Cas spécial `insertAtMinSeconds <= 0` : la 1ʳᵉ milestone EST l'intro,
+    // on remplace le first step classique. Compatible avec une seule body
+    // uniquement (deux milestones à t=0, ça n'a pas de sens).
+    //
+    // Pour les sessions longues (cf. career_screen.dart), on insère 2 body
+    // milestones : la 1ʳᵉ vers 30 % de la durée, la 2ᵉ vers 65 %, avec un
+    // buffer de 60 s minimum entre la fin de la 1ʳᵉ et le début de la 2ᵉ
+    // — sans quoi on ferme la 2ᵉ (fallback à 1 body, comportement actuel).
+    final pending = <_PendingMilestoneInsert>[];
+    for (var i = 0; i < insertedBodies.length; i++) {
+      final m = insertedBodies[i];
+      final defaultMaxFraction = i == 0 ? 0.40 : 0.75;
+      final defaultTargetFraction = i == 0 ? 0.30 : 0.65;
+      final maxInsert = m.insertAtMaxSeconds ??
+          (effectiveDuration * defaultMaxFraction).round();
+      final minInsert = m.insertAtMinSeconds ?? 60;
+      final target = (effectiveDuration * defaultTargetFraction).round();
+      pending.add(_PendingMilestoneInsert(
+        milestone: m,
+        minInsert: minInsert,
+        maxInsert: maxInsert,
+        targetTime: target.clamp(minInsert, maxInsert),
+      ));
+    }
+    final firstPending = pending.isNotEmpty ? pending.first : null;
+    final bool milestoneReplacesIntro = pending.length == 1 &&
+        firstPending != null &&
+        firstPending.minInsert <= 0;
     int? milestoneStartTime;
     int? milestoneDurationSeconds;
-    bool milestoneInserted = false;
-    final int minInsert = milestone?.insertAtMinSeconds ?? 60;
-    final int maxInsert =
-        milestone?.insertAtMaxSeconds ?? (effectiveDuration * 0.4).round();
-    final bool milestoneReplacesIntro = milestone != null && minInsert <= 0;
+    int? secondMilestoneStartTime;
+    int? secondMilestoneDurationSeconds;
 
-    void insertMilestoneNow() {
-      if (milestone == null || milestoneInserted) return;
-      milestoneStartTime = time;
-      for (final mStep in milestone.sequence) {
+    void insertPending(_PendingMilestoneInsert p, int index) {
+      final m = p.milestone;
+      if (p.inserted) return;
+      p.inserted = true;
+      final startedAt = time;
+      for (final mStep in m.sequence) {
         // Si une surcharge i18n existe pour ce step (clé = offset `time`
         // du step dans la sequence), on l'utilise à la place du `text`
         // du JSON principal.
-        final overrideText =
-            milestoneTextResolver?.call(milestone.id, mStep.time);
+        final overrideText = milestoneTextResolver?.call(m.id, mStep.time);
         steps.add(SessionStep(
           time: time + mStep.time,
           text: overrideText ?? mStep.text,
@@ -632,19 +780,37 @@ class CareerSessionGenerator {
       }
       // Met à jour le « dernier mode/texte » avec le dernier step de la
       // milestone — sert au filtrage anti-répétition de la suite générée.
-      final lastStep = milestone.sequence.last;
+      final lastStep = m.sequence.last;
       _lastMode = lastStep.mode ?? _lastMode;
       _lastText = lastStep.text;
-      time += milestone.durationSeconds;
-      milestoneDurationSeconds = milestone.durationSeconds;
-      milestoneInserted = true;
+      time += m.durationSeconds;
+      if (index == 0) {
+        milestoneStartTime = startedAt;
+        milestoneDurationSeconds = m.durationSeconds;
+      } else {
+        secondMilestoneStartTime = startedAt;
+        secondMilestoneDurationSeconds = m.durationSeconds;
+      }
       // Réutilisation post-acquittement : les unlocks de la milestone
       // deviennent disponibles pour les steps générés APRÈS la séquence
       // (corps restant, pré-finisher, boosts, final). On suppose succès au
       // runtime — sur fail la session est replanifiée par le contrôleur, ce
       // qui régénère un set d'unlocks cohérent.
-      if (milestone.unlocks.isNotEmpty) {
-        _unlockedKeys = {..._unlockedKeys, ...milestone.unlocks};
+      if (m.unlocks.isNotEmpty) {
+        _unlockedKeys = {..._unlockedKeys, ...m.unlocks};
+      }
+      // Recale le min de la prochaine pending : `m.endTime + 60s` buffer
+      // (sinon les 2 séquences pédagogiques s'enchaînent sans souffle).
+      if (index + 1 < pending.length) {
+        final nextMin = time + 60;
+        final next = pending[index + 1];
+        next.minInsert = max(next.minInsert, nextMin);
+        // Si le buffer pousse au-delà du maxInsert de la 2ᵉ, on le repousse
+        // pour laisser l'insertion se faire (relâchement plutôt que skip).
+        if (next.minInsert > next.maxInsert) {
+          next.maxInsert = next.minInsert + m.durationSeconds;
+        }
+        next.targetTime = next.targetTime.clamp(next.minInsert, next.maxInsert);
       }
     }
 
@@ -656,7 +822,7 @@ class CareerSessionGenerator {
     // Si la milestone remplace l'intro, on l'insère ici à t=0 et c'est
     // son premier step qui tient le rôle de step #0 non text-only.
     if (milestoneReplacesIntro) {
-      insertMilestoneNow();
+      insertPending(pending.first, 0);
     } else {
       final first = _clampToCapability(_firstStep(
         quickie: quickie,
@@ -718,16 +884,24 @@ class CareerSessionGenerator {
         (isLowLevel && !useFinalMilestone ? _preFinisherBudgetSeconds : 0);
 
     while (time < genUntil) {
-      // Insertion milestone : dès que `time` atteint la borne min, OU dès
-      // qu'on dépasse la borne max (auquel cas on insère en urgence pour
-      // ne pas la louper). Le cas time<minInsert continue à empiler des
-      // steps de chauffe normalement.
-      if (milestone != null &&
-          !milestoneInserted &&
-          (time >= minInsert || time >= maxInsert)) {
-        insertMilestoneNow();
-        if (time >= genUntil) break;
-        continue;
+      // Insertion milestone : on traite les pending dans l'ordre, dès que
+      // `time` atteint la target (`>= targetTime`), OU dès qu'on dépasse
+      // la borne max (insertion en urgence pour ne pas la louper). Le cas
+      // time < target continue à empiler des steps de chauffe normalement.
+      var nextPendingIndex = -1;
+      for (var idx = 0; idx < pending.length; idx++) {
+        if (!pending[idx].inserted) {
+          nextPendingIndex = idx;
+          break;
+        }
+      }
+      if (nextPendingIndex >= 0) {
+        final p = pending[nextPendingIndex];
+        if (time >= p.targetTime || time >= p.maxInsert) {
+          insertPending(p, nextPendingIndex);
+          if (time >= genUntil) break;
+          continue;
+        }
       }
       // Mini-vague : 2-3 steps enchaînés à BPM montant qui cassent la
       // diagonale d'intensité unique du début au finish. Inséré toutes
@@ -1006,13 +1180,15 @@ class CareerSessionGenerator {
       }
     }
 
-    // Si la boucle main s'est terminée sans avoir inséré la milestone
-    // (durée trop courte pour atteindre la fenêtre, ou `genUntil` faible
-    // après le first step), on force l'insertion ici pour qu'elle soit
-    // jouée avant le finisher. Cas rare mais on ne veut pas perdre la
-    // milestone silencieusement.
-    if (milestone != null && !milestoneInserted) {
-      insertMilestoneNow();
+    // Si la boucle main s'est terminée sans avoir inséré toutes les
+    // milestones (durée trop courte pour atteindre la fenêtre, ou
+    // `genUntil` faible après le first step), on force l'insertion ici
+    // pour qu'elles soient jouées avant le finisher. Cas rare mais on ne
+    // veut pas perdre une milestone silencieusement.
+    for (var idx = 0; idx < pending.length; idx++) {
+      if (!pending[idx].inserted) {
+        insertPending(pending[idx], idx);
+      }
     }
 
     // À partir d'ici on entre dans la fenêtre **finish** (pré-finisher +
@@ -1095,9 +1271,13 @@ class CareerSessionGenerator {
           durationSeconds: finalDuration,
           defaultMode: SessionMode.rhythm,
           steps: steps,
-          milestoneId: milestone?.id,
+          milestoneId: insertedBodies.isNotEmpty ? insertedBodies[0].id : null,
           milestoneStartTime: milestoneStartTime,
           milestoneDurationSeconds: milestoneDurationSeconds,
+          secondMilestoneId:
+              insertedBodies.length >= 2 ? insertedBodies[1].id : null,
+          secondMilestoneStartTime: secondMilestoneStartTime,
+          secondMilestoneDurationSeconds: secondMilestoneDurationSeconds,
           finalMilestoneId: finalMilestone.id,
           finalMilestoneStartTime: finalMilestoneStartTime,
           finalMilestoneDurationSeconds: finalMilestone.durationSeconds,
@@ -1118,7 +1298,9 @@ class CareerSessionGenerator {
     // Pré-finisher : pour les bas niveaux, courte accélération (rythme
     // un peu plus rapide que le plafond habituel du niveau) qui débouche
     // sur le final, dans une position d'amorce.
-    if (isLowLevel) {
+    // Custom : rhythm exclu → skip le pré-finisher (les boosts substitueront
+    // le sprint via leur propre fallback de mode).
+    if (isLowLevel && !_isModeForbidden(SessionMode.rhythm)) {
       final preDur = 22 + _rng.nextInt(9); // [22, 30]
       final preBpm = 62 + _rng.nextInt(9); // [62, 70]
       final preDraft = _clampToCapability(_StepDraft(
@@ -1148,9 +1330,44 @@ class CareerSessionGenerator {
     // - humiliation faible (<5) ET niveau ≤ 3 : 70% hand, 30% rhythm
     //   (rhythm sera de toute façon doux à ce niveau, autant pousser via hand)
     // - sinon : 75% rhythm, 25% hand (variété)
-    final preferHand = _humiliationCareer < 5 && level <= 3 ? 0.70 : 0.25;
-    final useHandBurst = _rng.nextDouble() < preferHand;
-    final burstMode = useHandBurst ? SessionMode.hand : SessionMode.rhythm;
+    // Custom : si hand est exclu, on force rhythm ; si rhythm est exclu, on
+    // force hand ; si les deux sont exclus, on retombe sur un lick au tempo
+    // burst (le BPM s'applique, l'humiliation se gate normalement) — moins
+    // archétypal mais respecte le ban. L'éditeur Custom garantit qu'au
+    // moins un mode bouche reste actif, donc lick est presque toujours dispo.
+    //
+    // Dose Custom rare/normal/frequent (cf. issue #68) : quand les poids
+    // hand/rhythm sont **strictement asymétriques** (cas Custom où la
+    // joueuse a explicitement biaisé une dose), on bascule sur le ratio
+    // brut des poids comme proba. Le pivot dramaturgique 25/75 vs 70/30
+    // ne s'applique qu'en cas d'égalité (cas carrière ou Custom doses
+    // toutes neutres). Avant fix #68, les doses ne servaient qu'à exclure
+    // (poids 0) : hand=rare + rhythm=frequent en Extrême → 25 % de boosts
+    // hand constants. Désormais : 0.4/(0.4+2.2) ≈ 15 %.
+    final handForbidden = _isModeForbidden(SessionMode.hand);
+    final rhythmForbidden = _isModeForbidden(SessionMode.rhythm);
+    final preferHandBase = _humiliationCareer < 5 && level <= 3 ? 0.70 : 0.25;
+    final bool useHandBurst;
+    final SessionMode burstMode;
+    if (handForbidden && rhythmForbidden) {
+      useHandBurst = false; // chemin "rhythm-like" : BPM cap/floor rhythm
+      burstMode = SessionMode.lick;
+    } else if (handForbidden) {
+      useHandBurst = false;
+      burstMode = SessionMode.rhythm;
+    } else if (rhythmForbidden) {
+      useHandBurst = true;
+      burstMode = SessionMode.hand;
+    } else {
+      final handWeight = _coachModeWeights[SessionMode.hand] ?? 1.0;
+      final rhythmWeight = _coachModeWeights[SessionMode.rhythm] ?? 1.0;
+      final dosesAreSymmetric = (handWeight - rhythmWeight).abs() < 0.01;
+      final preferHand = dosesAreSymmetric
+          ? preferHandBase
+          : handWeight / (handWeight + rhythmWeight);
+      useHandBurst = _rng.nextDouble() < preferHand;
+      burstMode = useHandBurst ? SessionMode.hand : SessionMode.rhythm;
+    }
 
     // Plafond humiliation pour les bursts. Hand n'est pas gating par
     // humiliation (cap inutile), mais on laisse `_enforceHumiliationRequired`
@@ -1164,14 +1381,16 @@ class CareerSessionGenerator {
     // jauge — le sprint est entièrement déterministe.
     final totalBoosts = max(1, boostsCount);
     // **BPM cap qui scale par niveau ET par chaîne d'encore** : niveau 1
-    // plafonne à ~110 BPM (hand) / 130 (rhythm), niveau 18 à 170/180. Le
+    // plafonne à ~110 BPM (hand) / 130 (rhythm), +4 BPM/niveau jusqu'à un
+    // plafond de garde-fou à 300 (très haut — c'est le `comfort` du profil
+    // de capacités qui borne en pratique, via `_clampToCapability`). Le
     // mode encore ajoute +8 BPM par cran de chaîne pour intensifier le
     // sprint sans changer le nombre de boosts.
     final levelBpmBoost =
         ((level - 1) * 4 + max(0, encoreChainIndex) * 8).clamp(0, 70);
     final bpmCap = useHandBurst
-        ? (110 + levelBpmBoost).clamp(110, 170)
-        : (130 + levelBpmBoost).clamp(130, 180);
+        ? (110 + levelBpmBoost).clamp(110, 300)
+        : (130 + levelBpmBoost).clamp(130, 300);
     final bpmFloor = useHandBurst ? 80 : 100;
     // BPM "ancre" du burst : varie autour de bpmCap selon deficit. Chaque
     // step varie de ±15 par-dessus pour éviter de répéter exactement le
@@ -1251,8 +1470,11 @@ class CareerSessionGenerator {
       // Dégrade le boost si humiliation insuffisante. Pour hand, la
       // contrainte humiliation est nulle → pas de dégradation, on garde
       // amplitude max. Pour rhythm, on respecte le cap normal du finish.
+      // Dans les deux cas on passe par `_clampToCapability` (qui applique
+      // aussi les bornes utilisateur Custom) pour qu'un BPM max imposé
+      // soit respecté même sur la phase finish.
       final boostDraft = useHandBurst
-          ? boostDraftRaw
+          ? _clampToCapability(boostDraftRaw)
           : _enforceHumiliationRequired(boostDraftRaw, boostHumilCap);
       // Tier dédié `boost` : phrases explicites « accélère / on monte /
       // dernier sprint » pour rendre la phase finish lisible. Fallback
@@ -1355,7 +1577,8 @@ class CareerSessionGenerator {
     // douce piochée dans `post_final` (fallback `congrats` si vide).
     // Le pool d'actions est tieré par humiliation : lick (= nettoyer après)
     // est l'aftercare humiliant qui n'apparaît qu'au-dessus d'un seuil.
-    final postFinalDraft = _buildPostFinalDraft(finalMode, _humilCapAt(time));
+    final postFinalDraft =
+        _clampToCapability(_buildPostFinalDraft(finalMode, _humilCapAt(time)));
     // Phrase : un step `beg` doit porter une CONSIGNE de supplique
     // (« remercie-moi », « supplie-moi de revenir »), pas un compliment
     // doux qui sonnerait à côté. De même un step `lick` post-final
@@ -1405,9 +1628,13 @@ class CareerSessionGenerator {
         durationSeconds: finalDuration,
         defaultMode: SessionMode.rhythm,
         steps: steps,
-        milestoneId: milestone?.id,
+        milestoneId: insertedBodies.isNotEmpty ? insertedBodies[0].id : null,
         milestoneStartTime: milestoneStartTime,
         milestoneDurationSeconds: milestoneDurationSeconds,
+        secondMilestoneId:
+            insertedBodies.length >= 2 ? insertedBodies[1].id : null,
+        secondMilestoneStartTime: secondMilestoneStartTime,
+        secondMilestoneDurationSeconds: secondMilestoneDurationSeconds,
         finalCategory: finalCategory,
         silentFinishStartTime: silentFinishStartTime,
         finalStepTime: finalStepStartTime,
@@ -1440,6 +1667,10 @@ class CareerSessionGenerator {
     if (time < _nextMiniWaveAt) return false;
     if (genUntil - time < 90) return false;
     if (stamina < 35) return false;
+    // La mini-vague est intégralement rhythm (cf. `_buildMiniWave`) : si
+    // rhythm est exclu en Custom, on ne sait pas la jouer — on la skip
+    // proprement plutôt que d'émettre un mode banni.
+    if (_isModeForbidden(SessionMode.rhythm)) return false;
     return true;
   }
 
@@ -1689,16 +1920,40 @@ class CareerSessionGenerator {
     final holdCeilingIdx = _milestoneHoldCeilingIdx();
     final holdTipObsolete = holdCeilingIdx > Position.tip.index;
     final holdHeadObsolete = holdCeilingIdx > Position.head.index;
+    // Note : breath n'est pas dosable côté Custom (cf. CustomSessionConfig.
+    // dosableModes), donc `_isModeForbidden(breath)` est toujours false.
     final candidates =
         <(double req, bool blocked, _StepDraft Function() build)>[
       (0.0, false, breath),
-      (8.0, !_includeHand || finalMode == SessionMode.hand, hand),
-      (20.0, isFinalHold || holdTipObsolete, holdTip),
-      (25.0, !canBeg, begLibre),
-      (35.0, finalMode == SessionMode.lick, lick),
-      (55.0, finalMode == SessionMode.rhythm, rhythm),
-      (60.0, !canBeg, begHead),
-      (70.0, isFinalHold || holdHeadObsolete, holdHead),
+      (
+        8.0,
+        !_includeHand ||
+            finalMode == SessionMode.hand ||
+            _isModeForbidden(SessionMode.hand),
+        hand
+      ),
+      (
+        20.0,
+        isFinalHold || holdTipObsolete || _isModeForbidden(SessionMode.hold),
+        holdTip
+      ),
+      (25.0, !canBeg || _isModeForbidden(SessionMode.beg), begLibre),
+      (
+        35.0,
+        finalMode == SessionMode.lick || _isModeForbidden(SessionMode.lick),
+        lick
+      ),
+      (
+        55.0,
+        finalMode == SessionMode.rhythm || _isModeForbidden(SessionMode.rhythm),
+        rhythm
+      ),
+      (60.0, !canBeg || _isModeForbidden(SessionMode.beg), begHead),
+      (
+        70.0,
+        isFinalHold || holdHeadObsolete || _isModeForbidden(SessionMode.hold),
+        holdHead
+      ),
     ];
     final valid = candidates.where((c) => c.$1 <= humilCap && !c.$2).toList()
       ..sort((a, b) => b.$1.compareTo(a.$1)); // req décroissante
@@ -1770,8 +2025,26 @@ class CareerSessionGenerator {
       // sans `throat_pulse`, jamais full sans `full_pulse`) — on borne aussi
       // à throat (idx 3) pour ne jamais lancer un intense full d'amorce.
       final to = Position.values[_milestoneRhythmCeilingIdx().clamp(2, 3)];
+      // Custom : rhythm exclu → on retombe sur hand (rythmé proche), sinon
+      // lick (langue) ou hold (statique) en dernier recours.
+      final intenseMode = !_isModeForbidden(SessionMode.rhythm)
+          ? SessionMode.rhythm
+          : !_isModeForbidden(SessionMode.hand)
+              ? SessionMode.hand
+              : !_isModeForbidden(SessionMode.lick)
+                  ? SessionMode.lick
+                  : SessionMode.hold;
+      if (intenseMode == SessionMode.hold) {
+        return _StepDraft(
+          mode: SessionMode.hold,
+          bpm: null,
+          from: null,
+          to: to,
+          duration: 10,
+        );
+      }
       return _StepDraft(
-        mode: SessionMode.rhythm,
+        mode: intenseMode,
         bpm: 90,
         from: Position.head,
         to: to,
@@ -1779,8 +2052,25 @@ class CareerSessionGenerator {
       );
     }
     if (quickie) {
-      return const _StepDraft(
-        mode: SessionMode.rhythm,
+      // Quickie : rhythm exclu → idem fallback hand/lick/hold.
+      final quickieMode = !_isModeForbidden(SessionMode.rhythm)
+          ? SessionMode.rhythm
+          : !_isModeForbidden(SessionMode.hand)
+              ? SessionMode.hand
+              : !_isModeForbidden(SessionMode.lick)
+                  ? SessionMode.lick
+                  : SessionMode.hold;
+      if (quickieMode == SessionMode.hold) {
+        return const _StepDraft(
+          mode: SessionMode.hold,
+          bpm: null,
+          from: null,
+          to: Position.mid,
+          duration: 8,
+        );
+      }
+      return _StepDraft(
+        mode: quickieMode,
         bpm: 75,
         from: Position.head,
         to: Position.mid,
@@ -1829,8 +2119,17 @@ class CareerSessionGenerator {
           duration: 18,
         ),
     ];
-    final allowed = variants.where(_isUnlocked).toList();
-    if (allowed.isEmpty) return variants.first;
+    final allowed = variants
+        .where(_isUnlocked)
+        .where((v) => !_isModeForbidden(v.mode))
+        .toList();
+    if (allowed.isEmpty) {
+      // Pas de variante alignée à la fois sur les unlocks et le dosage —
+      // on retombe sur la 1ʳᵉ variante non interdite, sinon la 1ʳᵉ tout court.
+      final notForbidden =
+          variants.where((v) => !_isModeForbidden(v.mode)).toList();
+      return notForbidden.isEmpty ? variants.first : notForbidden.first;
+    }
     return allowed[_rng.nextInt(allowed.length)];
   }
 
@@ -1864,7 +2163,14 @@ class CareerSessionGenerator {
     required int genUntil,
     required PhraseBank bank,
   }) {
-    if (_humiliationCareer < 20.0) return null;
+    // Convention `_unlockedKeys.isEmpty` = mode hérité (Custom / scénarios /
+    // debug) : pas de gating, le mécanisme reste actif. En carrière le
+    // déblocage passe par la milestone `intro_fake_breath` qui accorde la
+    // clé `fakeBreath` ; tant qu'elle n'est pas acquittée, rien ne sort.
+    if (_unlockedKeys.isNotEmpty &&
+        !_unlockedKeys.contains(UnlockKey.fakeBreath)) {
+      return null;
+    }
     if (genUntil - time < 30) return null; // pas trop près du finish
     if (currentStamina < 30) return null; // déjà en dette, vrai breath plus bas
     final isIntenseRhythm = (lastEmitted.mode == SessionMode.rhythm ||
@@ -1968,6 +2274,13 @@ class CareerSessionGenerator {
       // hors recovery). Coût stamina faible à cette profondeur.
       SessionMode.hold,
     ];
+    // Exclusions Custom (dose `none`) : la recovery ne doit pas ramener un
+    // mode que la joueuse a explicitement banni. Si tout est exclu, on
+    // retombe sur lick (le garde-fou de l'éditeur Custom assure que lick
+    // OU rhythm OU hold est resté ≥ rare — si lick lui-même est exclu, le
+    // mode bouche restant reprend la main au step suivant via mapDifficulty).
+    candidates.removeWhere(_isModeForbidden);
+    if (candidates.isEmpty) candidates.add(SessionMode.lick);
     final pool = _filterRepeated(candidates);
     // Tirage pondéré pour que la friction de continuité par type s'applique
     // aussi à la recovery (sans ça, une recovery uniforme repousse souvent
@@ -2129,6 +2442,11 @@ class CareerSessionGenerator {
     }
     // breath n'est jamais un step "d'effort" : il n'est tiré que par
     // _buildRecoveryStep quand l'endurance est basse, jamais ici.
+    // Exclusions Custom (dose `none`) : retirer les modes interdits avant
+    // tirage. Si tout est exclu, on retombe sur rhythm (last-resort) pour
+    // ne pas crasher — l'éditeur Custom garantit déjà qu'au moins un mode
+    // bouche (rhythm/lick/hold) reste actif via son garde-fou.
+    candidates.removeWhere(_isModeForbidden);
     if (candidates.isEmpty) candidates.add(SessionMode.rhythm);
     final mode = _pickWeightedMode(_filterRepeated(candidates));
 
@@ -2154,7 +2472,6 @@ class CareerSessionGenerator {
         var dur = _scaleDuration(
           _lerp(20.0, 60.0, durScore),
           enduranceFactor: 0.05,
-          resilienceFactor: 0.04,
         );
         // Cap par nombre d'aller-retours sur les profondeurs throat/full :
         // un step rythme à `to=throat` ne devrait pas enchaîner 30+ pulses
@@ -2188,7 +2505,6 @@ class CareerSessionGenerator {
         final dur = _scaleDuration(
           _lerp(8.0, 30.0, max(durScore, bpmScore)),
           enduranceFactor: 0.08,
-          resilienceFactor: 0.07,
         );
         return _StepDraft(
             mode: mode, bpm: null, from: null, to: to, duration: dur);
@@ -2263,7 +2579,14 @@ class CareerSessionGenerator {
     }
     final total = weights.fold<double>(0, (a, b) => a + b);
     if (total <= 0) {
-      return candidates[_rng.nextInt(candidates.length)];
+      // Fallback random : on garde la convention « jamais renvoyer un mode
+      // explicitement exclu » (dose `none` en Custom). Si tous les candidats
+      // sont exclus, on n'a rien de mieux que la liste d'origine — c'est
+      // au caller de pré-filtrer pour que ce cas n'arrive pas.
+      final allowed =
+          candidates.where((m) => !_isModeForbidden(m)).toList(growable: false);
+      final pool = allowed.isEmpty ? candidates : allowed;
+      return pool[_rng.nextInt(pool.length)];
     }
     var roll = _rng.nextDouble() * total;
     for (var i = 0; i < candidates.length; i++) {
@@ -2517,9 +2840,7 @@ class CareerSessionGenerator {
         // joueuse spé sloppy en voit toujours beaucoup (×4.1 à 5 pts).
         return 0.6 + 0.70 * _pts(SpecializationBranch.sloppy);
       case SessionMode.beg:
-        return 1.0 +
-            0.90 * _pts(SpecializationBranch.obeissance) +
-            0.20 * _pts(SpecializationBranch.resilience);
+        return 1.0 + 0.90 * _pts(SpecializationBranch.obeissance);
       case SessionMode.hand:
         // Poids neutre + boost léger rythmeBiffle (hand est un mode
         // rythmé — cohérent qu'une joueuse rythmeBiffle en voie un peu
@@ -2541,19 +2862,15 @@ class CareerSessionGenerator {
   }
 
   /// Applique aux durées les multiplicateurs de spé, capés.
-  /// `enduranceFactor` = bonus par point Endurance ; `resilienceFactor` =
-  /// bonus par point Résilience (allonge les phases dures pour augmenter
-  /// la probabilité de fail → la coach a plus à punir, en ligne avec
-  /// l'esprit de la branche). `extraFactor` = bonus brut additionnel.
+  /// `enduranceFactor` = bonus par point Endurance ; `extraFactor` = bonus
+  /// brut additionnel.
   int _scaleDuration(
     double base, {
     double enduranceFactor = 0.0,
-    double resilienceFactor = 0.0,
     double extraFactor = 0.0,
   }) {
     final mul = 1.0 +
         enduranceFactor * _pts(SpecializationBranch.endurance) +
-        resilienceFactor * _pts(SpecializationBranch.resilience) +
         extraFactor;
     final capped = mul.clamp(1.0, 1.6);
     return (base * capped).round();
@@ -2841,13 +3158,15 @@ class CareerSessionGenerator {
   }
 
   /// Profondeur max débloquée pour un hold, basée sur les milestones :
-  /// fullHoldShort > throatHoldShort > holdMidShort > head/tip de base.
+  /// fullHoldShort > throatHoldShort > holdMidShort > head (socle de base).
   /// Capée aussi par `_maxDepthIndex` (cohérence niveau).
   ///
   /// Sémantique design : « le seul hold qui a du sens est le plus profond
   /// que tu sais tenir ». Aller moins profond perd le côté narratif —
   /// l'utilisatrice qui sait tenir gorge n'a aucune raison de tenir mid
   /// pendant une session normale, c'est juste de la baisse arbitraire.
+  /// Les holds tip/head n'ont pas de clé (socle ouvert par `intro_basics`)
+  /// → en carrière sans milestone hold acquise, le plancher est `head`.
   int _milestoneHoldCeilingIdx() {
     final int milestoneCap;
     if (_unlockedKeys.contains(UnlockKey.fullHoldShort)) {
@@ -2856,15 +3175,13 @@ class CareerSessionGenerator {
       milestoneCap = Position.throat.index;
     } else if (_unlockedKeys.contains(UnlockKey.holdMidShort)) {
       milestoneCap = Position.mid.index;
-    } else if (_unlockedKeys.contains(UnlockKey.holdHead) ||
-        _unlockedKeys.contains(UnlockKey.holdHeadShort)) {
-      milestoneCap = Position.head.index;
-    } else if (_unlockedKeys.contains(UnlockKey.holdTip)) {
-      milestoneCap = Position.tip.index;
-    } else {
-      // Hérité (sans unlocks renseignés) : on retombe sur le cap de niveau.
-      // Évite que le mode démo non-carrière se fige sur tip.
+    } else if (_unlockedKeys.isEmpty) {
+      // Hérité (mode démo / scénario non-carrière) : on retombe sur le cap
+      // de niveau. Évite que le mode démo se fige sur head.
       milestoneCap = _maxDepthIndex;
+    } else {
+      // Carrière, socle de base : head est le hold le plus profond libre.
+      milestoneCap = Position.head.index;
     }
     return min(milestoneCap, _maxDepthIndex);
   }
@@ -2970,6 +3287,12 @@ class CareerSessionGenerator {
         continue;
       }
       if (!_isUnlocked(tpl.$1) || !_isUnlocked(tpl.$2)) continue;
+      // Custom (dose `none`) : on ne propose pas un beg-with-chain dont la
+      // suite est sur un mode banni. Le beg en lui-même est aussi gaté (si
+      // beg=none, le tirage de beg ne sera pas atteint en amont, mais on
+      // re-check ici pour rester explicite).
+      if (_isModeForbidden(tpl.$1.mode)) continue;
+      if (_isModeForbidden(tpl.$2.mode)) continue;
       candidates.add(tpl);
     }
     if (candidates.isEmpty) return null;
@@ -3290,18 +3613,21 @@ class CareerSessionGenerator {
       // courant + rampe de finish). Seuil d'introduction throat ≈ 10
       // d'humiliation (req intrinsèque hold throat 10s = 8, marge
       // de tolérance) : à humilCap=10 on tient le minimum (10s) ;
-      // +2s par tranche de 5 points d'humil au-dessus. Cap relâché
-      // à 40s pour laisser respirer la branche endurance maxée.
+      // +2s par tranche de 5 points d'humil au-dessus. Cap aligné sur
+      // full (80s) : en carrière, c'est le comfort du profil de capacités
+      // qui pilote la durée vécue (cf. `_clampToCapability`), pas ce cap
+      // — le cap ne mord qu'en mode hérité (Custom, scénarios) où le
+      // profil de capacités est désactivé.
       final humilOver = max(0.0, humilCap - 10.0);
       final targetDur =
-          (10 + (humilOver / 5).floor() * 2 + endPts * 2).clamp(10, 40);
+          (10 + (humilOver / 5).floor() * 2 + endPts * 2).clamp(10, 80);
       final dur = _trimHoldFinalDuration(
         target: targetDur,
         humilCap: humilCap,
         baseReq: 21.5, // hold throat 10s
         bonusPerSec: 1.5,
         finishMul: finishMul,
-        maxDur: 40,
+        maxDur: 80,
       );
       final req = 8.0 + (dur - 1) * 1.5;
       // Gate : intro_final_hold_throat (niveau 6, requires throat_hold_short).
@@ -3353,15 +3679,44 @@ class CareerSessionGenerator {
     // valide. Le gate est un `UnlockKey?` dédié au final ; null = libre.
     // `_isUnlocked` couvre les composants du draft (pour cohérence avec le
     // reste du générateur), `_finalUnlocked` couvre la gate du final.
+    // Exclusions Custom (dose `none`) : on retire en plus les finals dont
+    // le mode est explicitement banni — un final hold reste possible quand
+    // rhythm est exclu, un final hand quand hold est exclu, etc.
     final valid = <(_StepDraft, double, UnlockKey?)>[];
     for (final c in candidates) {
       if (!_finalUnlocked(c.$3)) continue;
+      if (_isModeForbidden(c.$1.mode)) continue;
       if (humilCap >= c.$2 && _isUnlocked(c.$1)) valid.add(c);
     }
     if (valid.isEmpty) {
       // Fallback dur : hand head→mid 50 BPM. Toujours unlocked, req=0,
       // garanti même si la palette change ou si humilCap est négatif.
       // Hand n'a pas d'axe de capacité → `_clampToCapability` no-op.
+      // Si hand est exclu en Custom, on retombe sur le 1ᵉʳ mode autorisé
+      // disponible — hold head court reste un final acceptable.
+      if (_isModeForbidden(SessionMode.hand)) {
+        if (!_isModeForbidden(SessionMode.lick)) {
+          return _clampToCapability(const _StepDraft(
+            mode: SessionMode.lick,
+            bpm: 60,
+            from: Position.tip,
+            to: Position.head,
+            duration: 16,
+          ));
+        }
+        if (!_isModeForbidden(SessionMode.hold)) {
+          return _clampToCapability(_StepDraft(
+            mode: SessionMode.hold,
+            bpm: null,
+            from: null,
+            to: Position.head,
+            duration: shortHoldDur,
+          ));
+        }
+        // Aucun mode bouche dispo : on accepte le hand de secours (l'éditeur
+        // Custom garantit qu'au moins un mode bouche reste — ce chemin est
+        // un filet de sécurité pour les call sites non-Custom).
+      }
       return _StepDraft(
         mode: SessionMode.hand,
         bpm: 50,
@@ -3826,8 +4181,9 @@ class CareerSessionGenerator {
   /// a vraiment le temps de se lasser sans contraste de profondeur.
   ///
   /// **Bornes** : le BPM cible est clampé entre 50 (sinon on tombe dans
-  /// du quasi-statique) et le cap niveau pour le mode (170 hand / 180
-  /// rhythm pour les niveaux hauts, plus bas pour les débutantes).
+  /// du quasi-statique) et le cap niveau pour le mode (plafond très haut
+  /// à 300 — c'est le `comfort` du profil de capacités qui borne en
+  /// pratique, le cap n'est qu'un garde-fou pour les modes hors carrière).
   _StepDraft _maybeApplyBpmRamp(_StepDraft d, double progress) {
     if (d.mode != SessionMode.rhythm &&
         d.mode != SessionMode.lick &&
@@ -3849,8 +4205,8 @@ class CareerSessionGenerator {
     // (level-1)*4` pour hand, `130 + ...` pour rhythm). Lick suit rhythm
     // — c'est aussi un mode rythmé bouche.
     final hardCap = d.mode == SessionMode.hand
-        ? (110 + (_level - 1) * 4).clamp(60, 170)
-        : (130 + (_level - 1) * 4).clamp(60, 180);
+        ? (110 + (_level - 1) * 4).clamp(60, 300)
+        : (130 + (_level - 1) * 4).clamp(60, 300);
     final raw = goesUp ? bpm + delta : bpm - delta;
     final clamped = raw.clamp(50, hardCap);
     if (clamped == bpm) return d; // Rampe nulle = pas la peine.
@@ -3921,10 +4277,12 @@ class CareerSessionGenerator {
   UnlockKey? _unlockKeyFor(_StepDraft d) {
     switch (d.mode) {
       case SessionMode.hold:
-        // Convention : hold/beg portent leur position dans `to`.
+        // Convention : hold/beg portent leur position dans `to`. Les holds
+        // tip/head sont du socle de base (pas de clé) ; mid+ sont gatés.
         final to = d.to;
-        if (to == null || to == Position.tip) return UnlockKey.holdTip;
-        if (to == Position.head) return UnlockKey.holdHead;
+        if (to == null || to == Position.tip || to == Position.head) {
+          return null;
+        }
         if (to == Position.mid) return UnlockKey.holdMidShort;
         final dur = d.duration ?? 0;
         if (to == Position.throat) {
@@ -3940,9 +4298,7 @@ class CareerSessionGenerator {
         if (d.to == Position.full) return UnlockKey.fullPulse;
         if (d.to == Position.throat) return UnlockKey.throatPulse;
         if (d.to == Position.mid) return UnlockKey.rhythmMidBasic;
-        if (d.to == Position.head && d.from == Position.tip) {
-          return UnlockKey.rhythmTipHead;
-        }
+        // Rythme superficiel (tip→head) = socle de base, pas de clé.
         if ((d.bpm ?? 0) >= 160) return UnlockKey.rhythmExtreme;
         return null;
       case SessionMode.biffle:
@@ -3963,13 +4319,12 @@ class CareerSessionGenerator {
         // introduits.
         return UnlockKey.begThroat;
       case SessionMode.lick:
-        // Lick X→full nécessite la milestone niveau 2. Sinon, lick from=tip
-        // (toutes amplitudes ≤ throat) est couvert par la base intro.
+        // Lick X→full nécessite la milestone `intro_lick_full`. Sinon, lick
+        // from=tip (toutes amplitudes ≤ throat) est du socle de base.
         if (d.to == Position.full) return UnlockKey.lickFull;
-        if (d.from == Position.tip) return UnlockKey.lickTipBasic;
         return null;
       case SessionMode.hand:
-        return UnlockKey.handBasic;
+        return null;
       case SessionMode.breath:
         return null;
     }
@@ -4002,13 +4357,20 @@ class CareerSessionGenerator {
   }
 
   /// Vrai si la gate `UnlockKey?` d'un final candidat est accessible :
-  /// soit `null` (final libre), soit présente dans `_unlockedKeys`.
+  /// soit `null` (final libre), soit présente dans `_unlockedKeys`, soit
+  /// `_unlockedKeys` est vide (= **mode hérité**, cf. la convention
+  /// documentée sur `_isUnlocked` : Custom, scénarios JSON, tests — pas de
+  /// gating milestone). Sans ce dernier cas, Custom filtrerait *tous* les
+  /// finals gated et retomberait systématiquement sur la baseline hand
+  /// (cf. issue #43 : Custom Extrême se terminait toujours par un
+  /// « branler »).
+  ///
   /// Distinct de `_isUnlocked` parce qu'un final est gaté par sa propre
   /// clé `finalXxx` dédiée — pas par la clé du composant. Ex : un final
   /// `hold mid` est gaté par `finalHoldMid` (sa milestone d'introduction
   /// dédiée), pas par `holdMidShort` qui couvre l'usage en corps de séance.
   bool _finalUnlocked(UnlockKey? key) =>
-      key == null || _unlockedKeys.contains(key);
+      key == null || _unlockedKeys.isEmpty || _unlockedKeys.contains(key);
 
   /// Si l'humiliation requise par [draft] dépasse [available], OU si la
   /// clé d'unlock requise n'est pas acquittée, dégrade progressivement
@@ -4384,5 +4746,23 @@ class _PunishmentCompo {
     required this.drafts,
     required this.reqHumil,
     this.handRequired = false,
+  });
+}
+
+/// État mutable d'une milestone body en attente d'insertion dans la séance.
+/// Le générateur traite `pending` dans l'ordre — chaque insertion repousse
+/// la `minInsert` de la suivante pour conserver un buffer ≥ 60 s.
+class _PendingMilestoneInsert {
+  final LevelMilestone milestone;
+  int minInsert;
+  int maxInsert;
+  int targetTime;
+  bool inserted = false;
+
+  _PendingMilestoneInsert({
+    required this.milestone,
+    required this.minInsert,
+    required this.maxInsert,
+    required this.targetTime,
   });
 }

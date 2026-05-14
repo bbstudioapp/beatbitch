@@ -24,8 +24,18 @@ class SpecializationService {
     return level ~/ 2;
   }
 
+  /// Clé legacy : points investis dans l'ancienne branche `resilience`
+  /// (retirée). On la nettoie au chargement — comme elle n'est plus
+  /// sommée dans `totalSpent`, les points qu'elle portait redeviennent
+  /// automatiquement disponibles (la bannière « points de spé à
+  /// réattribuer » s'affiche d'elle-même).
+  static const String _kLegacyResiliencePoints = '${_kPointsPrefix}resilience';
+
   Future<SpecializationAllocation> load() async {
     final prefs = await SharedPreferences.getInstance();
+    if (prefs.containsKey(_kLegacyResiliencePoints)) {
+      await prefs.remove(_kLegacyResiliencePoints);
+    }
     final points = <SpecializationBranch, int>{};
     for (final b in SpecializationBranch.values) {
       points[b] = prefs.getInt('$_kPointsPrefix${b.name}') ?? 0;

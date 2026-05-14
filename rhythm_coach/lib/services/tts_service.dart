@@ -70,6 +70,7 @@ class TtsService {
   String? _currentVoiceName;
 
   static bool get _isWindows => defaultTargetPlatform == TargetPlatform.windows;
+  static bool get _isLinux => defaultTargetPlatform == TargetPlatform.linux;
   static double get _platformDefaultRate =>
       _isWindows ? _windowsDefaultRate : _defaultRate;
   static double get _platformDefaultPitch =>
@@ -122,11 +123,12 @@ class TtsService {
     await _tts.setPitch(_platformDefaultPitch);
     await _tts.setSpeechRate(_platformDefaultRate);
     await _tts.setVolume(_defaultVolume);
-    // `awaitSpeakCompletion(true)` est défaillant sur Windows : la
-    // back-end SAPI n'émet pas toujours l'event de complétion attendu,
-    // ce qui fait freeze/crash le `speak()` suivant. On le garde activé
-    // sur les plateformes où il marche fiablement (Android/iOS).
-    if (defaultTargetPlatform != TargetPlatform.windows) {
+    // `awaitSpeakCompletion(true)` est défaillant sur Windows (SAPI) et
+    // sur Linux (Speech Dispatcher / flite) : les back-ends n'émettent
+    // pas toujours l'event de complétion attendu, ce qui fait
+    // freeze/crash le `speak()` suivant. On le garde activé sur les
+    // plateformes où il marche fiablement (Android/iOS).
+    if (!_isWindows && !_isLinux) {
       await _tts.awaitSpeakCompletion(true);
     }
     await _selectVoice();

@@ -312,8 +312,20 @@ class HumiliationEngine {
   void onMilestoneAcquired() => _bumpSession(bumpMilestoneAcquired);
   void onSalivaOverflow() => _bumpSession(bumpSalivaOverflow);
   void onSalivaSpit() => _bumpSession(bumpSalivaSpit);
-  void onFail({double multiplier = 1.0}) =>
-      _bumpSession(-malusFail * multiplier);
+
+  /// Fail manuel. Le [multiplier] est typiquement 2.0 quand on craque
+  /// dans la dernière minute (cf. [SessionController.triggerFail]).
+  ///
+  /// [milestoneOpportunityMissed] applique en plus un facteur ×2,
+  /// **cumulable** avec le multiplicateur de dernière minute (×4 au pire).
+  /// Sémantique : « tu pouvais avancer (une milestone candidate était là),
+  /// tu as raté ». Le mur de contenu rend le fail plus coûteux.
+  void onFail(
+      {double multiplier = 1.0, bool milestoneOpportunityMissed = false}) {
+    final mul = multiplier * (milestoneOpportunityMissed ? 2.0 : 1.0);
+    _bumpSession(-malusFail * mul);
+  }
+
   void onPunishmentAbandoned({double multiplier = 1.0}) =>
       _bumpSession(-malusPunishmentAbandoned * multiplier);
 
