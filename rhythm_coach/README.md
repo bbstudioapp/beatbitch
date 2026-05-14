@@ -1,7 +1,7 @@
 # BeatBitch
 
-![version](https://img.shields.io/badge/version-0.2.0-orange)
-![platform](https://img.shields.io/badge/platform-Android%20%7C%20Windows-blue)
+![version](https://img.shields.io/badge/version-0.3.0-orange)
+![platform](https://img.shields.io/badge/platform-Android%20%7C%20Windows%20%7C%20Linux-blue)
 ![offline](https://img.shields.io/badge/100%25-offline-blue)
 
 > Coach vocal rythmique immersif. Le téléphone est posé sur le côté, tu n'as pas besoin de regarder l'écran : tout passe par la voix et les bips de guidage.
@@ -70,6 +70,24 @@ Disponible depuis v0.1.3 — zip portable, aucun installateur.
 > ⚠ Fonctions désactivées sur Windows : vérif caméra des holds, notifications
 > surprise. La voix coach utilise Microsoft Julie (SAPI). Le reste — sessions,
 > mode carrière, coachs, badges, i18n — fonctionne identique à Android.
+
+### Installation (Linux desktop)
+
+Disponible depuis v0.3.0 — `tar.gz` portable, aucun paquet `.deb`/`.rpm`.
+
+1. Télécharger `BeatBitch-X.Y.Z-linux-x64.tar.gz` depuis la page Releases.
+2. Vérifier le SHA256 :
+   ```bash
+   sha256sum -c BeatBitch-X.Y.Z-linux-x64.tar.gz.sha256
+   ```
+3. Décompresser où tu veux : `tar -xzf BeatBitch-X.Y.Z-linux-x64.tar.gz`.
+4. Lancer le binaire : `./BeatBitch-X.Y.Z-linux-x64/beat_bitch`.
+5. Au 1er lancement : adult gate 18+, puis onboarding 3 étapes.
+
+> ⚠ Fonctions désactivées sur Linux : vérif caméra des holds, notifications
+> surprise. La voix coach utilise la voix par défaut de Speech Dispatcher
+> (typiquement `espeak-ng`). Le reste — sessions, mode carrière, coachs,
+> badges, i18n — fonctionne identique à Android.
 
 ### Mises à jour automatiques (Obtainium)
 
@@ -163,6 +181,24 @@ Available since v0.1.3 — portable zip, no installer.
 > ⚠ Disabled on Windows: hold camera check, surprise notifications. The
 > coach voice uses Microsoft Julie (SAPI). Everything else — sessions,
 > Career mode, coaches, badges, i18n — works identically to Android.
+
+### Install (Linux desktop)
+
+Available since v0.3.0 — portable `tar.gz`, no `.deb`/`.rpm` package.
+
+1. Download `BeatBitch-X.Y.Z-linux-x64.tar.gz` from the Releases page.
+2. Verify the SHA256:
+   ```bash
+   sha256sum -c BeatBitch-X.Y.Z-linux-x64.tar.gz.sha256
+   ```
+3. Unpack wherever you like: `tar -xzf BeatBitch-X.Y.Z-linux-x64.tar.gz`.
+4. Launch the binary: `./BeatBitch-X.Y.Z-linux-x64/beat_bitch`.
+5. First launch: 18+ adult gate, then 3-step onboarding.
+
+> ⚠ Disabled on Linux: hold camera check, surprise notifications. The
+> coach voice uses the default Speech Dispatcher voice (typically
+> `espeak-ng`). Everything else — sessions, Career mode, coaches, badges,
+> i18n — works identically to Android.
 
 ### Automatic updates (Obtainium)
 

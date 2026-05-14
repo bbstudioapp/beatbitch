@@ -28,6 +28,7 @@ assignees: ''
 - [ ] Toutes / All
 - [ ] Android
 - [ ] Windows desktop
+- [ ] Linux desktop
 - [ ] Autre / Other:
 
 ## Catégorie / Category
@@ -40,7 +41,7 @@ assignees: ''
 - [ ] UX / Interface
 - [ ] Carrière / Progression / Milestones
 - [ ] Caméra / Détection / Camera detection
-- [ ] Plateforme / Platform support (Linux, macOS, web, …)
+- [ ] Plateforme / Platform support (macOS, web, …)
 - [ ] Autre / Other:
 
 ## Notes
