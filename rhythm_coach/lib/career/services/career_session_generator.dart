@@ -1335,9 +1335,18 @@ class CareerSessionGenerator {
     // burst (le BPM s'applique, l'humiliation se gate normalement) — moins
     // archétypal mais respecte le ban. L'éditeur Custom garantit qu'au
     // moins un mode bouche reste actif, donc lick est presque toujours dispo.
+    //
+    // Dose Custom rare/normal/frequent (cf. issue #68) : quand les poids
+    // hand/rhythm sont **strictement asymétriques** (cas Custom où la
+    // joueuse a explicitement biaisé une dose), on bascule sur le ratio
+    // brut des poids comme proba. Le pivot dramaturgique 25/75 vs 70/30
+    // ne s'applique qu'en cas d'égalité (cas carrière ou Custom doses
+    // toutes neutres). Avant fix #68, les doses ne servaient qu'à exclure
+    // (poids 0) : hand=rare + rhythm=frequent en Extrême → 25 % de boosts
+    // hand constants. Désormais : 0.4/(0.4+2.2) ≈ 15 %.
     final handForbidden = _isModeForbidden(SessionMode.hand);
     final rhythmForbidden = _isModeForbidden(SessionMode.rhythm);
-    final preferHand = _humiliationCareer < 5 && level <= 3 ? 0.70 : 0.25;
+    final preferHandBase = _humiliationCareer < 5 && level <= 3 ? 0.70 : 0.25;
     final bool useHandBurst;
     final SessionMode burstMode;
     if (handForbidden && rhythmForbidden) {
@@ -1350,6 +1359,12 @@ class CareerSessionGenerator {
       useHandBurst = true;
       burstMode = SessionMode.hand;
     } else {
+      final handWeight = _coachModeWeights[SessionMode.hand] ?? 1.0;
+      final rhythmWeight = _coachModeWeights[SessionMode.rhythm] ?? 1.0;
+      final dosesAreSymmetric = (handWeight - rhythmWeight).abs() < 0.01;
+      final preferHand = dosesAreSymmetric
+          ? preferHandBase
+          : handWeight / (handWeight + rhythmWeight);
       useHandBurst = _rng.nextDouble() < preferHand;
       burstMode = useHandBurst ? SessionMode.hand : SessionMode.rhythm;
     }
