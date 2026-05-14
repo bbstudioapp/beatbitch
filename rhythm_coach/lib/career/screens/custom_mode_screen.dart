@@ -246,6 +246,7 @@ class _CustomModeScreenState extends State<CustomModeScreen> {
           holdVerifier: verifier,
           canSave: true,
           coachAdvancesTier: false,
+          coachTag: coach?.slug,
           specialization: cfg.resolveSpecialization(),
           autoContinueOnFinish: cfg.nonStop,
           onRequestEncore: cfg.nonStop
@@ -300,6 +301,7 @@ class _CustomModeScreenState extends State<CustomModeScreen> {
           holdVerifier: verifier,
           canSave: true,
           coachAdvancesTier: false,
+          coachTag: coach?.slug,
           specialization: cfg.resolveSpecialization(),
           autoContinueOnFinish: true,
           onRequestEncore: (ctrl) =>

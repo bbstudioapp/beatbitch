@@ -169,6 +169,13 @@ class SessionScreen extends StatefulWidget {
   /// du coach). 0 = jamais — valeur des écrans sans notion de coach.
   final double miniPunishmentRate;
 
+  /// Slug court du coach actif (`lina`, `victoria`, …), extrait de l'`id`
+  /// `coach_NN_<slug>` par le caller. Sert à la sélection priorisée des
+  /// fonds taggés au nom de la coach (cf. `BackgroundsService.pickForContext`
+  /// et `BackgroundTagVocabulary`). Null = pas de coach (voix par défaut,
+  /// scénarios, démos).
+  final String? coachTag;
+
   /// Valeur initiale du `sessionScore` d'humiliation au start. Vaut 0
   /// pour une session normale. Sur encore enchaîné, le caller transmet
   /// le `sessionScore` final de la session précédente pour conserver
@@ -212,6 +219,7 @@ class SessionScreen extends StatefulWidget {
     this.coachAdvancesTier = true,
     this.specialization,
     this.miniPunishmentRate = 0.0,
+    this.coachTag,
     this.seedHumiliationSession = 0.0,
     this.closeAppOnEnd = false,
   });
@@ -240,6 +248,7 @@ class _SessionScreenState extends State<SessionScreen>
       holdVerifier: widget.holdVerifier,
       specialization: widget.specialization,
       miniPunishmentRate: widget.miniPunishmentRate,
+      coachTag: widget.coachTag,
       seedHumiliationSession: widget.seedHumiliationSession,
       // Profil de capacités : suivi uniquement en carrière (Custom = sandbox,
       // scénarios JSON = hors carrière).
