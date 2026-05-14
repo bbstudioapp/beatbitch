@@ -481,7 +481,7 @@ class CareerSessionGenerator {
     double obedience = 100.0,
     double humiliationCareer = 0.0,
     double humiliationSession = 0.0,
-    LevelMilestone? milestone,
+    List<LevelMilestone> insertedBodies = const [],
     LevelMilestone? finalMilestone,
     Set<UnlockKey> unlockedKeys = const {},
     String? Function(String milestoneId, int stepTime)? milestoneTextResolver,
@@ -520,8 +520,12 @@ class CareerSessionGenerator {
       'finalMilestone doit avoir placement=finalApotheose',
     );
     assert(
-      milestone == null || milestone.placement == MilestonePlacement.body,
-      'milestone (paramètre body) doit avoir placement=body',
+      insertedBodies.every((m) => m.placement == MilestonePlacement.body),
+      'insertedBodies doivent avoir placement=body',
+    );
+    assert(
+      insertedBodies.length <= 2,
+      'insertedBodies : au plus 2 milestones body par séance pour l\'instant',
     );
     final cfg = CareerLevel.forLevel(level);
     _includeHand = includeHand;
@@ -578,32 +582,56 @@ class CareerSessionGenerator {
     var time = 0;
     var stamina = _staminaMax;
 
-    // Insertion différée de la milestone d'apprentissage. Pour permettre
-    // une chauffe avant de tomber sur la séquence pédagogique, on insère
-    // au plus tôt à `insertAtMinSeconds` (default 60s) et au plus tard à
-    // `insertAtMaxSeconds` (default 0.4 × durée totale). L'insertion se
-    // fait dans la boucle main dès que `time` entre dans la fenêtre.
+    // Insertion différée des milestones d'apprentissage. Pour permettre
+    // une chauffe avant de tomber sur la séquence pédagogique, chaque
+    // milestone vise une position de séance (par défaut `insertAtMinSeconds`
+    // = 60s, `insertAtMaxSeconds` = 0.4 × durée pour la 1ʳᵉ ; 0.75 × durée
+    // pour la 2ᵉ). L'insertion se fait dans la boucle main dès que `time`
+    // atteint la target, ou en urgence dès que `time >= maxInsert`.
     //
-    // Cas spécial `insertAtMinSeconds <= 0` : la milestone EST l'intro,
-    // on remplace le first step classique. Utile pour la milestone
-    // niveau 1 qui guide depuis t=0.
+    // Cas spécial `insertAtMinSeconds <= 0` : la 1ʳᵉ milestone EST l'intro,
+    // on remplace le first step classique. Compatible avec une seule body
+    // uniquement (deux milestones à t=0, ça n'a pas de sens).
+    //
+    // Pour les sessions longues (cf. career_screen.dart), on insère 2 body
+    // milestones : la 1ʳᵉ vers 30 % de la durée, la 2ᵉ vers 65 %, avec un
+    // buffer de 60 s minimum entre la fin de la 1ʳᵉ et le début de la 2ᵉ
+    // — sans quoi on ferme la 2ᵉ (fallback à 1 body, comportement actuel).
+    final pending = <_PendingMilestoneInsert>[];
+    for (var i = 0; i < insertedBodies.length; i++) {
+      final m = insertedBodies[i];
+      final defaultMaxFraction = i == 0 ? 0.40 : 0.75;
+      final defaultTargetFraction = i == 0 ? 0.30 : 0.65;
+      final maxInsert = m.insertAtMaxSeconds ??
+          (effectiveDuration * defaultMaxFraction).round();
+      final minInsert = m.insertAtMinSeconds ?? 60;
+      final target = (effectiveDuration * defaultTargetFraction).round();
+      pending.add(_PendingMilestoneInsert(
+        milestone: m,
+        minInsert: minInsert,
+        maxInsert: maxInsert,
+        targetTime: target.clamp(minInsert, maxInsert),
+      ));
+    }
+    final firstPending = pending.isNotEmpty ? pending.first : null;
+    final bool milestoneReplacesIntro = pending.length == 1 &&
+        firstPending != null &&
+        firstPending.minInsert <= 0;
     int? milestoneStartTime;
     int? milestoneDurationSeconds;
-    bool milestoneInserted = false;
-    final int minInsert = milestone?.insertAtMinSeconds ?? 60;
-    final int maxInsert =
-        milestone?.insertAtMaxSeconds ?? (effectiveDuration * 0.4).round();
-    final bool milestoneReplacesIntro = milestone != null && minInsert <= 0;
+    int? secondMilestoneStartTime;
+    int? secondMilestoneDurationSeconds;
 
-    void insertMilestoneNow() {
-      if (milestone == null || milestoneInserted) return;
-      milestoneStartTime = time;
-      for (final mStep in milestone.sequence) {
+    void insertPending(_PendingMilestoneInsert p, int index) {
+      final m = p.milestone;
+      if (p.inserted) return;
+      p.inserted = true;
+      final startedAt = time;
+      for (final mStep in m.sequence) {
         // Si une surcharge i18n existe pour ce step (clé = offset `time`
         // du step dans la sequence), on l'utilise à la place du `text`
         // du JSON principal.
-        final overrideText =
-            milestoneTextResolver?.call(milestone.id, mStep.time);
+        final overrideText = milestoneTextResolver?.call(m.id, mStep.time);
         steps.add(SessionStep(
           time: time + mStep.time,
           text: overrideText ?? mStep.text,
@@ -632,19 +660,37 @@ class CareerSessionGenerator {
       }
       // Met à jour le « dernier mode/texte » avec le dernier step de la
       // milestone — sert au filtrage anti-répétition de la suite générée.
-      final lastStep = milestone.sequence.last;
+      final lastStep = m.sequence.last;
       _lastMode = lastStep.mode ?? _lastMode;
       _lastText = lastStep.text;
-      time += milestone.durationSeconds;
-      milestoneDurationSeconds = milestone.durationSeconds;
-      milestoneInserted = true;
+      time += m.durationSeconds;
+      if (index == 0) {
+        milestoneStartTime = startedAt;
+        milestoneDurationSeconds = m.durationSeconds;
+      } else {
+        secondMilestoneStartTime = startedAt;
+        secondMilestoneDurationSeconds = m.durationSeconds;
+      }
       // Réutilisation post-acquittement : les unlocks de la milestone
       // deviennent disponibles pour les steps générés APRÈS la séquence
       // (corps restant, pré-finisher, boosts, final). On suppose succès au
       // runtime — sur fail la session est replanifiée par le contrôleur, ce
       // qui régénère un set d'unlocks cohérent.
-      if (milestone.unlocks.isNotEmpty) {
-        _unlockedKeys = {..._unlockedKeys, ...milestone.unlocks};
+      if (m.unlocks.isNotEmpty) {
+        _unlockedKeys = {..._unlockedKeys, ...m.unlocks};
+      }
+      // Recale le min de la prochaine pending : `m.endTime + 60s` buffer
+      // (sinon les 2 séquences pédagogiques s'enchaînent sans souffle).
+      if (index + 1 < pending.length) {
+        final nextMin = time + 60;
+        final next = pending[index + 1];
+        next.minInsert = max(next.minInsert, nextMin);
+        // Si le buffer pousse au-delà du maxInsert de la 2ᵉ, on le repousse
+        // pour laisser l'insertion se faire (relâchement plutôt que skip).
+        if (next.minInsert > next.maxInsert) {
+          next.maxInsert = next.minInsert + m.durationSeconds;
+        }
+        next.targetTime = next.targetTime.clamp(next.minInsert, next.maxInsert);
       }
     }
 
@@ -656,7 +702,7 @@ class CareerSessionGenerator {
     // Si la milestone remplace l'intro, on l'insère ici à t=0 et c'est
     // son premier step qui tient le rôle de step #0 non text-only.
     if (milestoneReplacesIntro) {
-      insertMilestoneNow();
+      insertPending(pending.first, 0);
     } else {
       final first = _clampToCapability(_firstStep(
         quickie: quickie,
@@ -718,16 +764,24 @@ class CareerSessionGenerator {
         (isLowLevel && !useFinalMilestone ? _preFinisherBudgetSeconds : 0);
 
     while (time < genUntil) {
-      // Insertion milestone : dès que `time` atteint la borne min, OU dès
-      // qu'on dépasse la borne max (auquel cas on insère en urgence pour
-      // ne pas la louper). Le cas time<minInsert continue à empiler des
-      // steps de chauffe normalement.
-      if (milestone != null &&
-          !milestoneInserted &&
-          (time >= minInsert || time >= maxInsert)) {
-        insertMilestoneNow();
-        if (time >= genUntil) break;
-        continue;
+      // Insertion milestone : on traite les pending dans l'ordre, dès que
+      // `time` atteint la target (`>= targetTime`), OU dès qu'on dépasse
+      // la borne max (insertion en urgence pour ne pas la louper). Le cas
+      // time < target continue à empiler des steps de chauffe normalement.
+      var nextPendingIndex = -1;
+      for (var idx = 0; idx < pending.length; idx++) {
+        if (!pending[idx].inserted) {
+          nextPendingIndex = idx;
+          break;
+        }
+      }
+      if (nextPendingIndex >= 0) {
+        final p = pending[nextPendingIndex];
+        if (time >= p.targetTime || time >= p.maxInsert) {
+          insertPending(p, nextPendingIndex);
+          if (time >= genUntil) break;
+          continue;
+        }
       }
       // Mini-vague : 2-3 steps enchaînés à BPM montant qui cassent la
       // diagonale d'intensité unique du début au finish. Inséré toutes
@@ -1006,13 +1060,15 @@ class CareerSessionGenerator {
       }
     }
 
-    // Si la boucle main s'est terminée sans avoir inséré la milestone
-    // (durée trop courte pour atteindre la fenêtre, ou `genUntil` faible
-    // après le first step), on force l'insertion ici pour qu'elle soit
-    // jouée avant le finisher. Cas rare mais on ne veut pas perdre la
-    // milestone silencieusement.
-    if (milestone != null && !milestoneInserted) {
-      insertMilestoneNow();
+    // Si la boucle main s'est terminée sans avoir inséré toutes les
+    // milestones (durée trop courte pour atteindre la fenêtre, ou
+    // `genUntil` faible après le first step), on force l'insertion ici
+    // pour qu'elles soient jouées avant le finisher. Cas rare mais on ne
+    // veut pas perdre une milestone silencieusement.
+    for (var idx = 0; idx < pending.length; idx++) {
+      if (!pending[idx].inserted) {
+        insertPending(pending[idx], idx);
+      }
     }
 
     // À partir d'ici on entre dans la fenêtre **finish** (pré-finisher +
@@ -1095,9 +1151,13 @@ class CareerSessionGenerator {
           durationSeconds: finalDuration,
           defaultMode: SessionMode.rhythm,
           steps: steps,
-          milestoneId: milestone?.id,
+          milestoneId: insertedBodies.isNotEmpty ? insertedBodies[0].id : null,
           milestoneStartTime: milestoneStartTime,
           milestoneDurationSeconds: milestoneDurationSeconds,
+          secondMilestoneId:
+              insertedBodies.length >= 2 ? insertedBodies[1].id : null,
+          secondMilestoneStartTime: secondMilestoneStartTime,
+          secondMilestoneDurationSeconds: secondMilestoneDurationSeconds,
           finalMilestoneId: finalMilestone.id,
           finalMilestoneStartTime: finalMilestoneStartTime,
           finalMilestoneDurationSeconds: finalMilestone.durationSeconds,
@@ -1405,9 +1465,13 @@ class CareerSessionGenerator {
         durationSeconds: finalDuration,
         defaultMode: SessionMode.rhythm,
         steps: steps,
-        milestoneId: milestone?.id,
+        milestoneId: insertedBodies.isNotEmpty ? insertedBodies[0].id : null,
         milestoneStartTime: milestoneStartTime,
         milestoneDurationSeconds: milestoneDurationSeconds,
+        secondMilestoneId:
+            insertedBodies.length >= 2 ? insertedBodies[1].id : null,
+        secondMilestoneStartTime: secondMilestoneStartTime,
+        secondMilestoneDurationSeconds: secondMilestoneDurationSeconds,
         finalCategory: finalCategory,
         silentFinishStartTime: silentFinishStartTime,
         finalStepTime: finalStepStartTime,
@@ -4382,5 +4446,23 @@ class _PunishmentCompo {
     required this.drafts,
     required this.reqHumil,
     this.handRequired = false,
+  });
+}
+
+/// État mutable d'une milestone body en attente d'insertion dans la séance.
+/// Le générateur traite `pending` dans l'ordre — chaque insertion repousse
+/// la `minInsert` de la suivante pour conserver un buffer ≥ 60 s.
+class _PendingMilestoneInsert {
+  final LevelMilestone milestone;
+  int minInsert;
+  int maxInsert;
+  int targetTime;
+  bool inserted = false;
+
+  _PendingMilestoneInsert({
+    required this.milestone,
+    required this.minInsert,
+    required this.maxInsert,
+    required this.targetTime,
   });
 }
