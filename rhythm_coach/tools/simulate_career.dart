@@ -313,6 +313,9 @@ class SimState {
   Set<UnlockKey> unlocked = <UnlockKey>{};
   Set<String> completedMilestones = <String>{};
   Map<CapabilityAxis, CapState> caps = <CapabilityAxis, CapState>{};
+  // Compteur de candidature (id milestone → sessions où elle est candidate
+  // mais non sélectionnée). Cf. `MilestoneService.incrementCandidacyAge`.
+  Map<String, int> candidacyAge = <String, int>{};
   // ordre d'acquisition des unlocks (clé → n° session)
   List<({UnlockKey key, int session, String milestone})> unlockHistory = [];
 }
@@ -393,7 +396,22 @@ int _lowestBranchPoints(SimMilestone m, SimProfile p) {
   return lo == (1 << 30) ? 0 : lo;
 }
 
-SimMilestone? _pickMilestone({
+/// Poids du vieillissement dans le sortScore (cf.
+/// `MilestoneService._agingWeight`). Doit rester aligné avec la prod.
+const double _kAgingWeight = 0.5;
+const double _kLowestBranchWeight = 0.1;
+
+double _sortScore(SimMilestone m, SimProfile p, SimState s) {
+  final age = s.candidacyAge[m.id] ?? 0;
+  return _branchScore(m, p).toDouble() +
+      _kAgingWeight * age -
+      _kLowestBranchWeight * _lowestBranchPoints(m, p);
+}
+
+/// Renvoie la liste complète des candidates triée — analogue à
+/// `MilestoneService.allPendingFor`. Le caller pioche `.first` et passe
+/// la queue à `_ageCandidates`.
+List<SimMilestone> _allPendingMilestones({
   required List<SimMilestone> catalog,
   required SimState state,
   required SimProfile profile,
@@ -409,19 +427,16 @@ SimMilestone? _pickMilestone({
       .where((m) => m.requires.every(state.unlocked.contains))
       .where((m) => _capabilitySatisfied(m, state))
       .toList();
-  if (candidates.isEmpty) return null;
+  if (candidates.isEmpty) return const [];
   candidates.sort((a, b) {
-    final byBranch =
-        _branchScore(b, profile).compareTo(_branchScore(a, profile));
-    if (byBranch != 0) return byBranch;
-    final byLow = _lowestBranchPoints(a, profile)
-        .compareTo(_lowestBranchPoints(b, profile));
-    if (byLow != 0) return byLow;
+    final byScore =
+        _sortScore(b, profile, state).compareTo(_sortScore(a, profile, state));
+    if (byScore != 0) return byScore;
     final byHumil = a.humilRequired.compareTo(b.humilRequired);
     if (byHumil != 0) return byHumil;
     return a.id.compareTo(b.id);
   });
-  return candidates.first;
+  return candidates;
 }
 
 // ─── Heuristique : axes touchés par les steps d'une milestone ─────────────
@@ -732,19 +747,29 @@ SimResult _runSim({
     state.sessionIndex = i + 1;
     final duration = _durationForLevel(state.level);
 
-    // Pick body + final milestones avec les paramètres courants.
-    final bodyM = _pickMilestone(
+    // Pick body + final milestones — récupère la queue complète pour
+    // pouvoir vieillir les candidates non choisies (cf. aging sort, parité
+    // avec `MilestoneService.incrementCandidacyAge`).
+    final bodyAll = _allPendingMilestones(
       catalog: catalog,
       state: state,
       profile: profile,
       placement: MilestonePlace.body,
     );
-    final finalM = _pickMilestone(
+    final finalAll = _allPendingMilestones(
       catalog: catalog,
       state: state,
       profile: profile,
       placement: MilestonePlace.finalApotheose,
     );
+    final bodyM = bodyAll.isEmpty ? null : bodyAll.first;
+    final finalM = finalAll.isEmpty ? null : finalAll.first;
+    for (final m in bodyAll.skip(1)) {
+      state.candidacyAge[m.id] = (state.candidacyAge[m.id] ?? 0) + 1;
+    }
+    for (final m in finalAll.skip(1)) {
+      state.candidacyAge[m.id] = (state.candidacyAge[m.id] ?? 0) + 1;
+    }
 
     // Decide outcomes.
     final isQuickie = rng.nextDouble() < profile.quickieProba;
@@ -837,6 +862,7 @@ SimResult _runSim({
       bodyInsertedId = bodyM.id;
       if (bodyOutcome == 'clean' && cleanSession) {
         state.completedMilestones.add(bodyM.id);
+        state.candidacyAge.remove(bodyM.id);
         for (final u in bodyM.unlocks) {
           if (state.unlocked.add(u)) {
             gained.add(u);
@@ -855,6 +881,7 @@ SimResult _runSim({
       finalInsertedId = finalM.id;
       if (finalOutcome == 'clean' && cleanSession) {
         state.completedMilestones.add(finalM.id);
+        state.candidacyAge.remove(finalM.id);
         for (final u in finalM.unlocks) {
           if (state.unlocked.add(u)) {
             gained.add(u);

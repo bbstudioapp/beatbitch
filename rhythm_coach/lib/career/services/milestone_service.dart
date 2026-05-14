@@ -20,12 +20,25 @@ import 'unlock_announcements.dart';
 class MilestoneService extends ChangeNotifier {
   static const String _kCompletions = 'career.milestones_completed';
   static const String _kRetries = 'career.milestone_retries';
+  static const String _kCandidacySeen = 'career.milestone_candidacy_seen';
+
+  /// Poids du vieillissement dans `sortScore` (cf. [allPendingFor]). Chaque
+  /// session où la milestone est candidate sans être choisie ajoute cette
+  /// valeur à son score effectif — au bout d'une dizaine de sessions
+  /// « snobée », l'aging égale un `branchScore` mono-branche de 5 pts.
+  static const double _agingWeight = 0.5;
+
+  /// Poids du tie-break variété (`lowestBranchPoints`) dans `sortScore`.
+  /// Volontairement bien plus petit que les autres termes : départage à
+  /// `branchScore`+`age` comparables sans dominer.
+  static const double _lowestBranchWeight = 0.1;
 
   final MilestoneLoader _loader = MilestoneLoader();
 
   List<LevelMilestone> _catalog = const [];
   Set<String> _completed = <String>{};
   Map<String, int> _retries = <String, int>{};
+  Map<String, int> _candidacyAge = <String, int>{};
   Map<String, MilestoneTextOverride> _overrides =
       <String, MilestoneTextOverride>{};
   bool _loaded = false;
@@ -67,6 +80,20 @@ class MilestoneService extends ChangeNotifier {
       } catch (e) {
         if (kDebugMode) {
           debugPrint('[MilestoneService] retries parse error : $e');
+        }
+      }
+    }
+    final rawAge = prefs.getString(_kCandidacySeen);
+    if (rawAge != null && rawAge.isNotEmpty) {
+      try {
+        final decoded = json.decode(rawAge);
+        if (decoded is Map) {
+          _candidacyAge =
+              decoded.map((k, v) => MapEntry(k.toString(), (v as num).toInt()));
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('[MilestoneService] candidacy age parse error : $e');
         }
       }
     }
@@ -201,9 +228,24 @@ class MilestoneService extends ChangeNotifier {
   /// Toutes les milestones pending éligibles à `humiliationScore` +
   /// tolérance d'obédiance, gated par `playerLevel ≥ minLevel` et par
   /// `requiresCapability` (si [capabilityProfile] est fourni). Triées
-  /// selon les mêmes critères que `pendingFor`. La première de la liste
-  /// est celle qui sera effectivement insérée dans la prochaine session
-  /// générée. Liste vide si aucune candidate.
+  /// selon les mêmes critères que `pendingFor`.
+  ///
+  /// **Tri** (cas standard, `allocation != null`) : `sortScore` desc, puis
+  /// `humilRequired` asc, puis id alpha. Le `sortScore` combine :
+  /// - `+branchScore` (points investis dans les branches du milestone) —
+  ///   privilégie le match spé,
+  /// - `+_agingWeight × candidacyAge` (vieillissement) — remonte
+  ///   progressivement les transverses ou milestones hors-spé candidates
+  ///   depuis longtemps mais jamais choisies,
+  /// - `−_lowestBranchWeight × lowestBranchPoints` (tie-break variété) —
+  ///   à match comparable, favorise la branche la moins investie.
+  ///
+  /// **Mode hérité** (`allocation == null`) : pas de vieillissement,
+  /// `branchScore = 0` partout, le tri retombe sur `humilRequired` asc
+  /// puis id alpha (identique au comportement pré-aging).
+  ///
+  /// La première de la liste est celle qui sera effectivement insérée
+  /// dans la prochaine session générée. Liste vide si aucune candidate.
   List<LevelMilestone> allPendingFor({
     required double humiliationScore,
     required double obedience,
@@ -275,6 +317,28 @@ class MilestoneService extends ChangeNotifier {
       return true;
     }
 
+    /// Score composite consommé par le tri principal (desc — plus grand =
+    /// plus prioritaire). N'a d'effet que si `allocation != null` — sans
+    /// allocation, `branchScore`+`lowestBranch` sont 0 partout et l'aging
+    /// est neutralisé (cf. plus bas) pour préserver le mode hérité (tests,
+    /// sessions hors carrière).
+    ///
+    /// - `+branchScore` : plus la milestone touche les branches investies,
+    ///   plus elle remonte.
+    /// - `+_agingWeight × age` : plus la milestone est candidate depuis
+    ///   longtemps sans être choisie, plus elle remonte (le poids 0.5
+    ///   donne à 10 sessions snobée le même boost qu'un mono-branche 5pts).
+    /// - `−_lowestBranchWeight × lowestBranchPoints` : à match comparable,
+    ///   pénalise la milestone dont la branche min chez la joueuse est
+    ///   investie — variété.
+    double sortScore(LevelMilestone m) {
+      if (allocation == null) return 0;
+      final age = _candidacyAge[m.id] ?? 0;
+      return branchScore(m).toDouble() +
+          _agingWeight * age -
+          _lowestBranchWeight * lowestBranchPoints(m);
+    }
+
     final candidates = _catalog
         .where((m) => m.placement == placement)
         .where((m) => (m.minLevel - branchAdvance(m)) <= playerLevel)
@@ -284,13 +348,20 @@ class MilestoneService extends ChangeNotifier {
         .where(capabilityOk)
         .toList();
     if (candidates.isEmpty) return const [];
+    if (allocation == null) {
+      // Mode hérité : pas de score composite, on retombe sur l'ordre
+      // historique `humilRequired` asc puis id alpha. `branchScore` = 0
+      // partout aurait suffi mais on évite l'allocation d'un double inutile.
+      candidates.sort((a, b) {
+        final byHumil = a.humilRequired.compareTo(b.humilRequired);
+        if (byHumil != 0) return byHumil;
+        return a.id.compareTo(b.id);
+      });
+      return candidates;
+    }
     candidates.sort((a, b) {
-      final byBranch = branchScore(b).compareTo(branchScore(a));
-      if (byBranch != 0) return byBranch;
-      // À match spé égal : favoriser la branche la moins investie chez la
-      // joueuse (variété). N'a d'effet que si une allocation est fournie.
-      final byLow = lowestBranchPoints(a).compareTo(lowestBranchPoints(b));
-      if (byLow != 0) return byLow;
+      final byScore = sortScore(b).compareTo(sortScore(a));
+      if (byScore != 0) return byScore;
       final byHumil = a.humilRequired.compareTo(b.humilRequired);
       if (byHumil != 0) return byHumil;
       return a.id.compareTo(b.id);
@@ -353,6 +424,33 @@ class MilestoneService extends ChangeNotifier {
     }
   }
 
+  /// Nombre de sessions où la milestone [id] a été candidate (a passé
+  /// tous les filtres `level/humil/requires/capability/non-completed`)
+  /// **sans être choisie**. Alimente le terme aging du `sortScore` (cf.
+  /// [allPendingFor]).
+  int getCandidacyAge(String id) => _candidacyAge[id] ?? 0;
+
+  /// Incrémente le compteur d'âge de toutes les milestones de [notChosen]
+  /// (= candidates passées au tri mais non sélectionnées). À appeler après
+  /// chaque tour de tri qui consomme une candidate (un par session,
+  /// typiquement). Persiste.
+  Future<void> incrementCandidacyAge(List<LevelMilestone> notChosen) async {
+    if (notChosen.isEmpty) return;
+    var changed = false;
+    for (final m in notChosen) {
+      _candidacyAge[m.id] = (_candidacyAge[m.id] ?? 0) + 1;
+      changed = true;
+    }
+    if (changed) await _persistCandidacyAge();
+  }
+
+  /// Remet à zéro le compteur d'âge de [id]. Persiste si modifié.
+  Future<void> resetCandidacyAge(String id) async {
+    if (_candidacyAge.remove(id) != null) {
+      await _persistCandidacyAge();
+    }
+  }
+
   /// Marque la milestone comme acquittée si pas de fail. Persiste.
   /// Notifie les listeners (utile pour rafraîchir UI).
   Future<void> markCompleted(String id, {required bool hadFail}) async {
@@ -360,6 +458,7 @@ class MilestoneService extends ChangeNotifier {
     if (_completed.add(id)) {
       await _persist();
       await resetRetryCount(id);
+      await resetCandidacyAge(id);
       notifyListeners();
     }
   }
@@ -379,9 +478,11 @@ class MilestoneService extends ChangeNotifier {
   void seedForTest({
     required List<LevelMilestone> catalog,
     Set<String> completed = const <String>{},
+    Map<String, int> candidacyAge = const <String, int>{},
   }) {
     _catalog = List<LevelMilestone>.unmodifiable(catalog);
     _completed = Set<String>.from(completed);
+    _candidacyAge = Map<String, int>.from(candidacyAge);
     _loaded = true;
   }
 
@@ -391,8 +492,10 @@ class MilestoneService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_kCompletions);
     await prefs.remove(_kRetries);
+    await prefs.remove(_kCandidacySeen);
     _completed = <String>{};
     _retries = <String, int>{};
+    _candidacyAge = <String, int>{};
     notifyListeners();
   }
 
@@ -404,5 +507,10 @@ class MilestoneService extends ChangeNotifier {
   Future<void> _persistRetries() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kRetries, json.encode(_retries));
+  }
+
+  Future<void> _persistCandidacyAge() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kCandidacySeen, json.encode(_candidacyAge));
   }
 }

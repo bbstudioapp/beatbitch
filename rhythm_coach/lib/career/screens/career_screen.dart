@@ -23,6 +23,7 @@ import '../../l10n/enum_labels.dart';
 import '../../main.dart' show coachService, milestoneService;
 import '../models/career_level.dart';
 import '../models/coach.dart';
+import '../models/level_milestone.dart';
 import '../models/phrase_bank.dart';
 import '../models/specialization.dart';
 import '../models/unlock_key.dart';
@@ -194,24 +195,43 @@ class _CareerScreenState extends State<CareerScreen> {
     // = boosts + step finisher). Les deux peuvent coexister sur une même
     // séance — l'utilisatrice apprend une compétence en milieu de séance,
     // puis une autre en apothéose.
-    final milestone = quickie
-        ? null
-        : milestoneService.pendingFor(
-            humiliationScore: humiliationScore,
-            obedience: obedienceScore,
-            playerLevel: bundle.maxLevel,
-            allocation: bundle.specialization,
-            capabilityProfile: bundle.capabilityProfile,
-          );
-    final finalMilestone = quickie
-        ? null
-        : milestoneService.pendingFinalFor(
-            humiliationScore: humiliationScore,
-            obedience: obedienceScore,
-            playerLevel: bundle.maxLevel,
-            allocation: bundle.specialization,
-            capabilityProfile: bundle.capabilityProfile,
-          );
+    // Consomme la queue de candidates triées via `allPendingFor`. Le 1ᵉʳ
+    // de la liste est inséré dans la séance, les autres prennent +1 dans
+    // leur compteur de candidature (aging du tri composite — cf.
+    // `MilestoneService.allPendingFor`). Pas de comptage en quickie : la
+    // session bâclée ne consomme aucune candidate.
+    LevelMilestone? milestone;
+    LevelMilestone? finalMilestone;
+    if (!quickie) {
+      final bodyCandidates = milestoneService.allPendingFor(
+        humiliationScore: humiliationScore,
+        obedience: obedienceScore,
+        playerLevel: bundle.maxLevel,
+        allocation: bundle.specialization,
+        capabilityProfile: bundle.capabilityProfile,
+      );
+      final finalCandidates = milestoneService.allPendingFor(
+        humiliationScore: humiliationScore,
+        obedience: obedienceScore,
+        playerLevel: bundle.maxLevel,
+        allocation: bundle.specialization,
+        capabilityProfile: bundle.capabilityProfile,
+        placement: MilestonePlacement.finalApotheose,
+      );
+      milestone = bodyCandidates.isEmpty ? null : bodyCandidates.first;
+      finalMilestone = finalCandidates.isEmpty ? null : finalCandidates.first;
+      // Vieillit les candidates non choisies de cette session : un +1 par
+      // milestone qui est passée au tri mais n'a pas été retenue. Le 1ᵉʳ
+      // de chaque liste est exclu (= insérée dans la séance, son âge
+      // sera reset à la complétion via `markCompleted`).
+      final notChosen = <LevelMilestone>[
+        if (bodyCandidates.length > 1) ...bodyCandidates.skip(1),
+        if (finalCandidates.length > 1) ...finalCandidates.skip(1),
+      ];
+      if (notChosen.isNotEmpty) {
+        await milestoneService.incrementCandidacyAge(notChosen);
+      }
+    }
     // Force includeHand=true si le milestone pending l'exige (séquence
     // scriptée comportant du hand/biffle). Sinon respecte la préférence
     // utilisatrice. Persistance volontairement avec la valeur effective
