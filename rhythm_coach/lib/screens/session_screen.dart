@@ -826,11 +826,17 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
             // l'AppBar), s'allume pile quand le `finale_chime` retentit et
             // que la séance tourne encore — quelques giclées irrégulières +
             // pulses de vibration, puis une brume qui se résorbe.
-            Positioned.fill(
-              child: SessionFinaleOverlay(
-                active: ctrl.isRunning && ctrl.finaleChimeStarted,
+            // Démonté dès qu'on bascule sur le panel de fin Phase 2 (badges
+            // révélés) : sinon les résidus blancs restent posés par-dessus
+            // et masquent le texte blanc du `_FinishedPanel` (issue #42).
+            // La Phase 1 (`_FinishedOverlay`) garde l'overlay : ses boutons
+            // ont déjà un voile sombre derrière eux et restent lisibles.
+            if (!ctrl.isFinished || ctrl.hasPendingBadges)
+              Positioned.fill(
+                child: SessionFinaleOverlay(
+                  active: ctrl.isRunning && ctrl.finaleChimeStarted,
+                ),
               ),
-            ),
           ],
         ),
       ),
