@@ -144,7 +144,7 @@
       "branches": ["rythmeBiffle"],
       "sequence": [
         {"time": 0,  "text": "Ouvre la bouche. Tu vas recevoir.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 90, "duration": 8},
-        {"time": 8,  "text": "Coups de queue. Reçois-les.", "mode": "biffle", "bpm": 90, "duration": 12},
+        {"time": 8,  "text": "Coups de queue. Reçois-les.", "mode": "biffle", "bpm": 45, "duration": 12},
         {"time": 20, "text": "Bien. Lèche pour finir.", "mode": "lick", "from": "head", "to": "head", "bpm": 70, "duration": 8}
       ]
     },

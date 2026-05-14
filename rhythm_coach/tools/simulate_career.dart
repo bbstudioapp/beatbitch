@@ -1520,8 +1520,9 @@ class _Args {
   final int seed;
   final String format;
   final String? outPath;
+  final bool capsTable;
   _Args(this.profiles, this.sessionsOverride, this.seed, this.format,
-      this.outPath);
+      this.outPath, this.capsTable);
 }
 
 _Args _parseArgs(List<String> argv) {
@@ -1530,6 +1531,7 @@ _Args _parseArgs(List<String> argv) {
   var seed = 42;
   var format = 'markdown';
   String? outPath;
+  var capsTable = false;
   for (var i = 0; i < argv.length; i++) {
     final a = argv[i];
     String next() {
@@ -1556,6 +1558,9 @@ _Args _parseArgs(List<String> argv) {
       case '--out':
         outPath = next();
         break;
+      case '--caps-table':
+        capsTable = true;
+        break;
       case '-h':
       case '--help':
         stdout.writeln('Usage: dart run tools/simulate_career.dart [options]\n'
@@ -1563,18 +1568,270 @@ _Args _parseArgs(List<String> argv) {
             '  --sessions <N>         override du nombre de sessions par profil\n'
             '  --seed <n>             seed RNG (défaut 42)\n'
             '  --format markdown|tsv  format de sortie (défaut markdown)\n'
-            '  --out <path>           fichier de sortie (défaut stdout)\n');
+            '  --out <path>           fichier de sortie (défaut stdout)\n'
+            '  --caps-table           génère un tableau BPM/durée par niveau\n'
+            '                         à la place de la simulation\n');
         exit(0);
       default:
         stderr.writeln('option inconnue : $a');
         exit(2);
     }
   }
-  return _Args(profiles, sessionsOverride, seed, format, outPath);
+  return _Args(profiles, sessionsOverride, seed, format, outPath, capsTable);
+}
+
+// ─── Tableau analytique BPM / durée par niveau ────────────────────────────
+//
+// Reproduit les formules de `CareerSessionGenerator._pickFinal` et de la
+// phase finish (boosts BPM). Sert à répondre à la question « pour une
+// joueuse qui performe, qu'est-ce qu'elle ressent à chaque niveau ? »
+// sans avoir à instancier le générateur (qui dépend de flutter/foundation).
+//
+// Source de vérité :
+// - hold throat : `target = clamp(10 + (humilOver/5).floor()*2 + endPts*2, 10, 40)`
+//   avec `humilOver = max(0, humilCap - 10)` — cf. career_session_generator.dart §3358.
+// - hold full : `target = clamp(10 + (humilOver/8).floor()*3 + endPts*3, 10, 80)`
+//   avec `humilOver = max(0, humilCap - 30)` — cf. career_session_generator.dart §3389.
+// - BPM cap boosts : hand = `clamp(110 + (level-1)*4, 110, 170)`,
+//   rhythm = `clamp(130 + (level-1)*4, 130, 180)` — cf. §1230-1234.
+// - maxDepth : level ≤ 2 → mid max ; level 3 → throat ; level 4+ → full
+//   — cf. `CareerLevel._maxDepthForLevel`.
+
+int _maxDepthIndexFor(int level) {
+  if (level <= 2) return 2;
+  if (level <= 3) return 3;
+  return 4;
+}
+
+int _holdThroatTarget({required double humilCap, required int endPts}) {
+  final humilOver = (humilCap - 10) < 0 ? 0.0 : (humilCap - 10);
+  final v = 10 + (humilOver / 5).floor() * 2 + endPts * 2;
+  return v.clamp(10, 80);
+}
+
+int _holdFullTarget({required double humilCap, required int endPts}) {
+  final humilOver = (humilCap - 30) < 0 ? 0.0 : (humilCap - 30);
+  final v = 10 + (humilOver / 8).floor() * 3 + endPts * 3;
+  return v.clamp(10, 80);
+}
+
+int _bpmBoostHand(int level) =>
+    ((110 + (level - 1) * 4).clamp(110, 300)).toInt();
+int _bpmBoostRhythm(int level) =>
+    ((130 + (level - 1) * 4).clamp(130, 300)).toInt();
+
+/// Humiliation cap "typique chez quelqu'un qui performe" en fin de séance
+/// (`careerScore + sessionScore` à la phase finish). Calé empiriquement sur
+/// les valeurs observées pour `purist_endurance` dans la simulation (seed 42) :
+/// L5 → ~70, L10 → ~115, L15 → ~160, L20 → ~200.
+double _perfHumilCapAtFinish(int level) => 30.0 + level * 8.5;
+
+/// Estimation du `comfort` throat tenu par une joueuse "perf endurance" qui
+/// surcharge à chaque séance et réussit (ratchet ↑ ~+12 %/session, cf.
+/// `CapabilityRegulator.regulate`). Modélise le clamp `_clampToCapability`
+/// qui borne la durée du hold final à `comfort × surcharge`. Paliers
+/// milestones :
+/// - L6 : `intro_hold_throat_short` tenu 3 s → best=3 → comfort=3.
+/// - L8 : `intro_hold_throat_long` tenu 8 s → best=8 → comfort=8.
+/// Ratchet entre les paliers : `comfort × 1.12` par session. Capé au plafond
+/// dur `_pickFinal` (80 s throat & full depuis relax cap).
+double? _estComfortThroat(int level) {
+  if (level < 6) return null;
+  final base = level < 8 ? 3.0 : 8.0;
+  final levelsSinceBump = level < 8 ? (level - 6) : (level - 8);
+  final v = base * pow(1.12, levelsSinceBump);
+  return v > 80.0 ? 80.0 : v.toDouble();
+}
+
+double? _estComfortFull(int level) {
+  if (level < 11) return null;
+  final base = level < 13 ? 3.0 : 10.0;
+  final levelsSinceBump = level < 13 ? (level - 11) : (level - 13);
+  final v = base * pow(1.12, levelsSinceBump);
+  return v > 80.0 ? 80.0 : v.toDouble();
+}
+
+/// Comfort BPM rythme dans la bande superficielle (`to ≤ mid`). Paliers
+/// milestones qui établissent le `best` :
+/// - L1 : `intro_basics` joue rhythm head→mid à 90 BPM → comfort=90.
+/// - L3 : `intro_deeper_basics` pousse à 100 puis 110 → comfort=110.
+/// `intro_rhythm_sustained` (L6) joue aussi à 110 BPM mais le ratchet est
+/// déjà bien au-delà à ce stade — pas de reset milestone.
+/// Ratchet ensuite ~+10 %/session pour une joueuse rythme/biffle.
+double _estComfortBpmShallow(int level) {
+  final double base;
+  final int levelsSinceBump;
+  if (level < 3) {
+    base = 90;
+    levelsSinceBump = level - 1;
+  } else {
+    base = 110;
+    levelsSinceBump = level - 3;
+  }
+  final v = base * pow(1.10, levelsSinceBump);
+  return v > 300.0 ? 300.0 : v.toDouble();
+}
+
+/// Comfort BPM rythme dans la bande throat (`to = throat`). Paliers :
+/// - L10 : `intro_throat_pulse` joue rhythm head→throat à 80 BPM → comfort=80.
+/// - L15 : `intro_rhythm_extreme` pousse à 165 BPM (saut massif) → comfort=165.
+/// Avant L10 : pas de donnée (throat-rhythm non débloqué côté `rhythm.depth_max`).
+double? _estComfortBpmThroat(int level) {
+  if (level < 10) return null;
+  final base = level < 15 ? 80.0 : 165.0;
+  final levelsSinceBump = level < 15 ? (level - 10) : (level - 15);
+  final v = base * pow(1.10, levelsSinceBump);
+  return v > 300.0 ? 300.0 : v.toDouble();
+}
+
+/// Comfort BPM biffle. Paliers :
+/// - L5 : `intro_biffle` joue biffle à 45 BPM → comfort=45 (lent et appliqué,
+///   premiers coups de queue).
+/// - L9 : `intro_biffle_fast` joue biffle à 140 BPM → comfort=140 (saut).
+double? _estComfortBpmBiffle(int level) {
+  if (level < 5) return null;
+  final base = level < 9 ? 45.0 : 140.0;
+  final levelsSinceBump = level < 9 ? (level - 5) : (level - 9);
+  final v = base * pow(1.10, levelsSinceBump);
+  return v > 300.0 ? 300.0 : v.toDouble();
+}
+
+String _renderCapsTable() {
+  final b = StringBuffer();
+  b.writeln('# Durée holds / BPM boosts par niveau — joueuse "qui performe"');
+  b.writeln();
+  b.writeln('Toutes les durées sont au moment du **final d\'apothéose**.'
+      ' On compare la **valeur effective** (= ce que la joueuse voit) à la'
+      ' formule théorique (= plafond `_pickFinal` avant le clamp `comfort`).');
+  b.writeln();
+  b.writeln('Sources :');
+  b.writeln('- Hold throat : `target = clamp(10 + (humilOver/5)·2 + endPts·2,'
+      ' 10, 80)` (`career_session_generator.dart` §3358 — cap aligné sur full).');
+  b.writeln('- Hold full : `target = clamp(10 + (humilOver/8)·3 + endPts·3,'
+      ' 10, 80)` (§3389).');
+  b.writeln('- BPM boosts : `hand = clamp(110 + (level-1)·4, 110, 300)`,'
+      ' `rhythm = clamp(130 + (level-1)·4, 130, 300)` (§1230-1234 — caps relâchés).');
+  b.writeln('- Comfort estimé : ratchet +10 à +12 %/session sur l\'axe poussé'
+      ' (`CapabilityRegulator.regulate`). Bumps milestones :'
+      ' throat 3 s (L6), 8 s (L8) ; full 3 s (L11), 10 s (L13) ;'
+      ' BPM rhythme shallow 90 (L1), 110 (L3) ; BPM rhythme throat 80 (L10),'
+      ' 165 (L15) ; BPM biffle 45 (L5), 140 (L9).');
+  b.writeln();
+  b.writeln('**Hypothèse joueuse perf** : 5 pts endurance, humil mature'
+      ' (`humilCap = 30 + level × 8.5`), zéro fail, surcharge réussie à'
+      ' chaque séance sur l\'axe poussé. Le `comfort` ratchet vers le haut'
+      ' régulièrement.');
+  b.writeln();
+  b.writeln(
+      '| L | durée séance | humilCap | comfort throat (effectif) | formule throat endPts=5 | comfort full (effectif) | formule full endPts=5 | BPM hand | BPM rythme |');
+  b.writeln('|---:|---:|---:|---:|---:|---:|---:|---:|---:|');
+
+  for (var l = 1; l <= 25; l++) {
+    final humil = _perfHumilCapAtFinish(l);
+    final mins = _durationForLevel(l) ~/ 60;
+    final cThroat = _estComfortThroat(l);
+    final cFull = _estComfortFull(l);
+    final theoThroat = _maxDepthIndexFor(l) >= 3
+        ? '${_holdThroatTarget(humilCap: humil, endPts: 5)}s'
+        : '—';
+    final theoFull = _maxDepthIndexFor(l) >= 4
+        ? '${_holdFullTarget(humilCap: humil, endPts: 5)}s'
+        : '—';
+    final effThroat =
+        cThroat == null ? '—' : '**${cThroat.toStringAsFixed(1)}s**';
+    final effFull = cFull == null ? '—' : '**${cFull.toStringAsFixed(1)}s**';
+    b.writeln('| $l | $mins min | ${humil.toStringAsFixed(0)} | '
+        '$effThroat | $theoThroat | $effFull | $theoFull | '
+        '${_bpmBoostHand(l)} | ${_bpmBoostRhythm(l)} |');
+  }
+  b.writeln();
+  b.writeln('## BPM main loop — comfort effectif par axe');
+  b.writeln();
+  b.writeln('Le BPM des steps **dans le main loop** est borné par le `comfort`'
+      ' de l\'axe correspondant (cf. `_capabilityCapFor` dans le générateur).'
+      ' Le BPM boost de la phase finish (colonnes "BPM hand / rythme" ci-dessus)'
+      ' est lui borné par le cap niveau, mais celui-ci passe maintenant à 300 —'
+      ' c\'est le comfort qui régule en pratique.');
+  b.writeln();
+  b.writeln(
+      '| L | comfort rhythm shallow (head→mid) | comfort rhythm throat (head→throat) | comfort biffle |');
+  b.writeln('|---:|---:|---:|---:|');
+  for (var l = 1; l <= 25; l++) {
+    final shallow = _estComfortBpmShallow(l);
+    final throat = _estComfortBpmThroat(l);
+    final biffle = _estComfortBpmBiffle(l);
+    String fmt(double? v) =>
+        v == null ? '—' : '**${v.toStringAsFixed(0)} BPM**';
+    b.writeln(
+        '| $l | **${shallow.toStringAsFixed(0)} BPM** | ${fmt(throat)} | ${fmt(biffle)} |');
+  }
+  b.writeln();
+  b.writeln('## Lecture');
+  b.writeln();
+  b.writeln('### Durées vécues (colonnes "effectif" du 1er tableau)');
+  b.writeln();
+  b.writeln(
+      '- **Premier hold throat** = 3 s à L6 (post `intro_hold_throat_short`).'
+      ' Reste sous 5 s jusqu\'à L7 inclus.');
+  b.writeln('- **Saut L8** : `intro_hold_throat_long` pousse `best` à 8 s →'
+      ' comfort = 8 s. Le finale peut tenir ~8 s d\'un coup.');
+  b.writeln('- **Throat à L15** : ~18 s seulement. À L20 : ~31 s. Le cap dur'
+      ' 80 s est inatteignable dans la progression normale.');
+  b.writeln(
+      '- **Premier hold full** = 3 s à L11 (post `intro_hold_full_short`).');
+  b.writeln(
+      '- **Saut L13** : `intro_hold_full_long` → best=10 s → comfort=10 s.');
+  b.writeln('- **Full à L20** : ~22 s effectifs. Le cap 80 s n\'est jamais'
+      ' atteint sur 25 levels par ce modèle de progression.');
+  b.writeln();
+  b.writeln('### BPM vécus (2e tableau)');
+  b.writeln();
+  b.writeln('- **Rhythm shallow** (head→mid) : démarre à 90 BPM dès L1 grâce'
+      ' à `intro_basics`, bump à 110 à L3 (`intro_deeper_basics`), puis ratchet'
+      ' lent (+10 %/session). À L10 ~177 BPM, L15 ~285 BPM, L17+ capé 300.');
+  b.writeln('- **Rhythm throat** (head→throat) : pas avant L10 (gate'
+      ' `intro_throat_pulse`). Démarre à 80 BPM, ratchet jusqu\'à `intro_rhythm_extreme`'
+      ' à L15 qui pousse à 165 BPM en un saut. Ensuite ratchet continue.');
+  b.writeln('- **Biffle** : démarre à 45 BPM à L5 (`intro_biffle`, lent et'
+      ' appliqué pour les premiers coups), bump à 140 à L9 (`intro_biffle_fast`,'
+      ' saut massif x3), ratchet ensuite.');
+  b.writeln();
+  b.writeln('### Écart formule vs comfort');
+  b.writeln();
+  b.writeln('L\'écart entre les colonnes "formule" (qui peut saturer haut) et'
+      ' "effectif" (qui suit le comfort) montre que **le système de monitoring'
+      ' pilote la valeur vécue** — durée comme BPM. Les caps prod (80 s holds,'
+      ' 300 BPM boosts) ne servent que de garde-fous en mode hérité (Custom /'
+      ' scénarios sans profil de capacités).');
+  b.writeln();
+  b.writeln('## Caveats');
+  b.writeln();
+  b.writeln('- Le modèle ratchet `× 1.10-1.12` suppose **surcharge réussie à'
+      ' chaque session**. Une joueuse qui rate ratraperait moins vite : tap-out'
+      ' imputé → comfort × 0.85 (cf. `CapabilityRegulator.kRatchetDownFactor`).');
+  b.writeln('- Le comfort ne peut **pas dépasser** `reached × 1.05` (ancrage,'
+      ' `kRatchetAnchorHeadroom`). En pratique : il faut **vraiment** tenir la'
+      ' nouvelle valeur pour que le ratchet la consolide. Le modèle suppose que'
+      ' la surcharge proposée est tenue à chaque fois — c\'est optimiste.');
+  b.writeln('- La courbe BPM main loop est différente du BPM boost (qui'
+      ' lui est borné par le cap niveau, plus le comfort de l\'axe). Le'
+      ' boost peut être encore plus haut que le main loop (sprint).');
+  return b.toString();
 }
 
 void main(List<String> argv) {
   final args = _parseArgs(argv);
+
+  if (args.capsTable) {
+    final out = _renderCapsTable();
+    if (args.outPath != null) {
+      File(args.outPath!).writeAsStringSync(out);
+      stderr.writeln('écrit dans ${args.outPath}');
+    } else {
+      stdout.write(out);
+    }
+    return;
+  }
 
   final milestonesFile = File('assets/career/milestones.json');
   if (!milestonesFile.existsSync()) {
