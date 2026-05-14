@@ -2,10 +2,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Persiste l'état de progression du mode Carrière entre lancements de l'app.
 ///
-/// La progression de niveau n'est pas gatée par les milestones : elle
-/// monte d'un cran à chaque session terminée sans fail au niveau max
-/// (cf. `recordSessionCompleted`). Les milestones sont sélectionnées
-/// via `MilestoneService.pendingFor` selon (humiliation + obédiance + minLevel).
+/// La progression de niveau est **gatée par les milestones** depuis la passe
+/// « level-up gaté » : `recordSessionCompleted(levelUp:)` reste l'API d'écriture,
+/// mais le caller doit calculer `levelUp` via [canLevelUp] qui exige soit
+/// l'acquittement d'une milestone candidate au niveau courant, soit l'absence
+/// de candidate (catalogue épuisé pour ce niveau — on laisse passer pour ne
+/// pas piéger la joueuse). Les milestones elles-mêmes sont sélectionnées
+/// par `MilestoneService.pendingFor` (humiliation + obédiance + minLevel +
+/// requiresCapability).
 class CareerProgressService {
   static const String _kMaxLevel = 'career.max_level';
   static const String _kLastLevel = 'career.last_level';
@@ -36,13 +40,37 @@ class CareerProgressService {
     await prefs.setInt(_kLastLevel, level);
   }
 
+  /// Décide si la session qui vient de finir autorise un level-up.
+  ///
+  /// Règle (« level-up gaté par milestone ») :
+  /// - session clean (pas de fail) **et** non bâclée — sinon faux d'office.
+  /// - et soit une milestone candidate au niveau courant a été acquittée
+  ///   cette séance, soit aucune n'était plus candidate (catalogue épuisé
+  ///   au niveau courant — on laisse passer pour ne pas piéger la joueuse).
+  ///
+  /// Le caller reste responsable du check « niveau de la session ≥ max
+  /// actuel » et de la cohérence coach (`coachAdvancesTier`) — ils
+  /// n'appartiennent pas à la mécanique milestone↔niveau.
+  bool canLevelUp({
+    required bool cleanSession,
+    required bool isQuickie,
+    required bool milestoneAcquittedThisSession,
+    required bool hasPendingAtCurrentLevel,
+  }) {
+    if (!cleanSession) return false;
+    if (isQuickie) return false;
+    return milestoneAcquittedThisSession || !hasPendingAtCurrentLevel;
+  }
+
   /// Incrémente le compteur de sessions complétées. Bump le niveau max
   /// uniquement si [levelUp] est vrai.
   ///
-  /// La règle de level-up est décidée par l'appelant : terminer une session
-  /// **standard** (pas bâclée) au niveau max actuel, **sans fail**. Toute
-  /// session jouée en dessous du max, en mode bâclée ou avec un fail est
-  /// comptabilisée mais ne débloque pas de palier.
+  /// La règle de level-up est décidée par l'appelant via [canLevelUp] :
+  /// session **standard** (pas bâclée), au niveau max, **sans fail**, et
+  /// soit une milestone candidate au niveau courant a été acquittée, soit
+  /// le catalogue est épuisé à ce niveau. Toute autre complétion
+  /// (en dessous du max, bâclée, avec fail, ou milestone candidate ratée)
+  /// est comptabilisée mais ne débloque pas de palier.
   Future<void> recordSessionCompleted({required bool levelUp}) async {
     final prefs = await SharedPreferences.getInstance();
     final completed = (prefs.getInt(_kCompleted) ?? 0) + 1;

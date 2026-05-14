@@ -876,6 +876,13 @@ SimResult _runSim({
         (body2Outcome == 'fail' || body2Outcome == 'abandon' ? 1 : 0) +
         (finalOutcome == 'fail' ? 1 : 0);
     final cleanSession = failsCount == 0;
+    // « Milestone opportunity missed » (passe « fails plus durs ») : il y a
+    // eu un fail ET au moins une milestone candidate était présente cette
+    // séance — donc non acquittée. Double le malus humil/obed du fail
+    // (parité avec `HumiliationEngine.onFail(milestoneOpportunityMissed:)`).
+    final missedMilestone =
+        failsCount > 0 && (bodyM != null || bodyM2 != null || finalM != null);
+    final failHumilObedMul = missedMilestone ? 2.0 : 1.0;
 
     // Approximation sessionScore : tick humil ×1 + obed accel, durée minutes.
     final accel = (1.0 + (state.obed / 100.0)).clamp(1.0, 3.0);
@@ -907,7 +914,7 @@ SimResult _runSim({
     final minutes = duration ~/ 60;
     final miniPunHits = profile.miniPunRate * minutes;
     sessionScore += miniPunHits * HumiliationEngine.bumpPunishmentCompleted;
-    sessionScore -= failsCount * HumiliationEngine.malusFail; // approximation
+    sessionScore -= failsCount * HumiliationEngine.malusFail * failHumilObedMul;
     if (sessionScore < 0) sessionScore = 0;
     if (sessionScore > HumiliationEngine.sessionCap) {
       sessionScore = HumiliationEngine.sessionCap;
@@ -933,7 +940,7 @@ SimResult _runSim({
         ObedienceEngineConst.bumpPerInterval;
     obedDelta += miniPunHits * ObedienceEngineConst.bumpPunishmentCompleted;
     if (cleanSession) obedDelta += ObedienceEngineConst.bumpSessionClean;
-    obedDelta -= failsCount * ObedienceEngineConst.malusFail;
+    obedDelta -= failsCount * ObedienceEngineConst.malusFail * failHumilObedMul;
     if (bodyOutcome == 'abandon') {
       obedDelta -= ObedienceEngineConst.malusPunishmentAbandoned;
     }
@@ -1038,11 +1045,23 @@ SimResult _runSim({
       }
     }
 
-    // Level-up : session terminée sans fail, hors bâclée, à `level` courant.
-    // Le simulateur considère le `level` courant = max level (pas de jeu
-    // sous-niveau dans le simulateur).
+    // Level-up gaté par milestone (parité avec
+    // `CareerProgressService.canLevelUp`) : il faut soit avoir acquitté
+    // une milestone candidate au niveau courant cette séance, soit qu'il
+    // n'y ait plus aucune candidate au niveau courant (catalogue épuisé
+    // — on laisse passer pour ne pas piéger la joueuse). On consulte
+    // `bodyAll` au niveau courant (= ce que `MilestoneService.pendingFor`
+    // renvoie en placement `body`, qui est la sémantique côté caller —
+    // les finals d'apothéose sont gérés à part par leur propre chaînage).
+    final milestoneAcquittedThisSession = cleanSession &&
+        ((bodyM != null && bodyOutcome == 'clean') ||
+            (bodyM2 != null && body2Outcome == 'clean') ||
+            (finalM != null && finalOutcome == 'clean'));
+    final hasPendingAtCurrentLevel = bodyAll.isNotEmpty;
     var leveledUp = false;
-    if (cleanSession && !isQuickie) {
+    if (cleanSession &&
+        !isQuickie &&
+        (milestoneAcquittedThisSession || !hasPendingAtCurrentLevel)) {
       state.level += 1;
       leveledUp = true;
       for (final t in sessionsForLevels.keys) {

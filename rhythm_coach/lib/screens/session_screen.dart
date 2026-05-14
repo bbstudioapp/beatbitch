@@ -350,10 +350,36 @@ class _SessionScreenState extends State<SessionScreen>
     final progress = CareerProgressService();
     final currentMax = await progress.getMaxLevel();
     final level = widget.careerLevel ?? 0;
-    final levelUp = !widget.isQuickie &&
-        !_controller.hadFailThisSession &&
-        level >= currentMax &&
-        widget.coachAdvancesTier;
+    final atMaxLevel = level >= currentMax;
+    // Level-up gaté par milestone : on n'autorise un palier qu'après
+    // l'acquittement d'une milestone candidate au niveau courant (ou si
+    // aucune ne l'était — catalogue épuisé, pas de piège). On consulte
+    // pendingFor avec les scores post-finish (≈ ceux que la séance suivante
+    // verra au start) pour rester cohérent avec ce que `pendingFor` choisirait
+    // la prochaine fois. Skip si le caller a déjà bloqué le palier (quickie /
+    // fail / niveau insuffisant / coach hors palier).
+    final cleanSession = !_controller.hadFailThisSession;
+    bool hasPendingAtCurrentLevel = false;
+    if (atMaxLevel &&
+        cleanSession &&
+        !widget.isQuickie &&
+        widget.coachAdvancesTier) {
+      final pending = milestoneService.pendingFor(
+        humiliationScore: _controller.humiliation.careerScore,
+        obedience: _controller.obedience.score,
+        playerLevel: currentMax,
+        allocation: widget.specialization,
+        capabilityProfile: widget.capabilityProfile,
+      );
+      hasPendingAtCurrentLevel = pending != null;
+    }
+    final gateOk = progress.canLevelUp(
+      cleanSession: cleanSession,
+      isQuickie: widget.isQuickie,
+      milestoneAcquittedThisSession: _controller.milestoneAcquittedThisSession,
+      hasPendingAtCurrentLevel: hasPendingAtCurrentLevel,
+    );
+    final levelUp = atMaxLevel && widget.coachAdvancesTier && gateOk;
     await progress.recordSessionCompleted(levelUp: levelUp);
   }
 

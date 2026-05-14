@@ -472,6 +472,29 @@ class SessionController extends ChangeNotifier {
   List<LevelMilestone> _sessionMilestoneUnlocks = const [];
   List<LevelMilestone> get sessionMilestoneUnlocks => _sessionMilestoneUnlocks;
 
+  /// True si au moins une milestone vient d'être acquittée pendant cette
+  /// séance (consulté après [_finish] par le caller pour décider du
+  /// level-up via `CareerProgressService.canLevelUp`).
+  bool get milestoneAcquittedThisSession => _sessionMilestoneUnlocks.isNotEmpty;
+
+  /// True si la séance avait au moins une milestone candidate planifiée
+  /// (body/body2/final) qui ne sera pas acquittée — utilisé par
+  /// [triggerFail] pour doubler les malus humil/obed (« tu pouvais avancer,
+  /// tu as raté »). Une milestone déjà complétée avant cette séance ne
+  /// compte pas (cas défensif : le générateur ne devrait pas en insérer).
+  bool _milestoneOpportunityMissed() {
+    final ids = <String?>[
+      _session.milestoneId,
+      _session.secondMilestoneId,
+      _session.finalMilestoneId,
+    ];
+    for (final id in ids) {
+      if (id == null) continue;
+      if (!milestoneService.isCompleted(id)) return true;
+    }
+    return false;
+  }
+
   /// Compteur interne de la durée passée dans la position courante (s)
   /// quand on est en mode hold throat/full. Sert à crediter chaque
   /// seconde au StatsService et à mémoriser le hold full le plus long
@@ -1493,10 +1516,19 @@ class SessionController extends ChangeNotifier {
     // demandant explicitement.
     _swallowMode = SwallowMode.allowed;
     // Pénalités amplifiées si on craque dans la dernière minute (la
-    // session est presque terminée — c'est ruiné).
+    // session est presque terminée — c'est ruiné). Cumulable avec ×2 si
+    // une milestone candidate au niveau courant était présente et n'a pas
+    // été acquittée : « tu pouvais avancer, tu as raté ». Au pire ×4.
     final lastMinuteMul = _isInLastMinute() ? 2.0 : 1.0;
-    _obedience.onFail(multiplier: lastMinuteMul);
-    _humiliation.onFail(multiplier: lastMinuteMul);
+    final missedMilestone = _milestoneOpportunityMissed();
+    _obedience.onFail(
+      multiplier: lastMinuteMul,
+      milestoneOpportunityMissed: missedMilestone,
+    );
+    _humiliation.onFail(
+      multiplier: lastMinuteMul,
+      milestoneOpportunityMissed: missedMilestone,
+    );
     _punishmentAbandoned = false;
     // Le hold full en cours est interrompu : pas de crédit Iron Lungs.
     _currentHoldFullDuration = 0;

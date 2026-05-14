@@ -67,7 +67,20 @@ class ObedienceEngine {
   void onPunishmentCompleted() => _bump(bumpPunishmentCompleted);
   void onSessionCleanFinish() => _bump(bumpSessionClean);
   void onCapabilityRecord() => _bump(bumpCapabilityRecord);
-  void onFail({double multiplier = 1.0}) => _bump(-malusFail * multiplier);
+
+  /// Fail manuel. Le [multiplier] est typiquement 2.0 quand on craque
+  /// dans la dernière minute (cf. [SessionController.triggerFail]).
+  ///
+  /// [milestoneOpportunityMissed] applique en plus un facteur ×2,
+  /// **cumulable** avec le multiplicateur de dernière minute (×4 au pire).
+  /// Sémantique : « une milestone candidate était là — tu n'as pas
+  /// franchi le mur de contenu ». Le coût d'obédiance double.
+  void onFail(
+      {double multiplier = 1.0, bool milestoneOpportunityMissed = false}) {
+    final mul = multiplier * (milestoneOpportunityMissed ? 2.0 : 1.0);
+    _bump(-malusFail * mul);
+  }
+
   void onPunishmentAbandoned({double multiplier = 1.0}) =>
       _bump(-malusPunishmentAbandoned * multiplier);
 
