@@ -197,6 +197,8 @@ class _CustomModeScreenState extends State<CustomModeScreen> {
       sessionName: _sessionName(cfg),
       intensityFloorOverride: cfg.resolveIntensityFloor(),
       maxDepthIndexOverride: cfg.maxDepthIndex < 4 ? cfg.maxDepthIndex : null,
+      bpmRange: (cfg.bpmMin, cfg.bpmMax),
+      holdDurationRange: (cfg.holdDurationMin, cfg.holdDurationMax),
       noStats: true,
     );
   }
@@ -369,6 +371,8 @@ class _CustomModeScreenState extends State<CustomModeScreen> {
           intensityFloorOverride: 0.8,
           maxDepthIndexOverride:
               cfg.maxDepthIndex < 4 ? cfg.maxDepthIndex : null,
+          bpmRange: (cfg.bpmMin, cfg.bpmMax),
+          holdDurationRange: (cfg.holdDurationMin, cfg.holdDurationMax),
           noStats: true,
           sessionName: ctrl.session.name,
         )

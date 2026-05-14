@@ -859,6 +859,24 @@
   "customIncludeHandToggle": "Handstimulation einbeziehen",
   "customIncludeHandDescription": "Aktiviert die Modi Hand und Biffle in der Generierung.",
   "customMaxDepthLabel": "Maximale Tiefe",
+  "customBpmRangeLabel": "BPM-Bereich",
+  "customBpmRangeValue": "{min}–{max} BPM",
+  "@customBpmRangeValue": {
+    "placeholders": {
+      "min": { "type": "int" },
+      "max": { "type": "int" }
+    }
+  },
+  "customBpmRangeHint": "Gilt für rhythmische Modi (Rhythmus, Lecken, Biffle, Hand).",
+  "customHoldDurationRangeLabel": "Haltedauer",
+  "customHoldDurationRangeValue": "{min}–{max} s",
+  "@customHoldDurationRangeValue": {
+    "placeholders": {
+      "min": { "type": "int" },
+      "max": { "type": "int" }
+    }
+  },
+  "customHoldDurationRangeHint": "Begrenzt die Dauer von Holds und gehaltenen Bitten.",
   "customSaveAndLaunch": "Speichern und starten",
   "customSaveOnly": "Speichern",
   "customHostLoadError": "Die Custom-Session konnte nicht geladen werden: {error}",

@@ -227,6 +227,20 @@ class CareerSessionGenerator {
   /// modulé par sa `successRate`). 1.0 pour tout autre axe.
   double _overloadFactor = 1.0;
 
+  /// Bornes BPM imposées par l'utilisateur en mode Custom (cf. `generate(
+  /// bpmRange:)`). `null` = pas de bornage utilisateur (carrière, scénario,
+  /// custom à valeurs par défaut). Le `_clampToCapability` final passe par
+  /// `_clampToCustomLimits` qui force le BPM des modes rythmés (rhythm /
+  /// lick / biffle / hand) dans cet intervalle.
+  (int, int)? _bpmRange;
+
+  /// Bornes de durée pour les steps tenus (hold + beg avec position) imposées
+  /// par l'utilisateur en mode Custom. `null` = pas de bornage. Appliqué
+  /// après `_clampToCapability` — donc compatible avec les caps profil de
+  /// capacité, qui peuvent encore raboter par-dessus (mais en pratique le
+  /// profil est null pour Custom).
+  (int, int)? _holdDurationRange;
+
   /// Axes éligibles à la surcharge : pilotants, hors `hand`/`lick`/`breath`
   /// (jamais des leviers de difficulté) et hors floors BPM / souffle (rien ne
   /// les consomme encore côté générateur — les surcharger ne ferait rien).
@@ -382,7 +396,7 @@ class CareerSessionGenerator {
   /// chemins et ne sont pas clampés — comme ils ne sont pas gatés par
   /// l'humiliation non plus.
   _StepDraft _clampToCapability(_StepDraft d) {
-    if (_capProfile == null) return d;
+    if (_capProfile == null) return _clampToCustomLimits(d);
     final clampedChain =
         d.chainNext == null ? null : _clampToCapability(d.chainNext!);
     var from = d.from;
@@ -470,9 +484,9 @@ class CareerSessionGenerator {
         bpmEnd == d.bpmEnd &&
         dur == d.duration &&
         identical(clampedChain, d.chainNext)) {
-      return d;
+      return _clampToCustomLimits(d);
     }
-    return _StepDraft(
+    return _clampToCustomLimits(_StepDraft(
       mode: d.mode,
       bpm: bpm,
       bpmEnd: bpmEnd,
@@ -480,7 +494,87 @@ class CareerSessionGenerator {
       to: to,
       duration: dur,
       chainNext: clampedChain,
+    ));
+  }
+
+  /// Borne un draft aux limites utilisateur du mode Custom (`bpmRange` /
+  /// `holdDurationRange` de [generate]). Appliqué après [_clampToCapability]
+  /// pour rester compatible avec le profil de capacités (qui ne sert qu'en
+  /// carrière, désactivé en Custom). `chainNext` est récursé. No-op si
+  /// aucune borne n'est fournie (carrière / scénario JSON).
+  _StepDraft _clampToCustomLimits(_StepDraft d) {
+    final bpmRange = _bpmRange;
+    final holdRange = _holdDurationRange;
+    if (bpmRange == null && holdRange == null) return d;
+    final clampedChain =
+        d.chainNext == null ? null : _clampToCustomLimits(d.chainNext!);
+    var bpm = d.bpm;
+    var bpmEnd = d.bpmEnd;
+    var dur = d.duration;
+    if (bpmRange != null) {
+      final (lo, hi) = bpmRange;
+      if (bpm != null) bpm = bpm.clamp(lo, hi);
+      if (bpmEnd != null) bpmEnd = bpmEnd.clamp(lo, hi);
+    }
+    if (holdRange != null && dur != null) {
+      // S'applique aux modes qui *tiennent* une position : hold et beg avec
+      // position (`from` ou `to` renseigné). Les autres modes ont aussi un
+      // `duration`, mais c'est la durée totale du step rythmé, pas un temps
+      // de maintien — on ne touche pas pour éviter de tronquer les phases.
+      final held = d.to ?? d.from;
+      final isHeld = d.mode == SessionMode.hold ||
+          (d.mode == SessionMode.beg && held != null);
+      if (isHeld) {
+        final (lo, hi) = holdRange;
+        dur = dur.clamp(lo, hi);
+      }
+    }
+    if (bpm == d.bpm &&
+        bpmEnd == d.bpmEnd &&
+        dur == d.duration &&
+        identical(clampedChain, d.chainNext)) {
+      return d;
+    }
+    return _StepDraft(
+      mode: d.mode,
+      bpm: bpm,
+      bpmEnd: bpmEnd,
+      from: d.from,
+      to: d.to,
+      duration: dur,
+      chainNext: clampedChain,
     );
+  }
+
+  /// Normalise une plage BPM utilisateur : trie `(min, max)` et borne aux
+  /// limites globales (`CustomSessionConfig.minBpmLimit`/`maxBpmLimit`). Si
+  /// la plage est nulle ou couvre tout le spectre par défaut, on la retourne
+  /// telle quelle (un range hors-bornes ne sera jamais atteint par le
+  /// générateur, c'est OK — pas la peine de masquer).
+  (int, int)? _normalizeBpmRange((int, int)? raw) {
+    if (raw == null) return null;
+    var (lo, hi) = raw;
+    if (lo > hi) {
+      final tmp = lo;
+      lo = hi;
+      hi = tmp;
+    }
+    return (lo, hi);
+  }
+
+  (int, int)? _normalizeHoldRange((int, int)? raw) {
+    if (raw == null) return null;
+    var (lo, hi) = raw;
+    if (lo > hi) {
+      final tmp = lo;
+      lo = hi;
+      hi = tmp;
+    }
+    // Plancher à 1s : un hold à 0s n'a aucun sens (le step est consommé en un
+    // tick, c'est juste un bip).
+    if (lo < 1) lo = 1;
+    if (hi < 1) hi = 1;
+    return (lo, hi);
   }
 
   CareerGenerationResult generate({
@@ -512,6 +606,15 @@ class CareerSessionGenerator {
     /// Plafond de profondeur (index `Position`) qui prime sur celui du
     /// `CareerLevel`. Permet au mode custom de borner rhythm/hold.
     int? maxDepthIndexOverride,
+
+    /// Bornes BPM utilisateur (mode Custom). Tuple `(min, max)`. Appliquées
+    /// à la fin du bornage à tous les modes rythmés (rhythm / lick / biffle /
+    /// hand). `null` = pas de bornage.
+    (int, int)? bpmRange,
+
+    /// Bornes de durée pour les steps tenus (hold + beg avec position),
+    /// imposées par l'utilisateur (mode Custom). `null` = pas de bornage.
+    (int, int)? holdDurationRange,
 
     /// Si true, la `Session` générée est marquée `noStats` → le
     /// `SessionController` n'écrit rien dans `StatsService`.
@@ -571,6 +674,8 @@ class CareerSessionGenerator {
     _obedience = obedience;
     _capProfile = capabilityProfile;
     _capCeilings = capabilitySessionCeilings;
+    _bpmRange = _normalizeBpmRange(bpmRange);
+    _holdDurationRange = _normalizeHoldRange(holdDurationRange);
     _pickOverloadAxis();
     // Mode "Session bâclée" : 6 min par défaut, intense tout du long. Floor
     // d'intensité appliqué au tirage de difficulté + on saute l'intro douce
@@ -1350,8 +1455,11 @@ class CareerSessionGenerator {
       // Dégrade le boost si humiliation insuffisante. Pour hand, la
       // contrainte humiliation est nulle → pas de dégradation, on garde
       // amplitude max. Pour rhythm, on respecte le cap normal du finish.
+      // Dans les deux cas on passe par `_clampToCapability` (qui applique
+      // aussi les bornes utilisateur Custom) pour qu'un BPM max imposé
+      // soit respecté même sur la phase finish.
       final boostDraft = useHandBurst
-          ? boostDraftRaw
+          ? _clampToCapability(boostDraftRaw)
           : _enforceHumiliationRequired(boostDraftRaw, boostHumilCap);
       // Tier dédié `boost` : phrases explicites « accélère / on monte /
       // dernier sprint » pour rendre la phase finish lisible. Fallback
@@ -1454,7 +1562,8 @@ class CareerSessionGenerator {
     // douce piochée dans `post_final` (fallback `congrats` si vide).
     // Le pool d'actions est tieré par humiliation : lick (= nettoyer après)
     // est l'aftercare humiliant qui n'apparaît qu'au-dessus d'un seuil.
-    final postFinalDraft = _buildPostFinalDraft(finalMode, _humilCapAt(time));
+    final postFinalDraft =
+        _clampToCapability(_buildPostFinalDraft(finalMode, _humilCapAt(time)));
     // Phrase : un step `beg` doit porter une CONSIGNE de supplique
     // (« remercie-moi », « supplie-moi de revenir »), pas un compliment
     // doux qui sonnerait à côté. De même un step `lick` post-final

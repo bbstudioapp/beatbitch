@@ -52,6 +52,27 @@ class CustomSessionConfig {
   static const int minCycleDurationSeconds = 5 * 60;
   static const int maxCycleDurationSeconds = 20 * 60;
 
+  /// Bornes des curseurs BPM (rhythm / lick / biffle / hand). Le générateur
+  /// tire dans [40, 180] selon mode et difficulté ; on laisse l'utilisateur
+  /// élargir un peu pour le mode custom.
+  static const int minBpmLimit = 30;
+  static const int maxBpmLimit = 220;
+
+  /// Valeurs par défaut du range BPM (couvrent l'essentiel des tirages
+  /// `_mapDifficultyToStep` du générateur).
+  static const int defaultBpmMin = 40;
+  static const int defaultBpmMax = 180;
+
+  /// Bornes du curseur de durée de maintien (modes hold + beg). Le générateur
+  /// peut produire jusqu'à 80s pour un hold full final avec spé endurance
+  /// maxée — on laisse de la marge.
+  static const int minHoldDurationLimit = 2;
+  static const int maxHoldDurationLimit = 120;
+
+  /// Valeurs par défaut du range hold.
+  static const int defaultHoldDurationMin = 4;
+  static const int defaultHoldDurationMax = 80;
+
   /// Points max investissables par branche d'axe.
   static const int maxAxisPoints = 5;
 
@@ -117,6 +138,16 @@ class CustomSessionConfig {
   /// pour les modes rhythm/hold.
   final int maxDepthIndex;
 
+  /// Bornes BPM appliquées à tous les modes rythmés (rhythm / lick / biffle /
+  /// hand). Le générateur clampe chaque draft à cet intervalle.
+  final int bpmMin;
+  final int bpmMax;
+
+  /// Bornes de durée pour les steps tenus (hold + beg avec position tenue),
+  /// en secondes. Le générateur clampe la `duration` à cet intervalle.
+  final int holdDurationMin;
+  final int holdDurationMax;
+
   /// Code langue au moment de la sauvegarde (utilisé pour le nom de session
   /// et un éventuel filtrage futur).
   final String lang;
@@ -134,6 +165,10 @@ class CustomSessionConfig {
     required this.axes,
     required this.includeHand,
     required this.maxDepthIndex,
+    required this.bpmMin,
+    required this.bpmMax,
+    required this.holdDurationMin,
+    required this.holdDurationMax,
     required this.lang,
   });
 
@@ -151,6 +186,10 @@ class CustomSessionConfig {
       axes: {for (final b in SpecializationBranch.values) b: 0},
       includeHand: true,
       maxDepthIndex: 4,
+      bpmMin: defaultBpmMin,
+      bpmMax: defaultBpmMax,
+      holdDurationMin: defaultHoldDurationMin,
+      holdDurationMax: defaultHoldDurationMax,
       lang: LocaleService.instance.languageCode,
     );
   }
@@ -171,6 +210,10 @@ class CustomSessionConfig {
     Map<SpecializationBranch, int>? axes,
     bool? includeHand,
     int? maxDepthIndex,
+    int? bpmMin,
+    int? bpmMax,
+    int? holdDurationMin,
+    int? holdDurationMax,
     String? lang,
   }) {
     return CustomSessionConfig(
@@ -187,6 +230,10 @@ class CustomSessionConfig {
       axes: axes ?? this.axes,
       includeHand: includeHand ?? this.includeHand,
       maxDepthIndex: maxDepthIndex ?? this.maxDepthIndex,
+      bpmMin: bpmMin ?? this.bpmMin,
+      bpmMax: bpmMax ?? this.bpmMax,
+      holdDurationMin: holdDurationMin ?? this.holdDurationMin,
+      holdDurationMax: holdDurationMax ?? this.holdDurationMax,
       lang: lang ?? this.lang,
     );
   }
@@ -257,6 +304,10 @@ class CustomSessionConfig {
         'difficulty': difficulty.name,
         'include_hand': includeHand,
         'max_depth_index': maxDepthIndex,
+        'bpm_min': bpmMin,
+        'bpm_max': bpmMax,
+        'hold_duration_min': holdDurationMin,
+        'hold_duration_max': holdDurationMax,
         'doses': {
           for (final entry in doses.entries)
             entry.key.serialized: entry.value.name,
@@ -317,6 +368,36 @@ class CustomSessionConfig {
     final rawDepth = json['max_depth_index'];
     final depth = rawDepth is num ? rawDepth.toInt().clamp(0, 4) : 4;
 
+    int parseRange(
+      Object? raw,
+      int fallback,
+      int lo,
+      int hi,
+    ) {
+      if (raw is num) return raw.toInt().clamp(lo, hi);
+      return fallback;
+    }
+
+    var bpmLo =
+        parseRange(json['bpm_min'], defaultBpmMin, minBpmLimit, maxBpmLimit);
+    var bpmHi =
+        parseRange(json['bpm_max'], defaultBpmMax, minBpmLimit, maxBpmLimit);
+    if (bpmLo > bpmHi) {
+      final tmp = bpmLo;
+      bpmLo = bpmHi;
+      bpmHi = tmp;
+    }
+
+    var holdLo = parseRange(json['hold_duration_min'], defaultHoldDurationMin,
+        minHoldDurationLimit, maxHoldDurationLimit);
+    var holdHi = parseRange(json['hold_duration_max'], defaultHoldDurationMax,
+        minHoldDurationLimit, maxHoldDurationLimit);
+    if (holdLo > holdHi) {
+      final tmp = holdLo;
+      holdLo = holdHi;
+      holdHi = tmp;
+    }
+
     return CustomSessionConfig(
       id: json['id'] as String? ?? newId(),
       name: json['name'] as String? ?? '',
@@ -333,6 +414,10 @@ class CustomSessionConfig {
       axes: axes,
       includeHand: json['include_hand'] as bool? ?? true,
       maxDepthIndex: depth,
+      bpmMin: bpmLo,
+      bpmMax: bpmHi,
+      holdDurationMin: holdLo,
+      holdDurationMax: holdHi,
       lang: json['lang'] as String? ?? LocaleService.instance.languageCode,
     );
   }
