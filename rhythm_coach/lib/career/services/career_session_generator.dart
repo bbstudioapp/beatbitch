@@ -169,7 +169,22 @@ class CareerSessionGenerator {
   /// Multiplicateur de poids par mode, fourni par le coach actif. Combiné
   /// **multiplicativement** par-dessus la pondération spé dans `_modeWeight`.
   /// Mode absent = 1.0 (neutre). Cf. CoachMeta.modeWeights.
+  ///
+  /// **Convention** : un poids strictement à 0 est lu comme une exclusion
+  /// dure (utilisé par le Mode Custom — dose `none` ⇒ 0.0). `_isModeForbidden`
+  /// l'expose et est consulté par tous les call sites qui tirent ou
+  /// hardcodent un mode pour ne jamais émettre un mode exclu.
   Map<SessionMode, double> _coachModeWeights = const {};
+
+  /// True si le mode est exclu par le caller via `coachModeWeights[m] == 0`.
+  /// Un coach normal ne pose jamais 0 (cf. CoachMeta) → toujours false hors
+  /// Custom. En Custom, c'est le dosage `none` de `CustomSessionConfig` qui
+  /// pose le 0 et qui doit être honoré partout (palette finale, mini-vagues,
+  /// pré-finisher, intro, recovery…), pas seulement dans `_pickWeightedMode`.
+  bool _isModeForbidden(SessionMode m) {
+    final w = _coachModeWeights[m];
+    return w != null && w <= 0;
+  }
 
   /// Score career d'humiliation (persisté lifetime) au démarrage de la
   /// session. Sert au tirage spécifique de certains modes (lick :
@@ -1178,7 +1193,9 @@ class CareerSessionGenerator {
     // Pré-finisher : pour les bas niveaux, courte accélération (rythme
     // un peu plus rapide que le plafond habituel du niveau) qui débouche
     // sur le final, dans une position d'amorce.
-    if (isLowLevel) {
+    // Custom : rhythm exclu → skip le pré-finisher (les boosts substitueront
+    // le sprint via leur propre fallback de mode).
+    if (isLowLevel && !_isModeForbidden(SessionMode.rhythm)) {
       final preDur = 22 + _rng.nextInt(9); // [22, 30]
       final preBpm = 62 + _rng.nextInt(9); // [62, 70]
       final preDraft = _clampToCapability(_StepDraft(
@@ -1208,9 +1225,29 @@ class CareerSessionGenerator {
     // - humiliation faible (<5) ET niveau ≤ 3 : 70% hand, 30% rhythm
     //   (rhythm sera de toute façon doux à ce niveau, autant pousser via hand)
     // - sinon : 75% rhythm, 25% hand (variété)
+    // Custom : si hand est exclu, on force rhythm ; si rhythm est exclu, on
+    // force hand ; si les deux sont exclus, on retombe sur un lick au tempo
+    // burst (le BPM s'applique, l'humiliation se gate normalement) — moins
+    // archétypal mais respecte le ban. L'éditeur Custom garantit qu'au
+    // moins un mode bouche reste actif, donc lick est presque toujours dispo.
+    final handForbidden = _isModeForbidden(SessionMode.hand);
+    final rhythmForbidden = _isModeForbidden(SessionMode.rhythm);
     final preferHand = _humiliationCareer < 5 && level <= 3 ? 0.70 : 0.25;
-    final useHandBurst = _rng.nextDouble() < preferHand;
-    final burstMode = useHandBurst ? SessionMode.hand : SessionMode.rhythm;
+    final bool useHandBurst;
+    final SessionMode burstMode;
+    if (handForbidden && rhythmForbidden) {
+      useHandBurst = false; // chemin "rhythm-like" : BPM cap/floor rhythm
+      burstMode = SessionMode.lick;
+    } else if (handForbidden) {
+      useHandBurst = false;
+      burstMode = SessionMode.rhythm;
+    } else if (rhythmForbidden) {
+      useHandBurst = true;
+      burstMode = SessionMode.hand;
+    } else {
+      useHandBurst = _rng.nextDouble() < preferHand;
+      burstMode = useHandBurst ? SessionMode.hand : SessionMode.rhythm;
+    }
 
     // Plafond humiliation pour les bursts. Hand n'est pas gating par
     // humiliation (cap inutile), mais on laisse `_enforceHumiliationRequired`
@@ -1506,6 +1543,10 @@ class CareerSessionGenerator {
     if (time < _nextMiniWaveAt) return false;
     if (genUntil - time < 90) return false;
     if (stamina < 35) return false;
+    // La mini-vague est intégralement rhythm (cf. `_buildMiniWave`) : si
+    // rhythm est exclu en Custom, on ne sait pas la jouer — on la skip
+    // proprement plutôt que d'émettre un mode banni.
+    if (_isModeForbidden(SessionMode.rhythm)) return false;
     return true;
   }
 
@@ -1755,16 +1796,40 @@ class CareerSessionGenerator {
     final holdCeilingIdx = _milestoneHoldCeilingIdx();
     final holdTipObsolete = holdCeilingIdx > Position.tip.index;
     final holdHeadObsolete = holdCeilingIdx > Position.head.index;
+    // Note : breath n'est pas dosable côté Custom (cf. CustomSessionConfig.
+    // dosableModes), donc `_isModeForbidden(breath)` est toujours false.
     final candidates =
         <(double req, bool blocked, _StepDraft Function() build)>[
       (0.0, false, breath),
-      (8.0, !_includeHand || finalMode == SessionMode.hand, hand),
-      (20.0, isFinalHold || holdTipObsolete, holdTip),
-      (25.0, !canBeg, begLibre),
-      (35.0, finalMode == SessionMode.lick, lick),
-      (55.0, finalMode == SessionMode.rhythm, rhythm),
-      (60.0, !canBeg, begHead),
-      (70.0, isFinalHold || holdHeadObsolete, holdHead),
+      (
+        8.0,
+        !_includeHand ||
+            finalMode == SessionMode.hand ||
+            _isModeForbidden(SessionMode.hand),
+        hand
+      ),
+      (
+        20.0,
+        isFinalHold || holdTipObsolete || _isModeForbidden(SessionMode.hold),
+        holdTip
+      ),
+      (25.0, !canBeg || _isModeForbidden(SessionMode.beg), begLibre),
+      (
+        35.0,
+        finalMode == SessionMode.lick || _isModeForbidden(SessionMode.lick),
+        lick
+      ),
+      (
+        55.0,
+        finalMode == SessionMode.rhythm || _isModeForbidden(SessionMode.rhythm),
+        rhythm
+      ),
+      (60.0, !canBeg || _isModeForbidden(SessionMode.beg), begHead),
+      (
+        70.0,
+        isFinalHold || holdHeadObsolete || _isModeForbidden(SessionMode.hold),
+        holdHead
+      ),
     ];
     final valid = candidates.where((c) => c.$1 <= humilCap && !c.$2).toList()
       ..sort((a, b) => b.$1.compareTo(a.$1)); // req décroissante
@@ -1836,8 +1901,26 @@ class CareerSessionGenerator {
       // sans `throat_pulse`, jamais full sans `full_pulse`) — on borne aussi
       // à throat (idx 3) pour ne jamais lancer un intense full d'amorce.
       final to = Position.values[_milestoneRhythmCeilingIdx().clamp(2, 3)];
+      // Custom : rhythm exclu → on retombe sur hand (rythmé proche), sinon
+      // lick (langue) ou hold (statique) en dernier recours.
+      final intenseMode = !_isModeForbidden(SessionMode.rhythm)
+          ? SessionMode.rhythm
+          : !_isModeForbidden(SessionMode.hand)
+              ? SessionMode.hand
+              : !_isModeForbidden(SessionMode.lick)
+                  ? SessionMode.lick
+                  : SessionMode.hold;
+      if (intenseMode == SessionMode.hold) {
+        return _StepDraft(
+          mode: SessionMode.hold,
+          bpm: null,
+          from: null,
+          to: to,
+          duration: 10,
+        );
+      }
       return _StepDraft(
-        mode: SessionMode.rhythm,
+        mode: intenseMode,
         bpm: 90,
         from: Position.head,
         to: to,
@@ -1845,8 +1928,25 @@ class CareerSessionGenerator {
       );
     }
     if (quickie) {
-      return const _StepDraft(
-        mode: SessionMode.rhythm,
+      // Quickie : rhythm exclu → idem fallback hand/lick/hold.
+      final quickieMode = !_isModeForbidden(SessionMode.rhythm)
+          ? SessionMode.rhythm
+          : !_isModeForbidden(SessionMode.hand)
+              ? SessionMode.hand
+              : !_isModeForbidden(SessionMode.lick)
+                  ? SessionMode.lick
+                  : SessionMode.hold;
+      if (quickieMode == SessionMode.hold) {
+        return const _StepDraft(
+          mode: SessionMode.hold,
+          bpm: null,
+          from: null,
+          to: Position.mid,
+          duration: 8,
+        );
+      }
+      return _StepDraft(
+        mode: quickieMode,
         bpm: 75,
         from: Position.head,
         to: Position.mid,
@@ -1895,8 +1995,17 @@ class CareerSessionGenerator {
           duration: 18,
         ),
     ];
-    final allowed = variants.where(_isUnlocked).toList();
-    if (allowed.isEmpty) return variants.first;
+    final allowed = variants
+        .where(_isUnlocked)
+        .where((v) => !_isModeForbidden(v.mode))
+        .toList();
+    if (allowed.isEmpty) {
+      // Pas de variante alignée à la fois sur les unlocks et le dosage —
+      // on retombe sur la 1ʳᵉ variante non interdite, sinon la 1ʳᵉ tout court.
+      final notForbidden =
+          variants.where((v) => !_isModeForbidden(v.mode)).toList();
+      return notForbidden.isEmpty ? variants.first : notForbidden.first;
+    }
     return allowed[_rng.nextInt(allowed.length)];
   }
 
@@ -2041,6 +2150,13 @@ class CareerSessionGenerator {
       // hors recovery). Coût stamina faible à cette profondeur.
       SessionMode.hold,
     ];
+    // Exclusions Custom (dose `none`) : la recovery ne doit pas ramener un
+    // mode que la joueuse a explicitement banni. Si tout est exclu, on
+    // retombe sur lick (le garde-fou de l'éditeur Custom assure que lick
+    // OU rhythm OU hold est resté ≥ rare — si lick lui-même est exclu, le
+    // mode bouche restant reprend la main au step suivant via mapDifficulty).
+    candidates.removeWhere(_isModeForbidden);
+    if (candidates.isEmpty) candidates.add(SessionMode.lick);
     final pool = _filterRepeated(candidates);
     // Tirage pondéré pour que la friction de continuité par type s'applique
     // aussi à la recovery (sans ça, une recovery uniforme repousse souvent
@@ -2202,6 +2318,11 @@ class CareerSessionGenerator {
     }
     // breath n'est jamais un step "d'effort" : il n'est tiré que par
     // _buildRecoveryStep quand l'endurance est basse, jamais ici.
+    // Exclusions Custom (dose `none`) : retirer les modes interdits avant
+    // tirage. Si tout est exclu, on retombe sur rhythm (last-resort) pour
+    // ne pas crasher — l'éditeur Custom garantit déjà qu'au moins un mode
+    // bouche (rhythm/lick/hold) reste actif via son garde-fou.
+    candidates.removeWhere(_isModeForbidden);
     if (candidates.isEmpty) candidates.add(SessionMode.rhythm);
     final mode = _pickWeightedMode(_filterRepeated(candidates));
 
@@ -2334,7 +2455,14 @@ class CareerSessionGenerator {
     }
     final total = weights.fold<double>(0, (a, b) => a + b);
     if (total <= 0) {
-      return candidates[_rng.nextInt(candidates.length)];
+      // Fallback random : on garde la convention « jamais renvoyer un mode
+      // explicitement exclu » (dose `none` en Custom). Si tous les candidats
+      // sont exclus, on n'a rien de mieux que la liste d'origine — c'est
+      // au caller de pré-filtrer pour que ce cas n'arrive pas.
+      final allowed =
+          candidates.where((m) => !_isModeForbidden(m)).toList(growable: false);
+      final pool = allowed.isEmpty ? candidates : allowed;
+      return pool[_rng.nextInt(pool.length)];
     }
     var roll = _rng.nextDouble() * total;
     for (var i = 0; i < candidates.length; i++) {
@@ -3035,6 +3163,12 @@ class CareerSessionGenerator {
         continue;
       }
       if (!_isUnlocked(tpl.$1) || !_isUnlocked(tpl.$2)) continue;
+      // Custom (dose `none`) : on ne propose pas un beg-with-chain dont la
+      // suite est sur un mode banni. Le beg en lui-même est aussi gaté (si
+      // beg=none, le tirage de beg ne sera pas atteint en amont, mais on
+      // re-check ici pour rester explicite).
+      if (_isModeForbidden(tpl.$1.mode)) continue;
+      if (_isModeForbidden(tpl.$2.mode)) continue;
       candidates.add(tpl);
     }
     if (candidates.isEmpty) return null;
@@ -3421,15 +3555,44 @@ class CareerSessionGenerator {
     // valide. Le gate est un `UnlockKey?` dédié au final ; null = libre.
     // `_isUnlocked` couvre les composants du draft (pour cohérence avec le
     // reste du générateur), `_finalUnlocked` couvre la gate du final.
+    // Exclusions Custom (dose `none`) : on retire en plus les finals dont
+    // le mode est explicitement banni — un final hold reste possible quand
+    // rhythm est exclu, un final hand quand hold est exclu, etc.
     final valid = <(_StepDraft, double, UnlockKey?)>[];
     for (final c in candidates) {
       if (!_finalUnlocked(c.$3)) continue;
+      if (_isModeForbidden(c.$1.mode)) continue;
       if (humilCap >= c.$2 && _isUnlocked(c.$1)) valid.add(c);
     }
     if (valid.isEmpty) {
       // Fallback dur : hand head→mid 50 BPM. Toujours unlocked, req=0,
       // garanti même si la palette change ou si humilCap est négatif.
       // Hand n'a pas d'axe de capacité → `_clampToCapability` no-op.
+      // Si hand est exclu en Custom, on retombe sur le 1ᵉʳ mode autorisé
+      // disponible — hold head court reste un final acceptable.
+      if (_isModeForbidden(SessionMode.hand)) {
+        if (!_isModeForbidden(SessionMode.lick)) {
+          return _clampToCapability(const _StepDraft(
+            mode: SessionMode.lick,
+            bpm: 60,
+            from: Position.tip,
+            to: Position.head,
+            duration: 16,
+          ));
+        }
+        if (!_isModeForbidden(SessionMode.hold)) {
+          return _clampToCapability(_StepDraft(
+            mode: SessionMode.hold,
+            bpm: null,
+            from: null,
+            to: Position.head,
+            duration: shortHoldDur,
+          ));
+        }
+        // Aucun mode bouche dispo : on accepte le hand de secours (l'éditeur
+        // Custom garantit qu'au moins un mode bouche reste — ce chemin est
+        // un filet de sécurité pour les call sites non-Custom).
+      }
       return _StepDraft(
         mode: SessionMode.hand,
         bpm: 50,
