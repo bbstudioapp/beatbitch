@@ -212,15 +212,40 @@ class _CareerScreenState extends State<CareerScreen> {
             allocation: bundle.specialization,
             capabilityProfile: bundle.capabilityProfile,
           );
-    final finalMilestone = quickie
-        ? null
-        : milestoneService.pendingFinalFor(
+    final finalCandidates = quickie
+        ? const <LevelMilestone>[]
+        : milestoneService.allPendingFor(
             humiliationScore: humiliationScore,
             obedience: obedienceScore,
             playerLevel: bundle.maxLevel,
             allocation: bundle.specialization,
             capabilityProfile: bundle.capabilityProfile,
+            placement: MilestonePlacement.finalApotheose,
           );
+    final finalMilestone =
+        finalCandidates.isEmpty ? null : finalCandidates.first;
+    // Vieillit les candidates non choisies de cette session — aging du tri
+    // composite, cf. `MilestoneService.allPendingFor`. Pour les bodies, on
+    // ré-évalue `allPendingFor` (avant les picks de `pendingForList`, qui
+    // a sa propre logique d'exclusion mutuelle) et on retire les ids
+    // effectivement insérés. Pas de comptage en quickie.
+    if (!quickie) {
+      final bodyAll = milestoneService.allPendingFor(
+        humiliationScore: humiliationScore,
+        obedience: obedienceScore,
+        playerLevel: bundle.maxLevel,
+        allocation: bundle.specialization,
+        capabilityProfile: bundle.capabilityProfile,
+      );
+      final insertedIds = insertedBodies.map((m) => m.id).toSet();
+      final notChosen = <LevelMilestone>[
+        ...bodyAll.where((m) => !insertedIds.contains(m.id)),
+        if (finalCandidates.length > 1) ...finalCandidates.skip(1),
+      ];
+      if (notChosen.isNotEmpty) {
+        await milestoneService.incrementCandidacyAge(notChosen);
+      }
+    }
     // Force includeHand=true si une milestone pending l'exige (séquence
     // scriptée comportant du hand/biffle). Sinon respecte la préférence
     // utilisatrice. Persistance volontairement avec la valeur effective
