@@ -1779,4 +1779,19 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get customDoseFrequent => 'Fréquent';
+
+  @override
+  String get profileSessionDisplaySection => 'Affichage de session';
+
+  @override
+  String get profileShowRemainingTime => 'Afficher le temps restant';
+
+  @override
+  String get profileShowRemainingTimeSubtitle =>
+      'Petite horloge mm:ss en haut de l\'écran pendant la séance.';
+
+  @override
+  String sessionRemainingTimeLabel(String time) {
+    return 'Restant : $time';
+  }
 }

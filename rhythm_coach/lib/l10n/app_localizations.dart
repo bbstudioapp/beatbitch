@@ -3184,6 +3184,30 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Fréquent'**
   String get customDoseFrequent;
+
+  /// No description provided for @profileSessionDisplaySection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Affichage de session'**
+  String get profileSessionDisplaySection;
+
+  /// No description provided for @profileShowRemainingTime.
+  ///
+  /// In fr, this message translates to:
+  /// **'Afficher le temps restant'**
+  String get profileShowRemainingTime;
+
+  /// No description provided for @profileShowRemainingTimeSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Petite horloge mm:ss en haut de l\'écran pendant la séance.'**
+  String get profileShowRemainingTimeSubtitle;
+
+  /// No description provided for @sessionRemainingTimeLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Restant : {time}'**
+  String sessionRemainingTimeLabel(String time);
 }
 
 class _AppLocalizationsDelegate
