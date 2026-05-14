@@ -492,15 +492,36 @@ class SessionController extends ChangeNotifier {
     return remaining.inSeconds <= 60 && remaining.inSeconds >= 0;
   }
 
-  /// True si la position courante est à l'intérieur de la fenêtre milestone
-  /// de la session. Utilisé pour offrir un retry plutôt que le flow fail
-  /// standard quand l'utilisatrice rate pendant l'apprentissage.
-  bool _isInMilestoneWindow() {
-    final start = _session.milestoneStartTime;
-    final dur = _session.milestoneDurationSeconds;
-    if (start == null || dur == null) return false;
+  /// True si la position courante est à l'intérieur de la fenêtre d'une
+  /// des milestones body de la session. Utilisé pour offrir un retry
+  /// plutôt que le flow fail standard quand l'utilisatrice rate pendant
+  /// l'apprentissage. Couvre les deux body (sessions longues) + la final.
+  bool _isInMilestoneWindow() => currentMilestoneIdInWindow != null;
+
+  /// Id de la milestone dont la fenêtre temporelle contient `elapsedSeconds`,
+  /// ou `null` si on est hors de toute fenêtre. Cherche dans l'ordre :
+  /// body 1, body 2, final. Sert au callback `onMilestoneRetry` pour cibler
+  /// la bonne milestone quand la séance en contient plusieurs.
+  String? get currentMilestoneIdInWindow {
     final t = elapsedSeconds;
-    return t >= start && t < start + dur;
+    bool within(int? start, int? dur) {
+      if (start == null || dur == null) return false;
+      return t >= start && t < start + dur;
+    }
+
+    if (within(
+        _session.milestoneStartTime, _session.milestoneDurationSeconds)) {
+      return _session.milestoneId;
+    }
+    if (within(_session.secondMilestoneStartTime,
+        _session.secondMilestoneDurationSeconds)) {
+      return _session.secondMilestoneId;
+    }
+    if (within(_session.finalMilestoneStartTime,
+        _session.finalMilestoneDurationSeconds)) {
+      return _session.finalMilestoneId;
+    }
+    return null;
   }
 
   /// Endurance projetée à la seconde courante, ou `null` si pas de
@@ -1151,6 +1172,7 @@ class SessionController extends ChangeNotifier {
     }
 
     await markIfPresent(session.milestoneId, isFinal: false);
+    await markIfPresent(session.secondMilestoneId, isFinal: false);
     await markIfPresent(session.finalMilestoneId, isFinal: true);
     _sessionMilestoneUnlocks = List<LevelMilestone>.unmodifiable(newlyUnlocked);
 

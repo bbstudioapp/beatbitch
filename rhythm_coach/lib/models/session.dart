@@ -82,6 +82,14 @@ class Session {
   final int? milestoneStartTime;
   final int? milestoneDurationSeconds;
 
+  /// Sessions longues (≥ 18 min, niveau 8+) : 2ᵉ milestone d'apprentissage
+  /// insérée dans le même corps de séance, généralement vers 65 % de la
+  /// durée. `null` si une seule body a été insérée (cas par défaut). Mêmes
+  /// règles d'acquittement / détection de fenêtre que [milestoneId].
+  final String? secondMilestoneId;
+  final int? secondMilestoneStartTime;
+  final int? secondMilestoneDurationSeconds;
+
   /// Si la session contient une **milestone-final** (placement
   /// `finalApotheose`), son id et sa fenêtre temporelle. Distincte de la
   /// milestone-body : les deux peuvent coexister dans une même séance.
@@ -133,6 +141,9 @@ class Session {
     this.milestoneId,
     this.milestoneStartTime,
     this.milestoneDurationSeconds,
+    this.secondMilestoneId,
+    this.secondMilestoneStartTime,
+    this.secondMilestoneDurationSeconds,
     this.finalMilestoneId,
     this.finalMilestoneStartTime,
     this.finalMilestoneDurationSeconds,

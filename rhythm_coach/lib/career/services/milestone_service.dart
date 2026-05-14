@@ -177,6 +177,56 @@ class MilestoneService extends ChangeNotifier {
     return all.isEmpty ? null : all.first;
   }
 
+  /// Sélectionne jusqu'à [count] milestones **body** distinctes pour la
+  /// même séance. Pour chaque pick, retire la candidate du pool et marque
+  /// ses `unlocks` comme acquis simulés afin d'exclure :
+  ///
+  /// - les doublons (une milestone ne peut être insérée deux fois),
+  /// - les milestones dont `requires` inclut un unlock d'une milestone
+  ///   déjà pickée dans la même session (sinon on triche sur l'ordre
+  ///   pédagogique : la 2ᵉ ne pourrait être jouée qu'APRÈS l'acquittement
+  ///   de la 1ʳᵉ, ce qui n'arrive qu'à la fin de la séance).
+  ///
+  /// Retombe gracieusement à moins de [count] (voire `[]`) si le pool
+  /// est insuffisant — le générateur saura adapter l'insertion.
+  List<LevelMilestone> pendingForList({
+    required int count,
+    required double humiliationScore,
+    required double obedience,
+    int playerLevel = 1,
+    SpecializationAllocation? allocation,
+    CapabilityProfile? capabilityProfile,
+  }) {
+    if (count <= 0) return const [];
+    final picked = <LevelMilestone>[];
+    final simulatedUnlocks = <UnlockKey>{};
+    final pickedIds = <String>{};
+    for (var i = 0; i < count; i++) {
+      final candidates = allPendingFor(
+        humiliationScore: humiliationScore,
+        obedience: obedience,
+        playerLevel: playerLevel,
+        allocation: allocation,
+        capabilityProfile: capabilityProfile,
+      );
+      LevelMilestone? next;
+      for (final m in candidates) {
+        if (pickedIds.contains(m.id)) continue;
+        // Exclusion mutuelle : m dépend d'un unlock que la milestone
+        // précédemment pickée vient d'apporter → forcerait un ordre
+        // pédagogique strict dans la même séance.
+        if (m.requires.any(simulatedUnlocks.contains)) continue;
+        next = m;
+        break;
+      }
+      if (next == null) break;
+      picked.add(next);
+      pickedIds.add(next.id);
+      simulatedUnlocks.addAll(next.unlocks);
+    }
+    return picked;
+  }
+
   /// Variante de [pendingFor] pour les milestones de placement
   /// `finalApotheose`. Une session peut donc jouer **une body + une
   /// final** sur la même séance. Retourne `null` si aucun candidat.

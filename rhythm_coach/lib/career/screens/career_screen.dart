@@ -23,6 +23,7 @@ import '../../l10n/enum_labels.dart';
 import '../../main.dart' show coachService, milestoneService;
 import '../models/career_level.dart';
 import '../models/coach.dart';
+import '../models/level_milestone.dart';
 import '../models/phrase_bank.dart';
 import '../models/specialization.dart';
 import '../models/unlock_key.dart';
@@ -194,9 +195,17 @@ class _CareerScreenState extends State<CareerScreen> {
     // = boosts + step finisher). Les deux peuvent coexister sur une même
     // séance — l'utilisatrice apprend une compétence en milieu de séance,
     // puis une autre en apothéose.
-    final milestone = quickie
-        ? null
-        : milestoneService.pendingFor(
+    //
+    // Sur les séances longues (≥ 18 min, level 8+ par CareerLevel.forLevel),
+    // on insère DEUX body milestones (vers 30 % et 65 % de la durée) pour
+    // accélérer le rythme d'apprentissage. Le pool retombe à 1 si la 2ᵉ
+    // candidate dépend pédagogiquement de la 1ʳᵉ (ou si pool insuffisant).
+    final cfg = CareerLevel.forLevel(clamped);
+    final wantDualBody = !quickie && cfg.durationSeconds >= 18 * 60;
+    final insertedBodies = quickie
+        ? const <LevelMilestone>[]
+        : milestoneService.pendingForList(
+            count: wantDualBody ? 2 : 1,
             humiliationScore: humiliationScore,
             obedience: obedienceScore,
             playerLevel: bundle.maxLevel,
@@ -212,11 +221,11 @@ class _CareerScreenState extends State<CareerScreen> {
             allocation: bundle.specialization,
             capabilityProfile: bundle.capabilityProfile,
           );
-    // Force includeHand=true si le milestone pending l'exige (séquence
+    // Force includeHand=true si une milestone pending l'exige (séquence
     // scriptée comportant du hand/biffle). Sinon respecte la préférence
     // utilisatrice. Persistance volontairement avec la valeur effective
     // (post-force) pour que le toggle reste cohérent avec ce qui a joué.
-    final includeHand = ((milestone?.requiresHands ?? false) ||
+    final includeHand = (insertedBodies.any((m) => m.requiresHands) ||
             (finalMilestone?.requiresHands ?? false))
         ? true
         : baseIncludeHand;
@@ -256,7 +265,7 @@ class _CareerScreenState extends State<CareerScreen> {
       // `capabilitySessionCeilings` ici — la séance démarre, aucun fail
       // n'a encore figé de plafond.
       capabilityProfile: bundle.capabilityProfile,
-      milestone: milestone,
+      insertedBodies: insertedBodies,
       finalMilestone: finalMilestone,
       unlockedKeys: unlockedKeys,
       milestoneTextResolver: milestoneService.getStepText,
@@ -267,14 +276,14 @@ class _CareerScreenState extends State<CareerScreen> {
 
     final introText = coachBank.pickIntro(Random());
 
-    // Unlocks provisoires de la session : la milestone insérée débloque
-    // visuellement ses compétences pour l'UI (bouton Supplier surtout)
-    // dès le démarrage, sans attendre le markCompleted final. Le
-    // générateur, lui, n'a pas reçu ces unlocks (cf. plus haut), donc
-    // pas de risque d'incohérence. Union des unlocks de la body et de
-    // la final milestone (les deux peuvent coexister).
+    // Unlocks provisoires de la session : chaque milestone insérée
+    // débloque visuellement ses compétences pour l'UI (bouton Supplier
+    // surtout) dès le démarrage, sans attendre le markCompleted final.
+    // Le générateur, lui, n'a pas reçu ces unlocks (cf. plus haut), donc
+    // pas de risque d'incohérence. Union des unlocks de toutes les body
+    // (1 ou 2) et de la final milestone.
     milestoneService.setSessionUnlocks(<UnlockKey>{
-      ...?milestone?.unlocks,
+      for (final m in insertedBodies) ...m.unlocks,
       ...?finalMilestone?.unlocks,
     });
 
@@ -576,10 +585,14 @@ class _CareerScreenState extends State<CareerScreen> {
     int level,
   ) async {
     final t = AppLocalizations.of(context);
-    final milestoneId = ctrl.session.milestoneId;
+    // Cible la milestone effectivement ratée : sur les séances ≥ 18 min
+    // avec 2 body, le fail peut tomber dans l'une OU l'autre fenêtre.
+    final milestoneId = ctrl.currentMilestoneIdInWindow;
     if (milestoneId == null) return false;
     final milestone = milestoneService.findById(milestoneId);
     if (milestone == null) return false;
+    // Pas de retry V1 pour le final (apothéose = on rate la séance).
+    if (milestone.placement != MilestonePlacement.body) return false;
     final used = milestoneService.getRetryCount(milestoneId);
     if (used >= milestone.maxRetry) return false;
     await milestoneService.incrementRetryCount(milestoneId);
@@ -615,7 +628,11 @@ class _CareerScreenState extends State<CareerScreen> {
       // l'axe qui a craqué.
       capabilityProfile: bundle.capabilityProfile,
       capabilitySessionCeilings: ctrl.capabilitySessionCeilings,
-      milestone: milestone,
+      // Retry V1 : on régénère avec une seule body (la milestone ratée).
+      // Si la séance d'origine en avait deux, l'autre est perdue sur le
+      // retry — V2 pourrait préserver l'autre si elle n'a pas encore été
+      // jouée, mais ça complexifie la dramaturgie.
+      insertedBodies: [milestone],
       // Plan pessimiste : pour le retry, on ne suppose plus que la
       // milestone est acquittée — son unlock n'est pas dans le set, le
       // reste de la session ne réutilise donc pas la compétence ratée.
