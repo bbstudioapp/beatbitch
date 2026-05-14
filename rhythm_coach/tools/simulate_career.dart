@@ -1049,15 +1049,26 @@ SimResult _runSim({
     // `CareerProgressService.canLevelUp`) : il faut soit avoir acquitté
     // une milestone candidate au niveau courant cette séance, soit qu'il
     // n'y ait plus aucune candidate au niveau courant (catalogue épuisé
-    // — on laisse passer pour ne pas piéger la joueuse). On consulte
-    // `bodyAll` au niveau courant (= ce que `MilestoneService.pendingFor`
-    // renvoie en placement `body`, qui est la sémantique côté caller —
-    // les finals d'apothéose sont gérés à part par leur propre chaînage).
+    // — on laisse passer pour ne pas piéger la joueuse).
+    //
+    // **Re-évaluation POST-finish** : le runtime consulte
+    // `MilestoneService.pendingFor(...)` dans `_recordCareerCompletion`
+    // avec les scores humil/obed **post-finish** (= ceux que la séance
+    // suivante verra au start). Une milestone qui n'était pas candidate
+    // au start (humil trop faible) peut le devenir après la chauffe de
+    // session + les bonus d'unlock acquis. On reproduit fidèlement en
+    // recalculant `bodyAll` ici, plutôt qu'en réutilisant celui du start.
     final milestoneAcquittedThisSession = cleanSession &&
         ((bodyM != null && bodyOutcome == 'clean') ||
             (bodyM2 != null && body2Outcome == 'clean') ||
             (finalM != null && finalOutcome == 'clean'));
-    final hasPendingAtCurrentLevel = bodyAll.isNotEmpty;
+    final bodyAllPostFinish = _allPendingMilestones(
+      catalog: catalog,
+      state: state,
+      profile: profile,
+      placement: MilestonePlace.body,
+    );
+    final hasPendingAtCurrentLevel = bodyAllPostFinish.isNotEmpty;
     var leveledUp = false;
     if (cleanSession &&
         !isQuickie &&
@@ -1414,13 +1425,40 @@ String _renderMarkdown(SimResult r) {
     lagsByMilestone.add((id: m.id, lag: lag, acquired: h.session));
   }
   if (lagsByMilestone.isNotEmpty) {
-    final maxLag = lagsByMilestone.map((e) => e.lag).reduce(max);
+    final lags = lagsByMilestone.map((e) => e.lag).toList()..sort();
+    final maxLag = lags.last;
+    final sum = lags.fold<int>(0, (a, b) => a + b);
+    final mean = sum / lags.length;
+    final median = lags.length.isOdd
+        ? lags[lags.length ~/ 2].toDouble()
+        : (lags[lags.length ~/ 2 - 1] + lags[lags.length ~/ 2]) / 2.0;
     final overdueCount =
         lagsByMilestone.where((e) => e.lag >= 5).toList(growable: false);
+    // Histogramme : 0 / 1-2 / 3-4 / 5-9 / ≥10. Sert à voir la distribution
+    // au-delà du seul max et du seuil overdue ; permet de valider que la
+    // règle « overdue d'abord » du prompt 3 raccourcit bien la queue droite.
+    var h0 = 0, h12 = 0, h34 = 0, h59 = 0, h10p = 0;
+    for (final v in lags) {
+      if (v == 0) {
+        h0++;
+      } else if (v <= 2) {
+        h12++;
+      } else if (v <= 4) {
+        h34++;
+      } else if (v <= 9) {
+        h59++;
+      } else {
+        h10p++;
+      }
+    }
     b.writeln('## Lag à l\'acquisition');
     b.writeln(
         '- max lag (body) : $maxLag session(s) ; milestones avec lag ≥ 5 : '
         '${overdueCount.length}');
+    b.writeln('- lag moyen : ${mean.toStringAsFixed(2)} ; médiane : '
+        '${median.toStringAsFixed(1)} sur ${lags.length} body acquises');
+    b.writeln(
+        '- histogramme : 0=$h0 | 1-2=$h12 | 3-4=$h34 | 5-9=$h59 | ≥10=$h10p');
     if (overdueCount.isNotEmpty) {
       for (final e in overdueCount) {
         b.writeln('  - ${e.id} acquise s${e.acquired} (lag ${e.lag})');
