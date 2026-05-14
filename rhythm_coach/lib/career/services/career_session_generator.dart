@@ -4233,13 +4233,20 @@ class CareerSessionGenerator {
   }
 
   /// Vrai si la gate `UnlockKey?` d'un final candidat est accessible :
-  /// soit `null` (final libre), soit présente dans `_unlockedKeys`.
+  /// soit `null` (final libre), soit présente dans `_unlockedKeys`, soit
+  /// `_unlockedKeys` est vide (= **mode hérité**, cf. la convention
+  /// documentée sur `_isUnlocked` : Custom, scénarios JSON, tests — pas de
+  /// gating milestone). Sans ce dernier cas, Custom filtrerait *tous* les
+  /// finals gated et retomberait systématiquement sur la baseline hand
+  /// (cf. issue #43 : Custom Extrême se terminait toujours par un
+  /// « branler »).
+  ///
   /// Distinct de `_isUnlocked` parce qu'un final est gaté par sa propre
   /// clé `finalXxx` dédiée — pas par la clé du composant. Ex : un final
   /// `hold mid` est gaté par `finalHoldMid` (sa milestone d'introduction
   /// dédiée), pas par `holdMidShort` qui couvre l'usage en corps de séance.
   bool _finalUnlocked(UnlockKey? key) =>
-      key == null || _unlockedKeys.contains(key);
+      key == null || _unlockedKeys.isEmpty || _unlockedKeys.contains(key);
 
   /// Si l'humiliation requise par [draft] dépasse [available], OU si la
   /// clé d'unlock requise n'est pas acquittée, dégrade progressivement
