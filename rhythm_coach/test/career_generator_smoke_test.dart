@@ -192,7 +192,7 @@ void main() {
     final result = CareerSessionGenerator(seed: 1234).generate(
       level: 2,
       bank: _bank(),
-      milestone: body,
+      insertedBodies: [body],
       finalMilestone: finalM,
       unlockedKeys: _allUnlocks,
     );
@@ -348,7 +348,7 @@ void main() {
       final r = CareerSessionGenerator(seed: seed).generate(
         level: 4,
         bank: _bank(),
-        milestone: milestone,
+        insertedBodies: [milestone],
         unlockedKeys: initial,
         humiliationCareer: 30.0,
       );

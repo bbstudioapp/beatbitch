@@ -329,6 +329,7 @@ class TimelineRow {
   final double obed;
   final List<UnlockKey> unlocksGained;
   final String? milestoneBodyInserted;
+  final String? milestoneBody2Inserted;
   final String? milestoneFinalInserted;
   final String outcome; // clean / fail / abandon / encore / quickie
   final List<CapabilityAxis> axesTouched;
@@ -341,6 +342,7 @@ class TimelineRow {
     required this.obed,
     required this.unlocksGained,
     required this.milestoneBodyInserted,
+    this.milestoneBody2Inserted,
     required this.milestoneFinalInserted,
     required this.outcome,
     required this.axesTouched,
@@ -416,15 +418,22 @@ List<SimMilestone> _allPendingMilestones({
   required SimState state,
   required SimProfile profile,
   required MilestonePlace placement,
+  Set<String> excludeIds = const {},
+  Set<UnlockKey> extraUnlockedSimulated = const {},
 }) {
   final cap =
       state.humilCareer + state.humilSession + _humilTolerance(state.obed);
   final candidates = catalog
       .where((m) => m.placement == placement)
+      .where((m) => !excludeIds.contains(m.id))
       .where((m) => (m.minLevel - _branchAdvance(m, profile)) <= state.level)
       .where((m) => m.humilRequired <= cap)
       .where((m) => !state.completedMilestones.contains(m.id))
       .where((m) => m.requires.every(state.unlocked.contains))
+      // Exclusion mutuelle quand on simule un 2ᵉ pick : si m dépend d'un
+      // unlock déjà attribué par le 1er pick simulé, on l'écarte pour ne
+      // pas tricher sur l'ordre pédagogique dans la même séance.
+      .where((m) => !m.requires.any(extraUnlockedSimulated.contains))
       .where((m) => _capabilitySatisfied(m, state))
       .toList();
   if (candidates.isEmpty) return const [];
@@ -756,16 +765,39 @@ SimResult _runSim({
       profile: profile,
       placement: MilestonePlace.body,
     );
+    final bodyM = bodyAll.isEmpty ? null : bodyAll.first;
+    // Séances longues (≥ 18 min, level 8+) : 2ᵉ body milestone pour
+    // accélérer la consommation du catalogue. `excludeIds` + simulation des
+    // unlocks de bodyM évitent doublon et conflit d'ordre pédagogique.
+    SimMilestone? bodyM2;
+    if (bodyM != null && duration >= 18 * 60) {
+      final pool = _allPendingMilestones(
+        catalog: catalog,
+        state: state,
+        profile: profile,
+        placement: MilestonePlace.body,
+        excludeIds: {bodyM.id},
+        extraUnlockedSimulated: bodyM.unlocks.toSet(),
+      );
+      bodyM2 = pool.isEmpty ? null : pool.first;
+    }
     final finalAll = _allPendingMilestones(
       catalog: catalog,
       state: state,
       profile: profile,
       placement: MilestonePlace.finalApotheose,
     );
-    final bodyM = bodyAll.isEmpty ? null : bodyAll.first;
     final finalM = finalAll.isEmpty ? null : finalAll.first;
-    for (final m in bodyAll.skip(1)) {
-      state.candidacyAge[m.id] = (state.candidacyAge[m.id] ?? 0) + 1;
+    // Vieillit les candidates non choisies : bodyAll moins les bodies
+    // effectivement insérés (1 ou 2), plus la queue finalAll moins le 1ᵉʳ.
+    final insertedBodyIds = <String>{
+      if (bodyM != null) bodyM.id,
+      if (bodyM2 != null) bodyM2.id,
+    };
+    for (final m in bodyAll) {
+      if (!insertedBodyIds.contains(m.id)) {
+        state.candidacyAge[m.id] = (state.candidacyAge[m.id] ?? 0) + 1;
+      }
     }
     for (final m in finalAll.skip(1)) {
       state.candidacyAge[m.id] = (state.candidacyAge[m.id] ?? 0) + 1;
@@ -776,6 +808,7 @@ SimResult _runSim({
     final ambientFailRoll = rng.nextDouble();
     final hasAmbientFail = ambientFailRoll < profile.failProba;
     var bodyOutcome = 'n/a';
+    var body2Outcome = 'n/a';
     var finalOutcome = 'n/a';
     if (bodyM != null) {
       final r = rng.nextDouble();
@@ -787,6 +820,16 @@ SimResult _runSim({
         bodyOutcome = tail < 0.6 ? 'fail' : 'abandon';
       }
     }
+    if (bodyM2 != null) {
+      final r = rng.nextDouble();
+      if (r < profile.milestoneCleanProba) {
+        body2Outcome = 'clean';
+      } else {
+        final tail = (r - profile.milestoneCleanProba) /
+            max(1e-9, 1.0 - profile.milestoneCleanProba);
+        body2Outcome = tail < 0.6 ? 'fail' : 'abandon';
+      }
+    }
     if (finalM != null) {
       final r = rng.nextDouble();
       // Finals sont moins risqués (la coach pousse à l'apothéose, la
@@ -796,6 +839,7 @@ SimResult _runSim({
     // Si milestone échouée, ça compte comme un fail ambiant.
     final failsCount = (hasAmbientFail ? 1 : 0) +
         (bodyOutcome == 'fail' || bodyOutcome == 'abandon' ? 1 : 0) +
+        (body2Outcome == 'fail' || body2Outcome == 'abandon' ? 1 : 0) +
         (finalOutcome == 'fail' ? 1 : 0);
     final cleanSession = failsCount == 0;
 
@@ -806,6 +850,16 @@ SimResult _runSim({
     // Bumps liés à des holds (très grossier : on regarde la milestone body).
     if (bodyOutcome == 'clean' && bodyM != null) {
       for (final s in bodyM.sequence) {
+        if (s.mode == SessionMode.hold && s.to == Position.throat) {
+          sessionScore += HumiliationEngine.bumpHoldThroatCompleted;
+        } else if (s.mode == SessionMode.hold && s.to == Position.full) {
+          sessionScore += HumiliationEngine.bumpHoldFullCompleted;
+        }
+      }
+      sessionScore += HumiliationEngine.bumpMilestoneAcquired;
+    }
+    if (body2Outcome == 'clean' && bodyM2 != null) {
+      for (final s in bodyM2.sequence) {
         if (s.mode == SessionMode.hold && s.to == Position.throat) {
           sessionScore += HumiliationEngine.bumpHoldThroatCompleted;
         } else if (s.mode == SessionMode.hold && s.to == Position.full) {
@@ -857,6 +911,7 @@ SimResult _runSim({
     // fenêtre milestone ou ambiant. On reproduit cette règle ici.
     final gained = <UnlockKey>[];
     String? bodyInsertedId;
+    String? body2InsertedId;
     String? finalInsertedId;
     if (bodyM != null) {
       bodyInsertedId = bodyM.id;
@@ -875,6 +930,24 @@ SimResult _runSim({
         }
         // Bonus career +2 par unlock (Phase 4 — l'exploit est une soumission).
         state.humilCareer += bodyM.unlocks.length * 2.0;
+      }
+    }
+    if (bodyM2 != null) {
+      body2InsertedId = bodyM2.id;
+      if (body2Outcome == 'clean' && cleanSession) {
+        state.completedMilestones.add(bodyM2.id);
+        state.candidacyAge.remove(bodyM2.id);
+        for (final u in bodyM2.unlocks) {
+          if (state.unlocked.add(u)) {
+            gained.add(u);
+            state.unlockHistory.add((
+              key: u,
+              session: state.sessionIndex,
+              milestone: bodyM2.id,
+            ));
+          }
+        }
+        state.humilCareer += bodyM2.unlocks.length * 2.0;
       }
     }
     if (finalM != null) {
@@ -917,6 +990,12 @@ SimResult _runSim({
           touched.add(axis);
         });
       }
+      if (bodyM2 != null && body2Outcome == 'clean') {
+        _axesFromMilestoneSequence(bodyM2).forEach((axis, reached) {
+          _pushBest(state, axis, reached, state.sessionIndex);
+          touched.add(axis);
+        });
+      }
       if (finalM != null && finalOutcome == 'clean') {
         _axesFromMilestoneSequence(finalM).forEach((axis, reached) {
           _pushBest(state, axis, reached, state.sessionIndex);
@@ -952,6 +1031,7 @@ SimResult _runSim({
       obed: state.obed,
       unlocksGained: gained,
       milestoneBodyInserted: bodyInsertedId,
+      milestoneBody2Inserted: body2InsertedId,
       milestoneFinalInserted: finalInsertedId,
       outcome: outcome,
       axesTouched: touched.toList(),
@@ -1214,7 +1294,9 @@ String _renderMarkdown(SimResult r) {
       '| # | lvl | humil | obed | milestone (body / final) | outcome | unlocks | axes touchés |');
   b.writeln('|---:|---:|---:|---:|---|---|---|---|');
   for (final t in r.timeline) {
-    final body = t.milestoneBodyInserted ?? '—';
+    final body = t.milestoneBody2Inserted != null
+        ? '${t.milestoneBodyInserted ?? '—'} + ${t.milestoneBody2Inserted}'
+        : (t.milestoneBodyInserted ?? '—');
     final fin = t.milestoneFinalInserted ?? '—';
     final unlocks = t.unlocksGained.isEmpty
         ? ''
@@ -1271,7 +1353,8 @@ String _renderMarkdown(SimResult r) {
 String _renderTsv(SimResult r) {
   final b = StringBuffer();
   b.writeln('# profile\t${r.profile.name}');
-  b.writeln('session\tlevel\thumil\tobed\tbody\tfinal\toutcome\tunlocks\taxes');
+  b.writeln(
+      'session\tlevel\thumil\tobed\tbody\tbody2\tfinal\toutcome\tunlocks\taxes');
   for (final t in r.timeline) {
     b.writeln([
       t.session,
@@ -1279,6 +1362,7 @@ String _renderTsv(SimResult r) {
       t.humilCareer.toStringAsFixed(1),
       t.obed.toStringAsFixed(1),
       t.milestoneBodyInserted ?? '',
+      t.milestoneBody2Inserted ?? '',
       t.milestoneFinalInserted ?? '',
       t.outcome,
       t.unlocksGained.map((u) => u.serialized).join(','),
