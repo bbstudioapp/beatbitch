@@ -132,7 +132,7 @@
     "Gerade jetzt bist du zu etwas nütze {name}.",
     "Beweg dich {name}.",
     "Mir egal, dass es wehtut. Mach weiter.",
-    "Du hältst, oder du brichst {name}. Entscheide.",
+    "Du steckst es weg, oder du brichst {name}. Entscheide.",
     "Reicht für jetzt.",
     "Schluck es {name}."
   ],
@@ -247,7 +247,7 @@
         "Halt den Rhythmus {name}. Du hast die Ausdauer dafür."
       ],
       "medium": [
-        "Du hältst {name}. Mehr will ich nicht.",
+        "Du steckst es weg {name}. Mehr will ich nicht.",
         "Keine Pause, keine Gnade {name}. Du machst weiter."
       ],
       "hard": [

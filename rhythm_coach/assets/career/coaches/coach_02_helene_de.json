@@ -22,7 +22,7 @@
         {"text": "Geh weiter runter, du kannst es besser.", "min_depth": "mid"},
         "Du wirst langsamer {name}. Komm zurück auf den Takt.",
         {"text": "Noch tiefer {name}. Das ist die Arbeit.", "min_depth": "mid"},
-        "Akzeptabel. Halte, lass nicht nach {name}.",
+        "Akzeptabel. Halte den Takt, lass nicht nach {name}.",
         "Ich habe vorerst nichts zu beanstanden {name}. Weiter."
       ],
       "hard": [
@@ -30,7 +30,7 @@
         {"text": "Schneller und tiefer. Ausführen.", "min_depth": "mid"},
         "Du musst diesen Rhythmus halten {name}.",
         {"text": "Steck es weg {name}. Du hast das Zeug dazu.", "min_depth": "throat"},
-        "Kein Zucken {name}. Halten.",
+        "Kein Zucken {name}. Weiter.",
         {"text": "Bis ganz nach unten, und du lässt nicht los {name}.", "min_depth": "throat"},
         "Es ist anspruchsvoll, und genau das wollen wir {name}."
       ]
@@ -163,7 +163,7 @@
     ],
     "75": [
       "Du näherst dich deinen Grenzen {name}. Wackel nicht.",
-      "Es ist hart, und du hältst {name}. Korrekt."
+      "Es ist hart, und du hältst durch {name}. Korrekt."
     ],
     "90": [
       "Letzte Anstrengung {name}. Kein Nachlassen.",

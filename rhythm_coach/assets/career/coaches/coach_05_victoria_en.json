@@ -158,7 +158,7 @@
   "progress": {
     "25": [
       "You're warming up correctly {name}.",
-      "You're catching the rhythm, little thing. Hold it."
+      "You're catching the rhythm, little thing. Keep it."
     ],
     "50": [
       "You're keeping up. That's the strict minimum {name}.",
@@ -166,7 +166,7 @@
     ],
     "75": [
       "You're approaching your limits {name}. Don't falter in front of me.",
-      "It's hard, and you're holding {name}. Almost worthy."
+      "It's hard, and you're taking it {name}. Almost worthy."
     ],
     "90": [
       "Last effort {name}. You don't break now, not in front of me.",
@@ -201,7 +201,7 @@
       ],
       "hard": [
         "Hit hard. Take it. You're a cock hole, behave like one.",
-        "Faster. Harder. You can hold on."
+        "Faster. Harder. You can take it."
       ]
     },
     "obeissance": {
@@ -224,12 +224,12 @@
         "Hold the rhythm {name}. You have the stamina for it."
       ],
       "medium": [
-        "You're holding. That's all I want.",
+        "You're enduring. That's all I want.",
         "No break. No mercy. You keep going."
       ],
       "hard": [
         "Take more. A real whore doesn't stop.",
-        "You'll hold on because I've decided so."
+        "You'll endure because I've decided so."
       ]
     },
     "resilience": {

@@ -538,7 +538,7 @@
         {"time": 12, "text": "Une seconde.", "mode": "breath", "duration": 2},
         {"time": 14, "text": "Encore. On n'a pas fini.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 100, "duration": 14},
         {"time": 28, "text": "Souffle.", "mode": "breath", "duration": 2},
-        {"time": 30, "text": "Reprends. Tu tiens.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 100, "duration": 12},
+        {"time": 30, "text": "Reprends. Tu encaisses.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 100, "duration": 12},
         {"time": 42, "text": "Voilà. Maintenant tu peux respirer.", "mode": "breath", "duration": 8}
       ]
     },

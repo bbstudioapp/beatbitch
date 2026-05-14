@@ -158,7 +158,7 @@
   "progress": {
     "25": [
       "Tu te chauffes correctement {name}.",
-      "Tu prends le rythme, petite chose. Tiens-le."
+      "Tu prends le rythme, petite chose. Garde-le."
     ],
     "50": [
       "Tu suis. C’est le strict minimum {name}.",
@@ -201,7 +201,7 @@
       ],
       "hard": [
         "Tape dur. Encaisse. T'es un trou à bite, comporte-toi comme tel.",
-        "Plus vite. Plus dur. Tu peux tenir."
+        "Plus vite. Plus dur. Tu peux encaisser."
       ]
     },
     "obeissance": {
@@ -220,16 +220,16 @@
     },
     "endurance": {
       "soft": [
-        "Tu tiens longtemps {name}. C'est dans tes cordes.",
+        "Tu encaisses longtemps {name}. C'est dans tes cordes.",
         "Garde le rythme {name}. Tu as la résistance pour."
       ],
       "medium": [
-        "Tu tiens. C'est tout ce que je veux.",
+        "Tu encaisses. C'est tout ce que je veux.",
         "Pas de pause. Pas de pitié. Tu continues."
       ],
       "hard": [
         "Encaisse encore. Une vraie pute ne s'arrête pas.",
-        "Tu vas tenir parce que je le décide."
+        "Tu vas encaisser parce que je le décide."
       ]
     },
     "resilience": {
