@@ -389,6 +389,18 @@ class SessionController extends ChangeNotifier {
   void _checkProgressMarkers() {
     final total = session.durationSeconds;
     if (total <= 0) return;
+    // Step final entamé → on a déjà déclenché le chime (climax). Les paliers
+    // pré-orgasme (« je vais décharger », « prépare ta gorge ») n'ont plus
+    // de sens à ce moment-là : marquer le palier comme annoncé mais ne pas
+    // parler. Cas typique : final hold long en custom, où le 90 % du temps
+    // écoulé tombe en plein dans la tenue post-chime (issue #65).
+    if (_finalChimePlayed) {
+      final percent = (elapsedSeconds * 100 / total).floor();
+      for (final marker in _progressMarkers) {
+        if (percent >= marker) _announcedProgressMarkers.add(marker);
+      }
+      return;
+    }
     final percent = (elapsedSeconds * 100 / total).floor();
     for (final marker in _progressMarkers) {
       if (percent >= marker && !_announcedProgressMarkers.contains(marker)) {
