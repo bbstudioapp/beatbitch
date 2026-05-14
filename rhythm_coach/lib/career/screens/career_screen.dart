@@ -942,7 +942,11 @@ class _CareerScreenState extends State<CareerScreen> {
                         ),
                       );
                       if (!mounted) return;
-                      setState(() => _bundleFuture = _loadBundle());
+                      // Bloc explicite : `() => x = future()` retourne le
+                      // Future, ce que setState refuse (cf. issue #63).
+                      setState(() {
+                        _bundleFuture = _loadBundle();
+                      });
                     },
                   ),
                 ),

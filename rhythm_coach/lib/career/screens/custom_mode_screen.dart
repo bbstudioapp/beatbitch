@@ -78,7 +78,13 @@ class _CustomModeScreenState extends State<CustomModeScreen> {
 
   void _reloadList() {
     if (!mounted) return;
-    setState(() => _listFuture = _loadList());
+    // NB: callback `setState` synchrone explicite — un `() => x = future()`
+    // évalue l'assignation comme expression, sa valeur est le Future à
+    // droite, et `setState` jette « setState() callback argument returned a
+    // Future. » (cf. issue #63). Le bloc `{}` garantit un retour void.
+    setState(() {
+      _listFuture = _loadList();
+    });
   }
 
   Future<_RunBundle> _loadRunBundle() async {
