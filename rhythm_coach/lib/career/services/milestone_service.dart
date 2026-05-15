@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../models/anatomy_profile.dart';
+import '../../models/session_step.dart';
 import '../../services/capability_service.dart';
 import '../../services/locale_service.dart';
 import '../models/level_milestone.dart';
@@ -193,6 +195,7 @@ class MilestoneService extends ChangeNotifier {
     int playerLevel = 1,
     SpecializationAllocation? allocation,
     CapabilityProfile? capabilityProfile,
+    AnatomyProfile? anatomy,
   }) {
     final all = allPendingFor(
       humiliationScore: humiliationScore,
@@ -200,6 +203,7 @@ class MilestoneService extends ChangeNotifier {
       playerLevel: playerLevel,
       allocation: allocation,
       capabilityProfile: capabilityProfile,
+      anatomy: anatomy,
     );
     return all.isEmpty ? null : all.first;
   }
@@ -223,6 +227,7 @@ class MilestoneService extends ChangeNotifier {
     int playerLevel = 1,
     SpecializationAllocation? allocation,
     CapabilityProfile? capabilityProfile,
+    AnatomyProfile? anatomy,
   }) {
     if (count <= 0) return const [];
     final picked = <LevelMilestone>[];
@@ -235,6 +240,7 @@ class MilestoneService extends ChangeNotifier {
         playerLevel: playerLevel,
         allocation: allocation,
         capabilityProfile: capabilityProfile,
+        anatomy: anatomy,
       );
       LevelMilestone? next;
       for (final m in candidates) {
@@ -263,6 +269,7 @@ class MilestoneService extends ChangeNotifier {
     int playerLevel = 1,
     SpecializationAllocation? allocation,
     CapabilityProfile? capabilityProfile,
+    AnatomyProfile? anatomy,
   }) {
     final all = allPendingFor(
       humiliationScore: humiliationScore,
@@ -270,6 +277,7 @@ class MilestoneService extends ChangeNotifier {
       playerLevel: playerLevel,
       allocation: allocation,
       capabilityProfile: capabilityProfile,
+      anatomy: anatomy,
       placement: MilestonePlacement.finalApotheose,
     );
     return all.isEmpty ? null : all.first;
@@ -320,6 +328,7 @@ class MilestoneService extends ChangeNotifier {
     int playerLevel = 1,
     SpecializationAllocation? allocation,
     CapabilityProfile? capabilityProfile,
+    AnatomyProfile? anatomy,
     MilestonePlacement placement = MilestonePlacement.body,
   }) {
     final cap = humiliationScore + humilTolerance(obedience);
@@ -385,6 +394,18 @@ class MilestoneService extends ChangeNotifier {
       return true;
     }
 
+    // Filtre anatomy : si l'appelant fournit un profil et que la zone balls
+    // n'est pas disponible, exclure toute milestone qui touche cette zone
+    // (séquence avec `from`/`to == Position.balls`). `anatomy == null` =
+    // mode hérité (tests, debug, sessions hors carrière) → pas de filtre.
+    bool anatomyOk(LevelMilestone m) {
+      if (anatomy == null || anatomy.hasBalls) return true;
+      for (final s in m.sequence) {
+        if (s.from == Position.balls || s.to == Position.balls) return false;
+      }
+      return true;
+    }
+
     /// Score composite consommé par le tri principal (desc — plus grand =
     /// plus prioritaire). N'a d'effet que si `allocation != null` — sans
     /// allocation, `branchScore`+`lowestBranch` sont 0 partout et l'aging
@@ -414,6 +435,7 @@ class MilestoneService extends ChangeNotifier {
         .where((m) => !_completed.contains(m.id))
         .where((m) => m.requires.every(hasUnlock))
         .where(capabilityOk)
+        .where(anatomyOk)
         .toList();
     if (candidates.isEmpty) return const [];
 

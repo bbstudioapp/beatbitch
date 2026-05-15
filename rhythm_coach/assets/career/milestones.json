@@ -419,6 +419,58 @@
       ]
     },
     {
+      "id": "intro_balls_lick",
+      "level": 9,
+      "displayLabel": "Lèche-moi les couilles",
+      "unlocks": ["lick_balls"],
+      "requires": ["lick_full"],
+      "branches": ["profondeur", "sloppy"],
+      "requiresHands": true,
+      "sequence": [
+        {"time": 0,  "text": "Aujourd'hui tu descends plus bas. Tu vas me lécher les couilles. Échauffe-toi en lèchant toute la longueur.", "mode": "lick", "from": "tip", "to": "throat", "bpm": 60, "duration": 14},
+        {"time": 14, "text": "Continue. Descends. Va plus bas que ma queue.", "mode": "lick", "from": "throat", "to": "balls", "bpm": 55, "duration": 14},
+        {"time": 28, "text": "Là. Lèche-les bien. Langue large.", "mode": "lick", "from": "throat", "to": "balls", "bpm": 50, "duration": 16},
+        {"time": 44, "text": "Reprends ton souffle.", "mode": "breath", "duration": 6},
+        {"time": 50, "text": "Encore. Cette fois plus humide, et tu remontes le long de ma queue.", "mode": "lick", "from": "balls", "to": "head", "bpm": 55, "duration": 16},
+        {"time": 66, "text": "Bien. Maintenant tu sais où descendre.", "mode": "breath", "duration": 6}
+      ]
+    },
+    {
+      "id": "balls_hold_short",
+      "level": 11,
+      "displayLabel": "Tiens-les en bouche",
+      "unlocks": ["hold_balls"],
+      "requires": ["lick_balls"],
+      "branches": ["profondeur", "endurance", "sloppy"],
+      "requiresHands": true,
+      "sequence": [
+        {"time": 0,  "text": "Aujourd'hui tu vas les prendre en bouche. Échauffe en léchant.", "mode": "lick", "from": "throat", "to": "balls", "bpm": 55, "duration": 14},
+        {"time": 14, "text": "Maintenant ouvre. Aspire une couille. Tiens-la. Trois secondes.", "mode": "hold", "to": "balls", "duration": 3},
+        {"time": 17, "text": "Respire. Doucement.", "mode": "breath", "duration": 8},
+        {"time": 25, "text": "Encore. L'autre cette fois. Cinq secondes.", "mode": "hold", "to": "balls", "duration": 5},
+        {"time": 30, "text": "Bien. Reprends ton souffle.", "mode": "breath", "duration": 8},
+        {"time": 38, "text": "Dernière. Six secondes, et tu lâches doucement.", "mode": "hold", "to": "balls", "duration": 6},
+        {"time": 44, "text": "Bonne petite. Lèche pour finir.", "mode": "lick", "from": "throat", "to": "balls", "bpm": 50, "duration": 12}
+      ]
+    },
+    {
+      "id": "balls_beg",
+      "level": 14,
+      "displayLabel": "Supplique sur les couilles",
+      "unlocks": ["beg_balls"],
+      "requires": ["beg_libre", "hold_balls"],
+      "branches": ["obeissance", "sloppy"],
+      "requiresHands": true,
+      "sequence": [
+        {"time": 0,  "text": "Aujourd'hui tu vas supplier la bouche sur mes couilles. Place-toi.", "mode": "lick", "from": "throat", "to": "balls", "bpm": 55, "duration": 10},
+        {"time": 10, "text": "Pose ta langue dessous. Et supplie-moi de te laisser là.", "mode": "beg", "to": "balls", "duration": 10},
+        {"time": 20, "text": "Dis-le encore. Plus humblement.", "mode": "beg", "to": "balls", "duration": 10},
+        {"time": 30, "text": "Demande-moi de te les faire prendre en bouche.", "mode": "beg", "to": "balls", "duration": 10},
+        {"time": 40, "text": "Bien. Lèche encore, langue large, sans t'arrêter.", "mode": "lick", "from": "throat", "to": "balls", "bpm": 50, "duration": 12},
+        {"time": 52, "text": "Bonne fille. Tu sais maintenant.", "mode": "breath", "duration": 6}
+      ]
+    },
+    {
       "id": "intro_final_hold_tip",
       "level": 2,
       "displayLabel": "Apothéose — sauce sur la langue",

@@ -17,6 +17,7 @@ import '../main.dart' show milestoneService;
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
 import '../l10n/format_helpers.dart';
+import '../models/anatomy_profile.dart';
 import '../models/badge.dart';
 import '../career/services/debug_settings_service.dart';
 import '../career/widgets/stamina_bar.dart';
@@ -189,6 +190,13 @@ class SessionScreen extends StatefulWidget {
   /// son téléphone, pas sur l'arborescence carrière.
   final bool closeAppOnEnd;
 
+  /// Profil anatomique de la joueuse. Sert à révéler la 6ᵉ ligne du
+  /// ladder visuel (zone balls) seulement quand la joueuse a la zone
+  /// **et** qu'elle a acquitté la milestone d'introduction
+  /// (`UnlockKey.lickBalls`). `null` = profil hérité (tout disponible,
+  /// mais la zone reste masquée tant que l'unlock n'a pas été acquis).
+  final AnatomyProfile? anatomy;
+
   const SessionScreen({
     super.key,
     required this.session,
@@ -222,6 +230,7 @@ class SessionScreen extends StatefulWidget {
     this.coachTag,
     this.seedHumiliationSession = 0.0,
     this.closeAppOnEnd = false,
+    this.anatomy,
   });
 
   @override
@@ -232,6 +241,13 @@ class _SessionScreenState extends State<SessionScreen>
     with WidgetsBindingObserver {
   late final SessionController _controller;
   bool _careerRecorded = false;
+
+  /// Nombre de lignes du ladder visuel (`MovementAnimation`). Snapshot
+  /// au start : on n'élargit pas dynamiquement si la milestone `lickBalls`
+  /// est acquittée pendant la séance (cf. PR2 plan balls — la révélation
+  /// vaut pour la **prochaine** séance). 6 lignes seulement quand la
+  /// joueuse a la zone ET a déjà appris à la lécher.
+  late final int _positionRowCount;
 
   @override
   void initState() {
@@ -261,6 +277,10 @@ class _SessionScreenState extends State<SessionScreen>
       isQuickie: widget.isQuickie,
     );
     _controller.onMilestoneRetry = widget.onMilestoneRetry;
+    final anatomy = widget.anatomy ?? AnatomyProfile.defaults;
+    final ballsRevealed = anatomy.hasBalls &&
+        milestoneService.acquiredUnlockKeys().contains(UnlockKey.lickBalls);
+    _positionRowCount = ballsRevealed ? 6 : 5;
     if (widget.isCareer) {
       _controller.addListener(_onCareerStateChanged);
     }
@@ -410,6 +430,7 @@ class _SessionScreenState extends State<SessionScreen>
         autoStart: widget.autoStart,
         canSave: widget.canSave,
         closeAppOnEnd: widget.closeAppOnEnd,
+        positionRowCount: _positionRowCount,
       ),
     );
   }
@@ -428,6 +449,7 @@ class _SessionScreenContent extends StatefulWidget {
   final bool autoStart;
   final bool canSave;
   final bool closeAppOnEnd;
+  final int positionRowCount;
 
   final BeepEngine beep;
 
@@ -445,6 +467,7 @@ class _SessionScreenContent extends StatefulWidget {
     required this.autoStart,
     required this.canSave,
     required this.closeAppOnEnd,
+    required this.positionRowCount,
   });
 
   @override
@@ -942,6 +965,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                       bpm: ctrl.currentBpm,
                       height: animHeight,
                       beepEngine: widget.beep,
+                      positionRowCount: widget.positionRowCount,
                     )
                   else
                     SizedBox(height: animHeight),
