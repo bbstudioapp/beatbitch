@@ -804,6 +804,23 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get soundsSuckleSection => 'Saugen (Aspiration)';
+
+  @override
+  String get soundsSuckleSubtitle =>
+      'Pulsierender feuchter Schlürfer. Hier ein einzelner Schlag, in der Session wird er alle ~1,2 s wiederholt.';
+
+  @override
+  String soundsSuckleButton(String position) {
+    return 'Saug $position';
+  }
+
+  @override
+  String soundsSucklePositionSubtitle(String name) {
+    return 'Saugen auf $name';
+  }
+
+  @override
   String get soundsSpecificSounds => 'Spezifische Sounds';
 
   @override
@@ -861,6 +878,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get soundsPosDescBalls => 'Sehr tief und gedämpft, seitlicher Bereich';
+
+  @override
+  String get soundsPosDescSuckle =>
+      'Mittlerer feuchter Ton, gleichmäßiger Saug-Puls';
 
   @override
   String get soundsDebugSection => 'Debug';
@@ -1120,6 +1141,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get modeShortHand => 'WICHS';
+
+  @override
+  String get modeShortSuckle => 'SAUG';
 
   @override
   String get badgeTierBronze => 'Bronze';

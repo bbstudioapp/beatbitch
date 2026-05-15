@@ -418,6 +418,20 @@
       "name": { "type": "String" }
     }
   },
+  "soundsSuckleSection": "Suckle (suction)",
+  "soundsSuckleSubtitle": "Pulsed wet slurp. One tap plays a single hit; in session it repeats every ~1.2 s for the step duration.",
+  "soundsSuckleButton": "Suckle {position}",
+  "@soundsSuckleButton": {
+    "placeholders": {
+      "position": { "type": "String" }
+    }
+  },
+  "soundsSucklePositionSubtitle": "Suckle on {name}",
+  "@soundsSucklePositionSubtitle": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
   "soundsSpecificSounds": "Specific sounds",
   "soundsBiffleOneShot": "Cock slap (one-shot)",
   "soundsBiffleOneShotSubtitle": "Short, percussive sound. On loop, follows the BPM.",
@@ -437,6 +451,7 @@
   "soundsPosDescThroat": "Low",
   "soundsPosDescFull": "Very low, heavy",
   "soundsPosDescBalls": "Very low and muffled, side area",
+  "soundsPosDescSuckle": "Mid wet tone, steady suction pulse",
   "soundsDebugSection": "Debug",
   "soundsDebugSubtitle": "Technical options for development.",
   "soundsDebugShowTimer": "Show timer",
@@ -523,6 +538,7 @@
   "modeShortBeg": "BEG",
   "modeShortFreestyle": "FREE",
   "modeShortHand": "STROKE",
+  "modeShortSuckle": "SUCKLE",
 
   "badgeTierBronze": "Bronze",
   "badgeTierSilver": "Silver",

@@ -224,6 +224,9 @@ class _MovementAnimationState extends State<MovementAnimation>
       SessionMode.hold || SessionMode.beg => const Duration(milliseconds: 1800),
       SessionMode.breath => const Duration(milliseconds: 3200),
       SessionMode.freestyle => const Duration(milliseconds: 2400),
+      // Suckle : pulse régulier ~1.2s aligné sur le timer audio
+      // (_sucklePulse dans BeepEngine). Pas de BPM, juste l'aspiration.
+      SessionMode.suckle => const Duration(milliseconds: 1200),
     };
   }
 
@@ -266,7 +269,14 @@ class _MovementAnimationState extends State<MovementAnimation>
           rowCount: widget.positionRowCount,
         ),
       SessionMode.biffle => _Pulse(t: t, color: color),
-      SessionMode.hold || SessionMode.beg => _StaticPosition(
+      // Suckle : la position est tenue (head ou balls), le curseur orb
+      // pulse au rythme imposé par `_durationFor(suckle)` (~1.2s) en
+      // mode `repeat(reverse: true)` côté AnimationController. Le visuel
+      // d'aspiration émerge naturellement du pulse sans logique dédiée.
+      SessionMode.hold ||
+      SessionMode.beg ||
+      SessionMode.suckle =>
+        _StaticPosition(
           position: widget.from,
           t: t,
           color: color,
@@ -288,13 +298,17 @@ class _MovementAnimationState extends State<MovementAnimation>
         SessionMode.beg => const Color(0xFFCE93D8),
         SessionMode.freestyle => const Color(0xFFB0BEC5),
         SessionMode.hand => const Color(0xFFFFAB91),
+        // Suckle : turquoise/aqua. Couleur libre, hors palette des autres
+        // modes corporels, qui évoque le côté humide / liquide du geste.
+        SessionMode.suckle => const Color(0xFF4DD0E1),
       };
 
   static _CursorStyle _cursorStyleFor(SessionMode m) => switch (m) {
         // lèvres / bouche → orbe pleine (le sample bip "remplit" la bouche)
         SessionMode.rhythm ||
         SessionMode.hold ||
-        SessionMode.beg =>
+        SessionMode.beg ||
+        SessionMode.suckle =>
           _CursorStyle.orb,
         // langue → pastille horizontale, lèche la position
         SessionMode.lick => _CursorStyle.tongue,

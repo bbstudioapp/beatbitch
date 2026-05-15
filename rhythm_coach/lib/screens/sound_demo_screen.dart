@@ -233,6 +233,23 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
                   ],
                 ),
                 _buildSection(
+                  title: t.soundsSuckleSection,
+                  subtitle: t.soundsSuckleSubtitle,
+                  children: [
+                    // Positions valides : head + balls (cf. filtre
+                    // `_isUnlocked` du générateur). Balls visible seulement
+                    // si l'anatomy de la joueuse l'inclut.
+                    for (final p in _availablePositions.where(
+                      (q) => q == Position.head || q == Position.balls,
+                    ))
+                      _SoundButton(
+                        label: t.soundsSuckleButton(_positionLabel(p)),
+                        subtitle: t.soundsSucklePositionSubtitle(p.name),
+                        onTap: () => widget.beep.playSuckleOnce(),
+                      ),
+                  ],
+                ),
+                _buildSection(
                   title: t.soundsSpecificSounds,
                   children: [
                     _SoundButton(

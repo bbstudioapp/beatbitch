@@ -81,7 +81,13 @@ enum UnlockKey {
   // hold (tenir en bouche), beg (supplique en tenant).
   lickBalls,
   holdBalls,
-  begBalls;
+  begBalls,
+  // Mode suckle (aspiration / téter) — geste actif-statique. Deux paliers
+  // pédagogiques distincts : `suckleHead` (zone introductive, level 4-5)
+  // et `suckleBalls` (zone humil pure, level 10-11, gating anatomy en
+  // plus côté MilestoneService).
+  suckleHead,
+  suckleBalls;
 
   String get serialized => switch (this) {
         UnlockKey.basics => 'basics',
@@ -121,6 +127,8 @@ enum UnlockKey {
         UnlockKey.lickBalls => 'lick_balls',
         UnlockKey.holdBalls => 'hold_balls',
         UnlockKey.begBalls => 'beg_balls',
+        UnlockKey.suckleHead => 'suckle_head',
+        UnlockKey.suckleBalls => 'suckle_balls',
       };
 
   static UnlockKey? fromString(String? raw) {

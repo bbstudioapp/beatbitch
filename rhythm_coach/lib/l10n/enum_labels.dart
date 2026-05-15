@@ -21,6 +21,7 @@ extension SessionModeL10n on SessionMode {
       SessionMode.beg => t.modeShortBeg,
       SessionMode.freestyle => t.modeShortFreestyle,
       SessionMode.hand => t.modeShortHand,
+      SessionMode.suckle => t.modeShortSuckle,
     };
   }
 }

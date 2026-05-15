@@ -33,7 +33,16 @@ enum SessionMode {
   /// rhythm/lick mais sample dédié et volume médian. Sert à laisser la
   /// bouche se reposer tout en faisant monter doucement l'excitation.
   /// Désactivable à la génération (carrière) via un flag.
-  hand;
+  hand,
+
+  /// Aspiration / téter : geste actif-statique. La bouche reste en place
+  /// sur la position visée (head ou balls), mais aspire au lieu de
+  /// bouger. Audio = un sample wet pulsé toutes ~1.2s pendant `duration`,
+  /// pas de loop BPM, pas d'amplitude. Visuel = `_StaticPosition` orb
+  /// pulsé (comme hold/beg). Positions valides : `head` (sloppy modéré)
+  /// et `balls` (sloppy soumis, gated anatomy). Interdit sur
+  /// tip/mid/throat/full.
+  suckle;
 
   static SessionMode fromString(String raw) => switch (raw.toLowerCase()) {
         'rhythm' => SessionMode.rhythm,
@@ -44,6 +53,7 @@ enum SessionMode {
         'beg' => SessionMode.beg,
         'freestyle' => SessionMode.freestyle,
         'hand' => SessionMode.hand,
+        'suckle' => SessionMode.suckle,
         _ => SessionMode.rhythm,
       };
 

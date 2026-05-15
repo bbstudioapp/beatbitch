@@ -471,6 +471,38 @@
       ]
     },
     {
+      "id": "intro_suckle_head",
+      "level": 4,
+      "displayLabel": "Aspire — la bouche bosse sans bouger",
+      "unlocks": ["suckle_head"],
+      "requires": ["basics"],
+      "branches": ["sloppy", "obeissance"],
+      "sequence": [
+        {"time": 0,  "text": "Aujourd'hui tu apprends à aspirer. Pas de va-et-vient — la bouche reste sur le gland et tu tètes.", "mode": "breath", "duration": 6},
+        {"time": 6,  "text": "Pose tes lèvres autour du gland. Et aspire. Doucement.", "mode": "suckle", "to": "head", "duration": 10},
+        {"time": 16, "text": "Continue. Tu sens la pression dans tes joues. C'est ça.", "mode": "suckle", "to": "head", "duration": 12},
+        {"time": 28, "text": "Respire par le nez. Garde la bouche en place.", "mode": "suckle", "to": "head", "duration": 14},
+        {"time": 42, "text": "Bien. Relâche.", "mode": "breath", "duration": 6}
+      ]
+    },
+    {
+      "id": "intro_suckle_balls",
+      "level": 11,
+      "displayLabel": "Aspire-les",
+      "unlocks": ["suckle_balls"],
+      "requires": ["suckle_head", "hold_balls"],
+      "branches": ["sloppy", "obeissance"],
+      "requiresHands": true,
+      "sequence": [
+        {"time": 0,  "text": "Aujourd'hui tu aspires mes couilles. Échauffe en léchant.", "mode": "lick", "from": "throat", "to": "balls", "bpm": 55, "duration": 12},
+        {"time": 12, "text": "Maintenant ouvre. Prends une couille en bouche. Aspire. Doucement.", "mode": "suckle", "to": "balls", "duration": 10},
+        {"time": 22, "text": "Continue. Joues creuses. Respire par le nez.", "mode": "suckle", "to": "balls", "duration": 12},
+        {"time": 34, "text": "Relâche.", "mode": "breath", "duration": 6},
+        {"time": 40, "text": "L'autre maintenant. Pareil. Tète.", "mode": "suckle", "to": "balls", "duration": 14},
+        {"time": 54, "text": "Bonne fille. Tu sais aspirer.", "mode": "breath", "duration": 6}
+      ]
+    },
+    {
       "id": "intro_final_hold_tip",
       "level": 2,
       "displayLabel": "Apothéose — sauce sur la langue",
