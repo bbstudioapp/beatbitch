@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/anatomy_profile.dart';
 import 'locale_service.dart';
 
 /// Profil utilisateur : prénom optionnel + liste de surnoms personnalisés.
@@ -21,6 +22,7 @@ class UserProfileService extends ChangeNotifier {
   static const String _disabledDefaultsKey =
       'user_profile_disabled_default_nicknames';
   static const String _nicknamesAssetPathDefault = 'assets/nicknames.json';
+  static const String _anatomyHasBallsKey = 'profile.anatomy.has_balls';
 
   String _nicknamesAssetPathFor(String lang) =>
       lang == 'fr' ? _nicknamesAssetPathDefault : 'assets/nicknames_$lang.json';
@@ -35,6 +37,7 @@ class UserProfileService extends ChangeNotifier {
   List<String> _defaultNicknames = const [];
   List<String> _customNicknames = const [];
   Set<String> _disabledDefaults = const {};
+  bool _anatomyHasBalls = true;
   bool _loaded = false;
   String? _defaultsLoadedFor;
   late final VoidCallback _localeListener = _onLocaleChanged;
@@ -53,6 +56,11 @@ class UserProfileService extends ChangeNotifier {
   List<String> get defaultNicknames => List.unmodifiable(_defaultNicknames);
   List<String> get customNicknames => List.unmodifiable(_customNicknames);
   Set<String> get disabledDefaults => Set.unmodifiable(_disabledDefaults);
+
+  /// Profil anatomique courant. Reconstruit à chaque appel (objet value
+  /// immuable, peu coûteux). Les listeners du service sont notifiés au
+  /// changement → `AnimatedBuilder` côté UI suffit pour réagir.
+  AnatomyProfile get anatomy => AnatomyProfile(hasBalls: _anatomyHasBalls);
 
   /// Pool effectif utilisé pour le tirage aléatoire.
   List<String> get activePool {
@@ -73,6 +81,7 @@ class UserProfileService extends ChangeNotifier {
     _customNicknames = prefs.getStringList(_customNicknamesKey) ?? const [];
     _disabledDefaults =
         (prefs.getStringList(_disabledDefaultsKey) ?? const []).toSet();
+    _anatomyHasBalls = prefs.getBool(_anatomyHasBallsKey) ?? true;
 
     await _loadDefaultsForCurrentLocale();
 
@@ -163,6 +172,14 @@ class UserProfileService extends ChangeNotifier {
   Future<void> _persistCustom() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_customNicknamesKey, _customNicknames);
+  }
+
+  Future<void> setAnatomyHasBalls(bool value) async {
+    if (_anatomyHasBalls == value) return;
+    _anatomyHasBalls = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_anatomyHasBallsKey, value);
+    notifyListeners();
   }
 
   /// Renvoie un nom à utiliser pour substituer `{name}`. Un tirage par appel.

@@ -114,6 +114,13 @@ class HumiliationScale {
         return 8.0;
       case Position.full:
         return 18.0;
+      case Position.balls:
+        // Zone très sloppy mais pas asphyxiante. Plus humiliante
+        // qu'un throat (8) sans atteindre le full (18) qui a sa
+        // composante apnée. Le combo cible `lick full/balls`
+        // (amplitude 1) tombe à 16 + 1 = 17 — sous le seuil d'un
+        // final hold full (req 25), accessible passé une chauffe.
+        return 16.0;
     }
   }
 
@@ -134,6 +141,10 @@ class HumiliationScale {
         return 10.0;
       case Position.full:
         return 25.0;
+      case Position.balls:
+        // Tenir les couilles dans la bouche : très humiliant (sloppy +
+        // soumis) mais respirable, donc entre throat (10) et full (25).
+        return 14.0;
     }
   }
 
@@ -153,6 +164,11 @@ class HumiliationScale {
         return 1.2;
       case Position.full:
         return 2.5;
+      case Position.balls:
+        // Pas d'apnée à compenser, mais l'humil augmente avec la
+        // durée (plus longtemps = plus humiliant). Modéré : entre
+        // mid (0.3) et throat (1.2).
+        return 0.8;
     }
   }
 
@@ -170,6 +186,11 @@ class HumiliationScale {
         return 18.0;
       case Position.full:
         return 28.0;
+      case Position.balls:
+        // Supplier la bouche sur les couilles : très humiliant
+        // (zone basse + verbal soumis), entre throat (18) et
+        // full (28). Pas de composante apnée donc en deçà de full.
+        return 22.0;
     }
   }
 

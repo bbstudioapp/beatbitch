@@ -34,6 +34,7 @@ extension PositionL10n on Position {
       Position.mid => t.positionMid,
       Position.throat => t.positionThroat,
       Position.full => t.positionFull,
+      Position.balls => t.positionBalls,
     };
   }
 }

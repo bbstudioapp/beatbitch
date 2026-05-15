@@ -196,10 +196,15 @@ class _CustomModeScreenState extends State<CustomModeScreen> {
       coachModeWeights: cfg.resolveCoachModeWeights(),
       sessionName: _sessionName(cfg),
       intensityFloorOverride: cfg.resolveIntensityFloor(),
-      maxDepthIndexOverride: cfg.maxDepthIndex < 4 ? cfg.maxDepthIndex : null,
+      // On passe l'override dès que la profondeur n'est pas full, et
+      // toujours quand c'est balls : le défaut du niveau virtuel ne va
+      // pas au-delà de full, il faut donc l'expliciter pour balls (5).
+      maxDepthIndexOverride:
+          cfg.maxDepthIndex == Position.full.index ? null : cfg.maxDepthIndex,
       bpmRange: (cfg.bpmMin, cfg.bpmMax),
       holdDurationRange: (cfg.holdDurationMin, cfg.holdDurationMax),
       noStats: true,
+      anatomy: widget.userProfile.anatomy,
     );
   }
 
@@ -393,8 +398,11 @@ class _CustomModeScreenState extends State<CustomModeScreen> {
     final initial = config ?? CustomSessionConfig.defaults();
     final result = await Navigator.of(context).push<CustomEditorResult>(
       MaterialPageRoute(
-        builder: (_) =>
-            CustomConfigEditorScreen(initial: initial, isNew: isNew),
+        builder: (_) => CustomConfigEditorScreen(
+          initial: initial,
+          isNew: isNew,
+          hasBalls: widget.userProfile.anatomy.hasBalls,
+        ),
       ),
     );
     if (result == null || !mounted) return;

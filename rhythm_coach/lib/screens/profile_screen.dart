@@ -164,6 +164,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 tts: widget.tts,
               ),
               const SizedBox(height: 24),
+              _SectionLabel(t.profileAnatomySection),
+              const SizedBox(height: 8),
+              _AnatomySection(userProfile: widget.userProfile),
+              const SizedBox(height: 24),
               _SectionLabel(t.profileStatsSection),
               const SizedBox(height: 8),
               _StatsBlock(stats: bundle.reputation.stats),
@@ -303,6 +307,45 @@ class _InfoTextSection extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Toggle anatomique : permet à l'utilisatrice de désactiver des zones
+/// pas disponibles dans son setup. Pour l'instant : présence des
+/// testicules (extensible plus tard via [AnatomyProfile]). Le switch
+/// est rebind sur les listeners de [UserProfileService] via
+/// [AnimatedBuilder] — un changement (re)dessine le widget directement.
+class _AnatomySection extends StatelessWidget {
+  final UserProfileService userProfile;
+  const _AnatomySection({required this.userProfile});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return AnimatedBuilder(
+      animation: userProfile,
+      builder: (context, _) {
+        return SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(
+            t.profileAnatomyHasBalls,
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          subtitle: Text(
+            t.profileAnatomyHasBallsSubtitle,
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppTheme.textMuted,
+            ),
+          ),
+          value: userProfile.anatomy.hasBalls,
+          onChanged: userProfile.setAnatomyHasBalls,
+        );
+      },
     );
   }
 }

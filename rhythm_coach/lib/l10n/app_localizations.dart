@@ -496,6 +496,24 @@ abstract class AppLocalizations {
   /// **'Erreur :\n{error}'**
   String profileLoadError(String error);
 
+  /// No description provided for @profileAnatomySection.
+  ///
+  /// In fr, this message translates to:
+  /// **'ANATOMIE'**
+  String get profileAnatomySection;
+
+  /// No description provided for @profileAnatomyHasBalls.
+  ///
+  /// In fr, this message translates to:
+  /// **'Inclure les testicules'**
+  String get profileAnatomyHasBalls;
+
+  /// No description provided for @profileAnatomyHasBallsSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Désactive si ton setup n\'en a pas (jouet sans testicules, autre). La coach n\'orientera plus d\'actions vers cette zone.'**
+  String get profileAnatomyHasBallsSubtitle;
+
   /// No description provided for @profileStatsSection.
   ///
   /// In fr, this message translates to:
@@ -1558,6 +1576,12 @@ abstract class AppLocalizations {
   /// **'Très grave, lourd'**
   String get soundsPosDescFull;
 
+  /// No description provided for @soundsPosDescBalls.
+  ///
+  /// In fr, this message translates to:
+  /// **'Très grave et sourd, zone latérale'**
+  String get soundsPosDescBalls;
+
   /// No description provided for @soundsDebugSection.
   ///
   /// In fr, this message translates to:
@@ -1995,6 +2019,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Tout'**
   String get positionFull;
+
+  /// No description provided for @positionBalls.
+  ///
+  /// In fr, this message translates to:
+  /// **'Couilles'**
+  String get positionBalls;
 
   /// No description provided for @modeShortRhythm.
   ///
