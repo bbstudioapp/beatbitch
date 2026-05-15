@@ -25,7 +25,7 @@
     "encore_fallback": "Again. Back to it."
   },
   "test_phrases": {
-    "voice": "Come on, show me what you've got. Deeper, slower.",
+    "voice": "Come on {name}, show me what you've got. Deeper, slower.",
     "identity": "Keep going {name}. You can do it {name}."
   }
 }
