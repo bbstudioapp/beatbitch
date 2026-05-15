@@ -1,4 +1,6 @@
-import 'dart:io' show Process, ProcessException;
+import 'dart:async' show unawaited;
+import 'dart:convert' show json, utf8;
+import 'dart:io' show Directory, File, Platform, Process, ProcessException;
 import 'dart:ui' show Locale;
 
 import 'package:flutter/foundation.dart';
@@ -23,11 +25,21 @@ class TtsService {
 
   /// Linux : le plugin `flutter_tts` n'a pas d'implémentation Linux (cf.
   /// son `pubspec.yaml` qui ne déclare que android/ios/macos/windows/web).
-  /// On bypass donc le plugin et on parle via `spd-say` (CLI de
-  /// speech-dispatcher, dépendance déclarée pour le paquet Linux). Pas de
-  /// sélection de voix possible côté CLI — voix système par défaut, le
-  /// rate/pitch piloté via les options `-r` / `-p` (échelle -100..100).
+  /// On bypass donc le plugin et on choisit l'un de deux backends détectés
+  /// au runtime :
+  ///
+  /// 1. **piper** (TTS neuronal, voix naturelle) — si `piper` est dans le
+  ///    PATH et au moins un fichier `.onnx` est posé dans un dossier
+  ///    conventionnel (cf. [_PiperResolver._candidateDirs]). C'est le
+  ///    backend préféré : qualité bien supérieure à espeak-ng.
+  /// 2. **spd-say** (CLI de speech-dispatcher) — fallback. Toujours
+  ///    disponible (déclaré comme dépendance Linux du paquet), mais utilise
+  ///    par défaut espeak-ng → voix très robotique.
+  ///
+  /// La sélection est faite au 1er `speak()` et mémoïsée. Cf.
+  /// `docs/LINUX_TTS.md` pour l'installation de piper côté utilisateur.
   static const String _linuxVoiceLabel = 'spd-say (système)';
+  static const String _linuxPiperVoiceLabel = 'piper (neuronal)';
 
   /// Voix préférées par locale, par ordre décroissant de qualité. **Voix
   /// locales uniquement** : on n'autorise jamais de voix réseau (cf.
@@ -61,6 +73,20 @@ class TtsService {
   bool _initialized = false;
   bool _speaking = false;
   Locale _locale;
+
+  /// Processus aplay en cours (backend piper) ou null. Tenu pour pouvoir
+  /// l'interrompre depuis [stop] — `Process.run('spd-say', ['-S'])` ne
+  /// peut pas couper un pipeline piper→aplay externe.
+  Process? _linuxAplayProcess;
+  Process? _linuxPiperProcess;
+
+  /// Mémoization de la résolution piper. Calculée lazy au 1er speak,
+  /// réévaluée jamais (le user doit relancer l'app après avoir installé
+  /// piper / posé une nouvelle voix). `null` après résolution = piper
+  /// indisponible, fallback spd-say.
+  _PiperConfig? _piperConfig;
+  bool _piperResolved = false;
+  Future<void>? _piperResolving;
 
   /// Optionnel : si fourni, toutes les phrases passent par `resolve` avant
   /// d'être prononcées (substitution `{name}`).
@@ -131,11 +157,12 @@ class TtsService {
     // Linux : le plugin flutter_tts ne déclare aucun pluginClass pour
     // Linux → tout appel sur le method channel jette
     // MissingPluginException. On ne touche pas au plugin et on délègue à
-    // `spd-say` (cf. _speakLinux / stop). On expose quand même la pseudo-
-    // voix « système » pour que l'UI Profil ne pense pas que rien
-    // n'existe.
+    // `piper` (préféré, voix neuronale) ou `spd-say` (fallback) selon ce
+    // qui est installé. Cf. _speakLinux / docs/LINUX_TTS.md.
     if (_isLinux) {
-      _currentVoiceName = _linuxVoiceLabel;
+      await _ensurePiperResolved();
+      _currentVoiceName =
+          _piperConfig != null ? _linuxPiperVoiceLabel : _linuxVoiceLabel;
       _initialized = true;
       return;
     }
@@ -211,11 +238,12 @@ class TtsService {
   /// locale fallback) d'avoir chacun une voix distincte. Avec `seed == null`,
   /// se comporte comme avant (1ère voix de la liste).
   Future<void> _selectVoiceWithSeed(String? seed) async {
-    // Linux : pas de sélection de voix via spd-say (CLI ne supporte pas le
-    // choix de voix de façon portable), la voix système par défaut est
-    // utilisée. On garde juste le label pseudo-voix pour l'UI.
+    // Linux : pas de sélection de voix programmatique (ni spd-say CLI ni
+    // notre pipeline piper n'exposent une API « setVoice »). Le label
+    // reflète juste quel backend a été détecté pour l'écran Profil.
     if (_isLinux) {
-      _currentVoiceName = _linuxVoiceLabel;
+      _currentVoiceName =
+          _piperConfig != null ? _linuxPiperVoiceLabel : _linuxVoiceLabel;
       return;
     }
     try {
@@ -300,13 +328,83 @@ class TtsService {
     }
   }
 
-  /// Parle via `spd-say -w` (wait until done). Le binaire est attendu sur
-  /// le PATH — `speech-dispatcher` est listé comme dépendance Linux du
-  /// paquet (cf. release notes). Si le binaire est absent ou retourne en
-  /// erreur, on logge et on ne crashe pas — l'app reste utilisable
-  /// silencieusement.
+  /// Route vers piper si dispo+voix matchant la locale, sinon spd-say.
   Future<void> _speakLinux(String text) async {
     _speaking = true;
+    try {
+      await _ensurePiperResolved();
+      final cfg = _piperConfig;
+      final voice = cfg?.voiceForLocale(_locale.languageCode);
+      if (cfg != null && voice != null) {
+        final ok = await _speakViaPiper(text, cfg.binaryPath, voice);
+        if (ok) return;
+        // piper a échoué (audio device pris, modèle KO, etc.) : on tente
+        // un dernier coup via spd-say plutôt que de rester muet.
+      }
+      await _speakViaSpd(text);
+    } finally {
+      _speaking = false;
+    }
+  }
+
+  /// Pipeline `piper(stdin=texte) | aplay(stdin=PCM brut)`. Garde une ref
+  /// sur les deux process pour que [stop] puisse interrompre — un kill de
+  /// spd-say (`spd-say -S`) ne touche pas un pipeline piper externe.
+  Future<bool> _speakViaPiper(
+    String text,
+    String binaryPath,
+    _PiperVoice voice,
+  ) async {
+    try {
+      final piper = await Process.start(
+        binaryPath,
+        ['--model', voice.modelPath, '--output_raw'],
+      );
+      final aplay = await Process.start('aplay', [
+        '-r',
+        '${voice.sampleRate}',
+        '-f',
+        'S16_LE',
+        '-t',
+        'raw',
+        '-c',
+        '1',
+        '-q',
+        '-',
+      ]);
+      _linuxPiperProcess = piper;
+      _linuxAplayProcess = aplay;
+
+      // Détourner stderr de piper pour ne pas polluer la console release
+      // (piper logge ses stats d'inférence par défaut).
+      unawaited(piper.stderr.drain<void>());
+
+      // Stream piper.stdout (PCM brut) → aplay.stdin. `pipe()` ferme le
+      // sink quand le stream se termine, donc aplay reçoit EOF auto.
+      final pipeDone = piper.stdout.pipe(aplay.stdin);
+
+      piper.stdin.add(utf8.encode(text));
+      await piper.stdin.close();
+      await pipeDone;
+
+      final code = await aplay.exitCode;
+      return code == 0;
+    } on ProcessException catch (e) {
+      if (kDebugMode) debugPrint('[TTS] piper KO : ${e.message}');
+      return false;
+    } catch (e) {
+      if (kDebugMode) debugPrint('[TTS] piper KO : $e');
+      return false;
+    } finally {
+      _linuxPiperProcess = null;
+      _linuxAplayProcess = null;
+    }
+  }
+
+  /// Fallback : `spd-say -w` (CLI de speech-dispatcher). Toujours dispo en
+  /// théorie (dep système du paquet), mais voix robotique par défaut
+  /// (espeak-ng).
+  Future<void> _speakViaSpd(String text) async {
     try {
       // Mapping : rate `0.1..1.0` (0.5 ≈ normal) → `-r -100..100`.
       // Pitch `0.5..2.0` (1.0 ≈ normal) → `-p -100..100`.
@@ -324,17 +422,53 @@ class TtsService {
       ]);
     } on ProcessException catch (e) {
       if (kDebugMode) debugPrint('[TTS] spd-say introuvable : ${e.message}');
-    } finally {
-      _speaking = false;
     }
+  }
+
+  /// Résout (1× par session) la dispo piper + la voix la plus pertinente
+  /// par langue. Synchronisé : plusieurs `speak()` concurrents partagent
+  /// la même résolution. Cf. [_PiperResolver].
+  Future<void> _ensurePiperResolved() async {
+    if (_piperResolved) return;
+    final pending = _piperResolving;
+    if (pending != null) {
+      await pending;
+      return;
+    }
+    final task = _PiperResolver.resolve().then((cfg) {
+      _piperConfig = cfg;
+      _piperResolved = true;
+      if (kDebugMode) {
+        if (cfg == null) {
+          debugPrint('[TTS] piper non détecté → fallback spd-say');
+        } else {
+          debugPrint('[TTS] piper détecté : ${cfg.binaryPath} '
+              '(langues : ${cfg.voicesByLang.keys.join(", ")})');
+        }
+      }
+    });
+    _piperResolving = task;
+    await task;
+    _piperResolving = null;
   }
 
   Future<void> stop() async {
     _speaking = false;
     try {
       if (_isLinux) {
-        // Annule tous les messages en cours / en file de speech-dispatcher.
-        await Process.run('spd-say', ['-S']);
+        // Backend piper : killer le pipeline piper+aplay courant.
+        _linuxPiperProcess?.kill();
+        _linuxAplayProcess?.kill();
+        _linuxPiperProcess = null;
+        _linuxAplayProcess = null;
+        // Backend spd-say : annule les messages en file de
+        // speech-dispatcher. Best-effort — pas grave si spd-say absent
+        // ou si on était sur piper.
+        try {
+          await Process.run('spd-say', ['-S']);
+        } on ProcessException {
+          // ignore
+        }
         return;
       }
       await _tts.stop();
@@ -371,12 +505,18 @@ class TtsService {
   Future<List<Map<String, String>>> listVoicesForLocale(
       [Locale? locale, bool includeNetwork = false]) async {
     if (_isLinux) {
-      // Pseudo-voix unique : représente la voix configurée dans
-      // speech-dispatcher pour la locale demandée.
+      // Pseudo-voix unique : reflète le backend détecté (piper si voix
+      // posée + binaire dispo, sinon spd-say). Pas de sélection
+      // utilisateur — la voix est définie par les fichiers `.onnx`
+      // installés (cf. docs/LINUX_TTS.md).
+      await _ensurePiperResolved();
       final lang = (locale ?? _locale).languageCode;
+      final label = _piperConfig?.voiceForLocale(lang) != null
+          ? _linuxPiperVoiceLabel
+          : _linuxVoiceLabel;
       return [
         {
-          'name': _linuxVoiceLabel,
+          'name': label,
           'locale': '$lang-${_defaultCountryFor(lang)}',
         },
       ];
@@ -420,10 +560,11 @@ class TtsService {
   }
 
   Future<List<Map<String, String>>> listEngines() async {
-    if (_isLinux)
+    if (_isLinux) {
       return const [
-        {'name': 'speech-dispatcher'}
+        {'name': 'speech-dispatcher'},
       ];
+    }
     final raw = await _tts.getEngines;
     if (raw is! List) return const [];
     return raw.map((e) => {'name': e.toString()}).toList();
@@ -541,6 +682,8 @@ class TtsService {
 
   Future<void> dispose() async {
     if (_isLinux) {
+      _linuxPiperProcess?.kill();
+      _linuxAplayProcess?.kill();
       try {
         await Process.run('spd-say', ['-S']);
       } on ProcessException {
@@ -558,5 +701,107 @@ extension _FirstWhereOrNull<T> on Iterable<T> {
       if (test(element)) return element;
     }
     return null;
+  }
+}
+
+/// Configuration piper résolue : chemin du binaire + voix indexées par
+/// code langue (`fr`, `en`, `de`…). Une seule voix par langue est retenue
+/// — la 1ʳᵉ trouvée par ordre alphabétique des fichiers `.onnx`.
+class _PiperConfig {
+  final String binaryPath;
+  final Map<String, _PiperVoice> voicesByLang;
+
+  const _PiperConfig({required this.binaryPath, required this.voicesByLang});
+
+  _PiperVoice? voiceForLocale(String languageCode) =>
+      voicesByLang[languageCode.toLowerCase()];
+}
+
+class _PiperVoice {
+  final String modelPath;
+  final int sampleRate;
+
+  const _PiperVoice({required this.modelPath, required this.sampleRate});
+}
+
+/// Détection paresseuse de piper + des voix posées par l'utilisateur.
+/// Pure fonction utilitaire — pas d'état, juste un `resolve()` qui scanne
+/// disque/PATH et retourne une config (ou null).
+class _PiperResolver {
+  /// Dossiers conventionnels où chercher les voix `.onnx`, par priorité
+  /// décroissante. Le 1er match par langue gagne.
+  static List<String> get _candidateDirs {
+    final env = Platform.environment;
+    final home = env['HOME'] ?? '';
+    final xdg = env['XDG_DATA_HOME'];
+    return [
+      if (xdg != null && xdg.isNotEmpty) '$xdg/piper-voices',
+      if (home.isNotEmpty) '$home/.local/share/piper-voices',
+      '/usr/local/share/piper-voices',
+      '/usr/share/piper-voices',
+    ];
+  }
+
+  static Future<_PiperConfig?> resolve() async {
+    final bin = await _locateBinary();
+    if (bin == null) return null;
+    final voices = await _collectVoices();
+    if (voices.isEmpty) return null;
+    return _PiperConfig(binaryPath: bin, voicesByLang: voices);
+  }
+
+  /// `which piper` puis fallback `~/.local/bin/piper` (chemin standard de
+  /// `pipx install piper-tts` quand `pipx ensurepath` n'a pas été fait).
+  static Future<String?> _locateBinary() async {
+    try {
+      final res = await Process.run('which', ['piper']);
+      final out = (res.stdout as String).trim();
+      if (out.isNotEmpty && File(out).existsSync()) return out;
+    } on ProcessException {
+      // `which` peut manquer dans des conteneurs minimaux — on continue.
+    }
+    final home = Platform.environment['HOME'];
+    if (home != null) {
+      final candidate = '$home/.local/bin/piper';
+      if (File(candidate).existsSync()) return candidate;
+    }
+    return null;
+  }
+
+  /// Scanne les dossiers et retourne une voix par code langue. Le code
+  /// langue est extrait du préfixe du nom de fichier avant `_` ou `-`
+  /// (convention piper : `fr_FR-siwis-medium.onnx` → `fr`).
+  static Future<Map<String, _PiperVoice>> _collectVoices() async {
+    final byLang = <String, _PiperVoice>{};
+    for (final dirPath in _candidateDirs) {
+      final dir = Directory(dirPath);
+      if (!dir.existsSync()) continue;
+      final entries = dir.listSync().whereType<File>().toList()
+        ..sort((a, b) => a.path.compareTo(b.path));
+      for (final f in entries) {
+        if (!f.path.endsWith('.onnx')) continue;
+        final base = f.path.split('/').last;
+        final lang = base.split(RegExp(r'[_\-]')).first.toLowerCase();
+        if (lang.isEmpty) continue;
+        if (byLang.containsKey(lang)) continue; // dossier prioritaire gagne
+        final sampleRate = await _readSampleRate('${f.path}.json');
+        byLang[lang] = _PiperVoice(modelPath: f.path, sampleRate: sampleRate);
+      }
+    }
+    return byLang;
+  }
+
+  static Future<int> _readSampleRate(String jsonPath) async {
+    try {
+      final raw = await File(jsonPath).readAsString();
+      final decoded = json.decode(raw) as Map<String, dynamic>;
+      final audio = decoded['audio'] as Map<String, dynamic>?;
+      final sr = audio?['sample_rate'];
+      if (sr is int) return sr;
+      if (sr is num) return sr.toInt();
+    } catch (_) {
+      // sidecar manquant ou JSON invalide → défaut piper standard
+    }
+    return 22050;
   }
 }
