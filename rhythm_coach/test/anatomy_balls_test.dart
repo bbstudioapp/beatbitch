@@ -82,8 +82,7 @@ void main() {
         anatomy: const AnatomyProfile(hasBalls: true),
       );
       for (final s in result.session.steps) {
-        final touchesBalls =
-            s.from == Position.balls || s.to == Position.balls;
+        final touchesBalls = s.from == Position.balls || s.to == Position.balls;
         if (!touchesBalls) continue;
         // Modes-incompatibles : balls n'est pertinent que pour
         // lick/hold/beg (zone à lécher / aspirer / supplier-en-tenant).
