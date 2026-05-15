@@ -25,7 +25,7 @@
     "encore_fallback": "Encore. On y retourne."
   },
   "test_phrases": {
-    "voice": "Allez, montre-moi ce que tu as. Plus profond, plus lent.",
+    "voice": "Allez {name}, montre-moi ce que tu as. Plus profond, plus lent.",
     "identity": "Continue {name}. Tu vas y arriver {name}."
   }
 }

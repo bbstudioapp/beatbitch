@@ -187,6 +187,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 8),
                 VoiceSettingsSection(
                   tts: widget.tts!,
+                  userProfile: widget.userProfile,
                 ),
               ],
               const SizedBox(height: 24),
