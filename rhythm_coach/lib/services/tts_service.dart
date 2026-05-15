@@ -1,3 +1,4 @@
+import 'dart:io' show Process, ProcessException;
 import 'dart:ui' show Locale;
 
 import 'package:flutter/foundation.dart';
@@ -19,6 +20,14 @@ class TtsService {
   // Match case-insensitive sur le nom de voix : couvre "Microsoft Julie
   // Desktop", "Julie - French (France)", etc. selon les variantes SAPI.
   static const String _windowsVoiceNeedle = 'julie';
+
+  /// Linux : le plugin `flutter_tts` n'a pas d'implémentation Linux (cf.
+  /// son `pubspec.yaml` qui ne déclare que android/ios/macos/windows/web).
+  /// On bypass donc le plugin et on parle via `spd-say` (CLI de
+  /// speech-dispatcher, dépendance déclarée pour le paquet Linux). Pas de
+  /// sélection de voix possible côté CLI — voix système par défaut, le
+  /// rate/pitch piloté via les options `-r` / `-p` (échelle -100..100).
+  static const String _linuxVoiceLabel = 'spd-say (système)';
 
   /// Voix préférées par locale, par ordre décroissant de qualité. **Voix
   /// locales uniquement** : on n'autorise jamais de voix réseau (cf.
@@ -119,16 +128,28 @@ class TtsService {
   Future<void> init() async {
     if (_initialized) return;
 
+    // Linux : le plugin flutter_tts ne déclare aucun pluginClass pour
+    // Linux → tout appel sur le method channel jette
+    // MissingPluginException. On ne touche pas au plugin et on délègue à
+    // `spd-say` (cf. _speakLinux / stop). On expose quand même la pseudo-
+    // voix « système » pour que l'UI Profil ne pense pas que rien
+    // n'existe.
+    if (_isLinux) {
+      _currentVoiceName = _linuxVoiceLabel;
+      _initialized = true;
+      return;
+    }
+
     await _tts.setLanguage(_ttsLanguageTag(_locale));
     await _tts.setPitch(_platformDefaultPitch);
     await _tts.setSpeechRate(_platformDefaultRate);
     await _tts.setVolume(_defaultVolume);
-    // `awaitSpeakCompletion(true)` est défaillant sur Windows (SAPI) et
-    // sur Linux (Speech Dispatcher / flite) : les back-ends n'émettent
-    // pas toujours l'event de complétion attendu, ce qui fait
-    // freeze/crash le `speak()` suivant. On le garde activé sur les
-    // plateformes où il marche fiablement (Android/iOS).
-    if (!_isWindows && !_isLinux) {
+    // `awaitSpeakCompletion(true)` est défaillant sur Windows (SAPI) :
+    // SAPI n'émet pas toujours l'event de complétion attendu, ce qui
+    // fait freeze/crash le `speak()` suivant. On le garde activé sur les
+    // plateformes où il marche fiablement (Android/iOS). Linux passe par
+    // spd-say -w qui fait son propre wait (cf. _speakLinux).
+    if (!_isWindows) {
       await _tts.awaitSpeakCompletion(true);
     }
     await _selectVoice();
@@ -149,10 +170,9 @@ class TtsService {
       return;
     }
     _locale = locale;
-    if (_initialized) {
-      await _tts.setLanguage(_ttsLanguageTag(_locale));
-      await _selectVoice();
-    }
+    if (!_initialized || _isLinux) return;
+    await _tts.setLanguage(_ttsLanguageTag(_locale));
+    await _selectVoice();
   }
 
   /// Construit le tag BCP-47 attendu par flutter_tts (`fr-FR`, `en-US`…).
@@ -191,6 +211,13 @@ class TtsService {
   /// locale fallback) d'avoir chacun une voix distincte. Avec `seed == null`,
   /// se comporte comme avant (1ère voix de la liste).
   Future<void> _selectVoiceWithSeed(String? seed) async {
+    // Linux : pas de sélection de voix via spd-say (CLI ne supporte pas le
+    // choix de voix de façon portable), la voix système par défaut est
+    // utilisée. On garde juste le label pseudo-voix pour l'UI.
+    if (_isLinux) {
+      _currentVoiceName = _linuxVoiceLabel;
+      return;
+    }
     try {
       final voices = await listVoicesForLocale(_locale);
       if (voices.isEmpty) return;
@@ -260,17 +287,56 @@ class TtsService {
   Future<void> speak(String text) async {
     if (!_initialized) await init();
     if (text.trim().isEmpty) return;
+    final resolved = resolveText(text);
     try {
-      await _tts.speak(resolveText(text));
+      if (_isLinux) {
+        await _speakLinux(resolved);
+        return;
+      }
+      await _tts.speak(resolved);
     } catch (e) {
       _speaking = false;
       if (kDebugMode) debugPrint('[TTS] speak KO : $e');
     }
   }
 
+  /// Parle via `spd-say -w` (wait until done). Le binaire est attendu sur
+  /// le PATH — `speech-dispatcher` est listé comme dépendance Linux du
+  /// paquet (cf. release notes). Si le binaire est absent ou retourne en
+  /// erreur, on logge et on ne crashe pas — l'app reste utilisable
+  /// silencieusement.
+  Future<void> _speakLinux(String text) async {
+    _speaking = true;
+    try {
+      // Mapping : rate `0.1..1.0` (0.5 ≈ normal) → `-r -100..100`.
+      // Pitch `0.5..2.0` (1.0 ≈ normal) → `-p -100..100`.
+      final rate = ((_rate - 0.5) * 200).clamp(-100.0, 100.0).round();
+      final pitch = ((_pitch - 1.0) * 100).clamp(-100.0, 100.0).round();
+      await Process.run('spd-say', [
+        '-w',
+        '-l',
+        _locale.languageCode,
+        '-r',
+        '$rate',
+        '-p',
+        '$pitch',
+        text,
+      ]);
+    } on ProcessException catch (e) {
+      if (kDebugMode) debugPrint('[TTS] spd-say introuvable : ${e.message}');
+    } finally {
+      _speaking = false;
+    }
+  }
+
   Future<void> stop() async {
     _speaking = false;
     try {
+      if (_isLinux) {
+        // Annule tous les messages en cours / en file de speech-dispatcher.
+        await Process.run('spd-say', ['-S']);
+        return;
+      }
       await _tts.stop();
     } catch (e) {
       if (kDebugMode) debugPrint('[TTS] stop KO : $e');
@@ -279,16 +345,20 @@ class TtsService {
 
   Future<void> setRate(double rate) async {
     _rate = rate.clamp(0.1, 1.0);
+    if (_isLinux) return; // appliqué par appel à _speakLinux
     await _tts.setSpeechRate(_rate);
   }
 
   Future<void> setPitch(double pitch) async {
     _pitch = pitch.clamp(0.5, 2.0);
+    if (_isLinux) return; // appliqué par appel à _speakLinux
     await _tts.setPitch(_pitch);
   }
 
-  Future<void> setVolume(double volume) =>
-      _tts.setVolume(volume.clamp(0.0, 1.0));
+  Future<void> setVolume(double volume) {
+    if (_isLinux) return Future.value(); // spd-say n'a pas d'option volume
+    return _tts.setVolume(volume.clamp(0.0, 1.0));
+  }
 
   /// Liste les voix disponibles pour la locale donnée (filtrage sur
   /// `locale.startsWith(languageCode)`). Si `locale` est null, retourne
@@ -300,6 +370,17 @@ class TtsService {
   /// serveurs Google. `includeNetwork: true` pour outrepasser (debug).
   Future<List<Map<String, String>>> listVoicesForLocale(
       [Locale? locale, bool includeNetwork = false]) async {
+    if (_isLinux) {
+      // Pseudo-voix unique : représente la voix configurée dans
+      // speech-dispatcher pour la locale demandée.
+      final lang = (locale ?? _locale).languageCode;
+      return [
+        {
+          'name': _linuxVoiceLabel,
+          'locale': '$lang-${_defaultCountryFor(lang)}',
+        },
+      ];
+    }
     final raw = await _tts.getVoices;
     if (raw is! List) return const [];
     var all = raw
@@ -339,12 +420,22 @@ class TtsService {
   }
 
   Future<List<Map<String, String>>> listEngines() async {
+    if (_isLinux)
+      return const [
+        {'name': 'speech-dispatcher'}
+      ];
     final raw = await _tts.getEngines;
     if (raw is! List) return const [];
     return raw.map((e) => {'name': e.toString()}).toList();
   }
 
   Future<void> setVoiceByName(String name, String locale) async {
+    if (_isLinux) {
+      // Pas de sélection de voix via spd-say (CLI) : on track juste le
+      // nom pour que l'UI reste cohérente.
+      _currentVoiceName = name;
+      return;
+    }
     try {
       await _tts.setVoice({'name': name, 'locale': locale});
       _currentVoiceName = name;
@@ -379,6 +470,13 @@ class TtsService {
       await _selectVoice();
       await setRate(_windowsDefaultRate);
       await setPitch(_windowsDefaultPitch);
+      return;
+    }
+    // Linux : pas de sélection de voix, mais on garde le rate/pitch du
+    // coach — c'est ce qui distingue les coachs entre eux.
+    if (_isLinux) {
+      if (rate != null) await setRate(rate);
+      if (pitch != null) await setPitch(pitch);
       return;
     }
     // Le preset coach est défini en dur dans le JSON meta (lang-indépendant)
@@ -442,6 +540,14 @@ class TtsService {
   }
 
   Future<void> dispose() async {
+    if (_isLinux) {
+      try {
+        await Process.run('spd-say', ['-S']);
+      } on ProcessException {
+        // pas grave, on ferme l'app
+      }
+      return;
+    }
     await _tts.stop();
   }
 }
