@@ -42,14 +42,14 @@ LevelMilestone _suckleBallsMilestone() {
     to: Position.balls,
     duration: 10,
   );
-  return LevelMilestone(
+  return const LevelMilestone(
     id: 'intro_suckle_balls',
     minLevel: 11,
     humilRequired: 5,
     displayLabel: 'Suckle balls',
-    sequence: const [ballsStep],
+    sequence: [ballsStep],
     durationSeconds: 10,
-    unlocks: const [UnlockKey.suckleBalls],
+    unlocks: [UnlockKey.suckleBalls],
   );
 }
 
@@ -62,14 +62,14 @@ LevelMilestone _suckleHeadMilestone() {
     to: Position.head,
     duration: 10,
   );
-  return LevelMilestone(
+  return const LevelMilestone(
     id: 'intro_suckle_head',
     minLevel: 4,
     humilRequired: 0,
     displayLabel: 'Suckle head',
-    sequence: const [headStep],
+    sequence: [headStep],
     durationSeconds: 10,
-    unlocks: const [UnlockKey.suckleHead],
+    unlocks: [UnlockKey.suckleHead],
   );
 }
 

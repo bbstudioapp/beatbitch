@@ -19,6 +19,13 @@ enum UnlockKey {
   rhythmMidBasic,
   lickFull,
   // Holds simples
+  //
+  // `holdHead` : clé pédagogique « savoir poser et tenir la bouche sur le
+  // gland sans bouger ». Ne gate pas les steps `hold to=head` du générateur
+  // (ils restent du socle de base, comme tip), c'est une clé prérequis-only
+  // — au même titre que `basics` — consommée par `intro_suckle_head` qui
+  // exige d'avoir prouvé la tenue de bouche avant d'apprendre l'aspiration.
+  holdHead,
   holdMidShort,
   throatHoldShort,
   throatHoldLong,
@@ -93,6 +100,7 @@ enum UnlockKey {
         UnlockKey.basics => 'basics',
         UnlockKey.rhythmMidBasic => 'rhythm_mid_basic',
         UnlockKey.lickFull => 'lick_full',
+        UnlockKey.holdHead => 'hold_head',
         UnlockKey.holdMidShort => 'hold_mid_short',
         UnlockKey.throatHoldShort => 'throat_hold_short',
         UnlockKey.throatHoldLong => 'throat_hold_long',
