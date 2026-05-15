@@ -3,15 +3,14 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../services/coach_phrases_loader.dart';
 import '../services/tts_service.dart';
-import '../services/user_profile_service.dart';
 import '../theme/app_theme.dart';
 
 /// Réglages de la voix par défaut de la coach : sélection de la voix TTS,
-/// vitesse, hauteur, et un bouton « Tester la voix » qui lit une phrase
-/// d'exemple (le prénom de l'utilisatrice s'il est saisi, sinon la phrase
-/// de test de la coach). Hébergé par l'écran Profil — les coachs de
-/// carrière ont leur propre voix figée, seule cette voix par défaut
-/// (utilisée hors-carrière) est paramétrable.
+/// vitesse, hauteur, et un bouton « Tester la voix » qui lit la phrase de
+/// test de la coach (avec substitution `{name}` si la phrase en contient).
+/// Hébergé par l'écran Profil — les coachs de carrière ont leur propre voix
+/// figée, seule cette voix par défaut (utilisée hors-carrière) est
+/// paramétrable.
 ///
 /// Charge la liste des voix à l'init (après `tts.init()`, idempotent) et
 /// reflète l'état courant du [TtsService] partagé : changer la voix /
@@ -19,12 +18,10 @@ import '../theme/app_theme.dart';
 /// le service vit.
 class VoiceSettingsSection extends StatefulWidget {
   final TtsService tts;
-  final UserProfileService userProfile;
 
   const VoiceSettingsSection({
     super.key,
     required this.tts,
-    required this.userProfile,
   });
 
   @override
@@ -57,11 +54,6 @@ class _VoiceSettingsSectionState extends State<VoiceSettingsSection> {
 
   Future<void> _testVoice() async {
     await widget.tts.stop();
-    final prenom = widget.userProfile.prenom?.trim();
-    if (prenom != null && prenom.isNotEmpty) {
-      await widget.tts.speak(prenom);
-      return;
-    }
     await widget.tts
         .speak(CoachPhrasesService.instance.current.testVoicePhrase);
   }
