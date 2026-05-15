@@ -297,6 +297,7 @@ class _CareerScreenState extends State<CareerScreen> {
       coachModeWeights: activeCoach.modeWeights,
       sessionName: t.careerSessionName(clamped),
       sessionNameQuickie: t.careerSessionNameQuickie(clamped),
+      anatomy: widget.userProfile.anatomy,
     );
 
     final introText = coachBank.pickIntro(Random());
@@ -577,6 +578,7 @@ class _CareerScreenState extends State<CareerScreen> {
       coachModeWeights: activeCoach.modeWeights,
       sessionName: t.careerSessionName(newLevel),
       sessionNameQuickie: t.careerSessionNameQuickie(newLevel),
+      anatomy: widget.userProfile.anatomy,
     );
 
     final rng = Random();
@@ -667,6 +669,7 @@ class _CareerScreenState extends State<CareerScreen> {
       coachModeWeights: activeCoach.modeWeights,
       sessionName: t.careerSessionName(level),
       sessionNameQuickie: t.careerSessionNameQuickie(level),
+      anatomy: widget.userProfile.anatomy,
     );
 
     final rng = Random();
@@ -776,6 +779,7 @@ class _CareerScreenState extends State<CareerScreen> {
       coachModeWeights: activeCoach.modeWeights,
       sessionName: t.careerSessionName(level),
       sessionNameQuickie: t.careerSessionNameQuickie(level),
+      anatomy: widget.userProfile.anatomy,
     );
 
     final camService = CameraMotionService();

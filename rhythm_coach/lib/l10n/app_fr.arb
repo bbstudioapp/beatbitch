@@ -105,6 +105,9 @@
       "error": { "type": "String" }
     }
   },
+  "profileAnatomySection": "ANATOMIE",
+  "profileAnatomyHasBalls": "Inclure les testicules",
+  "profileAnatomyHasBallsSubtitle": "Désactive si ton setup n'en a pas (jouet sans testicules, autre). La coach n'orientera plus d'actions vers cette zone.",
   "profileStatsSection": "STATISTIQUES",
   "profileStatsEmpty": "Aucune statistique pour l'instant. Termine quelques séances pour révéler tes compteurs.",
   "profileBadgesSection": "BADGES",
@@ -433,6 +436,7 @@
   "soundsPosDescMid": "Médium",
   "soundsPosDescThroat": "Grave",
   "soundsPosDescFull": "Très grave, lourd",
+  "soundsPosDescBalls": "Très grave et sourd, zone latérale",
   "soundsDebugSection": "Debug",
   "soundsDebugSubtitle": "Options techniques pour le développement.",
   "soundsDebugShowTimer": "Afficher le timer",
@@ -509,6 +513,7 @@
   "positionMid": "Milieu",
   "positionThroat": "Gorge",
   "positionFull": "Tout",
+  "positionBalls": "Couilles",
 
   "modeShortRhythm": "SUCE",
   "modeShortHold": "AU FOND",

@@ -39,6 +39,13 @@ class MovementAnimation extends StatefulWidget {
   /// causé par deux Timer parallèles non synchronisés.
   final BeepEngine? beepEngine;
 
+  /// Nombre de positions affichées sur l'axe vertical du ladder. Permet
+  /// de masquer la 6ᵉ ligne (`Position.balls`) tant que la zone n'est
+  /// pas révélée par la milestone d'unlock + le toggle `AnatomyProfile`.
+  /// Par défaut : 5 lignes (`tip..full`, sans balls). Le SessionScreen
+  /// passe la valeur calculée à partir du contexte joueuse.
+  final int positionRowCount;
+
   const MovementAnimation({
     super.key,
     required this.mode,
@@ -47,6 +54,7 @@ class MovementAnimation extends StatefulWidget {
     required this.bpm,
     this.height = 160,
     this.beepEngine,
+    this.positionRowCount = 5,
   });
 
   @override
@@ -255,6 +263,7 @@ class _MovementAnimationState extends State<MovementAnimation>
           color: color,
           cursorStyle: cursorStyle,
           lastBeatAt: _lastBeatAt,
+          rowCount: widget.positionRowCount,
         ),
       SessionMode.biffle => _Pulse(t: t, color: color),
       SessionMode.hold || SessionMode.beg => _StaticPosition(
@@ -262,6 +271,7 @@ class _MovementAnimationState extends State<MovementAnimation>
           t: t,
           color: color,
           cursorStyle: cursorStyle,
+          rowCount: widget.positionRowCount,
         ),
       SessionMode.breath ||
       SessionMode.freestyle =>
@@ -307,10 +317,12 @@ class _MovementAnimationState extends State<MovementAnimation>
 /// - [tongue] : pastille horizontale (langue qui lèche).
 enum _CursorStyle { orb, ring, tongue }
 
-/// Échelle verticale 5 positions (tip en haut, full en bas) avec un
-/// curseur (orbe / anneau / langue) qui glisse entre `from` et `to` à
-/// chaque battement. Quand `from == to`, le curseur pulse simplement
-/// sur cette position.
+/// Échelle verticale de positions (tip en haut, dernière en bas) avec
+/// un curseur (orbe / anneau / langue) qui glisse entre `from` et `to`
+/// à chaque battement. Le nombre de lignes est paramétré par [rowCount]
+/// — par défaut 5 (`tip..full`), 6 quand `Position.balls` est révélée
+/// (anatomie + milestone). Quand `from == to`, le curseur pulse
+/// simplement sur cette position.
 ///
 /// Le curseur **glisse** vers la prochaine cible avec une courbe d'easing
 /// (`Curves.easeInOutCubic`) sur la durée d'un beat. Anticipation : départ
@@ -335,6 +347,11 @@ class _PositionLadder extends StatelessWidget {
   final _CursorStyle cursorStyle;
   final DateTime? lastBeatAt;
 
+  /// Nombre de positions affichées (5 = sans balls, 6 = avec balls).
+  /// Borne `_toAlign` pour que les positions visibles restent espacées
+  /// uniformément dans la hauteur disponible quel que soit le rowCount.
+  final int rowCount;
+
   const _PositionLadder({
     required this.from,
     required this.to,
@@ -343,6 +360,7 @@ class _PositionLadder extends StatelessWidget {
     required this.color,
     required this.cursorStyle,
     required this.lastBeatAt,
+    required this.rowCount,
   });
 
   /// Fenêtre de prévision de la trajectoire future. Volontairement plus longue
@@ -370,7 +388,8 @@ class _PositionLadder extends StatelessWidget {
   Widget build(BuildContext context) {
     // Cible courante du curseur : flipped=false → `to`, flipped=true → `from`.
     final target = flipped ? from : to;
-    final targetAlignment = Alignment(_kCursorX, _toAlign(target.index));
+    final targetAlignment =
+        Alignment(_kCursorX, _toAlign(target.index, rowCount));
 
     final activeIndices = {from.index, to.index};
     final beats = _computeFutureBeats();
@@ -383,10 +402,10 @@ class _PositionLadder extends StatelessWidget {
         // c'est sur la verge) → utile pour tous les modes mais surtout pour
         // hand qui sinon évoque le même axe que la bouche sans repère.
         const _ShaftBackdrop(),
-        // Lignes horizontales fines pour repérer les 5 positions.
-        for (var i = 0; i < Position.values.length; i++)
+        // Lignes horizontales fines pour repérer les positions visibles.
+        for (var i = 0; i < rowCount; i++)
           Align(
-            alignment: Alignment(0, _toAlign(i)),
+            alignment: Alignment(0, _toAlign(i, rowCount)),
             child: FractionallySizedBox(
               widthFactor: 0.55,
               child: Container(
@@ -445,9 +464,9 @@ class _PositionLadder extends StatelessWidget {
           ),
         ),
         // Labels de position à droite. Mis en avant pour from / to.
-        for (var i = 0; i < Position.values.length; i++)
+        for (var i = 0; i < rowCount; i++)
           Align(
-            alignment: Alignment(0.92, _toAlign(i)),
+            alignment: Alignment(0.92, _toAlign(i, rowCount)),
             child: Text(
               Position.values[i].localizedLabel(context),
               style: TextStyle(
@@ -481,10 +500,12 @@ class _PositionLadder extends StatelessWidget {
     );
   }
 
-  /// Convertit un index de position (0..4) en y d'Alignment (-1..1).
-  static double _toAlign(int index) => Position.values.length == 1
-      ? 0
-      : index / (Position.values.length - 1) * 2 - 1;
+  /// Convertit un index de position en y d'Alignment (-1..1) sur un
+  /// ladder de [rowCount] lignes. Avec [rowCount] = 5, l'index 4 (full)
+  /// tombe en bas (y=1) ; avec [rowCount] = 6, l'index 5 (balls) tombe
+  /// en bas et full remonte à 0.6.
+  static double _toAlign(int index, int rowCount) =>
+      rowCount <= 1 ? 0 : index / (rowCount - 1) * 2 - 1;
 
   /// Calcule les points de la trajectoire future :
   /// - point 0 : position visible courante du curseur (interpolée easeInOutCubic).
@@ -716,11 +737,16 @@ class _StaticPosition extends StatelessWidget {
   final double t;
   final Color color;
   final _CursorStyle cursorStyle;
+
+  /// Nombre de positions visibles sur le ladder (cf. `_PositionLadder`).
+  final int rowCount;
+
   const _StaticPosition({
     required this.position,
     required this.t,
     required this.color,
     required this.cursorStyle,
+    required this.rowCount,
   });
 
   @override
@@ -730,10 +756,10 @@ class _StaticPosition extends StatelessWidget {
       alignment: Alignment.center,
       children: [
         const _ShaftBackdrop(),
-        // Repères des 5 positions, plus discrets que pour rhythm.
-        for (var i = 0; i < Position.values.length; i++)
+        // Repères des positions visibles, plus discrets que pour rhythm.
+        for (var i = 0; i < rowCount; i++)
           Align(
-            alignment: Alignment(0, _PositionLadder._toAlign(i)),
+            alignment: Alignment(0, _PositionLadder._toAlign(i, rowCount)),
             child: FractionallySizedBox(
               widthFactor: 0.4,
               child: Container(
@@ -743,7 +769,8 @@ class _StaticPosition extends StatelessWidget {
             ),
           ),
         Align(
-          alignment: Alignment(0.92, _PositionLadder._toAlign(position.index)),
+          alignment: Alignment(
+              0.92, _PositionLadder._toAlign(position.index, rowCount)),
           child: Text(
             position.localizedLabel(context),
             style: TextStyle(
@@ -755,8 +782,8 @@ class _StaticPosition extends StatelessWidget {
           ),
         ),
         Align(
-          alignment:
-              Alignment(_kCursorX, _PositionLadder._toAlign(position.index)),
+          alignment: Alignment(
+              _kCursorX, _PositionLadder._toAlign(position.index, rowCount)),
           child: Transform.scale(
             scale: pulse,
             child: _Cursor(style: cursorStyle, color: color),

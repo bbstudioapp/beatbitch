@@ -23,10 +23,17 @@ class CustomConfigEditorScreen extends StatefulWidget {
   final CustomSessionConfig initial;
   final bool isNew;
 
+  /// Indique si la zone `Position.balls` est disponible dans le setup
+  /// de la joueuse (cf. `AnatomyProfile.hasBalls`). Quand `false`, le
+  /// slider de profondeur max est borné à `Position.full` et un éventuel
+  /// `maxDepthIndex` legacy à `balls` est clampé à `full` au load.
+  final bool hasBalls;
+
   const CustomConfigEditorScreen({
     super.key,
     required this.initial,
     required this.isNew,
+    required this.hasBalls,
   });
 
   @override
@@ -61,7 +68,13 @@ class _CustomConfigEditorScreenState extends State<CustomConfigEditorScreen> {
       for (final m in SessionMode.values) m: c.doses[m] ?? ModeDose.normal
     };
     _difficulty = c.difficulty;
-    _maxDepthIndex = c.maxDepthIndex;
+    // Clamp legacy : une config sauvegardée avec `balls` reste cohérente
+    // si l'utilisatrice désactive ensuite la zone dans son anatomy.
+    _maxDepthIndex = widget.hasBalls
+        ? c.maxDepthIndex
+        : (c.maxDepthIndex > Position.full.index
+            ? Position.full.index
+            : c.maxDepthIndex);
     _bpmRange = RangeValues(c.bpmMin.toDouble(), c.bpmMax.toDouble());
     _holdRange = RangeValues(
       c.holdDurationMin.toDouble(),
@@ -273,8 +286,11 @@ class _CustomConfigEditorScreenState extends State<CustomConfigEditorScreen> {
           Slider(
             value: _maxDepthIndex.toDouble(),
             min: 0,
-            max: 4,
-            divisions: 4,
+            // Borne haute = balls (5) si l'anatomy l'inclut, sinon full (4).
+            max: (widget.hasBalls ? Position.balls.index : Position.full.index)
+                .toDouble(),
+            divisions:
+                widget.hasBalls ? Position.balls.index : Position.full.index,
             label: Position.values[_maxDepthIndex].localizedLabel(context),
             onChanged: (v) => setState(() => _maxDepthIndex = v.round()),
           ),

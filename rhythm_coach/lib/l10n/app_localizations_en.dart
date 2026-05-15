@@ -225,6 +225,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get profileAnatomySection => 'ANATOMY';
+
+  @override
+  String get profileAnatomyHasBalls => 'Include testicles';
+
+  @override
+  String get profileAnatomyHasBallsSubtitle =>
+      'Disable if your setup doesn\'t have them (toy without testicles, other). The coach won\'t direct actions to that area anymore.';
+
+  @override
   String get profileStatsSection => 'STATISTICS';
 
   @override
@@ -851,6 +861,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get soundsPosDescFull => 'Very low, heavy';
 
   @override
+  String get soundsPosDescBalls => 'Very low and muffled, side area';
+
+  @override
   String get soundsDebugSection => 'Debug';
 
   @override
@@ -1080,6 +1093,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get positionFull => 'Full';
+
+  @override
+  String get positionBalls => 'Balls';
 
   @override
   String get modeShortRhythm => 'SUCK';

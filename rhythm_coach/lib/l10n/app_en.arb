@@ -105,6 +105,9 @@
       "error": { "type": "String" }
     }
   },
+  "profileAnatomySection": "ANATOMY",
+  "profileAnatomyHasBalls": "Include testicles",
+  "profileAnatomyHasBallsSubtitle": "Disable if your setup doesn't have them (toy without testicles, other). The coach won't direct actions to that area anymore.",
   "profileStatsSection": "STATISTICS",
   "profileStatsEmpty": "No stats yet. Finish a few sessions to reveal your counters.",
   "profileBadgesSection": "BADGES",
@@ -433,6 +436,7 @@
   "soundsPosDescMid": "Mid",
   "soundsPosDescThroat": "Low",
   "soundsPosDescFull": "Very low, heavy",
+  "soundsPosDescBalls": "Very low and muffled, side area",
   "soundsDebugSection": "Debug",
   "soundsDebugSubtitle": "Technical options for development.",
   "soundsDebugShowTimer": "Show timer",
@@ -509,6 +513,7 @@
   "positionMid": "Mid",
   "positionThroat": "Throat",
   "positionFull": "Full",
+  "positionBalls": "Balls",
 
   "modeShortRhythm": "SUCK",
   "modeShortHold": "DEEP",

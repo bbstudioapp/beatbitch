@@ -24,6 +24,10 @@ class BeepEngine {
   static const String _midAsset = 'mid_beep';
   static const String _throatAsset = 'throat_beep';
   static const String _fullAsset = 'full_beep';
+  // Zone latérale (testicules). Sample plus grave que `full` (~180Hz)
+  // pour évoquer une zone "en-dessous" anatomiquement, sans interférer
+  // avec la rampe `tip→full` qui reste la zone verge.
+  static const String _ballsAsset = 'balls_beep';
   static const String _holdAsset = 'hold_beep';
   static const String _biffleAsset = 'biffle_beep';
   static const String _breathAsset = 'breath_beep';
@@ -44,6 +48,7 @@ class BeepEngine {
     _midAsset,
     _throatAsset,
     _fullAsset,
+    _ballsAsset,
     _holdAsset,
     _biffleAsset,
     _breathAsset,
@@ -551,6 +556,7 @@ class BeepEngine {
         Position.mid => _midAsset,
         Position.throat => _throatAsset,
         Position.full => _fullAsset,
+        Position.balls => _ballsAsset,
       };
 
   void _stopLoop() {

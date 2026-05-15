@@ -2,12 +2,20 @@ import '../services/saliva_engine.dart';
 import 'session.dart';
 
 /// Position cible d'une étape. Détermine la tonalité du bip joué.
+///
+/// `balls` est une zone latérale (testicules) plutôt qu'un cran de
+/// profondeur supplémentaire, mais on la place sur le même axe pour
+/// permettre les combos d'amplitude `lick full/balls` (= bouche sur
+/// full, langue qui descend lécher les couilles). Sa disponibilité
+/// dépend de `AnatomyProfile.hasBalls` (cf. `UserProfileService`) et,
+/// en carrière, du déblocage de la milestone `intro_balls_lick`.
 enum Position {
   tip,
   head,
   mid,
   throat,
-  full;
+  full,
+  balls;
 
   static Position? fromString(String? raw) {
     if (raw == null) return null;
@@ -17,6 +25,7 @@ enum Position {
       'mid' => Position.mid,
       'throat' => Position.throat,
       'full' => Position.full,
+      'balls' => Position.balls,
       _ => null,
     };
   }

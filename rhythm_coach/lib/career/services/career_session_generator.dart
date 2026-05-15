@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
+import '../../models/anatomy_profile.dart';
 import '../../models/final_category.dart';
 import '../../models/punishment.dart';
 import '../../models/session.dart';
@@ -165,6 +166,13 @@ class CareerSessionGenerator {
   /// dont la clé n'est pas dedans est rejetée par `_isUnlocked` et dégradée
   /// par `_stepDownOne`. Vide = aucune clé requise (mode héritage).
   Set<UnlockKey> _unlockedKeys = const {};
+
+  /// Profil anatomique de la joueuse — pour gater les zones non disponibles
+  /// dans son setup (testicules absents → tous les steps `Position.balls`
+  /// rejetés par `_isUnlocked`). Default = tout disponible (rétrocompat
+  /// pour tests / mode hérité). Le call site carrière / Custom passe la
+  /// valeur lue depuis `UserProfileService.anatomy`.
+  AnatomyProfile _anatomy = AnatomyProfile.defaults;
 
   /// Multiplicateur de poids par mode, fourni par le coach actif. Combiné
   /// **multiplicativement** par-dessus la pondération spé dans `_modeWeight`.
@@ -631,6 +639,12 @@ class CareerSessionGenerator {
     /// premier maillon d'un encore enchaîné via
     /// `SessionController.capabilitySessionCeilings`.
     Map<CapabilityAxis, double> capabilitySessionCeilings = const {},
+
+    /// Profil anatomique de la joueuse. Default = tout disponible
+    /// (rétrocompat carrière / tests). Quand `hasBalls = false`, aucun
+    /// step sur `Position.balls` n'est généré (filtre `_isUnlocked`
+    /// précoce, indépendant du gating milestone).
+    AnatomyProfile anatomy = AnatomyProfile.defaults,
   }) {
     assert(
       finalMilestone == null ||
@@ -674,6 +688,7 @@ class CareerSessionGenerator {
     _obedience = obedience;
     _capProfile = capabilityProfile;
     _capCeilings = capabilitySessionCeilings;
+    _anatomy = anatomy;
     _bpmRange = _normalizeBpmRange(bpmRange);
     _holdDurationRange = _normalizeHoldRange(holdDurationRange);
     _pickOverloadAxis();
@@ -3762,6 +3777,7 @@ class CareerSessionGenerator {
     double obedience = 100.0,
     bool includeHand = true,
     Map<SessionMode, double> coachModeWeights = const {},
+    AnatomyProfile anatomy = AnatomyProfile.defaults,
   }) {
     // Réinitialise l'état comme le ferait `generate`, pour que les helpers
     // (`_clampToCapability`, `_isUnlocked`, `_pickPhrase`...) lisent les
@@ -3773,6 +3789,7 @@ class CareerSessionGenerator {
     _unlockedKeys = unlockedKeys;
     _capProfile = capabilityProfile;
     _capCeilings = capabilitySessionCeilings;
+    _anatomy = anatomy;
     _spec = specialization ?? SpecializationAllocation.empty();
     _humiliationCareer = humiliationCareer;
     _humiliationSession = humiliationSession;
@@ -4264,6 +4281,10 @@ class CareerSessionGenerator {
           return FinalCategory.hard;
         case Position.full:
           return FinalCategory.extreme;
+        case Position.balls:
+          // Très humiliant (sloppy + soumis) mais sans la composante
+          // apnée/asphyxie de full → palier `hard`, pas `extreme`.
+          return FinalCategory.hard;
         case null:
           return FinalCategory.medium;
       }
@@ -4347,6 +4368,20 @@ class CareerSessionGenerator {
   /// reste sur la position pendant la supplique). On les bloque donc tant
   /// que begLibre n'est pas acquise — elle reste la fondation pédagogique.
   bool _isUnlocked(_StepDraft d) {
+    // Anatomy gate (toujours actif, même en mode hérité) : la zone
+    // balls n'est pas dans le setup → aucun step jouable dessus.
+    final touchesBalls = d.from == Position.balls || d.to == Position.balls;
+    if (touchesBalls && !_anatomy.hasBalls) return false;
+    // Modes-incompatibles : balls n'est pertinent que pour lick / hold /
+    // beg (zone à lécher / aspirer / supplier-en-tenant). Pas de pompage
+    // rythmé sur les couilles — gating structurel indépendant du contexte
+    // (anatomy, milestone, mode hérité ou non).
+    if (touchesBalls &&
+        (d.mode == SessionMode.rhythm ||
+            d.mode == SessionMode.hand ||
+            d.mode == SessionMode.biffle)) {
+      return false;
+    }
     if (_unlockedKeys.isEmpty) return true;
     if (d.mode == SessionMode.beg &&
         !_unlockedKeys.contains(UnlockKey.begLibre)) {
