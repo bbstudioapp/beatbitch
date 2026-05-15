@@ -424,7 +424,7 @@
       "displayLabel": "Lèche-moi les couilles",
       "unlocks": ["lick_balls"],
       "requires": ["lick_full"],
-      "branches": ["profondeur", "sloppy"],
+      "branches": ["sloppy"],
       "requiresHands": true,
       "sequence": [
         {"time": 0,  "text": "Aujourd'hui tu descends plus bas. Tu vas me lécher les couilles. Échauffe-toi en lèchant toute la longueur.", "mode": "lick", "from": "tip", "to": "throat", "bpm": 60, "duration": 14},
@@ -441,7 +441,7 @@
       "displayLabel": "Tiens-les en bouche",
       "unlocks": ["hold_balls"],
       "requires": ["lick_balls"],
-      "branches": ["profondeur", "endurance", "sloppy"],
+      "branches": ["sloppy", "endurance"],
       "requiresHands": true,
       "sequence": [
         {"time": 0,  "text": "Aujourd'hui tu vas les prendre en bouche. Échauffe en léchant.", "mode": "lick", "from": "throat", "to": "balls", "bpm": 55, "duration": 14},
