@@ -88,6 +88,32 @@ class BeepEngine {
   /// hold_beep ~450 ms) : sans cette marge des bips manquaient par moments.
   static const int _poolSize = 4;
 
+  /// Samples ≥ 200 ms pour lesquels on force un `seek(Duration.zero)` avant
+  /// chaque `resume()`. Sur Android, `audioplayers` ne remet pas toujours la
+  /// position à 0 entre deux `resume()` rapprochés si le plugin n'a pas encore
+  /// vu `onPlayerComplete` (le canal natif considère le player encore en
+  /// lecture) → le `resume()` passe sans erreur mais ne re-déclenche rien : le
+  /// bip est silencieusement perdu. Symptôme observé : « bip de gorge qui ne
+  /// sonne pas » par moments. Le pool round-robin de 4 dilue déjà le problème
+  /// mais ne le supprime pas quand le sample est long (le player suivant peut
+  /// hériter du même état "playing" mal réinitialisé).
+  ///
+  /// Coût : un appel canal natif de plus par bip sur ces assets. Les samples
+  /// courts (tip/head/mid 110–160 ms, hand_down/up 60–90 ms, biffle 140 ms)
+  /// gardent le chemin rapide — leur durée laisse au plugin le temps de voir
+  /// la complétion entre deux beats même à 180 BPM.
+  ///
+  /// Freestyle start/end et finale_chime sont longs aussi mais joués une seule
+  /// fois par session → pas de risque de chevauchement.
+  static const Set<String> _longSampleAssets = {
+    _throatAsset,
+    _fullAsset,
+    _ballsAsset,
+    _holdAsset,
+    _breathAsset,
+    _suckleAsset,
+  };
+
   final Map<String, _PlayerPool> _pools = {};
   final Random _random = Random();
   bool _initialized = false;
@@ -574,11 +600,12 @@ class BeepEngine {
     final pool = _pools[assetName];
     if (pool == null) return;
     final picked = pool.next(volume);
+    final needsReplaySeek = _longSampleAssets.contains(assetName);
     () async {
-      // setVolume et resume dans des `try` indépendants : un `setVolume` qui
-      // jette (PlatformException ponctuelle observée sur certains Android
+      // setVolume, seek et resume dans des `try` indépendants : un échec sur
+      // une étape (PlatformException ponctuelle observée sur certains Android
       // quand les appels canal s'enchaînent vite) ne doit pas court-circuiter
-      // le `resume` — sinon le bip est silencieusement perdu, exactement le
+      // les suivantes — sinon le bip est silencieusement perdu, exactement le
       // « bip qui manque de temps à autre » signalé. Et on saute carrément le
       // `setVolume` quand le volume n'a pas changé sur ce player (cas courant
       // d'un loop rythmé) → un appel canal de moins par bip, moins de
@@ -588,6 +615,18 @@ class BeepEngine {
           await picked.player.setVolume(volume);
         } catch (e) {
           if (kDebugMode) debugPrint('[BeepEngine] setVolume error : $e');
+        }
+      }
+      if (needsReplaySeek) {
+        // Sur les samples longs, on force la position à 0 avant `resume()` :
+        // sans ça, si le plugin n'a pas encore vu `onPlayerComplete` (Android
+        // peut avoir un hoquet de scheduling), le `resume()` ne redéclenche
+        // rien et le bip de gorge/full/hold manque. Cf. doc de
+        // [_longSampleAssets].
+        try {
+          await picked.player.seek(Duration.zero);
+        } catch (e) {
+          if (kDebugMode) debugPrint('[BeepEngine] seek error : $e');
         }
       }
       try {
