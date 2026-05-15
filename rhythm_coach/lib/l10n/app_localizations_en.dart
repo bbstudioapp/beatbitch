@@ -805,6 +805,23 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get soundsSuckleSection => 'Suckle (suction)';
+
+  @override
+  String get soundsSuckleSubtitle =>
+      'Pulsed wet slurp. One tap plays a single hit; in session it repeats every ~1.2 s for the step duration.';
+
+  @override
+  String soundsSuckleButton(String position) {
+    return 'Suckle $position';
+  }
+
+  @override
+  String soundsSucklePositionSubtitle(String name) {
+    return 'Suckle on $name';
+  }
+
+  @override
   String get soundsSpecificSounds => 'Specific sounds';
 
   @override
@@ -862,6 +879,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get soundsPosDescBalls => 'Very low and muffled, side area';
+
+  @override
+  String get soundsPosDescSuckle => 'Mid wet tone, steady suction pulse';
 
   @override
   String get soundsDebugSection => 'Debug';
@@ -1120,6 +1140,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get modeShortHand => 'STROKE';
+
+  @override
+  String get modeShortSuckle => 'SUCKLE';
 
   @override
   String get badgeTierBronze => 'Bronze';

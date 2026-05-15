@@ -567,6 +567,9 @@ Map<CapabilityAxis, double> _axesFromMilestoneSequence(SimMilestone m) {
       case SessionMode.freestyle:
       case SessionMode.hand:
       case SessionMode.hold:
+      case SessionMode.suckle:
+        // Suckle ne consomme aucun axe capability (geste actif-statique
+        // hors palette des records). On le laisse passer sans contribuer.
         break;
     }
   }

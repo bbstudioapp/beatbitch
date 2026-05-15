@@ -99,6 +99,7 @@ class CustomSessionConfig {
     SessionMode.biffle,
     SessionMode.hand,
     SessionMode.freestyle,
+    SessionMode.suckle,
   ];
 
   final String id;

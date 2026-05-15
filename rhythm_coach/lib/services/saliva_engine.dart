@@ -266,6 +266,25 @@ class SalivaEngine {
         final pos = to ?? from;
         if (pos == null) return -0.5;
         return (_holdProductionByPos[pos] ?? 0.0) * 0.8;
+      case SessionMode.suckle:
+        // Aspirer = bouche au contact + travail actif des lèvres et de
+        // la langue → grosse production de salive sur head (zone sensible
+        // de la verge), bcp plus modérée sur balls (humil pure, moins de
+        // pompage). On extrapole sur `_holdProductionByPos[head]` pour
+        // head et un cran intermédiaire pour balls.
+        final pos = to ?? from;
+        if (pos == Position.head) {
+          final base = _holdProductionByPos[Position.head] ?? 0.0;
+          return base * 1.6;
+        }
+        if (pos == Position.balls) {
+          // Pas de mapping `_holdProductionByPos` pour balls (zone
+          // latérale, pas une profondeur). On retombe sur la valeur de
+          // throat × 0.7 : sloppy pas trop, position humil pas sensible.
+          final base = _holdProductionByPos[Position.throat] ?? 0.0;
+          return base * 0.7;
+        }
+        return 0.0;
     }
   }
 

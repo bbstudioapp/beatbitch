@@ -484,6 +484,11 @@ class CareerSessionGenerator {
       case SessionMode.lick:
       case SessionMode.breath:
       case SessionMode.freestyle:
+      case SessionMode.suckle:
+        // Suckle : pas de BPM, position figée par construction (head ou
+        // balls, filtrée en amont par `_isUnlocked`). Aucun axe capability
+        // pertinent → pas de cap difficile. Durée bornée par la palette,
+        // pas par le profil.
         break; // pas de cap de difficulté pour ces modes
     }
     if (from == d.from &&
@@ -2580,6 +2585,25 @@ class CareerSessionGenerator {
         final dur = _lerp(8.0, 18.0, durScore).round();
         return _StepDraft(
             mode: mode, bpm: null, from: null, to: null, duration: dur);
+      case SessionMode.suckle:
+        // Aspiration : pas de BPM (pulse fixe ~1.2s côté audio), position
+        // tenue dans `to`. Tirage par défaut sur `head` (zone introductive,
+        // unlock `suckleHead` au level 4-5). `balls` n'est jamais proposé
+        // par ce tirage générique — il faut une milestone explicite ou un
+        // gating dédié pour y arriver (anatomy + `suckleBalls`). Sécurité
+        // : `_isUnlocked` rejette `suckle` si `to ∉ {head, balls}`, ce qui
+        // garantit qu'un suckle head produit ici n'est joué que si la
+        // milestone d'intro est acquise.
+        final dur = _scaleDuration(
+          _lerp(8.0, 18.0, durScore),
+          enduranceFactor: 0.04,
+        );
+        return _StepDraft(
+            mode: mode,
+            bpm: null,
+            from: null,
+            to: Position.head,
+            duration: dur);
     }
   }
 
@@ -2873,6 +2897,16 @@ class CareerSessionGenerator {
         // alors que les autres candidats prennent la friction de quitter
         // bouche). Un poids bas le garde comme option ponctuelle.
         return 0.25;
+      case SessionMode.suckle:
+        // Aspiration : geste actif-statique. Sloppy boost (bouche humide)
+        // et un peu d'obéissance (geste explicite et soumis). Pas de boost
+        // profondeur — suckle n'est jamais une profondeur de pompage, c'est
+        // une pratique latérale (head ou balls). Base 0.6 pour rester dans
+        // la veine « palette ponctuelle » comme freestyle/breath — c'est un
+        // mode de couleur, pas un mode de chauffe.
+        return 0.6 +
+            0.40 * _pts(SpecializationBranch.sloppy) +
+            0.15 * _pts(SpecializationBranch.obeissance);
     }
   }
 
@@ -3025,6 +3059,19 @@ class CareerSessionGenerator {
       case SessionMode.freestyle:
         // Phase libre : neutre côté endurance (ni effort ni vraie regen).
         break;
+      case SessionMode.suckle:
+        // Aspiration / téter : la bouche bosse sans aller-retour. Coût
+        // par seconde modéré, plus marqué sur head (zone sensible →
+        // pompage actif) que sur balls (sloppy soumis mais peu intense
+        // musculairement). On modélise sur `_holdCostPerSec` de
+        // StaminaEngine en l'ajustant : head ≈ 60 % d'un hold mid, balls
+        // ≈ 30 % (moins d'effort de la bouche, plus de l'humil).
+        final pos = draft.to ?? draft.from;
+        if (pos == Position.head) {
+          next -= 0.30 * dur;
+        } else if (pos == Position.balls) {
+          next -= 0.15 * dur;
+        }
     }
     return next;
   }
@@ -4331,6 +4378,11 @@ class CareerSessionGenerator {
           return UnlockKey.holdBalls;
         case SessionMode.beg:
           return UnlockKey.begBalls;
+        case SessionMode.suckle:
+          // Aspiration sur les couilles : gating dédié + filtre anatomy
+          // côté MilestoneService (le générateur a déjà rejeté `suckle to:balls`
+          // si `hasBalls=false`).
+          return UnlockKey.suckleBalls;
         default:
           return null;
       }
@@ -4387,6 +4439,12 @@ class CareerSessionGenerator {
         return null;
       case SessionMode.breath:
         return null;
+      case SessionMode.suckle:
+        // Suckle hors balls (filtré au-dessus) → forcément head. Gating
+        // dédié, indépendant de la profondeur générique (suckle head n'est
+        // pas une généralisation de hold head — c'est un geste explicite
+        // à introduire pédagogiquement par sa propre milestone).
+        return UnlockKey.suckleHead;
     }
   }
 
@@ -4420,6 +4478,15 @@ class CareerSessionGenerator {
             d.mode == SessionMode.hand ||
             d.mode == SessionMode.biffle)) {
       return false;
+    }
+    // Suckle : positions valides = `head` et `balls`. Toute autre cible
+    // (tip / mid / throat / full) est structurellement rejetée — l'action
+    // n'a pas de sens sur ces zones (aspiration sur la verge profonde =
+    // hold, pas suckle ; aspiration sur le bout = lick tip). Filtre actif
+    // même en mode hérité pour rester cohérent en Custom et scénarios JSON.
+    if (d.mode == SessionMode.suckle) {
+      final target = d.to ?? d.from;
+      if (target != Position.head && target != Position.balls) return false;
     }
     if (_unlockedKeys.isEmpty) return true;
     if (d.mode == SessionMode.beg &&
@@ -4759,6 +4826,11 @@ _StepType _classifyStep(SessionMode mode, Position? to) {
     case SessionMode.breath:
     case SessionMode.freestyle:
       return _StepType.transit;
+    case SessionMode.suckle:
+      // Aspiration : bouche au contact (head ou balls). On classe comme
+      // `bouche` pour bénéficier de la même friction de continuité que
+      // hold/beg-tenu — éviter d'enchaîner deux modes bouche sans pause.
+      return _StepType.bouche;
   }
 }
 
