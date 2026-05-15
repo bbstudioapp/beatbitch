@@ -269,6 +269,7 @@ class _CustomModeScreenState extends State<CustomModeScreen> {
                 ? (ctrl) => _handleCycle(b, bank, coach, cfg, ctrl, 1)
                 : null,
             onRequestFinishNow: (ctrl) => _handleFinishNow(bank, cfg, ctrl, 0),
+            anatomy: widget.userProfile.anatomy,
           ),
         ),
       );
@@ -339,6 +340,7 @@ class _CustomModeScreenState extends State<CustomModeScreen> {
               _handleCycle(b, bank, coach, cfg, ctrl, nextCycleIndex + 1),
           onRequestFinishNow: (ctrl) =>
               _handleFinishNow(bank, cfg, ctrl, nextCycleIndex),
+          anatomy: widget.userProfile.anatomy,
         ),
       ),
     );

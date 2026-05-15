@@ -3659,6 +3659,27 @@ class CareerSessionGenerator {
       ));
     }
 
+    // Lick full→balls : variante d'apothéose « sloppy descente » introduite
+    // par la milestone `intro_balls_lick`. Pas de gate-final dédiée — on
+    // réutilise `UnlockKey.lickBalls` (la zone est apprise une fois pour
+    // toutes, le gating de niveau est porté implicitement par la milestone
+    // qui débloque la clé). Filtre anatomy assuré par `_isUnlocked` sur
+    // le composant. req = 16 (depthLick balls) + 1 (amplitude full→balls)
+    // = 17, donc accessible passé chauffe sans atteindre hold full (req 22).
+    if (_anatomy.hasBalls) {
+      candidates.add((
+        const _StepDraft(
+          mode: SessionMode.lick,
+          bpm: 55,
+          from: Position.full,
+          to: Position.balls,
+          duration: 16,
+        ),
+        17.0,
+        UnlockKey.lickBalls,
+      ));
+    }
+
     if (maxDepth >= Position.full.index) {
       // Cible évolutive avec l'humiliation accumulée. Seuil d'introduction
       // full ≈ 30 d'humiliation (req intrinsèque hold full 10s = 22,
@@ -4296,6 +4317,24 @@ class CareerSessionGenerator {
   /// est libre par défaut. Le mapping se base sur les milestones existantes
   /// (cf. `assets/career/milestones.json`).
   UnlockKey? _unlockKeyFor(_StepDraft d) {
+    // Balls : zone latérale, gating dédié (`lickBalls`/`holdBalls`/`begBalls`)
+    // qui prime sur les clés génériques de profondeur. Le filtre anatomy +
+    // modes-incompatibles vit dans `_isUnlocked` (rhythm/hand/biffle balls
+    // sont déjà rejetés en amont) — ici on suppose que la zone est légitime
+    // pour le mode courant.
+    final touchesBalls = d.from == Position.balls || d.to == Position.balls;
+    if (touchesBalls) {
+      switch (d.mode) {
+        case SessionMode.lick:
+          return UnlockKey.lickBalls;
+        case SessionMode.hold:
+          return UnlockKey.holdBalls;
+        case SessionMode.beg:
+          return UnlockKey.begBalls;
+        default:
+          return null;
+      }
+    }
     switch (d.mode) {
       case SessionMode.hold:
         // Convention : hold/beg portent leur position dans `to`. Les holds

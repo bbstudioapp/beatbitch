@@ -202,6 +202,7 @@ class _CareerScreenState extends State<CareerScreen> {
     // candidate dépend pédagogiquement de la 1ʳᵉ (ou si pool insuffisant).
     final cfg = CareerLevel.forLevel(clamped);
     final wantDualBody = !quickie && cfg.durationSeconds >= 18 * 60;
+    final anatomy = widget.userProfile.anatomy;
     final insertedBodies = quickie
         ? const <LevelMilestone>[]
         : milestoneService.pendingForList(
@@ -211,6 +212,7 @@ class _CareerScreenState extends State<CareerScreen> {
             playerLevel: bundle.maxLevel,
             allocation: bundle.specialization,
             capabilityProfile: bundle.capabilityProfile,
+            anatomy: anatomy,
           );
     final finalCandidates = quickie
         ? const <LevelMilestone>[]
@@ -220,6 +222,7 @@ class _CareerScreenState extends State<CareerScreen> {
             playerLevel: bundle.maxLevel,
             allocation: bundle.specialization,
             capabilityProfile: bundle.capabilityProfile,
+            anatomy: anatomy,
             placement: MilestonePlacement.finalApotheose,
           );
     final finalMilestone =
@@ -236,6 +239,7 @@ class _CareerScreenState extends State<CareerScreen> {
         playerLevel: bundle.maxLevel,
         allocation: bundle.specialization,
         capabilityProfile: bundle.capabilityProfile,
+        anatomy: anatomy,
       );
       final insertedIds = insertedBodies.map((m) => m.id).toSet();
       final notChosen = <LevelMilestone>[
@@ -365,6 +369,7 @@ class _CareerScreenState extends State<CareerScreen> {
             bundle,
             clamped,
           ),
+          anatomy: anatomy,
         ),
       ),
     );
@@ -831,6 +836,7 @@ class _CareerScreenState extends State<CareerScreen> {
                     includeHand: includeHand,
                     quickie: quickie,
                   ),
+          anatomy: widget.userProfile.anatomy,
         ),
       ),
     );

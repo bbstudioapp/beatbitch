@@ -73,7 +73,15 @@ enum UnlockKey {
   // `intro_fake_breath` n'est pas acquittée (en carrière). En mode
   // hérité — Custom / scénarios / debug, `_unlockedKeys.isEmpty` — le
   // mécanisme reste actif sans gating.
-  fakeBreath;
+  fakeBreath,
+  // Position balls — zone latérale (testicules). Gating anatomy assuré
+  // séparément par `AnatomyProfile.hasBalls` dans `_isUnlocked` ; ces
+  // clés gouvernent l'apprentissage pédagogique chez les joueuses qui
+  // ont la zone. Trois actions distinctes : lick (toucher de langue),
+  // hold (tenir en bouche), beg (supplique en tenant).
+  lickBalls,
+  holdBalls,
+  begBalls;
 
   String get serialized => switch (this) {
         UnlockKey.basics => 'basics',
@@ -110,6 +118,9 @@ enum UnlockKey {
         UnlockKey.encore => 'encore',
         UnlockKey.surpriseNotifs => 'surprise_notifs',
         UnlockKey.fakeBreath => 'fake_breath',
+        UnlockKey.lickBalls => 'lick_balls',
+        UnlockKey.holdBalls => 'hold_balls',
+        UnlockKey.begBalls => 'beg_balls',
       };
 
   static UnlockKey? fromString(String? raw) {
