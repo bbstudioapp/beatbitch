@@ -12,10 +12,10 @@
 //
 // Migrations livrées :
 //   * `delta` — calcul du Δ endurance (cf. `_StaminaModel.delta`).
-//
-// Migrations en cours :
 //   * `unlockKeyFor` — gate UnlockKey requis pour qu'un draft soit jouable
 //     en mode carrière (cf. `_HumiliationGates.unlockKeyFor`).
+//   * `clampToCapability` — bornes profondeur / BPM / durée issues du
+//     profil de capacités (cf. `_CapabilityClamps.clampToCapability`).
 
 part of 'career_session_generator.dart';
 
@@ -45,6 +45,18 @@ abstract class _ModeRules {
   /// méthode ne tient pas compte de cette convention — elle retourne
   /// toujours la clé mécanique.
   UnlockKey? unlockKeyFor(_StepDraft draft) => null;
+
+  /// Borne un draft à l'enveloppe « profil de capacités » : profondeur,
+  /// BPM et durée ne dépassent pas ce que la joueuse a *prouvé* tenir.
+  /// Default = identité (les modes non pilotants — `hand`, `lick`,
+  /// `breath`, `freestyle`, `suckle` — ne sont jamais clampés par le
+  /// profil ; cf. règle « hand n'est jamais un levier de difficulté »).
+  ///
+  /// La gestion centrale de `chainNext` (récursion) et de la composition
+  /// avec `clampToCustomLimits` (bornes utilisateur Custom) reste côté
+  /// `_CapabilityClamps.clampToCapability` — chaque rule ne touche qu'à
+  /// son draft principal.
+  _StepDraft clampToCapability(_StepDraft draft, _CapabilityClamps c) => draft;
 }
 
 /// Règles `breath` : toujours regen. Vitesse 2.8 stamina/s — règle de
@@ -141,6 +153,30 @@ class _BiffleRules extends _ModeRules {
   @override
   UnlockKey? unlockKeyFor(_StepDraft draft) =>
       (draft.bpm ?? 0) > 100 ? UnlockKey.biffleFast : UnlockKey.biffleBasic;
+
+  @override
+  _StepDraft clampToCapability(_StepDraft draft, _CapabilityClamps c) {
+    var bpm = draft.bpm;
+    var dur = draft.duration;
+    final durCap = c.capabilityCapFor(CapabilityAxis.biffleStreak);
+    if (durCap != null && dur != null && dur > durCap) {
+      dur = max(2, durCap.floor());
+    }
+    final bpmCap = c.capabilityCapFor(CapabilityAxis.biffleBpmMax);
+    if (bpmCap != null && bpm != null && bpm > bpmCap) {
+      bpm = bpmCap.round();
+    }
+    if (bpm == draft.bpm && dur == draft.duration) return draft;
+    return _StepDraft(
+      mode: draft.mode,
+      bpm: bpm,
+      bpmEnd: draft.bpmEnd,
+      from: draft.from,
+      to: draft.to,
+      duration: dur,
+      chainNext: draft.chainNext,
+    );
+  }
 }
 
 /// Règles `lick` : BPM ≤ 60 = vraie récup vocale (regen), au-delà = effort
@@ -207,6 +243,36 @@ class _HoldRules extends _ModeRules {
     }
     return null;
   }
+
+  @override
+  _StepDraft clampToCapability(_StepDraft draft, _CapabilityClamps c) =>
+      _clampHeldDuration(draft, c);
+}
+
+/// Cap durée mutualisé hold + beg : convention `to` porte la position
+/// tenue (repli `from`). Pour throat / full, on prend le min des deux
+/// axes pertinents — la durée tenable de la position ET l'apnée prouvée.
+_StepDraft _clampHeldDuration(_StepDraft draft, _CapabilityClamps c) {
+  var dur = draft.duration;
+  final held = draft.to ?? draft.from;
+  if (held != Position.throat && held != Position.full) return draft;
+  final cap = _CapabilityClamps.minNullable(
+    c.capabilityCapFor(held == Position.throat
+        ? CapabilityAxis.holdThroatStreak
+        : CapabilityAxis.holdFullStreak),
+    c.capabilityCapFor(CapabilityAxis.gorgeApneeStreak),
+  );
+  if (cap == null || dur == null || dur <= cap) return draft;
+  dur = max(2, cap.floor());
+  return _StepDraft(
+    mode: draft.mode,
+    bpm: draft.bpm,
+    bpmEnd: draft.bpmEnd,
+    from: draft.from,
+    to: draft.to,
+    duration: dur,
+    chainNext: draft.chainNext,
+  );
 }
 
 /// Règles `beg` : convention uniforme hold/beg, la position tenue est dans
@@ -247,6 +313,10 @@ class _BegRules extends _ModeRules {
     // milestone ne les a explicitement introduits.
     return UnlockKey.begThroat;
   }
+
+  @override
+  _StepDraft clampToCapability(_StepDraft draft, _CapabilityClamps c) =>
+      _clampHeldDuration(draft, c);
 }
 
 /// Règles `rhythm` : coût modulé par profondeur cible (mid pèse le plus :
@@ -285,6 +355,73 @@ class _RhythmRules extends _ModeRules {
     // Rythme superficiel (tip→head) = socle de base, pas de clé.
     if ((draft.bpm ?? 0) >= 160) return UnlockKey.rhythmExtreme;
     return null;
+  }
+
+  @override
+  _StepDraft clampToCapability(_StepDraft draft, _CapabilityClamps c) {
+    var from = draft.from;
+    var to = draft.to;
+    var bpm = draft.bpm;
+    var bpmEnd = draft.bpmEnd;
+    var dur = draft.duration;
+
+    // Profondeur (cran). Plancher `head` : un rhythm a besoin d'au moins
+    // une amplitude tip↔head, jamais tip↔tip.
+    final depthCap = c.capabilityCapFor(CapabilityAxis.rhythmDepthMax);
+    if (depthCap != null && to != null) {
+      final capIdx = max(Position.head.index,
+          depthCap.round().clamp(0, Position.values.length - 1));
+      if (to.index > capIdx) to = Position.values[capIdx];
+    }
+    // Garde-fou amplitude `from < to` strict après abaissement de `to`.
+    if (from != null && to != null && from.index >= to.index) {
+      from = to.index > 0 ? Position.values[to.index - 1] : null;
+    }
+    // BPM : plafond de bande + plafond franchissement si pattern
+    // franchissant (`from ≤ mid` ET `to ≥ throat`).
+    if (to != null && (bpm != null || bpmEnd != null)) {
+      var bpmCap =
+          c.capabilityCapFor(_CapabilityClamps.rhythmBpmCeilAxisFor(to));
+      if (from != null &&
+          from.index <= Position.mid.index &&
+          to.index >= Position.throat.index) {
+        bpmCap = _CapabilityClamps.minNullable(
+          bpmCap,
+          c.capabilityCapFor(to == Position.throat
+              ? CapabilityAxis.gorgeCrossingsBpmThroat
+              : CapabilityAxis.gorgeCrossingsBpmFull),
+        );
+      }
+      if (bpmCap != null) {
+        final cap = bpmCap.round();
+        if (bpm != null && bpm > cap) bpm = cap;
+        if (bpmEnd != null && bpmEnd > cap) bpmEnd = cap;
+      }
+    }
+    // Apnée : un stroke airless (`from ≥ throat`) borne sa durée à
+    // l'apnée prouvée.
+    if (from != null && from.index >= Position.throat.index && dur != null) {
+      final apneaCap = c.capabilityCapFor(CapabilityAxis.gorgeApneeStreak);
+      if (apneaCap != null && dur > apneaCap) {
+        dur = max(2, apneaCap.floor());
+      }
+    }
+    if (from == draft.from &&
+        to == draft.to &&
+        bpm == draft.bpm &&
+        bpmEnd == draft.bpmEnd &&
+        dur == draft.duration) {
+      return draft;
+    }
+    return _StepDraft(
+      mode: draft.mode,
+      bpm: bpm,
+      bpmEnd: bpmEnd,
+      from: from,
+      to: to,
+      duration: dur,
+      chainNext: draft.chainNext,
+    );
   }
 
   @override
