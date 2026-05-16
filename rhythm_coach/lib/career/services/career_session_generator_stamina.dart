@@ -86,134 +86,16 @@ class _StaminaModel {
   /// le gain (positif) sans clamp, pour pouvoir détecter un déficit projeté
   /// (= dette d'endurance qu'il faut combler par un breath, cf. D3 du plan).
   ///
-  /// Comptabilité endurance : modes effort consomment (taux ~doublés par
-  /// rapport à la v1, qui descendait beaucoup trop lentement), modes respi
-  /// ≤ 60 BPM régénèrent (multiplicateur qui monte avec `progress`),
-  /// au-dessus c'est neutre.
+  /// Dispatch polymorphique : chaque mode a sa règle dans
+  /// `_modeStaminaRulesRegistry` (cf. `career_session_generator_mode_rules.dart`).
+  /// Comptabilité endurance : modes effort consomment, modes respi régénèrent
+  /// (multiplicateur qui monte avec `progress`), freestyle est neutre.
   static double delta(
     _StepDraft draft,
     double progress,
     CareerLevel cfg,
-  ) {
-    final dur = draft.duration ?? 0;
-    var next = 0.0;
-    switch (draft.mode) {
-      case SessionMode.rhythm:
-        final bpm = (draft.bpm ?? 60).toDouble();
-        final depth = positionDepth(draft.from, draft.to);
-        // Multiplicateur de coût accentué dès que `to` atteint mid
-        // (idx 2). Sur les bas niveaux, c'est la profondeur où on tient
-        // le rythme la plus longtemps, et l'endurance ne descendait
-        // quasiment pas — ajout d'un coup de fatigue plus marqué.
-        // to=mid: ×1.45, to=throat: ×1.30, to=full: ×1.15.
-        final toIdx = (draft.to ?? draft.from)?.index ?? 0;
-        final depthMul = toIdx >= Position.full.index
-            ? 1.15
-            : toIdx >= Position.throat.index
-                ? 1.30
-                : toIdx >= Position.mid.index
-                    ? 1.45
-                    : 1.0;
-        // Bénéfice respiration : un step à grande amplitude (ex tip→full,
-        // mid→throat) laisse une fenêtre de respi au creux du va-et-vient.
-        // À l'inverse, un step throat/full ou throat/throat = pas de
-        // respiration, coût plein. À haute vitesse, le bénéfice s'évanouit
-        // (la respi n'a plus le temps de s'installer entre deux beats).
-        // Formule : amplitudeFactor ∈ [0,1] = (toIdx - fromIdx) / 4
-        //          bpmFactor ∈ [0,1] = clamp((100-bpm)/40, 0, 1)
-        //          respiBenefit = amplitudeFactor × bpmFactor × 0.40
-        // → tip→full 60bpm : −40 % de coût
-        // → mid→full 60bpm : −20 %
-        // → throat→full 60bpm : −10 %
-        // → mid→full 100bpm : 0 % (BPM trop haut)
-        final fromIdx = (draft.from)?.index ?? toIdx;
-        final amplitude = (toIdx - fromIdx).clamp(0, 4);
-        final amplitudeFactor = amplitude / 4.0;
-        final respiBpmFactor = ((100.0 - bpm) / 40.0).clamp(0.0, 1.0);
-        final respiBenefit = amplitudeFactor * respiBpmFactor * 0.40;
-        final costFactor = (1.0 - respiBenefit).clamp(0.6, 1.0);
-        next -= (bpm / 100.0) * depth * dur * depthMul * costFactor / 3.0;
-      case SessionMode.hold:
-        // Convention uniforme : hold/beg portent leur position dans `to`.
-        final depth = positionDepth(draft.to, draft.to);
-        next -= depth * dur / 2.5;
-      case SessionMode.biffle:
-        // Biffle = effort soutenu (la fille encaisse), conso entre rythme
-        // et hold, modulée par la profondeur.
-        final bpm = (draft.bpm ?? 80).toDouble();
-        final depth = positionDepth(draft.from, draft.to);
-        next -= (bpm / 100.0) * depth * dur / 3.5;
-      case SessionMode.beg:
-        // Convention uniforme : hold/beg portent leur position dans `to`.
-        // Sans `to` ou `to = head` → assimilé à du repos vocal (regen).
-        // Avec `to = mid/throat/full` → coût comme un hold à cette
-        // profondeur (la position doit être tenue pendant la supplique).
-        final to = draft.to;
-        if (to == null || to == Position.head) {
-          final regen = lerp(
-            cfg.regenStartMultiplier,
-            cfg.regenEndMultiplier,
-            progress,
-          );
-          next += dur * 1.0 * regen;
-        } else {
-          final depth = positionDepth(to, to);
-          next -= depth * dur / 2.5;
-        }
-      case SessionMode.lick:
-        final bpm = draft.bpm ?? 60;
-        if (bpm <= 60) {
-          // Lick lent = vraie récup vocale.
-          final regen = lerp(
-            cfg.regenStartMultiplier,
-            cfg.regenEndMultiplier,
-            progress,
-          );
-          next += dur * 1.2 * regen;
-        } else {
-          // Lick plus vite = effort léger, on ne récupère plus et on
-          // s'épuise un peu.
-          final depth = positionDepth(draft.from, draft.to);
-          next -= depth * dur / 8.0;
-        }
-      case SessionMode.breath:
-        // Toujours regen : breath n'est jamais un step d'effort. Vitesse
-        // poussée à 2.8 stamina/s — règle de design : un breath doit être
-        // plus court que les steps d'action qu'il sépare, sinon la
-        // dramaturgie ressemble à « action / longue pause / action /
-        // longue pause ». À 2.8/s, 8 s rendent ~22 stamina, ce qui couvre
-        // un step rythme moyen (~20 de coût) et permet d'enchaîner.
-        final regen = lerp(
-          cfg.regenStartMultiplier,
-          cfg.regenEndMultiplier,
-          progress,
-        );
-        next += dur * 2.8 * regen;
-      case SessionMode.hand:
-        // Hand = effort modéré côté endurance (la bouche se repose, mais
-        // la main travaille). On consomme moins que rhythm équivalent.
-        final bpm = (draft.bpm ?? 80).toDouble();
-        final depth = positionDepth(draft.from, draft.to);
-        next -= (bpm / 100.0) * depth * dur / 6.0;
-      case SessionMode.freestyle:
-        // Phase libre : neutre côté endurance (ni effort ni vraie regen).
-        break;
-      case SessionMode.suckle:
-        // Aspiration / téter : la bouche bosse sans aller-retour. Coût
-        // par seconde modéré, plus marqué sur head (zone sensible →
-        // pompage actif) que sur balls (sloppy soumis mais peu intense
-        // musculairement). On modélise sur `_holdCostPerSec` de
-        // StaminaEngine en l'ajustant : head ≈ 60 % d'un hold mid, balls
-        // ≈ 30 % (moins d'effort de la bouche, plus de l'humil).
-        final pos = draft.to ?? draft.from;
-        if (pos == Position.head) {
-          next -= 0.30 * dur;
-        } else if (pos == Position.balls) {
-          next -= 0.15 * dur;
-        }
-    }
-    return next;
-  }
+  ) =>
+      _modeStaminaRulesRegistry[draft.mode]!.delta(draft, progress, cfg);
 
   /// Applique [delta] à `stamina`, en plafonnant à [cap].
   ///
