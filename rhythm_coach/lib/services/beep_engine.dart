@@ -24,6 +24,10 @@ class BeepEngine {
   static const String _midAsset = 'mid_beep';
   static const String _throatAsset = 'throat_beep';
   static const String _fullAsset = 'full_beep';
+  // Zone latérale (testicules). Sample plus grave que `full` (~180Hz)
+  // pour évoquer une zone "en-dessous" anatomiquement, sans interférer
+  // avec la rampe `tip→full` qui reste la zone verge.
+  static const String _ballsAsset = 'balls_beep';
   static const String _holdAsset = 'hold_beep';
   static const String _biffleAsset = 'biffle_beep';
   static const String _breathAsset = 'breath_beep';
@@ -34,6 +38,10 @@ class BeepEngine {
   // distinct du pool bouche pour parser les combos hand+rhythm/lick.
   static const String _handDownAsset = 'hand_down_beep';
   static const String _handUpAsset = 'hand_up_beep';
+  // Suckle : sample wet à fade-out mou, rejoué en pulse régulier (~1.2s)
+  // pendant `duration` pour évoquer l'aspiration. Pas de loop BPM, pas
+  // d'amplitude — la position est tenue, la bouche bosse sur place.
+  static const String _suckleAsset = 'suckle_beep';
   static const String _freestyleStartAsset = 'freestyle_start';
   static const String _freestyleEndAsset = 'freestyle_end';
   static const String _finaleChimeAsset = 'finale_chime';
@@ -44,11 +52,13 @@ class BeepEngine {
     _midAsset,
     _throatAsset,
     _fullAsset,
+    _ballsAsset,
     _holdAsset,
     _biffleAsset,
     _breathAsset,
     _handDownAsset,
     _handUpAsset,
+    _suckleAsset,
     _freestyleStartAsset,
     _freestyleEndAsset,
     _finaleChimeAsset,
@@ -61,6 +71,14 @@ class BeepEngine {
   static const double _handVolume = 0.85;
   static const double _holdLayerVolume = 0.9;
   static const double _breathVolume = 0.9;
+  // Suckle : un peu plus doux qu'un rhythm — la bouche aspire au lieu
+  // de frapper, le rendu reste wet sans dominer la piste.
+  static const double _suckleVolume = 0.75;
+
+  /// Intervalle entre deux pulsations d'aspiration en mode suckle.
+  /// ~50 BPM perçu, mais sans alternance from↔to (la position est tenue).
+  /// Cf. doc de [SessionMode.suckle].
+  static const Duration _sucklePulse = Duration(milliseconds: 1200);
 
   /// 4 players par sample. Round-robin : un bip ne réutilise jamais un player
   /// avant ses 3 voisins, donc le décay du précédent n'est jamais coupé même
@@ -69,6 +87,32 @@ class BeepEngine {
   /// jusqu'à 180) et quand un step combine deux samples (hold = position +
   /// hold_beep ~450 ms) : sans cette marge des bips manquaient par moments.
   static const int _poolSize = 4;
+
+  /// Samples ≥ 200 ms pour lesquels on force un `seek(Duration.zero)` avant
+  /// chaque `resume()`. Sur Android, `audioplayers` ne remet pas toujours la
+  /// position à 0 entre deux `resume()` rapprochés si le plugin n'a pas encore
+  /// vu `onPlayerComplete` (le canal natif considère le player encore en
+  /// lecture) → le `resume()` passe sans erreur mais ne re-déclenche rien : le
+  /// bip est silencieusement perdu. Symptôme observé : « bip de gorge qui ne
+  /// sonne pas » par moments. Le pool round-robin de 4 dilue déjà le problème
+  /// mais ne le supprime pas quand le sample est long (le player suivant peut
+  /// hériter du même état "playing" mal réinitialisé).
+  ///
+  /// Coût : un appel canal natif de plus par bip sur ces assets. Les samples
+  /// courts (tip/head/mid 110–160 ms, hand_down/up 60–90 ms, biffle 140 ms)
+  /// gardent le chemin rapide — leur durée laisse au plugin le temps de voir
+  /// la complétion entre deux beats même à 180 BPM.
+  ///
+  /// Freestyle start/end et finale_chime sont longs aussi mais joués une seule
+  /// fois par session → pas de risque de chevauchement.
+  static const Set<String> _longSampleAssets = {
+    _throatAsset,
+    _fullAsset,
+    _ballsAsset,
+    _holdAsset,
+    _breathAsset,
+    _suckleAsset,
+  };
 
   final Map<String, _PlayerPool> _pools = {};
   final Random _random = Random();
@@ -124,6 +168,12 @@ class BeepEngine {
 
   /// Timer de fin de freestyle : déclenche le bip de fin après `duration`.
   Timer? _freestyleEndTimer;
+
+  /// Timer périodique du mode suckle : rejoue [_suckleAsset] toutes les
+  /// [_sucklePulse]. Indépendant de [_loopTimer] / [_loopGen] : pas de
+  /// rampe BPM ni d'alternance, juste un pulse régulier annulé sur
+  /// pause/stop ou changement de step.
+  Timer? _suckleTimer;
 
   /// Callback notifié à chaque beat émis par un loop (rhythm/lick/biffle/hand).
   /// Le SessionController s'y abonne pour comptabiliser stats + excitation.
@@ -230,6 +280,7 @@ class BeepEngine {
       case SessionMode.biffle:
       case SessionMode.breath:
       case SessionMode.freestyle:
+      case SessionMode.suckle:
         return true;
       case SessionMode.beg:
         return incomingTo == null;
@@ -265,11 +316,18 @@ class BeepEngine {
       _loopDurationMs = null;
     }
 
-    // Hold et beg : la position cible vient de `step.to` (sémantique « tenir
-    // jusqu'à ce point »). On la stocke dans `_from` pour rester compatible
-    // avec les consommateurs UI (currentFrom). Pour rhythm/lick/hand/biffle :
-    // `_from` = step.from (point de départ de l'alternance).
-    if (mode == SessionMode.hold || mode == SessionMode.beg) {
+    // Hold / beg / suckle : la position cible vient de `step.to` (sémantique
+    // « tenir / aspirer à ce point »). On la stocke dans `_from` pour rester
+    // compatible avec les consommateurs UI (`currentFrom`, badge, ladder du
+    // `MovementAnimation` qui s'aligne sur `widget.from` pour les modes
+    // statiques). Sans cette ligne pour suckle, `_from` héritait de la
+    // position du step rythmé précédent → le ladder affichait « tip » /
+    // « head » selon le from précédent malgré un suckle to=head ou balls.
+    // Pour rhythm/lick/hand/biffle : `_from` = step.from (point de départ
+    // de l'alternance).
+    if (mode == SessionMode.hold ||
+        mode == SessionMode.beg ||
+        mode == SessionMode.suckle) {
       if (step.to != null) _from = step.to!;
     } else if (step.from != null) {
       _from = step.from!;
@@ -289,6 +347,8 @@ class BeepEngine {
     _stopLoop();
     _freestyleEndTimer?.cancel();
     _freestyleEndTimer = null;
+    _suckleTimer?.cancel();
+    _suckleTimer = null;
 
     // Gap de transition : silence avant le démarrage du nouveau mode pour
     // fluidifier l'enchaînement et laisser le temps physique de changer
@@ -351,7 +411,33 @@ class BeepEngine {
           _playHoldOneShot(step.to!);
         }
         break;
+      case SessionMode.suckle:
+        // Aspiration / téter : pulse régulier ~1.2s, pas de loop BPM,
+        // pas d'amplitude. Le sample wet est rejoué pendant `duration`,
+        // le visuel se charge du pulse du curseur via le AnimationController
+        // côté MovementAnimation.
+        _startSuckleLoop(step.duration);
+        break;
     }
+  }
+
+  /// Lance le pulse périodique d'aspiration. Le 1er coup tombe immédiatement
+  /// (cohérence avec rhythm/biffle qui jouent à `t=0`), puis toutes les
+  /// [_sucklePulse] jusqu'à la fin de [durationSec] ou à l'arrivée du step
+  /// suivant. `duration == null` ou <= 0 → pulse indéfini, stoppé seulement
+  /// par le prochain `applyStep` / `pause` / `stop`.
+  void _startSuckleLoop(int? durationSec) {
+    _trigger(_suckleAsset, _suckleVolume);
+    final endMs = (durationSec != null && durationSec > 0)
+        ? DateTime.now().millisecondsSinceEpoch + durationSec * 1000
+        : null;
+    _suckleTimer = Timer.periodic(_sucklePulse, (timer) {
+      if (endMs != null && DateTime.now().millisecondsSinceEpoch >= endMs) {
+        timer.cancel();
+        return;
+      }
+      _trigger(_suckleAsset, _suckleVolume);
+    });
   }
 
   /// Loop principal pour les modes rythmés (rhythm/lick/hand). Le sample joué
@@ -521,11 +607,12 @@ class BeepEngine {
     final pool = _pools[assetName];
     if (pool == null) return;
     final picked = pool.next(volume);
+    final needsReplaySeek = _longSampleAssets.contains(assetName);
     () async {
-      // setVolume et resume dans des `try` indépendants : un `setVolume` qui
-      // jette (PlatformException ponctuelle observée sur certains Android
+      // setVolume, seek et resume dans des `try` indépendants : un échec sur
+      // une étape (PlatformException ponctuelle observée sur certains Android
       // quand les appels canal s'enchaînent vite) ne doit pas court-circuiter
-      // le `resume` — sinon le bip est silencieusement perdu, exactement le
+      // les suivantes — sinon le bip est silencieusement perdu, exactement le
       // « bip qui manque de temps à autre » signalé. Et on saute carrément le
       // `setVolume` quand le volume n'a pas changé sur ce player (cas courant
       // d'un loop rythmé) → un appel canal de moins par bip, moins de
@@ -535,6 +622,18 @@ class BeepEngine {
           await picked.player.setVolume(volume);
         } catch (e) {
           if (kDebugMode) debugPrint('[BeepEngine] setVolume error : $e');
+        }
+      }
+      if (needsReplaySeek) {
+        // Sur les samples longs, on force la position à 0 avant `resume()` :
+        // sans ça, si le plugin n'a pas encore vu `onPlayerComplete` (Android
+        // peut avoir un hoquet de scheduling), le `resume()` ne redéclenche
+        // rien et le bip de gorge/full/hold manque. Cf. doc de
+        // [_longSampleAssets].
+        try {
+          await picked.player.seek(Duration.zero);
+        } catch (e) {
+          if (kDebugMode) debugPrint('[BeepEngine] seek error : $e');
         }
       }
       try {
@@ -551,6 +650,7 @@ class BeepEngine {
         Position.mid => _midAsset,
         Position.throat => _throatAsset,
         Position.full => _fullAsset,
+        Position.balls => _ballsAsset,
       };
 
   void _stopLoop() {
@@ -590,6 +690,13 @@ class BeepEngine {
   void playBreathOnce() {
     if (!_initialized) return;
     _playBreathOneShot();
+  }
+
+  /// Joue un seul coup du sample d'aspiration. Pour la démo SoundDemoScreen :
+  /// pas de pulse, juste un slurp ponctuel pour identifier le son.
+  void playSuckleOnce() {
+    if (!_initialized) return;
+    _trigger(_suckleAsset, _suckleVolume);
   }
 
   void startRhythmDemo({
@@ -696,6 +803,8 @@ class BeepEngine {
     _stopLoop();
     _freestyleEndTimer?.cancel();
     _freestyleEndTimer = null;
+    _suckleTimer?.cancel();
+    _suckleTimer = null;
     for (final pool in _pools.values) {
       for (final p in pool.players) {
         try {
@@ -721,6 +830,12 @@ class BeepEngine {
       case SessionMode.beg:
       case SessionMode.freestyle:
         // Modes one-shot ou silencieux — rien à reprendre.
+        break;
+      case SessionMode.suckle:
+        // Reprend le pulse à partir de zéro (le timer a été annulé par
+        // pause). On n'a pas la durée résiduelle ici → repulse indéfini,
+        // de toute façon le prochain step coupera proprement.
+        _startSuckleLoop(null);
         break;
     }
   }

@@ -496,6 +496,24 @@ abstract class AppLocalizations {
   /// **'Erreur :\n{error}'**
   String profileLoadError(String error);
 
+  /// No description provided for @profileAnatomySection.
+  ///
+  /// In fr, this message translates to:
+  /// **'ANATOMIE'**
+  String get profileAnatomySection;
+
+  /// No description provided for @profileAnatomyHasBalls.
+  ///
+  /// In fr, this message translates to:
+  /// **'Inclure les testicules'**
+  String get profileAnatomyHasBalls;
+
+  /// No description provided for @profileAnatomyHasBallsSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Désactive si ton setup n\'en a pas (jouet sans testicules, autre). La coach n\'orientera plus d\'actions vers cette zone.'**
+  String get profileAnatomyHasBallsSubtitle;
+
   /// No description provided for @profileStatsSection.
   ///
   /// In fr, this message translates to:
@@ -1450,6 +1468,30 @@ abstract class AppLocalizations {
   /// **'{name} + hold layer'**
   String soundsHoldPositionSubtitle(String name);
 
+  /// No description provided for @soundsSuckleSection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Suckle (aspiration / téter)'**
+  String get soundsSuckleSection;
+
+  /// No description provided for @soundsSuckleSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Slurp humide pulsé. Joue un seul coup ici, en séance c\'est répété toutes les ~1,2 s pendant la durée du step.'**
+  String get soundsSuckleSubtitle;
+
+  /// No description provided for @soundsSuckleButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'Suckle {position}'**
+  String soundsSuckleButton(String position);
+
+  /// No description provided for @soundsSucklePositionSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aspiration sur {name}'**
+  String soundsSucklePositionSubtitle(String name);
+
   /// No description provided for @soundsSpecificSounds.
   ///
   /// In fr, this message translates to:
@@ -1557,6 +1599,18 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Très grave, lourd'**
   String get soundsPosDescFull;
+
+  /// No description provided for @soundsPosDescBalls.
+  ///
+  /// In fr, this message translates to:
+  /// **'Très grave et sourd, zone latérale'**
+  String get soundsPosDescBalls;
+
+  /// No description provided for @soundsPosDescSuckle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Médium humide, pulse régulier d\'aspiration'**
+  String get soundsPosDescSuckle;
 
   /// No description provided for @soundsDebugSection.
   ///
@@ -1996,6 +2050,12 @@ abstract class AppLocalizations {
   /// **'Tout'**
   String get positionFull;
 
+  /// No description provided for @positionBalls.
+  ///
+  /// In fr, this message translates to:
+  /// **'Couilles'**
+  String get positionBalls;
+
   /// No description provided for @modeShortRhythm.
   ///
   /// In fr, this message translates to:
@@ -2043,6 +2103,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'BRANLE'**
   String get modeShortHand;
+
+  /// No description provided for @modeShortSuckle.
+  ///
+  /// In fr, this message translates to:
+  /// **'GOBE'**
+  String get modeShortSuckle;
 
   /// No description provided for @badgeTierBronze.
   ///

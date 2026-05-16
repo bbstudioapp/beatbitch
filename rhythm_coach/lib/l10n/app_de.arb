@@ -105,6 +105,9 @@
       "error": { "type": "String" }
     }
   },
+  "profileAnatomySection": "ANATOMIE",
+  "profileAnatomyHasBalls": "Hoden einbeziehen",
+  "profileAnatomyHasBallsSubtitle": "Deaktivieren, wenn dein Setup keine hat (Spielzeug ohne Hoden, anderes). Die Coach wird keine Aktionen mehr auf diesen Bereich lenken.",
   "profileStatsSection": "STATISTIKEN",
   "profileStatsEmpty": "Noch keine Statistiken. Beende ein paar Sessions, um deine Zähler zu enthüllen.",
   "profileBadgesSection": "ABZEICHEN",
@@ -415,6 +418,20 @@
       "name": { "type": "String" }
     }
   },
+  "soundsSuckleSection": "Saugen (Aspiration)",
+  "soundsSuckleSubtitle": "Pulsierender feuchter Schlürfer. Hier ein einzelner Schlag, in der Session wird er alle ~1,2 s wiederholt.",
+  "soundsSuckleButton": "Saug {position}",
+  "@soundsSuckleButton": {
+    "placeholders": {
+      "position": { "type": "String" }
+    }
+  },
+  "soundsSucklePositionSubtitle": "Saugen auf {name}",
+  "@soundsSucklePositionSubtitle": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
   "soundsSpecificSounds": "Spezifische Sounds",
   "soundsBiffleOneShot": "Schwanzschlag (One-Shot)",
   "soundsBiffleOneShotSubtitle": "Kurzer, perkussiver Sound. Im Loop folgt er den BPM.",
@@ -433,6 +450,8 @@
   "soundsPosDescMid": "Mittel",
   "soundsPosDescThroat": "Tief",
   "soundsPosDescFull": "Sehr tief, schwer",
+  "soundsPosDescBalls": "Sehr tief und gedämpft, seitlicher Bereich",
+  "soundsPosDescSuckle": "Mittlerer feuchter Ton, gleichmäßiger Saug-Puls",
   "soundsDebugSection": "Debug",
   "soundsDebugSubtitle": "Technische Optionen für die Entwicklung.",
   "soundsDebugShowTimer": "Timer anzeigen",
@@ -509,6 +528,7 @@
   "positionMid": "Mitte",
   "positionThroat": "Kehle",
   "positionFull": "Ganz",
+  "positionBalls": "Hoden",
 
   "modeShortRhythm": "LUTSCH",
   "modeShortHold": "TIEF",
@@ -518,6 +538,7 @@
   "modeShortBeg": "BETTLE",
   "modeShortFreestyle": "FREI",
   "modeShortHand": "WICHS",
+  "modeShortSuckle": "SAUG",
 
   "badgeTierBronze": "Bronze",
   "badgeTierSilver": "Silber",

@@ -25,7 +25,7 @@
     "encore_fallback": "Nochmal. Zurück an die Arbeit."
   },
   "test_phrases": {
-    "voice": "Los, zeig mir, was du kannst. Tiefer, langsamer.",
+    "voice": "Los {name}, zeig mir, was du kannst. Tiefer, langsamer.",
     "identity": "Weiter so, {name}. Du schaffst das, {name}."
   }
 }

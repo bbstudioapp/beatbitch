@@ -224,6 +224,16 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get profileAnatomySection => 'ANATOMIE';
+
+  @override
+  String get profileAnatomyHasBalls => 'Hoden einbeziehen';
+
+  @override
+  String get profileAnatomyHasBallsSubtitle =>
+      'Deaktivieren, wenn dein Setup keine hat (Spielzeug ohne Hoden, anderes). Die Coach wird keine Aktionen mehr auf diesen Bereich lenken.';
+
+  @override
   String get profileStatsSection => 'STATISTIKEN';
 
   @override
@@ -794,6 +804,23 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get soundsSuckleSection => 'Saugen (Aspiration)';
+
+  @override
+  String get soundsSuckleSubtitle =>
+      'Pulsierender feuchter Schlürfer. Hier ein einzelner Schlag, in der Session wird er alle ~1,2 s wiederholt.';
+
+  @override
+  String soundsSuckleButton(String position) {
+    return 'Saug $position';
+  }
+
+  @override
+  String soundsSucklePositionSubtitle(String name) {
+    return 'Saugen auf $name';
+  }
+
+  @override
   String get soundsSpecificSounds => 'Spezifische Sounds';
 
   @override
@@ -848,6 +875,13 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get soundsPosDescFull => 'Sehr tief, schwer';
+
+  @override
+  String get soundsPosDescBalls => 'Sehr tief und gedämpft, seitlicher Bereich';
+
+  @override
+  String get soundsPosDescSuckle =>
+      'Mittlerer feuchter Ton, gleichmäßiger Saug-Puls';
 
   @override
   String get soundsDebugSection => 'Debug';
@@ -1082,6 +1116,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get positionFull => 'Ganz';
 
   @override
+  String get positionBalls => 'Hoden';
+
+  @override
   String get modeShortRhythm => 'LUTSCH';
 
   @override
@@ -1104,6 +1141,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get modeShortHand => 'WICHS';
+
+  @override
+  String get modeShortSuckle => 'SAUG';
 
   @override
   String get badgeTierBronze => 'Bronze';

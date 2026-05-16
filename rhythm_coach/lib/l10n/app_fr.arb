@@ -105,6 +105,9 @@
       "error": { "type": "String" }
     }
   },
+  "profileAnatomySection": "ANATOMIE",
+  "profileAnatomyHasBalls": "Inclure les testicules",
+  "profileAnatomyHasBallsSubtitle": "Désactive si ton setup n'en a pas (jouet sans testicules, autre). La coach n'orientera plus d'actions vers cette zone.",
   "profileStatsSection": "STATISTIQUES",
   "profileStatsEmpty": "Aucune statistique pour l'instant. Termine quelques séances pour révéler tes compteurs.",
   "profileBadgesSection": "BADGES",
@@ -415,6 +418,20 @@
       "name": { "type": "String" }
     }
   },
+  "soundsSuckleSection": "Suckle (aspiration / téter)",
+  "soundsSuckleSubtitle": "Slurp humide pulsé. Joue un seul coup ici, en séance c'est répété toutes les ~1,2 s pendant la durée du step.",
+  "soundsSuckleButton": "Suckle {position}",
+  "@soundsSuckleButton": {
+    "placeholders": {
+      "position": { "type": "String" }
+    }
+  },
+  "soundsSucklePositionSubtitle": "Aspiration sur {name}",
+  "@soundsSucklePositionSubtitle": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
   "soundsSpecificSounds": "Sons spécifiques",
   "soundsBiffleOneShot": "Biffle (one-shot)",
   "soundsBiffleOneShotSubtitle": "Son court et percutant. Au loop, suit le BPM.",
@@ -433,6 +450,8 @@
   "soundsPosDescMid": "Médium",
   "soundsPosDescThroat": "Grave",
   "soundsPosDescFull": "Très grave, lourd",
+  "soundsPosDescBalls": "Très grave et sourd, zone latérale",
+  "soundsPosDescSuckle": "Médium humide, pulse régulier d'aspiration",
   "soundsDebugSection": "Debug",
   "soundsDebugSubtitle": "Options techniques pour le développement.",
   "soundsDebugShowTimer": "Afficher le timer",
@@ -509,6 +528,7 @@
   "positionMid": "Milieu",
   "positionThroat": "Gorge",
   "positionFull": "Tout",
+  "positionBalls": "Couilles",
 
   "modeShortRhythm": "SUCE",
   "modeShortHold": "AU FOND",
@@ -518,6 +538,7 @@
   "modeShortBeg": "SUPPLIE",
   "modeShortFreestyle": "LIBRE",
   "modeShortHand": "BRANLE",
+  "modeShortSuckle": "GOBE",
 
   "badgeTierBronze": "Bronze",
   "badgeTierSilver": "Argent",

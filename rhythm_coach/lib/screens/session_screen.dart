@@ -17,6 +17,7 @@ import '../main.dart' show milestoneService;
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
 import '../l10n/format_helpers.dart';
+import '../models/anatomy_profile.dart';
 import '../models/badge.dart';
 import '../career/services/debug_settings_service.dart';
 import '../career/widgets/stamina_bar.dart';
@@ -189,6 +190,13 @@ class SessionScreen extends StatefulWidget {
   /// son téléphone, pas sur l'arborescence carrière.
   final bool closeAppOnEnd;
 
+  /// Profil anatomique de la joueuse. Sert à révéler la 6ᵉ ligne du
+  /// ladder visuel (zone balls) seulement quand la joueuse a la zone
+  /// **et** qu'elle a acquitté la milestone d'introduction
+  /// (`UnlockKey.lickBalls`). `null` = profil hérité (tout disponible,
+  /// mais la zone reste masquée tant que l'unlock n'a pas été acquis).
+  final AnatomyProfile? anatomy;
+
   const SessionScreen({
     super.key,
     required this.session,
@@ -222,6 +230,7 @@ class SessionScreen extends StatefulWidget {
     this.coachTag,
     this.seedHumiliationSession = 0.0,
     this.closeAppOnEnd = false,
+    this.anatomy,
   });
 
   @override
@@ -232,6 +241,13 @@ class _SessionScreenState extends State<SessionScreen>
     with WidgetsBindingObserver {
   late final SessionController _controller;
   bool _careerRecorded = false;
+
+  /// Nombre de lignes du ladder visuel (`MovementAnimation`). Snapshot
+  /// au start : on n'élargit pas dynamiquement si la milestone `lickBalls`
+  /// est acquittée pendant la séance (cf. PR2 plan balls — la révélation
+  /// vaut pour la **prochaine** séance). 6 lignes seulement quand la
+  /// joueuse a la zone ET a déjà appris à la lécher.
+  late final int _positionRowCount;
 
   @override
   void initState() {
@@ -261,6 +277,20 @@ class _SessionScreenState extends State<SessionScreen>
       isQuickie: widget.isQuickie,
     );
     _controller.onMilestoneRetry = widget.onMilestoneRetry;
+    final anatomy = widget.anatomy ?? AnatomyProfile.defaults;
+    // En carrière, la 6e ligne (balls) se révèle progressivement : il faut
+    // que la zone existe ET que la milestone `lickBalls` ait été acquittée
+    // pour ne pas spoiler la zone avant son introduction pédagogique.
+    // Hors carrière (Custom, scénarios JSON, debug), la convention « mode
+    // hérité = tout débloqué » s'applique : on suit l'anatomy uniquement
+    // — sinon une joueuse Custom qui active la zone dans son profil ne
+    // voyait jamais la ligne tant qu'elle n'avait pas avancé en carrière.
+    final ballsRevealed = anatomy.hasBalls &&
+        (!widget.isCareer ||
+            milestoneService
+                .acquiredUnlockKeys()
+                .contains(UnlockKey.lickBalls));
+    _positionRowCount = ballsRevealed ? 6 : 5;
     if (widget.isCareer) {
       _controller.addListener(_onCareerStateChanged);
     }
@@ -410,6 +440,7 @@ class _SessionScreenState extends State<SessionScreen>
         autoStart: widget.autoStart,
         canSave: widget.canSave,
         closeAppOnEnd: widget.closeAppOnEnd,
+        positionRowCount: _positionRowCount,
       ),
     );
   }
@@ -428,6 +459,7 @@ class _SessionScreenContent extends StatefulWidget {
   final bool autoStart;
   final bool canSave;
   final bool closeAppOnEnd;
+  final int positionRowCount;
 
   final BeepEngine beep;
 
@@ -445,6 +477,7 @@ class _SessionScreenContent extends StatefulWidget {
     required this.autoStart,
     required this.canSave,
     required this.closeAppOnEnd,
+    required this.positionRowCount,
   });
 
   @override
@@ -600,15 +633,21 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
 
   Future<void> _onIntroReady() async {
     if (!_introPending) return;
-    // Coupe l'intro tout de suite via un nouveau speak court qui
-    // marque le début de la phase de préparation. QUEUE_FLUSH efface
-    // l'intro restante et dit clairement « En place » à l'utilisatrice.
-    await widget.tts.stop();
-    if (!mounted) return;
+    // Bascule l'UI AVANT le await stop() : sur Linux, l'arrêt du TTS
+    // (kill piper/aplay + Process.run spd-say) peut prendre quelques
+    // centaines de ms. Si on attendait, l'utilisatrice cliquerait
+    // plusieurs fois pensant que le bouton ne répond pas (cf. issue
+    // #85). En posant l'état tout de suite, on garantit le passage au
+    // décompte de mise en place au premier clic, et on cancele l'intro
+    // en arrière-plan.
     setState(() {
       _introPending = false;
       _prepCountdown = _prepDurationSeconds;
     });
+    // Coupe l'intro en cours. Sur les autres plateformes, QUEUE_FLUSH
+    // ferait le job à elle seule au prochain speak — mais on stoppe
+    // explicitement pour rester cohérent et libérer les ressources.
+    unawaited(widget.tts.stop());
     // Annonce courte pour signaler le décompte sans avoir à regarder l'écran.
     widget.tts.speak(
       CoachPhrasesService.instance.current.prepCountdown(_prepDurationSeconds),
@@ -704,16 +743,23 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     final t = AppLocalizations.of(context);
     final shouldLeave = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      // `barrierDismissible: false` : sur Linux, un clic mal placé sur
+      // « Arrêter » qui retombait sur la barrière modale dismissait le
+      // dialogue avec un résultat null → session reprise sans arrêt.
+      // L'utilisatrice voyait "Le bouton Arrêté fait continuer la
+      // session" (cf. issue #85). Forcer un choix explicite via les
+      // boutons supprime cette ambiguïté.
+      barrierDismissible: false,
+      builder: (dialogCtx) => AlertDialog(
         title: Text(t.sessionStopTitle),
         content: Text(t.sessionStopContent),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(dialogCtx, false),
             child: Text(t.commonContinue),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogCtx, true),
             child: Text(t.sessionStopConfirm),
           ),
         ],
@@ -942,6 +988,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                       bpm: ctrl.currentBpm,
                       height: animHeight,
                       beepEngine: widget.beep,
+                      positionRowCount: widget.positionRowCount,
                     )
                   else
                     SizedBox(height: animHeight),

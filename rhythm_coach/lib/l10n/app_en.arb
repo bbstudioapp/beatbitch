@@ -105,6 +105,9 @@
       "error": { "type": "String" }
     }
   },
+  "profileAnatomySection": "ANATOMY",
+  "profileAnatomyHasBalls": "Include testicles",
+  "profileAnatomyHasBallsSubtitle": "Disable if your setup doesn't have them (toy without testicles, other). The coach won't direct actions to that area anymore.",
   "profileStatsSection": "STATISTICS",
   "profileStatsEmpty": "No stats yet. Finish a few sessions to reveal your counters.",
   "profileBadgesSection": "BADGES",
@@ -415,6 +418,20 @@
       "name": { "type": "String" }
     }
   },
+  "soundsSuckleSection": "Suckle (suction)",
+  "soundsSuckleSubtitle": "Pulsed wet slurp. One tap plays a single hit; in session it repeats every ~1.2 s for the step duration.",
+  "soundsSuckleButton": "Suckle {position}",
+  "@soundsSuckleButton": {
+    "placeholders": {
+      "position": { "type": "String" }
+    }
+  },
+  "soundsSucklePositionSubtitle": "Suckle on {name}",
+  "@soundsSucklePositionSubtitle": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
   "soundsSpecificSounds": "Specific sounds",
   "soundsBiffleOneShot": "Cock slap (one-shot)",
   "soundsBiffleOneShotSubtitle": "Short, percussive sound. On loop, follows the BPM.",
@@ -433,6 +450,8 @@
   "soundsPosDescMid": "Mid",
   "soundsPosDescThroat": "Low",
   "soundsPosDescFull": "Very low, heavy",
+  "soundsPosDescBalls": "Very low and muffled, side area",
+  "soundsPosDescSuckle": "Mid wet tone, steady suction pulse",
   "soundsDebugSection": "Debug",
   "soundsDebugSubtitle": "Technical options for development.",
   "soundsDebugShowTimer": "Show timer",
@@ -509,6 +528,7 @@
   "positionMid": "Mid",
   "positionThroat": "Throat",
   "positionFull": "Full",
+  "positionBalls": "Balls",
 
   "modeShortRhythm": "SUCK",
   "modeShortHold": "DEEP",
@@ -518,6 +538,7 @@
   "modeShortBeg": "BEG",
   "modeShortFreestyle": "FREE",
   "modeShortHand": "STROKE",
+  "modeShortSuckle": "SUCKLE",
 
   "badgeTierBronze": "Bronze",
   "badgeTierSilver": "Silver",

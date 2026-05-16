@@ -2,16 +2,21 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../services/coach_phrases_loader.dart';
+import '../services/locale_service.dart';
 import '../services/tts_service.dart';
 import '../services/user_profile_service.dart';
 import '../theme/app_theme.dart';
 
 /// Réglages de la voix par défaut de la coach : sélection de la voix TTS,
-/// vitesse, hauteur, et un bouton « Tester la voix » qui lit une phrase
-/// d'exemple (le prénom de l'utilisatrice s'il est saisi, sinon la phrase
-/// de test de la coach). Hébergé par l'écran Profil — les coachs de
-/// carrière ont leur propre voix figée, seule cette voix par défaut
-/// (utilisée hors-carrière) est paramétrable.
+/// vitesse, hauteur, et un bouton « Tester la voix » qui lit la phrase de
+/// test de la coach. Le placeholder `{name}` y est substitué de façon
+/// **déterministe** par le prénom saisi (ou retiré proprement s'il est
+/// vide), sans passer par le tirage aléatoire du pool de surnoms — on teste
+/// le rendu sonore, pas la mécanique de substitution.
+///
+/// Hébergé par l'écran Profil — les coachs de carrière ont leur propre voix
+/// figée, seule cette voix par défaut (utilisée hors-carrière) est
+/// paramétrable.
 ///
 /// Charge la liste des voix à l'init (après `tts.init()`, idempotent) et
 /// reflète l'état courant du [TtsService] partagé : changer la voix /
@@ -32,6 +37,9 @@ class VoiceSettingsSection extends StatefulWidget {
 }
 
 class _VoiceSettingsSectionState extends State<VoiceSettingsSection> {
+  static final RegExp _namePlaceholder =
+      RegExp(r'\s?\{\s*name\s*\}', caseSensitive: false);
+
   bool _ready = false;
   List<Map<String, String>> _voices = const [];
   String? _selectedVoiceName;
@@ -41,29 +49,84 @@ class _VoiceSettingsSectionState extends State<VoiceSettingsSection> {
   @override
   void initState() {
     super.initState();
+    widget.userProfile.addListener(_onProfileChanged);
+    LocaleService.instance.addListener(_onLocaleChanged);
     widget.tts.init().then((_) async {
-      final voices = await widget.tts.listVoicesForLocale(widget.tts.locale);
-      if (!mounted) return;
-      setState(() {
-        _ready = true;
-        _voices = voices;
-        _selectedVoiceName = widget.tts.currentVoiceName ??
-            (voices.isNotEmpty ? voices.first['name'] : null);
-        _rate = widget.tts.currentRate;
-        _pitch = widget.tts.currentPitch;
-      });
+      await _loadVoicesForCurrentLocale(markReady: true);
+    });
+  }
+
+  @override
+  void dispose() {
+    widget.userProfile.removeListener(_onProfileChanged);
+    LocaleService.instance.removeListener(_onLocaleChanged);
+    super.dispose();
+  }
+
+  void _onProfileChanged() {
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  void _onLocaleChanged() {
+    if (!mounted) return;
+    _loadVoicesForCurrentLocale(markReady: false);
+  }
+
+  /// Recharge la liste des voix pour la locale active et resync les sliders
+  /// sur l'état du service. On appelle `tts.setLocale` ici (idempotent si la
+  /// locale n'a pas changé) pour garantir que la voix par défaut de la
+  /// nouvelle langue est sélectionnée *avant* qu'on lise `currentVoiceName`.
+  ///
+  /// Si la voix courante du service n'est pas dans la liste filtrée de la
+  /// nouvelle locale (cas observé sur Web Speech API où `_selectVoice` ne
+  /// propage pas toujours le changement), on bascule explicitement sur la
+  /// 1re voix dispo de la langue active et on le pousse au service — sinon
+  /// le dropdown reste figé sur l'ancien nom alors que le test sonne dans
+  /// la bonne langue (via `setLanguage`).
+  Future<void> _loadVoicesForCurrentLocale({required bool markReady}) async {
+    await widget.tts.setLocale(LocaleService.instance.current);
+    final voices = await widget.tts.listVoicesForLocale(widget.tts.locale);
+    String? resolved = widget.tts.currentVoiceName;
+    final hasCurrent =
+        resolved != null && voices.any((v) => v['name'] == resolved);
+    if (!hasCurrent && voices.isNotEmpty) {
+      final first = voices.first;
+      final name = first['name'];
+      final localeTag = first['locale'];
+      if (name != null && localeTag != null) {
+        await widget.tts.setVoiceByName(name, localeTag);
+        resolved = name;
+      }
+    }
+    if (!mounted) return;
+    setState(() {
+      if (markReady) _ready = true;
+      _voices = voices;
+      _selectedVoiceName =
+          resolved ?? (voices.isNotEmpty ? voices.first['name'] : null);
+      _rate = widget.tts.currentRate;
+      _pitch = widget.tts.currentPitch;
+    });
+  }
+
+  /// Construit la phrase exacte qui sera lue : substitue `{name}` par le
+  /// prénom (préserve l'espace capturé devant), ou retire le placeholder
+  /// proprement si le prénom est vide. Pas de tirage aléatoire — l'audio
+  /// rendu correspond mot pour mot au sous-titre affiché.
+  String _resolveTestPhrase() {
+    final raw = CoachPhrasesService.instance.current.testVoicePhrase;
+    final prenom = widget.userProfile.prenom?.trim();
+    return raw.replaceAllMapped(_namePlaceholder, (m) {
+      if (prenom == null || prenom.isEmpty) return '';
+      final hadSpace = m.group(0)?.startsWith(' ') ?? false;
+      return hadSpace ? ' $prenom' : prenom;
     });
   }
 
   Future<void> _testVoice() async {
     await widget.tts.stop();
-    final prenom = widget.userProfile.prenom?.trim();
-    if (prenom != null && prenom.isNotEmpty) {
-      await widget.tts.speak(prenom);
-      return;
-    }
-    await widget.tts
-        .speak(CoachPhrasesService.instance.current.testVoicePhrase);
+    await widget.tts.speak(_resolveTestPhrase());
   }
 
   @override
@@ -114,8 +177,7 @@ class _VoiceSettingsSectionState extends State<VoiceSettingsSection> {
         const SizedBox(height: 8),
         _TestVoiceButton(
           label: t.soundsTestVoice,
-          subtitle:
-              '« ${CoachPhrasesService.instance.current.testVoicePhrase} »',
+          subtitle: '« ${_resolveTestPhrase()} »',
           onTap: _testVoice,
         ),
       ],

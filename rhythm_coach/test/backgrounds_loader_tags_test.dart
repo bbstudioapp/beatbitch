@@ -44,6 +44,16 @@ void main() {
       expect(e.tagsByCategory[BackgroundTagCategory.position], {'full'});
     });
 
+    test('balls position tag (zone latérale, lick/hold/beg uniquement)', () {
+      final e = BackgroundsLoader.parseEntry(
+        'assets/backgrounds/clip01_lick_balls.png',
+      );
+      expect(e!.id, 'clip01');
+      expect(e.tags, {'lick', 'balls'});
+      expect(e.tagsByCategory[BackgroundTagCategory.mode], {'lick'});
+      expect(e.tagsByCategory[BackgroundTagCategory.position], {'balls'});
+    });
+
     test('coach + mode (Lina beg)', () {
       final e = BackgroundsLoader.parseEntry(
         'assets/backgrounds/clip01_lina_beg.png',

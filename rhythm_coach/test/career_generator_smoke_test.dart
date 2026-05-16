@@ -415,6 +415,8 @@ void main() {
         case SessionMode.breath:
         case SessionMode.freestyle:
           return 'transit';
+        case SessionMode.suckle:
+          return 'bouche';
       }
     }
 

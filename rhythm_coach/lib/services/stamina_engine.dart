@@ -110,6 +110,17 @@ class StaminaEngine extends ChangeNotifier {
         final cost = _holdCostPerSec[pos] ?? 0.0;
         delta = -cost;
       }
+    } else if (_mode == SessionMode.suckle) {
+      // Aspiration : la bouche bosse en continu sans bouger. Coût modéré
+      // sur head (zone sensible, pompage actif → fatigue ressentie), bien
+      // plus léger sur balls (sloppy soumis, plus d'humil que de muscle).
+      // Pas de mapping de stockage : valeurs explicites ici.
+      final pos = _currentFrom;
+      if (pos == Position.head) {
+        delta = -0.30;
+      } else if (pos == Position.balls) {
+        delta = -0.15;
+      }
     }
     if (delta == 0) return;
     _add(delta);

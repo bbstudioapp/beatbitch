@@ -19,6 +19,13 @@ enum UnlockKey {
   rhythmMidBasic,
   lickFull,
   // Holds simples
+  //
+  // `holdHead` : clé pédagogique « savoir poser et tenir la bouche sur le
+  // gland sans bouger ». Ne gate pas les steps `hold to=head` du générateur
+  // (ils restent du socle de base, comme tip), c'est une clé prérequis-only
+  // — au même titre que `basics` — consommée par `intro_suckle_head` qui
+  // exige d'avoir prouvé la tenue de bouche avant d'apprendre l'aspiration.
+  holdHead,
   holdMidShort,
   throatHoldShort,
   throatHoldLong,
@@ -73,12 +80,27 @@ enum UnlockKey {
   // `intro_fake_breath` n'est pas acquittée (en carrière). En mode
   // hérité — Custom / scénarios / debug, `_unlockedKeys.isEmpty` — le
   // mécanisme reste actif sans gating.
-  fakeBreath;
+  fakeBreath,
+  // Position balls — zone latérale (testicules). Gating anatomy assuré
+  // séparément par `AnatomyProfile.hasBalls` dans `_isUnlocked` ; ces
+  // clés gouvernent l'apprentissage pédagogique chez les joueuses qui
+  // ont la zone. Trois actions distinctes : lick (toucher de langue),
+  // hold (tenir en bouche), beg (supplique en tenant).
+  lickBalls,
+  holdBalls,
+  begBalls,
+  // Mode suckle (aspiration / téter) — geste actif-statique. Deux paliers
+  // pédagogiques distincts : `suckleHead` (zone introductive, level 4-5)
+  // et `suckleBalls` (zone humil pure, level 10-11, gating anatomy en
+  // plus côté MilestoneService).
+  suckleHead,
+  suckleBalls;
 
   String get serialized => switch (this) {
         UnlockKey.basics => 'basics',
         UnlockKey.rhythmMidBasic => 'rhythm_mid_basic',
         UnlockKey.lickFull => 'lick_full',
+        UnlockKey.holdHead => 'hold_head',
         UnlockKey.holdMidShort => 'hold_mid_short',
         UnlockKey.throatHoldShort => 'throat_hold_short',
         UnlockKey.throatHoldLong => 'throat_hold_long',
@@ -110,6 +132,11 @@ enum UnlockKey {
         UnlockKey.encore => 'encore',
         UnlockKey.surpriseNotifs => 'surprise_notifs',
         UnlockKey.fakeBreath => 'fake_breath',
+        UnlockKey.lickBalls => 'lick_balls',
+        UnlockKey.holdBalls => 'hold_balls',
+        UnlockKey.begBalls => 'beg_balls',
+        UnlockKey.suckleHead => 'suckle_head',
+        UnlockKey.suckleBalls => 'suckle_balls',
       };
 
   static UnlockKey? fromString(String? raw) {

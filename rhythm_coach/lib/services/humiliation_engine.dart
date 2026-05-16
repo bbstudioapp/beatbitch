@@ -86,6 +86,51 @@ class HumiliationScale {
         final base = _depthScoreBeg(to);
         final phraseBonus = _phraseBonus(phraseTier);
         return base + phraseBonus;
+
+      case SessionMode.suckle:
+        // Aspiration / téter : la position tenue est dans `to` (head ou
+        // balls, le filtre `_isUnlocked` du générateur garantit qu'on ne
+        // demande pas autre chose). Base par zone + montée linéaire avec
+        // la durée — plus on aspire longtemps, plus c'est humiliant.
+        // - head  : base 5, +0.3/s (sloppy modéré, geste explicite)
+        // - balls : base 12, +0.6/s (sloppy soumis, zone humiliante)
+        final base = _depthScoreSuckle(to);
+        final factor = _suckleDurationFactor(to);
+        final extra = factor * max(0, (duration ?? 1) - 1);
+        return base + extra;
+    }
+  }
+
+  static double _depthScoreSuckle(Position? p) {
+    if (p == null) return 0.0;
+    switch (p) {
+      case Position.head:
+        return 5.0;
+      case Position.balls:
+        return 12.0;
+      case Position.tip:
+      case Position.mid:
+      case Position.throat:
+      case Position.full:
+        // Positions interdites pour suckle (filtre `_isUnlocked` du
+        // générateur). On retourne un coût neutre — la requête ne
+        // devrait jamais atteindre ce point.
+        return 0.0;
+    }
+  }
+
+  static double _suckleDurationFactor(Position? p) {
+    if (p == null) return 0.0;
+    switch (p) {
+      case Position.head:
+        return 0.3;
+      case Position.balls:
+        return 0.6;
+      case Position.tip:
+      case Position.mid:
+      case Position.throat:
+      case Position.full:
+        return 0.0;
     }
   }
 
@@ -114,6 +159,13 @@ class HumiliationScale {
         return 8.0;
       case Position.full:
         return 18.0;
+      case Position.balls:
+        // Zone très sloppy mais pas asphyxiante. Plus humiliante
+        // qu'un throat (8) sans atteindre le full (18) qui a sa
+        // composante apnée. Le combo cible `lick full/balls`
+        // (amplitude 1) tombe à 16 + 1 = 17 — sous le seuil d'un
+        // final hold full (req 25), accessible passé une chauffe.
+        return 16.0;
     }
   }
 
@@ -134,6 +186,10 @@ class HumiliationScale {
         return 10.0;
       case Position.full:
         return 25.0;
+      case Position.balls:
+        // Tenir les couilles dans la bouche : très humiliant (sloppy +
+        // soumis) mais respirable, donc entre throat (10) et full (25).
+        return 14.0;
     }
   }
 
@@ -153,6 +209,11 @@ class HumiliationScale {
         return 1.2;
       case Position.full:
         return 2.5;
+      case Position.balls:
+        // Pas d'apnée à compenser, mais l'humil augmente avec la
+        // durée (plus longtemps = plus humiliant). Modéré : entre
+        // mid (0.3) et throat (1.2).
+        return 0.8;
     }
   }
 
@@ -170,6 +231,11 @@ class HumiliationScale {
         return 18.0;
       case Position.full:
         return 28.0;
+      case Position.balls:
+        // Supplier la bouche sur les couilles : très humiliant
+        // (zone basse + verbal soumis), entre throat (18) et
+        // full (28). Pas de composante apnée donc en deçà de full.
+        return 22.0;
     }
   }
 

@@ -104,7 +104,7 @@ caméra ML Kit).
 > caméra et les notifs surprise — l'app charge mais ces fonctions sont
 > masquées.
 
-### 3.4 Linux (non testé, à activer au besoin)
+### 3.4 Linux
 
 ```bash
 flutter config --enable-linux-desktop
@@ -112,8 +112,14 @@ flutter run -d linux
 flutter build linux --release
 ```
 
-Pas de job CI Linux pour l'instant. `audioplayers`, `flutter_tts` (espeak),
-`shared_preferences` marchent. Mêmes capabilities désactivées qu'en Windows.
+Job CI `release-linux` packageant en tar.gz portable (cf.
+`.github/workflows/release.yml`). Mêmes capabilities désactivées qu'en
+Windows (caméra hold-check + notifs surprise hors-périmètre).
+
+**TTS** : `flutter_tts` ne déclare pas d'implémentation Linux → le service
+bypasse le plugin et choisit au runtime entre `piper` (TTS neuronal, voix
+naturelle) et `spd-say` (fallback espeak-ng). Détails utilisateur + install
+piper : [LINUX_TTS.md](LINUX_TTS.md).
 
 ### 3.5 macOS (bloqué)
 

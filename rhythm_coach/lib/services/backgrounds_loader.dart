@@ -49,6 +49,7 @@ class BackgroundTagVocabulary {
     'mid': BackgroundTagCategory.position,
     'throat': BackgroundTagCategory.position,
     'full': BackgroundTagCategory.position,
+    'balls': BackgroundTagCategory.position,
     // Coachs : nom court (suffixe de `coach_NN_<name>`).
     'lina': BackgroundTagCategory.coach,
     'helene': BackgroundTagCategory.coach,

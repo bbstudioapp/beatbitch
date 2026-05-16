@@ -1,0 +1,12 @@
+{
+  "displayLabel": "Hold it on the head",
+  "stepTexts": {
+    "0": "Today you learn to hold. Open your mouth, rest the head on your lips.",
+    "8": "Now stop. Keep the head right there. Three seconds.",
+    "11": "Breathe. No movement.",
+    "16": "Again. Five seconds this time.",
+    "21": "Can you feel the weight on your tongue? Good. Catch your breath.",
+    "26": "Last one. Seven seconds. Mouth still.",
+    "33": "Perfect. You know how to hold."
+  }
+}

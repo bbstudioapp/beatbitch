@@ -4,6 +4,35 @@
 
 ## [Non publié]
 
+## [0.4.0] — 2026-05-16
+
+Nouvelle plateforme **Web / PWA installable iOS** (canal officiel iOS, App Store hors-jeu), introduction de la 6ᵉ position `balls` avec son anatomie associée, nouveau mode bouche **`suckle`** (aspirer / téter), TTS Linux passé au neuronal Piper, et une vague de fixes audio + voix + UI Custom.
+
+### Ajouté
+- **Plateforme Web (PWA installable iOS)** — la version web est désormais le canal officiel d'install iOS (l'App Store est hors-jeu pour ce contenu). PWA installable depuis Safari iOS, déploiement automatique sur `beatbitch.pages.dev` via GitHub Actions (workflow `web-deploy.yml`) sur push `main`. Guides d'installation iOS multilingues FR/EN/DE intégrés au repo (`docs/`).
+- **Position `balls`** — 6ᵉ niveau de profondeur (zone latérale, pas un cran de profondeur supplémentaire) accompagnée d'un `AnatomyProfile` qui filtre le contenu selon l'anatomie du partenaire. Le ladder visuel passe à 6 lignes, les fonds reconnaissent `balls` comme tag de position.
+- **Milestones `balls`** — nouveau jeu de milestones carrière dédiées à la position balls, avec révélation progressive du ladder hors-carrière dès que l'anatomie le permet.
+- **Mode `suckle` (aspirer / téter)** — 3ᵉ mode bouche dédié à côté de rhythm/lick/hold. Chaîne pédagogique : `hold_head` débloque `suckle_head`, et `suckle_balls` ne dépend que de `hold_balls` (pas de prérequis profondeur — c'est de la stimulation locale).
+- **Pool de phrases coach `suckle`** FR/EN/DE pour les steps gobe (tous les coachs concernés).
+- **TTS Linux neuronal** — `piper` (modèles neuronaux locaux) en priorité, repli sur `spd-say` (Speech Dispatcher) si Piper n'est pas dispo. Qualité de voix nettement meilleure que `espeak-ng` sur les distros qui ont Piper installé.
+
+### Modifié
+- **Branches `balls` retirées de l'axe profondeur** — `balls` est traitée comme une zone latérale, pas comme un cran de profondeur plus grand que `full`. Les milestones balls ne consomment plus le levier profondeur du profil de capacités.
+
+### Corrigé
+- **Throat beep manqué après resume** — sur les samples longs (throat / full), `seek(0)` est désormais appelé avant `resume()` pour garantir que le bip rejoue depuis le début même quand le sample précédent n'est pas complètement terminé.
+- **Boutons de session Custom peu réactifs sous Linux** (issue #85) — les boutons play/stop répondent maintenant immédiatement sur la version desktop Linux.
+- **Mode Custom — suckle / balls / fallback** — le mode `suckle` est désormais correctement tiré par `_mapDifficultyToStep` avec clamp de profondeur balls et fallback safe ; la position est tenue correctement entre les steps, la révélation balls fonctionne hors carrière, et la couleur du mode est distincte des autres.
+- **TTS vitesse / langue** — la vitesse TTS est normalisée par plateforme (Android / Windows / Linux ont des baselines différentes) et `setLocale` est désormais partagé entre la voix par défaut et les coachs.
+- **Sélecteur de voix dans le Profil** — le dropdown des voix se rafraîchit immédiatement au changement de langue (au lieu de garder l'ancienne liste).
+- **Milestones — overrides de langue ignorés pour la langue native** — les overrides texte des milestones étaient appliqués même quand la langue cible est la langue native du JSON source, ce qui pouvait écraser une variante locale par sa version anglaise. Le merge skip désormais quand `lang == native`.
+- **« Tester la voix » lit toujours la phrase de test** (closes #75) — le bouton ne se contentait plus de lancer un sample générique : la phrase de test localisée est désormais lue à chaque appui. Bonus : la résolution du prénom dans la phrase est déterministe.
+- **`_TrajectoryPainter` respecte `rowCount`** — l'alignement vertical du curseur restait calé sur 5 lignes même après l'ajout de la 6ᵉ position. Corrigé pour tout `rowCount` arbitraire.
+- **CI release-linux** — passe sur `ubuntu-24.04` (au lieu de `ubuntu-22.04` EOL) et est désormais retriggerable manuellement via `workflow_dispatch` pour rejouer un build Linux/Windows raté sans rebump de version.
+
+### Plateformes
+- Android (APK signé, side-load) + Windows desktop (zip portable) + Linux desktop (tar.gz portable) + **Web / PWA installable iOS (nouveau, `beatbitch.pages.dev`)**.
+
 ## [0.3.0] — 2026-05-14
 
 Nouvelle plateforme Linux, refonte de la progression carrière (capabilities, milestones overdue/aging/level-gated, deux body milestones sur les séances longues), horloge de séance et une grosse vague de polish sur le mode Custom.

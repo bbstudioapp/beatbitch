@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
+import '../../models/anatomy_profile.dart';
 import '../../models/final_category.dart';
 import '../../models/punishment.dart';
 import '../../models/session.dart';
@@ -165,6 +166,13 @@ class CareerSessionGenerator {
   /// dont la clé n'est pas dedans est rejetée par `_isUnlocked` et dégradée
   /// par `_stepDownOne`. Vide = aucune clé requise (mode héritage).
   Set<UnlockKey> _unlockedKeys = const {};
+
+  /// Profil anatomique de la joueuse — pour gater les zones non disponibles
+  /// dans son setup (testicules absents → tous les steps `Position.balls`
+  /// rejetés par `_isUnlocked`). Default = tout disponible (rétrocompat
+  /// pour tests / mode hérité). Le call site carrière / Custom passe la
+  /// valeur lue depuis `UserProfileService.anatomy`.
+  AnatomyProfile _anatomy = AnatomyProfile.defaults;
 
   /// Multiplicateur de poids par mode, fourni par le coach actif. Combiné
   /// **multiplicativement** par-dessus la pondération spé dans `_modeWeight`.
@@ -476,6 +484,11 @@ class CareerSessionGenerator {
       case SessionMode.lick:
       case SessionMode.breath:
       case SessionMode.freestyle:
+      case SessionMode.suckle:
+        // Suckle : pas de BPM, position figée par construction (head ou
+        // balls, filtrée en amont par `_isUnlocked`). Aucun axe capability
+        // pertinent → pas de cap difficile. Durée bornée par la palette,
+        // pas par le profil.
         break; // pas de cap de difficulté pour ces modes
     }
     if (from == d.from &&
@@ -631,6 +644,12 @@ class CareerSessionGenerator {
     /// premier maillon d'un encore enchaîné via
     /// `SessionController.capabilitySessionCeilings`.
     Map<CapabilityAxis, double> capabilitySessionCeilings = const {},
+
+    /// Profil anatomique de la joueuse. Default = tout disponible
+    /// (rétrocompat carrière / tests). Quand `hasBalls = false`, aucun
+    /// step sur `Position.balls` n'est généré (filtre `_isUnlocked`
+    /// précoce, indépendant du gating milestone).
+    AnatomyProfile anatomy = AnatomyProfile.defaults,
   }) {
     assert(
       finalMilestone == null ||
@@ -674,6 +693,7 @@ class CareerSessionGenerator {
     _obedience = obedience;
     _capProfile = capabilityProfile;
     _capCeilings = capabilitySessionCeilings;
+    _anatomy = anatomy;
     _bpmRange = _normalizeBpmRange(bpmRange);
     _holdDurationRange = _normalizeHoldRange(holdDurationRange);
     _pickOverloadAxis();
@@ -2440,14 +2460,39 @@ class CareerSessionGenerator {
       // full = comme un hold profond), pas par diff.
       candidates.add(SessionMode.beg);
     }
+    // suckle : geste latéral (head ou balls). En carrière, gaté par la
+    // milestone `intro_suckle_head` qui accorde `UnlockKey.suckleHead`. En
+    // mode hérité (Custom, scénarios), on l'ajoute inconditionnellement —
+    // sa dose Custom (ModeDose.none ⇒ forbidden) le retire ensuite via
+    // `removeWhere(_isModeForbidden)`. Sans cet ajout, la dose Custom
+    // était de fait ignorée : suckle n'était jamais tiré.
+    final canSuckle =
+        _unlockedKeys.isEmpty || _unlockedKeys.contains(UnlockKey.suckleHead);
+    if (canSuckle) {
+      candidates.add(SessionMode.suckle);
+    }
     // breath n'est jamais un step "d'effort" : il n'est tiré que par
     // _buildRecoveryStep quand l'endurance est basse, jamais ici.
     // Exclusions Custom (dose `none`) : retirer les modes interdits avant
-    // tirage. Si tout est exclu, on retombe sur rhythm (last-resort) pour
-    // ne pas crasher — l'éditeur Custom garantit déjà qu'au moins un mode
-    // bouche (rhythm/lick/hold) reste actif via son garde-fou.
+    // tirage. Si tout est exclu, on retombe sur un mode bouche encore
+    // actif (l'éditeur Custom garantit qu'au moins un mouth mode reste
+    // ≥ rare via son garde-fou). On essaie lick → hold → rhythm pour
+    // privilégier le mode le plus doux disponible, et rhythm en dernier
+    // ressort pour ne jamais crasher si une config était corrompue.
     candidates.removeWhere(_isModeForbidden);
-    if (candidates.isEmpty) candidates.add(SessionMode.rhythm);
+    if (candidates.isEmpty) {
+      for (final m in const [
+        SessionMode.lick,
+        SessionMode.hold,
+        SessionMode.rhythm,
+      ]) {
+        if (!_isModeForbidden(m)) {
+          candidates.add(m);
+          break;
+        }
+      }
+      if (candidates.isEmpty) candidates.add(SessionMode.rhythm);
+    }
     final mode = _pickWeightedMode(_filterRepeated(candidates));
 
     final (aBpm, aAmp, aDur) = _sampleSimplex3();
@@ -2565,6 +2610,30 @@ class CareerSessionGenerator {
         final dur = _lerp(8.0, 18.0, durScore).round();
         return _StepDraft(
             mode: mode, bpm: null, from: null, to: null, duration: dur);
+      case SessionMode.suckle:
+        // Aspiration : pas de BPM (pulse fixe ~1.2s côté audio), position
+        // tenue dans `to`. Cibles valides = head ou balls (cf. `_isUnlocked`).
+        // - En carrière : unlock `suckleHead` au level 4-5, `suckleBalls`
+        //   plus tard ; le filtre `_isUnlocked` rejette ce qui n'est pas
+        //   encore acquis et la cascade dégrade.
+        // - En mode hérité (Custom) : balls n'est candidat que si l'anatomy
+        //   l'inclut et que la profondeur max le permet (`_maxDepthIndex >=
+        //   Position.balls.index`). On biaise vers head (zone classique) avec
+        //   ~30 % de chances de tirer balls quand dispo, pour rester audible
+        //   mais marginal.
+        final dur = _scaleDuration(
+          _lerp(8.0, 18.0, durScore),
+          enduranceFactor: 0.04,
+        );
+        final ballsAllowed = _anatomy.hasBalls &&
+            _maxDepthIndex >= Position.balls.index &&
+            (_unlockedKeys.isEmpty ||
+                _unlockedKeys.contains(UnlockKey.suckleBalls));
+        final to = (ballsAllowed && _rng.nextDouble() < 0.30)
+            ? Position.balls
+            : Position.head;
+        return _StepDraft(
+            mode: mode, bpm: null, from: null, to: to, duration: dur);
     }
   }
 
@@ -2858,6 +2927,16 @@ class CareerSessionGenerator {
         // alors que les autres candidats prennent la friction de quitter
         // bouche). Un poids bas le garde comme option ponctuelle.
         return 0.25;
+      case SessionMode.suckle:
+        // Aspiration : geste actif-statique. Sloppy boost (bouche humide)
+        // et un peu d'obéissance (geste explicite et soumis). Pas de boost
+        // profondeur — suckle n'est jamais une profondeur de pompage, c'est
+        // une pratique latérale (head ou balls). Base 0.6 pour rester dans
+        // la veine « palette ponctuelle » comme freestyle/breath — c'est un
+        // mode de couleur, pas un mode de chauffe.
+        return 0.6 +
+            0.40 * _pts(SpecializationBranch.sloppy) +
+            0.15 * _pts(SpecializationBranch.obeissance);
     }
   }
 
@@ -3010,6 +3089,19 @@ class CareerSessionGenerator {
       case SessionMode.freestyle:
         // Phase libre : neutre côté endurance (ni effort ni vraie regen).
         break;
+      case SessionMode.suckle:
+        // Aspiration / téter : la bouche bosse sans aller-retour. Coût
+        // par seconde modéré, plus marqué sur head (zone sensible →
+        // pompage actif) que sur balls (sloppy soumis mais peu intense
+        // musculairement). On modélise sur `_holdCostPerSec` de
+        // StaminaEngine en l'ajustant : head ≈ 60 % d'un hold mid, balls
+        // ≈ 30 % (moins d'effort de la bouche, plus de l'humil).
+        final pos = draft.to ?? draft.from;
+        if (pos == Position.head) {
+          next -= 0.30 * dur;
+        } else if (pos == Position.balls) {
+          next -= 0.15 * dur;
+        }
     }
     return next;
   }
@@ -3644,6 +3736,27 @@ class CareerSessionGenerator {
       ));
     }
 
+    // Lick full→balls : variante d'apothéose « sloppy descente » introduite
+    // par la milestone `intro_balls_lick`. Pas de gate-final dédiée — on
+    // réutilise `UnlockKey.lickBalls` (la zone est apprise une fois pour
+    // toutes, le gating de niveau est porté implicitement par la milestone
+    // qui débloque la clé). Filtre anatomy assuré par `_isUnlocked` sur
+    // le composant. req = 16 (depthLick balls) + 1 (amplitude full→balls)
+    // = 17, donc accessible passé chauffe sans atteindre hold full (req 22).
+    if (_anatomy.hasBalls) {
+      candidates.add((
+        const _StepDraft(
+          mode: SessionMode.lick,
+          bpm: 55,
+          from: Position.full,
+          to: Position.balls,
+          duration: 16,
+        ),
+        17.0,
+        UnlockKey.lickBalls,
+      ));
+    }
+
     if (maxDepth >= Position.full.index) {
       // Cible évolutive avec l'humiliation accumulée. Seuil d'introduction
       // full ≈ 30 d'humiliation (req intrinsèque hold full 10s = 22,
@@ -3762,6 +3875,7 @@ class CareerSessionGenerator {
     double obedience = 100.0,
     bool includeHand = true,
     Map<SessionMode, double> coachModeWeights = const {},
+    AnatomyProfile anatomy = AnatomyProfile.defaults,
   }) {
     // Réinitialise l'état comme le ferait `generate`, pour que les helpers
     // (`_clampToCapability`, `_isUnlocked`, `_pickPhrase`...) lisent les
@@ -3773,6 +3887,7 @@ class CareerSessionGenerator {
     _unlockedKeys = unlockedKeys;
     _capProfile = capabilityProfile;
     _capCeilings = capabilitySessionCeilings;
+    _anatomy = anatomy;
     _spec = specialization ?? SpecializationAllocation.empty();
     _humiliationCareer = humiliationCareer;
     _humiliationSession = humiliationSession;
@@ -4264,6 +4379,10 @@ class CareerSessionGenerator {
           return FinalCategory.hard;
         case Position.full:
           return FinalCategory.extreme;
+        case Position.balls:
+          // Très humiliant (sloppy + soumis) mais sans la composante
+          // apnée/asphyxie de full → palier `hard`, pas `extreme`.
+          return FinalCategory.hard;
         case null:
           return FinalCategory.medium;
       }
@@ -4275,6 +4394,29 @@ class CareerSessionGenerator {
   /// est libre par défaut. Le mapping se base sur les milestones existantes
   /// (cf. `assets/career/milestones.json`).
   UnlockKey? _unlockKeyFor(_StepDraft d) {
+    // Balls : zone latérale, gating dédié (`lickBalls`/`holdBalls`/`begBalls`)
+    // qui prime sur les clés génériques de profondeur. Le filtre anatomy +
+    // modes-incompatibles vit dans `_isUnlocked` (rhythm/hand/biffle balls
+    // sont déjà rejetés en amont) — ici on suppose que la zone est légitime
+    // pour le mode courant.
+    final touchesBalls = d.from == Position.balls || d.to == Position.balls;
+    if (touchesBalls) {
+      switch (d.mode) {
+        case SessionMode.lick:
+          return UnlockKey.lickBalls;
+        case SessionMode.hold:
+          return UnlockKey.holdBalls;
+        case SessionMode.beg:
+          return UnlockKey.begBalls;
+        case SessionMode.suckle:
+          // Aspiration sur les couilles : gating dédié + filtre anatomy
+          // côté MilestoneService (le générateur a déjà rejeté `suckle to:balls`
+          // si `hasBalls=false`).
+          return UnlockKey.suckleBalls;
+        default:
+          return null;
+      }
+    }
     switch (d.mode) {
       case SessionMode.hold:
         // Convention : hold/beg portent leur position dans `to`. Les holds
@@ -4327,6 +4469,12 @@ class CareerSessionGenerator {
         return null;
       case SessionMode.breath:
         return null;
+      case SessionMode.suckle:
+        // Suckle hors balls (filtré au-dessus) → forcément head. Gating
+        // dédié, indépendant de la profondeur générique (suckle head n'est
+        // pas une généralisation de hold head — c'est un geste explicite
+        // à introduire pédagogiquement par sa propre milestone).
+        return UnlockKey.suckleHead;
     }
   }
 
@@ -4347,6 +4495,29 @@ class CareerSessionGenerator {
   /// reste sur la position pendant la supplique). On les bloque donc tant
   /// que begLibre n'est pas acquise — elle reste la fondation pédagogique.
   bool _isUnlocked(_StepDraft d) {
+    // Anatomy gate (toujours actif, même en mode hérité) : la zone
+    // balls n'est pas dans le setup → aucun step jouable dessus.
+    final touchesBalls = d.from == Position.balls || d.to == Position.balls;
+    if (touchesBalls && !_anatomy.hasBalls) return false;
+    // Modes-incompatibles : balls n'est pertinent que pour lick / hold /
+    // beg (zone à lécher / aspirer / supplier-en-tenant). Pas de pompage
+    // rythmé sur les couilles — gating structurel indépendant du contexte
+    // (anatomy, milestone, mode hérité ou non).
+    if (touchesBalls &&
+        (d.mode == SessionMode.rhythm ||
+            d.mode == SessionMode.hand ||
+            d.mode == SessionMode.biffle)) {
+      return false;
+    }
+    // Suckle : positions valides = `head` et `balls`. Toute autre cible
+    // (tip / mid / throat / full) est structurellement rejetée — l'action
+    // n'a pas de sens sur ces zones (aspiration sur la verge profonde =
+    // hold, pas suckle ; aspiration sur le bout = lick tip). Filtre actif
+    // même en mode hérité pour rester cohérent en Custom et scénarios JSON.
+    if (d.mode == SessionMode.suckle) {
+      final target = d.to ?? d.from;
+      if (target != Position.head && target != Position.balls) return false;
+    }
     if (_unlockedKeys.isEmpty) return true;
     if (d.mode == SessionMode.beg &&
         !_unlockedKeys.contains(UnlockKey.begLibre)) {
@@ -4685,6 +4856,11 @@ _StepType _classifyStep(SessionMode mode, Position? to) {
     case SessionMode.breath:
     case SessionMode.freestyle:
       return _StepType.transit;
+    case SessionMode.suckle:
+      // Aspiration : bouche au contact (head ou balls). On classe comme
+      // `bouche` pour bénéficier de la même friction de continuité que
+      // hold/beg-tenu — éviter d'enchaîner deux modes bouche sans pause.
+      return _StepType.bouche;
   }
 }
 

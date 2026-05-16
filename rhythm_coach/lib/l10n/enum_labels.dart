@@ -21,6 +21,7 @@ extension SessionModeL10n on SessionMode {
       SessionMode.beg => t.modeShortBeg,
       SessionMode.freestyle => t.modeShortFreestyle,
       SessionMode.hand => t.modeShortHand,
+      SessionMode.suckle => t.modeShortSuckle,
     };
   }
 }
@@ -34,6 +35,7 @@ extension PositionL10n on Position {
       Position.mid => t.positionMid,
       Position.throat => t.positionThroat,
       Position.full => t.positionFull,
+      Position.balls => t.positionBalls,
     };
   }
 }

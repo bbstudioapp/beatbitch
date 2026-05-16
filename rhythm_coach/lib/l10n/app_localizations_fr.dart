@@ -225,6 +225,16 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get profileAnatomySection => 'ANATOMIE';
+
+  @override
+  String get profileAnatomyHasBalls => 'Inclure les testicules';
+
+  @override
+  String get profileAnatomyHasBallsSubtitle =>
+      'Désactive si ton setup n\'en a pas (jouet sans testicules, autre). La coach n\'orientera plus d\'actions vers cette zone.';
+
+  @override
   String get profileStatsSection => 'STATISTIQUES';
 
   @override
@@ -797,6 +807,23 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get soundsSuckleSection => 'Suckle (aspiration / téter)';
+
+  @override
+  String get soundsSuckleSubtitle =>
+      'Slurp humide pulsé. Joue un seul coup ici, en séance c\'est répété toutes les ~1,2 s pendant la durée du step.';
+
+  @override
+  String soundsSuckleButton(String position) {
+    return 'Suckle $position';
+  }
+
+  @override
+  String soundsSucklePositionSubtitle(String name) {
+    return 'Aspiration sur $name';
+  }
+
+  @override
   String get soundsSpecificSounds => 'Sons spécifiques';
 
   @override
@@ -852,6 +879,13 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get soundsPosDescFull => 'Très grave, lourd';
+
+  @override
+  String get soundsPosDescBalls => 'Très grave et sourd, zone latérale';
+
+  @override
+  String get soundsPosDescSuckle =>
+      'Médium humide, pulse régulier d\'aspiration';
 
   @override
   String get soundsDebugSection => 'Debug';
@@ -1086,6 +1120,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get positionFull => 'Tout';
 
   @override
+  String get positionBalls => 'Couilles';
+
+  @override
   String get modeShortRhythm => 'SUCE';
 
   @override
@@ -1108,6 +1145,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get modeShortHand => 'BRANLE';
+
+  @override
+  String get modeShortSuckle => 'GOBE';
 
   @override
   String get badgeTierBronze => 'Bronze';

@@ -61,6 +61,10 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
   @override
   void initState() {
     super.initState();
+    // Le toggle anatomique vit dans `UserProfileService` — on rebuild la
+    // démo (filtrage de balls) à chaque changement, sans wrapper toute
+    // la page dans un AnimatedBuilder.
+    widget.userProfile.addListener(_onProfileChanged);
     Future.wait([
       widget.beep.ensureReady(),
       widget.tts.init(),
@@ -94,12 +98,24 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
 
   @override
   void dispose() {
+    widget.userProfile.removeListener(_onProfileChanged);
     widget.beep.stop();
     // L'ambiance est laissée pilotée par l'engine global ; on coupe juste
     // le test d'écoute si on quitte la page.
     if (_ambienceTestingAsset != null) widget.ambience.stop();
     super.dispose();
   }
+
+  void _onProfileChanged() {
+    if (mounted) setState(() {});
+  }
+
+  /// Positions visibles dans les blocs de démo. Filtre `Position.balls`
+  /// quand l'anatomy de la joueuse n'inclut pas la zone (cohérent avec
+  /// le générateur, qui n'aurait de toute façon pas joué le sample).
+  List<Position> get _availablePositions => Position.values
+      .where((p) => p != Position.balls || widget.userProfile.anatomy.hasBalls)
+      .toList(growable: false);
 
   void _stopLoop() {
     widget.beep.stop();
@@ -184,7 +200,7 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
                   title: t.soundsRhythmPositionsSection,
                   subtitle: t.soundsRhythmPositionsSubtitle,
                   children: [
-                    for (final p in Position.values)
+                    for (final p in _availablePositions)
                       _SoundButton(
                         label: _positionLabel(p),
                         subtitle: _positionDescription(t, p),
@@ -196,7 +212,7 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
                   title: t.soundsLickPositionsSection,
                   subtitle: t.soundsLickPositionsSubtitle,
                   children: [
-                    for (final p in Position.values)
+                    for (final p in _availablePositions)
                       _SoundButton(
                         label: t.soundsLickPositionLabel(_positionLabel(p)),
                         subtitle: t.soundsLickPositionSubtitle(p.name),
@@ -208,11 +224,28 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
                   title: t.soundsHoldSection,
                   subtitle: t.soundsHoldSubtitle,
                   children: [
-                    for (final p in Position.values)
+                    for (final p in _availablePositions)
                       _SoundButton(
                         label: t.soundsHoldButton(_positionLabel(p)),
                         subtitle: t.soundsHoldPositionSubtitle(p.name),
                         onTap: () => widget.beep.playHoldOnce(p),
+                      ),
+                  ],
+                ),
+                _buildSection(
+                  title: t.soundsSuckleSection,
+                  subtitle: t.soundsSuckleSubtitle,
+                  children: [
+                    // Positions valides : head + balls (cf. filtre
+                    // `_isUnlocked` du générateur). Balls visible seulement
+                    // si l'anatomy de la joueuse l'inclut.
+                    for (final p in _availablePositions.where(
+                      (q) => q == Position.head || q == Position.balls,
+                    ))
+                      _SoundButton(
+                        label: t.soundsSuckleButton(_positionLabel(p)),
+                        subtitle: t.soundsSucklePositionSubtitle(p.name),
+                        onTap: () => widget.beep.playSuckleOnce(),
                       ),
                   ],
                 ),
@@ -614,6 +647,7 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
         Position.mid => 'Mid',
         Position.throat => 'Throat',
         Position.full => 'Full',
+        Position.balls => 'Balls',
       };
 
   String _positionDescription(AppLocalizations t, Position p) => switch (p) {
@@ -622,6 +656,7 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
         Position.mid => t.soundsPosDescMid,
         Position.throat => t.soundsPosDescThroat,
         Position.full => t.soundsPosDescFull,
+        Position.balls => t.soundsPosDescBalls,
       };
 }
 

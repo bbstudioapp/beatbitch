@@ -77,6 +77,7 @@ class ModeBadgeRow extends StatelessWidget {
         SessionMode.beg => Icons.record_voice_over,
         SessionMode.freestyle => Icons.shuffle,
         SessionMode.hand => Icons.back_hand,
+        SessionMode.suckle => Icons.bubble_chart,
       };
 
   static Color _modeColor(SessionMode m) => switch (m) {
@@ -88,6 +89,11 @@ class ModeBadgeRow extends StatelessWidget {
         SessionMode.beg => const Color(0xFFCE93D8),
         SessionMode.freestyle => const Color(0xFFB0BEC5),
         SessionMode.hand => const Color(0xFFFFAB91),
+        // Suckle : rose vif. Le turquoise précédent (0xFF4DD0E1) collait
+        // trop au cyan de lick à l'œil ; rose vif tranche nettement avec
+        // tous les autres modes (mauve beg, saumon hand) et garde un côté
+        // « bouche / lèvres » cohérent avec le geste.
+        SessionMode.suckle => const Color(0xFFEC407A),
       };
 
   static String _positionLabel(

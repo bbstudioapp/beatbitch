@@ -198,6 +198,30 @@
       "Surprends-moi salope."
     ]
   },
+  "suckle": {
+    "soft": [
+      {"text": "Pose tes lèvres autour. Aspire doucement.", "max_depth": "head"},
+      {"text": "Joues creuses. Tète tout doux.", "max_depth": "head"},
+      {"text": "Comme une tétine. Garde-le en bouche.", "max_depth": "head"},
+      {"text": "Pose ta bouche sur la couille. Aspire doucement.", "min_depth": "balls"},
+      {"text": "Tète la couille, tout en douceur.", "min_depth": "balls"}
+    ],
+    "medium": [
+      {"text": "Aspire bien. Joues creuses.", "max_depth": "head"},
+      {"text": "Tète-le comme une tétine, applique-toi.", "max_depth": "head"},
+      {"text": "Garde la pression. Respire par le nez.", "max_depth": "head"},
+      {"text": "Tète bien la couille, joues creuses.", "min_depth": "balls"},
+      {"text": "Aspire la couille, je veux entendre ça.", "min_depth": "balls"},
+      {"text": "L'autre maintenant. Pareil. Tète.", "min_depth": "balls"}
+    ],
+    "hard": [
+      {"text": "Tète à fond. Sans relâcher.", "max_depth": "head"},
+      {"text": "Aspire comme si tu allais le vider.", "max_depth": "head"},
+      {"text": "Joues vraiment creuses. Tète fort.", "max_depth": "head"},
+      {"text": "Aspire la couille comme une glace fondue.", "min_depth": "balls"},
+      {"text": "Tète bien fort la couille, salope.", "min_depth": "balls"}
+    ]
+  },
   "encore": [
     "Encore ? Petite chienne insatiable. Tiens-toi bien, cette fois je vais aller plus loin.",
     "T'en veux encore ? Bon. On remet ça, et ce coup-ci tu donnes encore plus.",
