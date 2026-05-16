@@ -25,6 +25,7 @@ part 'career_session_generator_mode_picker.dart';
 part 'career_session_generator_final_picker.dart';
 part 'career_session_generator_difficulty_dispatch.dart';
 part 'career_session_generator_position_pickers.dart';
+part 'career_session_generator_punishment.dart';
 
 /// Résultat d'une génération : la session figée à passer au controller +
 /// le profil d'endurance projeté (utile à l'overlay debug `StaminaBar`) +
@@ -2654,200 +2655,11 @@ class CareerSessionGenerator {
       rng: _rng,
     );
 
-    final humilCap = _humiliationCareer + _humiliationSession;
-
-    // ─── Palette V1 (5 compos, parité dramaturgique avec `_pickFinal`) ───
-    final candidates = <_PunishmentCompo>[
-      // Biffle rapide court — le moins humiliant qui reste punitif. Gaté
-      // `includeHand` (biffle implique la main, comme dans `_pickFinal`).
-      const _PunishmentCompo(
-        id: 'biffle_burst',
-        drafts: [
-          _StepDraft(
-            mode: SessionMode.biffle,
-            bpm: 135,
-            from: null,
-            to: null,
-            duration: 25,
-          ),
-        ],
-        reqHumil: 13.0,
-        handRequired: true,
-      ),
-      // Franchissement `head→throat` rapide — axe « crossings BPM throat ».
-      const _PunishmentCompo(
-        id: 'crossings_burst',
-        drafts: [
-          _StepDraft(
-            mode: SessionMode.rhythm,
-            bpm: 110,
-            from: Position.head,
-            to: Position.throat,
-            duration: 25,
-          ),
-        ],
-        reqHumil: 14.0,
-      ),
-      // Torture lente profonde — rhythm `throat→full` BPM bas (= airless,
-      // pas de fenêtre de respiration) + hold full final.
-      const _PunishmentCompo(
-        id: 'slow_torture',
-        drafts: [
-          _StepDraft(
-            mode: SessionMode.rhythm,
-            bpm: 35,
-            from: Position.throat,
-            to: Position.full,
-            duration: 30,
-          ),
-          _StepDraft(
-            mode: SessionMode.hold,
-            bpm: null,
-            from: null,
-            to: Position.full,
-            duration: 8,
-          ),
-        ],
-        reqHumil: 16.0,
-      ),
-      // Throat sans pitié — rhythm `throat→full` rapide + hold final.
-      const _PunishmentCompo(
-        id: 'throat_relentless',
-        drafts: [
-          _StepDraft(
-            mode: SessionMode.rhythm,
-            bpm: 100,
-            from: Position.throat,
-            to: Position.full,
-            duration: 28,
-          ),
-          _StepDraft(
-            mode: SessionMode.hold,
-            bpm: null,
-            from: null,
-            to: Position.full,
-            duration: 8,
-          ),
-        ],
-        reqHumil: 18.0,
-      ),
-      // Chaîne de holds profonds avec courte fenêtre breath au milieu —
-      // la plus humiliante de la palette V1.
-      const _PunishmentCompo(
-        id: 'deep_hold_chain',
-        drafts: [
-          _StepDraft(
-            mode: SessionMode.hold,
-            bpm: null,
-            from: null,
-            to: Position.throat,
-            duration: 10,
-          ),
-          _StepDraft(
-            mode: SessionMode.breath,
-            bpm: null,
-            from: null,
-            to: null,
-            duration: 4,
-          ),
-          _StepDraft(
-            mode: SessionMode.hold,
-            bpm: null,
-            from: null,
-            to: Position.full,
-            duration: 12,
-          ),
-        ],
-        reqHumil: 20.0,
-      ),
-    ];
-
-    // Filtre humilCap + unlocks composants + gating hand. Sélection = max
-    // humiliant valide (parité `_pickFinal` : tri par `req` croissante,
-    // `valid.last`).
-    final valid = candidates.where((c) {
-      if (c.handRequired && !includeHand) return false;
-      if (c.reqHumil > humilCap) return false;
-      return c.drafts.every(_isUnlocked);
-    }).toList()
-      ..sort((a, b) => a.reqHumil.compareTo(b.reqHumil));
-    if (valid.isNotEmpty) {
-      return _materializePunishment(valid.last, bank);
-    }
-
-    // ─── Escalier fallback — ordre du plus exigeant au plus doux ──────────
-    // Étape 1 : rythme `head→mid` rapide (req≈5). Reste une vraie punition
-    // (BPM élevé) tant qu'on a un peu d'humil derrière. À niv. 2-3 c'est
-    // ici qu'on tombe en pratique pour une séance fragile.
-    const lastResort = _PunishmentCompo(
-      id: 'last_resort_rhythm',
-      drafts: [
-        _StepDraft(
-          mode: SessionMode.rhythm,
-          bpm: 120,
-          from: Position.head,
-          to: Position.mid,
-          duration: 22,
-        ),
-      ],
-      reqHumil: 5.0,
-    );
-    if (lastResort.reqHumil <= humilCap &&
-        lastResort.drafts.every(_isUnlocked)) {
-      return _materializePunishment(lastResort, bank);
-    }
-
-    // Étape 2 : filet ultime hand `head→mid` 50 BPM. req=0, toujours
-    // jouable. N'arrive qu'à humilCap≈0 + tous les autres bloqués — pas en
-    // pratique sur une joueuse carrière (mais évite tout crash).
-    const handFallback = _PunishmentCompo(
-      id: 'hand_fallback',
-      drafts: [
-        _StepDraft(
-          mode: SessionMode.hand,
-          bpm: 50,
-          from: Position.head,
-          to: Position.mid,
-          duration: 15,
-        ),
-      ],
-      reqHumil: 0.0,
-    );
-    return _materializePunishment(handFallback, bank);
-  }
-
-  /// Convertit une composition (drafts non-clampés) en [Punishment] runtime :
-  /// passe chaque draft par `_clampToCapability` (ceilings + comfort), injecte
-  /// un texte coach tiré dans le tier `hard` du mode (silencieux pour
-  /// `breath`, qui est une transition), et pose les `time` cumulés.
-  Punishment _materializePunishment(_PunishmentCompo compo, PhraseBank bank) {
-    final steps = <SessionStep>[];
-    var time = 0;
-    for (final raw in compo.drafts) {
-      final clamped = _clampToCapability(raw);
-      final dur = clamped.duration ?? 0;
-      String text = '';
-      if (clamped.mode != SessionMode.breath) {
-        text = _pickPhraseForDraft(bank, clamped, 'hard');
-      }
-      steps.add(SessionStep(
-        time: time,
-        text: text,
-        mode: clamped.mode,
-        bpm: clamped.bpm,
-        bpmEnd: clamped.bpmEnd,
-        from: clamped.from,
-        to: clamped.to,
-        duration: dur,
-      ));
-      time += dur;
-    }
-    return Punishment(
-      id: compo.id,
-      name: compo.id,
-      durationSeconds: time,
-      steps: steps,
-    );
+    // Palette + sélection + matérialisation déléguées à
+    // `_PunishmentBuilder` (cf. `career_session_generator_punishment.dart`).
+    // Le state d'instance a été (re)posé en haut de cette méthode — le
+    // builder lit gen._xxx directement.
+    return _PunishmentBuilder.buildFor(this, bank, includeHand);
   }
 
   /// Applique `_BpmPacing.diversifyBpm` au draft si pertinent (modes avec
@@ -3226,26 +3038,8 @@ class _StepDraft {
       );
 }
 
-/// Composition de punition carrière (Phase 5). Tuple
-/// `(id, drafts, reqHumil, handRequired)` qui mime la palette de `_pickFinal`
-/// — drafts non-clampés (le clamp se fait au moment de la matérialisation
-/// via `_materializePunishment`).
-class _PunishmentCompo {
-  final String id;
-  final List<_StepDraft> drafts;
-  final double reqHumil;
-
-  /// Si vrai, la compo est exclue quand `includeHand == false` (compo qui
-  /// implique la main, comme `biffle_burst`).
-  final bool handRequired;
-
-  const _PunishmentCompo({
-    required this.id,
-    required this.drafts,
-    required this.reqHumil,
-    this.handRequired = false,
-  });
-}
+// `_PunishmentCompo` a migré dans `career_session_generator_punishment.dart`
+// avec `_PunishmentBuilder` qui le consomme.
 
 /// Bundle des paramètres « figés pour la session » consommés par les helpers
 /// de phase de [CareerSessionGenerator.generate]. Construit une seule fois
