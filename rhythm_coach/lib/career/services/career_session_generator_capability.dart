@@ -179,117 +179,35 @@ class _CapabilityClamps {
   /// 2ᵉ enveloppe orthogonale à l'humiliation — un step n'est jouable
   /// que si **les deux** passent. No-op hors carrière ([profile] = null).
   ///
-  /// Modes hors gating : `hand` (exclu de tout axe de difficulté — cf.
-  /// règle « hand n'est jamais un levier »), `lick` (enregistré seulement,
-  /// pas pilotant), `breath` / `freestyle` (aucun axe). Les steps scriptés
-  /// (séquences milestone, beg insistant du Supplier) passent par d'autres
-  /// chemins et ne sont pas clampés — comme ils ne sont pas gatés par
-  /// l'humiliation non plus.
+  /// Dispatch polymorphique : chaque mode porte ses propres caps dans
+  /// `_*Rules.clampToCapability` (cf. `career_session_generator_mode_rules.dart`).
+  /// Modes hors gating (default identité) : `hand` (exclu de tout axe de
+  /// difficulté — cf. règle « hand n'est jamais un levier »), `lick`
+  /// (enregistré seulement, pas pilotant), `breath` / `freestyle` /
+  /// `suckle` (aucun axe). Les steps scriptés (séquences milestone, beg
+  /// insistant du Supplier) passent par d'autres chemins et ne sont pas
+  /// clampés — comme ils ne sont pas gatés par l'humiliation non plus.
+  ///
+  /// La récursion sur `chainNext` et la composition avec
+  /// [clampToCustomLimits] (bornes utilisateur Custom) restent
+  /// orchestrées ici.
   _StepDraft clampToCapability(_StepDraft d) {
     if (profile == null) return clampToCustomLimits(d);
     final clampedChain =
         d.chainNext == null ? null : clampToCapability(d.chainNext!);
-    var from = d.from;
-    var to = d.to;
-    var bpm = d.bpm;
-    var bpmEnd = d.bpmEnd;
-    var dur = d.duration;
-    switch (d.mode) {
-      case SessionMode.rhythm:
-        // Profondeur (cran). Plancher `head` : un rhythm a besoin d'au
-        // moins une amplitude tip↔head, jamais tip↔tip.
-        final depthCap = capabilityCapFor(CapabilityAxis.rhythmDepthMax);
-        if (depthCap != null && to != null) {
-          final capIdx = max(Position.head.index,
-              depthCap.round().clamp(0, Position.values.length - 1));
-          if (to.index > capIdx) to = Position.values[capIdx];
-        }
-        // Garde-fou amplitude `from < to` strict après abaissement de `to`.
-        if (from != null && to != null && from.index >= to.index) {
-          from = to.index > 0 ? Position.values[to.index - 1] : null;
-        }
-        // BPM : plafond de bande + plafond franchissement si pattern
-        // franchissant (`from ≤ mid` ET `to ≥ throat`).
-        if (to != null && (bpm != null || bpmEnd != null)) {
-          var bpmCap = capabilityCapFor(rhythmBpmCeilAxisFor(to));
-          if (from != null &&
-              from.index <= Position.mid.index &&
-              to.index >= Position.throat.index) {
-            bpmCap = minNullable(
-              bpmCap,
-              capabilityCapFor(to == Position.throat
-                  ? CapabilityAxis.gorgeCrossingsBpmThroat
-                  : CapabilityAxis.gorgeCrossingsBpmFull),
-            );
-          }
-          if (bpmCap != null) {
-            final cap = bpmCap.round();
-            if (bpm != null && bpm > cap) bpm = cap;
-            if (bpmEnd != null && bpmEnd > cap) bpmEnd = cap;
-          }
-        }
-        // Apnée : un stroke airless (`from ≥ throat`) borne sa durée à
-        // l'apnée prouvée.
-        if (from != null &&
-            from.index >= Position.throat.index &&
-            dur != null) {
-          final apneaCap = capabilityCapFor(CapabilityAxis.gorgeApneeStreak);
-          if (apneaCap != null && dur > apneaCap) {
-            dur = max(2, apneaCap.floor());
-          }
-        }
-      case SessionMode.hold:
-      case SessionMode.beg:
-        // Convention hold/beg : position tenue dans `to` (repli `from`).
-        final held = to ?? from;
-        if (held == Position.throat || held == Position.full) {
-          final cap = minNullable(
-            capabilityCapFor(held == Position.throat
-                ? CapabilityAxis.holdThroatStreak
-                : CapabilityAxis.holdFullStreak),
-            capabilityCapFor(CapabilityAxis.gorgeApneeStreak),
+    final clamped = _modeRulesRegistry[d.mode]!.clampToCapability(d, this);
+    final composed = identical(clampedChain, d.chainNext)
+        ? clamped
+        : _StepDraft(
+            mode: clamped.mode,
+            bpm: clamped.bpm,
+            bpmEnd: clamped.bpmEnd,
+            from: clamped.from,
+            to: clamped.to,
+            duration: clamped.duration,
+            chainNext: clampedChain,
           );
-          if (cap != null && dur != null && dur > cap) {
-            dur = max(2, cap.floor());
-          }
-        }
-      case SessionMode.biffle:
-        final durCap = capabilityCapFor(CapabilityAxis.biffleStreak);
-        if (durCap != null && dur != null && dur > durCap) {
-          dur = max(2, durCap.floor());
-        }
-        final bpmCap = capabilityCapFor(CapabilityAxis.biffleBpmMax);
-        if (bpmCap != null && bpm != null && bpm > bpmCap) {
-          bpm = bpmCap.round();
-        }
-      case SessionMode.hand:
-      case SessionMode.lick:
-      case SessionMode.breath:
-      case SessionMode.freestyle:
-      case SessionMode.suckle:
-        // Suckle : pas de BPM, position figée par construction (head ou
-        // balls, filtrée en amont par `_isUnlocked`). Aucun axe capability
-        // pertinent → pas de cap difficile. Durée bornée par la palette,
-        // pas par le profil.
-        break; // pas de cap de difficulté pour ces modes
-    }
-    if (from == d.from &&
-        to == d.to &&
-        bpm == d.bpm &&
-        bpmEnd == d.bpmEnd &&
-        dur == d.duration &&
-        identical(clampedChain, d.chainNext)) {
-      return clampToCustomLimits(d);
-    }
-    return clampToCustomLimits(_StepDraft(
-      mode: d.mode,
-      bpm: bpm,
-      bpmEnd: bpmEnd,
-      from: from,
-      to: to,
-      duration: dur,
-      chainNext: clampedChain,
-    ));
+    return clampToCustomLimits(composed);
   }
 
   /// Borne un draft aux limites utilisateur du mode Custom ([bpmRange] /
