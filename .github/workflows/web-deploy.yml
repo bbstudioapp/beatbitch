@@ -1,0 +1,85 @@
+name: Deploy PWA to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  deploy-web:
+    name: Build Flutter web and deploy to Cloudflare Pages
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rhythm_coach
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Fetch external assets from R2
+        env:
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          AWS_REQUEST_CHECKSUM_CALCULATION: WHEN_REQUIRED
+          AWS_RESPONSE_CHECKSUM_VALIDATION: WHEN_REQUIRED
+        run: |
+          if [ -z "$R2_ACCESS_KEY_ID" ] || [ -z "$R2_SECRET_ACCESS_KEY" ] || [ -z "$R2_ENDPOINT" ] || [ -z "$R2_BUCKET" ]; then
+            echo "R2 secrets not configured — skipping external assets fetch."
+            echo "Build will proceed with empty backgrounds / ambience / coach-portraits folders (graceful fallback in app)."
+            exit 0
+          fi
+
+          export AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID"
+          export AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY"
+          export AWS_DEFAULT_REGION="auto"
+
+          mkdir -p assets/backgrounds assets/audio/ambience assets/career/coaches/portraits
+
+          echo "Fetching backgrounds from s3://$R2_BUCKET/backgrounds/v1/ ..."
+          aws s3 sync "s3://$R2_BUCKET/backgrounds/v1/" assets/backgrounds/ \
+            --endpoint-url "$R2_ENDPOINT" \
+            --no-progress
+
+          echo "Fetching ambience from s3://$R2_BUCKET/ambience/v1/ ..."
+          aws s3 sync "s3://$R2_BUCKET/ambience/v1/" assets/audio/ambience/ \
+            --endpoint-url "$R2_ENDPOINT" \
+            --no-progress || echo "(ambience prefix empty or missing, continuing)"
+
+          echo "Fetching coach portraits from s3://$R2_BUCKET/coach-portraits/v1/ ..."
+          aws s3 sync "s3://$R2_BUCKET/coach-portraits/v1/" assets/career/coaches/portraits/ \
+            --endpoint-url "$R2_ENDPOINT" \
+            --no-progress || echo "(coach-portraits prefix empty or missing, continuing)"
+
+      - name: Build Flutter web release
+        run: flutter build web --release --no-wasm-dry-run
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # Le projet `beatbitch` doit déjà exister côté Cloudflare Pages
+          # (créé manuellement via le dashboard — cf. docs/SETUP-CLOUDFLARE-PAGES.md).
+          # `--branch=main` cible le déploiement production. Tout push sur une
+          # autre branche serait déployé en preview (URL distincte) — pas branché
+          # ici puisque ce workflow ne se déclenche que sur main.
+          command: pages deploy rhythm_coach/build/web --project-name=beatbitch --branch=main
+          workingDirectory: ${{ github.workspace }}
