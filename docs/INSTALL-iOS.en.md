@@ -24,10 +24,8 @@
 ### 1. Open Safari and go to
 
 ```
-URL_BEATBITCH_PWA
+https://beatbitch.pages.dev
 ```
-
-(Replace with the URL provided by BB Studio.)
 
 Wait for the page to fully load (a few seconds: we download the entire app,
 audio included, so it can work offline afterwards).
