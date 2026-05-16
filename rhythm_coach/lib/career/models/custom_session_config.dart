@@ -1,6 +1,7 @@
 import 'dart:math' show min;
 
 import '../../models/session.dart' show SessionMode;
+import '../../models/session_step.dart' show Position;
 import '../../services/locale_service.dart';
 import 'specialization.dart';
 
@@ -367,7 +368,12 @@ class CustomSessionConfig {
     final rawCycle = json['cycle_duration_seconds'];
     final cycle = rawCycle is num ? rawCycle.toInt() : 10 * 60;
     final rawDepth = json['max_depth_index'];
-    final depth = rawDepth is num ? rawDepth.toInt().clamp(0, 4) : 4;
+    // Clamp à 0..balls (5) pour conserver une sélection `balls` au reload.
+    // L'éditeur re-clampe à `full` (4) si l'anatomy de la joueuse n'inclut
+    // pas la zone (cf. `widget.hasBalls`), donc une config sauvegardée
+    // avec `balls` reste cohérente même si la zone est ensuite désactivée.
+    final depth =
+        rawDepth is num ? rawDepth.toInt().clamp(0, Position.balls.index) : 4;
 
     int parseRange(
       Object? raw,

@@ -298,9 +298,11 @@ class _MovementAnimationState extends State<MovementAnimation>
         SessionMode.beg => const Color(0xFFCE93D8),
         SessionMode.freestyle => const Color(0xFFB0BEC5),
         SessionMode.hand => const Color(0xFFFFAB91),
-        // Suckle : turquoise/aqua. Couleur libre, hors palette des autres
-        // modes corporels, qui évoque le côté humide / liquide du geste.
-        SessionMode.suckle => const Color(0xFF4DD0E1),
+        // Suckle : rose vif (Material pink 400). Le turquoise précédent
+        // collait trop au cyan de lick à l'œil — rose vif tranche
+        // nettement avec tous les autres modes (mauve beg, saumon hand)
+        // et garde un côté « bouche / lèvres » cohérent avec le geste.
+        SessionMode.suckle => const Color(0xFFEC407A),
       };
 
   static _CursorStyle _cursorStyleFor(SessionMode m) => switch (m) {
@@ -471,6 +473,7 @@ class _PositionLadder extends StatelessWidget {
                     color: color,
                     cursorXFraction: (_kCursorX + 1) / 2,
                     rightPaddingFraction: _kRightPaddingFraction,
+                    rowCount: rowCount,
                   ),
                 ),
               ),
@@ -620,11 +623,20 @@ class _TrajectoryPainter extends CustomPainter {
   final double cursorXFraction;
   final double rightPaddingFraction;
 
+  /// Nombre de positions visibles sur le ladder (5 sans balls, 6 avec).
+  /// Sert à mapper `p.idx` → y absolu de la même façon que
+  /// `_PositionLadder._toAlign` mappe l'index → coordonnée d'`Alignment`.
+  /// Sans ce param, le painter divisait par 4 (hardcodé pour 5 lignes),
+  /// ce qui décalait toutes les pastilles dès qu'on passait à 6 lignes
+  /// (et balls tombait carrément sous le canvas).
+  final int rowCount;
+
   _TrajectoryPainter({
     required this.beats,
     required this.color,
     required this.cursorXFraction,
     required this.rightPaddingFraction,
+    required this.rowCount,
   });
 
   /// Marge verticale (en pixels) entre le tracé et les bords du canvas.
@@ -645,8 +657,9 @@ class _TrajectoryPainter extends CustomPainter {
     final span = endX - startX;
     if (span <= 0) return;
 
+    final maxIdx = (rowCount - 1).clamp(1, 99);
     Offset toOffset(_BeatPoint p) =>
-        Offset(startX + p.t * span, _verticalInset + p.idx / 4 * usableH);
+        Offset(startX + p.t * span, _verticalInset + p.idx / maxIdx * usableH);
 
     // Path lissé (cubic bezier entre points consécutifs).
     final path = Path();
@@ -691,7 +704,8 @@ class _TrajectoryPainter extends CustomPainter {
     if (old.color != color ||
         old.beats.length != beats.length ||
         old.cursorXFraction != cursorXFraction ||
-        old.rightPaddingFraction != rightPaddingFraction) {
+        old.rightPaddingFraction != rightPaddingFraction ||
+        old.rowCount != rowCount) {
       return true;
     }
     for (var i = 0; i < beats.length; i++) {

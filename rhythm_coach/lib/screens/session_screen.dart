@@ -278,8 +278,18 @@ class _SessionScreenState extends State<SessionScreen>
     );
     _controller.onMilestoneRetry = widget.onMilestoneRetry;
     final anatomy = widget.anatomy ?? AnatomyProfile.defaults;
+    // En carrière, la 6e ligne (balls) se révèle progressivement : il faut
+    // que la zone existe ET que la milestone `lickBalls` ait été acquittée
+    // pour ne pas spoiler la zone avant son introduction pédagogique.
+    // Hors carrière (Custom, scénarios JSON, debug), la convention « mode
+    // hérité = tout débloqué » s'applique : on suit l'anatomy uniquement
+    // — sinon une joueuse Custom qui active la zone dans son profil ne
+    // voyait jamais la ligne tant qu'elle n'avait pas avancé en carrière.
     final ballsRevealed = anatomy.hasBalls &&
-        milestoneService.acquiredUnlockKeys().contains(UnlockKey.lickBalls);
+        (!widget.isCareer ||
+            milestoneService
+                .acquiredUnlockKeys()
+                .contains(UnlockKey.lickBalls));
     _positionRowCount = ballsRevealed ? 6 : 5;
     if (widget.isCareer) {
       _controller.addListener(_onCareerStateChanged);

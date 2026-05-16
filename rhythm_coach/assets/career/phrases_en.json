@@ -198,6 +198,30 @@
       "Surprise me, slut."
     ]
   },
+  "suckle": {
+    "soft": [
+      {"text": "Wrap your lips around it. Suckle gently.", "max_depth": "head"},
+      {"text": "Cheeks hollow. Soft suction.", "max_depth": "head"},
+      {"text": "Like a pacifier. Keep it in your mouth.", "max_depth": "head"},
+      {"text": "Put your mouth on that ball. Suck softly.", "min_depth": "balls"},
+      {"text": "Suckle the ball, slow and gentle.", "min_depth": "balls"}
+    ],
+    "medium": [
+      {"text": "Suck harder. Hollow those cheeks.", "max_depth": "head"},
+      {"text": "Suckle it like a pacifier — apply yourself.", "max_depth": "head"},
+      {"text": "Hold the suction. Breathe through your nose.", "max_depth": "head"},
+      {"text": "Suckle that ball — cheeks in.", "min_depth": "balls"},
+      {"text": "Suck the ball — I want to hear it.", "min_depth": "balls"},
+      {"text": "The other one now. Same. Suckle it.", "min_depth": "balls"}
+    ],
+    "hard": [
+      {"text": "Suckle hard. Don't let up.", "max_depth": "head"},
+      {"text": "Suck like you're trying to empty it.", "max_depth": "head"},
+      {"text": "Really hollow those cheeks. Hard suction.", "max_depth": "head"},
+      {"text": "Suck that ball like melted ice cream.", "min_depth": "balls"},
+      {"text": "Suckle hard, slut.", "min_depth": "balls"}
+    ]
+  },
   "encore": [
     "Again? Insatiable little bitch. Brace yourself, this time I'm going further.",
     "You want more? Fine. Back to it, and this time you give even more.",

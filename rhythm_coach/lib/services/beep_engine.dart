@@ -290,11 +290,18 @@ class BeepEngine {
       _loopDurationMs = null;
     }
 
-    // Hold et beg : la position cible vient de `step.to` (sémantique « tenir
-    // jusqu'à ce point »). On la stocke dans `_from` pour rester compatible
-    // avec les consommateurs UI (currentFrom). Pour rhythm/lick/hand/biffle :
-    // `_from` = step.from (point de départ de l'alternance).
-    if (mode == SessionMode.hold || mode == SessionMode.beg) {
+    // Hold / beg / suckle : la position cible vient de `step.to` (sémantique
+    // « tenir / aspirer à ce point »). On la stocke dans `_from` pour rester
+    // compatible avec les consommateurs UI (`currentFrom`, badge, ladder du
+    // `MovementAnimation` qui s'aligne sur `widget.from` pour les modes
+    // statiques). Sans cette ligne pour suckle, `_from` héritait de la
+    // position du step rythmé précédent → le ladder affichait « tip » /
+    // « head » selon le from précédent malgré un suckle to=head ou balls.
+    // Pour rhythm/lick/hand/biffle : `_from` = step.from (point de départ
+    // de l'alternance).
+    if (mode == SessionMode.hold ||
+        mode == SessionMode.beg ||
+        mode == SessionMode.suckle) {
       if (step.to != null) _from = step.to!;
     } else if (step.from != null) {
       _from = step.from!;

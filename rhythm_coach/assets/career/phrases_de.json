@@ -198,6 +198,30 @@
       "Überrasch mich, Schlampe."
     ]
   },
+  "suckle": {
+    "soft": [
+      {"text": "Leg deine Lippen drum herum. Sauge sanft.", "max_depth": "head"},
+      {"text": "Wangen einziehen. Weiches Saugen.", "max_depth": "head"},
+      {"text": "Wie an einem Schnuller. Behalt ihn im Mund.", "max_depth": "head"},
+      {"text": "Nimm den Hoden in den Mund. Sauge sanft.", "min_depth": "balls"},
+      {"text": "Lutsch den Hoden, langsam und sanft.", "min_depth": "balls"}
+    ],
+    "medium": [
+      {"text": "Sauge fester. Wangen rein.", "max_depth": "head"},
+      {"text": "Lutsch wie an einem Schnuller, streng dich an.", "max_depth": "head"},
+      {"text": "Halte den Sog. Atme durch die Nase.", "max_depth": "head"},
+      {"text": "Lutsch den Hoden — Wangen rein.", "min_depth": "balls"},
+      {"text": "Sauge den Hoden — ich will es hören.", "min_depth": "balls"},
+      {"text": "Jetzt den anderen. Genauso. Lutsch.", "min_depth": "balls"}
+    ],
+    "hard": [
+      {"text": "Sauge hart. Lass nicht nach.", "max_depth": "head"},
+      {"text": "Saug, als wolltest du ihn leeren.", "max_depth": "head"},
+      {"text": "Wangen richtig tief rein. Harter Sog.", "max_depth": "head"},
+      {"text": "Lutsch den Hoden wie geschmolzenes Eis.", "min_depth": "balls"},
+      {"text": "Lutsch hart, du Schlampe.", "min_depth": "balls"}
+    ]
+  },
   "encore": [
     "Noch mehr? Du unersättliche kleine Hündin. Halt dich fest, diesmal geh ich weiter.",
     "Du willst noch mehr? Gut. Wir machen das nochmal, und diesmal gibst du noch mehr.",
