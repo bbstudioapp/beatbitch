@@ -38,6 +38,8 @@ class CareerGenerationResult {
 /// durée demandée. Voir `(plan local)`
 /// pour la spec complète de l'algorithme.
 class CareerSessionGenerator {
+  // ─── CONSTANTES ──────────────────────────────────────────────────────────
+
   static const int _finisherBudgetSeconds = 12;
   static const double _staminaMax = 100.0;
 
@@ -46,7 +48,14 @@ class CareerSessionGenerator {
   /// proprement effort → finisher sans dépasser la durée demandée.
   static const int _preFinisherBudgetSeconds = 30;
 
+  // ─── RNG ─────────────────────────────────────────────────────────────────
+
   final Random _rng;
+
+  // ─── PARAMÈTRES DE SESSION (settables par [generate]) ────────────────────
+  // Posés au début de chaque appel à `generate`. Lus par les helpers de
+  // tirage / clamp tout au long de la génération. Aucun n'est modifié au
+  // cours d'une même session.
 
   /// Toggle propagé depuis [generate]. Filtre hand ET biffle des candidats
   /// (les coups de queue impliquent de tenir avec la main, donc cohérent
@@ -72,6 +81,11 @@ class CareerSessionGenerator {
   /// post-final humiliant biaisé par spé sloppy/obeissance, réservé aux
   /// niveaux avancés où la dramaturgie peut sortir du cadre doux).
   int _level = 1;
+
+  // ─── ÉTAT DE TRACKING (mutable pendant la génération) ────────────────────
+  // Champs mis à jour à chaque step poussé. Servent à la continuité, à la
+  // variété (anti-répétition mode/BPM/profondeur) et au pacing (mini-vagues,
+  // ordres salive). Tous reset au début de `generate`.
 
   /// `time` (en secondes) à partir duquel une **mini-vague** peut être
   /// insérée dans la boucle main. Cf. `_shouldEmitMiniWave` pour les
@@ -153,6 +167,10 @@ class CareerSessionGenerator {
   /// pattern, on veut qu'il continue à compter.
   final List<_RecentEmit> _recentEmits = [];
 
+  // ─── SIMULATION SALIVE ───────────────────────────────────────────────────
+  // Mime le runtime `SalivaEngine` pour anticiper les ordres de déglutition
+  // au moment du draft. Reset à chaque `generate`.
+
   /// Simulateur de salive utilisé pendant la génération. Mime le
   /// comportement du `SalivaEngine` runtime : production par mode/position,
   /// auto-déglutition au-dessus de 75. Sert à projeter la lubrification
@@ -161,6 +179,10 @@ class CareerSessionGenerator {
   /// steps forbidden auto-générés ; les milestones les portent en dur).
   late SalivaEngine _salivaSim;
   int _salivaSimSecond = 0;
+
+  // ─── GATING & CONTENU AUTORISÉ ───────────────────────────────────────────
+  // Set d'unlocks, profil anatomique, poids coach. Posés par `generate`,
+  // lus partout pour autoriser/exclure des modes ou des actions.
 
   /// Set des `UnlockKey` débloquées pour la génération en cours. Une action
   /// dont la clé n'est pas dedans est rejetée par `_isUnlocked` et dégradée
@@ -194,6 +216,10 @@ class CareerSessionGenerator {
     return w != null && w <= 0;
   }
 
+  // ─── HUMILIATION & OBÉDIANCE (snapshot au start de session) ──────────────
+  // Lus par `_humilCapAt` (cascade humil) et `_pickPhrase` (bump tier).
+  // Pas modifiés pendant la génération.
+
   /// Score career d'humiliation (persisté lifetime) au démarrage de la
   /// session. Sert au tirage spécifique de certains modes (lick :
   /// amplitudes complètes seulement à partir de 2).
@@ -211,6 +237,10 @@ class CareerSessionGenerator {
   /// (plus c'est élevé, plus la coach pioche dans `medium`/`hard`) et le
   /// `recoveryThreshold` (plus c'est élevé, plus on respecte l'endurance).
   double _obedience = 0.0;
+
+  // ─── CAPACITÉ & SURCHARGE (2ᵉ enveloppe carrière) ────────────────────────
+  // Profil persisté + plafonds figés sur fail + axe surchargé cette séance.
+  // Lus par `_clampToCapability` / `_capabilityCapFor`.
 
   /// Profil de capacités (2ᵉ enveloppe de difficulté, carrière uniquement).
   /// `null` = pas de gating capacité (mode Custom, scénarios JSON, tests
@@ -235,6 +265,10 @@ class CareerSessionGenerator {
   /// modulé par sa `successRate`). 1.0 pour tout autre axe.
   double _overloadFactor = 1.0;
 
+  // ─── SURCHARGES MODE CUSTOM ──────────────────────────────────────────────
+  // Bornes utilisateur (BPM, durée des holds) qui priment sur la capacité.
+  // Hors mode Custom → tuple `null` → aucun bornage supplémentaire.
+
   /// Bornes BPM imposées par l'utilisateur en mode Custom (cf. `generate(
   /// bpmRange:)`). `null` = pas de bornage utilisateur (carrière, scénario,
   /// custom à valeurs par défaut). Le `_clampToCapability` final passe par
@@ -248,6 +282,8 @@ class CareerSessionGenerator {
   /// capacité, qui peuvent encore raboter par-dessus (mais en pratique le
   /// profil est null pour Custom).
   (int, int)? _holdDurationRange;
+
+  // ─── CATALOGUE STATIQUE ──────────────────────────────────────────────────
 
   /// Axes éligibles à la surcharge : pilotants, hors `hand`/`lick`/`breath`
   /// (jamais des leviers de difficulté) et hors floors BPM / souffle (rien ne
@@ -714,6 +750,19 @@ class CareerSessionGenerator {
     // générateur). Le caller borne le nombre d'encores enchaînés via le
     // gating `_canEncore`.
     final boostsCount = cfg.boostsCount + max(0, encoreChainIndex) * 2;
+    // Pré-calculés ici (et non plus juste avant la pré-finition) pour
+    // pouvoir construire [_GenContext] en une seule fois après les locaux
+    // dérivés. Aucune dépendance sur l'opening step / la boucle main —
+    // tout vient de `level`, `quickie`, `intense`, `finalMilestone`.
+    final isLowLevel = level <= 2 && !quickie && !intense;
+    final useFinalMilestone = finalMilestone != null;
+    final finalBudget = useFinalMilestone
+        ? finalMilestone.durationSeconds
+        : _finisherBudgetSeconds;
+    final genUntil = effectiveDuration -
+        finalBudget -
+        (isLowLevel && !useFinalMilestone ? _preFinisherBudgetSeconds : 0);
+
     _salivaSim = SalivaEngine()..reset();
     _salivaSimSecond = 0;
     final steps = <SessionStep>[];
@@ -721,6 +770,35 @@ class CareerSessionGenerator {
 
     var time = 0;
     var stamina = _staminaMax;
+
+    // DTO partagé par les helpers de phase. Construit une fois ici et passé
+    // à chacun pour éviter de répéter les ~10 args (cfg/bank/effectiveDuration/
+    // level/...) à chaque appel. Le curseur `(time, stamina)` reste hors-ctx
+    // et threadé via record return values.
+    final ctx = _GenContext(
+      steps: steps,
+      profile: profile,
+      level: level,
+      encoreChainIndex: encoreChainIndex,
+      effectiveDuration: effectiveDuration,
+      boostsCount: boostsCount,
+      genUntil: genUntil,
+      intensityFloor: intensityFloor,
+      obedience: obedience,
+      quickie: quickie,
+      intense: intense,
+      includeHand: includeHand,
+      isLowLevel: isLowLevel,
+      useFinalMilestone: useFinalMilestone,
+      noStats: noStats,
+      cfg: cfg,
+      bank: bank,
+      sessionName: sessionName,
+      sessionNameQuickie: sessionNameQuickie,
+      milestoneTextResolver: milestoneTextResolver,
+      insertedBodies: insertedBodies,
+      finalMilestone: finalMilestone,
+    );
 
     // Insertion différée des milestones d'apprentissage. Pour permettre
     // une chauffe avant de tomber sur la séquence pédagogique, chaque
@@ -767,43 +845,14 @@ class CareerSessionGenerator {
       if (p.inserted) return;
       p.inserted = true;
       final startedAt = time;
-      for (final mStep in m.sequence) {
-        // Si une surcharge i18n existe pour ce step (clé = offset `time`
-        // du step dans la sequence), on l'utilise à la place du `text`
-        // du JSON principal.
-        final overrideText = milestoneTextResolver?.call(m.id, mStep.time);
-        steps.add(SessionStep(
-          time: time + mStep.time,
-          text: overrideText ?? mStep.text,
-          mode: mStep.mode,
-          bpm: mStep.bpm,
-          from: mStep.from,
-          to: mStep.to,
-          duration: mStep.duration,
-          swallowMode: mStep.swallowMode,
-        ));
-        // Simulation stamina/salive pour chaque step de la séquence, pour
-        // que la projection reste cohérente.
-        final mDraft = _stepToDraft(mStep, SessionMode.rhythm);
-        final staminaBefore = stamina;
-        stamina =
-            _applyStaminaChange(stamina, mDraft, time / effectiveDuration, cfg);
-        _advanceSalivaSim(mDraft);
-        _fillProfile(profile, time + mStep.time, mStep.duration ?? 0, stamina,
-            valueStart: staminaBefore);
-        // Tracking de continuité par type — chaque step de la séquence
-        // compte (la séquence peut elle-même alterner bouche/transit).
-        if (mStep.mode != null && !mStep.isTextOnly) {
-          _trackPushedStep(mStep.mode!, mStep.to,
-              from: mStep.from, bpm: mStep.bpm, duration: mStep.duration);
-        }
-      }
-      // Met à jour le « dernier mode/texte » avec le dernier step de la
-      // milestone — sert au filtrage anti-répétition de la suite générée.
-      final lastStep = m.sequence.last;
-      _lastMode = lastStep.mode ?? _lastMode;
-      _lastText = lastStep.text;
-      time += m.durationSeconds;
+      final result = _pushMilestoneSequence(
+        ctx,
+        milestone: m,
+        time: time,
+        stamina: stamina,
+      );
+      time = result.time;
+      stamina = result.stamina;
       if (index == 0) {
         milestoneStartTime = startedAt;
         milestoneDurationSeconds = m.durationSeconds;
@@ -889,20 +938,8 @@ class CareerSessionGenerator {
     // — la régen post-Supplier doit déjà être à fond, pas besoin de la
     // pré-accélérer.
     //
-    // Cas `finalMilestone != null` : la séquence milestone EST le final
-    // (placement `finalApotheose`). Elle remplace les boosts + le step
-    // finisher classique. On réserve donc sa durée intégrale en fin de
-    // séance (au lieu de `_finisherBudgetSeconds`), et on saute le
-    // pré-finisher (la milestone porte sa propre amorce d'apothéose).
-    final isLowLevel = level <= 2 && !quickie && !intense;
-    final useFinalMilestone = finalMilestone != null;
-    final finalBudget = useFinalMilestone
-        ? finalMilestone.durationSeconds
-        : _finisherBudgetSeconds;
-    final genUntil = effectiveDuration -
-        finalBudget -
-        (isLowLevel && !useFinalMilestone ? _preFinisherBudgetSeconds : 0);
-
+    // `isLowLevel`, `useFinalMilestone`, `finalBudget`, `genUntil` désormais
+    // pré-calculés en tête de [generate] (cf. construction de `ctx` plus haut).
     while (time < genUntil) {
       // Insertion milestone : on traite les pending dans l'ordre, dès que
       // `time` atteint la target (`>= targetTime`), OU dès qu'on dépasse
@@ -1225,34 +1262,14 @@ class CareerSessionGenerator {
     // `_finish` enchaîner sur la phrase finale + finale_chime.
     if (useFinalMilestone) {
       final finalMilestoneStartTime = time;
-      for (final mStep in finalMilestone.sequence) {
-        final overrideText =
-            milestoneTextResolver?.call(finalMilestone.id, mStep.time);
-        steps.add(SessionStep(
-          time: time + mStep.time,
-          text: overrideText ?? mStep.text,
-          mode: mStep.mode,
-          bpm: mStep.bpm,
-          from: mStep.from,
-          to: mStep.to,
-          duration: mStep.duration,
-          swallowMode: mStep.swallowMode,
-        ));
-        final mDraft = _stepToDraft(mStep, SessionMode.rhythm);
-        final staminaBeforeFinal = stamina;
-        stamina =
-            _applyStaminaChange(stamina, mDraft, time / effectiveDuration, cfg);
-        _advanceSalivaSim(mDraft);
-        _fillProfile(profile, time + mStep.time, mStep.duration ?? 0, stamina,
-            valueStart: staminaBeforeFinal);
-        if (mStep.mode != null && !mStep.isTextOnly) {
-          _trackPushedStep(mStep.mode!, mStep.to,
-              from: mStep.from, bpm: mStep.bpm, duration: mStep.duration);
-        }
-      }
-      time += finalMilestone.durationSeconds;
-      _lastMode = finalMilestone.sequence.last.mode ?? _lastMode;
-      _lastText = finalMilestone.sequence.last.text;
+      final finalResult = _pushMilestoneSequence(
+        ctx,
+        milestone: finalMilestone,
+        time: time,
+        stamina: stamina,
+      );
+      time = finalResult.time;
+      stamina = finalResult.stamina;
 
       // Catégorise le final pour piocher le bon `finale_chime` côté
       // BeepEngine. Basé sur le dernier step de config de la séquence
@@ -1275,39 +1292,20 @@ class CareerSessionGenerator {
         text: bank.pickCongrats(_rng),
       ));
 
-      final finalDuration = time + 2;
-      final trimmedProfile = List<double>.generate(
-        finalDuration,
-        (i) => i < profile.length ? profile[i] : stamina,
-      );
-
-      return CareerGenerationResult(
-        session: Session(
-          id: 'career:lvl$level:${effectiveDuration}s${quickie ? ":q" : ""}',
-          name: quickie
-              ? (sessionNameQuickie ?? 'Carrière niveau $level — bâclée')
-              : (sessionName ?? 'Carrière niveau $level'),
-          description: 'Session générée — $effectiveDuration s',
-          durationSeconds: finalDuration,
-          defaultMode: SessionMode.rhythm,
-          steps: steps,
-          milestoneId: insertedBodies.isNotEmpty ? insertedBodies[0].id : null,
-          milestoneStartTime: milestoneStartTime,
-          milestoneDurationSeconds: milestoneDurationSeconds,
-          secondMilestoneId:
-              insertedBodies.length >= 2 ? insertedBodies[1].id : null,
-          secondMilestoneStartTime: secondMilestoneStartTime,
-          secondMilestoneDurationSeconds: secondMilestoneDurationSeconds,
-          finalMilestoneId: finalMilestone.id,
-          finalMilestoneStartTime: finalMilestoneStartTime,
-          finalMilestoneDurationSeconds: finalMilestone.durationSeconds,
-          finalCategory: finalCategory,
-          silentFinishStartTime: silentFinishStartTime,
-          finalStepTime: finalStepStartTime,
-          noStats: noStats,
-        ),
-        staminaProfile: trimmedProfile,
-        overloadAxis: _overloadAxis,
+      return _assembleResult(
+        ctx,
+        time: time,
+        stamina: stamina,
+        milestoneStartTime: milestoneStartTime,
+        milestoneDurationSeconds: milestoneDurationSeconds,
+        secondMilestoneStartTime: secondMilestoneStartTime,
+        secondMilestoneDurationSeconds: secondMilestoneDurationSeconds,
+        finalCategory: finalCategory,
+        silentFinishStartTime: silentFinishStartTime,
+        finalStepStartTime: finalStepStartTime,
+        finalMilestoneId: finalMilestone.id,
+        finalMilestoneStartTime: finalMilestoneStartTime,
+        finalMilestoneDurationSeconds: finalMilestone.durationSeconds,
       );
     }
 
@@ -1321,28 +1319,14 @@ class CareerSessionGenerator {
     // Custom : rhythm exclu → skip le pré-finisher (les boosts substitueront
     // le sprint via leur propre fallback de mode).
     if (isLowLevel && !_isModeForbidden(SessionMode.rhythm)) {
-      final preDur = 22 + _rng.nextInt(9); // [22, 30]
-      final preBpm = 62 + _rng.nextInt(9); // [62, 70]
-      final preDraft = _clampToCapability(_StepDraft(
-        mode: SessionMode.rhythm,
-        bpm: preBpm,
-        from: Position.head,
-        to: preFinisherTarget,
-        duration: preDur,
-      ));
-      final preText = _pickPhraseForDraft(bank, preDraft, 'medium');
-      steps.add(_draftToStep(preDraft, time: time, text: preText));
-      _lastMode = SessionMode.rhythm;
-      _lastText = preText;
-      _trackPushedStep(SessionMode.rhythm, preDraft.to,
-          from: preDraft.from, bpm: preDraft.bpm, duration: preDraft.duration);
-      final staminaBeforePre = stamina;
-      stamina =
-          _applyStaminaChange(stamina, preDraft, time / effectiveDuration, cfg);
-      _fillProfile(profile, time, preDraft.duration ?? preDur, stamina,
-          valueStart: staminaBeforePre);
-      _advanceSalivaSim(preDraft);
-      time += preDraft.duration ?? preDur;
+      final preResult = _emitPreFinisher(
+        ctx,
+        time: time,
+        stamina: stamina,
+        preFinisherTarget: preFinisherTarget,
+      );
+      time = preResult.time;
+      stamina = preResult.stamina;
     }
 
     // Choix du template de finish : `hand_burst` (non humiliant, pure
@@ -1364,167 +1348,20 @@ class CareerSessionGenerator {
     // toutes neutres). Avant fix #68, les doses ne servaient qu'à exclure
     // (poids 0) : hand=rare + rhythm=frequent en Extrême → 25 % de boosts
     // hand constants. Désormais : 0.4/(0.4+2.2) ≈ 15 %.
-    final handForbidden = _isModeForbidden(SessionMode.hand);
-    final rhythmForbidden = _isModeForbidden(SessionMode.rhythm);
-    final preferHandBase = _humiliationCareer < 5 && level <= 3 ? 0.70 : 0.25;
-    final bool useHandBurst;
-    final SessionMode burstMode;
-    if (handForbidden && rhythmForbidden) {
-      useHandBurst = false; // chemin "rhythm-like" : BPM cap/floor rhythm
-      burstMode = SessionMode.lick;
-    } else if (handForbidden) {
-      useHandBurst = false;
-      burstMode = SessionMode.rhythm;
-    } else if (rhythmForbidden) {
-      useHandBurst = true;
-      burstMode = SessionMode.hand;
-    } else {
-      final handWeight = _coachModeWeights[SessionMode.hand] ?? 1.0;
-      final rhythmWeight = _coachModeWeights[SessionMode.rhythm] ?? 1.0;
-      final dosesAreSymmetric = (handWeight - rhythmWeight).abs() < 0.01;
-      final preferHand = dosesAreSymmetric
-          ? preferHandBase
-          : handWeight / (handWeight + rhythmWeight);
-      useHandBurst = _rng.nextDouble() < preferHand;
-      burstMode = useHandBurst ? SessionMode.hand : SessionMode.rhythm;
-    }
+    final burstPick = _pickBurstMode(ctx);
+    final useHandBurst = burstPick.useHandBurst;
+    final burstMode = burstPick.burstMode;
 
-    // Plafond humiliation pour les bursts. Hand n'est pas gating par
-    // humiliation (cap inutile), mais on laisse `_enforceHumiliationRequired`
-    // tourner — il rejettera juste si la profondeur du draft demande trop.
-    // Cap assoupli pour les boosts : projection au temps `time` du début
-    // de la phase finish, +8 de tolérance pour permettre des bursts un
-    // poil au-dessus du cap mécanique strict (tradition du finish).
-    final boostHumilCap = _humilCapAt(time) + 8.0;
-    // Nombre total de boosts : table par niveau + bonus encore (fixé en
-    // amont via `boostsCount`). Plus de boucle conditionnelle sur la
-    // jauge — le sprint est entièrement déterministe.
-    final totalBoosts = max(1, boostsCount);
-    // **BPM cap qui scale par niveau ET par chaîne d'encore** : niveau 1
-    // plafonne à ~110 BPM (hand) / 130 (rhythm), +4 BPM/niveau jusqu'à un
-    // plafond de garde-fou à 300 (très haut — c'est le `comfort` du profil
-    // de capacités qui borne en pratique, via `_clampToCapability`). Le
-    // mode encore ajoute +8 BPM par cran de chaîne pour intensifier le
-    // sprint sans changer le nombre de boosts.
-    final levelBpmBoost =
-        ((level - 1) * 4 + max(0, encoreChainIndex) * 8).clamp(0, 70);
-    final bpmCap = useHandBurst
-        ? (110 + levelBpmBoost).clamp(110, 300)
-        : (130 + levelBpmBoost).clamp(130, 300);
-    final bpmFloor = useHandBurst ? 80 : 100;
-    // BPM "ancre" du burst : varie autour de bpmCap selon deficit. Chaque
-    // step varie de ±15 par-dessus pour éviter de répéter exactement le
-    // même tempo tout en restant clairement en mode finish. La cible (`to`)
-    // varie également d'un cran selon le step — sinon on enchaîne 5 fois le
-    // même tip→mid à 148 BPM, sensation de stagnation.
-    // Cap de profondeur des boosts gaté par les milestones effectivement
-    // acquittées (cf. `_milestoneRhythmCeilingIdx`) : throat ouvert si
-    // `throatPulse` débloqué (intro_throat_pulse), full si `fullPulse`
-    // (intro_full_pulse). Indépendant du niveau seul — sauter des milestones
-    // ne donne pas accès aux profondeurs. Borné par `_maxDepthIndex` en
-    // sécurité, et par mid (idx 2) au minimum (un boost ne descend jamais
-    // sous mid pour rester reconnaissable comme un sprint).
-    final boostMaxToIdx = max(2, _milestoneRhythmCeilingIdx());
-    // Index dans `steps` du dernier boost ajouté. Sert ensuite à substituer
-    // le `text` par une annonce du final (ex: hand → lick → "sors ta langue,
-    // j'arrive") quand le mode change pour le finisher.
-    int? lastBoostIndex;
-    // Monotonie ascendante : la phase finish ne doit JAMAIS ralentir. Chaque
-    // boost démarre sur un BPM ≥ au précédent (idem pour la profondeur `to`).
-    // Sans ces planchers, le shift aléatoire ±15 et le tirage `boostMaxToIdx
-    // -1` pouvaient créer un palier descendant audible — l'utilisateur a
-    // explicitement noté ce ralentissement.
-    int prevBoostBpm = 0;
-    int prevBoostToIdx = 0;
-    // **Ramp progressif** : la phase finish doit s'entendre comme une
-    // accélération, pas comme un sprint plat à 100% dès le 1er boost.
-    // On échelonne BPM et profondeur sur la totalité des boosts prévus.
-    // Plancher 0.4 : premier boost à ~40 % de la dynamique floor↔cap pour
-    // rester reconnaissable comme un sprint dès l'attaque.
-    final plannedBoosts = totalBoosts;
-    for (var boostsAdded = 0; boostsAdded < totalBoosts; boostsAdded++) {
-      // Durée variable : 12 à 16 s par défaut, +1s par cran de chaîne
-      // encore pour allonger un peu chaque sprint.
-      final boostDur =
-          12 + _rng.nextInt(5) + max(0, encoreChainIndex).clamp(0, 4);
-      // Progression linéaire 0→1 sur les `plannedBoosts`. Plancher 0.4 :
-      // pas de démarrage mou.
-      final progress = plannedBoosts <= 1
-          ? 1.0
-          : ((boostsAdded + 1) / plannedBoosts).clamp(0.4, 1.0);
-      final targetBpm = (bpmFloor + progress * (bpmCap - bpmFloor)).round();
-      // Jitter ±5 BPM autour de la cible pour ne pas répéter exactement
-      // le même tempo deux boosts d'affilée. Capé par bpmCap (jamais
-      // au-delà du plafond du niveau).
-      final shift = _rng.nextInt(11) - 5;
-      final bpmRaw = (targetBpm + shift).clamp(bpmFloor, bpmCap);
-      // Plancher monotone : on ne descend jamais sous le BPM du boost
-      // précédent. Si bpmRaw repassait sous (jitter négatif sur un palier
-      // déjà haut), on remonte à prevBoostBpm + 4 pour entendre la montée.
-      final bpm =
-          bpmRaw <= prevBoostBpm ? min(prevBoostBpm + 4, bpmCap) : bpmRaw;
-      // Profondeur : ramp aussi sur la progression. boost 1 vise
-      // `boostMaxToIdx - 2`, boost 2 vise -1, boost 3+ vise le max.
-      // Toujours capé entre mid (idx 2) et le plafond. Le plancher
-      // `prevBoostToIdx` garantit la monotonie (jamais de descente).
-      final rampDenom = plannedBoosts <= 1 ? 1 : (plannedBoosts - 1);
-      final progressionToIdx =
-          (boostMaxToIdx - 2 + 2 * (boostsAdded / rampDenom).clamp(0.0, 1.0))
-              .round()
-              .clamp(2, boostMaxToIdx);
-      final toIdx = max(prevBoostToIdx, progressionToIdx);
-      final boostTo = Position.values[toIdx];
-      // `from` : 2 crans au-dessus si possible (pour amplitude max), sinon
-      // 1 cran. Permet à un finish niveau 4 (maxDepthIndex=2 → mid) de
-      // varier entre tip→mid (amplitude pleine) et head→mid (plus court).
-      final boostFromIdx =
-          _rng.nextBool() && toIdx >= 2 ? max(0, toIdx - 2) : max(0, toIdx - 1);
-      final boostFrom = Position.values[boostFromIdx];
-      final boostDraftRaw = _StepDraft(
-        mode: burstMode,
-        bpm: bpm,
-        from: boostFrom,
-        to: boostTo,
-        duration: boostDur,
-      );
-      // Dégrade le boost si humiliation insuffisante. Pour hand, la
-      // contrainte humiliation est nulle → pas de dégradation, on garde
-      // amplitude max. Pour rhythm, on respecte le cap normal du finish.
-      // Dans les deux cas on passe par `_clampToCapability` (qui applique
-      // aussi les bornes utilisateur Custom) pour qu'un BPM max imposé
-      // soit respecté même sur la phase finish.
-      final boostDraft = useHandBurst
-          ? _clampToCapability(boostDraftRaw)
-          : _enforceHumiliationRequired(boostDraftRaw, boostHumilCap);
-      // Tier dédié `boost` : phrases explicites « accélère / on monte /
-      // dernier sprint » pour rendre la phase finish lisible. Fallback
-      // sur 'hard' si la bank n'a rien dans 'boost'.
-      var boostText = _pickPhraseForDraft(bank, boostDraft, 'boost');
-      if (boostText.isEmpty) {
-        boostText = _pickPhraseForDraft(bank, boostDraft, 'hard');
-      }
-      steps.add(_draftToStep(boostDraft, time: time, text: boostText));
-      lastBoostIndex = steps.length - 1;
-      _lastMode = boostDraft.mode;
-      _lastText = boostText;
-      _lastBpm = boostDraft.bpm ?? _lastBpm;
-      _trackPushedStep(boostDraft.mode, boostDraft.to,
-          from: boostDraft.from,
-          bpm: boostDraft.bpm,
-          duration: boostDraft.duration);
-      final staminaBeforeBoost = stamina;
-      stamina = _applyStaminaChange(stamina, boostDraft, 1.0, cfg);
-      _advanceSalivaSim(boostDraft);
-      _fillProfile(profile, time, boostDur, stamina,
-          valueStart: staminaBeforeBoost);
-      time += boostDur;
-      // Mémorise BPM/profondeur retenus (post-dégradation humil) pour que le
-      // boost suivant ne puisse pas redescendre sous ce palier.
-      prevBoostBpm = boostDraft.bpm ?? prevBoostBpm;
-      if (boostDraft.to != null) {
-        prevBoostToIdx = max(prevBoostToIdx, boostDraft.to!.index);
-      }
-    }
+    final boostResult = _emitBoosts(
+      ctx,
+      time: time,
+      stamina: stamina,
+      useHandBurst: useHandBurst,
+      burstMode: burstMode,
+    );
+    time = boostResult.time;
+    stamina = boostResult.stamina;
+    final lastBoostIndex = boostResult.lastBoostIndex;
 
     // Final : action longue tenue qui clôture la séance. Distinct de la
     // phase « finish » (boosts) ; le final est l'apothéose contemplative.
@@ -1535,133 +1372,39 @@ class CareerSessionGenerator {
     // probablement saturé). Le générateur ne bénéficie pas des bumps
     // évènementiels (punition complétée etc.) — uniquement de la rampe
     // automatique — donc c'est volontairement conservateur.
-    final finalHumilCap = _humilCapAt(time);
-    // En chaîne encore, on allonge le final pour que la dramaturgie de
-    // « tu en veux encore » se traduise aussi côté apothéose. Bornée par
-    // le clamp de `_pickFinal` pour rester raisonnable.
-    final finishMul = 1.0 + max(0, encoreChainIndex) * 0.10;
-    final finisherDraft = _pickFinal(
-      humilCap: finalHumilCap,
-      includeHand: includeHand,
-      maxDepth: _maxDepthIndex,
-      finishMul: finishMul,
+    final finalResult = _emitFinalStep(
+      ctx,
+      time: time,
+      stamina: stamina,
+      lastBoostIndex: lastBoostIndex,
+      burstMode: burstMode,
     );
-    final finalCategory = _categorizeFinal(finisherDraft);
-    final finalMode = finisherDraft.mode;
+    time = finalResult.time;
+    stamina = finalResult.stamina;
+    final finalCategory = finalResult.finalCategory;
+    final finalMode = finalResult.finalMode;
+    final finalStepStartTime = finalResult.finalStepStartTime;
 
-    // **Annonce du final** : si le finisher change de mode (ex: dernier
-    // boost = hand, finisher = lick), on prépare une phrase qui annonce le
-    // changement physique imminent (« sors ta langue, j'arrive »). On la
-    // pose **sur le step final lui-même** (pas sur le dernier boost) pour
-    // qu'elle retentisse juste avant le `finale_chime` — feedback : annoncée
-    // 12-16 s en avance sur un boost, l'effet « ça arrive » se diluait. Si
-    // le finisher reste dans le même mode, on retombe sur la phrase d'action
-    // (« ouvre ta bouche », « avale tout »…) qui guide l'exécution.
-    final announcePhrase = (lastBoostIndex != null && burstMode != finalMode)
-        ? bank.pickFinalAnnouncement(
-            preMode: burstMode,
-            finalMode: finalMode,
-            rng: _rng,
-          )
-        : null;
-    final finalActionPhrase = bank.pickFinalAction(
-      mode: finalMode,
-      holdPosition: finalMode == SessionMode.hold ? finisherDraft.from : null,
-      rng: _rng,
+    final postFinalResult = _emitPostFinal(
+      ctx,
+      time: time,
+      stamina: stamina,
+      finalMode: finalMode,
     );
-    final finalStepText = (announcePhrase != null && announcePhrase.isNotEmpty)
-        ? announcePhrase
-        : (finalActionPhrase ?? '');
-    final finalStepStartTime = time;
-    final finisherStep =
-        _draftToStep(finisherDraft, time: time, text: finalStepText);
-    _lastMode = finalMode;
-    _lastText = finalStepText;
-    _trackPushedStep(finalMode, finisherDraft.to,
-        from: finisherDraft.from,
-        bpm: finisherDraft.bpm,
-        duration: finisherDraft.duration);
-    final finisherDuration = finisherDraft.duration!;
-    steps.add(finisherStep);
-    final staminaBeforeFinisher = stamina;
-    stamina = _applyStaminaChange(stamina, finisherDraft, 1.0, cfg);
-    _fillProfile(profile, time, finisherDuration, stamina,
-        valueStart: staminaBeforeFinisher);
-    _advanceSalivaSim(finisherDraft);
-    time += finisherDuration;
+    time = postFinalResult.time;
+    stamina = postFinalResult.stamina;
 
-    // **Phase post-final** : ~12 s d'action douce après l'orgasme — la
-    // coach ne lâche pas l'utilisatrice net, on profite de la fin. Mode
-    // contrastant avec le step final (alternance) pour que l'oreille
-    // perçoive bien la bascule « apothéose → calme ». Phrase de compliment
-    // douce piochée dans `post_final` (fallback `congrats` si vide).
-    // Le pool d'actions est tieré par humiliation : lick (= nettoyer après)
-    // est l'aftercare humiliant qui n'apparaît qu'au-dessus d'un seuil.
-    final postFinalDraft =
-        _clampToCapability(_buildPostFinalDraft(finalMode, _humilCapAt(time)));
-    // Phrase : un step `beg` doit porter une CONSIGNE de supplique
-    // (« remercie-moi », « supplie-moi de revenir »), pas un compliment
-    // doux qui sonnerait à côté. De même un step `lick` post-final
-    // attaqué pour la spé sloppy doit porter une consigne d'aftercare
-    // humiliant (« lèche pour nettoyer »). Cascade de fallback pour ne
-    // jamais tomber sur un text vide.
-    final String postFinalText;
-    if (postFinalDraft.mode == SessionMode.beg) {
-      postFinalText = bank.pickPostFinalBeg(_rng) ??
-          bank.pickPostFinal(_rng) ??
-          bank.pickCongrats(_rng);
-    } else if (postFinalDraft.mode == SessionMode.lick) {
-      postFinalText = bank.pickPostFinalLick(_rng) ??
-          bank.pickPostFinal(_rng) ??
-          bank.pickCongrats(_rng);
-    } else {
-      postFinalText = bank.pickPostFinal(_rng) ?? bank.pickCongrats(_rng);
-    }
-    final postFinalDuration = postFinalDraft.duration!;
-    steps.add(_draftToStep(postFinalDraft, time: time, text: postFinalText));
-    final staminaBeforePostFinal = stamina;
-    stamina = _applyStaminaChange(stamina, postFinalDraft, 1.0, cfg);
-    _fillProfile(profile, time, postFinalDuration, stamina,
-        valueStart: staminaBeforePostFinal);
-    _advanceSalivaSim(postFinalDraft);
-    time += postFinalDuration;
-    _lastMode = postFinalDraft.mode;
-    _lastText = postFinalText;
-    _trackPushedStep(postFinalDraft.mode, postFinalDraft.to,
-        from: postFinalDraft.from,
-        bpm: postFinalDraft.bpm,
-        duration: postFinalDraft.duration);
-
-    final finalDuration = time + 2;
-    final trimmedProfile = List<double>.generate(
-      finalDuration,
-      (i) => i < profile.length ? profile[i] : stamina,
-    );
-
-    return CareerGenerationResult(
-      session: Session(
-        id: 'career:lvl$level:${effectiveDuration}s${quickie ? ":q" : ""}',
-        name: quickie
-            ? (sessionNameQuickie ?? 'Carrière niveau $level — bâclée')
-            : (sessionName ?? 'Carrière niveau $level'),
-        description: 'Session générée — $effectiveDuration s',
-        durationSeconds: finalDuration,
-        defaultMode: SessionMode.rhythm,
-        steps: steps,
-        milestoneId: insertedBodies.isNotEmpty ? insertedBodies[0].id : null,
-        milestoneStartTime: milestoneStartTime,
-        milestoneDurationSeconds: milestoneDurationSeconds,
-        secondMilestoneId:
-            insertedBodies.length >= 2 ? insertedBodies[1].id : null,
-        secondMilestoneStartTime: secondMilestoneStartTime,
-        secondMilestoneDurationSeconds: secondMilestoneDurationSeconds,
-        finalCategory: finalCategory,
-        silentFinishStartTime: silentFinishStartTime,
-        finalStepTime: finalStepStartTime,
-        noStats: noStats,
-      ),
-      staminaProfile: trimmedProfile,
-      overloadAxis: _overloadAxis,
+    return _assembleResult(
+      ctx,
+      time: time,
+      stamina: stamina,
+      milestoneStartTime: milestoneStartTime,
+      milestoneDurationSeconds: milestoneDurationSeconds,
+      secondMilestoneStartTime: secondMilestoneStartTime,
+      secondMilestoneDurationSeconds: secondMilestoneDurationSeconds,
+      finalCategory: finalCategory,
+      silentFinishStartTime: silentFinishStartTime,
+      finalStepStartTime: finalStepStartTime,
     );
   }
 
@@ -2026,6 +1769,458 @@ class CareerSessionGenerator {
       from: step.from,
       to: step.to,
       duration: step.duration ?? 0,
+    );
+  }
+
+  /// Émet une séquence milestone (body ou final) dans la timeline en cours.
+  ///
+  /// Logique partagée entre l'insertion d'une milestone body (closure
+  /// `insertPending` dans [generate]) et le path final-milestone : itère
+  /// `m.sequence`, ajoute chaque step à `ctx.steps` avec son `text`
+  /// éventuellement surchargé via `ctx.milestoneTextResolver`, met à jour
+  /// stamina + simu salive, fillProfile, et tracke la continuité par type.
+  /// À la fin, met à jour `_lastMode` / `_lastText` à partir du dernier step.
+  ///
+  /// Retourne `(newTime, newStamina)` — le caller continue avec ces valeurs.
+  /// `time` ressort incrémenté de `milestone.durationSeconds`. Les listes
+  /// `ctx.steps` et `ctx.profile` sont mutées en place.
+  ({int time, double stamina}) _pushMilestoneSequence(
+    _GenContext ctx, {
+    required LevelMilestone milestone,
+    required int time,
+    required double stamina,
+  }) {
+    var t = time;
+    var s = stamina;
+    for (final mStep in milestone.sequence) {
+      // Si une surcharge i18n existe pour ce step (clé = offset `time` du
+      // step dans la sequence), on l'utilise à la place du `text` du JSON
+      // principal.
+      final overrideText =
+          ctx.milestoneTextResolver?.call(milestone.id, mStep.time);
+      ctx.steps.add(SessionStep(
+        time: t + mStep.time,
+        text: overrideText ?? mStep.text,
+        mode: mStep.mode,
+        bpm: mStep.bpm,
+        from: mStep.from,
+        to: mStep.to,
+        duration: mStep.duration,
+        swallowMode: mStep.swallowMode,
+      ));
+      // Simulation stamina/salive pour chaque step de la séquence, pour que
+      // la projection reste cohérente.
+      final mDraft = _stepToDraft(mStep, SessionMode.rhythm);
+      final staminaBefore = s;
+      s = _applyStaminaChange(s, mDraft, t / ctx.effectiveDuration, ctx.cfg);
+      _advanceSalivaSim(mDraft);
+      _fillProfile(ctx.profile, t + mStep.time, mStep.duration ?? 0, s,
+          valueStart: staminaBefore);
+      // Tracking de continuité par type — chaque step de la séquence compte
+      // (la séquence peut elle-même alterner bouche/transit).
+      if (mStep.mode != null && !mStep.isTextOnly) {
+        _trackPushedStep(mStep.mode!, mStep.to,
+            from: mStep.from, bpm: mStep.bpm, duration: mStep.duration);
+      }
+    }
+    // Met à jour le « dernier mode/texte » avec le dernier step de la
+    // milestone — sert au filtrage anti-répétition de la suite générée.
+    final lastStep = milestone.sequence.last;
+    _lastMode = lastStep.mode ?? _lastMode;
+    _lastText = lastStep.text;
+    t += milestone.durationSeconds;
+    return (time: t, stamina: s);
+  }
+
+  /// Émet le step de pré-finisher (courte accélération rythme `head→target`
+  /// qui prépare la phase boosts). Utilisé uniquement pour les bas niveaux —
+  /// le caller garde la guard `isLowLevel && !_isModeForbidden(rhythm)` autour
+  /// de l'appel pour ne pas changer la séquence RNG (la position est pickée
+  /// avant l'appel).
+  ///
+  /// Mute `ctx.steps` et `ctx.profile` en place. Met à jour
+  /// `_lastMode/_lastText` et tracke la continuité.
+  /// Retourne `(newTime, newStamina)`.
+  ({int time, double stamina}) _emitPreFinisher(
+    _GenContext ctx, {
+    required int time,
+    required double stamina,
+    required Position preFinisherTarget,
+  }) {
+    final preDur = 22 + _rng.nextInt(9); // [22, 30]
+    final preBpm = 62 + _rng.nextInt(9); // [62, 70]
+    final preDraft = _clampToCapability(_StepDraft(
+      mode: SessionMode.rhythm,
+      bpm: preBpm,
+      from: Position.head,
+      to: preFinisherTarget,
+      duration: preDur,
+    ));
+    final preText = _pickPhraseForDraft(ctx.bank, preDraft, 'medium');
+    ctx.steps.add(_draftToStep(preDraft, time: time, text: preText));
+    _lastMode = SessionMode.rhythm;
+    _lastText = preText;
+    _trackPushedStep(SessionMode.rhythm, preDraft.to,
+        from: preDraft.from, bpm: preDraft.bpm, duration: preDraft.duration);
+    final staminaBeforePre = stamina;
+    final newStamina = _applyStaminaChange(
+        stamina, preDraft, time / ctx.effectiveDuration, ctx.cfg);
+    _fillProfile(ctx.profile, time, preDraft.duration ?? preDur, newStamina,
+        valueStart: staminaBeforePre);
+    _advanceSalivaSim(preDraft);
+    return (time: time + (preDraft.duration ?? preDur), stamina: newStamina);
+  }
+
+  /// Choix du mode pour la phase de boosts (`hand_burst` non humiliant vs
+  /// `rhythm_burst` humiliant). Gère :
+  ///  - le biais dramaturgique 70/30 vs 25/75 selon humil + niveau ;
+  ///  - les exclusions Custom (`_isModeForbidden`) avec repli `lick` quand
+  ///    hand ET rhythm sont bannis ;
+  ///  - le ratio de poids brut quand les doses hand/rhythm sont asymétriques
+  ///    (cf. issue #68).
+  ///
+  /// Consomme un tirage RNG quand les deux modes sont autorisés.
+  ({bool useHandBurst, SessionMode burstMode}) _pickBurstMode(_GenContext ctx) {
+    final handForbidden = _isModeForbidden(SessionMode.hand);
+    final rhythmForbidden = _isModeForbidden(SessionMode.rhythm);
+    final preferHandBase =
+        _humiliationCareer < 5 && ctx.level <= 3 ? 0.70 : 0.25;
+    if (handForbidden && rhythmForbidden) {
+      // chemin "rhythm-like" : BPM cap/floor rhythm
+      return (useHandBurst: false, burstMode: SessionMode.lick);
+    }
+    if (handForbidden) {
+      return (useHandBurst: false, burstMode: SessionMode.rhythm);
+    }
+    if (rhythmForbidden) {
+      return (useHandBurst: true, burstMode: SessionMode.hand);
+    }
+    final handWeight = _coachModeWeights[SessionMode.hand] ?? 1.0;
+    final rhythmWeight = _coachModeWeights[SessionMode.rhythm] ?? 1.0;
+    final dosesAreSymmetric = (handWeight - rhythmWeight).abs() < 0.01;
+    final preferHand = dosesAreSymmetric
+        ? preferHandBase
+        : handWeight / (handWeight + rhythmWeight);
+    final useHandBurst = _rng.nextDouble() < preferHand;
+    return (
+      useHandBurst: useHandBurst,
+      burstMode: useHandBurst ? SessionMode.hand : SessionMode.rhythm,
+    );
+  }
+
+  /// Boucle des boosts de la phase finish — sprint déterministe de
+  /// `ctx.boostsCount` steps qui ramp BPM et profondeur de manière monotone
+  /// croissante. Renvoie l'index du dernier step ajouté à `ctx.steps` (pour
+  /// que l'annonce du final puisse y faire référence si besoin), ainsi que
+  /// les nouveaux `(time, stamina)`.
+  ///
+  /// Les listes `ctx.steps` et `ctx.profile` sont mutées en place. Met à
+  /// jour `_lastMode/_lastText/_lastBpm` à chaque boost émis et tracke la
+  /// continuité.
+  ({int time, double stamina, int? lastBoostIndex}) _emitBoosts(
+    _GenContext ctx, {
+    required int time,
+    required double stamina,
+    required bool useHandBurst,
+    required SessionMode burstMode,
+  }) {
+    // Plafond humiliation pour les bursts. Hand n'est pas gating par
+    // humiliation (cap inutile), mais on laisse `_enforceHumiliationRequired`
+    // tourner — il rejettera juste si la profondeur du draft demande trop.
+    // Cap assoupli pour les boosts : projection au temps `time` du début
+    // de la phase finish, +8 de tolérance pour permettre des bursts un
+    // poil au-dessus du cap mécanique strict (tradition du finish).
+    final boostHumilCap = _humilCapAt(time) + 8.0;
+    // Nombre total de boosts : table par niveau + bonus encore (fixé en
+    // amont via `boostsCount`). Plus de boucle conditionnelle sur la
+    // jauge — le sprint est entièrement déterministe.
+    final totalBoosts = max(1, ctx.boostsCount);
+    // **BPM cap qui scale par niveau ET par chaîne d'encore** : niveau 1
+    // plafonne à ~110 BPM (hand) / 130 (rhythm), +4 BPM/niveau jusqu'à un
+    // plafond de garde-fou à 300 (très haut — c'est le `comfort` du profil
+    // de capacités qui borne en pratique, via `_clampToCapability`). Le
+    // mode encore ajoute +8 BPM par cran de chaîne pour intensifier le
+    // sprint sans changer le nombre de boosts.
+    final levelBpmBoost =
+        ((ctx.level - 1) * 4 + max(0, ctx.encoreChainIndex) * 8).clamp(0, 70);
+    final bpmCap = useHandBurst
+        ? (110 + levelBpmBoost).clamp(110, 300)
+        : (130 + levelBpmBoost).clamp(130, 300);
+    final bpmFloor = useHandBurst ? 80 : 100;
+    // Cap de profondeur des boosts gaté par les milestones effectivement
+    // acquittées (cf. `_milestoneRhythmCeilingIdx`) : throat ouvert si
+    // `throatPulse` débloqué (intro_throat_pulse), full si `fullPulse`
+    // (intro_full_pulse). Indépendant du niveau seul — sauter des milestones
+    // ne donne pas accès aux profondeurs. Borné par `_maxDepthIndex` en
+    // sécurité, et par mid (idx 2) au minimum (un boost ne descend jamais
+    // sous mid pour rester reconnaissable comme un sprint).
+    final boostMaxToIdx = max(2, _milestoneRhythmCeilingIdx());
+    int? lastBoostIndex;
+    // Monotonie ascendante : la phase finish ne doit JAMAIS ralentir. Chaque
+    // boost démarre sur un BPM ≥ au précédent (idem pour la profondeur `to`).
+    int prevBoostBpm = 0;
+    int prevBoostToIdx = 0;
+    final plannedBoosts = totalBoosts;
+    var t = time;
+    var s = stamina;
+    for (var boostsAdded = 0; boostsAdded < totalBoosts; boostsAdded++) {
+      // Durée variable : 12 à 16 s par défaut, +1s par cran de chaîne
+      // encore pour allonger un peu chaque sprint.
+      final boostDur =
+          12 + _rng.nextInt(5) + max(0, ctx.encoreChainIndex).clamp(0, 4);
+      // Progression linéaire 0→1 sur les `plannedBoosts`. Plancher 0.4 :
+      // pas de démarrage mou.
+      final progress = plannedBoosts <= 1
+          ? 1.0
+          : ((boostsAdded + 1) / plannedBoosts).clamp(0.4, 1.0);
+      final targetBpm = (bpmFloor + progress * (bpmCap - bpmFloor)).round();
+      // Jitter ±5 BPM autour de la cible pour ne pas répéter exactement
+      // le même tempo deux boosts d'affilée. Capé par bpmCap.
+      final shift = _rng.nextInt(11) - 5;
+      final bpmRaw = (targetBpm + shift).clamp(bpmFloor, bpmCap);
+      // Plancher monotone : on ne descend jamais sous le BPM du boost
+      // précédent.
+      final bpm =
+          bpmRaw <= prevBoostBpm ? min(prevBoostBpm + 4, bpmCap) : bpmRaw;
+      // Profondeur : ramp aussi sur la progression. Plancher `prevBoostToIdx`
+      // garantit la monotonie.
+      final rampDenom = plannedBoosts <= 1 ? 1 : (plannedBoosts - 1);
+      final progressionToIdx =
+          (boostMaxToIdx - 2 + 2 * (boostsAdded / rampDenom).clamp(0.0, 1.0))
+              .round()
+              .clamp(2, boostMaxToIdx);
+      final toIdx = max(prevBoostToIdx, progressionToIdx);
+      final boostTo = Position.values[toIdx];
+      // `from` : 2 crans au-dessus si possible (amplitude max), sinon 1 cran.
+      final boostFromIdx =
+          _rng.nextBool() && toIdx >= 2 ? max(0, toIdx - 2) : max(0, toIdx - 1);
+      final boostFrom = Position.values[boostFromIdx];
+      final boostDraftRaw = _StepDraft(
+        mode: burstMode,
+        bpm: bpm,
+        from: boostFrom,
+        to: boostTo,
+        duration: boostDur,
+      );
+      // Hand : pas de gating humil → on garde amplitude max. Rhythm : cap
+      // normal du finish. Dans les deux cas, `_clampToCapability` (qui
+      // applique aussi les bornes utilisateur Custom).
+      final boostDraft = useHandBurst
+          ? _clampToCapability(boostDraftRaw)
+          : _enforceHumiliationRequired(boostDraftRaw, boostHumilCap);
+      // Tier dédié `boost` ; fallback `hard` si la bank n'a rien.
+      var boostText = _pickPhraseForDraft(ctx.bank, boostDraft, 'boost');
+      if (boostText.isEmpty) {
+        boostText = _pickPhraseForDraft(ctx.bank, boostDraft, 'hard');
+      }
+      ctx.steps.add(_draftToStep(boostDraft, time: t, text: boostText));
+      lastBoostIndex = ctx.steps.length - 1;
+      _lastMode = boostDraft.mode;
+      _lastText = boostText;
+      _lastBpm = boostDraft.bpm ?? _lastBpm;
+      _trackPushedStep(boostDraft.mode, boostDraft.to,
+          from: boostDraft.from,
+          bpm: boostDraft.bpm,
+          duration: boostDraft.duration);
+      final staminaBeforeBoost = s;
+      s = _applyStaminaChange(s, boostDraft, 1.0, ctx.cfg);
+      _advanceSalivaSim(boostDraft);
+      _fillProfile(ctx.profile, t, boostDur, s, valueStart: staminaBeforeBoost);
+      t += boostDur;
+      // Mémorise BPM/profondeur retenus (post-dégradation humil) pour que le
+      // boost suivant ne puisse pas redescendre sous ce palier.
+      prevBoostBpm = boostDraft.bpm ?? prevBoostBpm;
+      if (boostDraft.to != null) {
+        prevBoostToIdx = max(prevBoostToIdx, boostDraft.to!.index);
+      }
+    }
+    return (time: t, stamina: s, lastBoostIndex: lastBoostIndex);
+  }
+
+  /// Émet le step final (apothéose contemplative). Choix via [_pickFinal] selon
+  /// humil cap projeté à `time` et plafond de profondeur. Phrase : annonce du
+  /// changement de mode si différent du dernier boost (« sors ta langue,
+  /// j'arrive »), sinon phrase d'action standard.
+  ///
+  /// Retourne `(time, stamina, finalCategory, finalMode, finalStepStartTime)`.
+  /// Mute `ctx.steps` et `ctx.profile` en place.
+  ({
+    int time,
+    double stamina,
+    FinalCategory finalCategory,
+    SessionMode finalMode,
+    int finalStepStartTime,
+  }) _emitFinalStep(
+    _GenContext ctx, {
+    required int time,
+    required double stamina,
+    required int? lastBoostIndex,
+    required SessionMode burstMode,
+  }) {
+    // Cap effectif au moment du final (=quasi fin de session, sessionCap
+    // probablement saturé). Le générateur ne bénéficie pas des bumps
+    // évènementiels (punition complétée etc.) — uniquement de la rampe
+    // automatique — donc c'est volontairement conservateur.
+    final finalHumilCap = _humilCapAt(time);
+    // En chaîne encore, on allonge le final pour que la dramaturgie de
+    // « tu en veux encore » se traduise aussi côté apothéose. Bornée par
+    // le clamp de `_pickFinal` pour rester raisonnable.
+    final finishMul = 1.0 + max(0, ctx.encoreChainIndex) * 0.10;
+    final finisherDraft = _pickFinal(
+      humilCap: finalHumilCap,
+      includeHand: ctx.includeHand,
+      maxDepth: _maxDepthIndex,
+      finishMul: finishMul,
+    );
+    final finalCategory = _categorizeFinal(finisherDraft);
+    final finalMode = finisherDraft.mode;
+
+    // Annonce du final : si le finisher change de mode (ex. dernier boost =
+    // hand, finisher = lick), on pose une phrase qui annonce le changement
+    // physique imminent. Sinon, phrase d'action standard.
+    final announcePhrase = (lastBoostIndex != null && burstMode != finalMode)
+        ? ctx.bank.pickFinalAnnouncement(
+            preMode: burstMode,
+            finalMode: finalMode,
+            rng: _rng,
+          )
+        : null;
+    final finalActionPhrase = ctx.bank.pickFinalAction(
+      mode: finalMode,
+      holdPosition: finalMode == SessionMode.hold ? finisherDraft.from : null,
+      rng: _rng,
+    );
+    final finalStepText = (announcePhrase != null && announcePhrase.isNotEmpty)
+        ? announcePhrase
+        : (finalActionPhrase ?? '');
+    final finalStepStartTime = time;
+    final finisherStep =
+        _draftToStep(finisherDraft, time: time, text: finalStepText);
+    _lastMode = finalMode;
+    _lastText = finalStepText;
+    _trackPushedStep(finalMode, finisherDraft.to,
+        from: finisherDraft.from,
+        bpm: finisherDraft.bpm,
+        duration: finisherDraft.duration);
+    final finisherDuration = finisherDraft.duration!;
+    ctx.steps.add(finisherStep);
+    final staminaBeforeFinisher = stamina;
+    final newStamina =
+        _applyStaminaChange(stamina, finisherDraft, 1.0, ctx.cfg);
+    _fillProfile(ctx.profile, time, finisherDuration, newStamina,
+        valueStart: staminaBeforeFinisher);
+    _advanceSalivaSim(finisherDraft);
+    return (
+      time: time + finisherDuration,
+      stamina: newStamina,
+      finalCategory: finalCategory,
+      finalMode: finalMode,
+      finalStepStartTime: finalStepStartTime,
+    );
+  }
+
+  /// Émet le step post-final (aftercare ~12 s après l'orgasme). Mode
+  /// contrastant choisi par [_buildPostFinalDraft] selon le mode final +
+  /// l'humil. Phrase : cascade `post_final_beg` / `post_final_lick` /
+  /// `post_final` / `congrats`. Retourne `(time, stamina)`.
+  ({int time, double stamina}) _emitPostFinal(
+    _GenContext ctx, {
+    required int time,
+    required double stamina,
+    required SessionMode finalMode,
+  }) {
+    final postFinalDraft =
+        _clampToCapability(_buildPostFinalDraft(finalMode, _humilCapAt(time)));
+    // Phrase : beg porte une CONSIGNE de supplique (jamais un compliment
+    // doux) ; lick post-final porte une consigne d'aftercare humiliant.
+    // Cascade pour ne jamais tomber sur un text vide.
+    final String postFinalText;
+    if (postFinalDraft.mode == SessionMode.beg) {
+      postFinalText = ctx.bank.pickPostFinalBeg(_rng) ??
+          ctx.bank.pickPostFinal(_rng) ??
+          ctx.bank.pickCongrats(_rng);
+    } else if (postFinalDraft.mode == SessionMode.lick) {
+      postFinalText = ctx.bank.pickPostFinalLick(_rng) ??
+          ctx.bank.pickPostFinal(_rng) ??
+          ctx.bank.pickCongrats(_rng);
+    } else {
+      postFinalText =
+          ctx.bank.pickPostFinal(_rng) ?? ctx.bank.pickCongrats(_rng);
+    }
+    final postFinalDuration = postFinalDraft.duration!;
+    ctx.steps
+        .add(_draftToStep(postFinalDraft, time: time, text: postFinalText));
+    final staminaBeforePostFinal = stamina;
+    final newStamina =
+        _applyStaminaChange(stamina, postFinalDraft, 1.0, ctx.cfg);
+    _fillProfile(ctx.profile, time, postFinalDuration, newStamina,
+        valueStart: staminaBeforePostFinal);
+    _advanceSalivaSim(postFinalDraft);
+    _lastMode = postFinalDraft.mode;
+    _lastText = postFinalText;
+    _trackPushedStep(postFinalDraft.mode, postFinalDraft.to,
+        from: postFinalDraft.from,
+        bpm: postFinalDraft.bpm,
+        duration: postFinalDraft.duration);
+    return (time: time + postFinalDuration, stamina: newStamina);
+  }
+
+  /// Construit le [CareerGenerationResult] final à partir des accumulateurs
+  /// `ctx.steps` / `ctx.profile` et du curseur `time`. Tronque le profil à la
+  /// durée effective (= `time + 2`), assemble la [Session] avec toutes ses
+  /// métadonnées (milestones body + final si présentes).
+  ///
+  /// Partagé entre le path final-milestone (early return) et le path
+  /// standard (boosts + final + post-final).
+  CareerGenerationResult _assembleResult(
+    _GenContext ctx, {
+    required int time,
+    required double stamina,
+    required int? milestoneStartTime,
+    required int? milestoneDurationSeconds,
+    required int? secondMilestoneStartTime,
+    required int? secondMilestoneDurationSeconds,
+    required FinalCategory finalCategory,
+    required int silentFinishStartTime,
+    required int finalStepStartTime,
+    String? finalMilestoneId,
+    int? finalMilestoneStartTime,
+    int? finalMilestoneDurationSeconds,
+  }) {
+    final finalDuration = time + 2;
+    final trimmedProfile = List<double>.generate(
+      finalDuration,
+      (i) => i < ctx.profile.length ? ctx.profile[i] : stamina,
+    );
+    return CareerGenerationResult(
+      session: Session(
+        id: 'career:lvl${ctx.level}:${ctx.effectiveDuration}s${ctx.quickie ? ":q" : ""}',
+        name: ctx.quickie
+            ? (ctx.sessionNameQuickie ??
+                'Carrière niveau ${ctx.level} — bâclée')
+            : (ctx.sessionName ?? 'Carrière niveau ${ctx.level}'),
+        description: 'Session générée — ${ctx.effectiveDuration} s',
+        durationSeconds: finalDuration,
+        defaultMode: SessionMode.rhythm,
+        steps: ctx.steps,
+        milestoneId:
+            ctx.insertedBodies.isNotEmpty ? ctx.insertedBodies[0].id : null,
+        milestoneStartTime: milestoneStartTime,
+        milestoneDurationSeconds: milestoneDurationSeconds,
+        secondMilestoneId:
+            ctx.insertedBodies.length >= 2 ? ctx.insertedBodies[1].id : null,
+        secondMilestoneStartTime: secondMilestoneStartTime,
+        secondMilestoneDurationSeconds: secondMilestoneDurationSeconds,
+        finalMilestoneId: finalMilestoneId,
+        finalMilestoneStartTime: finalMilestoneStartTime,
+        finalMilestoneDurationSeconds: finalMilestoneDurationSeconds,
+        finalCategory: finalCategory,
+        silentFinishStartTime: silentFinishStartTime,
+        finalStepTime: finalStepStartTime,
+        noStats: ctx.noStats,
+      ),
+      staminaProfile: trimmedProfile,
+      overloadAxis: _overloadAxis,
     );
   }
 
@@ -4922,6 +5117,75 @@ class _PunishmentCompo {
     required this.drafts,
     required this.reqHumil,
     this.handRequired = false,
+  });
+}
+
+/// Bundle des paramètres « figés pour la session » consommés par les helpers
+/// de phase de [CareerSessionGenerator.generate]. Construit une seule fois
+/// au début de l'appel après que tous les paramètres dérivés sont calculés
+/// (`effectiveDuration`, `intensityFloor`, `boostsCount`, `genUntil`, `isLowLevel`,
+/// `useFinalMilestone`…).
+///
+/// Évite de répéter les mêmes 6-8 args (`cfg`, `bank`, `effectiveDuration`,
+/// `level`, `encoreChainIndex`, `steps`, `profile`…) dans la signature de
+/// chaque helper. Les helpers piochent ce dont ils ont besoin via `ctx.x`.
+///
+/// **Pas inclus** : le curseur live `(time, stamina)`. Ces deux scalaires
+/// sont threadés via record return values pour séparer ce qui est *fixé*
+/// (ctx) de ce qui *évolue à chaque step* (cursor).
+///
+/// **Mutables internes** : [steps] et [profile] sont des `List` mutées en
+/// place par les helpers. Le DTO les expose comme `final` (la référence
+/// liste ne change pas), mais le contenu est l'accumulateur de la séance.
+class _GenContext {
+  final List<SessionStep> steps;
+  final List<double> profile;
+
+  final int level;
+  final int encoreChainIndex;
+  final int effectiveDuration;
+  final int boostsCount;
+  final int genUntil;
+  final double intensityFloor;
+  final double obedience;
+  final bool quickie;
+  final bool intense;
+  final bool includeHand;
+  final bool isLowLevel;
+  final bool useFinalMilestone;
+  final bool noStats;
+  final CareerLevel cfg;
+  final PhraseBank bank;
+  final String? sessionName;
+  final String? sessionNameQuickie;
+  final String? Function(String milestoneId, int stepTime)?
+      milestoneTextResolver;
+  final List<LevelMilestone> insertedBodies;
+  final LevelMilestone? finalMilestone;
+
+  const _GenContext({
+    required this.steps,
+    required this.profile,
+    required this.level,
+    required this.encoreChainIndex,
+    required this.effectiveDuration,
+    required this.boostsCount,
+    required this.genUntil,
+    required this.intensityFloor,
+    required this.obedience,
+    required this.quickie,
+    required this.intense,
+    required this.includeHand,
+    required this.isLowLevel,
+    required this.useFinalMilestone,
+    required this.noStats,
+    required this.cfg,
+    required this.bank,
+    required this.sessionName,
+    required this.sessionNameQuickie,
+    required this.milestoneTextResolver,
+    required this.insertedBodies,
+    required this.finalMilestone,
   });
 }
 
