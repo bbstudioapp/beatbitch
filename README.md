@@ -1,147 +1,32 @@
 # BeatBitch
 
 ![version](https://img.shields.io/badge/version-0.4.0-orange)
-![platform](https://img.shields.io/badge/platform-Android%20%7C%20Windows%20%7C%20Linux-blue)
+![platform](https://img.shields.io/badge/platform-Android%20%7C%20Windows%20%7C%20Linux%20%7C%20iOS%20%7C%20Web-blue)
 ![offline](https://img.shields.io/badge/100%25-offline-blue)
 ![no tracking](https://img.shields.io/badge/no-tracking-success)
 ![license](https://img.shields.io/badge/license-PolyForm%20NC%201.0.0-lightgrey)
 
-> 🇫🇷 **Coach vocal rythmique immersif pour Android, Windows & Linux desktop.** Tu poses ton téléphone à plat sur le côté, tu lances la séance, tu fermes les yeux. Une voix te guide, des bips marquent le rythme, tu n'as plus besoin de regarder l'écran.
->
-> 🇬🇧 **Immersive rhythmic voice coach for Android, Windows & Linux desktop.** Drop your phone flat on its side, start the session, close your eyes. A voice guides you, beeps mark the rhythm — no screen-watching needed.
+> **Immersive rhythmic voice coach for Android, Windows, Linux, iOS (PWA) & web.** Drop your phone flat on its side, start the session, close your eyes. A voice guides you, beeps mark the rhythm — no screen-watching needed.
+
+**Languages**: English · [Français](README.fr.md) · [Deutsch](README.de.md)
 
 ---
 
-🇫🇷 **[Français](#français)** &nbsp;|&nbsp; 🇬🇧 **[English](#english)**
-
----
-
-## Français
-
-### En 30 secondes
-
-- Une **voix de coach** qui parle dans ta langue, en local — aucune synthèse réseau.
-- Des **bips de guidage** calés au BPM pour rythmer chaque mouvement.
-- 8 modes de jeu, un mode Carrière qui se débloque au fil des séances, des coachs avec des personnalités différentes.
-- **100 % hors-ligne** : permission `INTERNET` non déclarée, rien ne sort de ton téléphone.
-- **Pas de Play Store, pas de pub, pas d'achat in-app.** Distribution APK signé direct.
-
-### 📥 Télécharger
-
-➡ **[Page Releases](../../releases)** — APK signé + son SHA256.
-
-> ⚠ Android 9 minimum. Testé sur Android 13/14.
-
-### 📲 Installer (side-load, étape par étape)
-
-Le **side-load**, c'est juste « installer une app sans passer par le Play Store ». Android le permet nativement, il faut juste autoriser ton navigateur ou ton gestionnaire de fichiers à le faire.
-
-1. **Sur ton téléphone**, ouvre la [page Releases](../../releases) et télécharge le fichier `BeatBitch-X.Y.Z.apk` le plus récent.
-2. (*Optionnel mais recommandé*) Vérifie l'empreinte SHA256 du fichier téléchargé — elle doit correspondre à celle publiée à côté de l'APK. Une appli comme **Hash Droid** sur F-Droid fait ça en 2 clics.
-3. Ouvre le fichier APK dans tes téléchargements.
-4. Android va te demander d'**autoriser cette source** : tape « Paramètres » → active l'autorisation pour ton navigateur (ou gestionnaire de fichiers). Reviens et confirme.
-5. L'install démarre. Une fois fini, ouvre BeatBitch.
-6. **Au 1er lancement** : confirmation 18+ (non-skippable), puis 3 écrans d'onboarding (pose du téléphone, volume, test de la voix).
-
-> 💡 Tu peux désactiver l'autorisation « sources inconnues » après l'install — Android ne la rouvrira pas tant que tu ne mets pas l'app à jour.
-
-### 🖥 Installer sur Windows desktop
-
-Disponible depuis **v0.1.3**. C'est un zip portable, pas un installateur — l'app ne touche ni au registre Windows ni aux dossiers système.
-
-1. Sur la [page Releases](../../releases), télécharge `BeatBitch-X.Y.Z-windows-x64.zip` (et son `.sha256` si tu veux vérifier l'intégrité).
-2. Dézippe où tu veux : `C:\Users\toi\Documents\BeatBitch\`, une clé USB, peu importe.
-3. Lance `rhythm_coach.exe`. Windows SmartScreen peut afficher un avertissement (le binaire n'est pas signé par un éditeur reconnu) → clique « Informations supplémentaires » → « Exécuter quand même ».
-4. Premier lancement : adult gate 18+, puis onboarding 3 étapes (identique à Android).
-
-> ⚠ **Fonctions désactivées sur Windows** : la vérif caméra des holds et les notifications surprise ne sont pas portées (les plugins natifs n'existent pas pour Windows). La voix coach utilise **Microsoft Julie** (SAPI) à la place des voix Android. Sessions, mode Carrière, coachs, badges, langues : tout fonctionne identique à Android.
-
-### 🐧 Installer sur Linux desktop
-
-Disponible depuis **v0.3.0**. C'est un `tar.gz` portable, pas un paquet `.deb`/`.rpm` — l'app reste dans son dossier, rien n'est installé dans le système.
-
-1. Sur la [page Releases](../../releases), télécharge `BeatBitch-X.Y.Z-linux-x64.tar.gz` (et son `.sha256` pour vérifier l'intégrité).
-2. Vérifie l'empreinte : `sha256sum -c BeatBitch-X.Y.Z-linux-x64.tar.gz.sha256`.
-3. Décompresse où tu veux : `tar -xzf BeatBitch-X.Y.Z-linux-x64.tar.gz`.
-4. Lance le binaire : `./BeatBitch-X.Y.Z-linux-x64/beat_bitch` (clic droit → *Autoriser l'exécution* dans ton gestionnaire de fichiers si nécessaire).
-5. Premier lancement : adult gate 18+, puis onboarding 3 étapes (identique à Android).
-
-> ⚠ **Fonctions désactivées sur Linux** : la vérif caméra des holds et les notifications surprise ne sont pas portées. La voix coach utilise la voix par défaut de **Speech Dispatcher** (typiquement `espeak-ng` sur Ubuntu/Debian — installe une voix française/anglaise via ton gestionnaire de paquets si la voix par défaut ne sonne pas bien). Sessions, mode Carrière, coachs, badges, langues : tout fonctionne identique à Android.
-
-### 🔄 Mises à jour automatiques (Obtainium)
-
-L'app reste **strictement hors-ligne** : elle ne va pas chercher d'update toute seule. Pour être prévenu quand une nouvelle version sort et l'installer en deux taps, utilise **[Obtainium](https://github.com/ImranR98/Obtainium)** — un store Android open-source qui surveille les pages GitHub Releases.
-
-1. Installe Obtainium (dispo sur [F-Droid](https://f-droid.org/packages/dev.imranr.obtainium.fdroid/) ou en APK direct depuis son repo).
-2. Dans Obtainium : *Add App* → colle l'URL `https://github.com/bbstudioapp/beatbitch`.
-3. À chaque nouvelle release, Obtainium détecte l'APK `BeatBitch-X.Y.Z.apk` et te propose la mise à jour.
-
-> Aucun trafic réseau n'est généré par BeatBitch elle-même — c'est Obtainium qui interroge GitHub côté utilisateur, indépendamment de l'app. La promesse 100 % hors-ligne reste intacte.
-
-### 🔒 C'est safe ?
-
-- **APK signé** par la même clé à chaque release — Android refuse l'install si quelqu'un essaie de te refiler un APK trafiqué (la signature ne matchera pas).
-- **Code source public** — tu peux relire ce qui tourne (ou le faire relire).
-- **Aucune permission réseau** — ni `INTERNET`, ni `ACCESS_NETWORK_STATE`. L'app ne *peut* littéralement pas appeler un serveur.
-- **`allowBackup="false"`** — pas de remontée vers Google Backup.
-- **Caméra opt-in** — la vérif caméra des holds est désactivée par défaut, et le traitement reste 100 % on-device (Google ML Kit local). Aucune image ne quitte le téléphone.
-
-Détails dans **[PRIVACY.md](docs/PRIVACY.md)** ([version publiée](https://bbstudioapp.github.io/beatbitch/PRIVACY)).
-
-### 🎮 Comment ça se joue
-
-1. Pose ton téléphone à plat, sur le côté — pas besoin de l'avoir devant les yeux.
-2. Choisis une séance prédéfinie ou laisse le mode Carrière t'en générer une.
-3. Suis la voix. Les bips marquent le tempo (un grave + un aigu qui alternent, ou un seul si la séance demande de tenir une position).
-4. Le bouton **« Je peux pas »** est toujours dispo si tu décroches. La coach prend le relais avec une punition courte, puis la séance reprend là où ça avait du sens.
-5. À la fin, l'écran te dit ce que tu as débloqué (badges, niveaux carrière, milestones).
-
-### 🐛 Trouver un bug, suggérer une idée, contribuer
-
-Templates d'issues disponibles :
-- 🐛 [Bug](.github/ISSUE_TEMPLATE/bug_report.md) · 💡 [Idée / feature](.github/ISSUE_TEMPLATE/feature_request.md) · ✍ [Phrases coach / scénarios / traduction](.github/ISSUE_TEMPLATE/content_contribution.md)
-
-Tout est expliqué dans **[CONTRIBUTING.md](CONTRIBUTING.md)**.
-
-> Les contributions **éditoriales** (phrases coach, scénarios, surnoms, nouvelle langue) sont les plus précieuses et ne demandent **aucune compétence technique**. Le template Content guide vers le format à utiliser.
->
-> Les contributeurs IA (ChatGPT, Claude, etc.) peuvent se référer à **[docs/CONTENT_GUIDE.md](docs/CONTENT_GUIDE.md)** — guide structuré des formats JSON acceptés par le générateur.
-
-### 🛠 Curieux du code ?
-
-Tout le projet Flutter vit dans **[`rhythm_coach/`](rhythm_coach/)** :
-- **[Setup développeur](docs/DEVELOPMENT.md)** — installer Flutter, run par plateforme (Android, Windows, web Chrome), customiser les assets sans coder
-- **[Doc utilisateur Flutter](rhythm_coach/README.md)** — features détaillées, install par plateforme
-- **[Setup CI/CD](.github/RELEASE_SETUP.md)** — workflow de release auto
-
-### 📝 Licence
-
-Code et contenus éditoriaux sous **[PolyForm Noncommercial 1.0.0](LICENSE)**.
-
-- ✅ Usage personnel, étude, modification, fork, redistribution non-commerciale.
-- ❌ Vente, monetisation, fork « Premium » sur Telegram / Gumroad / store alternatif.
-
-Les binaires hors-repo (gifs et mp3 d'ambiance) restent soumis aux droits de leurs sources d'origine.
-
----
-
-## English
-
-### In 30 seconds
+## In 30 seconds
 
 - A **voice coach** speaking your language, locally — no network synthesis.
 - **Guidance beeps** locked to a BPM to drive every move.
 - 8 play modes, a Career mode that unlocks as you go, coaches with distinct personalities.
-- **100% offline**: `INTERNET` permission not declared, nothing leaves your phone.
-- **No Play Store, no ads, no IAP.** Distribution is direct signed APK.
+- **100% offline** on Android: `INTERNET` permission not declared, nothing leaves your phone.
+- **No Play Store, no ads, no IAP.** Distribution is direct signed APK (Android), portable zip (desktop), installable web app (iOS / browser).
 
-### 📥 Download
+## 📥 Download
 
 ➡ **[Releases page](../../releases)** — signed APK + its SHA256.
 
 > ⚠ Android 9 minimum. Tested on Android 13/14.
 
-### 📲 Install (side-load, step by step)
+## 📲 Install on Android (side-load, step by step)
 
 **Side-load** just means "install an app outside the Play Store". Android supports this natively — you just need to allow your browser or file manager to do it.
 
@@ -154,7 +39,24 @@ Les binaires hors-repo (gifs et mp3 d'ambiance) restent soumis aux droits de leu
 
 > 💡 You can disable "unknown sources" again after installing — Android won't reopen it unless you update the app.
 
-### 🖥 Install on Windows desktop
+## 🍎 Install on iPhone / iPad (PWA)
+
+BeatBitch is **not** available on the App Store (Apple does not allow adult content). On iOS, we ship an **installable web version** (PWA). Once added to your home screen, it behaves like a real app: dedicated icon, full screen, no Safari bar, works offline after the first load.
+
+1. On your iPhone / iPad (iOS 16.4+), open **Safari** (not Chrome / Firefox — Apple blocks PWA install from those).
+2. Go to **[beatbitch.pages.dev](https://beatbitch.pages.dev)** and wait for the page to fully load (the whole app gets downloaded the first time).
+3. Tap the **Share** button → **Add to Home Screen** → **Add**.
+4. Launch BeatBitch from your home screen. First launch: 18+ adult gate, then 3-step onboarding.
+
+> Detailed guide: **[docs/INSTALL-iOS.en.md](docs/INSTALL-iOS.en.md)**.
+>
+> ⚠ The web/iOS version uses **iOS native speech synthesis** (no Android voices). Hold camera check and surprise notifications are not available. First load needs an Internet connection; everything else runs offline from the home-screen icon.
+
+## 🌐 Use in a desktop browser
+
+Same URL as iOS — **[beatbitch.pages.dev](https://beatbitch.pages.dev)** works in any modern browser (Chrome, Edge, Firefox, Safari). Handy to try the app before installing the APK or desktop build. Voice quality depends on your OS speech engine.
+
+## 🖥 Install on Windows desktop
 
 Available since **v0.1.3**. Portable zip — no installer, no registry / system-folder writes.
 
@@ -165,7 +67,7 @@ Available since **v0.1.3**. Portable zip — no installer, no registry / system-
 
 > ⚠ **Disabled on Windows**: hold camera check and surprise notifications aren't ported (the native plugins don't have Windows implementations). The coach voice uses **Microsoft Julie** (SAPI) instead of Android voices. Sessions, Career mode, coaches, badges, languages: all work identically to Android.
 
-### 🐧 Install on Linux desktop
+## 🐧 Install on Linux desktop
 
 Available since **v0.3.0**. Portable `tar.gz` — no `.deb`/`.rpm` package, the app stays in its own folder and nothing is installed system-wide.
 
@@ -177,9 +79,9 @@ Available since **v0.3.0**. Portable `tar.gz` — no `.deb`/`.rpm` package, the 
 
 > ⚠ **Disabled on Linux**: hold camera check and surprise notifications aren't ported. The coach voice uses the default **Speech Dispatcher** voice (typically `espeak-ng` on Ubuntu/Debian — install a French/English voice via your package manager if the default doesn't sound right). Sessions, Career mode, coaches, badges, languages: all work identically to Android.
 
-### 🔄 Automatic updates (Obtainium)
+## 🔄 Automatic updates (Obtainium)
 
-The app stays **strictly offline** — it doesn't reach out for updates by itself. To get notified when a new version ships and install it in two taps, use **[Obtainium](https://github.com/ImranR98/Obtainium)**, an open-source Android store that watches GitHub Releases pages.
+The Android app stays **strictly offline** — it doesn't reach out for updates by itself. To get notified when a new version ships and install it in two taps, use **[Obtainium](https://github.com/ImranR98/Obtainium)**, an open-source Android store that watches GitHub Releases pages.
 
 1. Install Obtainium (available on [F-Droid](https://f-droid.org/packages/dev.imranr.obtainium.fdroid/) or as a direct APK from its repo).
 2. In Obtainium: *Add App* → paste the URL `https://github.com/bbstudioapp/beatbitch`.
@@ -187,17 +89,17 @@ The app stays **strictly offline** — it doesn't reach out for updates by itsel
 
 > No network traffic comes from BeatBitch itself — Obtainium queries GitHub on the user side, independently of the app. The 100% offline promise stays intact.
 
-### 🔒 Is it safe?
+## 🔒 Is it safe?
 
 - **APK signed** with the same key on every release — Android refuses to install a tampered APK (signature won't match).
 - **Source code public** — you can read what runs (or have it read for you).
-- **No network permission** — neither `INTERNET` nor `ACCESS_NETWORK_STATE`. The app *literally cannot* call out to a server.
+- **No network permission** (Android) — neither `INTERNET` nor `ACCESS_NETWORK_STATE`. The Android app *literally cannot* call out to a server.
 - **`allowBackup="false"`** — no Google Backup upload.
 - **Camera is opt-in** — the hold camera check is off by default and processing is 100% on-device (Google ML Kit local). No image leaves the phone.
 
 Details in **[PRIVACY.md](docs/PRIVACY.md)** ([published version](https://bbstudioapp.github.io/beatbitch/PRIVACY)).
 
-### 🎮 How to play
+## 🎮 How to play
 
 1. Drop your phone flat, on its side — no need to keep it in sight.
 2. Pick a preset session or let Career mode generate one for you.
@@ -205,7 +107,7 @@ Details in **[PRIVACY.md](docs/PRIVACY.md)** ([published version](https://bbstud
 4. The **"I can't"** button is always available if you drop off. The coach takes over with a short punishment, then the session resumes where it makes sense.
 5. At the end, the screen tells you what you unlocked (badges, career levels, milestones).
 
-### 🐛 Found a bug, got an idea, want to contribute?
+## 🐛 Found a bug, got an idea, want to contribute?
 
 Issue templates available:
 - 🐛 [Bug](.github/ISSUE_TEMPLATE/bug_report.md) · 💡 [Idea / feature](.github/ISSUE_TEMPLATE/feature_request.md) · ✍ [Coach lines / scenarios / translation](.github/ISSUE_TEMPLATE/content_contribution.md)
@@ -216,14 +118,15 @@ Everything is explained in **[CONTRIBUTING.md](CONTRIBUTING.md)**.
 >
 > AI contributors (ChatGPT, Claude, etc.) should refer to **[docs/CONTENT_GUIDE.md](docs/CONTENT_GUIDE.md)** — a structured guide to the JSON formats the generator consumes.
 
-### 🛠 Curious about the code?
+## 🛠 Curious about the code?
 
 The full Flutter project lives in **[`rhythm_coach/`](rhythm_coach/)**:
+- **[Developer setup](docs/DEVELOPMENT.md)** — install Flutter, run per platform (Android, Windows, web Chrome), customize assets without coding
 - **[Full dev README](rhythm_coach/README.md)** — detailed features, local build, tests
 - **[Architecture](rhythm_coach/CLAUDE.md)** — session flow, excitation engine, Career mode, i18n
 - **[CI/CD setup](.github/RELEASE_SETUP.md)** — auto-release workflow
 
-### 📝 License
+## 📝 License
 
 Code and editorial content under **[PolyForm Noncommercial 1.0.0](LICENSE)**.
 
