@@ -17,6 +17,8 @@ import '../models/phrase_bank.dart';
 import '../models/specialization.dart';
 import '../models/unlock_key.dart';
 
+part 'career_session_generator_stamina.dart';
+
 /// Résultat d'une génération : la session figée à passer au controller +
 /// le profil d'endurance projeté (utile à l'overlay debug `StaminaBar`) +
 /// l'axe de capacité surchargé sur cette séance (`null` hors carrière / profil
@@ -41,7 +43,6 @@ class CareerSessionGenerator {
   // ─── CONSTANTES ──────────────────────────────────────────────────────────
 
   static const int _finisherBudgetSeconds = 12;
-  static const double _staminaMax = 100.0;
 
   /// Budget réservé en fin de session pour la phase d'accélération qui
   /// précède le hold final (bas niveaux uniquement). Permet d'enchaîner
@@ -766,10 +767,11 @@ class CareerSessionGenerator {
     _salivaSim = SalivaEngine()..reset();
     _salivaSimSecond = 0;
     final steps = <SessionStep>[];
-    final profile = List<double>.filled(effectiveDuration + 60, _staminaMax);
+    final profile =
+        List<double>.filled(effectiveDuration + 60, _StaminaModel.cap);
 
     var time = 0;
-    var stamina = _staminaMax;
+    var stamina = _StaminaModel.cap;
 
     // DTO partagé par les helpers de phase. Construit une fois ici et passé
     // à chacun pour éviter de répéter les ~10 args (cfg/bank/effectiveDuration/
@@ -925,8 +927,8 @@ class CareerSessionGenerator {
       _trackPushedStep(first.mode, first.to,
           from: first.from, bpm: first.bpm, duration: first.duration);
       final staminaBefore = stamina;
-      stamina = _applyStaminaChange(stamina, first, 0.0, cfg);
-      _fillProfile(profile, 0, first.duration ?? 1, stamina,
+      stamina = _StaminaModel.apply(stamina, first, 0.0, cfg);
+      _StaminaModel.fillProfile(profile, 0, first.duration ?? 1, stamina,
           valueStart: staminaBefore);
       _advanceSalivaSim(first);
       time += first.duration ?? 1;
@@ -972,9 +974,9 @@ class CareerSessionGenerator {
           final waveText = _pickPhraseForDraft(bank, wd, 'hard');
           steps.add(_draftToStep(wd, time: time, text: waveText));
           final staminaBefore = stamina;
-          stamina = _applyStaminaChange(stamina, wd, progressForWave, cfg);
+          stamina = _StaminaModel.apply(stamina, wd, progressForWave, cfg);
           _advanceSalivaSim(wd);
-          _fillProfile(profile, time, wd.duration!, stamina,
+          _StaminaModel.fillProfile(profile, time, wd.duration!, stamina,
               valueStart: staminaBefore);
           _lastMode = wd.mode;
           _lastText = waveText;
@@ -1000,10 +1002,11 @@ class CareerSessionGenerator {
           final breathText = _pickPhrase(bank, SessionMode.breath, 'soft');
           steps.add(_draftToStep(postWaveBreath, time: time, text: breathText));
           final staminaBefore = stamina;
-          stamina = _applyStaminaChange(
+          stamina = _StaminaModel.apply(
               stamina, postWaveBreath, postWaveProgress, cfg);
           _advanceSalivaSim(postWaveBreath);
-          _fillProfile(profile, time, postWaveBreath.duration!, stamina,
+          _StaminaModel.fillProfile(
+              profile, time, postWaveBreath.duration!, stamina,
               valueStart: staminaBefore);
           _lastMode = SessionMode.breath;
           _lastText = breathText;
@@ -1028,13 +1031,14 @@ class CareerSessionGenerator {
             _pickPhrase(bank, SessionMode.beg, 'hard');
         steps.add(_draftToStep(swallowDraft, time: time, text: swallowText));
         final staminaBefore = stamina;
-        stamina = _applyStaminaChange(
+        stamina = _StaminaModel.apply(
             stamina, swallowDraft, time / effectiveDuration, cfg);
         // Conséquence simulée de l'ordre : la sim retombe à 0, comme si
         // la joueuse obéissait. En runtime le SessionController fera de
         // même via `SalivaEngine.forceSwallow()`.
         _salivaSim.forceSwallow();
-        _fillProfile(profile, time, swallowDraft.duration!, stamina,
+        _StaminaModel.fillProfile(
+            profile, time, swallowDraft.duration!, stamina,
             valueStart: staminaBefore);
         _lastMode = SessionMode.beg;
         _lastText = swallowText;
@@ -1045,8 +1049,9 @@ class CareerSessionGenerator {
         continue;
       }
       final progress = time / effectiveDuration;
-      final windowMin = _lerp(0.05, 0.50, progress);
-      var windowMax = min(_lerp(0.30, 1.00, progress), cfg.maxDifficultyCap);
+      final windowMin = _StaminaModel.lerp(0.05, 0.50, progress);
+      var windowMax =
+          min(_StaminaModel.lerp(0.30, 1.00, progress), cfg.maxDifficultyCap);
       // Floor d'intensité (mode bâclée) : tronque le bas de la fenêtre.
       final flooredMin = max(windowMin, intensityFloor);
       final boundedMin = min(flooredMin, windowMax - 0.05).clamp(0.0, 1.0);
@@ -1112,16 +1117,17 @@ class CareerSessionGenerator {
       // standard) ou si on est à <8s du genUntil (laisse la place au
       // pré-finisher / boost).
       if (draft.mode != SessionMode.breath && genUntil - time > 8) {
-        final delta = _staminaDelta(draft, progress, cfg);
+        final delta = _StaminaModel.delta(draft, progress, cfg);
         final projected = stamina + delta;
         if (projected < 0) {
           final breathDraft = _buildBreathRecovery(-projected, progress, cfg);
           final breathText = _pickPhrase(bank, SessionMode.breath, 'soft');
           steps.add(_draftToStep(breathDraft, time: time, text: breathText));
           final staminaBefore = stamina;
-          stamina = _applyStaminaChange(stamina, breathDraft, progress, cfg);
+          stamina = _StaminaModel.apply(stamina, breathDraft, progress, cfg);
           _advanceSalivaSim(breathDraft);
-          _fillProfile(profile, time, breathDraft.duration!, stamina,
+          _StaminaModel.fillProfile(
+              profile, time, breathDraft.duration!, stamina,
               valueStart: staminaBefore);
           time += breathDraft.duration!;
           _lastMode = SessionMode.breath;
@@ -1158,7 +1164,7 @@ class CareerSessionGenerator {
         final partText =
             partIdx == 0 ? _pickPhraseForDraft(bank, partDraft, tier) : '';
         final staminaBefore = stamina;
-        stamina = _applyStaminaChange(stamina, partDraft, progress, cfg);
+        stamina = _StaminaModel.apply(stamina, partDraft, progress, cfg);
         _advanceSalivaSim(partDraft);
         steps.add(_draftToStep(partDraft, time: time, text: partText));
         _lastMode = partDraft.mode;
@@ -1169,7 +1175,7 @@ class CareerSessionGenerator {
             from: partDraft.from,
             bpm: partDraft.bpm,
             duration: partDraft.duration);
-        _fillProfile(profile, time, partDraft.duration!, stamina,
+        _StaminaModel.fillProfile(profile, time, partDraft.duration!, stamina,
             valueStart: staminaBefore);
         time += partDraft.duration!;
       }
@@ -1193,7 +1199,7 @@ class CareerSessionGenerator {
       );
       if (fakeBreath != null) {
         final staminaBeforeFake = stamina;
-        stamina = _applyStaminaChange(stamina, fakeBreath.draft, progress, cfg);
+        stamina = _StaminaModel.apply(stamina, fakeBreath.draft, progress, cfg);
         _advanceSalivaSim(fakeBreath.draft);
         steps.add(
             _draftToStep(fakeBreath.draft, time: time, text: fakeBreath.text));
@@ -1201,7 +1207,8 @@ class CareerSessionGenerator {
         _lastText = fakeBreath.text;
         _trackPushedStep(SessionMode.breath, null,
             duration: fakeBreath.draft.duration);
-        _fillProfile(profile, time, fakeBreath.draft.duration!, stamina,
+        _StaminaModel.fillProfile(
+            profile, time, fakeBreath.draft.duration!, stamina,
             valueStart: staminaBeforeFake);
         time += fakeBreath.draft.duration!;
       }
@@ -1212,7 +1219,7 @@ class CareerSessionGenerator {
       final chain = draft.chainNext;
       if (chain != null && chain.duration != null) {
         final staminaBefore = stamina;
-        stamina = _applyStaminaChange(stamina, chain, progress, cfg);
+        stamina = _StaminaModel.apply(stamina, chain, progress, cfg);
         _advanceSalivaSim(chain);
         steps.add(_draftToStep(chain, time: time, text: ''));
         _lastMode = chain.mode;
@@ -1221,7 +1228,7 @@ class CareerSessionGenerator {
         _lastTo = chain.to;
         _trackPushedStep(chain.mode, chain.to,
             from: chain.from, bpm: chain.bpm, duration: chain.duration);
-        _fillProfile(profile, time, chain.duration!, stamina,
+        _StaminaModel.fillProfile(profile, time, chain.duration!, stamina,
             valueStart: staminaBefore);
         time += chain.duration!;
       }
@@ -1527,7 +1534,7 @@ class CareerSessionGenerator {
     int remainingSeconds,
   ) {
     if (remainingSeconds < 12) return null;
-    final regen = _lerp(
+    final regen = _StaminaModel.lerp(
       cfg.regenStartMultiplier,
       cfg.regenEndMultiplier,
       progress,
@@ -1812,9 +1819,10 @@ class CareerSessionGenerator {
       // la projection reste cohérente.
       final mDraft = _stepToDraft(mStep, SessionMode.rhythm);
       final staminaBefore = s;
-      s = _applyStaminaChange(s, mDraft, t / ctx.effectiveDuration, ctx.cfg);
+      s = _StaminaModel.apply(s, mDraft, t / ctx.effectiveDuration, ctx.cfg);
       _advanceSalivaSim(mDraft);
-      _fillProfile(ctx.profile, t + mStep.time, mStep.duration ?? 0, s,
+      _StaminaModel.fillProfile(
+          ctx.profile, t + mStep.time, mStep.duration ?? 0, s,
           valueStart: staminaBefore);
       // Tracking de continuité par type — chaque step de la séquence compte
       // (la séquence peut elle-même alterner bouche/transit).
@@ -1863,9 +1871,10 @@ class CareerSessionGenerator {
     _trackPushedStep(SessionMode.rhythm, preDraft.to,
         from: preDraft.from, bpm: preDraft.bpm, duration: preDraft.duration);
     final staminaBeforePre = stamina;
-    final newStamina = _applyStaminaChange(
+    final newStamina = _StaminaModel.apply(
         stamina, preDraft, time / ctx.effectiveDuration, ctx.cfg);
-    _fillProfile(ctx.profile, time, preDraft.duration ?? preDur, newStamina,
+    _StaminaModel.fillProfile(
+        ctx.profile, time, preDraft.duration ?? preDur, newStamina,
         valueStart: staminaBeforePre);
     _advanceSalivaSim(preDraft);
     return (time: time + (preDraft.duration ?? preDur), stamina: newStamina);
@@ -2023,9 +2032,10 @@ class CareerSessionGenerator {
           bpm: boostDraft.bpm,
           duration: boostDraft.duration);
       final staminaBeforeBoost = s;
-      s = _applyStaminaChange(s, boostDraft, 1.0, ctx.cfg);
+      s = _StaminaModel.apply(s, boostDraft, 1.0, ctx.cfg);
       _advanceSalivaSim(boostDraft);
-      _fillProfile(ctx.profile, t, boostDur, s, valueStart: staminaBeforeBoost);
+      _StaminaModel.fillProfile(ctx.profile, t, boostDur, s,
+          valueStart: staminaBeforeBoost);
       t += boostDur;
       // Mémorise BPM/profondeur retenus (post-dégradation humil) pour que le
       // boost suivant ne puisse pas redescendre sous ce palier.
@@ -2106,8 +2116,8 @@ class CareerSessionGenerator {
     ctx.steps.add(finisherStep);
     final staminaBeforeFinisher = stamina;
     final newStamina =
-        _applyStaminaChange(stamina, finisherDraft, 1.0, ctx.cfg);
-    _fillProfile(ctx.profile, time, finisherDuration, newStamina,
+        _StaminaModel.apply(stamina, finisherDraft, 1.0, ctx.cfg);
+    _StaminaModel.fillProfile(ctx.profile, time, finisherDuration, newStamina,
         valueStart: staminaBeforeFinisher);
     _advanceSalivaSim(finisherDraft);
     return (
@@ -2152,8 +2162,8 @@ class CareerSessionGenerator {
         .add(_draftToStep(postFinalDraft, time: time, text: postFinalText));
     final staminaBeforePostFinal = stamina;
     final newStamina =
-        _applyStaminaChange(stamina, postFinalDraft, 1.0, ctx.cfg);
-    _fillProfile(ctx.profile, time, postFinalDuration, newStamina,
+        _StaminaModel.apply(stamina, postFinalDraft, 1.0, ctx.cfg);
+    _StaminaModel.fillProfile(ctx.profile, time, postFinalDuration, newStamina,
         valueStart: staminaBeforePostFinal);
     _advanceSalivaSim(postFinalDraft);
     _lastMode = postFinalDraft.mode;
@@ -2424,7 +2434,7 @@ class CareerSessionGenerator {
     double progress,
     CareerLevel cfg,
   ) {
-    final regen = _lerp(
+    final regen = _StaminaModel.lerp(
       cfg.regenStartMultiplier,
       cfg.regenEndMultiplier,
       progress,
@@ -2707,10 +2717,10 @@ class CareerSessionGenerator {
 
     switch (mode) {
       case SessionMode.rhythm:
-        final bpm = _lerp(60.0, 140.0, bpmScore).round();
+        final bpm = _StaminaModel.lerp(60.0, 140.0, bpmScore).round();
         final (from, to) = _sampleFromTo(ampScore);
         var dur = _scaleDuration(
-          _lerp(20.0, 60.0, durScore),
+          _StaminaModel.lerp(20.0, 60.0, durScore),
           enduranceFactor: 0.05,
         );
         // Cap par nombre d'aller-retours sur les profondeurs throat/full :
@@ -2731,9 +2741,9 @@ class CareerSessionGenerator {
       case SessionMode.biffle:
         // Biffle = coups de queue sur le visage : pas de notion de
         // position. from/to restent null.
-        final bpm = _lerp(80.0, 140.0, bpmScore).round();
+        final bpm = _StaminaModel.lerp(80.0, 140.0, bpmScore).round();
         final dur = _scaleDuration(
-          _lerp(15.0, 40.0, durScore),
+          _StaminaModel.lerp(15.0, 40.0, durScore),
           enduranceFactor: 0.05,
         );
         return _StepDraft(
@@ -2743,7 +2753,7 @@ class CareerSessionGenerator {
         // (matche BeepEngine et le format SessionStep des JSON).
         final to = _pickHoldPosition(ampScore);
         final dur = _scaleDuration(
-          _lerp(8.0, 30.0, max(durScore, bpmScore)),
+          _StaminaModel.lerp(8.0, 30.0, max(durScore, bpmScore)),
           enduranceFactor: 0.08,
         );
         return _StepDraft(
@@ -2752,18 +2762,18 @@ class CareerSessionGenerator {
         // Sloppy : monte le BPM minimum (≥ 65 = lick humide / saliveux).
         final sloppyPts = _pts(SpecializationBranch.sloppy);
         final lickBpmScore = sloppyPts > 0 ? max(bpmScore, 0.3) : bpmScore;
-        final bpm = _lerp(55.0, 80.0, lickBpmScore).round();
+        final bpm = _StaminaModel.lerp(55.0, 80.0, lickBpmScore).round();
         // Tirage spécifique lick : tip→head forcé tant qu'humiliation < 2,
         // toutes amplitudes (incluant tip → throat/full) à partir de 2.
         final (from, to) = _sampleFromToForLick(ampScore);
         final dur = _scaleDuration(
-          _lerp(10.0, 25.0, durScore),
+          _StaminaModel.lerp(10.0, 25.0, durScore),
           enduranceFactor: 0.04,
         );
         return _StepDraft(
             mode: mode, bpm: bpm, from: from, to: to, duration: dur);
       case SessionMode.breath:
-        final dur = _lerp(6.0, 15.0, durScore).round();
+        final dur = _StaminaModel.lerp(6.0, 15.0, durScore).round();
         return _StepDraft(
             mode: mode, bpm: null, from: null, to: null, duration: dur);
       case SessionMode.beg:
@@ -2774,7 +2784,7 @@ class CareerSessionGenerator {
         final begAmp = (ampScore + 0.10 * obPts).clamp(0.0, 1.0);
         final to = _pickBegPosition(begAmp);
         final baseDur = _scaleDuration(
-          _lerp(7.0, 16.0, durScore),
+          _StaminaModel.lerp(7.0, 16.0, durScore),
           enduranceFactor: 0.04,
           extraFactor: obPts * 0.06,
         );
@@ -2789,20 +2799,20 @@ class CareerSessionGenerator {
         // Hand sert d'outil d'excitation/endurance pure : sa fréquence peut
         // grimper sans coût d'humiliation. Plage très large pour permettre
         // récup lente (60 BPM) jusqu'à burst frénétique (180 BPM).
-        final bpm = _lerp(60.0, 180.0, bpmScore).round();
+        final bpm = _StaminaModel.lerp(60.0, 180.0, bpmScore).round();
         // Tirage spécifique hand : la main tient la base de la queue, donc
         // l'amplitude reste dans le haut (jamais plus profond que throat).
         // En revanche tip→head et head→head sont autorisés (le tirage
         // commun les exclut pour les autres modes).
         final (from, to) = _sampleFromToForHand(ampScore);
         final dur = _scaleDuration(
-          _lerp(15.0, 30.0, durScore),
+          _StaminaModel.lerp(15.0, 30.0, durScore),
           enduranceFactor: 0.04,
         );
         return _StepDraft(
             mode: mode, bpm: bpm, from: from, to: to, duration: dur);
       case SessionMode.freestyle:
-        final dur = _lerp(8.0, 18.0, durScore).round();
+        final dur = _StaminaModel.lerp(8.0, 18.0, durScore).round();
         return _StepDraft(
             mode: mode, bpm: null, from: null, to: null, duration: dur);
       case SessionMode.suckle:
@@ -2817,7 +2827,7 @@ class CareerSessionGenerator {
         //   ~30 % de chances de tirer balls quand dispo, pour rester audible
         //   mais marginal.
         final dur = _scaleDuration(
-          _lerp(8.0, 18.0, durScore),
+          _StaminaModel.lerp(8.0, 18.0, durScore),
           enduranceFactor: 0.04,
         );
         final ballsAllowed = _anatomy.hasBalls &&
@@ -3152,155 +3162,6 @@ class CareerSessionGenerator {
 
   int _pts(SpecializationBranch b) => _spec.pointsIn(b);
 
-  /// Comptabilité endurance : modes effort consomment (taux ~doublés
-  /// par rapport à la v1, qui descendait beaucoup trop lentement), modes
-  /// respi ≤ 60 BPM régénèrent (multiplicateur qui monte avec t),
-  /// au-dessus c'est neutre.
-  ///
-  /// Plafond haut respecté (`_staminaMax`) pour éviter qu'un long break
-  /// ne capitalise indéfiniment ; pas de plancher bas — on autorise une
-  /// dette d'endurance qui sera comblée par le sas breath conditionnel
-  /// (cf. `_buildBreathRecovery`). Les bas niveaux ne descendaient jamais
-  /// sous 90 à cause du clamp à 0 combiné aux faibles deltas — le sas
-  /// breath ne se déclenchait alors quasiment jamais.
-  double _applyStaminaChange(
-    double stamina,
-    _StepDraft draft,
-    double progress,
-    CareerLevel cfg,
-  ) {
-    final next = stamina + _staminaDelta(draft, progress, cfg);
-    return next > _staminaMax ? _staminaMax : next;
-  }
-
-  /// Variante "brute" du delta endurance : retourne le coût (négatif) ou
-  /// le gain (positif) sans clamp, pour pouvoir détecter un déficit projeté
-  /// (= dette d'endurance qu'il faut combler par un breath, cf. D3).
-  double _staminaDelta(
-    _StepDraft draft,
-    double progress,
-    CareerLevel cfg,
-  ) {
-    final dur = draft.duration ?? 0;
-    var next = 0.0;
-    switch (draft.mode) {
-      case SessionMode.rhythm:
-        final bpm = (draft.bpm ?? 60).toDouble();
-        final depth = _positionDepth(draft.from, draft.to);
-        // Multiplicateur de coût accentué dès que `to` atteint mid
-        // (idx 2). Sur les bas niveaux, c'est la profondeur où on tient
-        // le rythme la plus longtemps, et l'endurance ne descendait
-        // quasiment pas — ajout d'un coup de fatigue plus marqué.
-        // to=mid: ×1.45, to=throat: ×1.30, to=full: ×1.15.
-        final toIdx = (draft.to ?? draft.from)?.index ?? 0;
-        final depthMul = toIdx >= Position.full.index
-            ? 1.15
-            : toIdx >= Position.throat.index
-                ? 1.30
-                : toIdx >= Position.mid.index
-                    ? 1.45
-                    : 1.0;
-        // Bénéfice respiration : un step à grande amplitude (ex tip→full,
-        // mid→throat) laisse une fenêtre de respi au creux du va-et-vient.
-        // À l'inverse, un step throat/full ou throat/throat = pas de
-        // respiration, coût plein. À haute vitesse, le bénéfice s'évanouit
-        // (la respi n'a plus le temps de s'installer entre deux beats).
-        // Formule : amplitudeFactor ∈ [0,1] = (toIdx - fromIdx) / 4
-        //          bpmFactor ∈ [0,1] = clamp((100-bpm)/40, 0, 1)
-        //          respiBenefit = amplitudeFactor × bpmFactor × 0.40
-        // → tip→full 60bpm : −40 % de coût
-        // → mid→full 60bpm : −20 %
-        // → throat→full 60bpm : −10 %
-        // → mid→full 100bpm : 0 % (BPM trop haut)
-        final fromIdx = (draft.from)?.index ?? toIdx;
-        final amplitude = (toIdx - fromIdx).clamp(0, 4);
-        final amplitudeFactor = amplitude / 4.0;
-        final respiBpmFactor = ((100.0 - bpm) / 40.0).clamp(0.0, 1.0);
-        final respiBenefit = amplitudeFactor * respiBpmFactor * 0.40;
-        final costFactor = (1.0 - respiBenefit).clamp(0.6, 1.0);
-        next -= (bpm / 100.0) * depth * dur * depthMul * costFactor / 3.0;
-      case SessionMode.hold:
-        // Convention uniforme : hold/beg portent leur position dans `to`.
-        final depth = _positionDepth(draft.to, draft.to);
-        next -= depth * dur / 2.5;
-      case SessionMode.biffle:
-        // Biffle = effort soutenu (la fille encaisse), conso entre rythme
-        // et hold, modulée par la profondeur.
-        final bpm = (draft.bpm ?? 80).toDouble();
-        final depth = _positionDepth(draft.from, draft.to);
-        next -= (bpm / 100.0) * depth * dur / 3.5;
-      case SessionMode.beg:
-        // Convention uniforme : hold/beg portent leur position dans `to`.
-        // Sans `to` ou `to = head` → assimilé à du repos vocal (regen).
-        // Avec `to = mid/throat/full` → coût comme un hold à cette
-        // profondeur (la position doit être tenue pendant la supplique).
-        final to = draft.to;
-        if (to == null || to == Position.head) {
-          final regen = _lerp(
-            cfg.regenStartMultiplier,
-            cfg.regenEndMultiplier,
-            progress,
-          );
-          next += dur * 1.0 * regen;
-        } else {
-          final depth = _positionDepth(to, to);
-          next -= depth * dur / 2.5;
-        }
-      case SessionMode.lick:
-        final bpm = draft.bpm ?? 60;
-        if (bpm <= 60) {
-          // Lick lent = vraie récup vocale.
-          final regen = _lerp(
-            cfg.regenStartMultiplier,
-            cfg.regenEndMultiplier,
-            progress,
-          );
-          next += dur * 1.2 * regen;
-        } else {
-          // Lick plus vite = effort léger, on ne récupère plus et on
-          // s'épuise un peu.
-          final depth = _positionDepth(draft.from, draft.to);
-          next -= depth * dur / 8.0;
-        }
-      case SessionMode.breath:
-        // Toujours regen : breath n'est jamais un step d'effort. Vitesse
-        // poussée à 2.8 stamina/s — règle de design : un breath doit être
-        // plus court que les steps d'action qu'il sépare, sinon la
-        // dramaturgie ressemble à « action / longue pause / action /
-        // longue pause ». À 2.8/s, 8 s rendent ~22 stamina, ce qui couvre
-        // un step rythme moyen (~20 de coût) et permet d'enchaîner.
-        final regen = _lerp(
-          cfg.regenStartMultiplier,
-          cfg.regenEndMultiplier,
-          progress,
-        );
-        next += dur * 2.8 * regen;
-      case SessionMode.hand:
-        // Hand = effort modéré côté endurance (la bouche se repose, mais
-        // la main travaille). On consomme moins que rhythm équivalent.
-        final bpm = (draft.bpm ?? 80).toDouble();
-        final depth = _positionDepth(draft.from, draft.to);
-        next -= (bpm / 100.0) * depth * dur / 6.0;
-      case SessionMode.freestyle:
-        // Phase libre : neutre côté endurance (ni effort ni vraie regen).
-        break;
-      case SessionMode.suckle:
-        // Aspiration / téter : la bouche bosse sans aller-retour. Coût
-        // par seconde modéré, plus marqué sur head (zone sensible →
-        // pompage actif) que sur balls (sloppy soumis mais peu intense
-        // musculairement). On modélise sur `_holdCostPerSec` de
-        // StaminaEngine en l'ajustant : head ≈ 60 % d'un hold mid, balls
-        // ≈ 30 % (moins d'effort de la bouche, plus de l'humil).
-        final pos = draft.to ?? draft.from;
-        if (pos == Position.head) {
-          next -= 0.30 * dur;
-        } else if (pos == Position.balls) {
-          next -= 0.15 * dur;
-        }
-    }
-    return next;
-  }
-
   /// Si [draft] est un `beg` qui suit immédiatement un `lick` ou un
   /// `breath`, retourne une copie sans position tenue (récup vocale pure).
   /// Sinon, renvoie [draft] tel quel.
@@ -3360,14 +3221,6 @@ class CareerSessionGenerator {
     return min(dur, cap);
   }
 
-  /// Profondeur effective du step : index max du couple (from, to), 1..5.
-  /// `tip` = 1, `full` = 5.
-  double _positionDepth(Position? from, Position? to) {
-    final fIdx = from?.index ?? 0;
-    final tIdx = to?.index ?? fIdx;
-    return (max(fIdx, tIdx) + 1).toDouble();
-  }
-
   /// Tire un couple (from, to) tel que `from.index < to.index` strictement.
   ///
   /// `ampScore = 0` → head→mid (baseline). `ampScore = 1` → tip→full ou
@@ -3388,8 +3241,9 @@ class CareerSessionGenerator {
     // Min mid (idx 2) au lieu de head (idx 1) : l'amplitude minimale est
     // head→mid, pas tip→head.
     final ceiling = capByDepth ? _maxDepthIndex.clamp(2, 4) : 4;
-    var deepestIdx =
-        _lerp(2.0, ceiling.toDouble(), clamped).round().clamp(2, ceiling);
+    var deepestIdx = _StaminaModel.lerp(2.0, ceiling.toDouble(), clamped)
+        .round()
+        .clamp(2, ceiling);
     // Bonus Profondeur (spé) : remonte la probabilité de profond, dans
     // la limite du plafond du tirage.
     final depthPts = _pts(SpecializationBranch.profondeur);
@@ -3692,41 +3546,10 @@ class CareerSessionGenerator {
     return (lo, hi - lo, 1.0 - hi);
   }
 
-  double _lerp(double a, double b, double t) => a + (b - a) * t.clamp(0.0, 1.0);
-
-  /// Remplit le profil stamina sur l'intervalle `[from, from+count)` avec
-  /// une **rampe linéaire** entre [valueStart] (stamina au début du step)
-  /// et [valueEnd] (stamina à la fin, après application du delta du step).
-  ///
-  /// Sans cette interpolation, l'affichage debug montre une valeur unique
-  /// pour toute la durée du step, ce qui est trompeur — un breath de 12s
-  /// affichait 70 % d'endurance pendant 12 s alors qu'il démarre justement
-  /// quand on est en déficit (stamina < 0). La rampe permet de voir la
-  /// chute pendant un step rythmique et la remontée pendant un breath /
-  /// recovery, ce qui colle à l'intuition de l'utilisatrice.
-  ///
-  /// Compatibilité : si [valueStart] est omis, on retombe sur le
-  /// comportement historique (valeur constante). Conservé pour la phase
-  /// de génération (séquences milestone) où on ne calcule pas la valeur
-  /// avant.
-  void _fillProfile(List<double> profile, int from, int count, double valueEnd,
-      {double? valueStart}) {
-    final end = min(profile.length, from + count);
-    final start = max(0, from);
-    if (start >= end) return;
-    final span = end - start;
-    if (valueStart == null || span <= 1) {
-      for (var i = start; i < end; i++) {
-        profile[i] = valueEnd;
-      }
-      return;
-    }
-    // Rampe linéaire : profile[start] = valueStart, profile[end-1] = valueEnd.
-    final dx = (valueEnd - valueStart) / (span - 1);
-    for (var i = 0; i < span; i++) {
-      profile[start + i] = valueStart + dx * i;
-    }
-  }
+  // _lerp, _fillProfile, _positionDepth, _staminaDelta, _applyStaminaChange
+  // + constante `_StaminaModel.cap` (renommée `_StaminaModel.cap`) ont migré dans
+  // `career_session_generator_stamina.dart` (fichier part). Accès toujours
+  // gratuit depuis cette classe — c'est la même library.
 
   /// Avance la simulation salive pour un draft. Mute `_salivaSim` et
   /// `_salivaSimSecond`. Appelé en parallèle de chaque simulation excit
