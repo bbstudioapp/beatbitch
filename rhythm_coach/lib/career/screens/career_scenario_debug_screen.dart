@@ -1161,7 +1161,7 @@ class _CareerScenarioDebugScreenState extends State<CareerScenarioDebugScreen> {
       case SessionMode.hand:
         return const Color(0xFFFF9E80);
       case SessionMode.suckle:
-        return const Color(0xFF4DD0E1);
+        return const Color(0xFFEC407A);
     }
   }
 }
