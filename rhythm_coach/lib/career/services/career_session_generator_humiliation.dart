@@ -140,92 +140,21 @@ class _HumiliationGates {
     return 0.0;
   }
 
-  /// Stratégie de dégradation : raccourcir un hold long, baisser `to` d'un
-  /// cran, sinon `from`, sinon ramener un BPM rapide à 80, sinon
-  /// transformer en mode plus doux.
+  /// Une étape de dégradation. Chaque mode porte sa propre stratégie
+  /// dans `_*Rules.tryDegrade` (cf. `career_session_generator_mode_rules.dart`) :
+  /// hold raccourcit puis baisse `to`, beg baisse `to` puis repli libre,
+  /// rhythm/lick/hand cascade desc-to → desc-from (+ cap BPM pour rhythm),
+  /// biffle cap BPM puis se transforme en lick. Quand toutes les rules
+  /// retournent `null`, on retombe sur le fallback ultime ci-dessous.
   ///
-  /// **Garde-fou from < to** : la descente de `to` saute l'étape si elle
-  /// ferait collision avec `from` (head→mid → head→head interdit). Dans
-  /// ce cas on passe directement à descendre `from`.
+  /// **Garde-fou from < to** porté par les helpers `_tryDescendToWithGuard`
+  /// (cf. mode rules) : la descente de `to` saute l'étape si elle
+  /// ferait collision avec `from` (head→mid → head→head interdit).
   static _StepDraft stepDownOne(_StepDraft d) {
-    // Hold throat/full long → raccourcir d'abord (la durée pèse beaucoup
-    // sur l'humiliation requise, la position reste contractuelle).
-    if (d.mode == SessionMode.hold &&
-        (d.to == Position.throat || d.to == Position.full) &&
-        (d.duration ?? 0) > 5) {
-      return _StepDraft(
-        mode: d.mode,
-        bpm: d.bpm,
-        from: d.from,
-        to: d.to,
-        duration: max(2, (d.duration ?? 0) ~/ 2),
-      );
-    }
-    // Hold/beg : descendre `to` (la position tenue) d'un cran avant
-    // d'aller plus loin.
-    final isHoldLike = d.mode == SessionMode.hold || d.mode == SessionMode.beg;
-    if (isHoldLike && d.to != null && d.to!.index > Position.tip.index) {
-      return _StepDraft(
-        mode: d.mode,
-        bpm: d.bpm,
-        from: d.from,
-        to: Position.values[d.to!.index - 1],
-        duration: d.duration,
-      );
-    }
-    if (d.to != null && d.to!.index > Position.head.index) {
-      final newToIdx = d.to!.index - 1;
-      // Skip si la descente collisionne avec `from` (cas typique :
-      // head→mid → head→head interdit). On passe à descendre `from`.
-      final fromIdx = d.from?.index ?? -1;
-      if (newToIdx > fromIdx) {
-        return _StepDraft(
-          mode: d.mode,
-          bpm: d.bpm,
-          from: d.from,
-          to: Position.values[newToIdx],
-          duration: d.duration,
-        );
-      }
-    }
-    if (d.from != null && d.from!.index > Position.tip.index) {
-      return _StepDraft(
-        mode: d.mode,
-        bpm: d.bpm,
-        from: Position.values[d.from!.index - 1],
-        to: d.to,
-        duration: d.duration,
-      );
-    }
-    if ((d.mode == SessionMode.rhythm || d.mode == SessionMode.biffle) &&
-        (d.bpm ?? 0) > 80) {
-      return _StepDraft(
-        mode: d.mode,
-        bpm: 80,
-        from: d.from,
-        to: d.to,
-        duration: d.duration,
-      );
-    }
-    if (d.mode == SessionMode.biffle) {
-      return _StepDraft(
-        mode: SessionMode.lick,
-        bpm: d.bpm ?? 60,
-        from: d.from ?? Position.tip,
-        to: d.to ?? Position.head,
-        duration: d.duration,
-      );
-    }
-    if (d.mode == SessionMode.beg && d.to != null) {
-      // Beg avec position tenue → repli sur beg libre.
-      return _StepDraft(
-        mode: d.mode,
-        bpm: d.bpm,
-        from: null,
-        to: null,
-        duration: d.duration,
-      );
-    }
+    final degraded = _modeRulesRegistry[d.mode]!.tryDegrade(d);
+    if (degraded != null) return degraded;
+    // Fallback ultime : lick tip→head — le geste le plus doux qu'on
+    // puisse poser sans contrainte d'unlock (toujours disponible).
     return _StepDraft(
       mode: SessionMode.lick,
       bpm: 60,

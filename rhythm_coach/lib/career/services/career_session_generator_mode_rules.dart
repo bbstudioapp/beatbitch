@@ -16,6 +16,8 @@
 //     en mode carrière (cf. `_HumiliationGates.unlockKeyFor`).
 //   * `clampToCapability` — bornes profondeur / BPM / durée issues du
 //     profil de capacités (cf. `_CapabilityClamps.clampToCapability`).
+//   * `tryDegrade` — stratégie de dégradation d'un cran pour la cascade
+//     humiliation (cf. `_HumiliationGates.stepDownOne`).
 
 part of 'career_session_generator.dart';
 
@@ -57,6 +59,51 @@ abstract class _ModeRules {
   /// `_CapabilityClamps.clampToCapability` — chaque rule ne touche qu'à
   /// son draft principal.
   _StepDraft clampToCapability(_StepDraft draft, _CapabilityClamps c) => draft;
+
+  /// Une étape de dégradation : retourne le draft modifié si la rule sait
+  /// adoucir, ou `null` pour passer la main au fallback global (lick
+  /// tip→head). Appelée en boucle par `_HumiliationGates.enforceRequired`
+  /// jusqu'à ce que le draft satisfasse `humilCap` ET `isUnlocked`.
+  ///
+  /// Chaque rule choisit l'ordre de ses propres stratégies (raccourcir,
+  /// baisser `to`, baisser `from`, capper BPM, changer de mode) ; on ne
+  /// retourne qu'**un seul** cran par appel pour permettre à la cascade
+  /// externe de re-vérifier l'humil/unlock après chaque pas.
+  _StepDraft? tryDegrade(_StepDraft draft) => null;
+}
+
+/// Baisse `to` d'un cran en s'arrêtant à `head` (jamais à `tip` — un step
+/// rythmique a besoin d'au moins une amplitude tip↔head). Garde-fou
+/// collision : si la descente ferait `from >= to` (ex. head→mid → head→head
+/// interdit), on retourne `null` pour passer à la stratégie suivante.
+/// Helper mutualisé par les modes à amplitude (rhythm / lick / hand).
+_StepDraft? _tryDescendToWithGuard(_StepDraft d) {
+  if (d.to == null || d.to!.index <= Position.head.index) return null;
+  final newToIdx = d.to!.index - 1;
+  final fromIdx = d.from?.index ?? -1;
+  if (newToIdx <= fromIdx) return null;
+  return _StepDraft(
+    mode: d.mode,
+    bpm: d.bpm,
+    from: d.from,
+    to: Position.values[newToIdx],
+    duration: d.duration,
+    chainNext: d.chainNext,
+  );
+}
+
+/// Baisse `from` d'un cran en s'arrêtant à `tip`. Helper mutualisé par les
+/// modes à amplitude.
+_StepDraft? _tryDescendFrom(_StepDraft d) {
+  if (d.from == null || d.from!.index <= Position.tip.index) return null;
+  return _StepDraft(
+    mode: d.mode,
+    bpm: d.bpm,
+    from: Position.values[d.from!.index - 1],
+    to: d.to,
+    duration: d.duration,
+    chainNext: d.chainNext,
+  );
 }
 
 /// Règles `breath` : toujours regen. Vitesse 2.8 stamina/s — règle de
@@ -135,6 +182,10 @@ class _HandRules extends _ModeRules {
     final depth = _StaminaModel.positionDepth(draft.from, draft.to);
     return -(bpm / 100.0) * depth * dur / 6.0;
   }
+
+  @override
+  _StepDraft? tryDegrade(_StepDraft draft) =>
+      _tryDescendToWithGuard(draft) ?? _tryDescendFrom(draft);
 }
 
 /// Règles `biffle` : effort soutenu (la fille encaisse), conso entre
@@ -177,6 +228,29 @@ class _BiffleRules extends _ModeRules {
       chainNext: draft.chainNext,
     );
   }
+
+  @override
+  _StepDraft? tryDegrade(_StepDraft draft) {
+    // Biffle n'a pas de from/to (coups de queue sur le visage). Cascade :
+    // cap BPM à 80, sinon repli sur lick tip→head qui devient une vraie
+    // récup en bouche.
+    if ((draft.bpm ?? 0) > 80) {
+      return _StepDraft(
+        mode: draft.mode,
+        bpm: 80,
+        from: draft.from,
+        to: draft.to,
+        duration: draft.duration,
+      );
+    }
+    return _StepDraft(
+      mode: SessionMode.lick,
+      bpm: draft.bpm ?? 60,
+      from: draft.from ?? Position.tip,
+      to: draft.to ?? Position.head,
+      duration: draft.duration,
+    );
+  }
 }
 
 /// Règles `lick` : BPM ≤ 60 = vraie récup vocale (regen), au-delà = effort
@@ -210,6 +284,10 @@ class _LickRules extends _ModeRules {
     if (draft.to == Position.full) return UnlockKey.lickFull;
     return null;
   }
+
+  @override
+  _StepDraft? tryDegrade(_StepDraft draft) =>
+      _tryDescendToWithGuard(draft) ?? _tryDescendFrom(draft);
 }
 
 /// Règles `hold` : coût pur lié à la profondeur tenue (`to`). Convention
@@ -247,6 +325,35 @@ class _HoldRules extends _ModeRules {
   @override
   _StepDraft clampToCapability(_StepDraft draft, _CapabilityClamps c) =>
       _clampHeldDuration(draft, c);
+
+  @override
+  _StepDraft? tryDegrade(_StepDraft draft) {
+    // (1) Hold throat/full long → raccourcir d'abord (la durée pèse
+    // beaucoup sur l'humiliation requise, la position reste contractuelle).
+    if ((draft.to == Position.throat || draft.to == Position.full) &&
+        (draft.duration ?? 0) > 5) {
+      return _StepDraft(
+        mode: draft.mode,
+        bpm: draft.bpm,
+        from: draft.from,
+        to: draft.to,
+        duration: max(2, (draft.duration ?? 0) ~/ 2),
+      );
+    }
+    // (2) Descendre `to` d'un cran (la position tenue). Note : hold
+    // descend jusqu'à `tip`, contrairement aux modes rythmiques qui
+    // s'arrêtent à `head`.
+    if (draft.to != null && draft.to!.index > Position.tip.index) {
+      return _StepDraft(
+        mode: draft.mode,
+        bpm: draft.bpm,
+        from: draft.from,
+        to: Position.values[draft.to!.index - 1],
+        duration: draft.duration,
+      );
+    }
+    return null;
+  }
 }
 
 /// Cap durée mutualisé hold + beg : convention `to` porte la position
@@ -317,6 +424,31 @@ class _BegRules extends _ModeRules {
   @override
   _StepDraft clampToCapability(_StepDraft draft, _CapabilityClamps c) =>
       _clampHeldDuration(draft, c);
+
+  @override
+  _StepDraft? tryDegrade(_StepDraft draft) {
+    // (1) Descendre `to` d'un cran (beg jusqu'à `tip` comme hold).
+    if (draft.to != null && draft.to!.index > Position.tip.index) {
+      return _StepDraft(
+        mode: draft.mode,
+        bpm: draft.bpm,
+        from: draft.from,
+        to: Position.values[draft.to!.index - 1],
+        duration: draft.duration,
+      );
+    }
+    // (2) Beg avec position tenue → repli sur beg libre.
+    if (draft.to != null) {
+      return _StepDraft(
+        mode: draft.mode,
+        bpm: draft.bpm,
+        from: null,
+        to: null,
+        duration: draft.duration,
+      );
+    }
+    return null;
+  }
 }
 
 /// Règles `rhythm` : coût modulé par profondeur cible (mid pèse le plus :
@@ -354,6 +486,23 @@ class _RhythmRules extends _ModeRules {
     if (draft.to == Position.mid) return UnlockKey.rhythmMidBasic;
     // Rythme superficiel (tip→head) = socle de base, pas de clé.
     if ((draft.bpm ?? 0) >= 160) return UnlockKey.rhythmExtreme;
+    return null;
+  }
+
+  @override
+  _StepDraft? tryDegrade(_StepDraft draft) {
+    // Cascade rythme : descendre `to` → descendre `from` → cap BPM à 80.
+    final desc = _tryDescendToWithGuard(draft) ?? _tryDescendFrom(draft);
+    if (desc != null) return desc;
+    if ((draft.bpm ?? 0) > 80) {
+      return _StepDraft(
+        mode: draft.mode,
+        bpm: 80,
+        from: draft.from,
+        to: draft.to,
+        duration: draft.duration,
+      );
+    }
     return null;
   }
 
