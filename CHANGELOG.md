@@ -93,7 +93,9 @@ Grosse mise à jour du mode carrière : nouvelle enveloppe de difficulté, nouve
 ## [0.1.0] — 2026-05-08
 - Premier release public : coach vocal rythmique hors-ligne pour Android, adult gate 18+, onboarding, mode carrière + scénarios, badges, profil/réputation.
 
-[Non publié]: https://github.com/bbstudioapp/beatbitch/compare/v0.2.1...develop
+[Non publié]: https://github.com/bbstudioapp/beatbitch/compare/v0.4.0...develop
+[0.4.0]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.4.0
+[0.3.0]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.3.0
 [0.2.1]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.2.1
 [0.2.0]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.2.0
 [0.1.3]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.1.3
