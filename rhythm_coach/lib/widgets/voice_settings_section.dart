@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../services/coach_phrases_loader.dart';
+import '../services/locale_service.dart';
 import '../services/tts_service.dart';
 import '../services/user_profile_service.dart';
 import '../theme/app_theme.dart';
@@ -49,29 +50,64 @@ class _VoiceSettingsSectionState extends State<VoiceSettingsSection> {
   void initState() {
     super.initState();
     widget.userProfile.addListener(_onProfileChanged);
+    LocaleService.instance.addListener(_onLocaleChanged);
     widget.tts.init().then((_) async {
-      final voices = await widget.tts.listVoicesForLocale(widget.tts.locale);
-      if (!mounted) return;
-      setState(() {
-        _ready = true;
-        _voices = voices;
-        _selectedVoiceName = widget.tts.currentVoiceName ??
-            (voices.isNotEmpty ? voices.first['name'] : null);
-        _rate = widget.tts.currentRate;
-        _pitch = widget.tts.currentPitch;
-      });
+      await _loadVoicesForCurrentLocale(markReady: true);
     });
   }
 
   @override
   void dispose() {
     widget.userProfile.removeListener(_onProfileChanged);
+    LocaleService.instance.removeListener(_onLocaleChanged);
     super.dispose();
   }
 
   void _onProfileChanged() {
     if (!mounted) return;
     setState(() {});
+  }
+
+  void _onLocaleChanged() {
+    if (!mounted) return;
+    _loadVoicesForCurrentLocale(markReady: false);
+  }
+
+  /// Recharge la liste des voix pour la locale active et resync les sliders
+  /// sur l'état du service. On appelle `tts.setLocale` ici (idempotent si la
+  /// locale n'a pas changé) pour garantir que la voix par défaut de la
+  /// nouvelle langue est sélectionnée *avant* qu'on lise `currentVoiceName`.
+  ///
+  /// Si la voix courante du service n'est pas dans la liste filtrée de la
+  /// nouvelle locale (cas observé sur Web Speech API où `_selectVoice` ne
+  /// propage pas toujours le changement), on bascule explicitement sur la
+  /// 1re voix dispo de la langue active et on le pousse au service — sinon
+  /// le dropdown reste figé sur l'ancien nom alors que le test sonne dans
+  /// la bonne langue (via `setLanguage`).
+  Future<void> _loadVoicesForCurrentLocale({required bool markReady}) async {
+    await widget.tts.setLocale(LocaleService.instance.current);
+    final voices = await widget.tts.listVoicesForLocale(widget.tts.locale);
+    String? resolved = widget.tts.currentVoiceName;
+    final hasCurrent =
+        resolved != null && voices.any((v) => v['name'] == resolved);
+    if (!hasCurrent && voices.isNotEmpty) {
+      final first = voices.first;
+      final name = first['name'];
+      final localeTag = first['locale'];
+      if (name != null && localeTag != null) {
+        await widget.tts.setVoiceByName(name, localeTag);
+        resolved = name;
+      }
+    }
+    if (!mounted) return;
+    setState(() {
+      if (markReady) _ready = true;
+      _voices = voices;
+      _selectedVoiceName =
+          resolved ?? (voices.isNotEmpty ? voices.first['name'] : null);
+      _rate = widget.tts.currentRate;
+      _pitch = widget.tts.currentPitch;
+    });
   }
 
   /// Construit la phrase exacte qui sera lue : substitue `{name}` par le
