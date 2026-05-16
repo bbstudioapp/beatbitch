@@ -1,108 +1,85 @@
-# Development setup / Setup développeur
+# Development setup
 
-🇫🇷 Comment installer le projet, le lancer sur chaque plateforme cible, et où
-toucher pour personnaliser le contenu sans coder.
+How to install the project, run it on every target platform, and where to edit if you want to tweak content without writing code.
 
-🇬🇧 How to install the project, run it on every target platform, and where to
-edit if you want to tweak content without writing code.
+**Languages**: English · [Français](DEVELOPMENT.fr.md) · [Deutsch](DEVELOPMENT.de.md)
 
 ---
 
-## 1. Prérequis / Requirements
+## 1. Requirements
 
-| Outil / Tool | Version | Notes |
+| Tool | Version | Notes |
 |---|---|---|
-| **Flutter SDK** | ≥ 3.19 (stable) | `flutter --version` doit afficher au moins 3.19. Plus récent = ok. |
-| **Dart SDK** | inclus dans Flutter | Pas à installer séparément. |
-| **Git** | n'importe quelle version récente | |
-| **Android Studio** *(Android only)* | dernière stable | Nécessaire pour le SDK Android, l'émulateur et `adb`. Le plugin Flutter d'IDE est facultatif — tu peux dev en VS Code ou éditeur de ton choix. |
-| **Visual Studio 2022 Community** *(Windows desktop only)* | dernière | Workload **« Desktop development with C++ »** requis. Sans ça, `flutter build windows` échoue à la compilation native. |
-| **Chrome** *(web only)* | n'importe quelle version récente | Pour `flutter run -d chrome` (mode dev). Le web n'est **pas** une cible release officielle (cf. `docs/index.md`), mais ça reste utilisable pour itérer rapidement sur l'UI. |
+| **Flutter SDK** | ≥ 3.19 (stable) | `flutter --version` must show at least 3.19. Newer = fine. |
+| **Dart SDK** | bundled with Flutter | No need to install separately. |
+| **Git** | any recent version | |
+| **Android Studio** *(Android only)* | latest stable | Needed for the Android SDK, the emulator and `adb`. The Flutter IDE plugin is optional — you can develop in VS Code or any editor. |
+| **Visual Studio 2022 Community** *(Windows desktop only)* | latest | **"Desktop development with C++"** workload required. Without it, `flutter build windows` fails at native compilation. |
+| **Chrome** *(web only)* | any recent version | For `flutter run -d chrome` (dev mode). Web is **not** an official release target (see `docs/index.md`), but it stays usable for fast UI iteration. |
 
-Vérification rapide après install :
+Quick check after install:
 
 ```bash
 flutter doctor
 ```
 
-Tout ce que tu veux cibler doit afficher ✅. Les ❌ sur les plateformes que tu
-ne cibles pas peuvent être ignorés.
+Anything you intend to target must show ✅. The ❌ on platforms you don't target can be ignored.
 
 ---
 
-## 2. Cloner et résoudre les dépendances / Clone and resolve deps
+## 2. Clone and resolve deps
 
 ```bash
 git clone git@github.com:bbstudioapp/beatbitch.git
 cd beatbitch/rhythm_coach
 flutter pub get
-flutter analyze   # doit retourner "No issues found!"
-flutter test      # ~80 tests unitaires
+flutter analyze   # should return "No issues found!"
+flutter test      # ~80 unit tests
 ```
 
-Tout le code Flutter vit dans **`rhythm_coach/`**. La racine du repo contient
-juste les docs publiques, la licence, le workflow CI/CD et les templates GitHub.
+All Flutter code lives in **`rhythm_coach/`**. The repo root only holds public docs, the license, the CI/CD workflow and GitHub templates.
 
 ---
 
-## 3. Run par plateforme / Run per platform
+## 3. Run per platform
 
-Dans tous les cas, depuis `rhythm_coach/`.
+In every case, run from `rhythm_coach/`.
 
 ### 3.1 Android
 
 ```bash
-flutter run                       # device USB ou émulateur connecté
-flutter build apk --release       # APK release (nécessite key.properties)
-flutter build apk --debug         # APK debug, signé avec la clé Android par défaut
+flutter run                       # USB device or connected emulator
+flutter build apk --release       # release APK (requires key.properties)
+flutter build apk --debug         # debug APK, signed with the default Android key
 ```
 
-`adb devices` pour voir si ton téléphone est bien reconnu. Active le **mode
-développeur** + **débogage USB** sur le téléphone. Premier lancement : Android
-te demande d'autoriser l'ordi (boîte de dialogue sur le téléphone).
+`adb devices` to verify your phone is recognized. Enable **developer mode** + **USB debugging** on the phone. First launch: Android asks to authorize the computer (dialog on the phone).
 
-> Pour build un APK release signé hors CI, il te faut un `android/key.properties`
-> avec ta keystore. Voir `android/key.properties.example` pour le format. La
-> CI utilise un keystore dédié versé en secret GitHub (cf.
-> `.github/RELEASE_SETUP.md`).
+> To build a signed release APK outside CI, you need an `android/key.properties` with your keystore. See `android/key.properties.example` for the format. CI uses a dedicated keystore stored as a GitHub secret (cf. `.github/RELEASE_SETUP.md`).
 
 ### 3.2 Windows desktop
 
 ```bash
-flutter config --enable-windows-desktop   # une seule fois
-flutter run -d windows                    # lance l'app en debug
-flutter build windows --release           # build release dans build/windows/x64/runner/Release/
+flutter config --enable-windows-desktop   # once
+flutter run -d windows                    # launches the app in debug
+flutter build windows --release           # release build in build/windows/x64/runner/Release/
 ```
 
-Le binaire final est `build/windows/x64/runner/Release/rhythm_coach.exe` + ses
-DLLs Flutter et plugins. Pour le distribuer, **zipper l'intégralité du dossier
-Release** — c'est ce que fait le job CI `release-windows` (cf.
-`.github/workflows/release.yml`).
+The final binary is `build/windows/x64/runner/Release/rhythm_coach.exe` + its Flutter DLLs and plugins. To distribute, **zip the whole Release folder** — that's what the `release-windows` CI job does (cf. `.github/workflows/release.yml`).
 
-> ⚠ Sur Windows, plusieurs fonctionnalités sont **désactivées** par design :
-> vérif caméra des holds, notifications surprise. Cf. `lib/services/platform_capabilities.dart`.
-> Le TTS utilise Microsoft Julie (SAPI) avec rate 0.68 / pitch 1.22 forcés
-> pour tous les coachs (les voix Android `fr-fr-x-*-local` n'existent pas
-> sous SAPI).
+> ⚠ On Windows, several features are **disabled** by design: hold camera check, surprise notifications. Cf. `lib/services/platform_capabilities.dart`. TTS uses Microsoft Julie (SAPI) with rate 0.68 / pitch 1.22 forced for all coaches (Android voices `fr-fr-x-*-local` don't exist under SAPI).
 
-### 3.3 Web (dev only — pas une cible release)
+### 3.3 Web (dev only — not a release target)
 
 ```bash
-flutter config --enable-web         # une seule fois
-flutter run -d chrome               # mode dev hot-reload
-flutter build web --release         # build statique dans build/web/
+flutter config --enable-web         # once
+flutter run -d chrome               # dev mode with hot-reload
+flutter build web --release         # static build in build/web/
 ```
 
-Le web sert à itérer rapidement sur l'UI sans rebuild Android. **Ce n'est
-pas une cible de distribution officielle** — l'hébergement NSFW publique
-soulève des problèmes (TOS GitHub Pages / Cloudflare Pages, adult gate
-fragile dans un navigateur, expérience dégradée sans notifs / vibration /
-caméra ML Kit).
+Web is for quick UI iteration without rebuilding Android. **It's not an official distribution target** — public NSFW hosting raises issues (GitHub Pages / Cloudflare Pages TOS, fragile adult gate in a browser, degraded experience without notifs / vibration / ML Kit camera).
 
-> Plusieurs APIs ne sont pas dispo sur web. Le code utilise déjà des
-> guards `defaultTargetPlatform != TargetPlatform.android` pour la
-> caméra et les notifs surprise — l'app charge mais ces fonctions sont
-> masquées.
+> Several APIs aren't available on web. The code already uses `defaultTargetPlatform != TargetPlatform.android` guards for camera and surprise notifs — the app loads but those features are hidden.
 
 ### 3.4 Linux
 
@@ -112,171 +89,129 @@ flutter run -d linux
 flutter build linux --release
 ```
 
-Job CI `release-linux` packageant en tar.gz portable (cf.
-`.github/workflows/release.yml`). Mêmes capabilities désactivées qu'en
-Windows (caméra hold-check + notifs surprise hors-périmètre).
+CI job `release-linux` packages it as a portable tar.gz (cf. `.github/workflows/release.yml`). Same capabilities disabled as on Windows (hold camera check + surprise notifs out of scope).
 
-**TTS** : `flutter_tts` ne déclare pas d'implémentation Linux → le service
-bypasse le plugin et choisit au runtime entre `piper` (TTS neuronal, voix
-naturelle) et `spd-say` (fallback espeak-ng). Détails utilisateur + install
-piper : [LINUX_TTS.md](LINUX_TTS.md).
+**TTS**: `flutter_tts` declares no Linux implementation → the service bypasses the plugin and picks at runtime between `piper` (neural TTS, natural voice) and `spd-say` (espeak-ng fallback). User-facing details + piper install: [LINUX_TTS.md](LINUX_TTS.md).
 
-### 3.5 macOS (bloqué)
+### 3.5 macOS (blocked)
 
-Bloqué par Apple Developer ID + notarization (~99 $/an + Mac requis). Pas
-prévu sauf demande explicite.
+Blocked by Apple Developer ID + notarization (~$99/year + Mac required). Not planned unless explicitly requested.
 
 ---
 
-## 4. Personnaliser le contenu / Customize content
+## 4. Customize content
 
-**Tout le contenu éditorial est dans `rhythm_coach/assets/`** sous forme de
-fichiers JSON / MP3. Pas de modification de code requise pour ajouter une
-session, une phrase, un coach, une langue.
+**All editorial content is in `rhythm_coach/assets/`** as JSON / MP3 files. No code change needed to add a session, a phrase, a coach, a language.
 
-### 4.1 Sessions Scénario
+### 4.1 Scenario sessions
 
-Path : `assets/sessions/*.json` — sessions prédéfinies du mode Scénario (pas
-les sessions générées en Carrière, qui sont composées au runtime par
-`CareerSessionGenerator`).
+Path: `assets/sessions/*.json` — preset Scenario-mode sessions (not the Career sessions, which are composed at runtime by `CareerSessionGenerator`).
 
-| Fichier | Description |
+| File | Description |
 |---|---|
-| `session_initiation.json` | 8 min, ton progressif. Démo douce. |
-| `session_intense.json` | 10 min, intervalles. |
-| `session_advanced_demo.json` | Démo des modes avancés (24 steps). |
-| `session_camera_test.json` | Tests de la vérif caméra (5 holds tip→full). |
-| `session_initiation_en.json` | Variante anglaise (locale = `en`). |
+| `session_initiation.json` | 8 min, progressive tone. Soft demo. |
+| `session_intense.json` | 10 min, intervals. |
+| `session_advanced_demo.json` | Demo of advanced modes (24 steps). |
+| `session_camera_test.json` | Camera-check tests (5 holds tip→full). |
+| `session_initiation_en.json` | English variant (locale = `en`). |
 
-**Schéma** : une session est `{id, name, description, duration_seconds, mode,
-lang, steps[], …}`. Détails complets dans `rhythm_coach/CLAUDE.md` section
-*Modèles de données* + `lib/models/session.dart`.
+**Schema**: a session is `{id, name, description, duration_seconds, mode, lang, steps[], …}`. Full details in `rhythm_coach/CLAUDE.md` section *Modèles de données* + `lib/models/session.dart`.
 
-**Ajouter une session** :
-1. Crée `assets/sessions/ma_session.json` avec le schéma attendu.
-2. Ajoute le path dans `lib/services/session_loader.dart` → liste `_assetPaths`.
-3. Pas besoin de toucher `pubspec.yaml` (le dossier `assets/sessions/` est déjà
-   déclaré).
+**Add a session**:
+1. Create `assets/sessions/my_session.json` with the expected schema.
+2. Add the path to `lib/services/session_loader.dart` → `_assetPaths` list.
+3. No need to touch `pubspec.yaml` (the `assets/sessions/` folder is already declared).
 
-### 4.2 Coachs
+### 4.2 Coaches
 
-Path : `assets/career/coaches/`
+Path: `assets/career/coaches/`
 
-| Fichier | Description |
+| File | Description |
 |---|---|
-| `coach_<id>.json` | Métadonnées coach (lang-indépendant) — id, name, archetype, specialties, modeWeights, voicePreset, etc. |
-| `coach_<id>_<lang>.json` | Phrases TTS du coach pour la locale (FR, EN…). Pool par mode/tier (soft/medium/hard/boost/finale) + intros + transitions + recovery. |
+| `coach_<id>.json` | Coach metadata (locale-independent) — id, name, archetype, specialties, modeWeights, voicePreset, etc. |
+| `coach_<id>_<lang>.json` | Coach TTS phrases for the locale (FR, EN…). Pool by mode/tier (soft/medium/hard/boost/finale) + intros + transitions + recovery. |
 
-Le contenu fait > 100 lignes par coach + > 200 phrases par locale. Les
-contributeurs IA peuvent se référer à **[`docs/CONTENT_GUIDE.md`](CONTENT_GUIDE.md)**
-qui décrit la structure attendue ligne par ligne.
+Each coach is > 100 lines + > 200 phrases per locale. AI contributors should refer to **[`docs/CONTENT_GUIDE.md`](CONTENT_GUIDE.md)** which describes the expected structure line by line.
 
-**Ajouter un coach** :
-1. Crée le `coach_<id>.json` (métadonnées).
-2. Crée au moins un `coach_<id>_fr.json` (phrases FR).
-3. Le coach apparaît automatiquement dans le sélecteur Carrière dès que les
-   conditions de débloquage (`requirements`) sont remplies.
+**Add a coach**:
+1. Create the `coach_<id>.json` (metadata).
+2. Create at least one `coach_<id>_fr.json` (FR phrases).
+3. The coach automatically appears in the Career selector as soon as the unlock conditions (`requirements`) are met.
 
-### 4.3 Punitions, commentaires, ambiances
+### 4.3 Punishments, comments, ambiences
 
-| Fichier | Rôle |
+| File | Role |
 |---|---|
-| `assets/punishments.json` (+ `_en.json`) | Phrases de fail + mini-séquences punition. |
-| `assets/random_comments.json` (+ `_en.json`) | Commentaires aléatoires intercalés dans les sessions. Cadence (`min/max_interval_seconds`) modifiable. |
-| `assets/ambience_packs.json` (+ `_en.json`) | Packs d'ambiance (mapping `SessionMode → MP3`). Curé éditorialement. |
-| `assets/nicknames.json` (+ `_en.json`) | Pool global de surnoms (override possible côté user dans Profil). |
+| `assets/punishments.json` (+ `_en.json`) | Fail phrases + mini punishment sequences. |
+| `assets/random_comments.json` (+ `_en.json`) | Random comments interleaved into sessions. Pacing (`min/max_interval_seconds`) editable. |
+| `assets/ambience_packs.json` (+ `_en.json`) | Ambience packs (mapping `SessionMode → MP3`). Editorially curated. |
+| `assets/nicknames.json` (+ `_en.json`) | Global nickname pool (user override possible from Profile). |
 
-Édition directe — aucune modification de code requise. Au prochain run, les
-loaders consomment la nouvelle version.
+Direct editing — no code change required. The loaders pick up the new version on the next run.
 
-### 4.4 Bips de guidage (audio)
+### 4.4 Guidance beeps (audio)
 
-Path : `assets/audio/*.mp3`
+Path: `assets/audio/*.mp3`
 
-| Fichier | Usage |
+| File | Usage |
 |---|---|
-| `tip_beep.mp3`, `head_beep.mp3`, `mid_beep.mp3`, `throat_beep.mp3`, `full_beep.mp3` | Sample par position (5 niveaux du plus aigu au plus grave). |
-| `hold_beep.mp3`, `breath_beep.mp3`, `biffle_beep.mp3` | Samples de modes spécifiques. |
-| `hand_down_beep.mp3`, `hand_up_beep.mp3` | Mode hand : coup descendant + coup remontant. |
-| `freestyle_start.mp3`, `freestyle_end.mp3` | Marqueurs début/fin de mode freestyle. |
-| `finale_chime.mp3` | Son d'orgasme du coach en fin de session. Variantes par catégorie dans `assets/audio/finale/` (vide à ce jour, fallback unique). |
+| `tip_beep.mp3`, `head_beep.mp3`, `mid_beep.mp3`, `throat_beep.mp3`, `full_beep.mp3` | Sample per position (5 levels from highest to lowest). |
+| `hold_beep.mp3`, `breath_beep.mp3`, `biffle_beep.mp3` | Mode-specific samples. |
+| `hand_down_beep.mp3`, `hand_up_beep.mp3` | Hand mode: down-stroke + up-stroke. |
+| `freestyle_start.mp3`, `freestyle_end.mp3` | Start/end markers for freestyle mode. |
+| `finale_chime.mp3` | Coach's orgasm sound at end of session. Per-category variants in `assets/audio/finale/` (empty for now, single fallback). |
 
-**Remplacer un bip** : dépose un nouveau MP3 avec le **même nom de fichier**.
-Aucune modif code. Pour un nouveau type de sample, étendre les constantes
-dans `lib/services/beep_engine.dart`.
+**Replace a beep**: drop in a new MP3 with the **same filename**. No code change. For a new sample type, extend the constants in `lib/services/beep_engine.dart`.
 
-**Regénérer les placeholders** : `bash tools/generate_beeps.sh` (nécessite
-`ffmpeg`). Les fréquences/durées sont en haut du script.
+**Regenerate placeholders**: `bash tools/generate_beeps.sh` (needs `ffmpeg`). Frequencies/durations are at the top of the script.
 
-### 4.5 Backgrounds (GIF / images) et ambiences (MP3)
+### 4.5 Backgrounds (GIF / images) and ambiences (MP3)
 
-Path : `assets/backgrounds/` (gitignoré) et `assets/audio/ambience/` (gitignoré).
+Path: `assets/backgrounds/` (gitignored) and `assets/audio/ambience/` (gitignored).
 
-Les binaires lourds ne sont **pas** dans le repo public — ils sont fetchés
-depuis Cloudflare R2 par la CI au moment du build (cf.
-`.github/workflows/release.yml` step *Fetch external assets from R2*). En
-local, ces dossiers sont vides et l'app dégrade gracieusement (placeholder
-animé pour les fonds, silence pour l'ambiance).
+Heavy binaries are **not** in the public repo — they're fetched from Cloudflare R2 by CI at build time (cf. `.github/workflows/release.yml` step *Fetch external assets from R2*). Locally these folders are empty and the app degrades gracefully (animated placeholder for backgrounds, silence for ambience).
 
-Pour bosser avec les vraies ambiances en local : demander accès au bucket R2
-(via une issue privée ou directement à l'auteur) ou déposer manuellement tes
-propres MP3 dans `assets/audio/ambience/`.
+To work with the real ambiences locally: request R2 bucket access (via a private issue or directly to the author), or manually drop your own MP3s into `assets/audio/ambience/`.
 
-### 4.6 Internationalisation (UI)
+### 4.6 Internationalization (UI)
 
-L'UI Flutter consomme `AppLocalizations.of(context).xxx` (généré depuis
-`lib/l10n/app_<lang>.arb`). Pour ajouter une langue, créer un nouveau fichier
-ARB + ajouter la locale à `kSupportedLocales` (`lib/services/locale_service.dart`)
-+ créer les pendants éditoriaux par langue (sections 4.1–4.4).
+The Flutter UI consumes `AppLocalizations.of(context).xxx` (generated from `lib/l10n/app_<lang>.arb`). To add a language, create a new ARB file + add the locale to `kSupportedLocales` (`lib/services/locale_service.dart`) + create the editorial counterparts per language (sections 4.1–4.4).
 
-Procédure complète : section *Internationalisation* de `rhythm_coach/CLAUDE.md`.
+Complete procedure: *Internationalisation* section in `rhythm_coach/CLAUDE.md`.
 
 ---
 
-## 5. Tests / Tests
+## 5. Tests
 
 ```bash
 cd rhythm_coach
-flutter test                          # tous les tests
-flutter test test/coach_service_test.dart   # un fichier précis
-flutter test --plain-name "encore"    # filtre par nom
+flutter test                          # all tests
+flutter test test/coach_service_test.dart   # a specific file
+flutter test --plain-name "encore"    # filter by name
 ```
 
-Pas de tests UI / golden tests — uniquement des tests unitaires Dart purs
-sur la logique métier (coach validation, nicknames, phrases, milestones,
-session generator).
+No UI / golden tests — only pure Dart unit tests on business logic (coach validation, nicknames, phrases, milestones, session generator).
 
-Au prochain release, un workflow `ci.yml` séparé tournera `analyze` + `test`
-sur chaque PR vers develop/main et apparaîtra comme *required check*.
+A separate `ci.yml` workflow will run `analyze` + `test` on every PR towards develop/main as a *required check* in the next release.
 
 ---
 
-## 6. Workflow Git / Git workflow
+## 6. Git workflow
 
-Voir [`CONTRIBUTING.md`](../CONTRIBUTING.md) section *Code — workflow Git*.
+See [`CONTRIBUTING.md`](../CONTRIBUTING.md) section *Code — Git workflow*.
 
-En résumé :
+In short:
 
-- Branches `feat/`, `fix/`, `chore/`, `docs/`, `ci/` → PR vers **`develop`**
-- Bumps de version `release/x.y.z` → PR vers **`main`** (déclenche le release
-  workflow auto, build APK + zip Windows + Release GitHub)
-- `main` et `develop` protégés (pas de push direct, linear history, PR
-  obligatoire avec 0 approval requis)
-- Back-merge auto `main → develop` après chaque release (workflow
-  `back-merge.yml`)
+- `feat/`, `fix/`, `chore/`, `docs/`, `ci/` branches → PR towards **`develop`**
+- `release/x.y.z` version bumps → PR towards **`main`** (triggers the auto-release workflow, builds APK + Windows zip + GitHub Release)
+- `main` and `develop` are protected (no direct push, linear history, mandatory PR with 0 approvals required)
+- Auto back-merge `main → develop` after every release (workflow `back-merge.yml`)
 
 ---
 
-## 7. Aller plus loin / Going further
+## 7. Going further
 
-- **[`rhythm_coach/CLAUDE.md`](../rhythm_coach/CLAUDE.md)** — architecture
-  interne complète (controllers, services, BeepEngine, ExcitationEngine,
-  HumiliationEngine, ObedienceEngine, mode Carrière, milestones, badges,
-  i18n). C'est le doc de référence pour comprendre comment l'app fonctionne.
-- **[`docs/CONTENT_GUIDE.md`](CONTENT_GUIDE.md)** — guide des formats JSON
-  pour les contributeurs (humains ou IA) qui veulent ajouter des phrases /
-  scénarios sans coder.
-- **[`docs/ASSET_CONTRIBUTIONS.md`](ASSET_CONTRIBUTIONS.md)** — règles pour
-  les contributions de GIFs / MP3 (licence, source obligatoire).
-- **[`.github/RELEASE_SETUP.md`](../.github/RELEASE_SETUP.md)** — secrets
-  CI/CD, keystore Android, R2.
+- **[`rhythm_coach/CLAUDE.md`](../rhythm_coach/CLAUDE.md)** — full internal architecture (controllers, services, BeepEngine, ExcitationEngine, HumiliationEngine, ObedienceEngine, Career mode, milestones, badges, i18n). This is the reference doc for understanding how the app works.
+- **[`docs/CONTENT_GUIDE.md`](CONTENT_GUIDE.md)** — guide to the JSON formats for contributors (human or AI) who want to add phrases / scenarios without coding.
+- **[`docs/ASSET_CONTRIBUTIONS.md`](ASSET_CONTRIBUTIONS.md)** — rules for GIF / MP3 contributions (mandatory license + source).
+- **[`.github/RELEASE_SETUP.md`](../.github/RELEASE_SETUP.md)** — CI/CD secrets, Android keystore, R2.
