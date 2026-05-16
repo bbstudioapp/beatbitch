@@ -51,4 +51,4 @@ Ces traces ne sont pas publiées (pas dans le dépôt, pas dans le bucket R2 dis
 
 ## Contributions externes
 
-Les contributions de fonds par des tiers ne sont **pas acceptées** pour l'instant — ouverture éventuelle plus tard avec un processus de vérification dédié. Voir [`ASSET_CONTRIBUTIONS.md`](ASSET_CONTRIBUTIONS.md) pour les contributions audio.
+Les contributions de fonds par des tiers ne sont **pas acceptées** pour l'instant — ouverture éventuelle plus tard avec un processus de vérification dédié. Voir [`ASSET_CONTRIBUTIONS.md`](ASSET_CONTRIBUTIONS.fr.md) pour les contributions audio.

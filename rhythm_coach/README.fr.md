@@ -99,7 +99,7 @@ flutter build apk --release
 flutter build windows --release
 ```
 
-Le contenu éditorial vit dans `assets/` (sessions JSON, punitions, commentaires aléatoires, packs d'ambiance, banque de phrases carrière). Setup complet par plateforme + paths de personnalisation : **[`docs/DEVELOPMENT.md`](../docs/DEVELOPMENT.md)**.
+Le contenu éditorial vit dans `assets/` (sessions JSON, punitions, commentaires aléatoires, packs d'ambiance, banque de phrases carrière). Setup complet par plateforme + paths de personnalisation : **[`docs/DEVELOPMENT.md`](../docs/DEVELOPMENT.fr.md)**.
 
 > ⚠ **Assets binaires externalisés** : les dossiers `assets/backgrounds/` (GIF/images de fond) et `assets/audio/ambience/` (MP3 d'ambiance) sont **gitignorés** — leurs fichiers ne sont pas versionnés dans le dépôt et doivent être rapatriés depuis un canal externe (à venir) avant `flutter build`. Le code se débrouille gracieusement si ces dossiers sont vides : le fond retombe sur un dégradé animé, l'ambiance sur du silence.
 

@@ -97,7 +97,7 @@ Die Android-App bleibt **strikt offline** — sie holt sich keine Updates von se
 - **`allowBackup="false"`** — keine Übertragung an Google Backup.
 - **Kamera ist opt-in** — die Kameraprüfung bei Holds ist standardmäßig aus, und die Verarbeitung läuft zu 100 % on-device (Google ML Kit lokal). Kein Bild verlässt das Handy.
 
-Details in **[PRIVACY.md](docs/PRIVACY.md)** ([veröffentlichte Version](https://bbstudioapp.github.io/beatbitch/PRIVACY)).
+Details in **[PRIVACY.md](docs/PRIVACY.de.md)** ([veröffentlichte Version](https://bbstudioapp.github.io/beatbitch/PRIVACY)).
 
 ## 🎮 Wie wird gespielt
 
@@ -112,7 +112,7 @@ Details in **[PRIVACY.md](docs/PRIVACY.md)** ([veröffentlichte Version](https:/
 Issue-Templates verfügbar:
 - 🐛 [Bug](.github/ISSUE_TEMPLATE/bug_report.md) · 💡 [Idee / Feature](.github/ISSUE_TEMPLATE/feature_request.md) · ✍ [Coach-Phrasen / Szenarien / Übersetzung](.github/ISSUE_TEMPLATE/content_contribution.md)
 
-Alles ist in **[CONTRIBUTING.md](CONTRIBUTING.md)** erklärt.
+Alles ist in **[CONTRIBUTING.md](CONTRIBUTING.de.md)** erklärt.
 
 > **Redaktionelle** Beiträge (Coach-Phrasen, Szenarien, Spitznamen, neue Sprachen) sind die wertvollsten und brauchen **keinerlei technische Kenntnisse**. Das Content-Template führt dich zum richtigen Format.
 >
@@ -121,8 +121,8 @@ Alles ist in **[CONTRIBUTING.md](CONTRIBUTING.md)** erklärt.
 ## 🛠 Neugierig auf den Code?
 
 Das gesamte Flutter-Projekt liegt in **[`rhythm_coach/`](rhythm_coach/)**:
-- **[Entwickler-Setup](docs/DEVELOPMENT.md)** — Flutter installieren, plattformspezifisch starten (Android, Windows, Web Chrome), Assets ohne Coden anpassen
-- **[Voller Dev-README](rhythm_coach/README.md)** — detaillierte Features, lokaler Build, Tests
+- **[Entwickler-Setup](docs/DEVELOPMENT.de.md)** — Flutter installieren, plattformspezifisch starten (Android, Windows, Web Chrome), Assets ohne Coden anpassen
+- **[Voller Dev-README](rhythm_coach/README.de.md)** — detaillierte Features, lokaler Build, Tests
 - **[Architektur](rhythm_coach/CLAUDE.md)** — Session-Flow, Erregungs-Engine, Karriere-Modus, i18n
 - **[CI/CD-Setup](.github/RELEASE_SETUP.md)** — Auto-Release-Workflow
 

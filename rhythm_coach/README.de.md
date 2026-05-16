@@ -99,7 +99,7 @@ flutter build apk --release
 flutter build windows --release
 ```
 
-Der redaktionelle Inhalt liegt in `assets/` (JSON-Sessions, Strafen, Zufallskommentare, Ambiente-Packs, Karriere-Phrasenbank). Vollständige plattformspezifische Einrichtung + Anpassungspfade: **[`docs/DEVELOPMENT.md`](../docs/DEVELOPMENT.md)**.
+Der redaktionelle Inhalt liegt in `assets/` (JSON-Sessions, Strafen, Zufallskommentare, Ambiente-Packs, Karriere-Phrasenbank). Vollständige plattformspezifische Einrichtung + Anpassungspfade: **[`docs/DEVELOPMENT.md`](../docs/DEVELOPMENT.de.md)**.
 
 > ⚠ **Externalisierte Binär-Assets**: die Ordner `assets/backgrounds/` (Hintergrund-GIFs/Bilder) und `assets/audio/ambience/` (Ambiente-MP3s) sind **gitignored** — ihre Dateien sind nicht im Repo versioniert und müssen vor `flutter build` aus einem externen Kanal (TBD) bezogen werden. Der Code verhält sich graceful, wenn diese Ordner leer sind: der Hintergrund fällt auf einen animierten Verlauf zurück, die Ambience auf Stille.
 
