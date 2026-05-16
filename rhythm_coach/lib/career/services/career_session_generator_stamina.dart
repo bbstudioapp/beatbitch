@@ -87,7 +87,7 @@ class _StaminaModel {
   /// (= dette d'endurance qu'il faut combler par un breath, cf. D3 du plan).
   ///
   /// Dispatch polymorphique : chaque mode a sa règle dans
-  /// `_modeStaminaRulesRegistry` (cf. `career_session_generator_mode_rules.dart`).
+  /// `_modeRulesRegistry` (cf. `career_session_generator_mode_rules.dart`).
   /// Comptabilité endurance : modes effort consomment, modes respi régénèrent
   /// (multiplicateur qui monte avec `progress`), freestyle est neutre.
   static double delta(
@@ -95,7 +95,7 @@ class _StaminaModel {
     double progress,
     CareerLevel cfg,
   ) =>
-      _modeStaminaRulesRegistry[draft.mode]!.delta(draft, progress, cfg);
+      _modeRulesRegistry[draft.mode]!.delta(draft, progress, cfg);
 
   /// Applique [delta] à `stamina`, en plafonnant à [cap].
   ///

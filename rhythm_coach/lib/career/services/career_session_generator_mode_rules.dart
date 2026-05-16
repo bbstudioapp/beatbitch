@@ -2,27 +2,49 @@
 //
 // Objectif : remplacer progressivement les gros `switch (draft.mode)`
 // éparpillés (stamina, humiliation gates, capability clamp, dispatch
-// difficulté…) par un dispatch polymorphique. Un fichier par mode, chacun
-// posant sa règle locale, le générateur n'orchestre plus que la cascade
-// commune.
+// difficulté…) par un dispatch polymorphique. Un fichier par mode (à
+// terme), chacun posant ses règles locales, le générateur n'orchestre
+// plus que la cascade commune.
 //
-// Migration **incrémentale** : tant qu'un mode n'a pas son `_ModeRules`
-// enregistré, l'ancien switch reste autoritaire. La migration mode par
-// mode permet de checker les tests à chaque étape sans bigbang.
+// Migration **incrémentale** : pour chaque méthode ajoutée au contrat,
+// on fournit une implémentation par défaut, puis on migre mode par mode.
+// Tant qu'un mode n'a pas override, le switch historique reste autoritaire.
 //
-// Étape en cours : `staminaDelta` (la plus pure — aucune dépendance à
-// l'état d'instance du générateur).
+// Migrations livrées :
+//   * `delta` — calcul du Δ endurance (cf. `_StaminaModel.delta`).
+//
+// Migrations en cours :
+//   * `unlockKeyFor` — gate UnlockKey requis pour qu'un draft soit jouable
+//     en mode carrière (cf. `_HumiliationGates.unlockKeyFor`).
 
 part of 'career_session_generator.dart';
 
-/// Règles d'un mode pour le calcul du `delta` d'endurance.
+/// Règles d'un mode pour le calcul du `delta` d'endurance et le mapping
+/// `_StepDraft → UnlockKey?`.
 ///
 /// Pure : aucun accès à l'état d'instance du générateur, tout est passé
-/// via [draft] / [progress] / [cfg]. Les helpers numériques partagés
-/// vivent côté `_StaminaModel` (`positionDepth`, `lerp`).
-abstract class _ModeStaminaRules {
+/// via les arguments. Les helpers numériques partagés vivent côté
+/// `_StaminaModel` (`positionDepth`, `lerp`).
+abstract class _ModeRules {
+  const _ModeRules();
+
   /// Coût (négatif) ou regen (positif) d'endurance pour le step.
   double delta(_StepDraft draft, double progress, CareerLevel cfg);
+
+  /// Clé d'unlock requise pour qu'un step de ce mode soit jouable en mode
+  /// carrière, ou `null` quand le step est dans le socle de base (pas de
+  /// gate explicite).
+  ///
+  /// Override par défaut `null` — la migration depuis le switch de
+  /// `_HumiliationGates.unlockKeyFor` se fait mode par mode, un mode non
+  /// migré n'aura pas encore d'override ici et continuera à être servi
+  /// par le switch historique.
+  ///
+  /// Convention `_isUnlocked` (hors interface ici, mais appliquée par le
+  /// caller) : `unlockedKeys.isEmpty` = mode hérité, aucun gating. Cette
+  /// méthode ne tient pas compte de cette convention — elle retourne
+  /// toujours la clé mécanique.
+  UnlockKey? unlockKeyFor(_StepDraft draft) => null;
 }
 
 /// Règles `breath` : toujours regen. Vitesse 2.8 stamina/s — règle de
@@ -30,8 +52,8 @@ abstract class _ModeStaminaRules {
 /// sépare, sinon la dramaturgie ressemble à « action / longue pause /
 /// action / longue pause ». À 2.8/s, 8 s rendent ~22 stamina, ce qui
 /// couvre un step rythme moyen (~20 de coût) et permet d'enchaîner.
-class _BreathStaminaRules implements _ModeStaminaRules {
-  const _BreathStaminaRules();
+class _BreathRules extends _ModeRules {
+  const _BreathRules();
 
   @override
   double delta(_StepDraft draft, double progress, CareerLevel cfg) {
@@ -46,12 +68,16 @@ class _BreathStaminaRules implements _ModeStaminaRules {
 }
 
 /// Règles `freestyle` : phase libre, neutre côté endurance (ni effort
-/// ni vraie regen).
-class _FreestyleStaminaRules implements _ModeStaminaRules {
-  const _FreestyleStaminaRules();
+/// ni vraie regen). Toujours gaté par `freestyle` (palier d'intro
+/// `intro_freestyle` au niveau 7).
+class _FreestyleRules extends _ModeRules {
+  const _FreestyleRules();
 
   @override
   double delta(_StepDraft draft, double progress, CareerLevel cfg) => 0.0;
+
+  @override
+  UnlockKey? unlockKeyFor(_StepDraft draft) => UnlockKey.freestyle;
 }
 
 /// Règles `suckle` : aspiration / téter. La bouche bosse sans aller-retour.
@@ -60,8 +86,8 @@ class _FreestyleStaminaRules implements _ModeStaminaRules {
 /// On modélise sur `_holdCostPerSec` de StaminaEngine en l'ajustant :
 /// head ≈ 60 % d'un hold mid, balls ≈ 30 % (moins d'effort de la bouche,
 /// plus de l'humil).
-class _SuckleStaminaRules implements _ModeStaminaRules {
-  const _SuckleStaminaRules();
+class _SuckleRules extends _ModeRules {
+  const _SuckleRules();
 
   @override
   double delta(_StepDraft draft, double progress, CareerLevel cfg) {
@@ -71,12 +97,24 @@ class _SuckleStaminaRules implements _ModeStaminaRules {
     if (pos == Position.balls) return -0.15 * dur;
     return 0.0;
   }
+
+  @override
+  UnlockKey? unlockKeyFor(_StepDraft draft) {
+    // Suckle hors balls (filtré ailleurs) → forcément head. Gating
+    // dédié, indépendant de la profondeur générique (suckle head n'est
+    // pas une généralisation de hold head — c'est un geste explicite à
+    // introduire pédagogiquement par sa propre milestone).
+    if (draft.from == Position.balls || draft.to == Position.balls) {
+      return UnlockKey.suckleBalls;
+    }
+    return UnlockKey.suckleHead;
+  }
 }
 
 /// Règles `hand` : effort modéré côté endurance (la bouche se repose, mais
 /// la main travaille). On consomme moins que rhythm équivalent.
-class _HandStaminaRules implements _ModeStaminaRules {
-  const _HandStaminaRules();
+class _HandRules extends _ModeRules {
+  const _HandRules();
 
   @override
   double delta(_StepDraft draft, double progress, CareerLevel cfg) {
@@ -89,8 +127,8 @@ class _HandStaminaRules implements _ModeStaminaRules {
 
 /// Règles `biffle` : effort soutenu (la fille encaisse), conso entre
 /// rythme et hold, modulée par la profondeur.
-class _BiffleStaminaRules implements _ModeStaminaRules {
-  const _BiffleStaminaRules();
+class _BiffleRules extends _ModeRules {
+  const _BiffleRules();
 
   @override
   double delta(_StepDraft draft, double progress, CareerLevel cfg) {
@@ -99,12 +137,16 @@ class _BiffleStaminaRules implements _ModeStaminaRules {
     final depth = _StaminaModel.positionDepth(draft.from, draft.to);
     return -(bpm / 100.0) * depth * dur / 3.5;
   }
+
+  @override
+  UnlockKey? unlockKeyFor(_StepDraft draft) =>
+      (draft.bpm ?? 0) > 100 ? UnlockKey.biffleFast : UnlockKey.biffleBasic;
 }
 
 /// Règles `lick` : BPM ≤ 60 = vraie récup vocale (regen), au-delà = effort
 /// léger (consommation modérée, plus de regen).
-class _LickStaminaRules implements _ModeStaminaRules {
-  const _LickStaminaRules();
+class _LickRules extends _ModeRules {
+  const _LickRules();
 
   @override
   double delta(_StepDraft draft, double progress, CareerLevel cfg) {
@@ -121,12 +163,23 @@ class _LickStaminaRules implements _ModeStaminaRules {
     final depth = _StaminaModel.positionDepth(draft.from, draft.to);
     return -depth * dur / 8.0;
   }
+
+  @override
+  UnlockKey? unlockKeyFor(_StepDraft draft) {
+    if (draft.from == Position.balls || draft.to == Position.balls) {
+      return UnlockKey.lickBalls;
+    }
+    // Lick X→full nécessite la milestone `intro_lick_full`. Sinon, lick
+    // from=tip (toutes amplitudes ≤ throat) est du socle de base.
+    if (draft.to == Position.full) return UnlockKey.lickFull;
+    return null;
+  }
 }
 
 /// Règles `hold` : coût pur lié à la profondeur tenue (`to`). Convention
 /// uniforme hold/beg : la position tenue est dans `to`.
-class _HoldStaminaRules implements _ModeStaminaRules {
-  const _HoldStaminaRules();
+class _HoldRules extends _ModeRules {
+  const _HoldRules();
 
   @override
   double delta(_StepDraft draft, double progress, CareerLevel cfg) {
@@ -134,14 +187,34 @@ class _HoldStaminaRules implements _ModeStaminaRules {
     final depth = _StaminaModel.positionDepth(draft.to, draft.to);
     return -depth * dur / 2.5;
   }
+
+  @override
+  UnlockKey? unlockKeyFor(_StepDraft draft) {
+    if (draft.from == Position.balls || draft.to == Position.balls) {
+      return UnlockKey.holdBalls;
+    }
+    // Convention : hold/beg portent leur position dans `to`. Les holds
+    // tip/head sont du socle de base (pas de clé) ; mid+ sont gatés.
+    final to = draft.to;
+    if (to == null || to == Position.tip || to == Position.head) return null;
+    if (to == Position.mid) return UnlockKey.holdMidShort;
+    final dur = draft.duration ?? 0;
+    if (to == Position.throat) {
+      return dur > 10 ? UnlockKey.throatHoldLong : UnlockKey.throatHoldShort;
+    }
+    if (to == Position.full) {
+      return dur > 10 ? UnlockKey.fullHoldLong : UnlockKey.fullHoldShort;
+    }
+    return null;
+  }
 }
 
 /// Règles `beg` : convention uniforme hold/beg, la position tenue est dans
 /// `to`. Sans `to` ou `to = head` → assimilé à du repos vocal (regen). Avec
 /// `to = mid/throat/full` → coût comme un hold à cette profondeur (la
 /// position doit être tenue pendant la supplique).
-class _BegStaminaRules implements _ModeStaminaRules {
-  const _BegStaminaRules();
+class _BegRules extends _ModeRules {
+  const _BegRules();
 
   @override
   double delta(_StepDraft draft, double progress, CareerLevel cfg) {
@@ -157,6 +230,22 @@ class _BegStaminaRules implements _ModeStaminaRules {
     }
     final depth = _StaminaModel.positionDepth(to, to);
     return -depth * dur / 2.5;
+  }
+
+  @override
+  UnlockKey? unlockKeyFor(_StepDraft draft) {
+    if (draft.from == Position.balls || draft.to == Position.balls) {
+      return UnlockKey.begBalls;
+    }
+    // Convention : hold/beg portent leur position dans `to`.
+    if (draft.to == null) return UnlockKey.begLibre;
+    if (draft.to == Position.full) return UnlockKey.begFull;
+    // Toute supplique avec position tenue (head/mid/throat) reste gated
+    // par begThroat (palier niveau 14). Avant ça, seule la supplique
+    // libre (to=null) doit apparaître. Évite que le générateur produise
+    // des beg head/mid après l'unlock de begLibre alors qu'aucune
+    // milestone ne les a explicitement introduits.
+    return UnlockKey.begThroat;
   }
 }
 
@@ -178,8 +267,25 @@ class _BegStaminaRules implements _ModeStaminaRules {
 /// → mid→full 60 bpm : −20 %
 /// → throat→full 60 bpm : −10 %
 /// → mid→full 100 bpm : 0 % (BPM trop haut)
-class _RhythmStaminaRules implements _ModeStaminaRules {
-  const _RhythmStaminaRules();
+class _RhythmRules extends _ModeRules {
+  const _RhythmRules();
+
+  @override
+  UnlockKey? unlockKeyFor(_StepDraft draft) {
+    // Rhythm n'a pas de variante balls valide (les modes-incompatibles
+    // balls sont filtrés en amont par `_HumiliationGates.isUnlocked`).
+    // Pour rester strictement isomorphe au switch historique on retourne
+    // null si touchesBalls — le filtre amont coupe avant.
+    if (draft.from == Position.balls || draft.to == Position.balls) {
+      return null;
+    }
+    if (draft.to == Position.full) return UnlockKey.fullPulse;
+    if (draft.to == Position.throat) return UnlockKey.throatPulse;
+    if (draft.to == Position.mid) return UnlockKey.rhythmMidBasic;
+    // Rythme superficiel (tip→head) = socle de base, pas de clé.
+    if ((draft.bpm ?? 0) >= 160) return UnlockKey.rhythmExtreme;
+    return null;
+  }
 
   @override
   double delta(_StepDraft draft, double progress, CareerLevel cfg) {
@@ -207,14 +313,14 @@ class _RhythmStaminaRules implements _ModeStaminaRules {
 /// Registry des règles par mode. La migration `staminaDelta` est terminée :
 /// les 9 modes sont couverts, le switch de `_StaminaModel.delta` n'est plus
 /// qu'un dispatch unique vers ce registry (cf. la méthode `delta`).
-final Map<SessionMode, _ModeStaminaRules> _modeStaminaRulesRegistry = {
-  SessionMode.rhythm: const _RhythmStaminaRules(),
-  SessionMode.lick: const _LickStaminaRules(),
-  SessionMode.hold: const _HoldStaminaRules(),
-  SessionMode.biffle: const _BiffleStaminaRules(),
-  SessionMode.beg: const _BegStaminaRules(),
-  SessionMode.hand: const _HandStaminaRules(),
-  SessionMode.breath: const _BreathStaminaRules(),
-  SessionMode.freestyle: const _FreestyleStaminaRules(),
-  SessionMode.suckle: const _SuckleStaminaRules(),
+final Map<SessionMode, _ModeRules> _modeRulesRegistry = {
+  SessionMode.rhythm: const _RhythmRules(),
+  SessionMode.lick: const _LickRules(),
+  SessionMode.hold: const _HoldRules(),
+  SessionMode.biffle: const _BiffleRules(),
+  SessionMode.beg: const _BegRules(),
+  SessionMode.hand: const _HandRules(),
+  SessionMode.breath: const _BreathRules(),
+  SessionMode.freestyle: const _FreestyleRules(),
+  SessionMode.suckle: const _SuckleRules(),
 };
