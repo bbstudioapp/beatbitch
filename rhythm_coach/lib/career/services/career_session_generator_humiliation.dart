@@ -29,94 +29,19 @@ class _HumiliationGates {
   /// mode carrière. Retourne `null` quand le step est dans le socle de
   /// base (pas de gate explicite).
   ///
-  /// Convention `_isUnlocked` (hors instance ici, mais appliquée par le
+  /// Dispatch polymorphique : chaque mode porte sa propre logique dans
+  /// `_*Rules.unlockKeyFor` (cf. `career_session_generator_mode_rules.dart`),
+  /// y compris la gestion des variantes balls (lickBalls / holdBalls /
+  /// begBalls / suckleBalls). Les modes-incompatibles balls
+  /// (rhythm / hand / biffle) sont déjà filtrés par [isUnlocked] avant
+  /// d'arriver ici.
+  ///
+  /// Convention `_isUnlocked` (hors interface ici, mais appliquée par le
   /// caller) : `unlockedKeys.isEmpty` = mode hérité, aucun gating. Cette
   /// fonction ne tient pas compte de cette convention — elle retourne
   /// toujours la clé mécanique.
-  static UnlockKey? unlockKeyFor(_StepDraft d) {
-    // Balls : zone latérale, gating dédié (`lickBalls`/`holdBalls`/`begBalls`)
-    // qui prime sur les clés génériques de profondeur. Le filtre anatomy +
-    // modes-incompatibles vit dans [isUnlocked] (rhythm/hand/biffle balls
-    // sont déjà rejetés en amont) — ici on suppose que la zone est légitime
-    // pour le mode courant.
-    final touchesBalls = d.from == Position.balls || d.to == Position.balls;
-    if (touchesBalls) {
-      switch (d.mode) {
-        case SessionMode.lick:
-          return UnlockKey.lickBalls;
-        case SessionMode.hold:
-          return UnlockKey.holdBalls;
-        case SessionMode.beg:
-          return UnlockKey.begBalls;
-        case SessionMode.suckle:
-          // Aspiration sur les couilles : gating dédié + filtre anatomy
-          // côté MilestoneService (le générateur a déjà rejeté `suckle to:balls`
-          // si `hasBalls=false`).
-          return UnlockKey.suckleBalls;
-        default:
-          return null;
-      }
-    }
-    switch (d.mode) {
-      case SessionMode.hold:
-        // Convention : hold/beg portent leur position dans `to`. Les holds
-        // tip/head sont du socle de base (pas de clé) ; mid+ sont gatés.
-        final to = d.to;
-        if (to == null || to == Position.tip || to == Position.head) {
-          return null;
-        }
-        if (to == Position.mid) return UnlockKey.holdMidShort;
-        final dur = d.duration ?? 0;
-        if (to == Position.throat) {
-          return dur > 10
-              ? UnlockKey.throatHoldLong
-              : UnlockKey.throatHoldShort;
-        }
-        if (to == Position.full) {
-          return dur > 10 ? UnlockKey.fullHoldLong : UnlockKey.fullHoldShort;
-        }
-        return null;
-      case SessionMode.rhythm:
-        if (d.to == Position.full) return UnlockKey.fullPulse;
-        if (d.to == Position.throat) return UnlockKey.throatPulse;
-        if (d.to == Position.mid) return UnlockKey.rhythmMidBasic;
-        // Rythme superficiel (tip→head) = socle de base, pas de clé.
-        if ((d.bpm ?? 0) >= 160) return UnlockKey.rhythmExtreme;
-        return null;
-      case SessionMode.biffle:
-        return (d.bpm ?? 0) > 100
-            ? UnlockKey.biffleFast
-            : UnlockKey.biffleBasic;
-      case SessionMode.freestyle:
-        return UnlockKey.freestyle;
-      case SessionMode.beg:
-        // Convention : hold/beg portent leur position dans `to`.
-        if (d.to == null) return UnlockKey.begLibre;
-        if (d.to == Position.full) return UnlockKey.begFull;
-        // Toute supplique avec position tenue (head/mid/throat) reste
-        // gated par begThroat (palier niveau 14). Avant ça, seule la
-        // supplique libre (to=null) doit apparaître. Évite que le
-        // générateur produise des beg head/mid après l'unlock de
-        // begLibre alors qu'aucun milestone ne les a explicitement
-        // introduits.
-        return UnlockKey.begThroat;
-      case SessionMode.lick:
-        // Lick X→full nécessite la milestone `intro_lick_full`. Sinon, lick
-        // from=tip (toutes amplitudes ≤ throat) est du socle de base.
-        if (d.to == Position.full) return UnlockKey.lickFull;
-        return null;
-      case SessionMode.hand:
-        return null;
-      case SessionMode.breath:
-        return null;
-      case SessionMode.suckle:
-        // Suckle hors balls (filtré au-dessus) → forcément head. Gating
-        // dédié, indépendant de la profondeur générique (suckle head n'est
-        // pas une généralisation de hold head — c'est un geste explicite
-        // à introduire pédagogiquement par sa propre milestone).
-        return UnlockKey.suckleHead;
-    }
-  }
+  static UnlockKey? unlockKeyFor(_StepDraft d) =>
+      _modeRulesRegistry[d.mode]!.unlockKeyFor(d);
 
   /// Position la plus profonde du couple (a, b). `null` est traité comme
   /// « non spécifié » et l'autre l'emporte.
