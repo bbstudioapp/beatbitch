@@ -2460,14 +2460,39 @@ class CareerSessionGenerator {
       // full = comme un hold profond), pas par diff.
       candidates.add(SessionMode.beg);
     }
+    // suckle : geste latéral (head ou balls). En carrière, gaté par la
+    // milestone `intro_suckle_head` qui accorde `UnlockKey.suckleHead`. En
+    // mode hérité (Custom, scénarios), on l'ajoute inconditionnellement —
+    // sa dose Custom (ModeDose.none ⇒ forbidden) le retire ensuite via
+    // `removeWhere(_isModeForbidden)`. Sans cet ajout, la dose Custom
+    // était de fait ignorée : suckle n'était jamais tiré.
+    final canSuckle =
+        _unlockedKeys.isEmpty || _unlockedKeys.contains(UnlockKey.suckleHead);
+    if (canSuckle) {
+      candidates.add(SessionMode.suckle);
+    }
     // breath n'est jamais un step "d'effort" : il n'est tiré que par
     // _buildRecoveryStep quand l'endurance est basse, jamais ici.
     // Exclusions Custom (dose `none`) : retirer les modes interdits avant
-    // tirage. Si tout est exclu, on retombe sur rhythm (last-resort) pour
-    // ne pas crasher — l'éditeur Custom garantit déjà qu'au moins un mode
-    // bouche (rhythm/lick/hold) reste actif via son garde-fou.
+    // tirage. Si tout est exclu, on retombe sur un mode bouche encore
+    // actif (l'éditeur Custom garantit qu'au moins un mouth mode reste
+    // ≥ rare via son garde-fou). On essaie lick → hold → rhythm pour
+    // privilégier le mode le plus doux disponible, et rhythm en dernier
+    // ressort pour ne jamais crasher si une config était corrompue.
     candidates.removeWhere(_isModeForbidden);
-    if (candidates.isEmpty) candidates.add(SessionMode.rhythm);
+    if (candidates.isEmpty) {
+      for (final m in const [
+        SessionMode.lick,
+        SessionMode.hold,
+        SessionMode.rhythm,
+      ]) {
+        if (!_isModeForbidden(m)) {
+          candidates.add(m);
+          break;
+        }
+      }
+      if (candidates.isEmpty) candidates.add(SessionMode.rhythm);
+    }
     final mode = _pickWeightedMode(_filterRepeated(candidates));
 
     final (aBpm, aAmp, aDur) = _sampleSimplex3();
@@ -2587,23 +2612,28 @@ class CareerSessionGenerator {
             mode: mode, bpm: null, from: null, to: null, duration: dur);
       case SessionMode.suckle:
         // Aspiration : pas de BPM (pulse fixe ~1.2s côté audio), position
-        // tenue dans `to`. Tirage par défaut sur `head` (zone introductive,
-        // unlock `suckleHead` au level 4-5). `balls` n'est jamais proposé
-        // par ce tirage générique — il faut une milestone explicite ou un
-        // gating dédié pour y arriver (anatomy + `suckleBalls`). Sécurité
-        // : `_isUnlocked` rejette `suckle` si `to ∉ {head, balls}`, ce qui
-        // garantit qu'un suckle head produit ici n'est joué que si la
-        // milestone d'intro est acquise.
+        // tenue dans `to`. Cibles valides = head ou balls (cf. `_isUnlocked`).
+        // - En carrière : unlock `suckleHead` au level 4-5, `suckleBalls`
+        //   plus tard ; le filtre `_isUnlocked` rejette ce qui n'est pas
+        //   encore acquis et la cascade dégrade.
+        // - En mode hérité (Custom) : balls n'est candidat que si l'anatomy
+        //   l'inclut et que la profondeur max le permet (`_maxDepthIndex >=
+        //   Position.balls.index`). On biaise vers head (zone classique) avec
+        //   ~30 % de chances de tirer balls quand dispo, pour rester audible
+        //   mais marginal.
         final dur = _scaleDuration(
           _lerp(8.0, 18.0, durScore),
           enduranceFactor: 0.04,
         );
+        final ballsAllowed = _anatomy.hasBalls &&
+            _maxDepthIndex >= Position.balls.index &&
+            (_unlockedKeys.isEmpty ||
+                _unlockedKeys.contains(UnlockKey.suckleBalls));
+        final to = (ballsAllowed && _rng.nextDouble() < 0.30)
+            ? Position.balls
+            : Position.head;
         return _StepDraft(
-            mode: mode,
-            bpm: null,
-            from: null,
-            to: Position.head,
-            duration: dur);
+            mode: mode, bpm: null, from: null, to: to, duration: dur);
     }
   }
 
