@@ -1,6 +1,7 @@
 import 'dart:async' show unawaited;
 import 'dart:convert' show json, utf8;
-import 'dart:io' show Directory, File, Platform, Process, ProcessException;
+import 'dart:io'
+    show Directory, File, Platform, Process, ProcessException, ProcessResult;
 import 'dart:ui' show Locale;
 
 import 'package:flutter/foundation.dart';
@@ -79,6 +80,13 @@ class TtsService {
   /// peut pas couper un pipeline piper→aplay externe.
   Process? _linuxAplayProcess;
   Process? _linuxPiperProcess;
+
+  /// Posé à true par [stop] le temps d'absorber l'interruption d'un speak
+  /// en cours. Empêche `_speakLinux` de retomber sur le fallback spd-say
+  /// après un kill volontaire de piper — sinon l'utilisateur entend la
+  /// phrase intégralement relancée juste après avoir cliqué "stop" / "Je
+  /// suis prête" (cf. issue #85 : "Boutons session custom non réactifs").
+  bool _linuxStopRequested = false;
 
   /// Mémoization de la résolution piper. Calculée lazy au 1er speak,
   /// réévaluée jamais (le user doit relancer l'app après avoir installé
@@ -331,6 +339,7 @@ class TtsService {
   /// Route vers piper si dispo+voix matchant la locale, sinon spd-say.
   Future<void> _speakLinux(String text) async {
     _speaking = true;
+    _linuxStopRequested = false;
     try {
       await _ensurePiperResolved();
       final cfg = _piperConfig;
@@ -338,6 +347,13 @@ class TtsService {
       if (cfg != null && voice != null) {
         final ok = await _speakViaPiper(text, cfg.binaryPath, voice);
         if (ok) return;
+        // Si [stop] a tué piper entre-temps, l'utilisateur veut le silence —
+        // surtout pas relancer la phrase complète via spd-say. Sans cette
+        // garde, un clic sur "Je suis prête" / "Arrêter" voit son TTS
+        // immédiatement remplacé par un spd-say plus lent et plus
+        // robotique, ce qui donne l'impression que le bouton n'a rien
+        // fait (cf. issue #85).
+        if (_linuxStopRequested) return;
         // piper a échoué (audio device pris, modèle KO, etc.) : on tente
         // un dernier coup via spd-say plutôt que de rester muet.
       }
@@ -456,6 +472,9 @@ class TtsService {
     _speaking = false;
     try {
       if (_isLinux) {
+        // Signale au speak en cours (s'il y en a un) que la coupure est
+        // volontaire — pas un échec piper à récupérer par fallback spd-say.
+        _linuxStopRequested = true;
         // Backend piper : killer le pipeline piper+aplay courant.
         _linuxPiperProcess?.kill();
         _linuxAplayProcess?.kill();
@@ -463,12 +482,14 @@ class TtsService {
         _linuxAplayProcess = null;
         // Backend spd-say : annule les messages en file de
         // speech-dispatcher. Best-effort — pas grave si spd-say absent
-        // ou si on était sur piper.
-        try {
-          await Process.run('spd-say', ['-S']);
-        } on ProcessException {
-          // ignore
-        }
+        // ou si on était sur piper. On ne l'attend pas : sur Wayland
+        // Ubuntu 24.04 le spawn peut prendre plusieurs centaines de ms,
+        // et bloquer ici ferait paraître les boutons "Je suis prête" /
+        // "Arrêter" non réactifs (cf. issue #85).
+        unawaited(
+          Process.run('spd-say', ['-S'])
+              .catchError((Object _) => ProcessResult(0, 0, '', '')),
+        );
         return;
       }
       await _tts.stop();

@@ -47,6 +47,12 @@ class _CustomConfigEditorScreenState extends State<CustomConfigEditorScreen> {
   late bool _nonStop;
   late int _cycleDurationSeconds;
   late bool _progressiveDifficulty;
+  // Posé à true dès le premier clic sur « Enregistrer (et lancer) » pour
+  // qu'un second clic — y compris involontaire pendant les ms de transition
+  // d'écran sur Linux desktop — ne re-pop pas la route avec un autre
+  // résultat. Sans cette garde, un double-clic rapide pouvait laisser le
+  // parent dans un état confus (cf. issue #85).
+  bool _finishInFlight = false;
   late String? _coachId;
   late Map<SessionMode, ModeDose> _doses;
   late CustomDifficulty _difficulty;
@@ -131,6 +137,7 @@ class _CustomConfigEditorScreenState extends State<CustomConfigEditorScreen> {
   }
 
   Future<void> _finish({required bool launch}) async {
+    if (_finishInFlight) return;
     // Garde-fou : au moins un mode bouche actif.
     if (_activeMouthModeCount == 0) {
       ScaffoldMessenger.of(context)
@@ -142,6 +149,7 @@ class _CustomConfigEditorScreenState extends State<CustomConfigEditorScreen> {
         );
       return;
     }
+    _finishInFlight = true;
     Navigator.of(context)
         .pop(CustomEditorResult(config: _build(), launch: launch));
   }
@@ -174,8 +182,46 @@ class _CustomConfigEditorScreenState extends State<CustomConfigEditorScreen> {
         title: Text(
             widget.isNew ? t.customEditorTitleNew : t.customEditorTitleEdit),
       ),
+      // Les boutons d'action sont posés DANS la bottomNavigationBar
+      // (ancrée en bas, hors du ListView) plutôt qu'à la fin de la liste
+      // déroulable. Sur Linux desktop, les clics juste après un scroll
+      // (boutons situés en bas de ListView après plusieurs Slider /
+      // RangeSlider) pouvaient être absorbés par la physique de bounce
+      // de la liste et imposer plusieurs tentatives (cf. issue #85).
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  minimumSize: const Size.fromHeight(56),
+                ),
+                onPressed: () => _finish(launch: true),
+                child: Text(
+                  t.customSaveAndLaunch,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w800, letterSpacing: 2),
+                ),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  minimumSize: const Size.fromHeight(48),
+                ),
+                onPressed: () => _finish(launch: false),
+                child: Text(t.customSaveOnly),
+              ),
+            ],
+          ),
+        ),
+      ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
         children: [
           // ─── Nom ─────────────────────────────────────────────────────
           TextField(
@@ -375,28 +421,10 @@ class _CustomConfigEditorScreenState extends State<CustomConfigEditorScreen> {
                 ],
               ),
             ),
-          const SizedBox(height: 32),
-
-          // ─── Actions ─────────────────────────────────────────────────
-          FilledButton(
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-            onPressed: () => _finish(launch: true),
-            child: Text(
-              t.customSaveAndLaunch,
-              style: const TextStyle(
-                  fontWeight: FontWeight.w800, letterSpacing: 2),
-            ),
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton(
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-            ),
-            onPressed: () => _finish(launch: false),
-            child: Text(t.customSaveOnly),
-          ),
+          // Les boutons d'action ont été déplacés dans
+          // `Scaffold.bottomNavigationBar` (cf. fix issue #85). Petit
+          // padding final pour aérer la fin du contenu.
+          const SizedBox(height: 8),
         ],
       ),
     );
