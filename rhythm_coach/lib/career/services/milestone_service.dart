@@ -103,8 +103,18 @@ class MilestoneService extends ChangeNotifier {
     _loaded = true;
   }
 
+  /// Langue native du catalogue `milestones.json` : ses textes y sont
+  /// directement inline. Les `_<lang>.json` du dossier `milestones/` sont
+  /// des overrides pour les *autres* locales — sur cette langue native, il
+  /// n'y a rien à charger (sinon 32 fetchs 404 inutiles, bruyants sur web).
+  static const String _catalogNativeLanguage = 'fr';
+
   Future<void> _loadOverrides() async {
     final lang = LocaleService.instance.languageCode;
+    if (lang == _catalogNativeLanguage) {
+      _overrides = const {};
+      return;
+    }
     final loaded = <String, MilestoneTextOverride>{};
     for (final m in _catalog) {
       final override = await _loader.loadOverride(m.id, lang);
