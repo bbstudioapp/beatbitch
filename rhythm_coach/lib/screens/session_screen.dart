@@ -633,15 +633,21 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
 
   Future<void> _onIntroReady() async {
     if (!_introPending) return;
-    // Coupe l'intro tout de suite via un nouveau speak court qui
-    // marque le début de la phase de préparation. QUEUE_FLUSH efface
-    // l'intro restante et dit clairement « En place » à l'utilisatrice.
-    await widget.tts.stop();
-    if (!mounted) return;
+    // Bascule l'UI AVANT le await stop() : sur Linux, l'arrêt du TTS
+    // (kill piper/aplay + Process.run spd-say) peut prendre quelques
+    // centaines de ms. Si on attendait, l'utilisatrice cliquerait
+    // plusieurs fois pensant que le bouton ne répond pas (cf. issue
+    // #85). En posant l'état tout de suite, on garantit le passage au
+    // décompte de mise en place au premier clic, et on cancele l'intro
+    // en arrière-plan.
     setState(() {
       _introPending = false;
       _prepCountdown = _prepDurationSeconds;
     });
+    // Coupe l'intro en cours. Sur les autres plateformes, QUEUE_FLUSH
+    // ferait le job à elle seule au prochain speak — mais on stoppe
+    // explicitement pour rester cohérent et libérer les ressources.
+    unawaited(widget.tts.stop());
     // Annonce courte pour signaler le décompte sans avoir à regarder l'écran.
     widget.tts.speak(
       CoachPhrasesService.instance.current.prepCountdown(_prepDurationSeconds),
@@ -737,16 +743,23 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     final t = AppLocalizations.of(context);
     final shouldLeave = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      // `barrierDismissible: false` : sur Linux, un clic mal placé sur
+      // « Arrêter » qui retombait sur la barrière modale dismissait le
+      // dialogue avec un résultat null → session reprise sans arrêt.
+      // L'utilisatrice voyait "Le bouton Arrêté fait continuer la
+      // session" (cf. issue #85). Forcer un choix explicite via les
+      // boutons supprime cette ambiguïté.
+      barrierDismissible: false,
+      builder: (dialogCtx) => AlertDialog(
         title: Text(t.sessionStopTitle),
         content: Text(t.sessionStopContent),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(dialogCtx, false),
             child: Text(t.commonContinue),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogCtx, true),
             child: Text(t.sessionStopConfirm),
           ),
         ],
