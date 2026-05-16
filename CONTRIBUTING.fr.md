@@ -21,7 +21,7 @@ Le plus simple est d'ouvrir une issue avec le bon template. Les templates guiden
 
 > Les contributions éditoriales (phrases, scénarios, surnoms, traductions) sont **les bienvenues sans toucher au code** — le template Content guide vers le format JSON consommable directement par le générateur.
 >
-> Pour les contributions d'assets binaires (gifs / MP3), lis d'abord **[docs/ASSET_CONTRIBUTIONS.md](docs/ASSET_CONTRIBUTIONS.md)** — la licence et la justification de la source sont obligatoires.
+> Pour les contributions d'assets binaires (gifs / MP3), lis d'abord **[docs/ASSET_CONTRIBUTIONS.md](docs/ASSET_CONTRIBUTIONS.fr.md)** — la licence et la justification de la source sont obligatoires.
 
 ---
 

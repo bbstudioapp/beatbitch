@@ -97,7 +97,7 @@ L'app Android reste **strictement hors-ligne** : elle ne va pas chercher d'updat
 - **`allowBackup="false"`** — pas de remontée vers Google Backup.
 - **Caméra opt-in** — la vérif caméra des holds est désactivée par défaut, et le traitement reste 100 % on-device (Google ML Kit local). Aucune image ne quitte le téléphone.
 
-Détails dans **[PRIVACY.md](docs/PRIVACY.md)** ([version publiée](https://bbstudioapp.github.io/beatbitch/PRIVACY)).
+Détails dans **[PRIVACY.md](docs/PRIVACY.fr.md)** ([version publiée](https://bbstudioapp.github.io/beatbitch/PRIVACY)).
 
 ## 🎮 Comment ça se joue
 
@@ -112,7 +112,7 @@ Détails dans **[PRIVACY.md](docs/PRIVACY.md)** ([version publiée](https://bbst
 Templates d'issues disponibles :
 - 🐛 [Bug](.github/ISSUE_TEMPLATE/bug_report.md) · 💡 [Idée / feature](.github/ISSUE_TEMPLATE/feature_request.md) · ✍ [Phrases coach / scénarios / traduction](.github/ISSUE_TEMPLATE/content_contribution.md)
 
-Tout est expliqué dans **[CONTRIBUTING.md](CONTRIBUTING.md)**.
+Tout est expliqué dans **[CONTRIBUTING.md](CONTRIBUTING.fr.md)**.
 
 > Les contributions **éditoriales** (phrases coach, scénarios, surnoms, nouvelle langue) sont les plus précieuses et ne demandent **aucune compétence technique**. Le template Content guide vers le format à utiliser.
 >
@@ -121,8 +121,8 @@ Tout est expliqué dans **[CONTRIBUTING.md](CONTRIBUTING.md)**.
 ## 🛠 Curieux du code ?
 
 Tout le projet Flutter vit dans **[`rhythm_coach/`](rhythm_coach/)** :
-- **[Setup développeur](docs/DEVELOPMENT.md)** — installer Flutter, run par plateforme (Android, Windows, web Chrome), customiser les assets sans coder
-- **[Doc utilisateur Flutter](rhythm_coach/README.md)** — features détaillées, install par plateforme
+- **[Setup développeur](docs/DEVELOPMENT.fr.md)** — installer Flutter, run par plateforme (Android, Windows, web Chrome), customiser les assets sans coder
+- **[Doc utilisateur Flutter](rhythm_coach/README.fr.md)** — features détaillées, install par plateforme
 - **[Setup CI/CD](.github/RELEASE_SETUP.md)** — workflow de release auto
 
 ## 📝 Licence

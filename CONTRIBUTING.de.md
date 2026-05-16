@@ -21,7 +21,7 @@ Am einfachsten ist es, ein Issue mit dem passenden Template zu öffnen. Die Temp
 
 > Redaktionelle Beiträge (Phrasen, Szenarien, Spitznamen, Übersetzungen) sind **willkommen, ohne den Code anzufassen** — das Content-Template führt zum JSON-Format, das der Generator direkt konsumiert.
 >
-> Für Beiträge binärer Assets (GIFs / MP3) lies zuerst **[docs/ASSET_CONTRIBUTIONS.md](docs/ASSET_CONTRIBUTIONS.md)** — Lizenz und Quellenangabe sind verpflichtend.
+> Für Beiträge binärer Assets (GIFs / MP3) lies zuerst **[docs/ASSET_CONTRIBUTIONS.md](docs/ASSET_CONTRIBUTIONS.de.md)** — Lizenz und Quellenangabe sind verpflichtend.
 
 ---
 

@@ -198,7 +198,7 @@ Im nächsten Release wird ein separater `ci.yml`-Workflow `analyze` + `test` bei
 
 ## 6. Git-Workflow
 
-Siehe [`CONTRIBUTING.md`](../CONTRIBUTING.md) Abschnitt *Code — Git-Workflow*.
+Siehe [`CONTRIBUTING.md`](../CONTRIBUTING.de.md) Abschnitt *Code — Git-Workflow*.
 
 Kurz:
 
@@ -213,5 +213,5 @@ Kurz:
 
 - **[`rhythm_coach/CLAUDE.md`](../rhythm_coach/CLAUDE.md)** — komplette interne Architektur (Controller, Services, BeepEngine, ExcitationEngine, HumiliationEngine, ObedienceEngine, Karriere-Modus, Milestones, Badges, i18n). Das ist die Referenz-Doku, um zu verstehen, wie die App funktioniert.
 - **[`docs/CONTENT_GUIDE.md`](CONTENT_GUIDE.md)** — Leitfaden zu den JSON-Formaten für Beitragende (Mensch oder KI), die Phrasen / Szenarien ohne Coden hinzufügen wollen.
-- **[`docs/ASSET_CONTRIBUTIONS.md`](ASSET_CONTRIBUTIONS.md)** — Regeln für GIF-/MP3-Beiträge (verpflichtende Lizenz + Quelle).
+- **[`docs/ASSET_CONTRIBUTIONS.md`](ASSET_CONTRIBUTIONS.de.md)** — Regeln für GIF-/MP3-Beiträge (verpflichtende Lizenz + Quelle).
 - **[`.github/RELEASE_SETUP.md`](../.github/RELEASE_SETUP.md)** — CI/CD-Secrets, Android-Keystore, R2.

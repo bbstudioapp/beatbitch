@@ -51,4 +51,4 @@ Diese Protokolle werden nicht veröffentlicht (nicht im Repo, nicht im verteilte
 
 ## Externe Beiträge
 
-Hintergrundbeiträge von Drittanbietern werden derzeit **nicht akzeptiert** — eventuelle spätere Öffnung mit einem dedizierten Verifizierungsprozess. Siehe [`ASSET_CONTRIBUTIONS.md`](ASSET_CONTRIBUTIONS.md) für Audio-Beiträge.
+Hintergrundbeiträge von Drittanbietern werden derzeit **nicht akzeptiert** — eventuelle spätere Öffnung mit einem dedizierten Verifizierungsprozess. Siehe [`ASSET_CONTRIBUTIONS.md`](ASSET_CONTRIBUTIONS.de.md) für Audio-Beiträge.
