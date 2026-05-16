@@ -111,6 +111,14 @@ class TtsService {
   static double get _platformDefaultPitch =>
       _isWindows ? _windowsDefaultPitch : _defaultPitch;
 
+  // Web Speech API : rate ∈ [0.1, 10] avec 1.0 = vitesse normale.
+  // flutter_tts (Android/iOS) : rate ∈ [0, 1] avec ~0.5 = vitesse normale.
+  // On stocke le rate logique (calibré Android) et on remappe ×2 sur web
+  // pour que la même valeur produise la même vitesse perçue partout —
+  // évite que les `tts.rate` baked des coachs (~0.55) sonnent en demi-vitesse.
+  static double _effectiveRate(double logical) =>
+      kIsWeb ? (logical * 2.0).clamp(0.1, 10.0) : logical;
+
   TtsService({Locale locale = const Locale('fr')}) : _locale = locale;
 
   /// True tant que le moteur TTS est en train de prononcer une phrase.
@@ -169,7 +177,7 @@ class TtsService {
 
     await _tts.setLanguage(_ttsLanguageTag(_locale));
     await _tts.setPitch(_platformDefaultPitch);
-    await _tts.setSpeechRate(_platformDefaultRate);
+    await _tts.setSpeechRate(_effectiveRate(_platformDefaultRate));
     await _tts.setVolume(_defaultVolume);
     // `awaitSpeakCompletion(true)` est défaillant sur Windows (SAPI) :
     // SAPI n'émet pas toujours l'event de complétion attendu, ce qui
@@ -189,13 +197,30 @@ class TtsService {
     _initialized = true;
   }
 
+  /// Promesse de la dernière transition de locale en cours, ou `null` si
+  /// aucune. Partagée pour que les appels concurrents (listener
+  /// `LocaleService` + UI qui veut resync) attendent tous la même
+  /// `_selectVoice()` au lieu de retourner immédiatement parce que
+  /// `_locale` a déjà été muté synchroniquement par le premier appelant.
+  Future<void>? _setLocalePending;
+
   /// Change la locale courante du moteur TTS et resélectionne une voix.
-  /// Reste idempotent si la locale est identique.
-  Future<void> setLocale(Locale locale) async {
+  /// Idempotent si la locale est identique (retourne la transition en cours
+  /// le cas échéant).
+  Future<void> setLocale(Locale locale) {
     if (_locale.languageCode == locale.languageCode &&
         _locale.countryCode == locale.countryCode) {
-      return;
+      return _setLocalePending ?? Future.value();
     }
+    final pending = _doSetLocale(locale);
+    _setLocalePending = pending;
+    pending.whenComplete(() {
+      if (identical(_setLocalePending, pending)) _setLocalePending = null;
+    });
+    return pending;
+  }
+
+  Future<void> _doSetLocale(Locale locale) async {
     _locale = locale;
     if (!_initialized || _isLinux) return;
     await _tts.setLanguage(_ttsLanguageTag(_locale));
@@ -480,7 +505,7 @@ class TtsService {
   Future<void> setRate(double rate) async {
     _rate = rate.clamp(0.1, 1.0);
     if (_isLinux) return; // appliqué par appel à _speakLinux
-    await _tts.setSpeechRate(_rate);
+    await _tts.setSpeechRate(_effectiveRate(_rate));
   }
 
   Future<void> setPitch(double pitch) async {
