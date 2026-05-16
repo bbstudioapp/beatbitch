@@ -20,6 +20,7 @@ import '../models/unlock_key.dart';
 part 'career_session_generator_stamina.dart';
 part 'career_session_generator_bpm.dart';
 part 'career_session_generator_humiliation.dart';
+part 'career_session_generator_capability.dart';
 
 /// Résultat d'une génération : la session figée à passer au controller +
 /// le profil d'endurance projeté (utile à l'overlay debug `StaminaBar`) +
@@ -288,25 +289,18 @@ class CareerSessionGenerator {
 
   // ─── CATALOGUE STATIQUE ──────────────────────────────────────────────────
 
-  /// Axes éligibles à la surcharge : pilotants, hors `hand`/`lick`/`breath`
-  /// (jamais des leviers de difficulté) et hors floors BPM / souffle (rien ne
-  /// les consomme encore côté générateur — les surcharger ne ferait rien).
-  static const Set<CapabilityAxis> _overloadableAxes = {
-    CapabilityAxis.gorgeApneeStreak,
-    CapabilityAxis.gorgeEngagementStreak,
-    CapabilityAxis.gorgeCrossingsBpmThroat,
-    CapabilityAxis.gorgeCrossingsBpmFull,
-    CapabilityAxis.rhythmBpmCeilShallow,
-    CapabilityAxis.rhythmBpmCeilThroat,
-    CapabilityAxis.rhythmBpmCeilFull,
-    CapabilityAxis.rhythmDepthMax,
-    CapabilityAxis.rhythmMotionStreak,
-    CapabilityAxis.holdThroatStreak,
-    CapabilityAxis.holdFullStreak,
-    CapabilityAxis.noswallowStreak,
-    CapabilityAxis.biffleStreak,
-    CapabilityAxis.biffleBpmMax,
-  };
+  // `_overloadableAxes` (set des axes pilotants pour la surcharge),
+  // `_minNullable`, `_rhythmBpmCeilAxisFor`, `_capabilityCapFor`,
+  // `_overloadFactorFor`, `_pickOverloadAxis`, `_clampToCapability` et
+  // `_clampToCustomLimits` ont migré dans
+  // `career_session_generator_capability.dart` (`_CapabilityClamps`).
+  // Le générateur construit un `_CapabilityClamps` au début de chaque
+  // `generate()` (après que l'axe de surcharge a été choisi) et l'expose
+  // via des adaptateurs courts plus bas.
+
+  /// 2ᵉ enveloppe (immuable pour la séance) — recréée à chaque appel à
+  /// [generate] après que l'axe de surcharge a été choisi.
+  late _CapabilityClamps _capClamps;
 
   CareerSessionGenerator({int? seed})
       : _rng = seed != null ? Random(seed) : Random();
@@ -332,271 +326,37 @@ class CareerSessionGenerator {
 
   // ─── Profil de capacités — 2ᵉ enveloppe de difficulté ────────────────────
 
-  static double? _minNullable(double? a, double? b) {
-    if (a == null) return b;
-    if (b == null) return a;
-    return a < b ? a : b;
-  }
-
-  /// Axe « plafond BPM rhythm » correspondant à la bande de profondeur de
-  /// `to` (`≤ mid` / `throat` / `full`). Aligné sur `_rhythmBand` du
-  /// `CapabilityTracker`.
-  static CapabilityAxis _rhythmBpmCeilAxisFor(Position to) {
-    if (to.index <= Position.mid.index) {
-      return CapabilityAxis.rhythmBpmCeilShallow;
-    }
-    if (to == Position.throat) return CapabilityAxis.rhythmBpmCeilThroat;
-    return CapabilityAxis.rhythmBpmCeilFull;
-  }
-
-  /// Plafond effectif (= le plus contraignant) d'un axe de capacité pour la
-  /// génération en cours : minimum de `comfort` (éventuellement **surchargé**
-  /// si c'est [_overloadAxis] de la séance) et du plafond figé sur un FAIL de
-  /// cette session (`sessionCeilings`, cf. §6 — qui plafonne *même* l'axe
-  /// surchargé : pas de re-fail dans la même séance). `null` si aucune donnée
-  /// — l'enveloppe ne contraint alors rien (joueuse neuve ou axe jamais
-  /// sollicité ; le profil prend le relais après ~3-5 sessions).
-  double? _capabilityCapFor(CapabilityAxis axis) {
-    final profile = _capProfile;
-    if (profile == null) return null;
-    var comfort = profile.comfortOf(axis);
-    if (comfort != null && axis == _overloadAxis) {
-      if (axis == CapabilityAxis.rhythmDepthMax) {
-        // Profondeur = cran discret : on autorise +1 cran, et seulement si la
-        // confiance au cran courant est là (cf. asymétries §5). « Humiliation
-        // l'autorise » + « milestone d'unlock acquittée » sont déjà garantis
-        // par `_maxDepthIndex` (qui borne `to` en amont).
-        if (profile.stateOf(axis).successRate >=
-            CapabilityRegulator.kDepthCranGate) {
-          comfort = comfort + 1;
-        }
-      } else {
-        comfort = comfort * _overloadFactor;
-      }
-    }
-    return _minNullable(comfort, _capCeilings[axis]);
-  }
-
-  /// Renvoie le facteur de surcharge applicable à [axis] (1.0 hors surcharge).
-  /// Pour `rhythmDepthMax` la surcharge est un cran, pas un facteur — utiliser
-  /// `_capabilityCapFor` directement.
+  /// Adaptateur d'instance pour `_CapabilityClamps.overloadFactorFor` —
+  /// utilisé par `_effectiveRhythmChainCapSeconds` pour étendre le cap de
+  /// chaîne rythme si `rhythmMotionStreak` est l'axe surchargé.
   double _overloadFactorFor(CapabilityAxis axis) =>
-      axis == _overloadAxis ? _overloadFactor : 1.0;
+      _capClamps.overloadFactorFor(axis);
 
-  /// Choisit l'axe à surcharger pour la séance (surcharge isolée, §5). Priorité
-  /// aux axes pas vus depuis longtemps (à reprouver avant que le decay ne les
-  /// érode), aux axes confiants (`successRate` haut, prêts à monter), évitement
-  /// des axes fragiles. Exclut les axes déjà figés cette session (`_capCeilings`
-  /// = verrou §6) et ceux sans donnée. No-op hors carrière.
+  /// Sélectionne l'axe de surcharge via `_CapabilityClamps.pickOverloadAxis`
+  /// et persiste le résultat dans les fields d'instance — consommés en aval
+  /// par les autres helpers (`_emitFinalStep`, etc.) et exposés sur le
+  /// `CareerGenerationResult`.
   void _pickOverloadAxis() {
-    _overloadAxis = null;
-    _overloadFactor = 1.0;
-    final profile = _capProfile;
-    if (profile == null) return;
-    // On ne connaît pas l'index de session courant ici : on prend le plus
-    // grand `lastSeenSession` du profil comme pseudo-horloge (≈ session
-    // précédente) et l'ancienneté = écart à ce repère.
-    var pseudoNow = 0;
-    for (final a in CapabilityAxis.values) {
-      final s = profile.stateOf(a).lastSeenSession;
-      if (s > pseudoNow) pseudoNow = s;
-    }
-    CapabilityAxis? best;
-    var bestScore = double.negativeInfinity;
-    for (final axis in _overloadableAxes) {
-      final st = profile.stateOf(axis);
-      if (st.comfort == null) continue; // rien de prouvé → rien à pousser
-      if (_capCeilings.containsKey(axis)) continue; // déjà calé cette séance
-      final staleness =
-          st.lastSeenSession < 0 ? 0 : (pseudoNow - st.lastSeenSession);
-      final stalenessNorm = (staleness / 6.0).clamp(0.0, 1.0);
-      final sr = st.successRate;
-      final score = 0.45 * stalenessNorm +
-          0.45 * sr -
-          0.10 * (1 - sr) +
-          _rng.nextDouble() * 0.05;
-      if (score > bestScore) {
-        bestScore = score;
-        best = axis;
-      }
-    }
-    if (best == null) return;
-    _overloadAxis = best;
-    _overloadFactor =
-        CapabilityRegulator.surchargeFactor(profile.stateOf(best).successRate);
-    if (kDebugMode) {
-      debugPrint('[career-gen] overload axis=${best.storageKey} '
-          'factor=${_overloadFactor.toStringAsFixed(3)} '
-          'sr=${profile.stateOf(best).successRate.toStringAsFixed(2)}');
-    }
-  }
-
-  /// Borne un draft à l'enveloppe « profil de capacités » : profondeur, BPM
-  /// et durée ne dépassent pas ce que la joueuse a *prouvé* tenir. 2ᵉ
-  /// enveloppe orthogonale à l'humiliation — un step n'est jouable que si
-  /// **les deux** passent. No-op hors carrière (`_capProfile == null`).
-  ///
-  /// Modes hors gating : `hand` (exclu de tout axe de difficulté — cf. règle
-  /// « hand n'est jamais un levier »), `lick` (enregistré seulement, pas
-  /// pilotant), `breath` / `freestyle` (aucun axe). Les steps scriptés
-  /// (séquences milestone, beg insistant du Supplier) passent par d'autres
-  /// chemins et ne sont pas clampés — comme ils ne sont pas gatés par
-  /// l'humiliation non plus.
-  _StepDraft _clampToCapability(_StepDraft d) {
-    if (_capProfile == null) return _clampToCustomLimits(d);
-    final clampedChain =
-        d.chainNext == null ? null : _clampToCapability(d.chainNext!);
-    var from = d.from;
-    var to = d.to;
-    var bpm = d.bpm;
-    var bpmEnd = d.bpmEnd;
-    var dur = d.duration;
-    switch (d.mode) {
-      case SessionMode.rhythm:
-        // Profondeur (cran). Plancher `head` : un rhythm a besoin d'au
-        // moins une amplitude tip↔head, jamais tip↔tip.
-        final depthCap = _capabilityCapFor(CapabilityAxis.rhythmDepthMax);
-        if (depthCap != null && to != null) {
-          final capIdx = max(Position.head.index,
-              depthCap.round().clamp(0, Position.values.length - 1));
-          if (to.index > capIdx) to = Position.values[capIdx];
-        }
-        // Garde-fou amplitude `from < to` strict après abaissement de `to`.
-        if (from != null && to != null && from.index >= to.index) {
-          from = to.index > 0 ? Position.values[to.index - 1] : null;
-        }
-        // BPM : plafond de bande + plafond franchissement si pattern
-        // franchissant (`from ≤ mid` ET `to ≥ throat`).
-        if (to != null && (bpm != null || bpmEnd != null)) {
-          var bpmCap = _capabilityCapFor(_rhythmBpmCeilAxisFor(to));
-          if (from != null &&
-              from.index <= Position.mid.index &&
-              to.index >= Position.throat.index) {
-            bpmCap = _minNullable(
-              bpmCap,
-              _capabilityCapFor(to == Position.throat
-                  ? CapabilityAxis.gorgeCrossingsBpmThroat
-                  : CapabilityAxis.gorgeCrossingsBpmFull),
-            );
-          }
-          if (bpmCap != null) {
-            final cap = bpmCap.round();
-            if (bpm != null && bpm > cap) bpm = cap;
-            if (bpmEnd != null && bpmEnd > cap) bpmEnd = cap;
-          }
-        }
-        // Apnée : un stroke airless (`from ≥ throat`) borne sa durée à
-        // l'apnée prouvée.
-        if (from != null &&
-            from.index >= Position.throat.index &&
-            dur != null) {
-          final apneaCap = _capabilityCapFor(CapabilityAxis.gorgeApneeStreak);
-          if (apneaCap != null && dur > apneaCap) {
-            dur = max(2, apneaCap.floor());
-          }
-        }
-      case SessionMode.hold:
-      case SessionMode.beg:
-        // Convention hold/beg : position tenue dans `to` (repli `from`).
-        final held = to ?? from;
-        if (held == Position.throat || held == Position.full) {
-          final cap = _minNullable(
-            _capabilityCapFor(held == Position.throat
-                ? CapabilityAxis.holdThroatStreak
-                : CapabilityAxis.holdFullStreak),
-            _capabilityCapFor(CapabilityAxis.gorgeApneeStreak),
-          );
-          if (cap != null && dur != null && dur > cap) {
-            dur = max(2, cap.floor());
-          }
-        }
-      case SessionMode.biffle:
-        final durCap = _capabilityCapFor(CapabilityAxis.biffleStreak);
-        if (durCap != null && dur != null && dur > durCap) {
-          dur = max(2, durCap.floor());
-        }
-        final bpmCap = _capabilityCapFor(CapabilityAxis.biffleBpmMax);
-        if (bpmCap != null && bpm != null && bpm > bpmCap) {
-          bpm = bpmCap.round();
-        }
-      case SessionMode.hand:
-      case SessionMode.lick:
-      case SessionMode.breath:
-      case SessionMode.freestyle:
-      case SessionMode.suckle:
-        // Suckle : pas de BPM, position figée par construction (head ou
-        // balls, filtrée en amont par `_isUnlocked`). Aucun axe capability
-        // pertinent → pas de cap difficile. Durée bornée par la palette,
-        // pas par le profil.
-        break; // pas de cap de difficulté pour ces modes
-    }
-    if (from == d.from &&
-        to == d.to &&
-        bpm == d.bpm &&
-        bpmEnd == d.bpmEnd &&
-        dur == d.duration &&
-        identical(clampedChain, d.chainNext)) {
-      return _clampToCustomLimits(d);
-    }
-    return _clampToCustomLimits(_StepDraft(
-      mode: d.mode,
-      bpm: bpm,
-      bpmEnd: bpmEnd,
-      from: from,
-      to: to,
-      duration: dur,
-      chainNext: clampedChain,
-    ));
-  }
-
-  /// Borne un draft aux limites utilisateur du mode Custom (`bpmRange` /
-  /// `holdDurationRange` de [generate]). Appliqué après [_clampToCapability]
-  /// pour rester compatible avec le profil de capacités (qui ne sert qu'en
-  /// carrière, désactivé en Custom). `chainNext` est récursé. No-op si
-  /// aucune borne n'est fournie (carrière / scénario JSON).
-  _StepDraft _clampToCustomLimits(_StepDraft d) {
-    final bpmRange = _bpmRange;
-    final holdRange = _holdDurationRange;
-    if (bpmRange == null && holdRange == null) return d;
-    final clampedChain =
-        d.chainNext == null ? null : _clampToCustomLimits(d.chainNext!);
-    var bpm = d.bpm;
-    var bpmEnd = d.bpmEnd;
-    var dur = d.duration;
-    if (bpmRange != null) {
-      final (lo, hi) = bpmRange;
-      if (bpm != null) bpm = bpm.clamp(lo, hi);
-      if (bpmEnd != null) bpmEnd = bpmEnd.clamp(lo, hi);
-    }
-    if (holdRange != null && dur != null) {
-      // S'applique aux modes qui *tiennent* une position : hold et beg avec
-      // position (`from` ou `to` renseigné). Les autres modes ont aussi un
-      // `duration`, mais c'est la durée totale du step rythmé, pas un temps
-      // de maintien — on ne touche pas pour éviter de tronquer les phases.
-      final held = d.to ?? d.from;
-      final isHeld = d.mode == SessionMode.hold ||
-          (d.mode == SessionMode.beg && held != null);
-      if (isHeld) {
-        final (lo, hi) = holdRange;
-        dur = dur.clamp(lo, hi);
-      }
-    }
-    if (bpm == d.bpm &&
-        bpmEnd == d.bpmEnd &&
-        dur == d.duration &&
-        identical(clampedChain, d.chainNext)) {
-      return d;
-    }
-    return _StepDraft(
-      mode: d.mode,
-      bpm: bpm,
-      bpmEnd: bpmEnd,
-      from: d.from,
-      to: d.to,
-      duration: dur,
-      chainNext: clampedChain,
+    final pick = _CapabilityClamps.pickOverloadAxis(
+      profile: _capProfile,
+      ceilings: _capCeilings,
+      rng: _rng,
     );
+    _overloadAxis = pick.axis;
+    _overloadFactor = pick.factor;
+    if (kDebugMode && pick.axis != null) {
+      final sr = _capProfile?.stateOf(pick.axis!).successRate ?? 0.0;
+      debugPrint('[career-gen] overload axis=${pick.axis!.storageKey} '
+          'factor=${pick.factor.toStringAsFixed(3)} '
+          'sr=${sr.toStringAsFixed(2)}');
+    }
   }
+
+  /// Adaptateur d'instance pour `_CapabilityClamps.clampToCapability` —
+  /// applique la 2ᵉ enveloppe (profondeur / BPM / durée) ET les bornes
+  /// utilisateur Custom en cascade.
+  _StepDraft _clampToCapability(_StepDraft d) =>
+      _capClamps.clampToCapability(d);
 
   /// Normalise une plage BPM utilisateur : trie `(min, max)` et borne aux
   /// limites globales (`CustomSessionConfig.minBpmLimit`/`maxBpmLimit`). Si
@@ -736,6 +496,18 @@ class CareerSessionGenerator {
     _bpmRange = _normalizeBpmRange(bpmRange);
     _holdDurationRange = _normalizeHoldRange(holdDurationRange);
     _pickOverloadAxis();
+    // 2ᵉ enveloppe immuable construite après le choix de l'axe de surcharge —
+    // recréée à chaque appel à `generate()` pour intégrer profile/ceilings/
+    // overload/bornes-Custom courants. Consommée via les adaptateurs
+    // `_clampToCapability` / `_capabilityCapFor` / `_overloadFactorFor`.
+    _capClamps = _CapabilityClamps(
+      profile: _capProfile,
+      ceilings: _capCeilings,
+      overloadAxis: _overloadAxis,
+      overloadFactor: _overloadFactor,
+      bpmRange: _bpmRange,
+      holdRange: _holdDurationRange,
+    );
     // Mode "Session bâclée" : 6 min par défaut, intense tout du long. Floor
     // d'intensité appliqué au tirage de difficulté + on saute l'intro douce
     // et la pré-finition. Une durée explicite reste prioritaire (cas de la
@@ -3915,6 +3687,19 @@ class CareerSessionGenerator {
             ? CapabilityRegulator.surchargeFactor(
                 capabilityProfile.stateOf(capabilityOverloadAxis).successRate)
             : 1.0;
+    // Punition générée hors `generate()` → on doit aussi (re)bâtir
+    // `_capClamps` ici, sinon le `_clampToCapability` qui sert à matérialiser
+    // chaque step de la compo lit un field non initialisé. Pas de
+    // `_bpmRange`/`_holdDurationRange` côté Custom (les punitions ne sont pas
+    // générées en Custom), donc on laisse les bornes utilisateur à null.
+    _capClamps = _CapabilityClamps(
+      profile: _capProfile,
+      ceilings: _capCeilings,
+      overloadAxis: _overloadAxis,
+      overloadFactor: _overloadFactor,
+      bpmRange: null,
+      holdRange: null,
+    );
 
     final humilCap = _humiliationCareer + _humiliationSession;
 
