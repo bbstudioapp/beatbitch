@@ -4,6 +4,13 @@
 
 ## [Non publié]
 
+## [0.4.1] — 2026-05-17
+
+Correctif ciblé d'un blocage de progression carrière apparu après l'update v0.4.0.
+
+### Corrigé
+- **Bloqué au niveau 9 en boucle (post-update v0.4.0)** — pour les joueuses sans la zone `balls` (`hasBalls=false`) et qui n'ont pas consolidé `biffle.streak ≥ 10`, le calcul de fin de séance de `hasPendingAtCurrentLevel` n'appliquait pas le filtre anatomy alors que le calcul de début de séance le faisait. Conséquence : la milestone `intro_balls_lick` (niveau 9) restait fantôme dans le pool « pending » au moment du check level-up, bloquant le passage au niveau 10 indéfiniment alors que la séance se jouait sans contenu de palier insérable. `session_screen._recordCareerCompletion` propage désormais `anatomy` à `MilestoneService.pendingFor` pour rester cohérent avec le start ; test de régression dédié + garde-fou statique contre régression silencieuse.
+
 ## [0.4.0] — 2026-05-16
 
 Nouvelle plateforme **Web / PWA installable iOS** (canal officiel iOS, App Store hors-jeu), introduction de la 6ᵉ position `balls` avec son anatomie associée, nouveau mode bouche **`suckle`** (aspirer / téter), TTS Linux passé au neuronal Piper, et une vague de fixes audio + voix + UI Custom.
@@ -122,7 +129,10 @@ Grosse mise à jour du mode carrière : nouvelle enveloppe de difficulté, nouve
 ## [0.1.0] — 2026-05-08
 - Premier release public : coach vocal rythmique hors-ligne pour Android, adult gate 18+, onboarding, mode carrière + scénarios, badges, profil/réputation.
 
-[Non publié]: https://github.com/bbstudioapp/beatbitch/compare/v0.2.1...develop
+[Non publié]: https://github.com/bbstudioapp/beatbitch/compare/v0.4.1...develop
+[0.4.1]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.4.1
+[0.4.0]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.4.0
+[0.3.0]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.3.0
 [0.2.1]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.2.1
 [0.2.0]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.2.0
 [0.1.3]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.1.3
