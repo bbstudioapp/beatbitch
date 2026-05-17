@@ -1,26 +1,25 @@
-// Fichier part de `career_session_generator.dart` — value object
-// `SessionConfig` : inputs figés d'une séance.
+// Library autonome — value object `SessionConfig` : inputs figés d'une
+// séance.
 //
-// Le générateur expose une grosse surface de paramètres (`generate(...)`
-// + `generatePunishment(...)`). Plutôt que de les répartir en ~16 fields
-// d'instance mutables (chacun reset au début de chaque session par une
-// assignation explicite), on les regroupe ici dans un value object
-// immuable.
-//
-// Le generator garde un `late SessionConfig _config` (re-posé en début
-// de chaque `generate()` / `generatePunishment()`) et y accède via des
-// getters d'instance `_level => _config.level` etc. — l'API interne du
-// generator reste inchangée, mais l'invariant « ces 16 valeurs sont
-// figées pour la séance » est désormais enforced par le langage.
+// Extrait de `career_session_generator.dart` : sa sortie en library
+// autonome est préalable à l'extraction de `gen_facade.dart` (la
+// facade expose `SessionConfig` comme field, donc elle ne peut pas
+// rester `part of` du générateur sinon le `gen_facade.dart` autonome
+// ne pourrait pas le référencer).
 //
 // **Pas dans `SessionConfig`** :
-//   * `_state.unlockedKeys` — muté en cours de séance quand une milestone est
+//   * `unlockedKeys` — muté en cours de séance quand une milestone est
 //     acquittée (un step scripté étend l'ensemble des unlocks pour les
 //     steps suivants). C'est conceptuellement un state, pas un input.
 //   * Tout l'état runtime (`_lastFoo`, `_stepsInLastType`, simulations
 //     salive, etc.) qui mute à chaque step poussé.
 
-part of 'career_session_generator.dart';
+import '../../../models/anatomy_profile.dart';
+import '../../../models/session.dart';
+import '../../../services/capability_axis.dart';
+import '../../../services/capability_service.dart';
+import '../../../services/humiliation_engine.dart';
+import '../../models/specialization.dart';
 
 /// Snapshot immuable des inputs d'une séance, posé en début de
 /// `generate()` / `generatePunishment()`. Lecture seule pour toute la

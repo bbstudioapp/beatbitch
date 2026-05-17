@@ -48,6 +48,14 @@ import 'rules/career_session_generator_rules_hold.dart';
 import 'rules/career_session_generator_rules_lick.dart';
 import 'rules/career_session_generator_rules_rhythm.dart';
 import 'rules/career_session_generator_rules_suckle.dart';
+import 'session_config.dart';
+import 'step_draft.dart';
+
+// Re-exports des types extraits (`SessionConfig`, `StepDraft`) — les
+// 9 fichiers de rules et les call sites externes importent
+// `career_session_generator.dart` et y trouvent toujours ces types.
+export 'session_config.dart' show SessionConfig;
+export 'step_draft.dart' show StepDraft;
 
 part 'career_session_generator_stamina.dart';
 part 'career_session_generator_mode_rules.dart';
@@ -61,7 +69,6 @@ part 'career_session_generator_position_pickers.dart';
 part 'career_session_generator_punishment.dart';
 part 'career_session_generator_rhythm_chain_tracker.dart';
 part 'career_session_generator_rhythmic_pattern_buffer.dart';
-part 'career_session_generator_session_config.dart';
 part 'career_session_generator_session_runtime_state.dart';
 part 'career_session_generator_milestone_scheduler.dart';
 
@@ -2364,46 +2371,6 @@ class CareerSessionGenerator {
     }
     return tier;
   }
-}
-
-/// Brouillon de step interne au générateur, avant matérialisation en
-/// `SessionStep` (il manque `time` et `text` qui sont décidés au push).
-class StepDraft {
-  final SessionMode mode;
-  final int? bpm;
-
-  /// BPM cible en fin de step pour les rampes intra-step (cf. doc de
-  /// `SessionStep.bpmEnd`). Null = pas de rampe (BPM constant).
-  final int? bpmEnd;
-  final Position? from;
-  final Position? to;
-  final int? duration;
-
-  /// Action enchaînée optionnelle. Émise comme step indépendant juste
-  /// après le step parent par le générateur. Sert aux beg « guidés »
-  /// (« dis X et continue à me sucer »). Le combo n'est jouable que si
-  /// les deux composants passent `_isUnlocked` ET `humilCap`.
-  final StepDraft? chainNext;
-
-  const StepDraft({
-    required this.mode,
-    required this.bpm,
-    required this.from,
-    required this.to,
-    required this.duration,
-    this.bpmEnd,
-    this.chainNext,
-  });
-
-  SessionStep copyWithTime(int t) => SessionStep(
-        time: t,
-        mode: mode,
-        bpm: bpm,
-        bpmEnd: bpmEnd,
-        from: from,
-        to: to,
-        duration: duration,
-      );
 }
 
 /// Bundle des paramètres « figés pour la session » consommés par les helpers
