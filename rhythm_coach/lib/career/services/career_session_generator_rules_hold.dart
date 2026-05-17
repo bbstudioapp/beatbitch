@@ -112,8 +112,7 @@ class _HoldRules extends _ModeRules {
       // Throat ou full débloqué : on tient profond même en récup. Le
       // user a explicitement validé la règle — pas de hold doux quand
       // tu sais tenir gorge.
-      to = ceilingIdx >= Position.full.index &&
-              ctx.gen._rng.nextDouble() < 0.30
+      to = ceilingIdx >= Position.full.index && ctx.gen._rng.nextDouble() < 0.30
           ? Position.full
           : Position.throat;
     } else if (ceilingIdx >= Position.mid.index) {

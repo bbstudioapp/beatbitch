@@ -198,8 +198,7 @@ class _RhythmRules extends _ModeRules {
     // doit refléter le niveau. BPM bas — le coût stamina reste modéré
     // pour ne pas creuser la dette d'endurance qu'on cherche justement
     // à combler ailleurs.
-    final hasThroat =
-        ctx.gen._unlockedKeys.contains(UnlockKey.throatHoldShort);
+    final hasThroat = ctx.gen._unlockedKeys.contains(UnlockKey.throatHoldShort);
     return _StepDraft(
       mode: SessionMode.rhythm,
       bpm: ctx.bpm,
