@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../career/models/specialization.dart';
 import '../models/badge.dart';
 import 'capability_axis.dart';
+import 'diagnostic_export_integrity.dart';
 import 'locale_service.dart';
 
 /// Options de l'export diagnostic. Seul levier exposé à la joueuse pour
@@ -118,8 +118,8 @@ class DiagnosticExportService {
       'consent': _consent(),
     };
     payload['integrity'] = <String, dynamic>{
-      'algorithm': 'sha256',
-      'value': _computeChecksum(payload),
+      'algorithm': DiagnosticExportIntegrity.algorithm,
+      'value': DiagnosticExportIntegrity.compute(payload),
       'scope': 'sha256 of the canonical JSON of every other top-level field '
           '(keys sorted alphabetically at every depth, no whitespace).',
     };
@@ -133,51 +133,11 @@ class DiagnosticExportService {
 
   /// Recalcule le checksum sur un payload importé et le compare au champ
   /// `integrity.value`. Renvoie `true` si tout colle. Permet à un outil
-  /// standalone (`tools/`) de valider un export reçu sans dépendre de l'app.
-  static bool verifyIntegrity(Map<String, dynamic> payload) {
-    final integrity = payload['integrity'];
-    if (integrity is! Map) return false;
-    final expected = integrity['value'];
-    if (expected is! String) return false;
-    final algorithm = integrity['algorithm'];
-    if (algorithm != 'sha256') return false;
-    final stripped = Map<String, dynamic>.from(payload)..remove('integrity');
-    return _computeChecksum(stripped) == expected;
-  }
-
-  static String _computeChecksum(Map<String, dynamic> payload) {
-    final canonical = _canonicalJson(payload);
-    return sha256.convert(utf8.encode(canonical)).toString();
-  }
-
-  /// Sérialisation canonique (clés triées récursivement, aucun espace). Sert
-  /// uniquement au calcul du checksum — pas exposé en sortie utilisateur.
-  static String _canonicalJson(Object? data) {
-    if (data == null) return 'null';
-    if (data is Map) {
-      final keys = data.keys.map((k) => k.toString()).toList()..sort();
-      final buf = StringBuffer('{');
-      for (var i = 0; i < keys.length; i++) {
-        if (i > 0) buf.write(',');
-        buf
-          ..write(json.encode(keys[i]))
-          ..write(':')
-          ..write(_canonicalJson(data[keys[i]]));
-      }
-      buf.write('}');
-      return buf.toString();
-    }
-    if (data is List) {
-      final buf = StringBuffer('[');
-      for (var i = 0; i < data.length; i++) {
-        if (i > 0) buf.write(',');
-        buf.write(_canonicalJson(data[i]));
-      }
-      buf.write(']');
-      return buf.toString();
-    }
-    return json.encode(data);
-  }
+  /// standalone (`tools/verify_export.dart`) de valider un export reçu.
+  /// Délègue à [DiagnosticExportIntegrity.verify] — ce wrapper existe pour
+  /// que l'UI / les tests n'aient qu'un seul symbole à importer.
+  static bool verifyIntegrity(Map<String, dynamic> payload) =>
+      DiagnosticExportIntegrity.verify(payload);
 
   // ── Sections ───────────────────────────────────────────────────────────
 
