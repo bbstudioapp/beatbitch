@@ -2,7 +2,7 @@
 // `hand`. Cf. contrat `_ModeRules` dans
 // `career_session_generator_mode_rules.dart`.
 
-part of 'career_session_generator.dart';
+part of '../career_session_generator.dart';
 
 /// Règles `hand` : effort modéré côté endurance (la bouche se repose, mais
 /// la main travaille). On consomme moins que rhythm équivalent.

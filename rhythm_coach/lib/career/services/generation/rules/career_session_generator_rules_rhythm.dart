@@ -2,7 +2,7 @@
 // `rhythm`. Cf. contrat `_ModeRules` dans
 // `career_session_generator_mode_rules.dart`.
 
-part of 'career_session_generator.dart';
+part of '../career_session_generator.dart';
 
 /// Règles `rhythm` : coût modulé par profondeur cible (mid pèse le plus :
 /// c'est la zone où on tient le rythme le plus longtemps), atténué par le

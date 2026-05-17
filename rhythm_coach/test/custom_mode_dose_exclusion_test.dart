@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:beat_bitch/career/models/phrase_bank.dart';
-import 'package:beat_bitch/career/services/career_session_generator.dart';
+import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
 import 'package:beat_bitch/models/session.dart';
 
 List<PhraseEntry> _p(List<String> texts) =>

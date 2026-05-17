@@ -4,7 +4,7 @@ import 'package:beat_bitch/career/models/coach.dart';
 import 'package:beat_bitch/career/models/coach_catalog.dart';
 import 'package:beat_bitch/career/models/phrase_bank.dart';
 import 'package:beat_bitch/career/models/unlock_key.dart';
-import 'package:beat_bitch/career/services/career_session_generator.dart';
+import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
 import 'package:beat_bitch/models/session.dart';
 import 'package:beat_bitch/models/session_step.dart';
 import 'package:beat_bitch/services/capability_axis.dart';

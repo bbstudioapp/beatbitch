@@ -2,7 +2,7 @@
 // `biffle`. Cf. contrat `_ModeRules` dans
 // `career_session_generator_mode_rules.dart`.
 
-part of 'career_session_generator.dart';
+part of '../career_session_generator.dart';
 
 /// Règles `biffle` : effort soutenu (la fille encaisse), conso entre
 /// rythme et hold, modulée par la profondeur.

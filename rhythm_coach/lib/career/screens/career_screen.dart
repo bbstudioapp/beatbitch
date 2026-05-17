@@ -30,7 +30,7 @@ import '../models/specialization.dart';
 import '../models/unlock_key.dart';
 import '../services/career_encore_gate.dart';
 import '../services/career_progress_service.dart';
-import '../services/career_session_generator.dart';
+import '../services/generation/career_session_generator.dart';
 import '../services/phrase_bank_loader.dart';
 import '../services/specialization_service.dart';
 import '../widgets/coach_portrait.dart';
