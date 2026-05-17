@@ -66,7 +66,7 @@ class _RhythmicPatternBuffer {
   /// derniers émis + le draft sont tous (a) du même mode rythmé,
   /// (b) à la même profondeur cible `to`, (c) avec une variance BPM
   /// < `_flatBpmSpread` sur les 4 valeurs.
-  bool wouldBeFlat(_StepDraft d) {
+  bool wouldBeFlat(StepDraft d) {
     if (_emits.length < _windowSize) return false;
     if (d.bpm == null || d.to == null) return false;
     if (!_emits.every((e) => e.mode == d.mode)) return false;

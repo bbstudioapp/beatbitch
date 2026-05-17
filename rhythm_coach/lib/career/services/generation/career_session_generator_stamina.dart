@@ -91,7 +91,7 @@ class _StaminaModel {
   /// Comptabilité endurance : modes effort consomment, modes respi régénèrent
   /// (multiplicateur qui monte avec `progress`), freestyle est neutre.
   static double delta(
-    _StepDraft draft,
+    StepDraft draft,
     double progress,
     CareerLevel cfg,
   ) =>
@@ -106,7 +106,7 @@ class _StaminaModel {
   /// alors quasiment jamais.
   static double apply(
     double stamina,
-    _StepDraft draft,
+    StepDraft draft,
     double progress,
     CareerLevel cfg,
   ) {

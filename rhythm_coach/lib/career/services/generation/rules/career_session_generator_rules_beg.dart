@@ -1,5 +1,5 @@
 // Fichier part de `career_session_generator.dart` — règles du mode
-// `beg`. Cf. contrat `_ModeRules` dans
+// `beg`. Cf. contrat `ModeRules` dans
 // `career_session_generator_mode_rules.dart`. Partage le helper
 // `_clampHeldDuration` avec `_HoldRules` (cap durée sur position tenue).
 
@@ -9,7 +9,7 @@ part of '../career_session_generator.dart';
 /// `to`. Sans `to` ou `to = head` → assimilé à du repos vocal (regen). Avec
 /// `to = mid/throat/full` → coût comme un hold à cette profondeur (la
 /// position doit être tenue pendant la supplique).
-class _BegRules extends _ModeRules {
+class _BegRules extends ModeRules {
   const _BegRules();
 
   /// Beg avec `to` tenu = la bouche reste sur la verge pendant la
@@ -17,11 +17,11 @@ class _BegRules extends _ModeRules {
   /// vocale, bouche libre → `libreMain`. Seul mode dont la classification
   /// dépend du paramètre `to`.
   @override
-  _StepType classify(Position? to) =>
-      to == null ? _StepType.libreMain : _StepType.bouche;
+  StepType classify(Position? to) =>
+      to == null ? StepType.libreMain : StepType.bouche;
 
   @override
-  double delta(_StepDraft draft, double progress, CareerLevel cfg) {
+  double delta(StepDraft draft, double progress, CareerLevel cfg) {
     final dur = draft.duration ?? 0;
     final to = draft.to;
     if (to == null || to == Position.head) {
@@ -37,7 +37,7 @@ class _BegRules extends _ModeRules {
   }
 
   @override
-  UnlockKey? unlockKeyFor(_StepDraft draft) {
+  UnlockKey? unlockKeyFor(StepDraft draft) {
     if (draft.from == Position.balls || draft.to == Position.balls) {
       return UnlockKey.begBalls;
     }
@@ -53,14 +53,14 @@ class _BegRules extends _ModeRules {
   }
 
   @override
-  _StepDraft clampToCapability(_StepDraft draft, _CapabilityClamps c) =>
+  StepDraft clampToCapability(StepDraft draft, CapabilityClamps c) =>
       _clampHeldDuration(draft, c);
 
   @override
-  _StepDraft? tryDegrade(_StepDraft draft) {
+  StepDraft? tryDegrade(StepDraft draft) {
     // (1) Descendre `to` d'un cran (beg jusqu'à `tip` comme hold).
     if (draft.to != null && draft.to!.index > Position.tip.index) {
-      return _StepDraft(
+      return StepDraft(
         mode: draft.mode,
         bpm: draft.bpm,
         from: draft.from,
@@ -70,7 +70,7 @@ class _BegRules extends _ModeRules {
     }
     // (2) Beg avec position tenue → repli sur beg libre.
     if (draft.to != null) {
-      return _StepDraft(
+      return StepDraft(
         mode: draft.mode,
         bpm: draft.bpm,
         from: null,
@@ -85,8 +85,8 @@ class _BegRules extends _ModeRules {
   /// `breath`, retourne une copie sans position tenue (récup vocale pure).
   /// Sinon, renvoie [draft] tel quel. Méthode pure, no-op si le mode
   /// n'est pas `beg` — l'orchestrateur peut l'appeler en mode-blind.
-  static _StepDraft stripAfterSoft(
-    _StepDraft draft,
+  static StepDraft stripAfterSoft(
+    StepDraft draft,
     List<SessionStep> steps,
   ) {
     if (draft.mode != SessionMode.beg) return draft;
@@ -94,7 +94,7 @@ class _BegRules extends _ModeRules {
     if (steps.isEmpty) return draft;
     final prev = steps.last.mode;
     if (prev != SessionMode.lick && prev != SessionMode.breath) return draft;
-    return _StepDraft(
+    return StepDraft(
       mode: draft.mode,
       bpm: draft.bpm,
       from: draft.from,
@@ -104,7 +104,7 @@ class _BegRules extends _ModeRules {
   }
 
   @override
-  _StepDraft build(_DraftCtx ctx) {
+  StepDraft build(DraftCtx ctx) {
     // Convention uniforme hold/beg : la position tenue est dans `to`.
     // Obéissance : beg plus profonds (ampScore boosté localement) et
     // plus longs.
@@ -121,7 +121,7 @@ class _BegRules extends _ModeRules {
       obPts: obPts,
     );
     if (chained != null) return chained;
-    return _StepDraft(
+    return StepDraft(
       mode: SessionMode.beg,
       bpm: null,
       from: null,
@@ -136,16 +136,16 @@ class _BegRules extends _ModeRules {
   /// (avec `from` tenu) sont mécaniquement plus dures et gatées par
   /// `begThroat`.
   @override
-  bool isRecoveryCandidate(_RecoveryAvailability a) =>
+  bool isRecoveryCandidate(RecoveryAvailability a) =>
       a.heritage || a.unlockedKeys.contains(UnlockKey.begLibre);
 
   @override
-  _StepDraft buildRecovery(_RecoveryCtx ctx) {
+  StepDraft buildRecovery(RecoveryCtx ctx) {
     // Récup vocale par défaut : sans position (= beg libre). Durée plus
     // courte que la fenêtre standard de récup — une supplique tient
     // rarement plus de 10 s sans s'essouffler.
     final begDur = 6 + ctx.gen.rng.nextInt(6);
-    return _StepDraft(
+    return StepDraft(
       mode: SessionMode.beg,
       bpm: null,
       from: null,
@@ -160,15 +160,15 @@ class _BegRules extends _ModeRules {
   /// demander une supplique post-orgasme à une débutante). Cible
   /// privilégiée par le biais spé obeissance ≥ 2 pts (« remercie-moi »).
   @override
-  List<_PostFinalVariant> postFinalVariants(_PostFinalCtx ctx) {
+  List<PostFinalVariant> postFinalVariants(PostFinalCtx ctx) {
     final canBeg = ctx.unlockedKeys.isEmpty ||
         ctx.unlockedKeys.contains(UnlockKey.begLibre);
     final blocked = !canBeg || ctx.isModeForbidden(SessionMode.beg);
     return [
-      _PostFinalVariant(
+      PostFinalVariant(
         req: 25.0,
         blocked: blocked,
-        draft: _StepDraft(
+        draft: StepDraft(
           mode: SessionMode.beg,
           bpm: null,
           from: null,
@@ -176,10 +176,10 @@ class _BegRules extends _ModeRules {
           duration: ctx.duration,
         ),
       ),
-      _PostFinalVariant(
+      PostFinalVariant(
         req: 60.0,
         blocked: blocked,
-        draft: _StepDraft(
+        draft: StepDraft(
           mode: SessionMode.beg,
           bpm: null,
           from: null,

@@ -12,7 +12,7 @@
 //
 // Le 3ᵉ levier dépend de l'état mutable du tracking (`_state.lastType`,
 // `_stepsInLastType`, `_state.stepsOutsideBouche`). On le capture dans un
-// snapshot [_ModeContinuityState] que le générateur reconstruit à chaque
+// snapshot [ModeContinuityState] que le générateur reconstruit à chaque
 // pick — c'est cheap (4 lectures de fields), et ça garde [_ModePicker]
 // 100 % statique-pur.
 //
@@ -29,10 +29,10 @@ part of 'career_session_generator.dart';
 /// Reconstruit à chaque appel au picker depuis les fields d'instance
 /// mutables (`_state.lastType`, `_stepsInLastType`, `_state.stepsOutsideBouche`,
 /// `_state.lastMode`). Le picker reste pur en consommant ce snapshot.
-class _ModeContinuityState {
+class ModeContinuityState {
   /// Type du dernier step poussé (cluster sémantique bouche / langue /
   /// libreMain / transit). `null` au premier step de la séance.
-  final _StepType? lastType;
+  final StepType? lastType;
 
   /// Nombre de steps consécutifs sur [lastType]. 0 si [lastType] est null.
   final int stepsInLastType;
@@ -45,7 +45,7 @@ class _ModeContinuityState {
   /// pour les modes ponctuels (breath / beg / biffle / hold / freestyle).
   final SessionMode? lastMode;
 
-  const _ModeContinuityState({
+  const ModeContinuityState({
     required this.lastType,
     required this.stepsInLastType,
     required this.stepsOutsideBouche,
@@ -54,7 +54,7 @@ class _ModeContinuityState {
 }
 
 /// Tirage pondéré du mode pour la boucle main. Toutes les méthodes sont
-/// statiques + pures — l'état mutable est consommé via [_ModeContinuityState]
+/// statiques + pures — l'état mutable est consommé via [ModeContinuityState]
 /// + [SpecializationAllocation] + `coachWeights` + `Random`.
 class _ModePicker {
   /// Pondération issue de la spé seule, sans le filtre coach. Le coach
@@ -148,7 +148,7 @@ class _ModePicker {
   ///   bouche)
   ///
   /// Cas neutres (×1.0) :
-  /// - pas de [_ModeContinuityState.lastType] encore (premier step)
+  /// - pas de [ModeContinuityState.lastType] encore (premier step)
   /// - dernier type = transit (breath/freestyle ne reset pas, donc rare)
   /// - candidat = beg (ambivalent — son type effectif dépend du `to` tiré
   ///   APRÈS le pick, donc on ne biaise pas le tirage du mode)
@@ -156,11 +156,11 @@ class _ModePicker {
   ///   par [pickWeighted], mais on reste neutre par sécurité)
   static double continuityMultiplier(
     SessionMode candidate,
-    _ModeContinuityState state,
+    ModeContinuityState state,
   ) {
     final last = state.lastType;
     if (last == null) return 1.0;
-    if (last == _StepType.transit) return 1.0;
+    if (last == StepType.transit) return 1.0;
 
     if (candidate == SessionMode.breath || candidate == SessionMode.freestyle) {
       return 1.0;
@@ -177,32 +177,32 @@ class _ModePicker {
     // mais on garde le shortcut explicite pour que l'intention reste
     // lisible (« beg = libre, sauf décision contraire »).
     final cand = candidate == SessionMode.beg
-        ? _StepType.libreMain
+        ? StepType.libreMain
         : _modeRulesRegistry[candidate]!.classify(null);
-    if (cand == _StepType.transit) return 1.0;
+    if (cand == StepType.transit) return 1.0;
 
     // Verrou strict : si on a déjà 2+ steps consécutifs hors bouche
     // (peu importe lequel), on pousse fortement pour rebasculer sur
     // bouche. Plus on s'écarte longtemps, plus le retour est verrouillé.
     if (state.stepsOutsideBouche >= 2) {
-      if (cand == _StepType.bouche) {
+      if (cand == StepType.bouche) {
         return 6.0 + state.stepsOutsideBouche * 1.5;
       }
       return 0.05; // quasi banni — sert juste de fallback si bouche bloqué
     }
 
     if (cand == last) {
-      if (last == _StepType.bouche) return 3.0;
+      if (last == StepType.bouche) return 3.0;
       // langue / libre/main : continuité dégradée pour ne pas s'éterniser.
       // 1 step de plus est OK, mais au-delà on pousse le retour à bouche.
       return state.stepsInLastType >= 2 ? 0.6 : 1.8;
     }
-    if (cand == _StepType.bouche) {
+    if (cand == StepType.bouche) {
       // Retour à bouche : encouragé dès la 1re excursion, fort dès 2.
       if (state.stepsOutsideBouche >= 1) return 3.0;
       return 1.4;
     }
-    if (last == _StepType.bouche) {
+    if (last == StepType.bouche) {
       // Quitter bouche est très onéreux : on n'en sort qu'après une vraie
       // phase de bouche (3+ steps), et même là la friction reste marquée.
       if (state.stepsInLastType < 3) return 0.10;
@@ -219,7 +219,7 @@ class _ModePicker {
     SessionMode m, {
     required SpecializationAllocation spec,
     required Map<SessionMode, double> coachWeights,
-    required _ModeContinuityState continuity,
+    required ModeContinuityState continuity,
   }) {
     final base = baseWeight(m, spec);
     final coachFactor = coachWeights[m] ?? 1.0;
@@ -268,7 +268,7 @@ class _ModePicker {
     List<SessionMode> candidates, {
     required SpecializationAllocation spec,
     required Map<SessionMode, double> coachWeights,
-    required _ModeContinuityState continuity,
+    required ModeContinuityState continuity,
     required Random rng,
   }) {
     final weights = <double>[];

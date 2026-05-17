@@ -33,9 +33,9 @@ part of 'career_session_generator.dart';
 /// L'état du tracker (`_consecutiveSeconds`) est par-session : `reset()`
 /// au début de chaque `generate()`. Il lit son cap via le générateur
 /// (`gen._config.capProfile`, `gen._overloadFactorFor`, `gen._state.unlockedKeys`)
-/// — couplage explicite assumé, comme `_DraftCtx` pour les rules.
-class _RhythmChainTracker {
-  _RhythmChainTracker({required this.gen});
+/// — couplage explicite assumé, comme `DraftCtx` pour les rules.
+class RhythmChainTracker {
+  RhythmChainTracker({required this.gen});
 
   final CareerSessionGenerator gen;
 

@@ -3,14 +3,14 @@
 //
 // `_mapDifficultyToStep` est le cœur de la boucle main : à partir d'une
 // difficulté `diff ∈ [0, 1]` tirée par `generate`, il construit le
-// _StepDraft concret du step suivant. Sa logique :
+// StepDraft concret du step suivant. Sa logique :
 //   1. Sélection des candidats de mode (gating profil + Custom + chaîne
 //      rythme + unlocks).
 //   2. Tirage pondéré du mode via `_ModePicker.pickWeighted` (couleur spé
 //      + dose coach + continuité par type).
 //   3. Découpe simplex du budget de difficulté entre BPM / amplitude /
 //      durée + bonus de spé par axe.
-//   4. **Dispatch polymorphique** vers `_ModeRules.build(_DraftCtx)` du
+//   4. **Dispatch polymorphique** vers `ModeRules.build(DraftCtx)` du
 //      mode tiré (cf. `career_session_generator_mode_rules.dart`). Chaque
 //      rule porte ses propres ranges / samplers / caps mode-specific.
 //
@@ -25,7 +25,7 @@ extension _DifficultyDispatch on CareerSessionGenerator {
   /// Convertit la difficulté `diff ∈ [0, 1]` en step concret. Le budget est
   /// réparti aléatoirement entre les axes BPM, amplitude et durée — donc un
   /// step "hard" peut être lent profond endurant, ou rapide plus court, etc.
-  _StepDraft _mapDifficultyToStep(double diff) {
+  StepDraft _mapDifficultyToStep(double diff) {
     final candidates = <SessionMode>[];
     if (diff < 0.30) {
       candidates.add(SessionMode.lick);
@@ -39,7 +39,7 @@ extension _DifficultyDispatch on CareerSessionGenerator {
     // pendant la phase de chauffe.
     if ((diff >= 0.20 ||
             _state.stepsOutsideBouche >= 2 ||
-            _state.lastType == _StepType.bouche) &&
+            _state.lastType == StepType.bouche) &&
         _rhythmChain.canChain()) {
       candidates.add(SessionMode.rhythm);
     }
@@ -47,7 +47,7 @@ extension _DifficultyDispatch on CareerSessionGenerator {
     // si on est déjà en bouche : permet l'alternance rhythm/hold à
     // l'intérieur d'une série bouche (sinon les phases de chauffe restaient
     // 100 % rhythm uniforme — l'utilisateur attend rythme/rythme/hold/…).
-    if (diff >= 0.20 || (_state.lastType == _StepType.bouche && diff >= 0.10)) {
+    if (diff >= 0.20 || (_state.lastType == StepType.bouche && diff >= 0.10)) {
       candidates.add(SessionMode.hold);
     }
     // biffle : candidat seulement si `biffleBasic` est débloqué (pré-filtre
@@ -129,12 +129,12 @@ extension _DifficultyDispatch on CareerSessionGenerator {
         .clamp(0.0, 1.0);
 
     // Dispatch polymorphique : chaque rule consomme les 3 scores via
-    // `_DraftCtx` et accède aux samplers / caps via `ctx.gen.*` (typé
-    // `_GenFacade`, surface restreinte du générateur). La logique
+    // `DraftCtx` et accède aux samplers / caps via `ctx.gen.*` (typé
+    // `GenFacade`, surface restreinte du générateur). La logique
     // mode-specific (ranges BPM/amplitude/durée, sloppy boost pour lick,
     // obéissance boost pour beg, anatomy gate pour suckle…) est portée
-    // par les `_ModeRules.build` correspondants.
-    return _modeRulesRegistry[mode]!.build(_DraftCtx(
+    // par les `ModeRules.build` correspondants.
+    return _modeRulesRegistry[mode]!.build(DraftCtx(
       bpmScore: bpmScore,
       ampScore: ampScore,
       durScore: durScore,

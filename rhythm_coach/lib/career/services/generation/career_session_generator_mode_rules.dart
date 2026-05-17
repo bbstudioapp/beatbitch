@@ -1,5 +1,5 @@
 // Fichier part de `career_session_generator.dart` — contrat « ModeRules »,
-// value object de contexte (`_DraftCtx`), helpers mutualisés (descente
+// value object de contexte (`DraftCtx`), helpers mutualisés (descente
 // d'amplitude, cap durée tenue) et registry par mode.
 //
 // Les implémentations vivent dans 9 fichiers `career_session_generator_rules_<mode>.dart`
@@ -12,15 +12,15 @@
 //   * `unlockKeyFor` — gate UnlockKey requis pour qu'un draft soit jouable
 //     en carrière (ex-`_HumiliationGates.unlockKeyFor`).
 //   * `clampToCapability` — bornes profondeur / BPM / durée du profil
-//     de capacités (ex-`_CapabilityClamps.clampToCapability`).
+//     de capacités (ex-`CapabilityClamps.clampToCapability`).
 //   * `tryDegrade` — un cran de dégradation pour la cascade humiliation
 //     (ex-`_HumiliationGates.stepDownOne`).
-//   * `build` — assemblage du `_StepDraft` final à partir des scores
+//   * `build` — assemblage du `StepDraft` final à partir des scores
 //     (bpm/amp/dur) budgétés par l'orchestrateur (ex-switch de
 //     `_DifficultyDispatch._mapDifficultyToStep`).
-//   * `classify` — cluster sémantique (`_StepType`) consommé par la
+//   * `classify` — cluster sémantique (`StepType`) consommé par la
 //     friction de continuité (`_ModePicker.continuityMultiplier`) et le
-//     tracking (`_SessionRuntimeState.recordContinuity`).
+//     tracking (`SessionRuntimeState.recordContinuity`).
 //   * `finalCategory` — variante de `finale_chime` à piocher si le mode
 //     se retrouve en final d'apothéose (ex-`_categorizeFinal`).
 //   * `postFinalVariants` — palette de variantes de step post-final
@@ -56,30 +56,30 @@ part of 'career_session_generator.dart';
 ///   stim vient de la main / d'un coup / d'une supplique vocale pure.
 /// - `transit` (breath, freestyle) : pause neutre, ne casse pas la
 ///   continuité du type courant.
-enum _StepType { bouche, langue, libreMain, transit }
+enum StepType { bouche, langue, libreMain, transit }
 
-/// Surface du générateur exposée aux `_ModeRules`. C'est strictement tout
+/// Surface du générateur exposée aux `ModeRules`. C'est strictement tout
 /// ce qu'une rule a le droit de consommer — ajouter une méthode ou un
 /// getter ici est un acte explicite (« j'élargis l'API que les modes
 /// peuvent voir »).
 ///
 /// Le wrapper ne porte que des délégations triviales : la logique reste
 /// côté `CareerSessionGenerator` (et de ses sous-systèmes
-/// `_positionPickers`, `_BpmPacing`, `_RhythmChainTracker`). Il évite
+/// `_positionPickers`, `_BpmPacing`, `RhythmChainTracker`). Il évite
 /// aux rules d'appeler directement les membres privés du générateur
 /// (`_sampleFromTo`, `_config`, `_rng`, …) — la barrière est mécanique
-/// dès qu'on type le ctx avec `_GenFacade` au lieu de
+/// dès qu'on type le ctx avec `GenFacade` au lieu de
 /// `CareerSessionGenerator`.
-class _GenFacade {
-  const _GenFacade._(this._gen);
+class GenFacade {
+  const GenFacade._(this._gen);
 
   final CareerSessionGenerator _gen;
 
   // ─── State stable lu par les rules ───────────────────────────────────────
-  _SessionConfig get config => _gen._config;
-  _SessionRuntimeState get state => _gen._state;
+  SessionConfig get config => _gen._config;
+  SessionRuntimeState get state => _gen._state;
   Random get rng => _gen._rng;
-  _RhythmChainTracker get rhythmChain => _gen._rhythmChain;
+  RhythmChainTracker get rhythmChain => _gen._rhythmChain;
 
   // ─── Plafonds milestone ──────────────────────────────────────────────────
   int milestoneHoldCeilingIdx() => _gen._milestoneHoldCeilingIdx();
@@ -96,7 +96,7 @@ class _GenFacade {
   Position pickHoldPosition(double ampScore) =>
       _gen._pickHoldPosition(ampScore);
   Position? pickBegPosition(double ampScore) => _gen._pickBegPosition(ampScore);
-  _StepDraft? maybePickBegWithChain({
+  StepDraft? maybePickBegWithChain({
     required Position? to,
     required int obPts,
   }) =>
@@ -107,17 +107,17 @@ class _GenFacade {
       _gen._capRhythmDurationByPulses(dur, bpm, to);
 }
 
-/// Contexte d'assemblage d'un step passé à `_ModeRules.build`. Porte les
+/// Contexte d'assemblage d'un step passé à `ModeRules.build`. Porte les
 /// trois scores déjà budgétés par l'orchestrateur (cf.
 /// `_DifficultyDispatch._mapDifficultyToStep` pour la simplex + le bonus
-/// de spé par axe) et un handle vers le générateur (`_GenFacade`) pour
+/// de spé par axe) et un handle vers le générateur (`GenFacade`) pour
 /// accéder aux samplers, caps, lecture de spé et state stable.
 ///
-/// Le couplage passe exclusivement par `_GenFacade` (pas d'accès direct
+/// Le couplage passe exclusivement par `GenFacade` (pas d'accès direct
 /// aux internes du générateur). Si une rule a besoin d'une donnée
 /// supplémentaire, l'ajouter au facade plutôt que de gonfler le ctx.
-class _DraftCtx {
-  const _DraftCtx({
+class DraftCtx {
+  const DraftCtx({
     required this.bpmScore,
     required this.ampScore,
     required this.durScore,
@@ -127,19 +127,19 @@ class _DraftCtx {
   final double bpmScore;
   final double ampScore;
   final double durScore;
-  final _GenFacade gen;
+  final GenFacade gen;
 }
 
 /// Snapshot des conditions d'éligibilité d'un mode à la phase de récup,
-/// passé à `_ModeRules.isRecoveryCandidate`. Construit une seule fois par
+/// passé à `ModeRules.isRecoveryCandidate`. Construit une seule fois par
 /// `_buildRecoveryStep` et partagé avec toutes les rules consultées.
 ///
 /// `heritage` (= `unlockedKeys.isEmpty`) marque les sessions hors-carrière :
 /// dans ce mode, le gating par milestone est court-circuité (tous les
 /// modes passent par défaut). Symétrique de la convention déjà appliquée
 /// par `_isUnlocked` ailleurs.
-class _RecoveryAvailability {
-  const _RecoveryAvailability({
+class RecoveryAvailability {
+  const RecoveryAvailability({
     required this.heritage,
     required this.unlockedKeys,
     required this.includeHand,
@@ -151,31 +151,31 @@ class _RecoveryAvailability {
 }
 
 /// Contexte d'assemblage d'un draft de récup passé à
-/// `_ModeRules.buildRecovery`. Le BPM et la durée par défaut sont tirés
+/// `ModeRules.buildRecovery`. Le BPM et la durée par défaut sont tirés
 /// une seule fois par `_buildRecoveryStep` pour garantir une cohérence
 /// inter-modes du contrat de récup (BPM ≤ 60, fenêtre 10–18 s) ; les
 /// rules qui dérivent leur propre durée (beg 6–11 s, freestyle 8–15 s,
 /// hold 4–7 s) peuvent simplement les ignorer.
-class _RecoveryCtx {
-  const _RecoveryCtx({
+class RecoveryCtx {
+  const RecoveryCtx({
     required this.gen,
     required this.bpm,
     required this.duration,
   });
 
-  final _GenFacade gen;
+  final GenFacade gen;
   final int bpm;
   final int duration;
 }
 
-/// Snapshot passé à `_ModeRules.postFinalVariants`. Construit une fois
+/// Snapshot passé à `ModeRules.postFinalVariants`. Construit une fois
 /// par `_FinalPicker.buildPostFinalDraft` avec `bpm`/`duration` tirés et
 /// le mode du final tout juste joué. Les rules consomment ces données
 /// pour gater leurs variantes (`finalMode` exclut le mode du final pour
 /// l'alternance ; `holdCeilingIdx` rend les holds peu profonds obsolètes
 /// si la joueuse a acquis un palier plus profond).
-class _PostFinalCtx {
-  const _PostFinalCtx({
+class PostFinalCtx {
+  const PostFinalCtx({
     required this.finalMode,
     required this.bpm,
     required this.duration,
@@ -204,8 +204,8 @@ class _PostFinalCtx {
 /// toutes les rules, filtre sur `req <= humilCap && !blocked`, trie par
 /// `req` décroissante et tire uniformément dans le top-3 (avec biais
 /// spé sloppy → lick / obeissance → beg).
-class _PostFinalVariant {
-  const _PostFinalVariant({
+class PostFinalVariant {
+  const PostFinalVariant({
     required this.req,
     required this.blocked,
     required this.draft,
@@ -220,10 +220,10 @@ class _PostFinalVariant {
 
   /// Draft pré-construit. Allocation négligeable (~7 fields) — pas de
   /// gain mesurable à laisser ce build paresseux.
-  final _StepDraft draft;
+  final StepDraft draft;
 }
 
-/// Snapshot passé à `_ModeRules.finalVariants`. Bundle tous les
+/// Snapshot passé à `ModeRules.finalVariants`. Bundle tous les
 /// paramètres dont une rule a besoin pour construire ses propositions
 /// d'apothéose : seuil humiliation à atteindre (`humilCap`), plafond
 /// profondeur (`maxDepth`), multiplicateur durée encore (`finishMul`),
@@ -238,8 +238,8 @@ class _PostFinalVariant {
 /// pré-refacto. `handBaselineBpm == null` signale aussi « pas de hand
 /// baseline cette séance » (niveau ≥ 4), idem `biffleBpm == null` pour
 /// `includeHand == false`.
-class _FinalCtx {
-  const _FinalCtx({
+class FinalCtx {
+  const FinalCtx({
     required this.humilCap,
     required this.maxDepth,
     required this.finishMul,
@@ -280,8 +280,8 @@ class _FinalCtx {
 /// `_finalUnlocked(gate) && !_isModeForbidden(mode) && humilCap >= req
 /// && _isUnlocked(draft)`, trie par `req` croissante et retient la **plus
 /// humiliante** (`valid.last`) — distinct du post-final qui sample top-3.
-class _FinalVariant {
-  const _FinalVariant({
+class FinalVariant {
+  const FinalVariant({
     required this.req,
     required this.gate,
     required this.draft,
@@ -298,18 +298,18 @@ class _FinalVariant {
 
   /// Draft pré-construit (durée déjà trimée pour les holds profonds via
   /// [`_FinalPicker.trimHoldFinalDuration`]).
-  final _StepDraft draft;
+  final StepDraft draft;
 }
 
 /// Contexte d'assemblage d'un step d'intro intense/quickie passé à
-/// `_ModeRules.buildIntroStep`. Construit par `_firstStep` avec les
+/// `ModeRules.buildIntroStep`. Construit par `_firstStep` avec les
 /// valeurs « fixture » (intense : bpm=90 / from=head / to=clamped /
 /// dur=10 ; quickie : bpm=75 / from=head / to=mid / dur=8). Les rules
 /// rythmées (rhythm/hand/lick) consomment les 4 params straight ; hold
 /// ignore bpm/from et garde uniquement to+duration (la position tenue +
 /// la durée).
-class _IntroCtx {
-  const _IntroCtx({
+class IntroCtx {
+  const IntroCtx({
     required this.bpm,
     required this.from,
     required this.to,
@@ -327,28 +327,28 @@ class _IntroCtx {
 /// unlock gate, capability clamp, dégradation, construction de step).
 ///
 /// La plupart des méthodes sont **pures** (signature `(draft, …) →
-/// résultat`, pas d'accès à l'état). Seule `build` reçoit un `_DraftCtx`
+/// résultat`, pas d'accès à l'état). Seule `build` reçoit un `DraftCtx`
 /// qui expose le générateur — la rule y consomme ses samplers / caps
 /// (`_positionPickers`, `_capRhythm*`, `_scaleDuration`) et state stable
 /// (`_rng`, `_anatomy`, `_maxDepthIndex`, `_state.unlockedKeys`, `_spec` via
 /// `_pts`). Les helpers numériques partagés vivent côté `_StaminaModel`
 /// (`positionDepth`, `lerp`).
-abstract class _ModeRules {
-  const _ModeRules();
+abstract class ModeRules {
+  const ModeRules();
 
   /// Coût (négatif) ou regen (positif) d'endurance pour le step.
-  double delta(_StepDraft draft, double progress, CareerLevel cfg);
+  double delta(StepDraft draft, double progress, CareerLevel cfg);
 
   /// Cluster sémantique du step (`bouche` / `langue` / `libreMain` /
   /// `transit`) consommé par la friction de continuité (`_ModePicker`)
-  /// et le tracking (`_SessionRuntimeState.recordContinuity`).
+  /// et le tracking (`SessionRuntimeState.recordContinuity`).
   ///
   /// Le paramètre `to` n'est utilisé que par `beg` (avec position tenue
   /// → `bouche`, libre → `libreMain`) ; les autres rules l'ignorent. Au
   /// moment du tirage d'un candidat (`_ModePicker.continuityMultiplier`),
   /// le caller passe `null` — un beg-candidat est traité comme libre par
   /// défaut (cf. doc du caller).
-  _StepType classify(Position? to);
+  StepType classify(Position? to);
 
   /// Variante de `finale_chime` à piocher si le mode se retrouve en
   /// final d'apothéose (cf. `_FinalPicker.pickFinal` côté palette,
@@ -358,7 +358,7 @@ abstract class _ModeRules {
   /// neutre. Hand override en `easy` (finition douce), hold override
   /// avec un switch sur `to` (tip→easy, head/mid→medium, throat→hard,
   /// full→extreme, balls→hard).
-  FinalCategory finalCategory(_StepDraft draft) => FinalCategory.medium;
+  FinalCategory finalCategory(StepDraft draft) => FinalCategory.medium;
 
   /// Clé d'unlock requise pour qu'un step de ce mode soit jouable en mode
   /// carrière, ou `null` quand le step est dans le socle de base (pas de
@@ -368,7 +368,7 @@ abstract class _ModeRules {
   /// caller) : `unlockedKeys.isEmpty` = mode hérité, aucun gating. Cette
   /// méthode ne tient pas compte de cette convention — elle retourne
   /// toujours la clé mécanique.
-  UnlockKey? unlockKeyFor(_StepDraft draft) => null;
+  UnlockKey? unlockKeyFor(StepDraft draft) => null;
 
   /// Borne un draft à l'enveloppe « profil de capacités » : profondeur,
   /// BPM et durée ne dépassent pas ce que la joueuse a *prouvé* tenir.
@@ -378,9 +378,9 @@ abstract class _ModeRules {
   ///
   /// La gestion centrale de `chainNext` (récursion) et de la composition
   /// avec `clampToCustomLimits` (bornes utilisateur Custom) reste côté
-  /// `_CapabilityClamps.clampToCapability` — chaque rule ne touche qu'à
+  /// `CapabilityClamps.clampToCapability` — chaque rule ne touche qu'à
   /// son draft principal.
-  _StepDraft clampToCapability(_StepDraft draft, _CapabilityClamps c) => draft;
+  StepDraft clampToCapability(StepDraft draft, CapabilityClamps c) => draft;
 
   /// Une étape de dégradation : retourne le draft modifié si la rule sait
   /// adoucir, ou `null` pour passer la main au fallback global (lick
@@ -391,20 +391,20 @@ abstract class _ModeRules {
   /// baisser `to`, baisser `from`, capper BPM, changer de mode) ; on ne
   /// retourne qu'**un seul** cran par appel pour permettre à la cascade
   /// externe de re-vérifier l'humil/unlock après chaque pas.
-  _StepDraft? tryDegrade(_StepDraft draft) => null;
+  StepDraft? tryDegrade(StepDraft draft) => null;
 
-  /// Assemble le `_StepDraft` final du mode à partir des scores déjà
-  /// budgétés par l'orchestrateur. Voir `_DraftCtx` pour la surface du
+  /// Assemble le `StepDraft` final du mode à partir des scores déjà
+  /// budgétés par l'orchestrateur. Voir `DraftCtx` pour la surface du
   /// contexte. La rule consomme ses propres samplers / caps mode-specific
-  /// via `ctx.gen.*` (le couplage est explicite, cf. doc de `_DraftCtx`).
+  /// via `ctx.gen.*` (le couplage est explicite, cf. doc de `DraftCtx`).
   ///
   /// **Obligatoire** : toute rule doit override `build`. Le défaut throw
   /// plutôt qu'un fallback silencieux — `_DifficultyDispatch` est
   /// dispatcher pur, il n'y a plus de switch historique vers lequel
   /// retomber.
-  _StepDraft build(_DraftCtx ctx) {
+  StepDraft build(DraftCtx ctx) {
     throw UnimplementedError(
-      '_ModeRules.build non implémenté pour $runtimeType',
+      'ModeRules.build non implémenté pour $runtimeType',
     );
   }
 
@@ -418,15 +418,15 @@ abstract class _ModeRules {
   /// check final `_isUnlocked` (qui dégrade en cascade) restent côté
   /// orchestrateur — ce gate est uniquement « éligibilité par défaut
   /// + unlock requis pour entrer dans la palette ».
-  bool isRecoveryCandidate(_RecoveryAvailability a) => false;
+  bool isRecoveryCandidate(RecoveryAvailability a) => false;
 
   /// Construit le draft de récup pour ce mode. Appelé uniquement après
   /// que le mode a été retenu par le tirage pondéré (donc après que
   /// `isRecoveryCandidate` a retourné `true`). Default throw — toute
   /// rule qui opt-in doit override.
-  _StepDraft buildRecovery(_RecoveryCtx ctx) {
+  StepDraft buildRecovery(RecoveryCtx ctx) {
     throw UnimplementedError(
-      '_ModeRules.buildRecovery non implémenté pour $runtimeType',
+      'ModeRules.buildRecovery non implémenté pour $runtimeType',
     );
   }
 
@@ -440,7 +440,7 @@ abstract class _ModeRules {
   /// les variantes, filtre sur `req <= humilCap && !blocked`, trie par
   /// `req` décroissante et tire uniformément dans le top-3 (avec biais
   /// spé sloppy → lick / obeissance → beg pour les niveaux ≥ 7).
-  List<_PostFinalVariant> postFinalVariants(_PostFinalCtx ctx) => const [];
+  List<PostFinalVariant> postFinalVariants(PostFinalCtx ctx) => const [];
 
   /// Variantes de step final (apothéose) proposées par ce mode.
   /// Plusieurs variantes par mode sont autorisées (hold propose
@@ -454,7 +454,7 @@ abstract class _ModeRules {
   /// croissante et retient la plus humiliante (`valid.last`), puis
   /// applique `clampToCapability`. Fallback hand → lick / hold head
   /// préservé côté picker pour les sessions où aucune variante ne passe.
-  List<_FinalVariant> finalVariants(_FinalCtx ctx) => const [];
+  List<FinalVariant> finalVariants(FinalCtx ctx) => const [];
 
   /// Plafond profondeur (index `Position`) pour la diversification
   /// d'amplitude (cf. `_diversifyAmplitude` côté générateur). `null` =
@@ -467,14 +467,14 @@ abstract class _ModeRules {
   /// retournent l'index `full` (4) — la profondeur max d'amplitude
   /// n'est pas gatée pour ces modes. `biffle` reste sur le default
   /// `null` (from/to sont null par convention).
-  int? amplitudeDiversifyCeiling(_GenFacade gen) => null;
+  int? amplitudeDiversifyCeiling(GenFacade gen) => null;
 
   /// Vrai quand le dernier step émis dans ce mode est suffisamment
   /// intense pour déclencher un faux-breath de 2-3 s (cf.
   /// `_maybeFakeBreath`). Default `false` (opt-in). Override `rhythm`
   /// / `hand` : `to ∈ {throat, full} && bpm ≥ 90`. Override `hold` :
   /// `to ∈ {throat, full}` (BPM null, le hold n'a pas de tempo).
-  bool isIntenseForFakeBreath(_StepDraft draft) => false;
+  bool isIntenseForFakeBreath(StepDraft draft) => false;
 
   /// Pioche la phrase à associer au step post-final pour ce mode, ou
   /// `null` pour laisser le caller retomber sur le pool générique
@@ -501,15 +501,15 @@ abstract class _ModeRules {
   int? get introPriority => null;
 
   /// Assemble le step d'intro intense/quickie pour ce mode à partir
-  /// des fixture values posées par `_firstStep` (cf. `_IntroCtx`).
+  /// des fixture values posées par `_firstStep` (cf. `IntroCtx`).
   /// Appelée uniquement après que `_pickIntroMode` a retenu ce mode
   /// (donc seuls les modes avec `introPriority != null` reçoivent
   /// l'appel). Default throw — toute rule qui opt-in à `introPriority`
   /// doit override. Rhythm/hand/lick consomment les 4 params straight ;
   /// hold ignore bpm/from et ne garde que `to`+`duration`.
-  _StepDraft buildIntroStep(_IntroCtx ctx) {
+  StepDraft buildIntroStep(IntroCtx ctx) {
     throw UnimplementedError(
-      '_ModeRules.buildIntroStep non implémenté pour $runtimeType',
+      'ModeRules.buildIntroStep non implémenté pour $runtimeType',
     );
   }
 }
@@ -519,12 +519,12 @@ abstract class _ModeRules {
 /// collision : si la descente ferait `from >= to` (ex. head→mid → head→head
 /// interdit), on retourne `null` pour passer à la stratégie suivante.
 /// Helper mutualisé par les modes à amplitude (rhythm / lick / hand).
-_StepDraft? _tryDescendToWithGuard(_StepDraft d) {
+StepDraft? _tryDescendToWithGuard(StepDraft d) {
   if (d.to == null || d.to!.index <= Position.head.index) return null;
   final newToIdx = d.to!.index - 1;
   final fromIdx = d.from?.index ?? -1;
   if (newToIdx <= fromIdx) return null;
-  return _StepDraft(
+  return StepDraft(
     mode: d.mode,
     bpm: d.bpm,
     from: d.from,
@@ -536,9 +536,9 @@ _StepDraft? _tryDescendToWithGuard(_StepDraft d) {
 
 /// Baisse `from` d'un cran en s'arrêtant à `tip`. Helper mutualisé par les
 /// modes à amplitude.
-_StepDraft? _tryDescendFrom(_StepDraft d) {
+StepDraft? _tryDescendFrom(StepDraft d) {
   if (d.from == null || d.from!.index <= Position.tip.index) return null;
-  return _StepDraft(
+  return StepDraft(
     mode: d.mode,
     bpm: d.bpm,
     from: Position.values[d.from!.index - 1],
@@ -551,11 +551,11 @@ _StepDraft? _tryDescendFrom(_StepDraft d) {
 /// Cap durée mutualisé hold + beg : convention `to` porte la position
 /// tenue (repli `from`). Pour throat / full, on prend le min des deux
 /// axes pertinents — la durée tenable de la position ET l'apnée prouvée.
-_StepDraft _clampHeldDuration(_StepDraft draft, _CapabilityClamps c) {
+StepDraft _clampHeldDuration(StepDraft draft, CapabilityClamps c) {
   var dur = draft.duration;
   final held = draft.to ?? draft.from;
   if (held != Position.throat && held != Position.full) return draft;
-  final cap = _CapabilityClamps.minNullable(
+  final cap = CapabilityClamps.minNullable(
     c.capabilityCapFor(held == Position.throat
         ? CapabilityAxis.holdThroatStreak
         : CapabilityAxis.holdFullStreak),
@@ -563,7 +563,7 @@ _StepDraft _clampHeldDuration(_StepDraft draft, _CapabilityClamps c) {
   );
   if (cap == null || dur == null || dur <= cap) return draft;
   dur = max(2, cap.floor());
-  return _StepDraft(
+  return StepDraft(
     mode: draft.mode,
     bpm: draft.bpm,
     bpmEnd: draft.bpmEnd,
@@ -576,10 +576,10 @@ _StepDraft _clampHeldDuration(_StepDraft draft, _CapabilityClamps c) {
 
 /// Registry des règles par mode. Les 9 modes sont couverts par leurs
 /// fichiers dédiés ; les cinq call sites (`_StaminaModel.delta`,
-/// `_HumiliationGates.unlockKeyFor`, `_CapabilityClamps.clampToCapability`,
+/// `_HumiliationGates.unlockKeyFor`, `CapabilityClamps.clampToCapability`,
 /// `_HumiliationGates.stepDownOne`, `_DifficultyDispatch._mapDifficultyToStep`)
 /// sont devenus de simples lookups + appel polymorphique sur ce registry.
-final Map<SessionMode, _ModeRules> _modeRulesRegistry = {
+final Map<SessionMode, ModeRules> _modeRulesRegistry = {
   SessionMode.rhythm: const _RhythmRules(),
   SessionMode.lick: const _LickRules(),
   SessionMode.hold: const _HoldRules(),

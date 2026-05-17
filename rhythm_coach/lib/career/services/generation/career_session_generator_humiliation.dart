@@ -2,7 +2,7 @@
 // + unlocks + lubrification.
 //
 // Toutes les méthodes sont statiques. Les fonctions purement liées au
-// `_StepDraft` (mapping unlock-key, descente d'un cran, deepestOf) n'ont
+// `StepDraft` (mapping unlock-key, descente d'un cran, deepestOf) n'ont
 // aucun état d'instance. Celles qui consultent un thermomètre persistent
 // reçoivent l'état requis en paramètres explicites :
 //   * `isUnlocked` ← `anatomy` + `unlockedKeys`
@@ -40,7 +40,7 @@ class _HumiliationGates {
   /// caller) : `unlockedKeys.isEmpty` = mode hérité, aucun gating. Cette
   /// fonction ne tient pas compte de cette convention — elle retourne
   /// toujours la clé mécanique.
-  static UnlockKey? unlockKeyFor(_StepDraft d) =>
+  static UnlockKey? unlockKeyFor(StepDraft d) =>
       _modeRulesRegistry[d.mode]!.unlockKeyFor(d);
 
   /// Position la plus profonde du couple (a, b). `null` est traité comme
@@ -68,7 +68,7 @@ class _HumiliationGates {
   /// reste sur la position pendant la supplique). On les bloque donc tant
   /// que `begLibre` n'est pas acquise — elle reste la fondation pédagogique.
   static bool isUnlocked(
-    _StepDraft d, {
+    StepDraft d, {
     required AnatomyProfile anatomy,
     required Set<UnlockKey> unlockedKeys,
   }) {
@@ -127,7 +127,7 @@ class _HumiliationGates {
   /// - saliva < 25 → -5 (sec, l'action coûte plus cher)
   /// - saliva ≥ 60 → +3 (humide, on peut pousser un peu plus)
   /// - sinon : 0
-  static double lubricationCapDelta(_StepDraft d, double saliva) {
+  static double lubricationCapDelta(StepDraft d, double saliva) {
     final deepest = deepestOf(d.from, d.to);
     final needsLube = (d.mode == SessionMode.rhythm ||
             d.mode == SessionMode.lick ||
@@ -150,12 +150,12 @@ class _HumiliationGates {
   /// **Garde-fou from < to** porté par les helpers `_tryDescendToWithGuard`
   /// (cf. mode rules) : la descente de `to` saute l'étape si elle
   /// ferait collision avec `from` (head→mid → head→head interdit).
-  static _StepDraft stepDownOne(_StepDraft d) {
+  static StepDraft stepDownOne(StepDraft d) {
     final degraded = _modeRulesRegistry[d.mode]!.tryDegrade(d);
     if (degraded != null) return degraded;
     // Fallback ultime : lick tip→head — le geste le plus doux qu'on
     // puisse poser sans contrainte d'unlock (toujours disponible).
-    return _StepDraft(
+    return StepDraft(
       mode: SessionMode.lick,
       bpm: 60,
       from: Position.tip,
@@ -176,10 +176,10 @@ class _HumiliationGates {
   /// snapshots de la session courante. La cascade ne fait que dégrader
   /// après le clamp initial, donc le clamp n'est appelé qu'une fois en
   /// tête de boucle.
-  static _StepDraft enforceRequired(
-    _StepDraft draft,
+  static StepDraft enforceRequired(
+    StepDraft draft,
     double available, {
-    required _StepDraft Function(_StepDraft) clampToCapability,
+    required StepDraft Function(StepDraft) clampToCapability,
     required AnatomyProfile anatomy,
     required Set<UnlockKey> unlockedKeys,
     required double saliva,
@@ -208,7 +208,7 @@ class _HumiliationGates {
       }
       current = stepDownOne(current);
     }
-    return _StepDraft(
+    return StepDraft(
       mode: SessionMode.lick,
       bpm: 60,
       from: Position.tip,

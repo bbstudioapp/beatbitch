@@ -1,5 +1,5 @@
 // Fichier part de `career_session_generator.dart` — règles du mode
-// `freestyle`. Cf. contrat `_ModeRules` dans
+// `freestyle`. Cf. contrat `ModeRules` dans
 // `career_session_generator_mode_rules.dart`.
 
 part of '../career_session_generator.dart';
@@ -7,22 +7,22 @@ part of '../career_session_generator.dart';
 /// Règles `freestyle` : phase libre, neutre côté endurance (ni effort
 /// ni vraie regen). Toujours gaté par `freestyle` (palier d'intro
 /// `intro_freestyle` au niveau 7).
-class _FreestyleRules extends _ModeRules {
+class _FreestyleRules extends ModeRules {
   const _FreestyleRules();
 
   @override
-  _StepType classify(Position? to) => _StepType.transit;
+  StepType classify(Position? to) => StepType.transit;
 
   @override
-  double delta(_StepDraft draft, double progress, CareerLevel cfg) => 0.0;
+  double delta(StepDraft draft, double progress, CareerLevel cfg) => 0.0;
 
   @override
-  UnlockKey? unlockKeyFor(_StepDraft draft) => UnlockKey.freestyle;
+  UnlockKey? unlockKeyFor(StepDraft draft) => UnlockKey.freestyle;
 
   @override
-  _StepDraft build(_DraftCtx ctx) {
+  StepDraft build(DraftCtx ctx) {
     final dur = _StaminaModel.lerp(8.0, 18.0, ctx.durScore).round();
-    return _StepDraft(
+    return StepDraft(
       mode: SessionMode.freestyle,
       bpm: null,
       from: null,
@@ -36,13 +36,13 @@ class _FreestyleRules extends _ModeRules {
   /// neutre est introduite explicitement, pas un fallback de récup
   /// permanent.
   @override
-  bool isRecoveryCandidate(_RecoveryAvailability a) =>
+  bool isRecoveryCandidate(RecoveryAvailability a) =>
       a.heritage || a.unlockedKeys.contains(UnlockKey.freestyle);
 
   @override
-  _StepDraft buildRecovery(_RecoveryCtx ctx) {
+  StepDraft buildRecovery(RecoveryCtx ctx) {
     final freeDur = 8 + ctx.gen.rng.nextInt(8);
-    return _StepDraft(
+    return StepDraft(
       mode: SessionMode.freestyle,
       bpm: null,
       from: null,

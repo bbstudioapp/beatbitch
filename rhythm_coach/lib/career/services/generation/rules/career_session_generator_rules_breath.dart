@@ -1,5 +1,5 @@
 // Fichier part de `career_session_generator.dart` — règles du mode
-// `breath`. Cf. contrat `_ModeRules` dans
+// `breath`. Cf. contrat `ModeRules` dans
 // `career_session_generator_mode_rules.dart`.
 
 part of '../career_session_generator.dart';
@@ -9,14 +9,14 @@ part of '../career_session_generator.dart';
 /// sépare, sinon la dramaturgie ressemble à « action / longue pause /
 /// action / longue pause ». À 2.8/s, 8 s rendent ~22 stamina, ce qui
 /// couvre un step rythme moyen (~20 de coût) et permet d'enchaîner.
-class _BreathRules extends _ModeRules {
+class _BreathRules extends ModeRules {
   const _BreathRules();
 
   @override
-  _StepType classify(Position? to) => _StepType.transit;
+  StepType classify(Position? to) => StepType.transit;
 
   @override
-  double delta(_StepDraft draft, double progress, CareerLevel cfg) {
+  double delta(StepDraft draft, double progress, CareerLevel cfg) {
     final dur = draft.duration ?? 0;
     final regen = _StaminaModel.lerp(
       cfg.regenStartMultiplier,
@@ -27,9 +27,9 @@ class _BreathRules extends _ModeRules {
   }
 
   @override
-  _StepDraft build(_DraftCtx ctx) {
+  StepDraft build(DraftCtx ctx) {
     final dur = _StaminaModel.lerp(6.0, 15.0, ctx.durScore).round();
-    return _StepDraft(
+    return StepDraft(
       mode: SessionMode.breath,
       bpm: null,
       from: null,
@@ -43,11 +43,11 @@ class _BreathRules extends _ModeRules {
   /// dosableModes`). Sert de fallback safe quand humilCap est trop bas
   /// pour les autres variantes.
   @override
-  List<_PostFinalVariant> postFinalVariants(_PostFinalCtx ctx) => [
-        _PostFinalVariant(
+  List<PostFinalVariant> postFinalVariants(PostFinalCtx ctx) => [
+        PostFinalVariant(
           req: 0.0,
           blocked: false,
-          draft: _StepDraft(
+          draft: StepDraft(
             mode: SessionMode.breath,
             bpm: null,
             from: null,

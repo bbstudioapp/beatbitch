@@ -1,5 +1,5 @@
 // Fichier part de `career_session_generator.dart` — value object
-// mutable `_SessionRuntimeState` : état muté pendant une séance.
+// mutable `SessionRuntimeState` : état muté pendant une séance.
 //
 // Pendant l'exécution de `generate()`, le générateur tient un
 // scratchpad de compteurs / derniers émis / cooldowns / simulation
@@ -8,18 +8,18 @@
 // dans ce value object mutable, posé en début de chaque `generate()`
 // / `generatePunishment()`.
 //
-// Pendant que `_SessionConfig` est **immuable** (inputs figés de la
-// séance), `_SessionRuntimeState` est **mutable par contrat** — c'est
+// Pendant que `SessionConfig` est **immuable** (inputs figés de la
+// séance), `SessionRuntimeState` est **mutable par contrat** — c'est
 // le moteur de la boucle main. Les call sites externes (rules,
 // dispatcher, trackers) lisent toujours via `gen._foo` grâce à des
 // getters d'adapteur ; les mutations sont locales au générateur.
 //
-// `unlockedKeys` vit ici (et pas dans `_SessionConfig`) parce qu'il est
+// `unlockedKeys` vit ici (et pas dans `SessionConfig`) parce qu'il est
 // **étendu** en cours de séance : quand une milestone est acquittée,
 // ses unlocks rejoignent l'ensemble pour les steps suivants.
 //
 // Sous-systèmes runtime déjà extraits **séparément** (pas dans ce state) :
-//   * `_RhythmChainTracker` — sait gérer sa propre vie (reset + onStepPushed).
+//   * `RhythmChainTracker` — sait gérer sa propre vie (reset + onStepPushed).
 //   * `_RhythmicPatternBuffer` — idem (clear + record).
 // Ils restent des objets autonomes du générateur ; ce state regroupe
 // juste les fields plats.
@@ -28,13 +28,13 @@ part of 'career_session_generator.dart';
 
 /// État muté pendant une séance — scratchpad de la boucle `generate()`.
 /// Posé une fois en début de `generate()` / `generatePunishment()` via
-/// `_SessionRuntimeState.fresh(rng:)`, puis muté à chaque step poussé.
+/// `SessionRuntimeState.fresh(rng:)`, puis muté à chaque step poussé.
 ///
 /// Champs publics et mutables par convention : le générateur les lit/écrit
 /// directement, les call sites externes y accèdent via les getters
 /// d'adapteur sur le générateur.
-class _SessionRuntimeState {
-  _SessionRuntimeState._({
+class SessionRuntimeState {
+  SessionRuntimeState._({
     required this.nextMiniWaveAt,
     required this.salivaSim,
   });
@@ -49,8 +49,8 @@ class _SessionRuntimeState {
   ///   * Tous les autres : valeurs « rien-encore-poussé » (null / 0 / '').
   ///   * `unlockedKeys` : vide par défaut (le caller met le set reçu en
   ///     param après `fresh()`).
-  factory _SessionRuntimeState.fresh({required Random rng}) {
-    return _SessionRuntimeState._(
+  factory SessionRuntimeState.fresh({required Random rng}) {
+    return SessionRuntimeState._(
       nextMiniWaveAt: 240 + rng.nextInt(61),
       salivaSim: SalivaEngine()..reset(),
     );
@@ -85,7 +85,7 @@ class _SessionRuntimeState {
   /// transparentes : ils ne touchent ni `lastType` ni `stepsInLastType`,
   /// pour qu'un breath de récup au milieu d'une série bouche n'efface pas
   /// la continuité.
-  _StepType? lastType;
+  StepType? lastType;
   int stepsInLastType = 0;
 
   /// Nombre de steps **consécutifs** posés en dehors du type `bouche`.
@@ -141,7 +141,7 @@ class _SessionRuntimeState {
   /// par un step scripté, ses unlocks rejoignent l'ensemble — les steps
   /// suivants en bénéficient immédiatement. C'est cette extension qui
   /// justifie la présence du field dans le **state** plutôt que dans
-  /// `_SessionConfig` (qui est immuable).
+  /// `SessionConfig` (qui est immuable).
   Set<UnlockKey> unlockedKeys = const {};
 
   // ─── Méthodes dérivées (mutations / lectures purement state) ─────────────
@@ -154,9 +154,9 @@ class _SessionRuntimeState {
   /// Les steps `transit` (breath / freestyle) sont une parenthèse
   /// transparente : ils ne touchent à rien (un breath de récup au milieu
   /// d'une série rythmée ne doit pas remettre le compteur à zéro).
-  void recordContinuity(_StepType type) {
-    if (type == _StepType.transit) return;
-    if (type == _StepType.bouche) {
+  void recordContinuity(StepType type) {
+    if (type == StepType.transit) return;
+    if (type == StepType.bouche) {
       stepsOutsideBouche = 0;
     } else {
       stepsOutsideBouche++;
@@ -172,7 +172,7 @@ class _SessionRuntimeState {
   /// Capture l'état mutable de continuité (lasts + compteurs) pour le
   /// passer au picker statique [`_ModePicker.pickWeighted`]. Reconstruit
   /// à chaque pick — 4 lectures de fields, cheap.
-  _ModeContinuityState continuitySnapshot() => _ModeContinuityState(
+  ModeContinuityState continuitySnapshot() => ModeContinuityState(
         lastType: lastType,
         stepsInLastType: stepsInLastType,
         stepsOutsideBouche: stepsOutsideBouche,
@@ -192,7 +192,7 @@ class _SessionRuntimeState {
   /// `_diversifyLongSegment` et le `chainNext`, on veut au contraire que
   /// `lastBpm` reste celui de l'**outer** step — ne rien faire ici donne
   /// la bonne sémantique.
-  void recordLastAction(_StepDraft d, String text) {
+  void recordLastAction(StepDraft d, String text) {
     lastMode = d.mode;
     lastText = text;
     lastFrom = d.from;
@@ -215,7 +215,7 @@ class _SessionRuntimeState {
   /// seconde, en propageant `salivaSimSecond` qui sert d'index temporel
   /// à `SalivaEngine.onTickSecond`. Mute `salivaSim` (via `onTickSecond`)
   /// et `salivaSimSecond`. No-op si `draft.duration` ≤ 0.
-  void advanceSalivaSim(_StepDraft draft) {
+  void advanceSalivaSim(StepDraft draft) {
     final dur = draft.duration ?? 0;
     if (dur <= 0) return;
     for (var s = 0; s < dur; s++) {

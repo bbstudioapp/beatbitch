@@ -1,19 +1,19 @@
 // Fichier part de `career_session_generator.dart` — règles du mode
-// `lick`. Cf. contrat `_ModeRules` dans
+// `lick`. Cf. contrat `ModeRules` dans
 // `career_session_generator_mode_rules.dart`.
 
 part of '../career_session_generator.dart';
 
 /// Règles `lick` : BPM ≤ 60 = vraie récup vocale (regen), au-delà = effort
 /// léger (consommation modérée, plus de regen).
-class _LickRules extends _ModeRules {
+class _LickRules extends ModeRules {
   const _LickRules();
 
   @override
-  _StepType classify(Position? to) => _StepType.langue;
+  StepType classify(Position? to) => StepType.langue;
 
   @override
-  double delta(_StepDraft draft, double progress, CareerLevel cfg) {
+  double delta(StepDraft draft, double progress, CareerLevel cfg) {
     final dur = draft.duration ?? 0;
     final bpm = draft.bpm ?? 60;
     if (bpm <= 60) {
@@ -29,7 +29,7 @@ class _LickRules extends _ModeRules {
   }
 
   @override
-  UnlockKey? unlockKeyFor(_StepDraft draft) {
+  UnlockKey? unlockKeyFor(StepDraft draft) {
     if (draft.from == Position.balls || draft.to == Position.balls) {
       return UnlockKey.lickBalls;
     }
@@ -40,11 +40,11 @@ class _LickRules extends _ModeRules {
   }
 
   @override
-  _StepDraft? tryDegrade(_StepDraft draft) =>
+  StepDraft? tryDegrade(StepDraft draft) =>
       _tryDescendToWithGuard(draft) ?? _tryDescendFrom(draft);
 
   @override
-  _StepDraft build(_DraftCtx ctx) {
+  StepDraft build(DraftCtx ctx) {
     // Sloppy : monte le BPM minimum (≥ 65 = lick humide / saliveux).
     final sloppyPts = ctx.gen.config.pts(SpecializationBranch.sloppy);
     final lickBpmScore = sloppyPts > 0 ? max(ctx.bpmScore, 0.3) : ctx.bpmScore;
@@ -56,7 +56,7 @@ class _LickRules extends _ModeRules {
       _StaminaModel.lerp(10.0, 25.0, ctx.durScore),
       enduranceFactor: 0.04,
     );
-    return _StepDraft(
+    return StepDraft(
       mode: SessionMode.lick,
       bpm: bpm,
       from: from,
@@ -68,12 +68,12 @@ class _LickRules extends _ModeRules {
   /// Lick est toujours candidat en récup — c'est la baseline « langue »
   /// (variante douce, vraie regen d'endurance à BPM bas).
   @override
-  bool isRecoveryCandidate(_RecoveryAvailability a) => true;
+  bool isRecoveryCandidate(RecoveryAvailability a) => true;
 
   @override
-  _StepDraft buildRecovery(_RecoveryCtx ctx) {
+  StepDraft buildRecovery(RecoveryCtx ctx) {
     final (from, to) = ctx.gen.sampleFromTo(0.3);
-    return _StepDraft(
+    return StepDraft(
       mode: SessionMode.lick,
       bpm: ctx.bpm,
       from: from,
@@ -87,12 +87,12 @@ class _LickRules extends _ModeRules {
   /// Cible privilégiée par le biais spé sloppy ≥ 2 pts (« lèche pour
   /// nettoyer »).
   @override
-  List<_PostFinalVariant> postFinalVariants(_PostFinalCtx ctx) => [
-        _PostFinalVariant(
+  List<PostFinalVariant> postFinalVariants(PostFinalCtx ctx) => [
+        PostFinalVariant(
           req: 35.0,
           blocked: ctx.finalMode == SessionMode.lick ||
               ctx.isModeForbidden(SessionMode.lick),
-          draft: _StepDraft(
+          draft: StepDraft(
             mode: SessionMode.lick,
             bpm: ctx.bpm,
             from: Position.tip,
@@ -112,12 +112,12 @@ class _LickRules extends _ModeRules {
   ///    côté picker, donc on émet la variante systématiquement quand
   ///    `anatomy.hasBalls`.
   @override
-  List<_FinalVariant> finalVariants(_FinalCtx ctx) {
-    final out = <_FinalVariant>[
-      const _FinalVariant(
+  List<FinalVariant> finalVariants(FinalCtx ctx) {
+    final out = <FinalVariant>[
+      const FinalVariant(
         req: 8.0,
         gate: UnlockKey.finalLickTipHead,
-        draft: _StepDraft(
+        draft: StepDraft(
           mode: SessionMode.lick,
           bpm: 60,
           from: Position.tip,
@@ -127,10 +127,10 @@ class _LickRules extends _ModeRules {
       ),
     ];
     if (ctx.anatomy.hasBalls) {
-      out.add(const _FinalVariant(
+      out.add(const FinalVariant(
         req: 17.0,
         gate: UnlockKey.lickBalls,
-        draft: _StepDraft(
+        draft: StepDraft(
           mode: SessionMode.lick,
           bpm: 55,
           from: Position.full,
@@ -147,7 +147,7 @@ class _LickRules extends _ModeRules {
   /// plus haut sans contrainte milestone (cf. `_LickRules.unlockKeyFor`
   /// qui gate seulement `to == full` et `balls`).
   @override
-  int? amplitudeDiversifyCeiling(_GenFacade gen) => Position.full.index;
+  int? amplitudeDiversifyCeiling(GenFacade gen) => Position.full.index;
 
   /// Lick post-final = consigne d'aftercare humiliant (« lèche pour
   /// nettoyer »). Pool dédié `pickPostFinalLick` avec fallback cascade
@@ -163,7 +163,7 @@ class _LickRules extends _ModeRules {
 
   /// Intro langue : consomme les 4 params du ctx straight.
   @override
-  _StepDraft buildIntroStep(_IntroCtx ctx) => _StepDraft(
+  StepDraft buildIntroStep(IntroCtx ctx) => StepDraft(
         mode: SessionMode.lick,
         bpm: ctx.bpm,
         from: ctx.from,

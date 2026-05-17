@@ -28,7 +28,7 @@ part of 'career_session_generator.dart';
 class _FinalPicker {
   /// Snapshot de la config de séance. On y lit `level`, `anatomy`, `spec`,
   /// `coachModeWeights`, `includeHand`.
-  final _SessionConfig config;
+  final SessionConfig config;
 
   /// Unlocks acquittés au moment où le picker est construit. Vit côté
   /// `_state` (peut être muté par `markCompleted` en cours de séance),
@@ -36,7 +36,7 @@ class _FinalPicker {
   final Set<UnlockKey> unlockedKeys;
 
   final Random rng;
-  final _CapabilityClamps capClamps;
+  final CapabilityClamps capClamps;
 
   const _FinalPicker({
     required this.config,
@@ -49,7 +49,7 @@ class _FinalPicker {
 
   bool _isModeForbidden(SessionMode m) => config.isModeForbidden(m);
 
-  bool _isUnlocked(_StepDraft d) => _HumiliationGates.isUnlocked(
+  bool _isUnlocked(StepDraft d) => _HumiliationGates.isUnlocked(
         d,
         anatomy: config.anatomy,
         unlockedKeys: unlockedKeys,
@@ -88,13 +88,13 @@ class _FinalPicker {
   /// scale avec le niveau et la chaîne d'encore.
   ///
   /// La palette est désormais portée par les rules via
-  /// `_ModeRules.finalVariants` : hand (baseline level<4), lick (tip→head
+  /// `ModeRules.finalVariants` : hand (baseline level<4), lick (tip→head
   /// + full→balls), hold (tip/head/mid + throat/full conditionnels),
   /// biffle (si `includeHand`). Le `gate` (`UnlockKey?` dédié final)
   /// remplace l'ancien `minLevel` : la progression est désormais
   /// gouvernée par les milestones `intro_final_*`, pas par un seuil de
   /// niveau implicite.
-  _StepDraft pickFinal({
+  StepDraft pickFinal({
     required double humilCap,
     required int maxDepth,
     required double finishMul,
@@ -110,7 +110,7 @@ class _FinalPicker {
     final handBaselineBpm = config.level < 4 ? (40 + rng.nextInt(21)) : null;
     final biffleBpm = config.includeHand ? (40 + rng.nextInt(21)) : null;
 
-    final ctx = _FinalCtx(
+    final ctx = FinalCtx(
       humilCap: humilCap,
       maxDepth: maxDepth,
       finishMul: finishMul,
@@ -124,7 +124,7 @@ class _FinalPicker {
       handBaselineBpm: handBaselineBpm,
       biffleBpm: biffleBpm,
     );
-    final candidates = <_FinalVariant>[
+    final candidates = <FinalVariant>[
       for (final rule in _modeRulesRegistry.values) ...rule.finalVariants(ctx),
     ];
 
@@ -135,7 +135,7 @@ class _FinalPicker {
     // Exclusions Custom (dose `none`) : on retire en plus les finals dont
     // le mode est explicitement banni — un final hold reste possible
     // quand rhythm est exclu, un final hand quand hold est exclu, etc.
-    final valid = <_FinalVariant>[];
+    final valid = <FinalVariant>[];
     for (final c in candidates) {
       if (!_finalUnlocked(c.gate)) continue;
       if (_isModeForbidden(c.draft.mode)) continue;
@@ -149,7 +149,7 @@ class _FinalPicker {
       // disponible — hold head court reste un final acceptable.
       if (_isModeForbidden(SessionMode.hand)) {
         if (!_isModeForbidden(SessionMode.lick)) {
-          return capClamps.clampToCapability(const _StepDraft(
+          return capClamps.clampToCapability(const StepDraft(
             mode: SessionMode.lick,
             bpm: 60,
             from: Position.tip,
@@ -158,7 +158,7 @@ class _FinalPicker {
           ));
         }
         if (!_isModeForbidden(SessionMode.hold)) {
-          return capClamps.clampToCapability(_StepDraft(
+          return capClamps.clampToCapability(StepDraft(
             mode: SessionMode.hold,
             bpm: null,
             from: null,
@@ -171,7 +171,7 @@ class _FinalPicker {
         // ce chemin est un filet de sécurité pour les call sites
         // non-Custom).
       }
-      return _StepDraft(
+      return StepDraft(
         mode: SessionMode.hand,
         bpm: 50,
         from: Position.head,
@@ -197,7 +197,7 @@ class _FinalPicker {
   /// (cf. instance `_milestoneHoldCeilingIdx`). Bloque holdTip si la
   /// joueuse a déjà acquis un palier plus profond — sémantique design
   /// « le seul hold qui a du sens est le plus profond que tu sais tenir ».
-  _StepDraft buildPostFinalDraft({
+  StepDraft buildPostFinalDraft({
     required SessionMode finalMode,
     required double humilCap,
     required int holdCeilingIdx,
@@ -206,9 +206,9 @@ class _FinalPicker {
     final bpm = 38 + rng.nextInt(11); // [38, 48]
     // Échelle ordonnée. `blocked` (mode du final, holds obsolètes,
     // unlock beg, dose Custom) est calculé par chaque rule à partir du
-    // ctx ci-dessous. Cf. `_ModeRules.postFinalVariants` et la doc
+    // ctx ci-dessous. Cf. `ModeRules.postFinalVariants` et la doc
     // mode-par-mode dans les rules.
-    final ctx = _PostFinalCtx(
+    final ctx = PostFinalCtx(
       finalMode: finalMode,
       bpm: bpm,
       duration: dur,
@@ -217,7 +217,7 @@ class _FinalPicker {
       holdCeilingIdx: holdCeilingIdx,
       isModeForbidden: _isModeForbidden,
     );
-    final candidates = <_PostFinalVariant>[
+    final candidates = <PostFinalVariant>[
       for (final rule in _modeRulesRegistry.values)
         ...rule.postFinalVariants(ctx),
     ];
@@ -231,7 +231,7 @@ class _FinalPicker {
       // donc survenir que sur un `humilCap < 0` aberrant. On reconstruit
       // un draft breath plutôt que de plonger dans le registry pour
       // garder un comportement déterministe.
-      return _StepDraft(
+      return StepDraft(
         mode: SessionMode.breath,
         bpm: null,
         from: null,

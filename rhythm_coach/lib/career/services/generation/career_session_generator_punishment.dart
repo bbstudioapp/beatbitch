@@ -21,7 +21,7 @@ part of 'career_session_generator.dart';
 /// moment de la matérialisation via [_PunishmentBuilder._materialize]).
 class _PunishmentCompo {
   final String id;
-  final List<_StepDraft> drafts;
+  final List<StepDraft> drafts;
   final double reqHumil;
 
   /// Si vrai, la compo est exclue quand `includeHand == false` (compo qui
@@ -50,7 +50,7 @@ class _PunishmentBuilder {
     _PunishmentCompo(
       id: 'biffle_burst',
       drafts: [
-        _StepDraft(
+        StepDraft(
           mode: SessionMode.biffle,
           bpm: 135,
           from: null,
@@ -65,7 +65,7 @@ class _PunishmentBuilder {
     _PunishmentCompo(
       id: 'crossings_burst',
       drafts: [
-        _StepDraft(
+        StepDraft(
           mode: SessionMode.rhythm,
           bpm: 110,
           from: Position.head,
@@ -80,14 +80,14 @@ class _PunishmentBuilder {
     _PunishmentCompo(
       id: 'slow_torture',
       drafts: [
-        _StepDraft(
+        StepDraft(
           mode: SessionMode.rhythm,
           bpm: 35,
           from: Position.throat,
           to: Position.full,
           duration: 30,
         ),
-        _StepDraft(
+        StepDraft(
           mode: SessionMode.hold,
           bpm: null,
           from: null,
@@ -101,14 +101,14 @@ class _PunishmentBuilder {
     _PunishmentCompo(
       id: 'throat_relentless',
       drafts: [
-        _StepDraft(
+        StepDraft(
           mode: SessionMode.rhythm,
           bpm: 100,
           from: Position.throat,
           to: Position.full,
           duration: 28,
         ),
-        _StepDraft(
+        StepDraft(
           mode: SessionMode.hold,
           bpm: null,
           from: null,
@@ -123,21 +123,21 @@ class _PunishmentBuilder {
     _PunishmentCompo(
       id: 'deep_hold_chain',
       drafts: [
-        _StepDraft(
+        StepDraft(
           mode: SessionMode.hold,
           bpm: null,
           from: null,
           to: Position.throat,
           duration: 10,
         ),
-        _StepDraft(
+        StepDraft(
           mode: SessionMode.breath,
           bpm: null,
           from: null,
           to: null,
           duration: 4,
         ),
-        _StepDraft(
+        StepDraft(
           mode: SessionMode.hold,
           bpm: null,
           from: null,
@@ -155,7 +155,7 @@ class _PunishmentBuilder {
   static const _PunishmentCompo lastResort = _PunishmentCompo(
     id: 'last_resort_rhythm',
     drafts: [
-      _StepDraft(
+      StepDraft(
         mode: SessionMode.rhythm,
         bpm: 120,
         from: Position.head,
@@ -172,7 +172,7 @@ class _PunishmentBuilder {
   static const _PunishmentCompo handFallback = _PunishmentCompo(
     id: 'hand_fallback',
     drafts: [
-      _StepDraft(
+      StepDraft(
         mode: SessionMode.hand,
         bpm: 50,
         from: Position.head,
