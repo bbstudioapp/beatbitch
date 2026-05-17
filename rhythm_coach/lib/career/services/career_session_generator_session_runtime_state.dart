@@ -143,4 +143,58 @@ class _SessionRuntimeState {
   /// justifie la présence du field dans le **state** plutôt que dans
   /// `_SessionConfig` (qui est immuable).
   Set<UnlockKey> unlockedKeys = const {};
+
+  // ─── Méthodes dérivées (mutations / lectures purement state) ─────────────
+
+  /// Met à jour la continuité par type après un step poussé :
+  ///   * `lastType` / `stepsInLastType` (incrémenté si même type que le
+  ///     précédent, sinon nouveau cluster).
+  ///   * `stepsOutsideBouche` (reset à 0 sur bouche, incrémenté sinon).
+  ///
+  /// Les steps `transit` (breath / freestyle) sont une parenthèse
+  /// transparente : ils ne touchent à rien (un breath de récup au milieu
+  /// d'une série rythmée ne doit pas remettre le compteur à zéro).
+  void recordContinuity(_StepType type) {
+    if (type == _StepType.transit) return;
+    if (type == _StepType.bouche) {
+      stepsOutsideBouche = 0;
+    } else {
+      stepsOutsideBouche++;
+    }
+    if (type == lastType) {
+      stepsInLastType++;
+    } else {
+      lastType = type;
+      stepsInLastType = 1;
+    }
+  }
+
+  /// Capture l'état mutable de continuité (lasts + compteurs) pour le
+  /// passer au picker statique [`_ModePicker.pickWeighted`]. Reconstruit
+  /// à chaque pick — 4 lectures de fields, cheap.
+  _ModeContinuityState continuitySnapshot() => _ModeContinuityState(
+        lastType: lastType,
+        stepsInLastType: stepsInLastType,
+        stepsOutsideBouche: stepsOutsideBouche,
+        lastMode: lastMode,
+      );
+
+  /// Avance la simulation salive pour la durée d'un draft : un tick par
+  /// seconde, en propageant `salivaSimSecond` qui sert d'index temporel
+  /// à `SalivaEngine.onTickSecond`. Mute `salivaSim` (via `onTickSecond`)
+  /// et `salivaSimSecond`. No-op si `draft.duration` ≤ 0.
+  void advanceSalivaSim(_StepDraft draft) {
+    final dur = draft.duration ?? 0;
+    if (dur <= 0) return;
+    for (var s = 0; s < dur; s++) {
+      salivaSim.onTickSecond(
+        mode: draft.mode,
+        from: draft.from,
+        to: draft.to,
+        swallowMode: SwallowMode.allowed,
+        elapsedSecond: salivaSimSecond,
+      );
+      salivaSimSecond++;
+    }
+  }
 }

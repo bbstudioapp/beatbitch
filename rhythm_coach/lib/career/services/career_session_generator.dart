@@ -110,13 +110,8 @@ class CareerSessionGenerator {
   set _lastMode(SessionMode? v) => _state.lastMode = v;
 
   _StepType? get _lastType => _state.lastType;
-  set _lastType(_StepType? v) => _state.lastType = v;
-
-  int get _stepsInLastType => _state.stepsInLastType;
-  set _stepsInLastType(int v) => _state.stepsInLastType = v;
 
   int get _stepsOutsideBouche => _state.stepsOutsideBouche;
-  set _stepsOutsideBouche(int v) => _state.stepsOutsideBouche = v;
 
   String get _lastText => _state.lastText;
   set _lastText(String v) => _state.lastText = v;
@@ -131,9 +126,6 @@ class CareerSessionGenerator {
   set _lastTo(Position? v) => _state.lastTo = v;
 
   SalivaEngine get _salivaSim => _state.salivaSim;
-
-  int get _salivaSimSecond => _state.salivaSimSecond;
-  set _salivaSimSecond(int v) => _state.salivaSimSecond = v;
 
   Set<UnlockKey> get _unlockedKeys => _state.unlockedKeys;
   set _unlockedKeys(Set<UnlockKey> v) => _state.unlockedKeys = v;
@@ -2103,16 +2095,6 @@ class CareerSessionGenerator {
     return draft;
   }
 
-  /// Capture l'état mutable de continuité (lasts + compteurs) pour le passer
-  /// au picker statique. Reconstruit à chaque pick — 4 lectures de fields,
-  /// cheap.
-  _ModeContinuityState _continuitySnapshot() => _ModeContinuityState(
-        lastType: _lastType,
-        stepsInLastType: _stepsInLastType,
-        stepsOutsideBouche: _stepsOutsideBouche,
-        lastMode: _lastMode,
-      );
-
   /// Adaptateur d'instance pour `_ModePicker.pickWeighted` — injecte `_spec`,
   /// `_coachModeWeights`, le snapshot de continuité et `_rng`.
   SessionMode _pickWeightedMode(List<SessionMode> candidates) =>
@@ -2120,37 +2102,20 @@ class CareerSessionGenerator {
         candidates,
         spec: _spec,
         coachWeights: _coachModeWeights,
-        continuity: _continuitySnapshot(),
+        continuity: _state.continuitySnapshot(),
         rng: _rng,
       );
 
-  /// Met à jour `_lastType` / `_stepsInLastType` après push d'un step,
-  /// notifie `_rhythmChain` du mode/durée, et alimente le buffer
-  /// `_patternBuffer` (rythmés uniquement, filtré en interne) pour la
-  /// détection de pattern plat.
-  ///
-  /// Les steps `transit` (breath / freestyle) sont une parenthèse
-  /// transparente côté `_lastType` / `_stepsInLastType` : ils ne touchent
-  /// ni le tracking de type ni le buffer — un breath de récup au milieu
-  /// d'une série rythmée ne doit pas remettre le compteur de continuité
-  /// à zéro. Note : pour `_rhythmChain`, un breath *reset* le cumul
-  /// (c'est une vraie pause), géré dans `onStepPushed`.
+  /// Notifie les 3 sous-systèmes runtime après un step poussé :
+  ///   * `_rhythmChain` : cumule / reset selon mode et durée.
+  ///   * `_state.recordContinuity(type)` : `lastType` / `stepsInLastType`
+  ///     / `stepsOutsideBouche`.
+  ///   * `_patternBuffer.record(...)` : buffer roulant des 3 derniers
+  ///     rythmés (filtre interne sur mode).
   void _trackPushedStep(SessionMode mode, Position? to,
       {Position? from, int? bpm, int? duration}) {
     _rhythmChain.onStepPushed(mode, duration);
-    final type = _classifyStep(mode, to);
-    if (type == _StepType.transit) return;
-    if (type == _StepType.bouche) {
-      _stepsOutsideBouche = 0;
-    } else {
-      _stepsOutsideBouche++;
-    }
-    if (type == _lastType) {
-      _stepsInLastType++;
-    } else {
-      _lastType = type;
-      _stepsInLastType = 1;
-    }
+    _state.recordContinuity(_classifyStep(mode, to));
     _patternBuffer.record(mode, from: from, to: to, bpm: bpm);
   }
 
@@ -2211,23 +2176,8 @@ class CareerSessionGenerator {
   }) =>
       _positionPickers.maybePickBegWithChain(to: to, obPts: obPts);
 
-  /// Avance la simulation salive pour un draft. Mute `_salivaSim` et
-  /// `_salivaSimSecond`. Appelé en parallèle de chaque simulation excit
-  /// principale via [_emitDraftOnSims].
-  void _advanceSalivaSim(_StepDraft draft) {
-    final dur = draft.duration ?? 0;
-    if (dur <= 0) return;
-    for (var s = 0; s < dur; s++) {
-      _salivaSim.onTickSecond(
-        mode: draft.mode,
-        from: draft.from,
-        to: draft.to,
-        swallowMode: SwallowMode.allowed,
-        elapsedSecond: _salivaSimSecond,
-      );
-      _salivaSimSecond++;
-    }
-  }
+  /// Délégué à [`_SessionRuntimeState.advanceSalivaSim`].
+  void _advanceSalivaSim(_StepDraft draft) => _state.advanceSalivaSim(draft);
 
   // ─── Phase 5 — Punitions générées & bornées ────────────────────────────
 
