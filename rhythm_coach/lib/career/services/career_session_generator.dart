@@ -308,18 +308,12 @@ class CareerSessionGenerator {
     final ctx = _GenContext(
       steps: steps,
       profile: profile,
-      level: level,
       encoreChainIndex: encoreChainIndex,
       effectiveDuration: effectiveDuration,
       boostsCount: boostsCount,
       genUntil: genUntil,
       intensityFloor: intensityFloor,
-      obedience: obedience,
       quickie: quickie,
-      intense: intense,
-      includeHand: includeHand,
-      isLowLevel: isLowLevel,
-      useFinalMilestone: useFinalMilestone,
       noStats: custom.noStats,
       cfg: cfg,
       bank: bank,
@@ -327,7 +321,6 @@ class CareerSessionGenerator {
       sessionNameQuickie: sessionNameQuickie,
       milestoneTextResolver: milestones.textResolver,
       insertedBodies: milestones.bodies,
-      finalMilestone: finalMilestone,
     );
 
     // Insertion différée des milestones d'apprentissage. Pour permettre
@@ -852,7 +845,7 @@ class CareerSessionGenerator {
     // Bonus obédiance sur le seuil de recovery : capé +25 pour pas
     // qu'une obédiance lifetime extrême (200+) pousse le seuil à 80
     // (= recovery quasi-permanente). À obed=100, +25 ; à obed=0, +0.
-    final obedienceBonus = (ctx.obedience / 100.0).clamp(0.0, 1.0) * 25.0;
+    final obedienceBonus = (_config.obedience / 100.0).clamp(0.0, 1.0) * 25.0;
     final recoveryThreshold =
         inLastMinute ? -1 : (ctx.quickie ? 15 : 30) + obedienceBonus;
     final recoveryRandomThreshold =
@@ -1334,7 +1327,7 @@ class CareerSessionGenerator {
     final handForbidden = _config.isModeForbidden(SessionMode.hand);
     final rhythmForbidden = _config.isModeForbidden(SessionMode.rhythm);
     final preferHandBase =
-        _config.humiliationCareer < 5 && ctx.level <= 3 ? 0.70 : 0.25;
+        _config.humiliationCareer < 5 && _config.level <= 3 ? 0.70 : 0.25;
     if (handForbidden && rhythmForbidden) {
       // chemin "rhythm-like" : BPM cap/floor rhythm
       return (useHandBurst: false, burstMode: SessionMode.lick);
@@ -1392,7 +1385,8 @@ class CareerSessionGenerator {
     // mode encore ajoute +8 BPM par cran de chaîne pour intensifier le
     // sprint sans changer le nombre de boosts.
     final levelBpmBoost =
-        ((ctx.level - 1) * 4 + max(0, ctx.encoreChainIndex) * 8).clamp(0, 70);
+        ((_config.level - 1) * 4 + max(0, ctx.encoreChainIndex) * 8)
+            .clamp(0, 70);
     final bpmCap = useHandBurst
         ? (110 + levelBpmBoost).clamp(110, 300)
         : (130 + levelBpmBoost).clamp(130, 300);
@@ -1624,11 +1618,11 @@ class CareerSessionGenerator {
     );
     return CareerGenerationResult(
       session: Session(
-        id: 'career:lvl${ctx.level}:${ctx.effectiveDuration}s${ctx.quickie ? ":q" : ""}',
+        id: 'career:lvl${_config.level}:${ctx.effectiveDuration}s${ctx.quickie ? ":q" : ""}',
         name: ctx.quickie
             ? (ctx.sessionNameQuickie ??
-                'Carrière niveau ${ctx.level} — bâclée')
-            : (ctx.sessionName ?? 'Carrière niveau ${ctx.level}'),
+                'Carrière niveau ${_config.level} — bâclée')
+            : (ctx.sessionName ?? 'Carrière niveau ${_config.level}'),
         description: 'Session générée — ${ctx.effectiveDuration} s',
         durationSeconds: finalDuration,
         defaultMode: SessionMode.rhythm,
@@ -2371,16 +2365,19 @@ class _StepDraft {
 /// Bundle des paramètres « figés pour la session » consommés par les helpers
 /// de phase de [CareerSessionGenerator.generate]. Construit une seule fois
 /// au début de l'appel après que tous les paramètres dérivés sont calculés
-/// (`effectiveDuration`, `intensityFloor`, `boostsCount`, `genUntil`, `isLowLevel`,
-/// `useFinalMilestone`…).
+/// (`effectiveDuration`, `intensityFloor`, `boostsCount`, `genUntil`…).
 ///
 /// Évite de répéter les mêmes 6-8 args (`cfg`, `bank`, `effectiveDuration`,
-/// `level`, `encoreChainIndex`, `steps`, `profile`…) dans la signature de
-/// chaque helper. Les helpers piochent ce dont ils ont besoin via `ctx.x`.
+/// `encoreChainIndex`, `steps`, `profile`…) dans la signature de chaque
+/// helper. Les helpers piochent ce dont ils ont besoin via `ctx.x`.
 ///
 /// **Pas inclus** : le curseur live `(time, stamina)`. Ces deux scalaires
 /// sont threadés via record return values pour séparer ce qui est *fixé*
 /// (ctx) de ce qui *évolue à chaque step* (cursor).
+///
+/// **Pas dupliqué depuis `_config`** : `level`, `includeHand`, `obedience`
+/// vivent dans `_SessionConfig` (immuable). Les helpers ont `this` donc
+/// y accèdent via `_config.x` — pas la peine de les copier ici.
 ///
 /// **Mutables internes** : [steps] et [profile] sont des `List` mutées en
 /// place par les helpers. Le DTO les expose comme `final` (la référence
@@ -2389,18 +2386,12 @@ class _GenContext {
   final List<SessionStep> steps;
   final List<double> profile;
 
-  final int level;
   final int encoreChainIndex;
   final int effectiveDuration;
   final int boostsCount;
   final int genUntil;
   final double intensityFloor;
-  final double obedience;
   final bool quickie;
-  final bool intense;
-  final bool includeHand;
-  final bool isLowLevel;
-  final bool useFinalMilestone;
   final bool noStats;
   final CareerLevel cfg;
   final PhraseBank bank;
@@ -2409,23 +2400,16 @@ class _GenContext {
   final String? Function(String milestoneId, int stepTime)?
       milestoneTextResolver;
   final List<LevelMilestone> insertedBodies;
-  final LevelMilestone? finalMilestone;
 
   const _GenContext({
     required this.steps,
     required this.profile,
-    required this.level,
     required this.encoreChainIndex,
     required this.effectiveDuration,
     required this.boostsCount,
     required this.genUntil,
     required this.intensityFloor,
-    required this.obedience,
     required this.quickie,
-    required this.intense,
-    required this.includeHand,
-    required this.isLowLevel,
-    required this.useFinalMilestone,
     required this.noStats,
     required this.cfg,
     required this.bank,
@@ -2433,6 +2417,5 @@ class _GenContext {
     required this.sessionNameQuickie,
     required this.milestoneTextResolver,
     required this.insertedBodies,
-    required this.finalMilestone,
   });
 }
