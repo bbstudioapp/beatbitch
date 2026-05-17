@@ -18,15 +18,50 @@
 //     profil de capacités (cf. `_CapabilityClamps.clampToCapability`).
 //   * `tryDegrade` — stratégie de dégradation d'un cran pour la cascade
 //     humiliation (cf. `_HumiliationGates.stepDownOne`).
+//   * `build` — assemblage final du `_StepDraft` à partir des scores
+//     (bpm/amp/dur) déjà budgétés par l'orchestrateur (cf. switch de
+//     `_DifficultyDispatch._mapDifficultyToStep`).
 
 part of 'career_session_generator.dart';
 
-/// Règles d'un mode pour le calcul du `delta` d'endurance et le mapping
-/// `_StepDraft → UnlockKey?`.
+/// Contexte d'assemblage d'un step passé à `_ModeRules.build`. Porte les
+/// trois scores déjà budgétés par l'orchestrateur (cf.
+/// `_DifficultyDispatch._mapDifficultyToStep` pour la simplex + le bonus
+/// de spé par axe) et un handle vers le générateur pour accéder aux
+/// samplers (`_positionPickers`), caps (`_capRhythm*`, `_scaleDuration`),
+/// lecture de spé (`_pts`) et state stable (`_rng`, `_anatomy`,
+/// `_maxDepthIndex`, `_unlockedKeys`).
 ///
-/// Pure : aucun accès à l'état d'instance du générateur, tout est passé
-/// via les arguments. Les helpers numériques partagés vivent côté
-/// `_StaminaModel` (`positionDepth`, `lerp`).
+/// Le couplage est explicite (`ctx.gen.x`) — la consolidation de la
+/// logique mode-specific dans les rules s'arrête à la frontière des
+/// services déjà extraits (`_positionPickers`, `_BpmPacing`). Le ctx
+/// n'a pas vocation à grossir : si une rule a besoin d'une donnée
+/// supplémentaire, la passer via `gen` plutôt que d'ajouter un field.
+class _DraftCtx {
+  const _DraftCtx({
+    required this.bpmScore,
+    required this.ampScore,
+    required this.durScore,
+    required this.gen,
+  });
+
+  final double bpmScore;
+  final double ampScore;
+  final double durScore;
+  final CareerSessionGenerator gen;
+}
+
+/// Règles d'un mode : tout ce qui est spécifique au mode et qui était
+/// auparavant porté par les gros switches du générateur (stamina,
+/// unlock gate, capability clamp, dégradation, construction de step).
+///
+/// La plupart des méthodes sont **pures** (signature `(draft, …) →
+/// résultat`, pas d'accès à l'état). Seule `build` reçoit un `_DraftCtx`
+/// qui expose le générateur — la rule y consomme ses samplers / caps
+/// (`_positionPickers`, `_capRhythm*`, `_scaleDuration`) et state stable
+/// (`_rng`, `_anatomy`, `_maxDepthIndex`, `_unlockedKeys`, `_spec` via
+/// `_pts`). Les helpers numériques partagés vivent côté `_StaminaModel`
+/// (`positionDepth`, `lerp`).
 abstract class _ModeRules {
   const _ModeRules();
 
@@ -70,6 +105,21 @@ abstract class _ModeRules {
   /// retourne qu'**un seul** cran par appel pour permettre à la cascade
   /// externe de re-vérifier l'humil/unlock après chaque pas.
   _StepDraft? tryDegrade(_StepDraft draft) => null;
+
+  /// Assemble le `_StepDraft` final du mode à partir des scores déjà
+  /// budgétés par l'orchestrateur. Voir `_DraftCtx` pour la surface du
+  /// contexte. La rule consomme ses propres samplers / caps mode-specific
+  /// via `ctx.gen.*` (le couplage est explicite, cf. doc de `_DraftCtx`).
+  ///
+  /// Migration **obligatoire** : toute rule doit override `build`. Le
+  /// défaut throw plutôt qu'un fallback silencieux — `_DifficultyDispatch`
+  /// est dispatcher pur, il n'y a plus de switch historique vers lequel
+  /// retomber.
+  _StepDraft build(_DraftCtx ctx) {
+    throw UnimplementedError(
+      '_ModeRules.build non implémenté pour $runtimeType',
+    );
+  }
 }
 
 /// Baisse `to` d'un cran en s'arrêtant à `head` (jamais à `tip` — un step
@@ -124,6 +174,18 @@ class _BreathRules extends _ModeRules {
     );
     return dur * 2.8 * regen;
   }
+
+  @override
+  _StepDraft build(_DraftCtx ctx) {
+    final dur = _StaminaModel.lerp(6.0, 15.0, ctx.durScore).round();
+    return _StepDraft(
+      mode: SessionMode.breath,
+      bpm: null,
+      from: null,
+      to: null,
+      duration: dur,
+    );
+  }
 }
 
 /// Règles `freestyle` : phase libre, neutre côté endurance (ni effort
@@ -137,6 +199,18 @@ class _FreestyleRules extends _ModeRules {
 
   @override
   UnlockKey? unlockKeyFor(_StepDraft draft) => UnlockKey.freestyle;
+
+  @override
+  _StepDraft build(_DraftCtx ctx) {
+    final dur = _StaminaModel.lerp(8.0, 18.0, ctx.durScore).round();
+    return _StepDraft(
+      mode: SessionMode.freestyle,
+      bpm: null,
+      from: null,
+      to: null,
+      duration: dur,
+    );
+  }
 }
 
 /// Règles `suckle` : aspiration / téter. La bouche bosse sans aller-retour.
@@ -168,6 +242,38 @@ class _SuckleRules extends _ModeRules {
     }
     return UnlockKey.suckleHead;
   }
+
+  @override
+  _StepDraft build(_DraftCtx ctx) {
+    // Aspiration : pas de BPM (pulse fixe ~1.2s côté audio), position
+    // tenue dans `to`. Cibles valides = head ou balls (cf. `_isUnlocked`).
+    // - En carrière : unlock `suckleHead` au level 4-5, `suckleBalls`
+    //   plus tard ; le filtre `_isUnlocked` rejette ce qui n'est pas
+    //   encore acquis et la cascade dégrade.
+    // - En mode hérité (Custom) : balls n'est candidat que si l'anatomy
+    //   l'inclut et que la profondeur max le permet (`_maxDepthIndex >=
+    //   Position.balls.index`). On biaise vers head (zone classique) avec
+    //   ~30 % de chances de tirer balls quand dispo, pour rester audible
+    //   mais marginal.
+    final dur = ctx.gen._scaleDuration(
+      _StaminaModel.lerp(8.0, 18.0, ctx.durScore),
+      enduranceFactor: 0.04,
+    );
+    final ballsAllowed = ctx.gen._anatomy.hasBalls &&
+        ctx.gen._maxDepthIndex >= Position.balls.index &&
+        (ctx.gen._unlockedKeys.isEmpty ||
+            ctx.gen._unlockedKeys.contains(UnlockKey.suckleBalls));
+    final to = (ballsAllowed && ctx.gen._rng.nextDouble() < 0.30)
+        ? Position.balls
+        : Position.head;
+    return _StepDraft(
+      mode: SessionMode.suckle,
+      bpm: null,
+      from: null,
+      to: to,
+      duration: dur,
+    );
+  }
 }
 
 /// Règles `hand` : effort modéré côté endurance (la bouche se repose, mais
@@ -186,6 +292,30 @@ class _HandRules extends _ModeRules {
   @override
   _StepDraft? tryDegrade(_StepDraft draft) =>
       _tryDescendToWithGuard(draft) ?? _tryDescendFrom(draft);
+
+  @override
+  _StepDraft build(_DraftCtx ctx) {
+    // Hand sert d'outil d'excitation/endurance pure : sa fréquence peut
+    // grimper sans coût d'humiliation. Plage très large pour permettre
+    // récup lente (60 BPM) jusqu'à burst frénétique (180 BPM).
+    final bpm = _StaminaModel.lerp(60.0, 180.0, ctx.bpmScore).round();
+    // Tirage spécifique hand : la main tient la base de la queue, donc
+    // l'amplitude reste dans le haut (jamais plus profond que throat).
+    // En revanche tip→head et head→head sont autorisés (le tirage
+    // commun les exclut pour les autres modes).
+    final (from, to) = ctx.gen._sampleFromToForHand(ctx.ampScore);
+    final dur = ctx.gen._scaleDuration(
+      _StaminaModel.lerp(15.0, 30.0, ctx.durScore),
+      enduranceFactor: 0.04,
+    );
+    return _StepDraft(
+      mode: SessionMode.hand,
+      bpm: bpm,
+      from: from,
+      to: to,
+      duration: dur,
+    );
+  }
 }
 
 /// Règles `biffle` : effort soutenu (la fille encaisse), conso entre
@@ -251,6 +381,24 @@ class _BiffleRules extends _ModeRules {
       duration: draft.duration,
     );
   }
+
+  @override
+  _StepDraft build(_DraftCtx ctx) {
+    // Biffle = coups de queue sur le visage : pas de notion de position.
+    // from/to restent null.
+    final bpm = _StaminaModel.lerp(80.0, 140.0, ctx.bpmScore).round();
+    final dur = ctx.gen._scaleDuration(
+      _StaminaModel.lerp(15.0, 40.0, ctx.durScore),
+      enduranceFactor: 0.05,
+    );
+    return _StepDraft(
+      mode: SessionMode.biffle,
+      bpm: bpm,
+      from: null,
+      to: null,
+      duration: dur,
+    );
+  }
 }
 
 /// Règles `lick` : BPM ≤ 60 = vraie récup vocale (regen), au-delà = effort
@@ -288,6 +436,28 @@ class _LickRules extends _ModeRules {
   @override
   _StepDraft? tryDegrade(_StepDraft draft) =>
       _tryDescendToWithGuard(draft) ?? _tryDescendFrom(draft);
+
+  @override
+  _StepDraft build(_DraftCtx ctx) {
+    // Sloppy : monte le BPM minimum (≥ 65 = lick humide / saliveux).
+    final sloppyPts = ctx.gen._pts(SpecializationBranch.sloppy);
+    final lickBpmScore = sloppyPts > 0 ? max(ctx.bpmScore, 0.3) : ctx.bpmScore;
+    final bpm = _StaminaModel.lerp(55.0, 80.0, lickBpmScore).round();
+    // Tirage spécifique lick : tip→head forcé tant qu'humiliation < 2,
+    // toutes amplitudes (incluant tip → throat/full) à partir de 2.
+    final (from, to) = ctx.gen._sampleFromToForLick(ctx.ampScore);
+    final dur = ctx.gen._scaleDuration(
+      _StaminaModel.lerp(10.0, 25.0, ctx.durScore),
+      enduranceFactor: 0.04,
+    );
+    return _StepDraft(
+      mode: SessionMode.lick,
+      bpm: bpm,
+      from: from,
+      to: to,
+      duration: dur,
+    );
+  }
 }
 
 /// Règles `hold` : coût pur lié à la profondeur tenue (`to`). Convention
@@ -353,6 +523,24 @@ class _HoldRules extends _ModeRules {
       );
     }
     return null;
+  }
+
+  @override
+  _StepDraft build(_DraftCtx ctx) {
+    // Convention uniforme hold/beg : la position tenue est dans `to`
+    // (matche BeepEngine et le format SessionStep des JSON).
+    final to = ctx.gen._pickHoldPosition(ctx.ampScore);
+    final dur = ctx.gen._scaleDuration(
+      _StaminaModel.lerp(8.0, 30.0, max(ctx.durScore, ctx.bpmScore)),
+      enduranceFactor: 0.08,
+    );
+    return _StepDraft(
+      mode: SessionMode.hold,
+      bpm: null,
+      from: null,
+      to: to,
+      duration: dur,
+    );
   }
 }
 
@@ -448,6 +636,33 @@ class _BegRules extends _ModeRules {
       );
     }
     return null;
+  }
+
+  @override
+  _StepDraft build(_DraftCtx ctx) {
+    // Convention uniforme hold/beg : la position tenue est dans `to`.
+    // Obéissance : beg plus profonds (ampScore boosté localement) et
+    // plus longs.
+    final obPts = ctx.gen._pts(SpecializationBranch.obeissance);
+    final begAmp = (ctx.ampScore + 0.10 * obPts).clamp(0.0, 1.0);
+    final to = ctx.gen._pickBegPosition(begAmp);
+    final baseDur = ctx.gen._scaleDuration(
+      _StaminaModel.lerp(7.0, 16.0, ctx.durScore),
+      enduranceFactor: 0.04,
+      extraFactor: obPts * 0.06,
+    );
+    final chained = ctx.gen._maybePickBegWithChain(
+      to: to,
+      obPts: obPts,
+    );
+    if (chained != null) return chained;
+    return _StepDraft(
+      mode: SessionMode.beg,
+      bpm: null,
+      from: null,
+      to: to,
+      duration: baseDur,
+    );
   }
 }
 
@@ -593,6 +808,36 @@ class _RhythmRules extends _ModeRules {
     final respiBenefit = amplitudeFactor * respiBpmFactor * 0.40;
     final costFactor = (1.0 - respiBenefit).clamp(0.6, 1.0);
     return -(bpm / 100.0) * depth * dur * depthMul * costFactor / 3.0;
+  }
+
+  @override
+  _StepDraft build(_DraftCtx ctx) {
+    final bpm = _StaminaModel.lerp(60.0, 140.0, ctx.bpmScore).round();
+    final (from, to) = ctx.gen._sampleFromTo(ctx.ampScore);
+    var dur = ctx.gen._scaleDuration(
+      _StaminaModel.lerp(20.0, 60.0, ctx.durScore),
+      enduranceFactor: 0.05,
+    );
+    // Cap par nombre d'aller-retours sur les profondeurs throat/full :
+    // un step rythme à `to=throat` ne devrait pas enchaîner 30+ pulses
+    // consécutifs (à 90 bpm, 60 s = 45 throats — la joueuse étouffe).
+    // Cf. règle « passé to:throat, on se limite à un certain nombre
+    // d'aller-retours par step ». Le cap est calculé en secondes :
+    // durMax = maxPulses × 120 / bpm (×2 car pulse = 2 beats).
+    dur = ctx.gen._capRhythmDurationByPulses(dur, bpm, to);
+    // Cap rythme soutenu : tant que la milestone
+    // `intro_rhythm_sustained` n'a pas été acquittée, la chaîne rythme
+    // consécutive est plafonnée à 60 s. Le candidat n'arrive ici que
+    // si `_canChainRhythm()` était vrai au tirage, donc il reste au
+    // moins `_minRhythmStepSeconds` de marge.
+    dur = ctx.gen._capRhythmConsecutive(dur);
+    return _StepDraft(
+      mode: SessionMode.rhythm,
+      bpm: bpm,
+      from: from,
+      to: to,
+      duration: dur,
+    );
   }
 }
 
