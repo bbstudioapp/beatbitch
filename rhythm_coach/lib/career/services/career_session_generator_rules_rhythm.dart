@@ -166,9 +166,9 @@ class _RhythmRules extends _ModeRules {
     // Cap rythme soutenu : tant que la milestone
     // `intro_rhythm_sustained` n'a pas été acquittée, la chaîne rythme
     // consécutive est plafonnée à 60 s. Le candidat n'arrive ici que
-    // si `_canChainRhythm()` était vrai au tirage, donc il reste au
-    // moins `_minRhythmStepSeconds` de marge.
-    dur = ctx.gen._capRhythmConsecutive(dur);
+    // si `_rhythmChain.canChain()` était vrai au tirage, donc il reste
+    // au moins `_RhythmChainTracker._minStepSeconds` de marge.
+    dur = ctx.gen._rhythmChain.capDuration(dur);
     return _StepDraft(
       mode: SessionMode.rhythm,
       bpm: bpm,

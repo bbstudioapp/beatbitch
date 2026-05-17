@@ -40,7 +40,7 @@ extension _DifficultyDispatch on CareerSessionGenerator {
     if ((diff >= 0.20 ||
             _stepsOutsideBouche >= 2 ||
             _lastType == _StepType.bouche) &&
-        _canChainRhythm()) {
+        _rhythmChain.canChain()) {
       candidates.add(SessionMode.rhythm);
     }
     // Hold candidat dès diff >= 0.20 normalement, mais aussi dès diff >= 0.10
