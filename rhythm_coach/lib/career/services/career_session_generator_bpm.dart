@@ -7,8 +7,8 @@
 //
 // Restent côté instance :
 //   * `_applyBpmDiversity` — écrit `_lastBpm`, ne peut pas être pure
-//   * `_diversifyAmplitude` — lit/écrit `_lastFrom/_lastTo` + appelle
-//     `_isFlatRhythmicPattern` qui consomme `_recentEmits`
+//   * `_diversifyAmplitude` — lit/écrit `_lastFrom/_lastTo` + consulte
+//     `_patternBuffer.wouldBeFlat`
 // Elles utilisent les fonctions de cette classe en passant l'état requis.
 
 part of 'career_session_generator.dart';
