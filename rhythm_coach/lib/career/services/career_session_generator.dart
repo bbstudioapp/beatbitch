@@ -156,37 +156,6 @@ class CareerSessionGenerator {
   _StepDraft _clampToCapability(_StepDraft d) =>
       _capClamps.clampToCapability(d);
 
-  /// Normalise une plage BPM utilisateur : trie `(min, max)` et borne aux
-  /// limites globales (`CustomSessionConfig.minBpmLimit`/`maxBpmLimit`). Si
-  /// la plage est nulle ou couvre tout le spectre par défaut, on la retourne
-  /// telle quelle (un range hors-bornes ne sera jamais atteint par le
-  /// générateur, c'est OK — pas la peine de masquer).
-  (int, int)? _normalizeBpmRange((int, int)? raw) {
-    if (raw == null) return null;
-    var (lo, hi) = raw;
-    if (lo > hi) {
-      final tmp = lo;
-      lo = hi;
-      hi = tmp;
-    }
-    return (lo, hi);
-  }
-
-  (int, int)? _normalizeHoldRange((int, int)? raw) {
-    if (raw == null) return null;
-    var (lo, hi) = raw;
-    if (lo > hi) {
-      final tmp = lo;
-      lo = hi;
-      hi = tmp;
-    }
-    // Plancher à 1s : un hold à 0s n'a aucun sens (le step est consommé en un
-    // tick, c'est juste un bip).
-    if (lo < 1) lo = 1;
-    if (hi < 1) hi = 1;
-    return (lo, hi);
-  }
-
   CareerGenerationResult generate({
     required int level,
     required PhraseBank bank,
@@ -227,6 +196,10 @@ class CareerSessionGenerator {
     /// = comportement carrière standard, aucune surcharge.
     CustomOverrides custom = CustomOverrides.none,
   }) {
+    // Invariants `milestones` : on ne peut pas les déplacer dans le
+    // constructeur de `MilestonePlan` car `.placement` n'est pas
+    // const-eval-friendly (ce qui casserait `static const MilestonePlan.none`,
+    // lui-même utilisé comme valeur par défaut de ce param).
     assert(
       milestones.finalMilestone == null ||
           milestones.finalMilestone!.placement ==
@@ -254,8 +227,8 @@ class CareerSessionGenerator {
       spec: specialization ?? SpecializationAllocation.empty(),
       anatomy: anatomy,
       coachModeWeights: coachModeWeights,
-      bpmRange: _normalizeBpmRange(custom.bpmRange),
-      holdDurationRange: _normalizeHoldRange(custom.holdDurationRange),
+      bpmRange: custom.normalizedBpmRange,
+      holdDurationRange: custom.normalizedHoldDurationRange,
       humiliationCareer: humiliationCareer,
       humiliationSession: humiliationSession,
       obedience: obedience,
@@ -2005,14 +1978,8 @@ class CareerSessionGenerator {
     // de session (`_state.lastMode`, `_rhythmChain`, etc.) — sans objet ici.
     //
     // Surcharge : on honore l'axe imposé par la séance (pas de re-tirage).
-    // Le facteur est reconstruit depuis la `successRate` du profil (même
-    // formule que `_pickOverload`). Si pas de profil → 1.0 (no-op).
-    final overloadAxis = capability.overloadAxis;
-    final capProfile = capability.profile;
-    final overloadFactor = (overloadAxis != null && capProfile != null)
-        ? CapabilityRegulator.surchargeFactor(
-            capProfile.stateOf(overloadAxis).successRate)
-        : 1.0;
+    // Le facteur est dérivé de la `successRate` du profil par
+    // `CapabilityInputs.overloadFactor` (no-op = 1.0 si pas de profil).
     _config = _SessionConfig(
       level: level,
       includeHand: includeHand,
@@ -2031,10 +1998,10 @@ class CareerSessionGenerator {
       humiliationCareer: humiliationCareer,
       humiliationSession: humiliationSession,
       obedience: obedience,
-      capProfile: capProfile,
+      capProfile: capability.profile,
       capCeilings: capability.sessionCeilings,
-      overloadAxis: overloadAxis,
-      overloadFactor: overloadFactor,
+      overloadAxis: capability.overloadAxis,
+      overloadFactor: capability.overloadFactor,
     );
     _state = _SessionRuntimeState.fresh(rng: _rng);
     _state.unlockedKeys = unlockedKeys;
