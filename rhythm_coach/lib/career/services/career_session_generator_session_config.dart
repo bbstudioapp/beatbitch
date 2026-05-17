@@ -14,7 +14,7 @@
 // figées pour la séance » est désormais enforced par le langage.
 //
 // **Pas dans `_SessionConfig`** :
-//   * `_unlockedKeys` — muté en cours de séance quand une milestone est
+//   * `_state.unlockedKeys` — muté en cours de séance quand une milestone est
 //     acquittée (un step scripté étend l'ensemble des unlocks pour les
 //     steps suivants). C'est conceptuellement un state, pas un input.
 //   * Tout l'état runtime (`_lastFoo`, `_stepsInLastType`, simulations

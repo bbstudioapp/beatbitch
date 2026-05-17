@@ -58,8 +58,8 @@ class _SuckleRules extends _ModeRules {
     );
     final ballsAllowed = ctx.gen._config.anatomy.hasBalls &&
         ctx.gen._config.maxDepthIndex >= Position.balls.index &&
-        (ctx.gen._unlockedKeys.isEmpty ||
-            ctx.gen._unlockedKeys.contains(UnlockKey.suckleBalls));
+        (ctx.gen._state.unlockedKeys.isEmpty ||
+            ctx.gen._state.unlockedKeys.contains(UnlockKey.suckleBalls));
     final to = (ballsAllowed && ctx.gen._rng.nextDouble() < 0.30)
         ? Position.balls
         : Position.head;

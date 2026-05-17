@@ -88,42 +88,14 @@ class CareerSessionGenerator {
   // ─── ÉTAT DE TRACKING (mutable pendant la génération) ────────────────────
   // 13 fields scratchpad regroupés dans `_SessionRuntimeState`, re-posé en
   // début de chaque `generate()` / `generatePunishment()` via
-  // `_SessionRuntimeState.fresh(rng:)`. Les getters/setters ci-dessous ne
-  // sont qu'une projection — toute lecture/écriture passe par `_state.xxx`.
-  // Cf. `career_session_generator_session_runtime_state.dart` pour la liste
-  // complète et la doc des champs.
+  // `_SessionRuntimeState.fresh(rng:)`. Toute lecture/écriture passe
+  // directement par `_state.xxx` (cf.
+  // `career_session_generator_session_runtime_state.dart` pour la liste
+  // complète et la doc des champs). Les anciens getters/setters projection
+  // ont été supprimés — l'aliasing du field `_state` est sûr (la référence
+  // est stable même si son contenu mute pendant la séance).
 
   late _SessionRuntimeState _state;
-
-  int get _nextMiniWaveAt => _state.nextMiniWaveAt;
-  set _nextMiniWaveAt(int v) => _state.nextMiniWaveAt = v;
-
-  int get _lastSwallowOrderAt => _state.lastSwallowOrderAt;
-  set _lastSwallowOrderAt(int v) => _state.lastSwallowOrderAt = v;
-
-  SessionMode? get _lastMode => _state.lastMode;
-  set _lastMode(SessionMode? v) => _state.lastMode = v;
-
-  _StepType? get _lastType => _state.lastType;
-
-  int get _stepsOutsideBouche => _state.stepsOutsideBouche;
-
-  String get _lastText => _state.lastText;
-  set _lastText(String v) => _state.lastText = v;
-
-  int? get _lastBpm => _state.lastBpm;
-  set _lastBpm(int? v) => _state.lastBpm = v;
-
-  Position? get _lastFrom => _state.lastFrom;
-  set _lastFrom(Position? v) => _state.lastFrom = v;
-
-  Position? get _lastTo => _state.lastTo;
-  set _lastTo(Position? v) => _state.lastTo = v;
-
-  SalivaEngine get _salivaSim => _state.salivaSim;
-
-  Set<UnlockKey> get _unlockedKeys => _state.unlockedKeys;
-  set _unlockedKeys(Set<UnlockKey> v) => _state.unlockedKeys = v;
 
   // Sous-systèmes runtime autonomes (gèrent leur reset eux-mêmes).
   late final _RhythmChainTracker _rhythmChain = _RhythmChainTracker(gen: this);
@@ -325,13 +297,13 @@ class CareerSessionGenerator {
     );
     _finalPicker = _FinalPicker(
       config: _config,
-      unlockedKeys: _unlockedKeys,
+      unlockedKeys: _state.unlockedKeys,
       rng: _rng,
       capClamps: _capClamps,
     );
     _positionPickers = _PositionPickers(
       config: _config,
-      unlockedKeys: _unlockedKeys,
+      unlockedKeys: _state.unlockedKeys,
       rng: _rng,
     );
     // Mode "Session bâclée" : 6 min par défaut, intense tout du long. Floor
@@ -364,7 +336,7 @@ class CareerSessionGenerator {
         finalBudget -
         (isLowLevel && !useFinalMilestone ? _preFinisherBudgetSeconds : 0);
 
-    // `_salivaSim` et `_salivaSimSecond` sont posés par
+    // `_state.salivaSim` et `_state.salivaSimSecond` sont posés par
     // `_SessionRuntimeState.fresh()` plus haut.
     final steps = <SessionStep>[];
     final profile =
@@ -468,7 +440,7 @@ class CareerSessionGenerator {
       // runtime — sur fail la session est replanifiée par le contrôleur, ce
       // qui régénère un set d'unlocks cohérent.
       if (m.unlocks.isNotEmpty) {
-        _unlockedKeys = {..._unlockedKeys, ...m.unlocks};
+        _state.unlockedKeys = {..._state.unlockedKeys, ...m.unlocks};
       }
       // Recale le min de la prochaine pending : `m.endTime + 60s` buffer
       // (sinon les 2 séquences pédagogiques s'enchaînent sans souffle).
@@ -519,11 +491,11 @@ class CareerSessionGenerator {
           openingPhrase ??
           _pickPhraseForDraft(bank, first, 'soft');
       steps.add(_draftToStep(first, time: 0, text: firstText));
-      _lastMode = first.mode;
-      _lastText = firstText;
-      _lastBpm = first.bpm ?? _lastBpm;
-      _lastFrom = first.from;
-      _lastTo = first.to;
+      _state.lastMode = first.mode;
+      _state.lastText = firstText;
+      _state.lastBpm = first.bpm ?? _state.lastBpm;
+      _state.lastFrom = first.from;
+      _state.lastTo = first.to;
       _trackPushedStep(first.mode, first.to,
           from: first.from, bpm: first.bpm, duration: first.duration);
       final staminaBefore = stamina;
@@ -578,11 +550,11 @@ class CareerSessionGenerator {
           _advanceSalivaSim(wd);
           _StaminaModel.fillProfile(profile, time, wd.duration!, stamina,
               valueStart: staminaBefore);
-          _lastMode = wd.mode;
-          _lastText = waveText;
-          _lastFrom = wd.from;
-          _lastTo = wd.to;
-          _lastBpm = wd.bpm ?? _lastBpm;
+          _state.lastMode = wd.mode;
+          _state.lastText = waveText;
+          _state.lastFrom = wd.from;
+          _state.lastTo = wd.to;
+          _state.lastBpm = wd.bpm ?? _state.lastBpm;
           _trackPushedStep(wd.mode, wd.to,
               from: wd.from, bpm: wd.bpm, duration: wd.duration);
           time += wd.duration!;
@@ -608,8 +580,8 @@ class CareerSessionGenerator {
           _StaminaModel.fillProfile(
               profile, time, postWaveBreath.duration!, stamina,
               valueStart: staminaBefore);
-          _lastMode = SessionMode.breath;
-          _lastText = breathText;
+          _state.lastMode = SessionMode.breath;
+          _state.lastText = breathText;
           _trackPushedStep(SessionMode.breath, null,
               duration: postWaveBreath.duration);
           time += postWaveBreath.duration!;
@@ -618,7 +590,7 @@ class CareerSessionGenerator {
         // La séance enchaîne ensuite sur du tirage classique — la stamina
         // restaurée par la pause longue permet d'enchaîner sereinement
         // jusqu'à la prochaine vague.
-        _nextMiniWaveAt = time + 240 + _rng.nextInt(61);
+        _state.nextMiniWaveAt = time + 240 + _rng.nextInt(61);
         continue;
       }
       // Ordre de déglutition forcé : quand la simulation salive sature,
@@ -636,16 +608,16 @@ class CareerSessionGenerator {
         // Conséquence simulée de l'ordre : la sim retombe à 0, comme si
         // la joueuse obéissait. En runtime le SessionController fera de
         // même via `SalivaEngine.forceSwallow()`.
-        _salivaSim.forceSwallow();
+        _state.salivaSim.forceSwallow();
         _StaminaModel.fillProfile(
             profile, time, swallowDraft.duration!, stamina,
             valueStart: staminaBefore);
-        _lastMode = SessionMode.beg;
-        _lastText = swallowText;
+        _state.lastMode = SessionMode.beg;
+        _state.lastText = swallowText;
         _trackPushedStep(SessionMode.beg, null,
             duration: swallowDraft.duration);
         time += swallowDraft.duration!;
-        _lastSwallowOrderAt = time;
+        _state.lastSwallowOrderAt = time;
         continue;
       }
       final progress = time / effectiveDuration;
@@ -731,9 +703,9 @@ class CareerSessionGenerator {
               profile, time, breathDraft.duration!, stamina,
               valueStart: staminaBefore);
           time += breathDraft.duration!;
-          _lastMode = SessionMode.breath;
-          _lastText = breathText;
-          // breath = transit → ne touche pas _lastType (parenthèse
+          _state.lastMode = SessionMode.breath;
+          _state.lastText = breathText;
+          // breath = transit → ne touche pas _state.lastType (parenthèse
           // transparente). On l'appelle quand même pour cohérence si la
           // règle évoluait.
           _trackPushedStep(SessionMode.breath, null,
@@ -769,10 +741,10 @@ class CareerSessionGenerator {
         stamina = _StaminaModel.apply(stamina, partDraft, progress, cfg);
         _advanceSalivaSim(partDraft);
         steps.add(_draftToStep(partDraft, time: time, text: partText));
-        _lastMode = partDraft.mode;
-        _lastText = partText;
-        _lastFrom = partDraft.from;
-        _lastTo = partDraft.to;
+        _state.lastMode = partDraft.mode;
+        _state.lastText = partText;
+        _state.lastFrom = partDraft.from;
+        _state.lastTo = partDraft.to;
         _trackPushedStep(partDraft.mode, partDraft.to,
             from: partDraft.from,
             bpm: partDraft.bpm,
@@ -805,8 +777,8 @@ class CareerSessionGenerator {
         _advanceSalivaSim(fakeBreath.draft);
         steps.add(
             _draftToStep(fakeBreath.draft, time: time, text: fakeBreath.text));
-        _lastMode = SessionMode.breath;
-        _lastText = fakeBreath.text;
+        _state.lastMode = SessionMode.breath;
+        _state.lastText = fakeBreath.text;
         _trackPushedStep(SessionMode.breath, null,
             duration: fakeBreath.draft.duration);
         _StaminaModel.fillProfile(
@@ -824,10 +796,10 @@ class CareerSessionGenerator {
         stamina = _StaminaModel.apply(stamina, chain, progress, cfg);
         _advanceSalivaSim(chain);
         steps.add(_draftToStep(chain, time: time, text: ''));
-        _lastMode = chain.mode;
-        _lastText = '';
-        _lastFrom = chain.from;
-        _lastTo = chain.to;
+        _state.lastMode = chain.mode;
+        _state.lastText = '';
+        _state.lastFrom = chain.from;
+        _state.lastTo = chain.to;
         _trackPushedStep(chain.mode, chain.to,
             from: chain.from, bpm: chain.bpm, duration: chain.duration);
         _StaminaModel.fillProfile(profile, time, chain.duration!, stamina,
@@ -1025,7 +997,7 @@ class CareerSessionGenerator {
   ///   d'intensité simple).
   /// - niveau ≥ 5 (pédagogie : on ne surprend pas une débutante avec
   ///   un mini-finish dramatique au milieu de la séance).
-  /// - `time >= _nextMiniWaveAt` (replanifié après chaque vague).
+  /// - `time >= _state.nextMiniWaveAt` (replanifié après chaque vague).
   /// - `genUntil - time >= 90 s` (laisse une marge avant la phase finish
   ///   pour ne pas chevaucher pré-finisher / boosts).
   /// - stamina ≥ 35 (assoupli vs 50 initial : sur les profils profondeur
@@ -1037,7 +1009,7 @@ class CareerSessionGenerator {
       int time, int effectiveDuration, double stamina, int genUntil) {
     if (effectiveDuration < 720) return false;
     if (_config.level < 5) return false;
-    if (time < _nextMiniWaveAt) return false;
+    if (time < _state.nextMiniWaveAt) return false;
     if (genUntil - time < 90) return false;
     if (stamina < 35) return false;
     // La mini-vague est intégralement rhythm (cf. `_buildMiniWave`) : si
@@ -1059,7 +1031,7 @@ class CareerSessionGenerator {
   /// dégradation un step duplique le précédent, il est skip plutôt que
   /// re-poussé — la vague peut donc se réduire à 2 steps en pratique.
   List<_StepDraft> _buildMiniWave(double humilCap) {
-    final hasThroat = _unlockedKeys.contains(UnlockKey.throatHoldShort) ||
+    final hasThroat = _state.unlockedKeys.contains(UnlockKey.throatHoldShort) ||
         _config.maxDepthIndex >= Position.throat.index;
     // Steps montants : BPMs espacés de 20 pour que la variance détectée
     // par `_patternBuffer.wouldBeFlat` (< 10) ne déclenche pas. Choix
@@ -1169,10 +1141,10 @@ class CareerSessionGenerator {
   /// audible : phrase impérative + mini-pause beg libre.
   ///
   /// Conditions cumulatives :
-  /// - `_salivaSim.value >= 80` : marge de 10 sous le seuil overflow (90)
+  /// - `_state.salivaSim.value >= 80` : marge de 10 sous le seuil overflow (90)
   ///   pour anticiper et ne pas attendre que ça déborde réellement
   ///   (l'auto-swallow runtime peut intercepter à 75 et masquer).
-  /// - `time - _lastSwallowOrderAt >= 90` : cooldown 90 s pour ne pas
+  /// - `time - _state.lastSwallowOrderAt >= 90` : cooldown 90 s pour ne pas
   ///   spammer les ordres en série (cas spé sloppy à fond sur lick).
   /// - `genUntil - time >= 60` : marge avant le finish — la dramaturgie
   ///   scriptée ne doit pas être interrompue par un ordre opportuniste.
@@ -1181,10 +1153,10 @@ class CareerSessionGenerator {
   ///
   /// Retourne null si une condition manque.
   _StepDraft? _maybeBuildSwallowOrder(int time, int genUntil) {
-    if (_salivaSim.value < 80.0) return null;
-    if (time - _lastSwallowOrderAt < 90) return null;
+    if (_state.salivaSim.value < 80.0) return null;
+    if (time - _state.lastSwallowOrderAt < 90) return null;
     if (genUntil - time < 60) return null;
-    if (!_unlockedKeys.contains(UnlockKey.begLibre)) return null;
+    if (!_state.unlockedKeys.contains(UnlockKey.begLibre)) return null;
     final dur = 5 + _rng.nextInt(3); // [5, 7]
     return _StepDraft(
       mode: SessionMode.beg,
@@ -1196,7 +1168,7 @@ class CareerSessionGenerator {
   }
 
   /// Adaptateur d'instance pour `_FinalPicker.buildPostFinalDraft`. Injecte
-  /// le `holdCeilingIdx` calculé depuis `_unlockedKeys` + `_config.maxDepthIndex`
+  /// le `holdCeilingIdx` calculé depuis `_state.unlockedKeys` + `_config.maxDepthIndex`
   /// — qui n'est pas dans `_FinalPicker` car partagé avec `_pickHoldPosition`
   /// et d'autres call sites.
   _StepDraft _buildPostFinalDraft(SessionMode finalMode, double humilCap) =>
@@ -1228,7 +1200,7 @@ class CareerSessionGenerator {
   /// `m.sequence`, ajoute chaque step à `ctx.steps` avec son `text`
   /// éventuellement surchargé via `ctx.milestoneTextResolver`, met à jour
   /// stamina + simu salive, fillProfile, et tracke la continuité par type.
-  /// À la fin, met à jour `_lastMode` / `_lastText` à partir du dernier step.
+  /// À la fin, met à jour `_state.lastMode` / `_state.lastText` à partir du dernier step.
   ///
   /// Retourne `(newTime, newStamina)` — le caller continue avec ces valeurs.
   /// `time` ressort incrémenté de `milestone.durationSeconds`. Les listes
@@ -1276,8 +1248,8 @@ class CareerSessionGenerator {
     // Met à jour le « dernier mode/texte » avec le dernier step de la
     // milestone — sert au filtrage anti-répétition de la suite générée.
     final lastStep = milestone.sequence.last;
-    _lastMode = lastStep.mode ?? _lastMode;
-    _lastText = lastStep.text;
+    _state.lastMode = lastStep.mode ?? _state.lastMode;
+    _state.lastText = lastStep.text;
     t += milestone.durationSeconds;
     return (time: t, stamina: s);
   }
@@ -1289,7 +1261,7 @@ class CareerSessionGenerator {
   /// avant l'appel).
   ///
   /// Mute `ctx.steps` et `ctx.profile` en place. Met à jour
-  /// `_lastMode/_lastText` et tracke la continuité.
+  /// `_state.lastMode/_state.lastText` et tracke la continuité.
   /// Retourne `(newTime, newStamina)`.
   ({int time, double stamina}) _emitPreFinisher(
     _GenContext ctx, {
@@ -1308,8 +1280,8 @@ class CareerSessionGenerator {
     ));
     final preText = _pickPhraseForDraft(ctx.bank, preDraft, 'medium');
     ctx.steps.add(_draftToStep(preDraft, time: time, text: preText));
-    _lastMode = SessionMode.rhythm;
-    _lastText = preText;
+    _state.lastMode = SessionMode.rhythm;
+    _state.lastText = preText;
     _trackPushedStep(SessionMode.rhythm, preDraft.to,
         from: preDraft.from, bpm: preDraft.bpm, duration: preDraft.duration);
     final staminaBeforePre = stamina;
@@ -1366,7 +1338,7 @@ class CareerSessionGenerator {
   /// les nouveaux `(time, stamina)`.
   ///
   /// Les listes `ctx.steps` et `ctx.profile` sont mutées en place. Met à
-  /// jour `_lastMode/_lastText/_lastBpm` à chaque boost émis et tracke la
+  /// jour `_state.lastMode/_state.lastText/_state.lastBpm` à chaque boost émis et tracke la
   /// continuité.
   ({int time, double stamina, int? lastBoostIndex}) _emitBoosts(
     _GenContext ctx, {
@@ -1466,9 +1438,9 @@ class CareerSessionGenerator {
       }
       ctx.steps.add(_draftToStep(boostDraft, time: t, text: boostText));
       lastBoostIndex = ctx.steps.length - 1;
-      _lastMode = boostDraft.mode;
-      _lastText = boostText;
-      _lastBpm = boostDraft.bpm ?? _lastBpm;
+      _state.lastMode = boostDraft.mode;
+      _state.lastText = boostText;
+      _state.lastBpm = boostDraft.bpm ?? _state.lastBpm;
       _trackPushedStep(boostDraft.mode, boostDraft.to,
           from: boostDraft.from,
           bpm: boostDraft.bpm,
@@ -1548,8 +1520,8 @@ class CareerSessionGenerator {
     final finalStepStartTime = time;
     final finisherStep =
         _draftToStep(finisherDraft, time: time, text: finalStepText);
-    _lastMode = finalMode;
-    _lastText = finalStepText;
+    _state.lastMode = finalMode;
+    _state.lastText = finalStepText;
     _trackPushedStep(finalMode, finisherDraft.to,
         from: finisherDraft.from,
         bpm: finisherDraft.bpm,
@@ -1602,8 +1574,8 @@ class CareerSessionGenerator {
     _StaminaModel.fillProfile(ctx.profile, time, postFinalDuration, newStamina,
         valueStart: staminaBeforePostFinal);
     _advanceSalivaSim(postFinalDraft);
-    _lastMode = postFinalDraft.mode;
-    _lastText = postFinalText;
+    _state.lastMode = postFinalDraft.mode;
+    _state.lastText = postFinalText;
     _trackPushedStep(postFinalDraft.mode, postFinalDraft.to,
         from: postFinalDraft.from,
         bpm: postFinalDraft.bpm,
@@ -1797,12 +1769,12 @@ class CareerSessionGenerator {
     required int genUntil,
     required PhraseBank bank,
   }) {
-    // Convention `_unlockedKeys.isEmpty` = mode hérité (Custom / scénarios /
+    // Convention `_state.unlockedKeys.isEmpty` = mode hérité (Custom / scénarios /
     // debug) : pas de gating, le mécanisme reste actif. En carrière le
     // déblocage passe par la milestone `intro_fake_breath` qui accorde la
     // clé `fakeBreath` ; tant qu'elle n'est pas acquittée, rien ne sort.
-    if (_unlockedKeys.isNotEmpty &&
-        !_unlockedKeys.contains(UnlockKey.fakeBreath)) {
+    if (_state.unlockedKeys.isNotEmpty &&
+        !_state.unlockedKeys.contains(UnlockKey.fakeBreath)) {
       return null;
     }
     if (genUntil - time < 30) return null; // pas trop près du finish
@@ -1882,11 +1854,11 @@ class CareerSessionGenerator {
   _StepDraft _buildRecoveryStep() {
     final bpm = 45 + _rng.nextInt(14); // [45, 58]
     final dur = 10 + _rng.nextInt(9); // [10, 18]
-    // Convention `_unlockedKeys.isEmpty` = mode hérité : pas de gating, tous
+    // Convention `_state.unlockedKeys.isEmpty` = mode hérité : pas de gating, tous
     // les modes opt-in passent par défaut (cf. `_isUnlocked`).
     final avail = _RecoveryAvailability(
-      heritage: _unlockedKeys.isEmpty,
-      unlockedKeys: _unlockedKeys,
+      heritage: _state.unlockedKeys.isEmpty,
+      unlockedKeys: _state.unlockedKeys,
       includeHand: _config.includeHand,
     );
     final candidates = <SessionMode>[
@@ -2046,7 +2018,7 @@ class CareerSessionGenerator {
     // Réinitialise l'état comme le ferait `generate`, pour que les helpers
     // (`_clampToCapability`, `_isUnlocked`, `_pickPhrase`...) lisent les
     // mêmes invariants. On ne touche pas aux champs spécifiques au tirage
-    // de session (`_lastMode`, `_rhythmChain`, etc.) — sans objet ici.
+    // de session (`_state.lastMode`, `_rhythmChain`, etc.) — sans objet ici.
     //
     // Surcharge : on honore l'axe imposé par la séance (pas de re-tirage).
     // Le facteur est reconstruit depuis la `successRate` du profil (même
@@ -2094,13 +2066,13 @@ class CareerSessionGenerator {
     // (idempotence avec `generate()`).
     _finalPicker = _FinalPicker(
       config: _config,
-      unlockedKeys: _unlockedKeys,
+      unlockedKeys: _state.unlockedKeys,
       rng: _rng,
       capClamps: _capClamps,
     );
     _positionPickers = _PositionPickers(
       config: _config,
-      unlockedKeys: _unlockedKeys,
+      unlockedKeys: _state.unlockedKeys,
       rng: _rng,
     );
 
@@ -2113,14 +2085,14 @@ class CareerSessionGenerator {
 
   /// Applique `_BpmPacing.diversifyBpm` au draft si pertinent (modes avec
   /// BPM, hors hold/beg/breath/freestyle qui n'en ont pas), et met à jour
-  /// `_lastBpm`. Retourne le draft (potentiellement modifié).
+  /// `_state.lastBpm`. Retourne le draft (potentiellement modifié).
   ///
-  /// Reste sur l'instance car écrit `_lastBpm` (mutation d'état).
+  /// Reste sur l'instance car écrit `_state.lastBpm` (mutation d'état).
   _StepDraft _applyBpmDiversity(_StepDraft d) {
     final bpm = d.bpm;
     if (bpm == null) return d;
-    final newBpm = _BpmPacing.diversifyBpm(bpm, _lastBpm, _rng);
-    _lastBpm = newBpm;
+    final newBpm = _BpmPacing.diversifyBpm(bpm, _state.lastBpm, _rng);
+    _state.lastBpm = newBpm;
     if (newBpm == bpm) return d;
     return _StepDraft(
       mode: d.mode,
@@ -2144,8 +2116,8 @@ class CareerSessionGenerator {
   _StepDraft _diversifyAmplitude(_StepDraft d) {
     final ceiling = _modeRulesRegistry[d.mode]!.amplitudeDiversifyCeiling(this);
     if (ceiling == null) return d;
-    final lastFrom = _lastFrom;
-    final lastTo = _lastTo;
+    final lastFrom = _state.lastFrom;
+    final lastTo = _state.lastTo;
     final exactSameAsLast = lastFrom != null &&
         lastTo != null &&
         d.from == lastFrom &&
@@ -2222,12 +2194,12 @@ class CareerSessionGenerator {
   // Adaptateurs d'instance pour ceux qui restent appelés directement :
 
   /// Adaptateurs d'instance pour `_HumiliationGates` : injectent
-  /// `_config.anatomy`, `_unlockedKeys` et la projection salive `_salivaSim.value`
+  /// `_config.anatomy`, `_state.unlockedKeys` et la projection salive `_state.salivaSim.value`
   /// pour garder les call sites brefs (un seul argument au lieu de quatre).
   bool _isUnlocked(_StepDraft d) => _HumiliationGates.isUnlocked(
         d,
         anatomy: _config.anatomy,
-        unlockedKeys: _unlockedKeys,
+        unlockedKeys: _state.unlockedKeys,
       );
 
   // `_finalUnlocked` n'est plus appelé depuis l'instance (consommé par
@@ -2235,7 +2207,7 @@ class CareerSessionGenerator {
   // Plus d'adaptateur ici.
 
   /// Adaptateur d'instance pour `_HumiliationGates.enforceRequired` : injecte
-  /// `_config.anatomy`, `_unlockedKeys`, la salive courante, et le callback de
+  /// `_config.anatomy`, `_state.unlockedKeys`, la salive courante, et le callback de
   /// clamp capacité (qui reste sur l'instance car il consulte `_config.capProfile`).
   _StepDraft _enforceHumiliationRequired(_StepDraft draft, double available) =>
       _HumiliationGates.enforceRequired(
@@ -2243,11 +2215,11 @@ class CareerSessionGenerator {
         available,
         clampToCapability: _clampToCapability,
         anatomy: _config.anatomy,
-        unlockedKeys: _unlockedKeys,
-        saliva: _salivaSim.value,
+        unlockedKeys: _state.unlockedKeys,
+        saliva: _state.salivaSim.value,
       );
 
-  /// Retire `_lastMode` des candidats si une alternative existe et que le
+  /// Retire `_state.lastMode` des candidats si une alternative existe et que le
   /// mode est « ponctuel » (breath / beg / biffle / hold / freestyle) — deux
   /// events identiques d'affilé y sonneraient comme un bug.
   ///
@@ -2259,12 +2231,12 @@ class CareerSessionGenerator {
   /// step ; l'utilisateur a relevé que la séance ressemblait à une rotation
   /// stricte au lieu de phases prolongées avec variation.
   /// Adaptateur d'instance pour `_ModePicker.filterRepeated` — injecte
-  /// `_lastMode`.
+  /// `_state.lastMode`.
   List<SessionMode> _filterRepeated(List<SessionMode> candidates) =>
-      _ModePicker.filterRepeated(candidates, _lastMode);
+      _ModePicker.filterRepeated(candidates, _state.lastMode);
 
   /// Tire une phrase pour [mode]/[tier] en évitant la même qu'au step
-  /// précédent (`_lastText`). Quelques essais suffisent : si la banque ne
+  /// précédent (`_state.lastText`). Quelques essais suffisent : si la banque ne
   /// contient qu'une seule entrée pour ce couple, on accepte la répétition.
   ///
   /// Si [context] est fourni, le filtrage par contraintes de la
@@ -2291,7 +2263,7 @@ class CareerSessionGenerator {
     final effectiveTier = _bumpTierByObedience(tier);
     for (var i = 0; i < 4; i++) {
       final phrase = bank.pickFor(mode, effectiveTier, _rng, context: context);
-      if (phrase.isEmpty || phrase != _lastText) return phrase;
+      if (phrase.isEmpty || phrase != _state.lastText) return phrase;
     }
     return bank.pickFor(mode, effectiveTier, _rng, context: context);
   }

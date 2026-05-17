@@ -6,8 +6,8 @@
 // donc passer en statiques pures clarifie ce qu'ils consomment.
 //
 // Restent côté instance :
-//   * `_applyBpmDiversity` — écrit `_lastBpm`, ne peut pas être pure
-//   * `_diversifyAmplitude` — lit/écrit `_lastFrom/_lastTo` + consulte
+//   * `_applyBpmDiversity` — écrit `_state.lastBpm`, ne peut pas être pure
+//   * `_diversifyAmplitude` — lit/écrit `_state.lastFrom/_state.lastTo` + consulte
 //     `_patternBuffer.wouldBeFlat`
 // Elles utilisent les fonctions de cette classe en passant l'état requis.
 

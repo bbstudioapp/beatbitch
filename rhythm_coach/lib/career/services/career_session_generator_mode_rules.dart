@@ -64,7 +64,7 @@ enum _StepType { bouche, langue, libreMain, transit }
 /// de spé par axe) et un handle vers le générateur pour accéder aux
 /// samplers (`_positionPickers`), caps (`_capRhythm*`, `_scaleDuration`),
 /// lecture de spé (`_pts`) et state stable (`_rng`, `_anatomy`,
-/// `_maxDepthIndex`, `_unlockedKeys`).
+/// `_maxDepthIndex`, `_state.unlockedKeys`).
 ///
 /// Le couplage est explicite (`ctx.gen.x`) — la consolidation de la
 /// logique mode-specific dans les rules s'arrête à la frontière des
@@ -285,7 +285,7 @@ class _IntroCtx {
 /// résultat`, pas d'accès à l'état). Seule `build` reçoit un `_DraftCtx`
 /// qui expose le générateur — la rule y consomme ses samplers / caps
 /// (`_positionPickers`, `_capRhythm*`, `_scaleDuration`) et state stable
-/// (`_rng`, `_anatomy`, `_maxDepthIndex`, `_unlockedKeys`, `_spec` via
+/// (`_rng`, `_anatomy`, `_maxDepthIndex`, `_state.unlockedKeys`, `_spec` via
 /// `_pts`). Les helpers numériques partagés vivent côté `_StaminaModel`
 /// (`positionDepth`, `lerp`).
 abstract class _ModeRules {

@@ -10,7 +10,7 @@
 // Concerne uniquement les 4 modes à amplitude rythmée (rhythm / lick /
 // hand / biffle). Les hold / beg n'ont pas de BPM et leur monotonie
 // est gérée ailleurs (variation de position dans `_pickHoldPosition`
-// / `_lastFrom`). Les steps transit (breath / freestyle) sont
+// / `_state.lastFrom`). Les steps transit (breath / freestyle) sont
 // transparents — un breath de récup au milieu d'une série rythmée ne
 // casse pas la perception du pattern, on veut qu'il continue à compter.
 
