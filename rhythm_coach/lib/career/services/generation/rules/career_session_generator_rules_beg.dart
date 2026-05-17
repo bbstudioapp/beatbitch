@@ -108,15 +108,15 @@ class _BegRules extends _ModeRules {
     // Convention uniforme hold/beg : la position tenue est dans `to`.
     // Obéissance : beg plus profonds (ampScore boosté localement) et
     // plus longs.
-    final obPts = ctx.gen._config.pts(SpecializationBranch.obeissance);
+    final obPts = ctx.gen.config.pts(SpecializationBranch.obeissance);
     final begAmp = (ctx.ampScore + 0.10 * obPts).clamp(0.0, 1.0);
-    final to = ctx.gen._pickBegPosition(begAmp);
-    final baseDur = ctx.gen._config.scaleDuration(
+    final to = ctx.gen.pickBegPosition(begAmp);
+    final baseDur = ctx.gen.config.scaleDuration(
       _StaminaModel.lerp(7.0, 16.0, ctx.durScore),
       enduranceFactor: 0.04,
       extraFactor: obPts * 0.06,
     );
-    final chained = ctx.gen._maybePickBegWithChain(
+    final chained = ctx.gen.maybePickBegWithChain(
       to: to,
       obPts: obPts,
     );
@@ -144,7 +144,7 @@ class _BegRules extends _ModeRules {
     // Récup vocale par défaut : sans position (= beg libre). Durée plus
     // courte que la fenêtre standard de récup — une supplique tient
     // rarement plus de 10 s sans s'essouffler.
-    final begDur = 6 + ctx.gen._rng.nextInt(6);
+    final begDur = 6 + ctx.gen.rng.nextInt(6);
     return _StepDraft(
       mode: SessionMode.beg,
       bpm: null,

@@ -41,7 +41,7 @@ class _FreestyleRules extends _ModeRules {
 
   @override
   _StepDraft buildRecovery(_RecoveryCtx ctx) {
-    final freeDur = 8 + ctx.gen._rng.nextInt(8);
+    final freeDur = 8 + ctx.gen.rng.nextInt(8);
     return _StepDraft(
       mode: SessionMode.freestyle,
       bpm: null,

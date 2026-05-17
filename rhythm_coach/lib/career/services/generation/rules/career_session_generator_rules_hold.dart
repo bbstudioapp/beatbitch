@@ -101,8 +101,8 @@ class _HoldRules extends _ModeRules {
   _StepDraft build(_DraftCtx ctx) {
     // Convention uniforme hold/beg : la position tenue est dans `to`
     // (matche BeepEngine et le format SessionStep des JSON).
-    final to = ctx.gen._pickHoldPosition(ctx.ampScore);
-    final dur = ctx.gen._config.scaleDuration(
+    final to = ctx.gen.pickHoldPosition(ctx.ampScore);
+    final dur = ctx.gen.config.scaleDuration(
       _StaminaModel.lerp(8.0, 30.0, max(ctx.durScore, ctx.bpmScore)),
       enduranceFactor: 0.08,
     );
@@ -132,20 +132,20 @@ class _HoldRules extends _ModeRules {
     // profondeur max (= throat ou full), assumée comme l'unique geste
     // de tenue. La durée courte (4-7 s) garde une marge de respi avant
     // de redescendre.
-    final ceilingIdx = ctx.gen._milestoneHoldCeilingIdx();
-    final holdDur = 4 + ctx.gen._rng.nextInt(4);
+    final ceilingIdx = ctx.gen.milestoneHoldCeilingIdx();
+    final holdDur = 4 + ctx.gen.rng.nextInt(4);
     final Position to;
     if (ceilingIdx >= Position.throat.index) {
       // Throat ou full débloqué : on tient profond même en récup. Le
       // user a explicitement validé la règle — pas de hold doux quand
       // tu sais tenir gorge.
-      to = ceilingIdx >= Position.full.index && ctx.gen._rng.nextDouble() < 0.30
+      to = ceilingIdx >= Position.full.index && ctx.gen.rng.nextDouble() < 0.30
           ? Position.full
           : Position.throat;
     } else if (ceilingIdx >= Position.mid.index) {
       to = Position.mid;
     } else {
-      to = ctx.gen._rng.nextBool() ? Position.tip : Position.head;
+      to = ctx.gen.rng.nextBool() ? Position.tip : Position.head;
     }
     return _StepDraft(
       mode: SessionMode.hold,
