@@ -80,4 +80,52 @@ class _SessionConfig {
   final Map<CapabilityAxis, double> capCeilings;
   final CapabilityAxis? overloadAxis;
   final double overloadFactor;
+
+  // ─── Méthodes dérivées (pures, lisent uniquement les fields ci-dessus) ───
+
+  /// True si le mode est exclu par le caller via `coachModeWeights[m] == 0`.
+  /// Un coach normal ne pose jamais 0 (cf. CoachMeta) → toujours false hors
+  /// Custom. En Custom, c'est le dosage `none` de `CustomSessionConfig` qui
+  /// pose le 0 et qui doit être honoré partout (palette finale, mini-vagues,
+  /// pré-finisher, intro, recovery…), pas seulement dans `_pickWeightedMode`.
+  bool isModeForbidden(SessionMode m) {
+    final w = coachModeWeights[m];
+    return w != null && w <= 0;
+  }
+
+  /// Points investis dans la branche [b] (lecture courte de `spec`).
+  int pts(SpecializationBranch b) => spec.pointsIn(b);
+
+  /// Applique aux durées les multiplicateurs de spé, capés. `enduranceFactor`
+  /// = bonus par point Endurance ; `extraFactor` = bonus brut additionnel.
+  int scaleDuration(
+    double base, {
+    double enduranceFactor = 0.0,
+    double extraFactor = 0.0,
+  }) {
+    final mul = 1.0 +
+        enduranceFactor * pts(SpecializationBranch.endurance) +
+        extraFactor;
+    final capped = mul.clamp(1.0, 1.6);
+    return (base * capped).round();
+  }
+
+  /// Cap effectif d'humiliation projeté au temps `seconds` depuis le
+  /// début de la session générée. Modèle 2 thermomètres :
+  ///
+  ///   `cap(t) = career + min(session + tickRate × t/60, sessionCap)`
+  ///
+  /// avec `tickRate = 1 × accel(obed)` (cf. `HumiliationEngine.onTickSecond`).
+  /// La projection ne tient pas compte des bumps évènementiels (punition
+  /// complétée, hold profond complété…) — c'est volontairement conservateur,
+  /// le runtime peut accepter des actions un poil plus dures que ce que la
+  /// rampe seule prédit.
+  double humilCapAt(int seconds) {
+    final accel = (1.0 + obedience / 100.0).clamp(1.0, 3.0);
+    final tickRate = HumiliationEngine.bumpPerInterval * accel; // par minute
+    final added = tickRate * seconds / 60.0;
+    final session =
+        (humiliationSession + added).clamp(0.0, HumiliationEngine.sessionCap);
+    return humiliationCareer + session;
+  }
 }

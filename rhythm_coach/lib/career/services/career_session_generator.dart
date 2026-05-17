@@ -195,15 +195,8 @@ class CareerSessionGenerator {
   /// qui tirent ou hardcodent un mode pour ne jamais émettre un mode exclu.
   Map<SessionMode, double> get _coachModeWeights => _config.coachModeWeights;
 
-  /// True si le mode est exclu par le caller via `coachModeWeights[m] == 0`.
-  /// Un coach normal ne pose jamais 0 (cf. CoachMeta) → toujours false hors
-  /// Custom. En Custom, c'est le dosage `none` de `CustomSessionConfig` qui
-  /// pose le 0 et qui doit être honoré partout (palette finale, mini-vagues,
-  /// pré-finisher, intro, recovery…), pas seulement dans `_pickWeightedMode`.
-  bool _isModeForbidden(SessionMode m) {
-    final w = _coachModeWeights[m];
-    return w != null && w <= 0;
-  }
+  /// Délégué à [`_SessionConfig.isModeForbidden`].
+  bool _isModeForbidden(SessionMode m) => _config.isModeForbidden(m);
 
   // Scores au moment t=0 (lus par `_humilCapAt` et `_pickPhrase`).
   double get _humiliationCareer => _config.humiliationCareer;
@@ -236,24 +229,8 @@ class CareerSessionGenerator {
   CareerSessionGenerator({int? seed})
       : _rng = seed != null ? Random(seed) : Random();
 
-  /// Cap effectif d'humiliation projeté au temps `seconds` depuis le
-  /// début de la session générée. Modèle 2 thermomètres :
-  ///
-  ///   `cap(t) = career + min(session + tickRate × t/60, sessionCap)`
-  ///
-  /// avec `tickRate = 1 × accel(obed)` (cf. `HumiliationEngine.onTickSecond`).
-  /// La projection ne tient pas compte des bumps évènementiels (punition
-  /// complétée, hold profond complété…) — c'est volontairement
-  /// conservateur, le runtime peut accepter des actions un poil plus
-  /// dures que ce que la rampe seule prédit.
-  double _humilCapAt(int seconds) {
-    final accel = (1.0 + _obedience / 100.0).clamp(1.0, 3.0);
-    final tickRate = HumiliationEngine.bumpPerInterval * accel; // par minute
-    final added = tickRate * seconds / 60.0;
-    final session =
-        (_humiliationSession + added).clamp(0.0, HumiliationEngine.sessionCap);
-    return _humiliationCareer + session;
-  }
+  /// Délégué à [`_SessionConfig.humilCapAt`].
+  double _humilCapAt(int seconds) => _config.humilCapAt(seconds);
 
   // ─── Profil de capacités — 2ᵉ enveloppe de difficulté ────────────────────
 
@@ -2235,22 +2212,17 @@ class CareerSessionGenerator {
     _patternBuffer.record(mode, from: from, to: to, bpm: bpm);
   }
 
-  /// Applique aux durées les multiplicateurs de spé, capés.
-  /// `enduranceFactor` = bonus par point Endurance ; `extraFactor` = bonus
-  /// brut additionnel.
+  /// Délégué à [`_SessionConfig.scaleDuration`].
   int _scaleDuration(
     double base, {
     double enduranceFactor = 0.0,
     double extraFactor = 0.0,
-  }) {
-    final mul = 1.0 +
-        enduranceFactor * _pts(SpecializationBranch.endurance) +
-        extraFactor;
-    final capped = mul.clamp(1.0, 1.6);
-    return (base * capped).round();
-  }
+  }) =>
+      _config.scaleDuration(base,
+          enduranceFactor: enduranceFactor, extraFactor: extraFactor);
 
-  int _pts(SpecializationBranch b) => _spec.pointsIn(b);
+  /// Délégué à [`_SessionConfig.pts`].
+  int _pts(SpecializationBranch b) => _config.pts(b);
 
   /// Adapteur d'instance de `_BpmPacing.capRhythmDurationByPulses` qui
   /// injecte `_humiliationCareer` et les points de spé (l'algo lui-même
