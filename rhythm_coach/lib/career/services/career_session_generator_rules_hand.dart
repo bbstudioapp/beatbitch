@@ -52,4 +52,24 @@ class _HandRules extends _ModeRules {
       duration: dur,
     );
   }
+
+  /// Hand post-final = finition douce tip→head. Blocked si le toggle
+  /// Hand est off, si hand vient juste d'être joué en final (alternance),
+  /// ou si la dose Custom hand est 0.
+  @override
+  List<_PostFinalVariant> postFinalVariants(_PostFinalCtx ctx) => [
+        _PostFinalVariant(
+          req: 8.0,
+          blocked: !ctx.includeHand ||
+              ctx.finalMode == SessionMode.hand ||
+              ctx.isModeForbidden(SessionMode.hand),
+          draft: _StepDraft(
+            mode: SessionMode.hand,
+            bpm: ctx.bpm,
+            from: Position.tip,
+            to: Position.head,
+            duration: ctx.duration,
+          ),
+        ),
+      ];
 }

@@ -37,4 +37,23 @@ class _BreathRules extends _ModeRules {
       duration: dur,
     );
   }
+
+  /// Breath post-final = req 0 (toujours accessible), jamais blocked
+  /// (breath n'est pas dosable Custom, cf. `CustomSessionConfig.
+  /// dosableModes`). Sert de fallback safe quand humilCap est trop bas
+  /// pour les autres variantes.
+  @override
+  List<_PostFinalVariant> postFinalVariants(_PostFinalCtx ctx) => [
+        _PostFinalVariant(
+          req: 0.0,
+          blocked: false,
+          draft: _StepDraft(
+            mode: SessionMode.breath,
+            bpm: null,
+            from: null,
+            to: null,
+            duration: ctx.duration,
+          ),
+        ),
+      ];
 }

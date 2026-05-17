@@ -155,4 +155,42 @@ class _HoldRules extends _ModeRules {
       duration: holdDur,
     );
   }
+
+  /// Hold post-final = 2 variantes (tip + head). Blocked si le final
+  /// vient juste d'être un hold (alternance), si la dose Custom hold
+  /// est 0, ou si la joueuse a déjà acquis un palier de hold plus
+  /// profond (philo design : « le seul hold qui a du sens est le plus
+  /// profond que tu sais tenir » — un hold tip/head post-orgasme alors
+  /// que mid est acquis est juste une régression arbitraire).
+  @override
+  List<_PostFinalVariant> postFinalVariants(_PostFinalCtx ctx) {
+    final isFinalHold = ctx.finalMode == SessionMode.hold;
+    final forbidden = ctx.isModeForbidden(SessionMode.hold);
+    final tipObsolete = ctx.holdCeilingIdx > Position.tip.index;
+    final headObsolete = ctx.holdCeilingIdx > Position.head.index;
+    return [
+      _PostFinalVariant(
+        req: 20.0,
+        blocked: isFinalHold || tipObsolete || forbidden,
+        draft: _StepDraft(
+          mode: SessionMode.hold,
+          bpm: null,
+          from: null,
+          to: Position.tip,
+          duration: ctx.duration,
+        ),
+      ),
+      _PostFinalVariant(
+        req: 70.0,
+        blocked: isFinalHold || headObsolete || forbidden,
+        draft: _StepDraft(
+          mode: SessionMode.hold,
+          bpm: null,
+          from: null,
+          to: Position.head,
+          duration: ctx.duration,
+        ),
+      ),
+    ];
+  }
 }
