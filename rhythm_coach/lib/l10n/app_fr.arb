@@ -162,6 +162,33 @@
   "profileCapLickDepth": "Profondeur langue",
   "profileCapLickStreak": "Langue continue",
   "profileCapHandStreak": "Main continue",
+  "profileDiagnosticSection": "DIAGNOSTIC",
+  "profileDiagnosticDescription": "Exporte un fichier JSON avec ton état de progression — utile si tu veux signaler un bug. Rien n'est envoyé automatiquement, c'est toi qui choisis ce que tu en fais.",
+  "profileDiagnosticExportButton": "Exporter mes données",
+  "profileDiagnosticSheetTitle": "Exporter mes données",
+  "profileDiagnosticSheetIntro": "Le fichier contient :",
+  "profileDiagnosticItemCareer": "Carrière : ton niveau max, sessions terminées, milestones acquises.",
+  "profileDiagnosticItemStats": "Stats : compteurs de séance (temps total, throatfucks, holds, streaks…).",
+  "profileDiagnosticItemCapabilities": "Capacités : tes records et zones de confort par axe.",
+  "profileDiagnosticItemAnatomy": "Anatomie : tes toggles de profil (présence des testicules).",
+  "profileDiagnosticItemPreferences": "Préférences : langue, voix, affichage, surprises, debug.",
+  "profileDiagnosticItemBadges": "Badges : les paliers que tu as débloqués.",
+  "profileDiagnosticIncludeNicknames": "Inclure mes surnoms personnalisés",
+  "profileDiagnosticIncludeNicknamesSubtitle": "Désactivé par défaut — ils peuvent contenir un prénom réel.",
+  "profileDiagnosticShareButton": "Partager",
+  "profileDiagnosticSaveButton": "Enregistrer",
+  "profileDiagnosticDownloadButton": "Télécharger",
+  "profileDiagnosticCancel": "Annuler",
+  "profileDiagnosticShareSubject": "Export BeatBitch",
+  "profileDiagnosticShareSnackbar": "Export prêt à être partagé.",
+  "profileDiagnosticSavedSnackbar": "Fichier enregistré.",
+  "profileDiagnosticErrorSnackbar": "Échec de l'export : {error}",
+  "@profileDiagnosticErrorSnackbar": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+
   "profileResetSection": "ZONE DANGER",
   "profileResetButton": "Tout remettre à zéro",
   "profileResetDialogTitle": "Tout remettre à zéro ?",

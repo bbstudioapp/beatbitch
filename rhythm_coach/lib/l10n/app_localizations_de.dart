@@ -372,6 +372,80 @@ class AppLocalizationsDe extends AppLocalizations {
   String get profileCapHandStreak => 'Ununterbrochene Hand';
 
   @override
+  String get profileDiagnosticSection => 'DIAGNOSE';
+
+  @override
+  String get profileDiagnosticDescription =>
+      'Exportiere eine JSON-Datei mit deinen Fortschrittsdaten — nützlich, wenn du einen Bug melden willst. Es wird nichts automatisch verschickt, du entscheidest, was du damit machst.';
+
+  @override
+  String get profileDiagnosticExportButton => 'Meine Daten exportieren';
+
+  @override
+  String get profileDiagnosticSheetTitle => 'Meine Daten exportieren';
+
+  @override
+  String get profileDiagnosticSheetIntro => 'Die Datei enthält:';
+
+  @override
+  String get profileDiagnosticItemCareer =>
+      'Karriere: dein Maximallevel, abgeschlossene Sessions, erreichte Meilensteine.';
+
+  @override
+  String get profileDiagnosticItemStats =>
+      'Statistiken: Sessionzähler (Gesamtzeit, Throatfucks, Holds, Streaks…).';
+
+  @override
+  String get profileDiagnosticItemCapabilities =>
+      'Fähigkeiten: deine Rekorde und Komfortzonen pro Achse.';
+
+  @override
+  String get profileDiagnosticItemAnatomy =>
+      'Anatomie: deine Profileinstellungen (Hoden vorhanden).';
+
+  @override
+  String get profileDiagnosticItemPreferences =>
+      'Einstellungen: Sprache, Stimme, Anzeige, Überraschungen, Debug.';
+
+  @override
+  String get profileDiagnosticItemBadges =>
+      'Abzeichen: die Stufen, die du freigeschaltet hast.';
+
+  @override
+  String get profileDiagnosticIncludeNicknames =>
+      'Meine persönlichen Spitznamen einschließen';
+
+  @override
+  String get profileDiagnosticIncludeNicknamesSubtitle =>
+      'Standardmäßig aus — sie können einen echten Vornamen enthalten.';
+
+  @override
+  String get profileDiagnosticShareButton => 'Teilen';
+
+  @override
+  String get profileDiagnosticSaveButton => 'Speichern';
+
+  @override
+  String get profileDiagnosticDownloadButton => 'Herunterladen';
+
+  @override
+  String get profileDiagnosticCancel => 'Abbrechen';
+
+  @override
+  String get profileDiagnosticShareSubject => 'BeatBitch-Export';
+
+  @override
+  String get profileDiagnosticShareSnackbar => 'Export zum Teilen bereit.';
+
+  @override
+  String get profileDiagnosticSavedSnackbar => 'Datei gespeichert.';
+
+  @override
+  String profileDiagnosticErrorSnackbar(String error) {
+    return 'Export fehlgeschlagen: $error';
+  }
+
+  @override
   String get profileResetSection => 'GEFAHRENZONE';
 
   @override

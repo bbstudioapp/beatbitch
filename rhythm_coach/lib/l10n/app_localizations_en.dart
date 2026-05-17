@@ -373,6 +373,79 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileCapHandStreak => 'Unbroken hand';
 
   @override
+  String get profileDiagnosticSection => 'DIAGNOSTIC';
+
+  @override
+  String get profileDiagnosticDescription =>
+      'Export a JSON file with your progress data — useful when reporting a bug. Nothing is sent automatically, you choose what to do with it.';
+
+  @override
+  String get profileDiagnosticExportButton => 'Export my data';
+
+  @override
+  String get profileDiagnosticSheetTitle => 'Export my data';
+
+  @override
+  String get profileDiagnosticSheetIntro => 'The file contains:';
+
+  @override
+  String get profileDiagnosticItemCareer =>
+      'Career: your max level, completed sessions, milestones earned.';
+
+  @override
+  String get profileDiagnosticItemStats =>
+      'Stats: session counters (total time, throatfucks, holds, streaks…).';
+
+  @override
+  String get profileDiagnosticItemCapabilities =>
+      'Capabilities: your records and comfort zones per axis.';
+
+  @override
+  String get profileDiagnosticItemAnatomy =>
+      'Anatomy: your profile toggles (whether you have balls).';
+
+  @override
+  String get profileDiagnosticItemPreferences =>
+      'Preferences: language, voice, display, surprises, debug.';
+
+  @override
+  String get profileDiagnosticItemBadges =>
+      'Badges: the tiers you\'ve unlocked.';
+
+  @override
+  String get profileDiagnosticIncludeNicknames => 'Include my custom nicknames';
+
+  @override
+  String get profileDiagnosticIncludeNicknamesSubtitle =>
+      'Off by default — they may contain a real first name.';
+
+  @override
+  String get profileDiagnosticShareButton => 'Share';
+
+  @override
+  String get profileDiagnosticSaveButton => 'Save';
+
+  @override
+  String get profileDiagnosticDownloadButton => 'Download';
+
+  @override
+  String get profileDiagnosticCancel => 'Cancel';
+
+  @override
+  String get profileDiagnosticShareSubject => 'BeatBitch export';
+
+  @override
+  String get profileDiagnosticShareSnackbar => 'Export ready to share.';
+
+  @override
+  String get profileDiagnosticSavedSnackbar => 'File saved.';
+
+  @override
+  String profileDiagnosticErrorSnackbar(String error) {
+    return 'Export failed: $error';
+  }
+
+  @override
   String get profileResetSection => 'DANGER ZONE';
 
   @override
