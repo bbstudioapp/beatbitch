@@ -311,4 +311,11 @@ class _HoldRules extends _ModeRules {
   @override
   bool isIntenseForFakeBreath(_StepDraft draft) =>
       draft.to == Position.throat || draft.to == Position.full;
+
+  /// Rang 3 (fallback ultime) dans la chaîne d'intro intense/quickie :
+  /// hold statique quand tous les modes rythmés/langue sont exclus.
+  /// Construction de step différente (pas de BPM, juste `to` + dur) —
+  /// le caller branche explicitement dessus.
+  @override
+  int? get introPriority => 3;
 }

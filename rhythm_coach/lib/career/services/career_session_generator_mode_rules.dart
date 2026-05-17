@@ -35,6 +35,9 @@
 //     déclencher un faux-breath » (ex-check inline dans `_maybeFakeBreath`).
 //   * `pickPostFinalText` — pool de phrase post-final spécifique au mode
 //     (ex-switch dans `_emitPostFinal`).
+//   * `introPriority` — rang du mode dans la chaîne de fallback
+//     « intro intense / quickie » de `_firstStep` (ex-cascade `rhythm →
+//     hand → lick → hold`).
 
 part of 'career_session_generator.dart';
 
@@ -416,6 +419,17 @@ abstract class _ModeRules {
   /// consommée à chaque tentative ; semantics identiques au switch
   /// historique sur `mode == beg / lick`.
   String? pickPostFinalText(PhraseBank bank, Random rng) => null;
+
+  /// Rang du mode dans la chaîne de fallback « intro intense / quickie »
+  /// (cf. `_firstStep` côté générateur). Plus bas = préféré. `null` =
+  /// mode pas candidat à cette chaîne (default opt-in).
+  ///
+  /// Cascade actuelle (rangs distincts pour ordre total déterministe) :
+  /// rhythm (0) → hand (1) → lick (2) → hold (3). Hold occupe le rang
+  /// le plus haut = fallback ultime ; le caller préserve hold même si
+  /// `_isModeForbidden(hold)` (sinon en Custom dose à 0 partout on
+  /// retombe sans candidat).
+  int? get introPriority => null;
 }
 
 /// Baisse `to` d'un cran en s'arrêtant à `head` (jamais à `tip` — un step
