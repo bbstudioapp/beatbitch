@@ -1,17 +1,28 @@
-// Fichier part de `career_session_generator.dart` — outils de pacing BPM.
+// Library autonome — outils de pacing BPM.
 //
-// Regroupe les helpers de pacing rythmique **sans état d'instance**, sortis
-// du fichier principal pour la même raison que `StaminaModel` : leurs
-// formules sont denses et leurs entrées sont des scalaires explicites,
-// donc passer en statiques pures clarifie ce qu'ils consomment.
+// Regroupe les helpers de pacing rythmique **sans état d'instance**,
+// sortis de `career_session_generator.dart` pour la même raison que
+// `StaminaModel` : leurs formules sont denses et leurs entrées sont
+// des scalaires explicites, donc passer en statiques pures clarifie
+// ce qu'ils consomment.
 //
-// Restent côté instance :
+// Préalable à l'extraction de `gen_facade.dart` (la facade délègue
+// `capRhythmDurationByPulses` à cette classe ; elle doit pouvoir
+// l'importer sans passer par le `part of` du générateur).
+//
+// Restent côté instance dans le générateur :
 //   * `_applyBpmDiversity` — écrit `_state.lastBpm`, ne peut pas être pure
-//   * `_diversifyAmplitude` — lit/écrit `_state.lastFrom/_state.lastTo` + consulte
-//     `_patternBuffer.wouldBeFlat`
+//   * `_diversifyAmplitude` — lit/écrit `_state.lastFrom/_state.lastTo` +
+//     consulte `_patternBuffer.wouldBeFlat`
 // Elles utilisent les fonctions de cette classe en passant l'état requis.
 
-part of 'career_session_generator.dart';
+import 'dart:math';
+
+import '../../../models/session.dart';
+import '../../../models/session_step.dart';
+import '../../models/specialization.dart';
+import 'session_config.dart';
+import 'step_draft.dart';
 
 /// Pacing rythmique : diversification BPM/profondeur, rampe, cap pulses
 /// pour les profondeurs gorgées. Toutes les méthodes sont statiques + pures.
@@ -19,7 +30,7 @@ part of 'career_session_generator.dart';
 /// Le caller passe explicitement l'état nécessaire (`lastBpm`, `rng`,
 /// `level`, `humiliationCareer`, points de spé). Permet à terme une
 /// couverture par tests unitaires dédiés.
-class _BpmPacing {
+class BpmPacing {
   /// Force une variation de BPM si le proposé est dans ±10 du précédent.
   /// Décale de 18–30 BPM dans la direction opposée (clampé [40, 200]).
   ///

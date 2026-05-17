@@ -57,7 +57,7 @@ part of 'career_session_generator.dart';
 /// générateur. Elle reçoit en constructeur les collaborateurs dont les
 /// rules ont besoin — state stable (`config`, `state`, `rng`,
 /// `rhythmChain`) et sous-systèmes (`_PositionPickers`). Les méthodes
-/// `_BpmPacing` consommées passent par le `config` field. Le générateur
+/// `BpmPacing` consommées passent par le `config` field. Le générateur
 /// recrée la facade à chaque `generate()` / `generatePunishment()`,
 /// après que ses sous-systèmes sont posés.
 class GenFacade {
@@ -101,9 +101,9 @@ class GenFacade {
   }) =>
       _positionPickers.maybePickBegWithChain(to: to, obPts: obPts);
 
-  // ─── Caps pacing (délégué à `_BpmPacing` avec injection de `config`) ─────
+  // ─── Caps pacing (délégué à `BpmPacing` avec injection de `config`) ─────
   int capRhythmDurationByPulses(int dur, int bpm, Position? to) =>
-      _BpmPacing.capRhythmDurationByPulses(dur, bpm, to, config: config);
+      BpmPacing.capRhythmDurationByPulses(dur, bpm, to, config: config);
 }
 
 /// Contexte d'assemblage d'un step passé à `ModeRules.build`. Porte les
