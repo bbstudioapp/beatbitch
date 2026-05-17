@@ -37,6 +37,7 @@ part 'career_session_generator_difficulty_dispatch.dart';
 part 'career_session_generator_position_pickers.dart';
 part 'career_session_generator_punishment.dart';
 part 'career_session_generator_rhythm_chain_tracker.dart';
+part 'career_session_generator_rhythmic_pattern_buffer.dart';
 
 /// Résultat d'une génération : la session figée à passer au controller +
 /// le profil d'endurance projeté (utile à l'overlay debug `StaminaBar`) +
@@ -172,18 +173,11 @@ class CareerSessionGenerator {
   Position? _lastFrom;
   Position? _lastTo;
 
-  /// Buffer roulant des 3 derniers steps rythmés émis (mode + from + to +
-  /// bpm). Sert à détecter un **pattern plat** sur une fenêtre élargie :
-  /// même mode + même profondeur cible + variance BPM < 10 sur 3 steps
-  /// consécutifs = monotone, on force une diversification au step suivant.
-  /// Sans cette fenêtre, `_diversifyAmplitude` ne regardait que le step
-  /// strictement précédent et laissait passer des séries du genre
-  /// `head→mid 90 / head→mid 92 / head→mid 88` (BPMs proches mais différents
-  /// donc check classique satisfait, alors que l'oreille perçoit un plat).
-  /// Les steps transit (breath / freestyle) sont **ignorés** : un breath
-  /// de récup au milieu d'une série rythmée ne casse pas la perception du
-  /// pattern, on veut qu'il continue à compter.
-  final List<_RecentEmit> _recentEmits = [];
+  /// Buffer roulant des derniers steps rythmés émis + détecteur de
+  /// pattern plat. Cf. `_RhythmicPatternBuffer` pour le détail. Couplé
+  /// à `_trackPushedStep` (qui appelle `record`) et consulté via
+  /// `wouldBeFlat(draft)` par `_diversifyAmplitude`.
+  final _RhythmicPatternBuffer _patternBuffer = _RhythmicPatternBuffer();
 
   // ─── SIMULATION SALIVE ───────────────────────────────────────────────────
   // Mime le runtime `SalivaEngine` pour anticiper les ordres de déglutition
@@ -507,7 +501,7 @@ class CareerSessionGenerator {
     _stepsInLastType = 0;
     _stepsOutsideBouche = 0;
     _rhythmChain.reset();
-    _recentEmits.clear();
+    _patternBuffer.clear();
     _unlockedKeys = unlockedKeys;
     _coachModeWeights = coachModeWeights;
     _humiliationCareer = humiliationCareer;
@@ -1265,7 +1259,7 @@ class CareerSessionGenerator {
   /// Construit la séquence de la mini-vague : 2 à 3 steps rythmés à BPM
   /// montant, chacun à profondeur progressive (head→mid puis head→mid
   /// puis head→throat si débloqué). Variations de `to` choisies pour ne
-  /// pas trigger le détecteur de pattern plat (`_isFlatRhythmicPattern`)
+  /// pas trigger le détecteur de pattern plat (`_patternBuffer.wouldBeFlat`)
   /// et pour matérialiser la montée à l'oreille (BPMs espacés de 20).
   ///
   /// Chaque step est filtré par `_enforceHumiliationRequired(humilCap)` :
@@ -1277,7 +1271,7 @@ class CareerSessionGenerator {
     final hasThroat = _unlockedKeys.contains(UnlockKey.throatHoldShort) ||
         _maxDepthIndex >= Position.throat.index;
     // Steps montants : BPMs espacés de 20 pour que la variance détectée
-    // par `_isFlatRhythmicPattern` (< 10) ne déclenche pas. Choix
+    // par `_patternBuffer.wouldBeFlat` (< 10) ne déclenche pas. Choix
     // mode=rhythm sur les 3 steps pour cohérence dramaturgique (un seul
     // mode = montée homogène). `to` qui change évite aussi le pattern
     // plat — la diversification interne ne peut pas le casser.
@@ -2295,16 +2289,16 @@ class CareerSessionGenerator {
   // (passé un `_ModeContinuityState`). Plus de call site externe.
 
   /// Met à jour `_lastType` / `_stepsInLastType` après push d'un step,
-  /// notifie `_rhythmChain` du mode/durée, et alimente `_recentEmits`
-  /// (buffer 3 derniers, modes rythmés uniquement) pour la détection
-  /// de pattern plat.
+  /// notifie `_rhythmChain` du mode/durée, et alimente le buffer
+  /// `_patternBuffer` (rythmés uniquement, filtré en interne) pour la
+  /// détection de pattern plat.
   ///
   /// Les steps `transit` (breath / freestyle) sont une parenthèse
   /// transparente côté `_lastType` / `_stepsInLastType` : ils ne touchent
-  /// ni le tracking de type ni le buffer `_recentEmits` — un breath de
-  /// récup au milieu d'une série rythmée ne doit pas remettre le compteur
-  /// de continuité à zéro. Note : pour `_rhythmChain`, un breath *reset*
-  /// le cumul (c'est une vraie pause), géré dans `onStepPushed`.
+  /// ni le tracking de type ni le buffer — un breath de récup au milieu
+  /// d'une série rythmée ne doit pas remettre le compteur de continuité
+  /// à zéro. Note : pour `_rhythmChain`, un breath *reset* le cumul
+  /// (c'est une vraie pause), géré dans `onStepPushed`.
   void _trackPushedStep(SessionMode mode, Position? to,
       {Position? from, int? bpm, int? duration}) {
     _rhythmChain.onStepPushed(mode, duration);
@@ -2321,44 +2315,7 @@ class CareerSessionGenerator {
       _lastType = type;
       _stepsInLastType = 1;
     }
-    // Buffer pattern plat : on n'enregistre que les modes à amplitude
-    // (rhythm / lick / hand / biffle) — ce sont les seuls où la notion de
-    // « même profondeur + même BPM » fait sens. Les hold / beg ne portent
-    // pas de BPM, et leur monotonie est gérée ailleurs (variation de
-    // position dans `_pickHoldPosition` / `_lastFrom`).
-    if (mode == SessionMode.rhythm ||
-        mode == SessionMode.lick ||
-        mode == SessionMode.hand ||
-        mode == SessionMode.biffle) {
-      _recentEmits.add((mode: mode, from: from, to: to, bpm: bpm));
-      while (_recentEmits.length > 3) {
-        _recentEmits.removeAt(0);
-      }
-    }
-  }
-
-  /// Vrai si le draft proposé prolongerait un **pattern plat** : les 3
-  /// derniers émis + le draft sont tous (a) du même mode rythmé,
-  /// (b) à la même profondeur cible `to`, (c) avec une variance BPM
-  /// < 10 sur les 4 valeurs. Sans cette fenêtre élargie, une série
-  /// `head→mid 88 / head→mid 92 / head→mid 90` glissait à travers le
-  /// check classique (BPMs « différents ») alors que l'oreille perçoit
-  /// un plat. Le seuil < 10 reste serré : 10 BPM de variance c'est déjà
-  /// audible, on n'intervient que sous ce seuil.
-  bool _isFlatRhythmicPattern(_StepDraft d) {
-    if (_recentEmits.length < 3) return false;
-    if (d.bpm == null || d.to == null) return false;
-    if (!_recentEmits.every((e) => e.mode == d.mode)) return false;
-    if (!_recentEmits.every((e) => e.to == d.to)) return false;
-    final bpms = <int>[
-      for (final e in _recentEmits)
-        if (e.bpm != null) e.bpm!,
-      d.bpm!,
-    ];
-    if (bpms.length < 4) return false;
-    final maxB = bpms.reduce(max);
-    final minB = bpms.reduce(min);
-    return (maxB - minB) < 10;
+    _patternBuffer.record(mode, from: from, to: to, bpm: bpm);
   }
 
   // `_modeBaseWeight` a migré dans `_ModePicker.baseWeight` (prend
@@ -2640,7 +2597,7 @@ class CareerSessionGenerator {
     // Le détecteur fenêtre 3 ne déclenche que si on a déjà 3 émissions
     // rythmées en buffer. Tant qu'il n'y en a pas (début de session), on
     // s'appuie uniquement sur le check classique sur le step précédent.
-    final flatPattern = _isFlatRhythmicPattern(d);
+    final flatPattern = _patternBuffer.wouldBeFlat(d);
     if (!exactSameAsLast && !flatPattern) return d;
     // Même amplitude que le step précédent OU pattern plat sur 3 steps :
     // on décale `to` d'un cran.
@@ -2892,16 +2849,6 @@ class CareerSessionGenerator {
 /// - `transit` (breath, freestyle) : pause neutre, ne casse pas la
 ///   continuité du type courant.
 enum _StepType { bouche, langue, libreMain, transit }
-
-/// Snapshot léger d'un step rythmé déjà émis, conservé dans le buffer
-/// roulant `_recentEmits`. Sert à `_isFlatRhythmicPattern` pour détecter
-/// une monotonie sur fenêtre 3 (mêmes mode + to + BPMs proches).
-typedef _RecentEmit = ({
-  SessionMode mode,
-  Position? from,
-  Position? to,
-  int? bpm,
-});
 
 /// Classe un step (mode + position éventuelle) en `_StepType`. La
 /// position est nécessaire pour `beg` : un beg avec `to` tenu = la
