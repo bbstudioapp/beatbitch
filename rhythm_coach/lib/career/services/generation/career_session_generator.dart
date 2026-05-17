@@ -48,6 +48,7 @@ import 'rules/career_session_generator_rules_lick.dart';
 import 'rules/career_session_generator_rules_rhythm.dart';
 import 'rules/career_session_generator_rules_suckle.dart';
 import 'mode_continuity_state.dart';
+import 'rhythm_chain_tracker.dart';
 import 'session_config.dart';
 import 'session_runtime_state.dart';
 import 'step_draft.dart';
@@ -57,6 +58,7 @@ import 'step_type.dart';
 // sites externes importent `career_session_generator.dart` et y trouvent
 // toujours ces types.
 export 'mode_continuity_state.dart' show ModeContinuityState;
+export 'rhythm_chain_tracker.dart' show RhythmChainTracker;
 export 'session_config.dart' show SessionConfig;
 export 'session_runtime_state.dart' show SessionRuntimeState;
 export 'step_draft.dart' show StepDraft;
@@ -72,7 +74,6 @@ part 'career_session_generator_final_picker.dart';
 part 'career_session_generator_difficulty_dispatch.dart';
 part 'career_session_generator_position_pickers.dart';
 part 'career_session_generator_punishment.dart';
-part 'career_session_generator_rhythm_chain_tracker.dart';
 part 'career_session_generator_rhythmic_pattern_buffer.dart';
 part 'career_session_generator_milestone_scheduler.dart';
 
@@ -132,8 +133,11 @@ class CareerSessionGenerator {
 
   late SessionRuntimeState _state;
 
-  // Sous-systèmes runtime autonomes (gèrent leur reset eux-mêmes).
-  late final RhythmChainTracker _rhythmChain = RhythmChainTracker(gen: this);
+  // Sous-systèmes runtime autonomes. `_rhythmChain` est recréé à chaque
+  // `generate()` après que `_state` + `_capClamps` sont posés (il consomme
+  // `motion_streak` comfort + overload factor projetés). Le pattern buffer
+  // reste un objet stable avec son propre `clear()` au début de séance.
+  late RhythmChainTracker _rhythmChain;
   final _RhythmicPatternBuffer _patternBuffer = _RhythmicPatternBuffer();
 
   /// Surface exposée aux `ModeRules` (cf. `GenFacade`). Recréée à chaque
@@ -174,12 +178,6 @@ class CareerSessionGenerator {
         _rules = rules ?? defaultModeRulesRegistry;
 
   // ─── Profil de capacités — 2ᵉ enveloppe de difficulté ────────────────────
-
-  /// Adaptateur d'instance pour `CapabilityClamps.overloadFactorFor` —
-  /// utilisé par `RhythmChainTracker.effectiveCapSeconds` pour étendre
-  /// le cap de chaîne rythme si `rhythmMotionStreak` est l'axe surchargé.
-  double _overloadFactorFor(CapabilityAxis axis) =>
-      _capClamps.overloadFactorFor(axis);
 
   /// Sélectionne l'axe de surcharge pour la séance via
   /// `CapabilityClamps.pickOverloadAxis`. Retourne `(axis, factor)`
@@ -292,7 +290,6 @@ class CareerSessionGenerator {
     );
     _state = SessionRuntimeState.fresh(rng: _rng);
     _state.unlockedKeys = unlockedKeys;
-    _rhythmChain.reset();
     _patternBuffer.clear();
     // 2ᵉ enveloppe immuable construite après le choix de l'axe de surcharge —
     // recréée à chaque appel à `generate()` pour intégrer profile/ceilings/
@@ -303,6 +300,16 @@ class CareerSessionGenerator {
       bpmRange: _config.bpmRange,
       holdRange: _config.holdDurationRange,
       rules: _rules,
+    );
+    // Recréé à chaque séance (compteur à 0 naturellement) après `_capClamps`
+    // dont on lit le facteur de surcharge `motion_streak`. Plus de
+    // `reset()` explicite — la composition rend l'invariant mécanique.
+    _rhythmChain = RhythmChainTracker(
+      state: _state,
+      motionStreakComfort:
+          _config.capProfile?.comfortOf(CapabilityAxis.rhythmMotionStreak),
+      motionStreakOverloadFactor:
+          _capClamps.overloadFactorFor(CapabilityAxis.rhythmMotionStreak),
     );
     _finalPicker = FinalPicker(
       config: _config,
@@ -2103,6 +2110,17 @@ class CareerSessionGenerator {
       bpmRange: null,
       holdRange: null,
       rules: _rules,
+    );
+    // `_rhythmChain` n'est pas consommé par `generatePunishment` (les
+    // compositions ne déclenchent pas de chaîne rythme), mais on le
+    // (re)pose pour idempotence avec `generate()` — la facade le tient
+    // en field, un null planterait au moment du `_facade` construct.
+    _rhythmChain = RhythmChainTracker(
+      state: _state,
+      motionStreakComfort:
+          _config.capProfile?.comfortOf(CapabilityAxis.rhythmMotionStreak),
+      motionStreakOverloadFactor:
+          _capClamps.overloadFactorFor(CapabilityAxis.rhythmMotionStreak),
     );
     // `_finalPicker` et `_positionPickers` ne sont pas consommés par
     // `generatePunishment`, mais on les initialise par sécurité

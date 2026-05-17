@@ -1,5 +1,4 @@
-// Fichier part de `career_session_generator.dart` — sous-système
-// « fatigue de chaîne rythme ».
+// Library autonome — sous-système « fatigue de chaîne rythme ».
 //
 // Le rythme soutenu (steps `rhythm` consécutifs) doit être borné pour
 // que la joueuse n'enchaîne pas 3 minutes de loop sans rupture. Le
@@ -12,7 +11,15 @@
 //   * `onStepPushed(mode, duration)` — appelé par `_trackPushedStep` à
 //     chaque step émis : cumule pour `rhythm`, reset pour tout autre
 //     mode (breath compris — c'est une vraie pause de souffle).
-//   * `reset()` — appelé au début de chaque `generate()`.
+//
+// Plus de méthode `reset()` : le tracker est **recréé** à chaque
+// `generate()` (comme `_capClamps`, `_facade`, `_positionPickers`).
+// Cette voie de composition explicite a remplacé l'ancien handle
+// `gen: CareerSessionGenerator` : la facade et les sous-systèmes
+// auxquels accédait le tracker (`gen._config`, `gen._capClamps`,
+// `gen._state`) sont projetés en deux scalaires (`motionStreakComfort`,
+// `motionStreakOverloadFactor`) et une référence sur `SessionRuntimeState`
+// (pour lire `unlockedKeys` muté en cours de séance).
 //
 // Le cap effectif (`effectiveCapSeconds`) a deux régimes :
 //   * Profil capacités renseigné (carrière) → `motion_streak.comfort` de
@@ -23,21 +30,33 @@
 //     `_capSeconds` (60 s), levé à virtuellement illimité par l'unlock
 //     `rhythmHeadMidSustained` (milestone `intro_rhythm_sustained`).
 
-part of 'career_session_generator.dart';
+import 'dart:math';
+
+import '../../../models/session.dart';
+import '../../models/unlock_key.dart';
+import 'session_runtime_state.dart';
 
 /// Tracker de la chaîne `rhythm` consécutive. Détient le compteur de
 /// secondes cumulées, expose la marge restante et le cap effectif au
 /// caller (le dispatcher pour `canChain()`, `RhythmRules.build` pour
 /// `capDuration()`).
 ///
-/// L'état du tracker (`_consecutiveSeconds`) est par-session : `reset()`
-/// au début de chaque `generate()`. Il lit son cap via le générateur
-/// (`gen._config.capProfile`, `gen._overloadFactorFor`, `gen._state.unlockedKeys`)
-/// — couplage explicite assumé, comme `DraftCtx` pour les rules.
+/// Recréé à chaque `generate()` (compteur naturellement à 0). Les
+/// collaborateurs (`SessionRuntimeState` pour la lecture courante de
+/// `unlockedKeys`, `motion_streak` comfort + overload factor projetés
+/// par le générateur) sont passés au constructeur.
 class RhythmChainTracker {
-  RhythmChainTracker({required this.gen});
+  RhythmChainTracker({
+    required SessionRuntimeState state,
+    required double? motionStreakComfort,
+    required double motionStreakOverloadFactor,
+  })  : _state = state,
+        _motionStreakComfort = motionStreakComfort,
+        _motionStreakOverloadFactor = motionStreakOverloadFactor;
 
-  final CareerSessionGenerator gen;
+  final SessionRuntimeState _state;
+  final double? _motionStreakComfort;
+  final double _motionStreakOverloadFactor;
 
   /// Durée cumulée (en secondes) des steps `rhythm` poussés
   /// consécutivement. Tout step d'un autre mode (breath compris) reset
@@ -66,14 +85,12 @@ class RhythmChainTracker {
   /// régime profil-pilotant si `motion_streak` est renseigné dans le
   /// profil de capacités ; régime historique sinon.
   int get effectiveCapSeconds {
-    final c =
-        gen._config.capProfile?.comfortOf(CapabilityAxis.rhythmMotionStreak);
+    final c = _motionStreakComfort;
     if (c != null) {
-      final v = (c * gen._overloadFactorFor(CapabilityAxis.rhythmMotionStreak))
-          .round();
+      final v = (c * _motionStreakOverloadFactor).round();
       return v < _capFloorSeconds ? _capFloorSeconds : v;
     }
-    return gen._state.unlockedKeys.contains(UnlockKey.rhythmHeadMidSustained)
+    return _state.unlockedKeys.contains(UnlockKey.rhythmHeadMidSustained)
         ? 1 << 20 // de fait illimité
         : _capSeconds;
   }
@@ -100,10 +117,5 @@ class RhythmChainTracker {
     } else {
       _consecutiveSeconds = 0;
     }
-  }
-
-  /// Reset par session, appelé en tête de `generate()`.
-  void reset() {
-    _consecutiveSeconds = 0;
   }
 }
