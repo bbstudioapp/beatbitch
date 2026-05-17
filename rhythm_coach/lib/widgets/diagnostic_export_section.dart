@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:file_saver/file_saver.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
@@ -112,6 +113,13 @@ class _ExportConfirmSheetState extends State<_ExportConfirmSheet> {
         subject: t.profileDiagnosticShareSubject,
       );
       if (!mounted) return;
+      if (outcome == _DeliverOutcome.cancelled) {
+        // L'utilisatrice a fermé la save dialog desktop : on rétablit l'état
+        // de la sheet pour qu'elle puisse réessayer ou annuler proprement,
+        // sans snackbar trompeuse.
+        setState(() => _running = false);
+        return;
+      }
       navigator.pop();
       messenger.showSnackBar(
         SnackBar(
@@ -246,12 +254,16 @@ class _ExportConfirmSheetState extends State<_ExportConfirmSheet> {
   }
 }
 
-enum _DeliverOutcome { shared, saved }
+enum _DeliverOutcome { shared, saved, cancelled }
 
-/// Achemine le fichier selon la plateforme. Sur Android/iOS on passe par le
-/// partage natif (`share_plus`), sur desktop on ouvre un save dialog
-/// (`file_saver.saveAs`), sur web on déclenche le download blob
-/// (`file_saver.saveFile`).
+/// Achemine le fichier selon la plateforme :
+/// - **Web** : `file_saver.saveFile` (download blob via navigateur — la seule
+///   API qui marche sans accès au filesystem).
+/// - **Android / iOS** : `share_plus` (intent système → mail, messagerie, etc.).
+/// - **Desktop (Linux / Windows / macOS / Fuchsia)** : `file_selector` pour
+///   ouvrir un save dialog GTK/Win/AppKit, puis `XFile.saveTo` pour écrire.
+///   Volontairement **pas** `file_saver.saveAs` : son implémentation Linux
+///   throw `UnimplementedError` (la méthode n'est livrée que sur Android).
 Future<_DeliverOutcome> _deliver({
   required Uint8List bytes,
   required String filename,
@@ -285,12 +297,22 @@ Future<_DeliverOutcome> _deliver({
     case TargetPlatform.windows:
     case TargetPlatform.macOS:
     case TargetPlatform.fuchsia:
-      await FileSaver.instance.saveAs(
-        name: filename.replaceAll('.json', ''),
-        bytes: bytes,
-        ext: 'json',
-        mimeType: MimeType.json,
+      final location = await getSaveLocation(
+        suggestedName: filename,
+        acceptedTypeGroups: const [
+          XTypeGroup(
+            label: 'JSON',
+            extensions: <String>['json'],
+            mimeTypes: <String>['application/json'],
+          ),
+        ],
       );
+      if (location == null) return _DeliverOutcome.cancelled;
+      await XFile.fromData(
+        bytes,
+        mimeType: 'application/json',
+        name: filename,
+      ).saveTo(location.path);
       return _DeliverOutcome.saved;
   }
 }
