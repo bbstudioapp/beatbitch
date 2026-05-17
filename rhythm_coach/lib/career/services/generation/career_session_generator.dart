@@ -48,14 +48,18 @@ import 'rules/career_session_generator_rules_hold.dart';
 import 'rules/career_session_generator_rules_lick.dart';
 import 'rules/career_session_generator_rules_rhythm.dart';
 import 'rules/career_session_generator_rules_suckle.dart';
+import 'mode_continuity_state.dart';
 import 'session_config.dart';
 import 'step_draft.dart';
+import 'step_type.dart';
 
-// Re-exports des types extraits (`SessionConfig`, `StepDraft`) — les
-// 9 fichiers de rules et les call sites externes importent
-// `career_session_generator.dart` et y trouvent toujours ces types.
+// Re-exports des types extraits — les 9 fichiers de rules et les call
+// sites externes importent `career_session_generator.dart` et y trouvent
+// toujours ces types.
+export 'mode_continuity_state.dart' show ModeContinuityState;
 export 'session_config.dart' show SessionConfig;
 export 'step_draft.dart' show StepDraft;
+export 'step_type.dart' show StepType;
 
 part 'career_session_generator_stamina.dart';
 part 'career_session_generator_mode_rules.dart';
