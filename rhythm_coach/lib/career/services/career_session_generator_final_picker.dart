@@ -87,6 +87,14 @@ class _FinalPicker {
   /// Choisi parmi les candidats valides selon le score d'humiliation, le
   /// plafond de profondeur du niveau, et la durée des holds profonds qui
   /// scale avec le niveau et la chaîne d'encore.
+  ///
+  /// La palette est désormais portée par les rules via
+  /// `_ModeRules.finalVariants` : hand (baseline level<4), lick (tip→head
+  /// + full→balls), hold (tip/head/mid + throat/full conditionnels),
+  /// biffle (si `includeHand`). Le `gate` (`UnlockKey?` dédié final)
+  /// remplace l'ancien `minLevel` : la progression est désormais
+  /// gouvernée par les milestones `intro_final_*`, pas par un seuil de
+  /// niveau implicite.
   _StepDraft pickFinal({
     required double humilCap,
     required int maxDepth,
@@ -95,202 +103,31 @@ class _FinalPicker {
     final endPts = _pts(SpecializationBranch.endurance);
     final fastDur = ((14 + endPts) * finishMul).round().clamp(14, 60);
     final shortHoldDur = ((12 + endPts) * finishMul).round().clamp(12, 60);
-    // Tuple : (draft, req_humiliation, gate). Le `gate` est l'`UnlockKey?`
-    // dédié au final, qui doit être présent dans `unlockedKeys` pour que
-    // le candidat soit retenu. `null` = libre par défaut (cas hand
-    // baseline : c'est le fallback universel). Ce gating remplace
-    // l'ancien `minLevel` : la progression d'un final est désormais
-    // gouvernée par sa milestone d'introduction dédiée (intro_final_*),
-    // pas par un seuil de niveau implicite.
-    final candidates = <(_StepDraft, double, UnlockKey?)>[];
+    // Tirage rng UPFRONT pour préserver strictement l'ordre de
+    // consommation (handBpm avant biffleBpm, conditionnels sur level<4
+    // et includeHand comme dans la palette pré-refacto). Sans ça,
+    // l'itération du registry (rhythm→lick→hold→biffle→…→hand→…)
+    // rebattrait le rng et ferait diverger les sessions reproductibles.
+    final handBaselineBpm = level < 4 ? (40 + rng.nextInt(21)) : null;
+    final biffleBpm = includeHand ? (40 + rng.nextInt(21)) : null;
 
-    // Hand baseline : non humiliant, BPM tiré dans [40, 60] pour rester
-    // dans la zone "lent contemplatif". Pas de gate dédiée — c'est le
-    // fallback universel quand aucun autre final n'est unlocké.
-    //
-    // Niveaux 1-3 : candidat NORMAL — le finish bas niveau a besoin de
-    // cette baseline (req 0) tant que les finals gated (hold tip / lick
-    // tip→head / hold head…) ne sont pas acquittés.
-    // Niveau ≥ 4 : retiré des candidats normaux (un hand-final est trop
-    // anodin pour clôturer une séance à ce stade). Il ne subsiste alors
-    // que (a) comme fallback technique ultime si AUCUN autre candidat ne
-    // passe (cf. `valid.isEmpty` plus bas), ou (b) si une milestone-final
-    // venait à le scripter explicitement (placement "final", backlog).
-    if (level < 4) {
-      final handBpm = 40 + rng.nextInt(21);
-      candidates.add((
-        _StepDraft(
-          mode: SessionMode.hand,
-          bpm: handBpm,
-          from: Position.head,
-          to: Position.mid,
-          duration: fastDur,
-        ),
-        0.0,
-        null,
-      ));
-    }
-
-    // Hold tip : surcote 5 (faible profondeur mais sauce sur la langue).
-    // Gate : intro_final_hold_tip (niveau 2).
-    candidates.add((
-      _StepDraft(
-        mode: SessionMode.hold,
-        bpm: null,
-        from: null,
-        to: Position.tip,
-        duration: shortHoldDur,
-      ),
-      5.0,
-      UnlockKey.finalHoldTip,
-    ));
-
-    // Lick tip→head 60 BPM lent : palier intermédiaire (req 8).
-    // Gate : intro_final_lick_tip_head (niveau 3).
-    candidates.add((
-      const _StepDraft(
-        mode: SessionMode.lick,
-        bpm: 60,
-        from: Position.tip,
-        to: Position.head,
-        duration: 16,
-      ),
-      8.0,
-      UnlockKey.finalLickTipHead,
-    ));
-
-    // Hold head : surcote 14 (sauce sur le gland/bouche).
-    // Gate : intro_final_hold_head (niveau 4).
-    candidates.add((
-      _StepDraft(
-        mode: SessionMode.hold,
-        bpm: null,
-        from: null,
-        to: Position.head,
-        duration: shortHoldDur,
-      ),
-      14.0,
-      UnlockKey.finalHoldHead,
-    ));
-
-    // Hold mid : surcote 10 (sauce profonde dans la bouche).
-    // Gate : intro_final_hold_mid (niveau 5, requires hold_mid_short).
-    candidates.add((
-      _StepDraft(
-        mode: SessionMode.hold,
-        bpm: null,
-        from: null,
-        to: Position.mid,
-        duration: shortHoldDur,
-      ),
-      10.0,
-      UnlockKey.finalHoldMid,
-    ));
-
-    if (includeHand) {
-      // Biffle 40-60 BPM : coups lents + sauce sur le visage.
-      // Gate : intro_final_biffle (niveau 5, requires biffle_basic).
-      final biffleBpm = 40 + rng.nextInt(21);
-      candidates.add((
-        _StepDraft(
-          mode: SessionMode.biffle,
-          bpm: biffleBpm,
-          from: null,
-          to: null,
-          duration: fastDur,
-        ),
-        13.0,
-        UnlockKey.finalBiffle,
-      ));
-    }
-
-    if (maxDepth >= Position.throat.index) {
-      // Cible évolutive avec l'humiliation accumulée (humilCap = score
-      // courant + rampe de finish). Seuil d'introduction throat ≈ 10
-      // d'humiliation (req intrinsèque hold throat 10s = 8, marge
-      // de tolérance) : à humilCap=10 on tient le minimum (10s) ;
-      // +2s par tranche de 5 points d'humil au-dessus. Cap aligné sur
-      // full (80s) : en carrière, c'est le comfort du profil de
-      // capacités qui pilote la durée vécue (cf. `clampToCapability`),
-      // pas ce cap — le cap ne mord qu'en mode hérité (Custom,
-      // scénarios) où le profil de capacités est désactivé.
-      final humilOver = max(0.0, humilCap - 10.0);
-      final targetDur =
-          (10 + (humilOver / 5).floor() * 2 + endPts * 2).clamp(10, 80);
-      final dur = trimHoldFinalDuration(
-        target: targetDur,
-        humilCap: humilCap,
-        baseReq: 21.5, // hold throat 10s
-        bonusPerSec: 1.5,
-        finishMul: finishMul,
-        maxDur: 80,
-      );
-      final req = 8.0 + (dur - 1) * 1.5;
-      // Gate : intro_final_hold_throat (niveau 6, requires throat_hold_short).
-      candidates.add((
-        _StepDraft(
-          mode: SessionMode.hold,
-          bpm: null,
-          from: null,
-          to: Position.throat,
-          duration: dur,
-        ),
-        req,
-        UnlockKey.finalHoldThroat,
-      ));
-    }
-
-    // Lick full→balls : variante d'apothéose « sloppy descente » introduite
-    // par la milestone `intro_balls_lick`. Pas de gate-final dédiée — on
-    // réutilise `UnlockKey.lickBalls` (la zone est apprise une fois pour
-    // toutes, le gating de niveau est porté implicitement par la milestone
-    // qui débloque la clé). Filtre anatomy assuré par `_isUnlocked` sur
-    // le composant. req = 16 (depthLick balls) + 1 (amplitude full→balls)
-    // = 17, donc accessible passé chauffe sans atteindre hold full (req 22).
-    if (anatomy.hasBalls) {
-      candidates.add((
-        const _StepDraft(
-          mode: SessionMode.lick,
-          bpm: 55,
-          from: Position.full,
-          to: Position.balls,
-          duration: 16,
-        ),
-        17.0,
-        UnlockKey.lickBalls,
-      ));
-    }
-
-    if (maxDepth >= Position.full.index) {
-      // Cible évolutive avec l'humiliation accumulée. Seuil d'introduction
-      // full ≈ 30 d'humiliation (req intrinsèque hold full 10s = 22,
-      // marge de tolérance) : à humilCap=30 on tient le minimum (10s) ;
-      // +3s par tranche de 8 points d'humil au-dessus. Cap relâché à 80s.
-      final humilOver = max(0.0, humilCap - 30.0);
-      final targetDur =
-          (10 + (humilOver / 8).floor() * 3 + endPts * 3).clamp(10, 80);
-      final dur = trimHoldFinalDuration(
-        target: targetDur,
-        humilCap: humilCap,
-        baseReq: 49.0, // hold full 10s
-        bonusPerSec: 3.0,
-        finishMul: finishMul,
-        maxDur: 80,
-      );
-      final req = 22.0 + (dur - 1) * 3.0;
-      // Gate : intro_final_hold_full (niveau 11, requires full_hold_short).
-      candidates.add((
-        _StepDraft(
-          mode: SessionMode.hold,
-          bpm: null,
-          from: null,
-          to: Position.full,
-          duration: dur,
-        ),
-        req,
-        UnlockKey.finalHoldFull,
-      ));
-    }
+    final ctx = _FinalCtx(
+      humilCap: humilCap,
+      maxDepth: maxDepth,
+      finishMul: finishMul,
+      level: level,
+      anatomy: anatomy,
+      unlockedKeys: unlockedKeys,
+      includeHand: includeHand,
+      endPts: endPts,
+      fastDur: fastDur,
+      shortHoldDur: shortHoldDur,
+      handBaselineBpm: handBaselineBpm,
+      biffleBpm: biffleBpm,
+    );
+    final candidates = <_FinalVariant>[
+      for (final rule in _modeRulesRegistry.values) ...rule.finalVariants(ctx),
+    ];
 
     // Filtre humilCap + gate + unlocks composants, prend le plus humiliant
     // valide. Le gate est un `UnlockKey?` dédié au final ; null = libre.
@@ -299,11 +136,11 @@ class _FinalPicker {
     // Exclusions Custom (dose `none`) : on retire en plus les finals dont
     // le mode est explicitement banni — un final hold reste possible
     // quand rhythm est exclu, un final hand quand hold est exclu, etc.
-    final valid = <(_StepDraft, double, UnlockKey?)>[];
+    final valid = <_FinalVariant>[];
     for (final c in candidates) {
-      if (!_finalUnlocked(c.$3)) continue;
-      if (_isModeForbidden(c.$1.mode)) continue;
-      if (humilCap >= c.$2 && _isUnlocked(c.$1)) valid.add(c);
+      if (!_finalUnlocked(c.gate)) continue;
+      if (_isModeForbidden(c.draft.mode)) continue;
+      if (humilCap >= c.req && _isUnlocked(c.draft)) valid.add(c);
     }
     if (valid.isEmpty) {
       // Fallback dur : hand head→mid 50 BPM. Toujours unlocked, req=0,
@@ -343,10 +180,10 @@ class _FinalPicker {
         duration: fastDur,
       );
     }
-    valid.sort((a, b) => a.$2.compareTo(b.$2));
+    valid.sort((a, b) => a.req.compareTo(b.req));
     // 2ᵉ enveloppe : on tronque le final retenu au profil de capacités —
     // un hold throat/full d'apothéose ne dépasse pas la tenue prouvée.
-    return capClamps.clampToCapability(valid.last.$1);
+    return capClamps.clampToCapability(valid.last.draft);
   }
 
   /// Step post-final (aftercare ~12 s après l'orgasme). Mode contrastant

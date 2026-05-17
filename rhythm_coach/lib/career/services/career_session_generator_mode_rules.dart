@@ -26,8 +26,9 @@
 //   * `postFinalVariants` — palette de variantes de step post-final
 //     proposées par le mode (ex-palette hardcodée de
 //     `_FinalPicker.buildPostFinalDraft`).
-//   * `finalCategory` — variante de `finale_chime` à piocher si le mode
-//     se retrouve en final d'apothéose (ex-`_categorizeFinal`).
+//   * `finalVariants` — palette de variantes de step final / apothéose
+//     proposées par le mode (ex-palette hardcodée de
+//     `_FinalPicker.pickFinal`).
 
 part of 'career_session_generator.dart';
 
@@ -165,6 +166,84 @@ class _PostFinalVariant {
   final _StepDraft draft;
 }
 
+/// Snapshot passé à `_ModeRules.finalVariants`. Bundle tous les
+/// paramètres dont une rule a besoin pour construire ses propositions
+/// d'apothéose : seuil humiliation à atteindre (`humilCap`), plafond
+/// profondeur (`maxDepth`), multiplicateur durée encore (`finishMul`),
+/// niveau global, anatomie, unlocks, toggle hand, points endurance
+/// pour le scaling de durée, et durées pré-calculées
+/// (`fastDur` / `shortHoldDur` partagées entre plusieurs variantes).
+///
+/// Les **BPM aléatoires** (hand baseline / biffle) sont pré-tirés par
+/// le picker **avant** la collecte des variantes — sinon l'itération
+/// du registry (rhythm→lick→hold→biffle→…→hand) rebattrait le rng et
+/// ferait diverger les sessions reproductibles vs la version
+/// pré-refacto. `handBaselineBpm == null` signale aussi « pas de hand
+/// baseline cette séance » (niveau ≥ 4), idem `biffleBpm == null` pour
+/// `includeHand == false`.
+class _FinalCtx {
+  const _FinalCtx({
+    required this.humilCap,
+    required this.maxDepth,
+    required this.finishMul,
+    required this.level,
+    required this.anatomy,
+    required this.unlockedKeys,
+    required this.includeHand,
+    required this.endPts,
+    required this.fastDur,
+    required this.shortHoldDur,
+    required this.handBaselineBpm,
+    required this.biffleBpm,
+  });
+
+  final double humilCap;
+  final int maxDepth;
+  final double finishMul;
+  final int level;
+  final AnatomyProfile anatomy;
+  final Set<UnlockKey> unlockedKeys;
+  final bool includeHand;
+  final int endPts;
+  final int fastDur;
+  final int shortHoldDur;
+
+  /// BPM hand baseline pré-tiré côté picker (null = pas de hand baseline,
+  /// niveau ≥ 4).
+  final int? handBaselineBpm;
+
+  /// BPM biffle pré-tiré côté picker (null = `includeHand == false`).
+  final int? biffleBpm;
+}
+
+/// Variante de step final (apothéose) proposée par une rule. Plusieurs
+/// variantes par mode sont autorisées (`hold` propose tip/head/mid +
+/// throat/full conditionnels, `lick` propose tip→head + full→balls).
+/// Le picker concatène toutes les variantes, filtre par
+/// `_finalUnlocked(gate) && !_isModeForbidden(mode) && humilCap >= req
+/// && _isUnlocked(draft)`, trie par `req` croissante et retient la **plus
+/// humiliante** (`valid.last`) — distinct du post-final qui sample top-3.
+class _FinalVariant {
+  const _FinalVariant({
+    required this.req,
+    required this.gate,
+    required this.draft,
+  });
+
+  /// Seuil humiliation requis pour que la variante entre dans la palette.
+  final double req;
+
+  /// Clé d'unlock dédiée final (distincte de l'unlock du composant — un
+  /// hold mid en final exige `finalHoldMid`, pas `holdMidShort` qui
+  /// couvre l'usage en corps de séance). `null` = libre par défaut (cas
+  /// hand baseline : fallback universel).
+  final UnlockKey? gate;
+
+  /// Draft pré-construit (durée déjà trimée pour les holds profonds via
+  /// [`_FinalPicker.trimHoldFinalDuration`]).
+  final _StepDraft draft;
+}
+
 /// Règles d'un mode : tout ce qui est spécifique au mode et qui était
 /// auparavant porté par les gros switches du générateur (stamina,
 /// unlock gate, capability clamp, dégradation, construction de step).
@@ -284,6 +363,20 @@ abstract class _ModeRules {
   /// `req` décroissante et tire uniformément dans le top-3 (avec biais
   /// spé sloppy → lick / obeissance → beg pour les niveaux ≥ 7).
   List<_PostFinalVariant> postFinalVariants(_PostFinalCtx ctx) => const [];
+
+  /// Variantes de step final (apothéose) proposées par ce mode.
+  /// Plusieurs variantes par mode sont autorisées (hold propose
+  /// tip/head/mid + throat/full conditionnels, lick propose tip→head +
+  /// full→balls). Default `const []` (opt-in) — rhythm, beg, breath,
+  /// freestyle, suckle n'ont pas de variante final.
+  ///
+  /// Le picker (`_FinalPicker.pickFinal`) concatène toutes les
+  /// variantes, filtre par `_finalUnlocked(gate)` + `_isModeForbidden`
+  /// + `humilCap >= req` + `_isUnlocked(draft)`, trie par `req`
+  /// croissante et retient la plus humiliante (`valid.last`), puis
+  /// applique `clampToCapability`. Fallback hand → lick / hold head
+  /// préservé côté picker pour les sessions où aucune variante ne passe.
+  List<_FinalVariant> finalVariants(_FinalCtx ctx) => const [];
 }
 
 /// Baisse `to` d'un cran en s'arrêtant à `head` (jamais à `tip` — un step
