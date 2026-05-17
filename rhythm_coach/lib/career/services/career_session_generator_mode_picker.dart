@@ -10,8 +10,8 @@
 //      séries cohérentes (bouche/bouche/bouche) plutôt qu'un saut à
 //      chaque step.
 //
-// Le 3ᵉ levier dépend de l'état mutable du tracking (`_lastType`,
-// `_stepsInLastType`, `_stepsOutsideBouche`). On le capture dans un
+// Le 3ᵉ levier dépend de l'état mutable du tracking (`_state.lastType`,
+// `_stepsInLastType`, `_state.stepsOutsideBouche`). On le capture dans un
 // snapshot [_ModeContinuityState] que le générateur reconstruit à chaque
 // pick — c'est cheap (4 lectures de fields), et ça garde [_ModePicker]
 // 100 % statique-pur.
@@ -27,8 +27,8 @@ part of 'career_session_generator.dart';
 /// Snapshot du tracking de continuité au moment d'un pick.
 ///
 /// Reconstruit à chaque appel au picker depuis les fields d'instance
-/// mutables (`_lastType`, `_stepsInLastType`, `_stepsOutsideBouche`,
-/// `_lastMode`). Le picker reste pur en consommant ce snapshot.
+/// mutables (`_state.lastType`, `_stepsInLastType`, `_state.stepsOutsideBouche`,
+/// `_state.lastMode`). Le picker reste pur en consommant ce snapshot.
 class _ModeContinuityState {
   /// Type du dernier step poussé (cluster sémantique bouche / langue /
   /// libreMain / transit). `null` au premier step de la séance.

@@ -38,8 +38,8 @@ extension _DifficultyDispatch on CareerSessionGenerator {
     // steps sur bouche) ne marche que si rhythm reste un candidat valide
     // pendant la phase de chauffe.
     if ((diff >= 0.20 ||
-            _stepsOutsideBouche >= 2 ||
-            _lastType == _StepType.bouche) &&
+            _state.stepsOutsideBouche >= 2 ||
+            _state.lastType == _StepType.bouche) &&
         _rhythmChain.canChain()) {
       candidates.add(SessionMode.rhythm);
     }
@@ -47,16 +47,16 @@ extension _DifficultyDispatch on CareerSessionGenerator {
     // si on est déjà en bouche : permet l'alternance rhythm/hold à
     // l'intérieur d'une série bouche (sinon les phases de chauffe restaient
     // 100 % rhythm uniforme — l'utilisateur attend rythme/rythme/hold/…).
-    if (diff >= 0.20 || (_lastType == _StepType.bouche && diff >= 0.10)) {
+    if (diff >= 0.20 || (_state.lastType == _StepType.bouche && diff >= 0.10)) {
       candidates.add(SessionMode.hold);
     }
     // biffle : candidat seulement si `biffleBasic` est débloqué (pré-filtre
     // sur le mode pour éviter une cascade systématique de dégradation
     // biffle → lick quand la milestone n'est pas acquise). Le pré-filtre
-    // respecte la convention héritée (`_unlockedKeys.isEmpty` = pas de
+    // respecte la convention héritée (`_state.unlockedKeys.isEmpty` = pas de
     // gating) pour ne pas casser les sessions hors carrière.
-    final canBiffle =
-        _unlockedKeys.isEmpty || _unlockedKeys.contains(UnlockKey.biffleBasic);
+    final canBiffle = _state.unlockedKeys.isEmpty ||
+        _state.unlockedKeys.contains(UnlockKey.biffleBasic);
     if (diff >= 0.40 && _config.includeHand && canBiffle) {
       candidates.add(SessionMode.biffle);
     }
@@ -70,8 +70,8 @@ extension _DifficultyDispatch on CareerSessionGenerator {
     // beg : candidat seulement si begLibre est déjà acquis (prérequis
     // transverse à toutes les formes de beg, cf. `_isUnlocked`). Convention
     // héritée appliquée aussi (set vide = pas de gating).
-    final canBeg =
-        _unlockedKeys.isEmpty || _unlockedKeys.contains(UnlockKey.begLibre);
+    final canBeg = _state.unlockedKeys.isEmpty ||
+        _state.unlockedKeys.contains(UnlockKey.begLibre);
     if (canBeg) {
       // Sa difficulté effective est portée par `from` (head = doux,
       // full = comme un hold profond), pas par diff.
@@ -83,8 +83,8 @@ extension _DifficultyDispatch on CareerSessionGenerator {
     // sa dose Custom (ModeDose.none ⇒ forbidden) le retire ensuite via
     // `removeWhere(_config.isModeForbidden)`. Sans cet ajout, la dose Custom
     // était de fait ignorée : suckle n'était jamais tiré.
-    final canSuckle =
-        _unlockedKeys.isEmpty || _unlockedKeys.contains(UnlockKey.suckleHead);
+    final canSuckle = _state.unlockedKeys.isEmpty ||
+        _state.unlockedKeys.contains(UnlockKey.suckleHead);
     if (canSuckle) {
       candidates.add(SessionMode.suckle);
     }
