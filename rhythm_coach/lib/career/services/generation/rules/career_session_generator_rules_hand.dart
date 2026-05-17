@@ -105,7 +105,7 @@ class HandRules extends ModeRules {
   /// profondeur côté gating (cf. règle « hand n'est jamais un levier
   /// de difficulté »).
   @override
-  int? amplitudeDiversifyCeiling(GenFacade gen) => Position.full.index;
+  int? amplitudeDiversifyCeiling(GenFacadeSurface gen) => Position.full.index;
 
   /// Hand en throat/full à BPM ≥ 90 = profil intense capable de
   /// déclencher un faux-breath (même logique que rhythm).
