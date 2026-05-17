@@ -63,48 +63,57 @@ enum StepType { bouche, langue, libreMain, transit }
 /// getter ici est un acte explicite (« j'élargis l'API que les modes
 /// peuvent voir »).
 ///
-/// Le wrapper ne porte que des délégations triviales : la logique reste
-/// côté `CareerSessionGenerator` (et de ses sous-systèmes
-/// `_positionPickers`, `_BpmPacing`, `RhythmChainTracker`). Il évite
-/// aux rules d'appeler directement les membres privés du générateur
-/// (`_sampleFromTo`, `_config`, `_rng`, …) — la barrière est mécanique
-/// dès qu'on type le ctx avec `GenFacade` au lieu de
-/// `CareerSessionGenerator`.
+/// Composition explicite : la facade ne détient pas de référence au
+/// générateur. Elle reçoit en constructeur les collaborateurs dont les
+/// rules ont besoin — state stable (`config`, `state`, `rng`,
+/// `rhythmChain`) et sous-systèmes (`_PositionPickers`). Les méthodes
+/// `_BpmPacing` consommées passent par le `config` field. Le générateur
+/// recrée la facade à chaque `generate()` / `generatePunishment()`,
+/// après que ses sous-systèmes sont posés.
 class GenFacade {
-  const GenFacade._(this._gen);
-
-  final CareerSessionGenerator _gen;
+  GenFacade._({
+    required this.config,
+    required this.state,
+    required this.rng,
+    required this.rhythmChain,
+    required _PositionPickers positionPickers,
+  }) : _positionPickers = positionPickers;
 
   // ─── State stable lu par les rules ───────────────────────────────────────
-  SessionConfig get config => _gen._config;
-  SessionRuntimeState get state => _gen._state;
-  Random get rng => _gen._rng;
-  RhythmChainTracker get rhythmChain => _gen._rhythmChain;
+  final SessionConfig config;
+  final SessionRuntimeState state;
+  final Random rng;
+  final RhythmChainTracker rhythmChain;
 
-  // ─── Plafonds milestone ──────────────────────────────────────────────────
-  int milestoneHoldCeilingIdx() => _gen._milestoneHoldCeilingIdx();
-  int milestoneRhythmCeilingIdx() => _gen._milestoneRhythmCeilingIdx();
+  // ─── Sous-systèmes wrappés (privés — accès via les méthodes ci-dessous) ──
+  final _PositionPickers _positionPickers;
+
+  // ─── Plafonds milestone (délégués à `_positionPickers`) ──────────────────
+  int milestoneHoldCeilingIdx() => _positionPickers.milestoneHoldCeilingIdx();
+  int milestoneRhythmCeilingIdx() =>
+      _positionPickers.milestoneRhythmCeilingIdx();
 
   // ─── Samplers position (délégués à `_positionPickers`) ───────────────────
   (Position, Position) sampleFromTo(double ampScore,
           {bool capByDepth = true}) =>
-      _gen._sampleFromTo(ampScore, capByDepth: capByDepth);
+      _positionPickers.sampleFromTo(ampScore, capByDepth: capByDepth);
   (Position, Position) sampleFromToForHand(double ampScore) =>
-      _gen._sampleFromToForHand(ampScore);
+      _positionPickers.sampleFromToForHand(ampScore);
   (Position, Position) sampleFromToForLick(double ampScore) =>
-      _gen._sampleFromToForLick(ampScore);
+      _positionPickers.sampleFromToForLick(ampScore);
   Position pickHoldPosition(double ampScore) =>
-      _gen._pickHoldPosition(ampScore);
-  Position? pickBegPosition(double ampScore) => _gen._pickBegPosition(ampScore);
+      _positionPickers.pickHoldPosition(ampScore);
+  Position? pickBegPosition(double ampScore) =>
+      _positionPickers.pickBegPosition(ampScore);
   StepDraft? maybePickBegWithChain({
     required Position? to,
     required int obPts,
   }) =>
-      _gen._maybePickBegWithChain(to: to, obPts: obPts);
+      _positionPickers.maybePickBegWithChain(to: to, obPts: obPts);
 
-  // ─── Caps pacing (délégué à `_BpmPacing`) ────────────────────────────────
+  // ─── Caps pacing (délégué à `_BpmPacing` avec injection de `config`) ─────
   int capRhythmDurationByPulses(int dur, int bpm, Position? to) =>
-      _gen._capRhythmDurationByPulses(dur, bpm, to);
+      _BpmPacing.capRhythmDurationByPulses(dur, bpm, to, config: config);
 }
 
 /// Contexte d'assemblage d'un step passé à `ModeRules.build`. Porte les

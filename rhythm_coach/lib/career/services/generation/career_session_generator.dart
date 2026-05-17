@@ -125,9 +125,12 @@ class CareerSessionGenerator {
   late final RhythmChainTracker _rhythmChain = RhythmChainTracker(gen: this);
   final _RhythmicPatternBuffer _patternBuffer = _RhythmicPatternBuffer();
 
-  /// Surface exposée aux `ModeRules` (cf. `GenFacade`). Instance unique
-  /// du générateur : les rules reçoivent toujours `_facade`, jamais `this`.
-  late final GenFacade _facade = GenFacade._(this);
+  /// Surface exposée aux `ModeRules` (cf. `GenFacade`). Recréée à chaque
+  /// `generate()` / `generatePunishment()` après que `_positionPickers` et
+  /// les autres sous-systèmes sont posés : la facade capture les références
+  /// stables (`_config`, `_state`, `_positionPickers`…) en field, pas via
+  /// un handle vers le générateur.
+  late GenFacade _facade;
 
   /// 2ᵉ enveloppe (immuable pour la séance) — recréée à chaque appel à
   /// [generate] après que l'axe de surcharge a été choisi.
@@ -302,6 +305,13 @@ class CareerSessionGenerator {
       unlockedKeys: _state.unlockedKeys,
       rng: _rng,
       rules: _rules,
+    );
+    _facade = GenFacade._(
+      config: _config,
+      state: _state,
+      rng: _rng,
+      rhythmChain: _rhythmChain,
+      positionPickers: _positionPickers,
     );
     // Mode "Session bâclée" : 6 min par défaut, intense tout du long. Floor
     // d'intensité appliqué au tirage de difficulté + on saute l'intro douce
@@ -1991,42 +2001,21 @@ class CareerSessionGenerator {
     _patternBuffer.record(mode, from: from, to: to, bpm: bpm);
   }
 
-  /// Adapteur d'instance de `_BpmPacing.capRhythmDurationByPulses` qui
-  /// injecte `_config` (l'algo lui-même vit côté `_BpmPacing`).
-  int _capRhythmDurationByPulses(int dur, int bpm, Position? to) =>
-      _BpmPacing.capRhythmDurationByPulses(dur, bpm, to, config: _config);
-
   // ─── Position pickers (adapteurs vers `_PositionPickers`) ────────────────
-
-  (Position, Position) _sampleFromTo(double ampScore,
-          {bool capByDepth = true}) =>
-      _positionPickers.sampleFromTo(ampScore, capByDepth: capByDepth);
-
-  (Position, Position) _sampleFromToForHand(double ampScore) =>
-      _positionPickers.sampleFromToForHand(ampScore);
-
-  (Position, Position) _sampleFromToForLick(double ampScore) =>
-      _positionPickers.sampleFromToForLick(ampScore);
+  //
+  // Les délégations consommées par les rules (`sampleFromTo`, `pickHold`,
+  // `maybePickBegWithChain`, `capRhythmDurationByPulses`…) vivent désormais
+  // sur `GenFacade` qui wrappe directement `_PositionPickers` / `_BpmPacing`.
+  // Restent ici uniquement les adaptateurs encore consommés par le
+  // générateur lui-même (orchestration) ou ses parts (`_DifficultyDispatch`).
 
   int _milestoneHoldCeilingIdx() => _positionPickers.milestoneHoldCeilingIdx();
 
   int _milestoneRhythmCeilingIdx() =>
       _positionPickers.milestoneRhythmCeilingIdx();
 
-  Position _pickHoldPosition(double ampScore) =>
-      _positionPickers.pickHoldPosition(ampScore);
-
-  Position? _pickBegPosition(double ampScore) =>
-      _positionPickers.pickBegPosition(ampScore);
-
   (double, double, double) _sampleSimplex3() =>
       _positionPickers.sampleSimplex3();
-
-  StepDraft? _maybePickBegWithChain({
-    required Position? to,
-    required int obPts,
-  }) =>
-      _positionPickers.maybePickBegWithChain(to: to, obPts: obPts);
 
   /// Délégué à [`SessionRuntimeState.advanceSalivaSim`].
   void _advanceSalivaSim(StepDraft draft) => _state.advanceSalivaSim(draft);
@@ -2119,6 +2108,13 @@ class CareerSessionGenerator {
       unlockedKeys: _state.unlockedKeys,
       rng: _rng,
       rules: _rules,
+    );
+    _facade = GenFacade._(
+      config: _config,
+      state: _state,
+      rng: _rng,
+      rhythmChain: _rhythmChain,
+      positionPickers: _positionPickers,
     );
 
     // Palette + sélection + matérialisation déléguées à
