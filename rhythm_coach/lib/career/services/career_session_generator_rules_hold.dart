@@ -305,4 +305,10 @@ class _HoldRules extends _ModeRules {
 
     return out;
   }
+
+  /// Hold en throat/full = profil intense capable de déclencher un
+  /// faux-breath. Pas de check BPM (hold n'a pas de tempo).
+  @override
+  bool isIntenseForFakeBreath(_StepDraft draft) =>
+      draft.to == Position.throat || draft.to == Position.full;
 }

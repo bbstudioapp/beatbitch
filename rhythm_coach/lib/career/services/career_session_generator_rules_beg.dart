@@ -189,4 +189,11 @@ class _BegRules extends _ModeRules {
       ),
     ];
   }
+
+  /// Beg post-final = consigne de supplique (jamais un compliment
+  /// doux). Pool dédié `pickPostFinalBeg` avec fallback cascade vers le
+  /// pool générique côté caller.
+  @override
+  String? pickPostFinalText(PhraseBank bank, Random rng) =>
+      bank.pickPostFinalBeg(rng);
 }

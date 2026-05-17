@@ -99,4 +99,19 @@ class _HandRules extends _ModeRules {
       ),
     ];
   }
+
+  /// Hand : profondeur d'amplitude max = `full` (4) pour la
+  /// diversification — symétrique avec lick, pas de tension de
+  /// profondeur côté gating (cf. règle « hand n'est jamais un levier
+  /// de difficulté »).
+  @override
+  int? amplitudeDiversifyCeiling(CareerSessionGenerator gen) =>
+      Position.full.index;
+
+  /// Hand en throat/full à BPM ≥ 90 = profil intense capable de
+  /// déclencher un faux-breath (même logique que rhythm).
+  @override
+  bool isIntenseForFakeBreath(_StepDraft draft) =>
+      (draft.to == Position.throat || draft.to == Position.full) &&
+      (draft.bpm ?? 0) >= 90;
 }

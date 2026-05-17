@@ -1628,22 +1628,16 @@ class CareerSessionGenerator {
   }) {
     final postFinalDraft =
         _clampToCapability(_buildPostFinalDraft(finalMode, _humilCapAt(time)));
-    // Phrase : beg porte une CONSIGNE de supplique (jamais un compliment
-    // doux) ; lick post-final porte une consigne d'aftercare humiliant.
-    // Cascade pour ne jamais tomber sur un text vide.
-    final String postFinalText;
-    if (postFinalDraft.mode == SessionMode.beg) {
-      postFinalText = ctx.bank.pickPostFinalBeg(_rng) ??
-          ctx.bank.pickPostFinal(_rng) ??
-          ctx.bank.pickCongrats(_rng);
-    } else if (postFinalDraft.mode == SessionMode.lick) {
-      postFinalText = ctx.bank.pickPostFinalLick(_rng) ??
-          ctx.bank.pickPostFinal(_rng) ??
-          ctx.bank.pickCongrats(_rng);
-    } else {
-      postFinalText =
-          ctx.bank.pickPostFinal(_rng) ?? ctx.bank.pickCongrats(_rng);
-    }
+    // Phrase : pool mode-spécifique (beg = CONSIGNE de supplique ;
+    // lick = consigne d'aftercare humiliant) puis cascade sur le pool
+    // générique. Default `pickPostFinalText` retourne `null` → on saute
+    // direct à la cascade générique. Garantit un text non-vide via le
+    // fallback final `pickCongrats`.
+    final modeSpecific = _modeRulesRegistry[postFinalDraft.mode]!
+        .pickPostFinalText(ctx.bank, _rng);
+    final postFinalText = modeSpecific ??
+        ctx.bank.pickPostFinal(_rng) ??
+        ctx.bank.pickCongrats(_rng);
     final postFinalDuration = postFinalDraft.duration!;
     ctx.steps
         .add(_draftToStep(postFinalDraft, time: time, text: postFinalText));
@@ -1885,14 +1879,10 @@ class CareerSessionGenerator {
     }
     if (genUntil - time < 30) return null; // pas trop près du finish
     if (currentStamina < 30) return null; // déjà en dette, vrai breath plus bas
-    final isIntenseRhythm = (lastEmitted.mode == SessionMode.rhythm ||
-            lastEmitted.mode == SessionMode.hand) &&
-        (lastEmitted.to == Position.throat ||
-            lastEmitted.to == Position.full) &&
-        (lastEmitted.bpm ?? 0) >= 90;
-    final isIntenseHold = lastEmitted.mode == SessionMode.hold &&
-        (lastEmitted.to == Position.throat || lastEmitted.to == Position.full);
-    if (!isIntenseRhythm && !isIntenseHold) return null;
+    if (!_modeRulesRegistry[lastEmitted.mode]!
+        .isIntenseForFakeBreath(lastEmitted)) {
+      return null;
+    }
     if (_rng.nextDouble() >= 0.25) return null;
     // 2-3 s : assez pour entendre un soupir, trop peu pour vraiment
     // récupérer (à 2.8 stamina/s = 5-8 stamina rendus, peanuts face au
@@ -2236,12 +2226,8 @@ class CareerSessionGenerator {
   /// - lick / hand : full ouvert (pas de tension de profondeur)
   /// - biffle : pas concerné (from/to null par convention)
   _StepDraft _diversifyAmplitude(_StepDraft d) {
-    if (d.mode != SessionMode.rhythm &&
-        d.mode != SessionMode.lick &&
-        d.mode != SessionMode.hand &&
-        d.mode != SessionMode.biffle) {
-      return d;
-    }
+    final ceiling = _modeRulesRegistry[d.mode]!.amplitudeDiversifyCeiling(this);
+    if (ceiling == null) return d;
     final lastFrom = _lastFrom;
     final lastTo = _lastTo;
     final exactSameAsLast = lastFrom != null &&
@@ -2257,8 +2243,7 @@ class CareerSessionGenerator {
     // on décale `to` d'un cran.
     final toIdx = d.to?.index;
     if (toIdx == null) return d;
-    final ceil =
-        d.mode == SessionMode.rhythm ? _milestoneRhythmCeilingIdx() : 4;
+    final ceil = ceiling;
     final fromIdx = d.from?.index ?? 0;
     final canUp = toIdx + 1 <= ceil;
     final canDown = toIdx - 1 > fromIdx;

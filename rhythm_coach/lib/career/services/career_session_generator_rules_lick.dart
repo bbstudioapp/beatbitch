@@ -141,4 +141,19 @@ class _LickRules extends _ModeRules {
     }
     return out;
   }
+
+  /// Lick : profondeur d'amplitude max = `full` (4). Pas de tension de
+  /// profondeur côté gating — la diversification peut décaler `to` au
+  /// plus haut sans contrainte milestone (cf. `_LickRules.unlockKeyFor`
+  /// qui gate seulement `to == full` et `balls`).
+  @override
+  int? amplitudeDiversifyCeiling(CareerSessionGenerator gen) =>
+      Position.full.index;
+
+  /// Lick post-final = consigne d'aftercare humiliant (« lèche pour
+  /// nettoyer »). Pool dédié `pickPostFinalLick` avec fallback cascade
+  /// vers le pool générique côté caller.
+  @override
+  String? pickPostFinalText(PhraseBank bank, Random rng) =>
+      bank.pickPostFinalLick(rng);
 }
