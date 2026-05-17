@@ -13,6 +13,30 @@ class _HoldRules extends _ModeRules {
   @override
   _StepType classify(Position? to) => _StepType.bouche;
 
+  /// Hold final → chime escaladé sur la profondeur tenue. Échelle :
+  /// tip → easy (bisou final, geste doux), head/mid → medium (en bouche
+  /// sans gorge), throat → hard (gorge profonde tenue), full → extreme
+  /// (apnée + gorge). Balls = `hard` (sloppy + soumis mais sans apnée).
+  /// `to == null` ne devrait pas survenir pour un hold ; fallback medium.
+  @override
+  FinalCategory finalCategory(_StepDraft draft) {
+    switch (draft.to) {
+      case Position.tip:
+        return FinalCategory.easy;
+      case Position.head:
+      case Position.mid:
+        return FinalCategory.medium;
+      case Position.throat:
+        return FinalCategory.hard;
+      case Position.full:
+        return FinalCategory.extreme;
+      case Position.balls:
+        return FinalCategory.hard;
+      case null:
+        return FinalCategory.medium;
+    }
+  }
+
   @override
   double delta(_StepDraft draft, double progress, CareerLevel cfg) {
     final dur = draft.duration ?? 0;

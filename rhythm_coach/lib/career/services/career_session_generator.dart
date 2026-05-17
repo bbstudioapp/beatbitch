@@ -932,7 +932,8 @@ class CareerSessionGenerator {
           (s) => !s.isTextOnly,
           orElse: () => finalMilestone.sequence.last);
       final lastDraft = _stepToDraft(lastConfigStep, SessionMode.rhythm);
-      final finalCategory = _categorizeFinal(lastDraft);
+      final finalCategory =
+          _modeRulesRegistry[lastDraft.mode]!.finalCategory(lastDraft);
 
       // Marque l'instant où le dernier step de config de la milestone
       // démarre (= moment où le chime doit retentir). `time` (avant ce
@@ -1567,7 +1568,8 @@ class CareerSessionGenerator {
       maxDepth: _maxDepthIndex,
       finishMul: finishMul,
     );
-    final finalCategory = _categorizeFinal(finisherDraft);
+    final finalCategory =
+        _modeRulesRegistry[finisherDraft.mode]!.finalCategory(finisherDraft);
     final finalMode = finisherDraft.mode;
 
     // Annonce du final : si le finisher change de mode (ex. dernier boost =
@@ -2308,39 +2310,6 @@ class CareerSessionGenerator {
       to: draft.to,
       duration: draft.duration,
     );
-  }
-
-  /// Catégorise le draft retenu par `_finalPicker.pickFinal` pour piocher la bonne
-  /// variante de `finale_chime` côté `BeepEngine`. Mapping :
-  /// - hand any, hold tip → easy
-  /// - hold head, hold mid, biffle → medium
-  /// - hold throat → hard
-  /// - hold full → extreme
-  /// Cas non couverts (ne devraient pas survenir vu les options de
-  /// `_finalPicker.pickFinal`) → `medium` par défaut.
-  FinalCategory _categorizeFinal(_StepDraft d) {
-    if (d.mode == SessionMode.hand) return FinalCategory.easy;
-    if (d.mode == SessionMode.biffle) return FinalCategory.medium;
-    if (d.mode == SessionMode.hold) {
-      switch (d.to) {
-        case Position.tip:
-          return FinalCategory.easy;
-        case Position.head:
-        case Position.mid:
-          return FinalCategory.medium;
-        case Position.throat:
-          return FinalCategory.hard;
-        case Position.full:
-          return FinalCategory.extreme;
-        case Position.balls:
-          // Très humiliant (sloppy + soumis) mais sans la composante
-          // apnée/asphyxie de full → palier `hard`, pas `extreme`.
-          return FinalCategory.hard;
-        case null:
-          return FinalCategory.medium;
-      }
-    }
-    return FinalCategory.medium;
   }
 
   /// Retourne l'`UnlockKey` requise pour jouer [draft], `null` si l'action
