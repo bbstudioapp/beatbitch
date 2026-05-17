@@ -77,18 +77,13 @@ class CareerSessionGenerator {
 
   // ─── PARAMÈTRES DE SESSION (figés par [generate]) ────────────────────────
   // 16 inputs immuables regroupés dans `_SessionConfig`, re-posé en début
-  // de chaque `generate()` / `generatePunishment()`. Les getters ci-dessous
-  // ne sont qu'une projection — toute lecture passe par `_config.xxx`.
-  // Cf. `career_session_generator_session_config.dart` pour la liste
-  // complète et la doc des champs.
+  // de chaque `generate()` / `generatePunishment()`. Toute lecture passe
+  // directement par `_config.xxx` (cf.
+  // `career_session_generator_session_config.dart` pour la liste complète
+  // et la doc des champs). Les anciens getters projection ont été
+  // supprimés — l'immutabilité de `_config` rend l'accès direct sûr.
 
   late _SessionConfig _config;
-
-  bool get _includeHand => _config.includeHand;
-  int get _maxDepthIndex => _config.maxDepthIndex;
-  double get _deepProbability => _config.deepProbability;
-  SpecializationAllocation get _spec => _config.spec;
-  int get _level => _config.level;
 
   // ─── ÉTAT DE TRACKING (mutable pendant la génération) ────────────────────
   // 13 fields scratchpad regroupés dans `_SessionRuntimeState`, re-posé en
@@ -134,32 +129,6 @@ class CareerSessionGenerator {
   late final _RhythmChainTracker _rhythmChain = _RhythmChainTracker(gen: this);
   final _RhythmicPatternBuffer _patternBuffer = _RhythmicPatternBuffer();
 
-  AnatomyProfile get _anatomy => _config.anatomy;
-
-  /// **Convention** : un poids `coachModeWeights[m] == 0` est lu comme
-  /// une exclusion dure (utilisé par le Mode Custom — dose `none` ⇒ 0.0).
-  /// `_isModeForbidden` l'expose et est consulté par tous les call sites
-  /// qui tirent ou hardcodent un mode pour ne jamais émettre un mode exclu.
-  Map<SessionMode, double> get _coachModeWeights => _config.coachModeWeights;
-
-  /// Délégué à [`_SessionConfig.isModeForbidden`].
-  bool _isModeForbidden(SessionMode m) => _config.isModeForbidden(m);
-
-  // Scores au moment t=0 (lus par `_humilCapAt` et `_pickPhrase`).
-  double get _humiliationCareer => _config.humiliationCareer;
-  double get _humiliationSession => _config.humiliationSession;
-  double get _obedience => _config.obedience;
-
-  // Capacité & surcharge (lus par `_clampToCapability` / `_capabilityCapFor`).
-  CapabilityProfile? get _capProfile => _config.capProfile;
-  Map<CapabilityAxis, double> get _capCeilings => _config.capCeilings;
-  CapabilityAxis? get _overloadAxis => _config.overloadAxis;
-  double get _overloadFactor => _config.overloadFactor;
-
-  // Bornes utilisateur Custom (null hors Custom = pas de bornage).
-  (int, int)? get _bpmRange => _config.bpmRange;
-  (int, int)? get _holdDurationRange => _config.holdDurationRange;
-
   /// 2ᵉ enveloppe (immuable pour la séance) — recréée à chaque appel à
   /// [generate] après que l'axe de surcharge a été choisi.
   late _CapabilityClamps _capClamps;
@@ -175,9 +144,6 @@ class CareerSessionGenerator {
 
   CareerSessionGenerator({int? seed})
       : _rng = seed != null ? Random(seed) : Random();
-
-  /// Délégué à [`_SessionConfig.humilCapAt`].
-  double _humilCapAt(int seconds) => _config.humilCapAt(seconds);
 
   // ─── Profil de capacités — 2ᵉ enveloppe de difficulté ────────────────────
 
@@ -353,31 +319,31 @@ class CareerSessionGenerator {
     // overload/bornes-Custom courants. Consommée via les adaptateurs
     // `_clampToCapability` / `_capabilityCapFor` / `_overloadFactorFor`.
     _capClamps = _CapabilityClamps(
-      profile: _capProfile,
-      ceilings: _capCeilings,
-      overloadAxis: _overloadAxis,
-      overloadFactor: _overloadFactor,
-      bpmRange: _bpmRange,
-      holdRange: _holdDurationRange,
+      profile: _config.capProfile,
+      ceilings: _config.capCeilings,
+      overloadAxis: _config.overloadAxis,
+      overloadFactor: _config.overloadFactor,
+      bpmRange: _config.bpmRange,
+      holdRange: _config.holdDurationRange,
     );
     _finalPicker = _FinalPicker(
-      level: _level,
-      anatomy: _anatomy,
+      level: _config.level,
+      anatomy: _config.anatomy,
       unlockedKeys: _unlockedKeys,
-      spec: _spec,
-      coachModeWeights: _coachModeWeights,
-      includeHand: _includeHand,
+      spec: _config.spec,
+      coachModeWeights: _config.coachModeWeights,
+      includeHand: _config.includeHand,
       rng: _rng,
       capClamps: _capClamps,
     );
     _positionPickers = _PositionPickers(
-      maxDepthIndex: _maxDepthIndex,
-      deepProbability: _deepProbability,
-      humiliationCareer: _humiliationCareer,
+      maxDepthIndex: _config.maxDepthIndex,
+      deepProbability: _config.deepProbability,
+      humiliationCareer: _config.humiliationCareer,
       unlockedKeys: _unlockedKeys,
-      spec: _spec,
-      coachModeWeights: _coachModeWeights,
-      anatomy: _anatomy,
+      spec: _config.spec,
+      coachModeWeights: _config.coachModeWeights,
+      anatomy: _config.anatomy,
       rng: _rng,
     );
     // Mode "Session bâclée" : 6 min par défaut, intense tout du long. Floor
@@ -552,13 +518,13 @@ class CareerSessionGenerator {
       // place de l'ouverture générique. Coach sans `progressPhrases` pour cet
       // axe → `null` → on retombe sur l'ouverture habituelle (silence par défaut).
       String? attemptPhrase;
-      if (_overloadAxis != null &&
+      if (_config.overloadAxis != null &&
           openingPhrase == null &&
           !quickie &&
           _rng.nextDouble() <
               CapabilityRegulator.progressPhraseChanceForLevel(level)) {
-        final raw =
-            bank.pickProgressPhrase(_overloadAxis!.storageKey, 'attempt', _rng);
+        final raw = bank.pickProgressPhrase(
+            _config.overloadAxis!.storageKey, 'attempt', _rng);
         if (raw != null && raw.isNotEmpty) attemptPhrase = raw;
       }
       final firstText = attemptPhrase ??
@@ -614,7 +580,7 @@ class CareerSessionGenerator {
       // niveau 5. Cf. `_shouldEmitMiniWave`.
       if (_shouldEmitMiniWave(time, effectiveDuration, stamina, genUntil)) {
         final progressForWave = time / effectiveDuration;
-        final humilCapForWave = _humilCapAt(time);
+        final humilCapForWave = _config.humilCapAt(time);
         final waveDrafts = _buildMiniWave(humilCapForWave);
         for (final wd in waveDrafts) {
           final waveText = _pickPhraseForDraft(bank, wd, 'hard');
@@ -734,8 +700,8 @@ class CareerSessionGenerator {
       // Filtre humiliation requise : on garde uniquement ce que le cap
       // effectif (career + session projeté à `time`) permet. La rampe
       // session (+1/min en clean, ×3 max avec obed, capée à sessionCap)
-      // est intégrée par `_humilCapAt`.
-      final humilCap = _humilCapAt(time);
+      // est intégrée par `_config.humilCapAt`.
+      final humilCap = _config.humilCapAt(time);
       draft = _enforceHumiliationRequired(draft, humilCap);
 
       // Variété BPM : évite d'enchaîner des steps au même tempo.
@@ -747,7 +713,8 @@ class CareerSessionGenerator {
       // moyenne (≤ mid), pose `bpmEnd` distinct pour raconter une
       // montée / descente sur la durée. Skip throat/full pour ne pas
       // violer le cap pulses (cf. `_capRhythmDurationByPulses`).
-      draft = _BpmPacing.maybeApplyBpmRamp(draft, progress, _rng, _level);
+      draft =
+          _BpmPacing.maybeApplyBpmRamp(draft, progress, _rng, _config.level);
       // 2ᵉ enveloppe (profil de capacités) : dernier mot après les
       // diversifications BPM/amplitude qui ont pu remonter au-dessus du
       // `comfort` prouvé. `_diversifyLongSegment` derrière ne fait que
@@ -965,7 +932,7 @@ class CareerSessionGenerator {
     }
 
     // Position cible du pré-finisher : profondeur « normale » du niveau,
-    // capée par `_maxDepthIndex`. Sert de transition vers le final.
+    // capée par `_config.maxDepthIndex`. Sert de transition vers le final.
     final preFinisherTarget = _positionPickers.pickFinisherPosition();
 
     // Pré-finisher : pour les bas niveaux, courte accélération (rythme
@@ -973,7 +940,7 @@ class CareerSessionGenerator {
     // sur le final, dans une position d'amorce.
     // Custom : rhythm exclu → skip le pré-finisher (les boosts substitueront
     // le sprint via leur propre fallback de mode).
-    if (isLowLevel && !_isModeForbidden(SessionMode.rhythm)) {
+    if (isLowLevel && !_config.isModeForbidden(SessionMode.rhythm)) {
       final preResult = _emitPreFinisher(
         ctx,
         time: time,
@@ -1081,14 +1048,14 @@ class CareerSessionGenerator {
   bool _shouldEmitMiniWave(
       int time, int effectiveDuration, double stamina, int genUntil) {
     if (effectiveDuration < 720) return false;
-    if (_level < 5) return false;
+    if (_config.level < 5) return false;
     if (time < _nextMiniWaveAt) return false;
     if (genUntil - time < 90) return false;
     if (stamina < 35) return false;
     // La mini-vague est intégralement rhythm (cf. `_buildMiniWave`) : si
     // rhythm est exclu en Custom, on ne sait pas la jouer — on la skip
     // proprement plutôt que d'émettre un mode banni.
-    if (_isModeForbidden(SessionMode.rhythm)) return false;
+    if (_config.isModeForbidden(SessionMode.rhythm)) return false;
     return true;
   }
 
@@ -1105,7 +1072,7 @@ class CareerSessionGenerator {
   /// re-poussé — la vague peut donc se réduire à 2 steps en pratique.
   List<_StepDraft> _buildMiniWave(double humilCap) {
     final hasThroat = _unlockedKeys.contains(UnlockKey.throatHoldShort) ||
-        _maxDepthIndex >= Position.throat.index;
+        _config.maxDepthIndex >= Position.throat.index;
     // Steps montants : BPMs espacés de 20 pour que la variance détectée
     // par `_patternBuffer.wouldBeFlat` (< 10) ne déclenche pas. Choix
     // mode=rhythm sur les 3 steps pour cohérence dramaturgique (un seul
@@ -1241,7 +1208,7 @@ class CareerSessionGenerator {
   }
 
   /// Adaptateur d'instance pour `_FinalPicker.buildPostFinalDraft`. Injecte
-  /// le `holdCeilingIdx` calculé depuis `_unlockedKeys` + `_maxDepthIndex`
+  /// le `holdCeilingIdx` calculé depuis `_unlockedKeys` + `_config.maxDepthIndex`
   /// — qui n'est pas dans `_FinalPicker` car partagé avec `_pickHoldPosition`
   /// et d'autres call sites.
   _StepDraft _buildPostFinalDraft(SessionMode finalMode, double humilCap) =>
@@ -1329,7 +1296,7 @@ class CareerSessionGenerator {
 
   /// Émet le step de pré-finisher (courte accélération rythme `head→target`
   /// qui prépare la phase boosts). Utilisé uniquement pour les bas niveaux —
-  /// le caller garde la guard `isLowLevel && !_isModeForbidden(rhythm)` autour
+  /// le caller garde la guard `isLowLevel && !_config.isModeForbidden(rhythm)` autour
   /// de l'appel pour ne pas changer la séquence RNG (la position est pickée
   /// avant l'appel).
   ///
@@ -1370,17 +1337,17 @@ class CareerSessionGenerator {
   /// Choix du mode pour la phase de boosts (`hand_burst` non humiliant vs
   /// `rhythm_burst` humiliant). Gère :
   ///  - le biais dramaturgique 70/30 vs 25/75 selon humil + niveau ;
-  ///  - les exclusions Custom (`_isModeForbidden`) avec repli `lick` quand
+  ///  - les exclusions Custom (`_config.isModeForbidden`) avec repli `lick` quand
   ///    hand ET rhythm sont bannis ;
   ///  - le ratio de poids brut quand les doses hand/rhythm sont asymétriques
   ///    (cf. issue #68).
   ///
   /// Consomme un tirage RNG quand les deux modes sont autorisés.
   ({bool useHandBurst, SessionMode burstMode}) _pickBurstMode(_GenContext ctx) {
-    final handForbidden = _isModeForbidden(SessionMode.hand);
-    final rhythmForbidden = _isModeForbidden(SessionMode.rhythm);
+    final handForbidden = _config.isModeForbidden(SessionMode.hand);
+    final rhythmForbidden = _config.isModeForbidden(SessionMode.rhythm);
     final preferHandBase =
-        _humiliationCareer < 5 && ctx.level <= 3 ? 0.70 : 0.25;
+        _config.humiliationCareer < 5 && ctx.level <= 3 ? 0.70 : 0.25;
     if (handForbidden && rhythmForbidden) {
       // chemin "rhythm-like" : BPM cap/floor rhythm
       return (useHandBurst: false, burstMode: SessionMode.lick);
@@ -1391,8 +1358,8 @@ class CareerSessionGenerator {
     if (rhythmForbidden) {
       return (useHandBurst: true, burstMode: SessionMode.hand);
     }
-    final handWeight = _coachModeWeights[SessionMode.hand] ?? 1.0;
-    final rhythmWeight = _coachModeWeights[SessionMode.rhythm] ?? 1.0;
+    final handWeight = _config.coachModeWeights[SessionMode.hand] ?? 1.0;
+    final rhythmWeight = _config.coachModeWeights[SessionMode.rhythm] ?? 1.0;
     final dosesAreSymmetric = (handWeight - rhythmWeight).abs() < 0.01;
     final preferHand = dosesAreSymmetric
         ? preferHandBase
@@ -1426,7 +1393,7 @@ class CareerSessionGenerator {
     // Cap assoupli pour les boosts : projection au temps `time` du début
     // de la phase finish, +8 de tolérance pour permettre des bursts un
     // poil au-dessus du cap mécanique strict (tradition du finish).
-    final boostHumilCap = _humilCapAt(time) + 8.0;
+    final boostHumilCap = _config.humilCapAt(time) + 8.0;
     // Nombre total de boosts : table par niveau + bonus encore (fixé en
     // amont via `boostsCount`). Plus de boucle conditionnelle sur la
     // jauge — le sprint est entièrement déterministe.
@@ -1447,7 +1414,7 @@ class CareerSessionGenerator {
     // acquittées (cf. `_milestoneRhythmCeilingIdx`) : throat ouvert si
     // `throatPulse` débloqué (intro_throat_pulse), full si `fullPulse`
     // (intro_full_pulse). Indépendant du niveau seul — sauter des milestones
-    // ne donne pas accès aux profondeurs. Borné par `_maxDepthIndex` en
+    // ne donne pas accès aux profondeurs. Borné par `_config.maxDepthIndex` en
     // sécurité, et par mid (idx 2) au minimum (un boost ne descend jamais
     // sous mid pour rester reconnaissable comme un sprint).
     final boostMaxToIdx = max(2, _milestoneRhythmCeilingIdx());
@@ -1558,14 +1525,14 @@ class CareerSessionGenerator {
     // probablement saturé). Le générateur ne bénéficie pas des bumps
     // évènementiels (punition complétée etc.) — uniquement de la rampe
     // automatique — donc c'est volontairement conservateur.
-    final finalHumilCap = _humilCapAt(time);
+    final finalHumilCap = _config.humilCapAt(time);
     // En chaîne encore, on allonge le final pour que la dramaturgie de
     // « tu en veux encore » se traduise aussi côté apothéose. Bornée par
     // le clamp de `_finalPicker.pickFinal` pour rester raisonnable.
     final finishMul = 1.0 + max(0, ctx.encoreChainIndex) * 0.10;
     final finisherDraft = _finalPicker.pickFinal(
       humilCap: finalHumilCap,
-      maxDepth: _maxDepthIndex,
+      maxDepth: _config.maxDepthIndex,
       finishMul: finishMul,
     );
     final finalCategory =
@@ -1626,8 +1593,8 @@ class CareerSessionGenerator {
     required double stamina,
     required SessionMode finalMode,
   }) {
-    final postFinalDraft =
-        _clampToCapability(_buildPostFinalDraft(finalMode, _humilCapAt(time)));
+    final postFinalDraft = _clampToCapability(
+        _buildPostFinalDraft(finalMode, _config.humilCapAt(time)));
     // Phrase : pool mode-spécifique (beg = CONSIGNE de supplique ;
     // lick = consigne d'aftercare humiliant) puis cascade sur le pool
     // générique. Default `pickPostFinalText` retourne `null` → on saute
@@ -1711,15 +1678,15 @@ class CareerSessionGenerator {
         noStats: ctx.noStats,
       ),
       staminaProfile: trimmedProfile,
-      overloadAxis: _overloadAxis,
+      overloadAxis: _config.overloadAxis,
     );
   }
 
   /// Step d'intro. Modes hardcodés pour quickie / intense (besoins
   /// dramaturgiques spécifiques). En séance normale, panel de variantes
   /// douces : lick et rhythm en amplitude limitée, plus une option hand
-  /// pour la variété. Filtré par `_maxDepthIndex` (head→mid n'apparaît pas
-  /// si le niveau plafonne à head) et `_includeHand`.
+  /// pour la variété. Filtré par `_config.maxDepthIndex` (head→mid n'apparaît pas
+  /// si le niveau plafonne à head) et `_config.includeHand`.
   _StepDraft _firstStep({
     bool quickie = false,
     bool intense = false,
@@ -1789,7 +1756,7 @@ class CareerSessionGenerator {
         to: Position.mid,
         duration: 16,
       ),
-      if (_includeHand)
+      if (_config.includeHand)
         const _StepDraft(
           mode: SessionMode.hand,
           bpm: 55,
@@ -1800,13 +1767,13 @@ class CareerSessionGenerator {
     ];
     final allowed = variants
         .where(_isUnlocked)
-        .where((v) => !_isModeForbidden(v.mode))
+        .where((v) => !_config.isModeForbidden(v.mode))
         .toList();
     if (allowed.isEmpty) {
       // Pas de variante alignée à la fois sur les unlocks et le dosage —
       // on retombe sur la 1ʳᵉ variante non interdite, sinon la 1ʳᵉ tout court.
       final notForbidden =
-          variants.where((v) => !_isModeForbidden(v.mode)).toList();
+          variants.where((v) => !_config.isModeForbidden(v.mode)).toList();
       return notForbidden.isEmpty ? variants.first : notForbidden.first;
     }
     return allowed[_rng.nextInt(allowed.length)];
@@ -1932,7 +1899,7 @@ class CareerSessionGenerator {
     final avail = _RecoveryAvailability(
       heritage: _unlockedKeys.isEmpty,
       unlockedKeys: _unlockedKeys,
-      includeHand: _includeHand,
+      includeHand: _config.includeHand,
     );
     final candidates = <SessionMode>[
       for (final entry in _modeRulesRegistry.entries)
@@ -1943,7 +1910,7 @@ class CareerSessionGenerator {
     // retombe sur lick (le garde-fou de l'éditeur Custom assure que lick
     // OU rhythm OU hold est resté ≥ rare — si lick lui-même est exclu, le
     // mode bouche restant reprend la main au step suivant via mapDifficulty).
-    candidates.removeWhere(_isModeForbidden);
+    candidates.removeWhere(_config.isModeForbidden);
     if (candidates.isEmpty) candidates.add(SessionMode.lick);
     final pool = _filterRepeated(candidates);
     // Tirage pondéré pour que la friction de continuité par type s'applique
@@ -1971,13 +1938,13 @@ class CareerSessionGenerator {
     return draft;
   }
 
-  /// Adaptateur d'instance pour `_ModePicker.pickWeighted` — injecte `_spec`,
-  /// `_coachModeWeights`, le snapshot de continuité et `_rng`.
+  /// Adaptateur d'instance pour `_ModePicker.pickWeighted` — injecte `_config.spec`,
+  /// `_config.coachModeWeights`, le snapshot de continuité et `_rng`.
   SessionMode _pickWeightedMode(List<SessionMode> candidates) =>
       _ModePicker.pickWeighted(
         candidates,
-        spec: _spec,
-        coachWeights: _coachModeWeights,
+        spec: _config.spec,
+        coachWeights: _config.coachModeWeights,
         continuity: _state.continuitySnapshot(),
         rng: _rng,
       );
@@ -1985,7 +1952,7 @@ class CareerSessionGenerator {
   /// Mode retenu pour la chaîne de fallback « intro intense / quickie »
   /// (cf. `_firstStep`). Trie les rules par `introPriority` croissante,
   /// retient la première non-forbidden. Le mode de rang max (hold)
-  /// reste le fallback ultime même quand `_isModeForbidden(hold)` —
+  /// reste le fallback ultime même quand `_config.isModeForbidden(hold)` —
   /// l'éditeur Custom garantit qu'au moins un mode bouche reste, mais
   /// si tout est exclu, hold doit sortir pour préserver le contrat
   /// historique (la cascade `rhythm → hand → lick → hold` finissait
@@ -1997,7 +1964,7 @@ class CareerSessionGenerator {
       ..sort(
           (a, b) => a.value.introPriority!.compareTo(b.value.introPriority!));
     for (final e in ranked) {
-      if (!_isModeForbidden(e.key)) return e.key;
+      if (!_config.isModeForbidden(e.key)) return e.key;
     }
     return ranked.last.key;
   }
@@ -2015,29 +1982,17 @@ class CareerSessionGenerator {
     _patternBuffer.record(mode, from: from, to: to, bpm: bpm);
   }
 
-  /// Délégué à [`_SessionConfig.scaleDuration`].
-  int _scaleDuration(
-    double base, {
-    double enduranceFactor = 0.0,
-    double extraFactor = 0.0,
-  }) =>
-      _config.scaleDuration(base,
-          enduranceFactor: enduranceFactor, extraFactor: extraFactor);
-
-  /// Délégué à [`_SessionConfig.pts`].
-  int _pts(SpecializationBranch b) => _config.pts(b);
-
   /// Adapteur d'instance de `_BpmPacing.capRhythmDurationByPulses` qui
-  /// injecte `_humiliationCareer` et les points de spé (l'algo lui-même
+  /// injecte `_config.humiliationCareer` et les points de spé (l'algo lui-même
   /// vit côté `_BpmPacing`).
   int _capRhythmDurationByPulses(int dur, int bpm, Position? to) =>
       _BpmPacing.capRhythmDurationByPulses(
         dur,
         bpm,
         to,
-        humiliationCareer: _humiliationCareer,
-        rythmePts: _pts(SpecializationBranch.rythmeBiffle),
-        profondeurPts: _pts(SpecializationBranch.profondeur),
+        humiliationCareer: _config.humiliationCareer,
+        rythmePts: _config.pts(SpecializationBranch.rythmeBiffle),
+        profondeurPts: _config.pts(SpecializationBranch.profondeur),
       );
 
   // ─── Position pickers (adapteurs vers `_PositionPickers`) ────────────────
@@ -2150,10 +2105,10 @@ class CareerSessionGenerator {
     // `_capClamps` ici, sinon le `_clampToCapability` qui sert à matérialiser
     // chaque step de la compo lit un field non initialisé.
     _capClamps = _CapabilityClamps(
-      profile: _capProfile,
-      ceilings: _capCeilings,
-      overloadAxis: _overloadAxis,
-      overloadFactor: _overloadFactor,
+      profile: _config.capProfile,
+      ceilings: _config.capCeilings,
+      overloadAxis: _config.overloadAxis,
+      overloadFactor: _config.overloadFactor,
       bpmRange: null,
       holdRange: null,
     );
@@ -2161,23 +2116,23 @@ class CareerSessionGenerator {
     // `generatePunishment`, mais on les initialise par sécurité
     // (idempotence avec `generate()`).
     _finalPicker = _FinalPicker(
-      level: _level,
-      anatomy: _anatomy,
+      level: _config.level,
+      anatomy: _config.anatomy,
       unlockedKeys: _unlockedKeys,
-      spec: _spec,
-      coachModeWeights: _coachModeWeights,
-      includeHand: _includeHand,
+      spec: _config.spec,
+      coachModeWeights: _config.coachModeWeights,
+      includeHand: _config.includeHand,
       rng: _rng,
       capClamps: _capClamps,
     );
     _positionPickers = _PositionPickers(
-      maxDepthIndex: _maxDepthIndex,
-      deepProbability: _deepProbability,
-      humiliationCareer: _humiliationCareer,
+      maxDepthIndex: _config.maxDepthIndex,
+      deepProbability: _config.deepProbability,
+      humiliationCareer: _config.humiliationCareer,
       unlockedKeys: _unlockedKeys,
-      spec: _spec,
-      coachModeWeights: _coachModeWeights,
-      anatomy: _anatomy,
+      spec: _config.spec,
+      coachModeWeights: _config.coachModeWeights,
+      anatomy: _config.anatomy,
       rng: _rng,
     );
 
@@ -2299,11 +2254,11 @@ class CareerSessionGenerator {
   // Adaptateurs d'instance pour ceux qui restent appelés directement :
 
   /// Adaptateurs d'instance pour `_HumiliationGates` : injectent
-  /// `_anatomy`, `_unlockedKeys` et la projection salive `_salivaSim.value`
+  /// `_config.anatomy`, `_unlockedKeys` et la projection salive `_salivaSim.value`
   /// pour garder les call sites brefs (un seul argument au lieu de quatre).
   bool _isUnlocked(_StepDraft d) => _HumiliationGates.isUnlocked(
         d,
-        anatomy: _anatomy,
+        anatomy: _config.anatomy,
         unlockedKeys: _unlockedKeys,
       );
 
@@ -2312,14 +2267,14 @@ class CareerSessionGenerator {
   // Plus d'adaptateur ici.
 
   /// Adaptateur d'instance pour `_HumiliationGates.enforceRequired` : injecte
-  /// `_anatomy`, `_unlockedKeys`, la salive courante, et le callback de
-  /// clamp capacité (qui reste sur l'instance car il consulte `_capProfile`).
+  /// `_config.anatomy`, `_unlockedKeys`, la salive courante, et le callback de
+  /// clamp capacité (qui reste sur l'instance car il consulte `_config.capProfile`).
   _StepDraft _enforceHumiliationRequired(_StepDraft draft, double available) =>
       _HumiliationGates.enforceRequired(
         draft,
         available,
         clampToCapability: _clampToCapability,
-        anatomy: _anatomy,
+        anatomy: _config.anatomy,
         unlockedKeys: _unlockedKeys,
         saliva: _salivaSim.value,
       );
@@ -2394,11 +2349,11 @@ class CareerSessionGenerator {
     );
   }
 
-  /// Bump conditionnel d'un tier de phrase selon `_obedience`. Cf. doc
+  /// Bump conditionnel d'un tier de phrase selon `_config.obedience`. Cf. doc
   /// de `_pickPhrase`. Ne touche pas aux tiers `boost`/`finale`.
   String _bumpTierByObedience(String tier) {
     if (tier == 'boost' || tier == 'finale') return tier;
-    final obed = _obedience;
+    final obed = _config.obedience;
     final roll = _rng.nextDouble();
     if (tier == 'soft') {
       double pSoftToMedium;

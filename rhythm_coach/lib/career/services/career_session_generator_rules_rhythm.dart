@@ -155,7 +155,7 @@ class _RhythmRules extends _ModeRules {
   _StepDraft build(_DraftCtx ctx) {
     final bpm = _StaminaModel.lerp(60.0, 140.0, ctx.bpmScore).round();
     final (from, to) = ctx.gen._sampleFromTo(ctx.ampScore);
-    var dur = ctx.gen._scaleDuration(
+    var dur = ctx.gen._config.scaleDuration(
       _StaminaModel.lerp(20.0, 60.0, ctx.durScore),
       enduranceFactor: 0.05,
     );

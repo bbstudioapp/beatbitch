@@ -108,10 +108,10 @@ class _BegRules extends _ModeRules {
     // Convention uniforme hold/beg : la position tenue est dans `to`.
     // Obéissance : beg plus profonds (ampScore boosté localement) et
     // plus longs.
-    final obPts = ctx.gen._pts(SpecializationBranch.obeissance);
+    final obPts = ctx.gen._config.pts(SpecializationBranch.obeissance);
     final begAmp = (ctx.ampScore + 0.10 * obPts).clamp(0.0, 1.0);
     final to = ctx.gen._pickBegPosition(begAmp);
-    final baseDur = ctx.gen._scaleDuration(
+    final baseDur = ctx.gen._config.scaleDuration(
       _StaminaModel.lerp(7.0, 16.0, ctx.durScore),
       enduranceFactor: 0.04,
       extraFactor: obPts * 0.06,

@@ -76,7 +76,7 @@ class _BiffleRules extends _ModeRules {
     // Biffle = coups de queue sur le visage : pas de notion de position.
     // from/to restent null.
     final bpm = _StaminaModel.lerp(80.0, 140.0, ctx.bpmScore).round();
-    final dur = ctx.gen._scaleDuration(
+    final dur = ctx.gen._config.scaleDuration(
       _StaminaModel.lerp(15.0, 40.0, ctx.durScore),
       enduranceFactor: 0.05,
     );

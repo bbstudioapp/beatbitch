@@ -46,13 +46,13 @@ class _LickRules extends _ModeRules {
   @override
   _StepDraft build(_DraftCtx ctx) {
     // Sloppy : monte le BPM minimum (≥ 65 = lick humide / saliveux).
-    final sloppyPts = ctx.gen._pts(SpecializationBranch.sloppy);
+    final sloppyPts = ctx.gen._config.pts(SpecializationBranch.sloppy);
     final lickBpmScore = sloppyPts > 0 ? max(ctx.bpmScore, 0.3) : ctx.bpmScore;
     final bpm = _StaminaModel.lerp(55.0, 80.0, lickBpmScore).round();
     // Tirage spécifique lick : tip→head forcé tant qu'humiliation < 2,
     // toutes amplitudes (incluant tip → throat/full) à partir de 2.
     final (from, to) = ctx.gen._sampleFromToForLick(ctx.ampScore);
-    final dur = ctx.gen._scaleDuration(
+    final dur = ctx.gen._config.scaleDuration(
       _StaminaModel.lerp(10.0, 25.0, ctx.durScore),
       enduranceFactor: 0.04,
     );

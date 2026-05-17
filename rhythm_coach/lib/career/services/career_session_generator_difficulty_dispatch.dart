@@ -16,7 +16,7 @@
 //
 // Le file reste posé comme **extension** sur `CareerSessionGenerator`
 // (library-private, call site `_mapDifficultyToStep(diff)` inchangé)
-// pour l'accès à `this` côté orchestration (candidats, picker, _pts).
+// pour l'accès à `this` côté orchestration (candidats, picker, _config.pts).
 // Le sous-cas par mode du switch a migré vers le registry `_modeRules`.
 
 part of 'career_session_generator.dart';
@@ -57,10 +57,10 @@ extension _DifficultyDispatch on CareerSessionGenerator {
     // gating) pour ne pas casser les sessions hors carrière.
     final canBiffle =
         _unlockedKeys.isEmpty || _unlockedKeys.contains(UnlockKey.biffleBasic);
-    if (diff >= 0.40 && _includeHand && canBiffle) {
+    if (diff >= 0.40 && _config.includeHand && canBiffle) {
       candidates.add(SessionMode.biffle);
     }
-    if (_includeHand && diff >= 0.10) {
+    if (_config.includeHand && diff >= 0.10) {
       // Hand est dispo dès le début : repose la bouche, aide à varier le
       // tempo. Seuil bas pour qu'il apparaisse aussi en bas niveau (sinon
       // les fenêtres de difficulté basses des premiers paliers le bloquent
@@ -81,7 +81,7 @@ extension _DifficultyDispatch on CareerSessionGenerator {
     // milestone `intro_suckle_head` qui accorde `UnlockKey.suckleHead`. En
     // mode hérité (Custom, scénarios), on l'ajoute inconditionnellement —
     // sa dose Custom (ModeDose.none ⇒ forbidden) le retire ensuite via
-    // `removeWhere(_isModeForbidden)`. Sans cet ajout, la dose Custom
+    // `removeWhere(_config.isModeForbidden)`. Sans cet ajout, la dose Custom
     // était de fait ignorée : suckle n'était jamais tiré.
     final canSuckle =
         _unlockedKeys.isEmpty || _unlockedKeys.contains(UnlockKey.suckleHead);
@@ -96,14 +96,14 @@ extension _DifficultyDispatch on CareerSessionGenerator {
     // ≥ rare via son garde-fou). On essaie lick → hold → rhythm pour
     // privilégier le mode le plus doux disponible, et rhythm en dernier
     // ressort pour ne jamais crasher si une config était corrompue.
-    candidates.removeWhere(_isModeForbidden);
+    candidates.removeWhere(_config.isModeForbidden);
     if (candidates.isEmpty) {
       for (final m in const [
         SessionMode.lick,
         SessionMode.hold,
         SessionMode.rhythm,
       ]) {
-        if (!_isModeForbidden(m)) {
+        if (!_config.isModeForbidden(m)) {
           candidates.add(m);
           break;
         }
@@ -120,11 +120,12 @@ extension _DifficultyDispatch on CareerSessionGenerator {
     // +0.08/pt) pour que la branche choisie pousse plus visiblement les
     // paramètres : 5 pts en profondeur = +0.40 ampScore, donc des
     // amplitudes mid→full / throat→full bien plus fréquentes.
-    bpmScore = (bpmScore + 0.08 * _pts(SpecializationBranch.rythmeBiffle))
+    bpmScore =
+        (bpmScore + 0.08 * _config.pts(SpecializationBranch.rythmeBiffle))
+            .clamp(0.0, 1.0);
+    ampScore = (ampScore + 0.08 * _config.pts(SpecializationBranch.profondeur))
         .clamp(0.0, 1.0);
-    ampScore = (ampScore + 0.08 * _pts(SpecializationBranch.profondeur))
-        .clamp(0.0, 1.0);
-    durScore = (durScore + 0.08 * _pts(SpecializationBranch.endurance))
+    durScore = (durScore + 0.08 * _config.pts(SpecializationBranch.endurance))
         .clamp(0.0, 1.0);
 
     // Dispatch polymorphique : chaque rule consomme les 3 scores via
