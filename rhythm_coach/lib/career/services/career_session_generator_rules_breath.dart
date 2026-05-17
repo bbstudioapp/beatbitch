@@ -13,6 +13,9 @@ class _BreathRules extends _ModeRules {
   const _BreathRules();
 
   @override
+  _StepType classify(Position? to) => _StepType.transit;
+
+  @override
   double delta(_StepDraft draft, double progress, CareerLevel cfg) {
     final dur = draft.duration ?? 0;
     final regen = _StaminaModel.lerp(

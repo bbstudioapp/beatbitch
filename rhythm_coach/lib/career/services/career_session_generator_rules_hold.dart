@@ -11,6 +11,9 @@ class _HoldRules extends _ModeRules {
   const _HoldRules();
 
   @override
+  _StepType classify(Position? to) => _StepType.bouche;
+
+  @override
   double delta(_StepDraft draft, double progress, CareerLevel cfg) {
     final dur = draft.duration ?? 0;
     final depth = _StaminaModel.positionDepth(draft.to, draft.to);

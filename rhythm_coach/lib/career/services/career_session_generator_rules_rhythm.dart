@@ -26,6 +26,9 @@ class _RhythmRules extends _ModeRules {
   const _RhythmRules();
 
   @override
+  _StepType classify(Position? to) => _StepType.bouche;
+
+  @override
   UnlockKey? unlockKeyFor(_StepDraft draft) {
     // Rhythm n'a pas de variante balls valide (les modes-incompatibles
     // balls sont filtrés en amont par `_HumiliationGates.isUnlocked`).
