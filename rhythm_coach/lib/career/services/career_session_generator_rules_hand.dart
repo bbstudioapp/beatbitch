@@ -120,4 +120,15 @@ class _HandRules extends _ModeRules {
   /// en Custom.
   @override
   int? get introPriority => 1;
+
+  /// Intro main : consomme les 4 params du ctx straight, comme rhythm
+  /// (l'acoustique change mais la forme du step est identique).
+  @override
+  _StepDraft buildIntroStep(_IntroCtx ctx) => _StepDraft(
+        mode: SessionMode.hand,
+        bpm: ctx.bpm,
+        from: ctx.from,
+        to: ctx.to,
+        duration: ctx.duration,
+      );
 }
