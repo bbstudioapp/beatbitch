@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
+import '../career/models/career_generation_inputs.dart';
 import '../career/models/level_milestone.dart';
 import '../career/models/phrase_bank.dart';
 import '../career/models/specialization.dart';
@@ -1893,10 +1894,11 @@ class SessionController extends ChangeNotifier {
       level: _careerLevel,
       bank: bank,
       unlockedKeys: _unlockedKeys,
-      capabilityProfile: profile,
-      capabilitySessionCeilings:
-          _capabilityTracker?.sessionCeilings ?? const {},
-      capabilityOverloadAxis: _capabilityOverloadAxis,
+      capability: CapabilityInputs(
+        profile: profile,
+        sessionCeilings: _capabilityTracker?.sessionCeilings ?? const {},
+        overloadAxis: _capabilityOverloadAxis,
+      ),
       specialization: _specialization,
       humiliationCareer: _humiliation.careerScore,
       humiliationSession: _humiliation.sessionScore,

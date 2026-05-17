@@ -8,6 +8,7 @@ import '../../models/session_step.dart';
 import '../../services/humiliation_engine.dart';
 import '../../services/stats_service.dart';
 import '../../theme/app_theme.dart';
+import '../models/career_generation_inputs.dart';
 import '../models/career_level.dart';
 import '../models/level_milestone.dart';
 import '../models/phrase_bank.dart';
@@ -122,10 +123,12 @@ class _CareerScenarioDebugScreenState extends State<CareerScenarioDebugScreen> {
       obedience: _obed,
       durationSeconds: _durationOverride > 0 ? _durationOverride : null,
       specialization: _spec,
-      insertedBodies: milestone == null ? const [] : [milestone],
-      finalMilestone: finalMilestone,
       unlockedKeys: _unlocks,
-      milestoneTextResolver: milestoneService.getStepText,
+      milestones: MilestonePlan(
+        bodies: milestone == null ? const [] : [milestone],
+        finalMilestone: finalMilestone,
+        textResolver: milestoneService.getStepText,
+      ),
     );
     setState(() {
       _result = result;
@@ -199,10 +202,12 @@ class _CareerScenarioDebugScreenState extends State<CareerScenarioDebugScreen> {
       intense: true,
       humiliationCareer: _humil,
       obedience: _obed,
-      insertedBodies: milestone == null ? const [] : [milestone],
-      finalMilestone: finalMilestone,
       unlockedKeys: _unlocks,
-      milestoneTextResolver: milestoneService.getStepText,
+      milestones: MilestonePlan(
+        bodies: milestone == null ? const [] : [milestone],
+        finalMilestone: finalMilestone,
+        textResolver: milestoneService.getStepText,
+      ),
     );
     setState(() {
       _forkResult = fork;

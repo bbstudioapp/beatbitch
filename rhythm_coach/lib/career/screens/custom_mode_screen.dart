@@ -20,6 +20,7 @@ import '../../services/random_comments_loader.dart';
 import '../../services/tts_service.dart';
 import '../../services/user_profile_service.dart';
 import '../../theme/app_theme.dart';
+import '../models/career_generation_inputs.dart';
 import '../models/coach.dart';
 import '../models/custom_session_config.dart';
 import '../models/phrase_bank.dart';
@@ -195,16 +196,18 @@ class _CustomModeScreenState extends State<CustomModeScreen> {
       unlockedKeys: const {},
       coachModeWeights: cfg.resolveCoachModeWeights(),
       sessionName: _sessionName(cfg),
-      intensityFloorOverride: cfg.resolveIntensityFloor(),
-      // On passe l'override dès que la profondeur n'est pas full, et
-      // toujours quand c'est balls : le défaut du niveau virtuel ne va
-      // pas au-delà de full, il faut donc l'expliciter pour balls (5).
-      maxDepthIndexOverride:
-          cfg.maxDepthIndex == Position.full.index ? null : cfg.maxDepthIndex,
-      bpmRange: (cfg.bpmMin, cfg.bpmMax),
-      holdDurationRange: (cfg.holdDurationMin, cfg.holdDurationMax),
-      noStats: true,
       anatomy: widget.userProfile.anatomy,
+      custom: CustomOverrides(
+        intensityFloor: cfg.resolveIntensityFloor(),
+        // On passe l'override dès que la profondeur n'est pas full, et
+        // toujours quand c'est balls : le défaut du niveau virtuel ne va
+        // pas au-delà de full, il faut donc l'expliciter pour balls (5).
+        maxDepthIndex:
+            cfg.maxDepthIndex == Position.full.index ? null : cfg.maxDepthIndex,
+        bpmRange: (cfg.bpmMin, cfg.bpmMax),
+        holdDurationRange: (cfg.holdDurationMin, cfg.holdDurationMax),
+        noStats: true,
+      ),
     );
   }
 
@@ -358,7 +361,7 @@ class _CustomModeScreenState extends State<CustomModeScreen> {
     final remaining = ctrl.session.durationSeconds - ctrl.elapsedSeconds;
     if (remaining < _finishNowMinRemainingSeconds) return;
     const begDuration = 5;
-    // ~60 s : avec `intense` (pas de soft-intro) + `intensityFloorOverride`
+    // ~60 s : avec `intense` (pas de soft-intro) + `custom.intensityFloor`
     // élevé, ça donne une amorce courte, un sprint dur, puis la phase finish
     // (boosts + final + chime). Volontairement plus court que le gate de 75 s
     // pour que « Termine-moi » raccourcisse toujours la séance restante.
@@ -375,13 +378,14 @@ class _CustomModeScreenState extends State<CustomModeScreen> {
           humiliationSession: 0.0,
           unlockedKeys: const {},
           coachModeWeights: cfg.resolveCoachModeWeights(),
-          intensityFloorOverride: 0.8,
-          maxDepthIndexOverride:
-              cfg.maxDepthIndex < 4 ? cfg.maxDepthIndex : null,
-          bpmRange: (cfg.bpmMin, cfg.bpmMax),
-          holdDurationRange: (cfg.holdDurationMin, cfg.holdDurationMax),
-          noStats: true,
           sessionName: ctrl.session.name,
+          custom: CustomOverrides(
+            intensityFloor: 0.8,
+            maxDepthIndex: cfg.maxDepthIndex < 4 ? cfg.maxDepthIndex : null,
+            bpmRange: (cfg.bpmMin, cfg.bpmMax),
+            holdDurationRange: (cfg.holdDurationMin, cfg.holdDurationMax),
+            noStats: true,
+          ),
         )
         .session;
     final beg = SessionStep(

@@ -11,6 +11,7 @@ import '../../services/capability_axis.dart';
 import '../../services/capability_service.dart';
 import '../../services/humiliation_engine.dart';
 import '../../services/saliva_engine.dart';
+import '../models/career_generation_inputs.dart';
 import '../models/career_level.dart';
 import '../models/level_milestone.dart';
 import '../models/phrase_bank.dart';
@@ -199,87 +200,67 @@ class CareerSessionGenerator {
     double obedience = 100.0,
     double humiliationCareer = 0.0,
     double humiliationSession = 0.0,
-    List<LevelMilestone> insertedBodies = const [],
-    LevelMilestone? finalMilestone,
     Set<UnlockKey> unlockedKeys = const {},
-    String? Function(String milestoneId, int stepTime)? milestoneTextResolver,
     Map<SessionMode, double> coachModeWeights = const {},
     String? sessionName,
     String? sessionNameQuickie,
-    // ─── Surcharges pour le mode « Custom » (rétrocompat : tous null /
-    //     false par défaut = comportement carrière inchangé) ───────────────
-    /// Plancher de difficulté appliqué au tirage dès le début de séance
-    /// (prime sur la valeur dérivée de quickie/intense).
-    double? intensityFloorOverride,
-
-    /// Plafond de profondeur (index `Position`) qui prime sur celui du
-    /// `CareerLevel`. Permet au mode custom de borner rhythm/hold.
-    int? maxDepthIndexOverride,
-
-    /// Bornes BPM utilisateur (mode Custom). Tuple `(min, max)`. Appliquées
-    /// à la fin du bornage à tous les modes rythmés (rhythm / lick / biffle /
-    /// hand). `null` = pas de bornage.
-    (int, int)? bpmRange,
-
-    /// Bornes de durée pour les steps tenus (hold + beg avec position),
-    /// imposées par l'utilisateur (mode Custom). `null` = pas de bornage.
-    (int, int)? holdDurationRange,
-
-    /// Si true, la `Session` générée est marquée `noStats` → le
-    /// `SessionController` n'écrit rien dans `StatsService`.
-    bool noStats = false,
-    // ─── Profil de capacités (2ᵉ enveloppe de difficulté, carrière only) ──
-    /// Profil persisté lu pour borner les steps : profondeur, BPM et durée
-    /// ne dépassent pas le `comfort` (= `best` naïf en Phase 2) de chaque
-    /// axe pilotant. `null` → aucun gating capacité (Custom, scénarios JSON).
-    CapabilityProfile? capabilityProfile,
-
-    /// Plafonds figés sur un FAIL de la session en cours (§6) — encore plus
-    /// contraignants que `comfort` quand présents. Passés par les
-    /// régénérations en cours de séance (Supplier / retry milestone) et le
-    /// premier maillon d'un encore enchaîné via
-    /// `SessionController.capabilitySessionCeilings`.
-    Map<CapabilityAxis, double> capabilitySessionCeilings = const {},
 
     /// Profil anatomique de la joueuse. Default = tout disponible
     /// (rétrocompat carrière / tests). Quand `hasBalls = false`, aucun
     /// step sur `Position.balls` n'est généré (filtre `_isUnlocked`
     /// précoce, indépendant du gating milestone).
     AnatomyProfile anatomy = AnatomyProfile.defaults,
+
+    /// Plan d'insertion des milestones pédagogiques. `MilestonePlan.none`
+    /// = séance standard sans milestone (cas Custom / scénarios /
+    /// surprise / Supplier / encore).
+    MilestonePlan milestones = MilestonePlan.none,
+
+    /// 2ᵉ enveloppe de difficulté (profil de capacités + plafonds figés
+    /// par fail). `CapabilityInputs.none` = aucun gating capacité.
+    /// `overloadAxis` est ignoré ici (`generate()` pioche son axe via
+    /// `_pickOverload`) — seul `generatePunishment` le consomme.
+    CapabilityInputs capability = CapabilityInputs.none,
+
+    /// Surcharges propres au mode Custom (intensité plancher, plafond
+    /// profondeur, bornes BPM / hold, `noStats`). `CustomOverrides.none`
+    /// = comportement carrière standard, aucune surcharge.
+    CustomOverrides custom = CustomOverrides.none,
   }) {
     assert(
-      finalMilestone == null ||
-          finalMilestone.placement == MilestonePlacement.finalApotheose,
+      milestones.finalMilestone == null ||
+          milestones.finalMilestone!.placement ==
+              MilestonePlacement.finalApotheose,
       'finalMilestone doit avoir placement=finalApotheose',
     );
     assert(
-      insertedBodies.every((m) => m.placement == MilestonePlacement.body),
-      'insertedBodies doivent avoir placement=body',
+      milestones.bodies.every((m) => m.placement == MilestonePlacement.body),
+      'milestones.bodies doivent avoir placement=body',
     );
     assert(
-      insertedBodies.length <= 2,
-      'insertedBodies : au plus 2 milestones body par séance pour l\'instant',
+      milestones.bodies.length <= 2,
+      'milestones.bodies : au plus 2 milestones body par séance pour l\'instant',
     );
     final cfg = CareerLevel.forLevel(level);
     final overload = _pickOverload(
-      profile: capabilityProfile,
-      ceilings: capabilitySessionCeilings,
+      profile: capability.profile,
+      ceilings: capability.sessionCeilings,
     );
     _config = _SessionConfig(
       level: level,
       includeHand: includeHand,
-      maxDepthIndex: maxDepthIndexOverride ?? cfg.maxDepthIndex,
+      maxDepthIndex: custom.maxDepthIndex ?? cfg.maxDepthIndex,
       deepProbability: cfg.deepProbability,
       spec: specialization ?? SpecializationAllocation.empty(),
       anatomy: anatomy,
       coachModeWeights: coachModeWeights,
-      bpmRange: _normalizeBpmRange(bpmRange),
-      holdDurationRange: _normalizeHoldRange(holdDurationRange),
+      bpmRange: _normalizeBpmRange(custom.bpmRange),
+      holdDurationRange: _normalizeHoldRange(custom.holdDurationRange),
       humiliationCareer: humiliationCareer,
       humiliationSession: humiliationSession,
       obedience: obedience,
-      capProfile: capabilityProfile,
-      capCeilings: capabilitySessionCeilings,
+      capProfile: capability.profile,
+      capCeilings: capability.sessionCeilings,
       overloadAxis: overload.axis,
       overloadFactor: overload.factor,
     );
@@ -318,7 +299,7 @@ class CareerSessionGenerator {
     final effectiveDuration =
         durationSeconds ?? (quickie ? 6 * 60 : cfg.durationSeconds);
     final intensityFloor =
-        intensityFloorOverride ?? (quickie ? 0.65 : (intense ? 0.55 : 0.0));
+        custom.intensityFloor ?? (quickie ? 0.65 : (intense ? 0.55 : 0.0));
     // Nombre de boosts en phase finish : table par niveau + bonus encore
     // (chaîne encore = +2 boosts par cran, sans plafond explicite côté
     // générateur). Le caller borne le nombre d'encores enchaînés via le
@@ -327,8 +308,9 @@ class CareerSessionGenerator {
     // Pré-calculés ici (et non plus juste avant la pré-finition) pour
     // pouvoir construire [_GenContext] en une seule fois après les locaux
     // dérivés. Aucune dépendance sur l'opening step / la boucle main —
-    // tout vient de `level`, `quickie`, `intense`, `finalMilestone`.
+    // tout vient de `level`, `quickie`, `intense`, `milestones.finalMilestone`.
     final isLowLevel = level <= 2 && !quickie && !intense;
+    final finalMilestone = milestones.finalMilestone;
     final useFinalMilestone = finalMilestone != null;
     final finalBudget = useFinalMilestone
         ? finalMilestone.durationSeconds
@@ -365,13 +347,13 @@ class CareerSessionGenerator {
       includeHand: includeHand,
       isLowLevel: isLowLevel,
       useFinalMilestone: useFinalMilestone,
-      noStats: noStats,
+      noStats: custom.noStats,
       cfg: cfg,
       bank: bank,
       sessionName: sessionName,
       sessionNameQuickie: sessionNameQuickie,
-      milestoneTextResolver: milestoneTextResolver,
-      insertedBodies: insertedBodies,
+      milestoneTextResolver: milestones.textResolver,
+      insertedBodies: milestones.bodies,
       finalMilestone: finalMilestone,
     );
 
@@ -392,7 +374,7 @@ class CareerSessionGenerator {
     // — sans quoi on ferme la 2ᵉ (fallback à 1 body, comportement actuel).
     final milestoneScheduler = _MilestoneScheduler.fromBodies(
       this,
-      bodies: insertedBodies,
+      bodies: milestones.bodies,
       effectiveDuration: effectiveDuration,
     );
 
@@ -1999,18 +1981,16 @@ class CareerSessionGenerator {
   /// escalier (rythme `head→mid` rapide → hand ultime) pour rester jouable
   /// même à humilCap quasi-nul.
   ///
-  /// L'axe surchargé de la séance ([capabilityOverloadAxis]) est honoré côté
-  /// **clamp** (le `comfort` de cet axe est élargi du facteur de surcharge
-  /// dans `_clampToCapability` via `_capabilityCapFor`) — mais **pas côté
-  /// sélection** : on ne filtre pas par affinité d'axe, on prend strictement
-  /// le plus humiliant qui passe (décision projet).
+  /// L'axe surchargé de la séance ([CapabilityInputs.overloadAxis]) est
+  /// honoré côté **clamp** (le `comfort` de cet axe est élargi du facteur
+  /// de surcharge dans `_clampToCapability` via `_capabilityCapFor`) —
+  /// mais **pas côté sélection** : on ne filtre pas par affinité d'axe,
+  /// on prend strictement le plus humiliant qui passe (décision projet).
   Punishment generatePunishment({
     required int level,
     required PhraseBank bank,
     required Set<UnlockKey> unlockedKeys,
-    required CapabilityProfile? capabilityProfile,
-    Map<CapabilityAxis, double> capabilitySessionCeilings = const {},
-    CapabilityAxis? capabilityOverloadAxis,
+    required CapabilityInputs capability,
     SpecializationAllocation? specialization,
     double humiliationCareer = 0.0,
     double humiliationSession = 0.0,
@@ -2027,11 +2007,12 @@ class CareerSessionGenerator {
     // Surcharge : on honore l'axe imposé par la séance (pas de re-tirage).
     // Le facteur est reconstruit depuis la `successRate` du profil (même
     // formule que `_pickOverload`). Si pas de profil → 1.0 (no-op).
-    final overloadFactor =
-        (capabilityOverloadAxis != null && capabilityProfile != null)
-            ? CapabilityRegulator.surchargeFactor(
-                capabilityProfile.stateOf(capabilityOverloadAxis).successRate)
-            : 1.0;
+    final overloadAxis = capability.overloadAxis;
+    final capProfile = capability.profile;
+    final overloadFactor = (overloadAxis != null && capProfile != null)
+        ? CapabilityRegulator.surchargeFactor(
+            capProfile.stateOf(overloadAxis).successRate)
+        : 1.0;
     _config = _SessionConfig(
       level: level,
       includeHand: includeHand,
@@ -2050,9 +2031,9 @@ class CareerSessionGenerator {
       humiliationCareer: humiliationCareer,
       humiliationSession: humiliationSession,
       obedience: obedience,
-      capProfile: capabilityProfile,
-      capCeilings: capabilitySessionCeilings,
-      overloadAxis: capabilityOverloadAxis,
+      capProfile: capProfile,
+      capCeilings: capability.sessionCeilings,
+      overloadAxis: overloadAxis,
       overloadFactor: overloadFactor,
     );
     _state = _SessionRuntimeState.fresh(rng: _rng);

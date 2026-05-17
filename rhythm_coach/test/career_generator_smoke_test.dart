@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:beat_bitch/career/models/career_generation_inputs.dart';
 import 'package:beat_bitch/career/models/level_milestone.dart';
 import 'package:beat_bitch/career/models/phrase_bank.dart';
 import 'package:beat_bitch/career/models/unlock_key.dart';
@@ -120,7 +121,7 @@ void main() {
     final result = CareerSessionGenerator(seed: 1234).generate(
       level: 2,
       bank: _bank(),
-      finalMilestone: milestone,
+      milestones: const MilestonePlan(finalMilestone: milestone),
       unlockedKeys: _allUnlocks,
     );
 
@@ -192,8 +193,7 @@ void main() {
     final result = CareerSessionGenerator(seed: 1234).generate(
       level: 2,
       bank: _bank(),
-      insertedBodies: [body],
-      finalMilestone: finalM,
+      milestones: const MilestonePlan(bodies: [body], finalMilestone: finalM),
       unlockedKeys: _allUnlocks,
     );
 
@@ -348,7 +348,7 @@ void main() {
       final r = CareerSessionGenerator(seed: seed).generate(
         level: 4,
         bank: _bank(),
-        insertedBodies: [milestone],
+        milestones: const MilestonePlan(bodies: [milestone]),
         unlockedKeys: initial,
         humiliationCareer: 30.0,
       );

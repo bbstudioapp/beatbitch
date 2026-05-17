@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:beat_bitch/career/models/career_generation_inputs.dart';
 import 'package:beat_bitch/career/models/phrase_bank.dart';
 import 'package:beat_bitch/career/models/unlock_key.dart';
 import 'package:beat_bitch/career/services/career_session_generator.dart';
@@ -65,8 +66,10 @@ CareerGenerationResult _gen(
       includeHand: includeHand,
       humiliationCareer: 100.0,
       unlockedKeys: _allUnlocks,
-      capabilityProfile: profile,
-      capabilitySessionCeilings: ceilings,
+      capability: CapabilityInputs(
+        profile: profile,
+        sessionCeilings: ceilings,
+      ),
     );
 
 void main() {
