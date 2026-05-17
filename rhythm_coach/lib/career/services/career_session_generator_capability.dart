@@ -10,10 +10,12 @@
 // l'axe) sont des `static`.
 //
 // Conception : les méthodes de clamp s'appellent entre elles, et toutes
-// ont besoin du même bundle (`profile`, `ceilings`, `overloadAxis`,
-// `overloadFactor`, `bpmRange`, `holdRange`). Passer ces 6 fields à chaque
-// appel rendrait les signatures illisibles — l'objet immuable est plus
-// propre qu'une longue liste de paramètres répétés.
+// ont besoin du même bundle (profil, ceilings, axe/facteur de surcharge,
+// bornes Custom). Plutôt qu'une longue liste de paramètres répétés, on
+// snapshot une référence vers le `_SessionConfig` de la séance pour les 4
+// fields capacités (profil + ceilings + axe + facteur), et on garde
+// `bpmRange` / `holdRange` comme fields explicites — la path punition
+// les nullifie alors que la session principale les hérite de `_config`.
 
 part of 'career_session_generator.dart';
 
@@ -22,33 +24,22 @@ part of 'career_session_generator.dart';
 /// Immutable : le générateur en construit un par appel à `generate()`,
 /// après que `pickOverloadAxis` a choisi l'axe à pousser cette séance.
 class _CapabilityClamps {
-  /// Profil persisté (lecture seule). `null` = mode hérité (Custom,
-  /// scénarios JSON, tests) → toutes les méthodes de cap se neutralisent.
-  final CapabilityProfile? profile;
+  /// Snapshot de la config de séance. On y lit `capProfile`,
+  /// `capCeilings`, `overloadAxis`, `overloadFactor` — figés au début de
+  /// `generate()`.
+  final _SessionConfig config;
 
-  /// Plafonds figés sur un FAIL pendant la session courante (§6 de la
-  /// spec) — plus contraignants que `comfort` quand présents.
-  final Map<CapabilityAxis, double> ceilings;
-
-  /// Axe surchargé cette séance (un seul, §5). `null` = pas de surcharge.
-  final CapabilityAxis? overloadAxis;
-
-  /// Facteur de surcharge appliqué au `comfort` de [overloadAxis]
-  /// (1.03..1.15). 1.0 pour les autres axes.
-  final double overloadFactor;
-
-  /// Bornes BPM utilisateur (mode Custom). `null` hors Custom.
+  /// Bornes BPM utilisateur (mode Custom). `null` hors Custom **ou** quand
+  /// le caller veut explicitement désactiver le clamp (cf. path punition
+  /// dans `generatePunishment`).
   final (int, int)? bpmRange;
 
-  /// Bornes de durée pour les steps tenus (hold + beg avec position),
-  /// utilisateur (mode Custom). `null` hors Custom.
+  /// Bornes de durée pour les steps tenus (hold + beg avec position).
+  /// Même semantics que [bpmRange] côté override.
   final (int, int)? holdRange;
 
   const _CapabilityClamps({
-    required this.profile,
-    required this.ceilings,
-    required this.overloadAxis,
-    required this.overloadFactor,
+    required this.config,
     required this.bpmRange,
     required this.holdRange,
   });
@@ -149,10 +140,10 @@ class _CapabilityClamps {
   /// (joueuse neuve ou axe jamais sollicité ; le profil prend le relais
   /// après ~3-5 sessions).
   double? capabilityCapFor(CapabilityAxis axis) {
-    final p = profile;
+    final p = config.capProfile;
     if (p == null) return null;
     var comfort = p.comfortOf(axis);
-    if (comfort != null && axis == overloadAxis) {
+    if (comfort != null && axis == config.overloadAxis) {
       if (axis == CapabilityAxis.rhythmDepthMax) {
         // Profondeur = cran discret : on autorise +1 cran, et seulement si
         // la confiance au cran courant est là (cf. asymétries §5).
@@ -162,17 +153,17 @@ class _CapabilityClamps {
           comfort = comfort + 1;
         }
       } else {
-        comfort = comfort * overloadFactor;
+        comfort = comfort * config.overloadFactor;
       }
     }
-    return minNullable(comfort, ceilings[axis]);
+    return minNullable(comfort, config.capCeilings[axis]);
   }
 
   /// Renvoie le facteur de surcharge applicable à [axis] (1.0 hors
   /// surcharge). Pour `rhythmDepthMax` la surcharge est un cran, pas un
   /// facteur — utiliser [capabilityCapFor] directement.
   double overloadFactorFor(CapabilityAxis axis) =>
-      axis == overloadAxis ? overloadFactor : 1.0;
+      axis == config.overloadAxis ? config.overloadFactor : 1.0;
 
   /// Borne un draft à l'enveloppe « profil de capacités » : profondeur,
   /// BPM et durée ne dépassent pas ce que la joueuse a *prouvé* tenir.
@@ -192,7 +183,7 @@ class _CapabilityClamps {
   /// [clampToCustomLimits] (bornes utilisateur Custom) restent
   /// orchestrées ici.
   _StepDraft clampToCapability(_StepDraft d) {
-    if (profile == null) return clampToCustomLimits(d);
+    if (config.capProfile == null) return clampToCustomLimits(d);
     final clampedChain =
         d.chainNext == null ? null : clampToCapability(d.chainNext!);
     final clamped = _modeRulesRegistry[d.mode]!.clampToCapability(d, this);

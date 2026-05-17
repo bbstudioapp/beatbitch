@@ -172,16 +172,16 @@ class _BpmPacing {
     int dur,
     int bpm,
     Position? to, {
-    required double humiliationCareer,
-    required int rythmePts,
-    required int profondeurPts,
+    required _SessionConfig config,
   }) {
     if (to == null || bpm <= 0) return dur;
     if (to != Position.throat && to != Position.full) return dur;
     // Seuil d'humil au déblocage (approx les `humilRequired` des milestones
     // throat_pulse / full_pulse).
     final unlockHumil = to == Position.full ? 25.0 : 10.0;
-    final humilBonus = max(0.0, humiliationCareer - unlockHumil);
+    final humilBonus = max(0.0, config.humiliationCareer - unlockHumil);
+    final rythmePts = config.pts(SpecializationBranch.rythmeBiffle);
+    final profondeurPts = config.pts(SpecializationBranch.profondeur);
     final maxPulses = to == Position.full
         ? 4 + humilBonus * 0.18 + profondeurPts * 1.0 + rythmePts * 0.4
         : 6 + humilBonus * 0.30 + rythmePts * 0.7 + profondeurPts * 0.5;
