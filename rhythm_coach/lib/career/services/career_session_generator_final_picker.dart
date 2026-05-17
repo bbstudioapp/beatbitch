@@ -11,10 +11,13 @@
 // mode contrastant avec le final, échelle req croissante, top-3 tiré
 // uniformément. Biais spé sloppy/obeissance pour les niveaux avancés.
 //
-// Les deux méthodes partagent leur état (level, anatomy, unlockedKeys,
-// spec, coachModeWeights, includeHand, rng, capClamps) — bundlé dans
-// `_FinalPicker` comme value object immuable construit une fois par
-// `generate()`. Pattern identique à `_CapabilityClamps` (cf. phase 2.d).
+// Les deux méthodes partagent leur état — bundlé dans `_FinalPicker`
+// comme value object immuable construit une fois par `generate()`. Les 5
+// champs immuables côté config (level, anatomy, spec, coachModeWeights,
+// includeHand) sont consultés via `config.x` ; on garde `unlockedKeys` à
+// part parce qu'il vit côté `_state` (mutable inter-séance via
+// `markCompleted`, capturé en snapshot ici), et `rng` / `capClamps` sont
+// des références non-config injectées par le caller.
 
 part of 'career_session_generator.dart';
 
@@ -23,36 +26,32 @@ part of 'career_session_generator.dart';
 /// décisions de gating consultent ce snapshot — les mutations d'état du
 /// tracking (`_lastMode`, etc.) ne concernent pas la palette finale.
 class _FinalPicker {
-  final int level;
-  final AnatomyProfile anatomy;
+  /// Snapshot de la config de séance. On y lit `level`, `anatomy`, `spec`,
+  /// `coachModeWeights`, `includeHand`.
+  final _SessionConfig config;
+
+  /// Unlocks acquittés au moment où le picker est construit. Vit côté
+  /// `_state` (peut être muté par `markCompleted` en cours de séance),
+  /// snapshoté ici parce que le picker est lui-même immuable.
   final Set<UnlockKey> unlockedKeys;
-  final SpecializationAllocation spec;
-  final Map<SessionMode, double> coachModeWeights;
-  final bool includeHand;
+
   final Random rng;
   final _CapabilityClamps capClamps;
 
   const _FinalPicker({
-    required this.level,
-    required this.anatomy,
+    required this.config,
     required this.unlockedKeys,
-    required this.spec,
-    required this.coachModeWeights,
-    required this.includeHand,
     required this.rng,
     required this.capClamps,
   });
 
-  int _pts(SpecializationBranch b) => spec.pointsIn(b);
+  int _pts(SpecializationBranch b) => config.spec.pointsIn(b);
 
-  bool _isModeForbidden(SessionMode m) {
-    final w = coachModeWeights[m];
-    return w != null && w <= 0;
-  }
+  bool _isModeForbidden(SessionMode m) => config.isModeForbidden(m);
 
   bool _isUnlocked(_StepDraft d) => _HumiliationGates.isUnlocked(
         d,
-        anatomy: anatomy,
+        anatomy: config.anatomy,
         unlockedKeys: unlockedKeys,
       );
 
@@ -108,17 +107,17 @@ class _FinalPicker {
     // et includeHand comme dans la palette pré-refacto). Sans ça,
     // l'itération du registry (rhythm→lick→hold→biffle→…→hand→…)
     // rebattrait le rng et ferait diverger les sessions reproductibles.
-    final handBaselineBpm = level < 4 ? (40 + rng.nextInt(21)) : null;
-    final biffleBpm = includeHand ? (40 + rng.nextInt(21)) : null;
+    final handBaselineBpm = config.level < 4 ? (40 + rng.nextInt(21)) : null;
+    final biffleBpm = config.includeHand ? (40 + rng.nextInt(21)) : null;
 
     final ctx = _FinalCtx(
       humilCap: humilCap,
       maxDepth: maxDepth,
       finishMul: finishMul,
-      level: level,
-      anatomy: anatomy,
+      level: config.level,
+      anatomy: config.anatomy,
       unlockedKeys: unlockedKeys,
-      includeHand: includeHand,
+      includeHand: config.includeHand,
       endPts: endPts,
       fastDur: fastDur,
       shortHoldDur: shortHoldDur,
@@ -213,7 +212,7 @@ class _FinalPicker {
       finalMode: finalMode,
       bpm: bpm,
       duration: dur,
-      includeHand: includeHand,
+      includeHand: config.includeHand,
       unlockedKeys: unlockedKeys,
       holdCeilingIdx: holdCeilingIdx,
       isModeForbidden: _isModeForbidden,
@@ -249,7 +248,7 @@ class _FinalPicker {
     // chance — assez pour que la couleur de la spé soit perceptible
     // post-orgasme, mais 40 % de tirage standard pour conserver de la
     // variété (sinon chaque session avance signe la même fin).
-    if (level >= 7 && humilCap >= 30) {
+    if (config.level >= 7 && humilCap >= 30) {
       final sloppyPts = _pts(SpecializationBranch.sloppy);
       final obPts = _pts(SpecializationBranch.obeissance);
       // Tirage prioritaire si les deux branches sont présentes : on

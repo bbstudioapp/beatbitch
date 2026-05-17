@@ -18,58 +18,31 @@ part of 'career_session_generator.dart';
 /// construit un par appel à `generate()` / `generatePunishment()` après
 /// que `_capClamps` est posé.
 class _PositionPickers {
-  /// Plafond de profondeur autorisé (index `Position`). Borne supérieure
-  /// de tous les tirages dépendants de la profondeur.
-  final int maxDepthIndex;
-
-  /// Probabilité de tirer une profondeur ≥ throat quand le plafond le
-  /// permet. Permet de raréfier sans bannir.
-  final double deepProbability;
-
-  /// Score career d'humiliation (lifetime). Sert au gating spécifique
-  /// lick (amplitudes pleines uniquement à partir de 2).
-  final double humiliationCareer;
+  /// Snapshot de la config de séance. On y lit `maxDepthIndex`,
+  /// `deepProbability`, `humiliationCareer`, `spec`, `coachModeWeights`,
+  /// `anatomy` — figés au début de `generate()`.
+  final _SessionConfig config;
 
   /// Unlocks acquittés par milestones. Convention héritée :
   /// `unlockedKeys.isEmpty` = pas de gating milestone, on retombe sur le
   /// cap de niveau.
   final Set<UnlockKey> unlockedKeys;
 
-  /// Allocation de spécialisation — biaise les tirages vers la branche
-  /// dominante (profondeur, obéissance, …).
-  final SpecializationAllocation spec;
-
-  /// Poids coach / dose Custom — pour le filtre `isModeForbidden` sur les
-  /// templates beg-with-chain.
-  final Map<SessionMode, double> coachModeWeights;
-
-  /// Profil anatomique — passé à `_HumiliationGates.isUnlocked` pour le
-  /// filtrage des templates beg-with-chain qui pourraient toucher balls.
-  final AnatomyProfile anatomy;
-
   final Random rng;
 
   const _PositionPickers({
-    required this.maxDepthIndex,
-    required this.deepProbability,
-    required this.humiliationCareer,
+    required this.config,
     required this.unlockedKeys,
-    required this.spec,
-    required this.coachModeWeights,
-    required this.anatomy,
     required this.rng,
   });
 
-  int _pts(SpecializationBranch b) => spec.pointsIn(b);
+  int _pts(SpecializationBranch b) => config.spec.pointsIn(b);
 
-  bool _isModeForbidden(SessionMode m) {
-    final w = coachModeWeights[m];
-    return w != null && w <= 0;
-  }
+  bool _isModeForbidden(SessionMode m) => config.isModeForbidden(m);
 
   bool _isUnlocked(_StepDraft d) => _HumiliationGates.isUnlocked(
         d,
-        anatomy: anatomy,
+        anatomy: config.anatomy,
         unlockedKeys: unlockedKeys,
       );
 
@@ -171,12 +144,12 @@ class _PositionPickers {
     } else if (unlockedKeys.isEmpty) {
       // Hérité (mode démo / scénario non-carrière) : on retombe sur le cap
       // de niveau. Évite que le mode démo se fige sur head.
-      milestoneCap = maxDepthIndex;
+      milestoneCap = config.maxDepthIndex;
     } else {
       // Carrière, socle de base : head est le hold le plus profond libre.
       milestoneCap = Position.head.index;
     }
-    return min(milestoneCap, maxDepthIndex);
+    return min(milestoneCap, config.maxDepthIndex);
   }
 
   /// Cap de profondeur autorisé pour les modes rythmés (rhythm/hand) en
@@ -197,7 +170,7 @@ class _PositionPickers {
     } else {
       milestoneCap = Position.mid.index;
     }
-    return min(milestoneCap, maxDepthIndex);
+    return min(milestoneCap, config.maxDepthIndex);
   }
 
   /// Choix de la position d'un hold. Règle : on ne tient **que la
@@ -212,7 +185,7 @@ class _PositionPickers {
     if (ceilingIdx >= Position.full.index) {
       final adjusted = (ampScore + 0.10 * depthPts).clamp(0.0, 1.0);
       final boostedFullProb =
-          (deepProbability + 0.10 * depthPts).clamp(0.0, 1.0);
+          (config.deepProbability + 0.10 * depthPts).clamp(0.0, 1.0);
       // Plus ampScore est haut, plus on penche full ; mais on respecte
       // aussi `deepProbability` du niveau pour ne pas spammer du full dès
       // le palier d'ouverture.
@@ -269,14 +242,14 @@ class _PositionPickers {
     final clamped = ampScore.clamp(0.0, 1.0);
     // Min mid (idx 2) au lieu de head (idx 1) : l'amplitude minimale est
     // head→mid, pas tip→head.
-    final ceiling = capByDepth ? maxDepthIndex.clamp(2, 4) : 4;
+    final ceiling = capByDepth ? config.maxDepthIndex.clamp(2, 4) : 4;
     var deepestIdx = _StaminaModel.lerp(2.0, ceiling.toDouble(), clamped)
         .round()
         .clamp(2, ceiling);
     // Bonus Profondeur (spé) : remonte la probabilité de profond, dans la
     // limite du plafond du tirage.
     final depthPts = _pts(SpecializationBranch.profondeur);
-    final effectiveDeepProb = capByDepth ? deepProbability : 1.0;
+    final effectiveDeepProb = capByDepth ? config.deepProbability : 1.0;
     final boostedDeepProb =
         (effectiveDeepProb + 0.08 * depthPts).clamp(0.0, 1.0);
     // Si le tirage demande une position profonde (≥ throat) mais que la
@@ -321,7 +294,7 @@ class _PositionPickers {
   /// sans la milestone `lick_full`, le filtre `_isUnlocked` en cascade
   /// dégrade.
   (Position, Position) sampleFromToForLick(double ampScore) {
-    if (humiliationCareer < 2.0) {
+    if (config.humiliationCareer < 2.0) {
       return (Position.tip, Position.head);
     }
     return sampleFromTo(ampScore, capByDepth: false);

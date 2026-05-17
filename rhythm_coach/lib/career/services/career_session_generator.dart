@@ -319,31 +319,19 @@ class CareerSessionGenerator {
     // overload/bornes-Custom courants. Consommée via les adaptateurs
     // `_clampToCapability` / `_capabilityCapFor` / `_overloadFactorFor`.
     _capClamps = _CapabilityClamps(
-      profile: _config.capProfile,
-      ceilings: _config.capCeilings,
-      overloadAxis: _config.overloadAxis,
-      overloadFactor: _config.overloadFactor,
+      config: _config,
       bpmRange: _config.bpmRange,
       holdRange: _config.holdDurationRange,
     );
     _finalPicker = _FinalPicker(
-      level: _config.level,
-      anatomy: _config.anatomy,
+      config: _config,
       unlockedKeys: _unlockedKeys,
-      spec: _config.spec,
-      coachModeWeights: _config.coachModeWeights,
-      includeHand: _config.includeHand,
       rng: _rng,
       capClamps: _capClamps,
     );
     _positionPickers = _PositionPickers(
-      maxDepthIndex: _config.maxDepthIndex,
-      deepProbability: _config.deepProbability,
-      humiliationCareer: _config.humiliationCareer,
+      config: _config,
       unlockedKeys: _unlockedKeys,
-      spec: _config.spec,
-      coachModeWeights: _config.coachModeWeights,
-      anatomy: _config.anatomy,
       rng: _rng,
     );
     // Mode "Session bâclée" : 6 min par défaut, intense tout du long. Floor
@@ -1983,17 +1971,9 @@ class CareerSessionGenerator {
   }
 
   /// Adapteur d'instance de `_BpmPacing.capRhythmDurationByPulses` qui
-  /// injecte `_config.humiliationCareer` et les points de spé (l'algo lui-même
-  /// vit côté `_BpmPacing`).
+  /// injecte `_config` (l'algo lui-même vit côté `_BpmPacing`).
   int _capRhythmDurationByPulses(int dur, int bpm, Position? to) =>
-      _BpmPacing.capRhythmDurationByPulses(
-        dur,
-        bpm,
-        to,
-        humiliationCareer: _config.humiliationCareer,
-        rythmePts: _config.pts(SpecializationBranch.rythmeBiffle),
-        profondeurPts: _config.pts(SpecializationBranch.profondeur),
-      );
+      _BpmPacing.capRhythmDurationByPulses(dur, bpm, to, config: _config);
 
   // ─── Position pickers (adapteurs vers `_PositionPickers`) ────────────────
 
@@ -2105,10 +2085,7 @@ class CareerSessionGenerator {
     // `_capClamps` ici, sinon le `_clampToCapability` qui sert à matérialiser
     // chaque step de la compo lit un field non initialisé.
     _capClamps = _CapabilityClamps(
-      profile: _config.capProfile,
-      ceilings: _config.capCeilings,
-      overloadAxis: _config.overloadAxis,
-      overloadFactor: _config.overloadFactor,
+      config: _config,
       bpmRange: null,
       holdRange: null,
     );
@@ -2116,23 +2093,14 @@ class CareerSessionGenerator {
     // `generatePunishment`, mais on les initialise par sécurité
     // (idempotence avec `generate()`).
     _finalPicker = _FinalPicker(
-      level: _config.level,
-      anatomy: _config.anatomy,
+      config: _config,
       unlockedKeys: _unlockedKeys,
-      spec: _config.spec,
-      coachModeWeights: _config.coachModeWeights,
-      includeHand: _config.includeHand,
       rng: _rng,
       capClamps: _capClamps,
     );
     _positionPickers = _PositionPickers(
-      maxDepthIndex: _config.maxDepthIndex,
-      deepProbability: _config.deepProbability,
-      humiliationCareer: _config.humiliationCareer,
+      config: _config,
       unlockedKeys: _unlockedKeys,
-      spec: _config.spec,
-      coachModeWeights: _config.coachModeWeights,
-      anatomy: _config.anatomy,
       rng: _rng,
     );
 
