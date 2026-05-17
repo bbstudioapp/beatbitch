@@ -243,4 +243,9 @@ class _RhythmRules extends _ModeRules {
   bool isIntenseForFakeBreath(_StepDraft draft) =>
       (draft.to == Position.throat || draft.to == Position.full) &&
       (draft.bpm ?? 0) >= 90;
+
+  /// Rang 0 (préféré) dans la chaîne d'intro intense/quickie : un
+  /// rythme bouche profond reste l'ouverture canonique.
+  @override
+  int? get introPriority => 0;
 }

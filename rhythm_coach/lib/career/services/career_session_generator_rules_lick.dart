@@ -156,4 +156,9 @@ class _LickRules extends _ModeRules {
   @override
   String? pickPostFinalText(PhraseBank bank, Random rng) =>
       bank.pickPostFinalLick(rng);
+
+  /// Rang 2 (2ᵉ fallback) dans la chaîne d'intro intense/quickie : la
+  /// langue prend le relais quand rhythm ET hand sont exclus.
+  @override
+  int? get introPriority => 2;
 }

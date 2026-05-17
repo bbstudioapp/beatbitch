@@ -114,4 +114,10 @@ class _HandRules extends _ModeRules {
   bool isIntenseForFakeBreath(_StepDraft draft) =>
       (draft.to == Position.throat || draft.to == Position.full) &&
       (draft.bpm ?? 0) >= 90;
+
+  /// Rang 1 (1er fallback) dans la chaîne d'intro intense/quickie :
+  /// rythmé proche de rhythm, prend le relais quand rhythm est exclu
+  /// en Custom.
+  @override
+  int? get introPriority => 1;
 }

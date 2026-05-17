@@ -1732,14 +1732,10 @@ class CareerSessionGenerator {
       // à throat (idx 3) pour ne jamais lancer un intense full d'amorce.
       final to = Position.values[_milestoneRhythmCeilingIdx().clamp(2, 3)];
       // Custom : rhythm exclu → on retombe sur hand (rythmé proche), sinon
-      // lick (langue) ou hold (statique) en dernier recours.
-      final intenseMode = !_isModeForbidden(SessionMode.rhythm)
-          ? SessionMode.rhythm
-          : !_isModeForbidden(SessionMode.hand)
-              ? SessionMode.hand
-              : !_isModeForbidden(SessionMode.lick)
-                  ? SessionMode.lick
-                  : SessionMode.hold;
+      // lick (langue) ou hold (statique) en dernier recours. Cascade
+      // pilotée par `introPriority` côté rules (rhythm=0 → hand=1 → lick=2
+      // → hold=3).
+      final intenseMode = _pickIntroMode();
       if (intenseMode == SessionMode.hold) {
         return _StepDraft(
           mode: SessionMode.hold,
@@ -1758,14 +1754,9 @@ class CareerSessionGenerator {
       );
     }
     if (quickie) {
-      // Quickie : rhythm exclu → idem fallback hand/lick/hold.
-      final quickieMode = !_isModeForbidden(SessionMode.rhythm)
-          ? SessionMode.rhythm
-          : !_isModeForbidden(SessionMode.hand)
-              ? SessionMode.hand
-              : !_isModeForbidden(SessionMode.lick)
-                  ? SessionMode.lick
-                  : SessionMode.hold;
+      // Quickie : même cascade que l'intense (rhythm → hand → lick →
+      // hold) via `introPriority` côté rules.
+      final quickieMode = _pickIntroMode();
       if (quickieMode == SessionMode.hold) {
         return const _StepDraft(
           mode: SessionMode.hold,
@@ -2008,6 +1999,26 @@ class CareerSessionGenerator {
         continuity: _state.continuitySnapshot(),
         rng: _rng,
       );
+
+  /// Mode retenu pour la chaîne de fallback « intro intense / quickie »
+  /// (cf. `_firstStep`). Trie les rules par `introPriority` croissante,
+  /// retient la première non-forbidden. Le mode de rang max (hold)
+  /// reste le fallback ultime même quand `_isModeForbidden(hold)` —
+  /// l'éditeur Custom garantit qu'au moins un mode bouche reste, mais
+  /// si tout est exclu, hold doit sortir pour préserver le contrat
+  /// historique (la cascade `rhythm → hand → lick → hold` finissait
+  /// toujours par hold).
+  SessionMode _pickIntroMode() {
+    final ranked = _modeRulesRegistry.entries
+        .where((e) => e.value.introPriority != null)
+        .toList()
+      ..sort(
+          (a, b) => a.value.introPriority!.compareTo(b.value.introPriority!));
+    for (final e in ranked) {
+      if (!_isModeForbidden(e.key)) return e.key;
+    }
+    return ranked.last.key;
+  }
 
   /// Notifie les 3 sous-systèmes runtime après un step poussé :
   ///   * `_rhythmChain` : cumule / reset selon mode et durée.
