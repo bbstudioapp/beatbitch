@@ -61,6 +61,66 @@ void main() {
     });
   });
 
+  group('DiagnosticExportService — checksum d\'intégrité', () {
+    test('présence d\'un champ `integrity` SHA-256 hex 64 chars', () async {
+      final svc = await _build(seed: const <String, Object>{});
+      final payload = svc.buildPayload(const DiagnosticExportOptions());
+      final integrity = payload['integrity'] as Map<String, dynamic>;
+      expect(integrity['algorithm'], 'sha256');
+      final value = integrity['value'] as String;
+      expect(value.length, 64);
+      expect(RegExp(r'^[0-9a-f]{64}$').hasMatch(value), isTrue,
+          reason: 'value doit être un SHA-256 hex minuscule.');
+    });
+
+    test('verifyIntegrity accepte un payload non modifié', () async {
+      final svc = await _build(seed: const <String, Object>{
+        'career.max_level': 9,
+        'stats.throatfucks': 42,
+      });
+      final payload = svc.buildPayload(const DiagnosticExportOptions());
+      expect(DiagnosticExportService.verifyIntegrity(payload), isTrue);
+    });
+
+    test('verifyIntegrity rejette un payload modifié', () async {
+      final svc = await _build(seed: const <String, Object>{
+        'career.max_level': 9,
+      });
+      final payload = svc.buildPayload(const DiagnosticExportOptions());
+      // Falsification : on bump le niveau max après coup.
+      (payload['career'] as Map<String, dynamic>)['maxLevel'] = 18;
+      expect(DiagnosticExportService.verifyIntegrity(payload), isFalse);
+    });
+
+    test('verifyIntegrity rejette si la valeur du hash est altérée', () async {
+      final svc = await _build(seed: const <String, Object>{});
+      final payload = svc.buildPayload(const DiagnosticExportOptions());
+      (payload['integrity'] as Map<String, dynamic>)['value'] =
+          '0' * 64; // hash bidon
+      expect(DiagnosticExportService.verifyIntegrity(payload), isFalse);
+    });
+
+    test('verifyIntegrity rejette les algos inconnus', () async {
+      final svc = await _build(seed: const <String, Object>{});
+      final payload = svc.buildPayload(const DiagnosticExportOptions());
+      (payload['integrity'] as Map<String, dynamic>)['algorithm'] = 'md5';
+      expect(DiagnosticExportService.verifyIntegrity(payload), isFalse);
+    });
+
+    test('le hash change quand includeNicknames bascule', () async {
+      final svc = await _build(seed: const <String, Object>{
+        'user_profile_prenom': 'Alice',
+      });
+      final p1 = svc.buildPayload(const DiagnosticExportOptions());
+      final p2 = svc
+          .buildPayload(const DiagnosticExportOptions(includeNicknames: true));
+      expect(
+        (p1['integrity'] as Map)['value'],
+        isNot((p2['integrity'] as Map)['value']),
+      );
+    });
+  });
+
   group('DiagnosticExportService — sections par défaut (prefs vides)', () {
     test('toutes les catégories sont présentes', () async {
       final svc = await _build(seed: const <String, Object>{});
@@ -82,6 +142,7 @@ void main() {
         'savedSessions',
         'customConfigs',
         'consent',
+        'integrity',
       ];
       for (final k in expected) {
         expect(payload.containsKey(k), isTrue, reason: 'missing $k');
