@@ -229,4 +229,18 @@ class _RhythmRules extends _ModeRules {
           ),
         ),
       ];
+
+  /// Rhythm consulte le plafond milestone pour la diversification
+  /// d'amplitude : on ne décale jamais `to` au-dessus du palier de
+  /// profondeur acquis.
+  @override
+  int? amplitudeDiversifyCeiling(CareerSessionGenerator gen) =>
+      gen._milestoneRhythmCeilingIdx();
+
+  /// Rhythm en throat/full à BPM ≥ 90 = profil intense capable de
+  /// déclencher un faux-breath taquin.
+  @override
+  bool isIntenseForFakeBreath(_StepDraft draft) =>
+      (draft.to == Position.throat || draft.to == Position.full) &&
+      (draft.bpm ?? 0) >= 90;
 }

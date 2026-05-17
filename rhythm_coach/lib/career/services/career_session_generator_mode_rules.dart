@@ -29,6 +29,12 @@
 //   * `finalVariants` — palette de variantes de step final / apothéose
 //     proposées par le mode (ex-palette hardcodée de
 //     `_FinalPicker.pickFinal`).
+//   * `amplitudeDiversifyCeiling` — plafond profondeur pour le décalage
+//     anti-monotonie d'amplitude (ex-switch dans `_diversifyAmplitude`).
+//   * `isIntenseForFakeBreath` — prédicat « step intense au point de
+//     déclencher un faux-breath » (ex-check inline dans `_maybeFakeBreath`).
+//   * `pickPostFinalText` — pool de phrase post-final spécifique au mode
+//     (ex-switch dans `_emitPostFinal`).
 
 part of 'career_session_generator.dart';
 
@@ -377,6 +383,39 @@ abstract class _ModeRules {
   /// applique `clampToCapability`. Fallback hand → lick / hold head
   /// préservé côté picker pour les sessions où aucune variante ne passe.
   List<_FinalVariant> finalVariants(_FinalCtx ctx) => const [];
+
+  /// Plafond profondeur (index `Position`) pour la diversification
+  /// d'amplitude (cf. `_diversifyAmplitude` côté générateur). `null` =
+  /// le mode n'a pas d'amplitude `from→to` à diversifier → la fonction
+  /// est no-op (le draft est retourné tel quel).
+  ///
+  /// Default `null` (opt-in). Override `rhythm` consulte le plafond
+  /// milestone (`gen._milestoneRhythmCeilingIdx`) pour ne jamais
+  /// dépasser le palier d'unlock acquis. Override `lick` / `hand`
+  /// retournent l'index `full` (4) — la profondeur max d'amplitude
+  /// n'est pas gatée pour ces modes. `biffle` reste sur le default
+  /// `null` (from/to sont null par convention).
+  int? amplitudeDiversifyCeiling(CareerSessionGenerator gen) => null;
+
+  /// Vrai quand le dernier step émis dans ce mode est suffisamment
+  /// intense pour déclencher un faux-breath de 2-3 s (cf.
+  /// `_maybeFakeBreath`). Default `false` (opt-in). Override `rhythm`
+  /// / `hand` : `to ∈ {throat, full} && bpm ≥ 90`. Override `hold` :
+  /// `to ∈ {throat, full}` (BPM null, le hold n'a pas de tempo).
+  bool isIntenseForFakeBreath(_StepDraft draft) => false;
+
+  /// Pioche la phrase à associer au step post-final pour ce mode, ou
+  /// `null` pour laisser le caller retomber sur le pool générique
+  /// (`PhraseBank.pickPostFinal`). Default `null` (opt-in).
+  /// Override `beg` → `bank.pickPostFinalBeg(rng)` (consigne de
+  /// supplique, jamais un compliment doux). Override `lick` →
+  /// `bank.pickPostFinalLick(rng)` (consigne d'aftercare humiliant).
+  ///
+  /// Le caller cascade : `rule.pickPostFinalText(bank, rng)` →
+  /// `bank.pickPostFinal(rng)` → `bank.pickCongrats(rng)`. La rng est
+  /// consommée à chaque tentative ; semantics identiques au switch
+  /// historique sur `mode == beg / lick`.
+  String? pickPostFinalText(PhraseBank bank, Random rng) => null;
 }
 
 /// Baisse `to` d'un cran en s'arrêtant à `head` (jamais à `tip` — un step
