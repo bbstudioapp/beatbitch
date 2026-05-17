@@ -2,7 +2,7 @@
 // `freestyle`. Cf. contrat `_ModeRules` dans
 // `career_session_generator_mode_rules.dart`.
 
-part of 'career_session_generator.dart';
+part of '../career_session_generator.dart';
 
 /// Règles `freestyle` : phase libre, neutre côté endurance (ni effort
 /// ni vraie regen). Toujours gaté par `freestyle` (palier d'intro

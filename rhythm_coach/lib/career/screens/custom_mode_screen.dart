@@ -24,7 +24,7 @@ import '../models/career_generation_inputs.dart';
 import '../models/coach.dart';
 import '../models/custom_session_config.dart';
 import '../models/phrase_bank.dart';
-import '../services/career_session_generator.dart';
+import '../services/generation/career_session_generator.dart';
 import '../services/custom_config_service.dart';
 import '../services/phrase_bank_loader.dart';
 import 'custom_config_editor_screen.dart';

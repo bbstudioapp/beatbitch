@@ -2,7 +2,7 @@
 // `breath`. Cf. contrat `_ModeRules` dans
 // `career_session_generator_mode_rules.dart`.
 
-part of 'career_session_generator.dart';
+part of '../career_session_generator.dart';
 
 /// Règles `breath` : toujours regen. Vitesse 2.8 stamina/s — règle de
 /// design : un breath doit être plus court que les steps d'action qu'il

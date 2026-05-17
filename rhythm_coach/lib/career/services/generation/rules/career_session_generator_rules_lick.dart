@@ -2,7 +2,7 @@
 // `lick`. Cf. contrat `_ModeRules` dans
 // `career_session_generator_mode_rules.dart`.
 
-part of 'career_session_generator.dart';
+part of '../career_session_generator.dart';
 
 /// Règles `lick` : BPM ≤ 60 = vraie récup vocale (regen), au-delà = effort
 /// léger (consommation modérée, plus de regen).

@@ -3,7 +3,7 @@
 // `career_session_generator_mode_rules.dart`. Partage le helper
 // `_clampHeldDuration` avec `_HoldRules` (cap durée sur position tenue).
 
-part of 'career_session_generator.dart';
+part of '../career_session_generator.dart';
 
 /// Règles `beg` : convention uniforme hold/beg, la position tenue est dans
 /// `to`. Sans `to` ou `to = head` → assimilé à du repos vocal (regen). Avec

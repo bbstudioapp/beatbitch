@@ -2,7 +2,7 @@
 // `suckle`. Cf. contrat `_ModeRules` dans
 // `career_session_generator_mode_rules.dart`.
 
-part of 'career_session_generator.dart';
+part of '../career_session_generator.dart';
 
 /// Règles `suckle` : aspiration / téter. La bouche bosse sans aller-retour.
 /// Coût par seconde modéré, plus marqué sur head (zone sensible → pompage
