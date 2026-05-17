@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:beat_bitch/career/models/career_generation_inputs.dart';
 import 'package:beat_bitch/career/models/coach.dart';
 import 'package:beat_bitch/career/models/coach_catalog.dart';
 import 'package:beat_bitch/career/models/phrase_bank.dart';
@@ -50,8 +51,10 @@ CareerGenerationResult _gen(
       includeHand: true,
       humiliationCareer: 100.0,
       unlockedKeys: unlocks ?? _allUnlocks,
-      capabilityProfile: profile,
-      capabilitySessionCeilings: ceilings,
+      capability: CapabilityInputs(
+        profile: profile,
+        sessionCeilings: ceilings,
+      ),
     );
 
 void main() {
@@ -237,7 +240,7 @@ void main() {
         openingPhrase: openingPhrase,
         humiliationCareer: 100.0,
         unlockedKeys: _allUnlocks,
-        capabilityProfile: profile,
+        capability: CapabilityInputs(profile: profile),
       );
       return r.session.steps
           .firstWhere((s) => !s.isTextOnly && s.time == 0)

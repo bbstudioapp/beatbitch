@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:beat_bitch/career/models/career_generation_inputs.dart';
 import 'package:beat_bitch/career/models/phrase_bank.dart';
 import 'package:beat_bitch/career/models/unlock_key.dart';
 import 'package:beat_bitch/career/services/career_session_generator.dart';
@@ -58,7 +59,7 @@ void main() {
         bank: _bank(),
         unlockedKeys: _allUnlocks,
         humiliationCareer: 400.0,
-        maxDepthIndexOverride: Position.balls.index,
+        custom: CustomOverrides(maxDepthIndex: Position.balls.index),
         anatomy: const AnatomyProfile(hasBalls: false),
       );
       final touchesBalls = result.session.steps.any(
@@ -78,7 +79,7 @@ void main() {
         bank: _bank(),
         unlockedKeys: _allUnlocks,
         humiliationCareer: 400.0,
-        maxDepthIndexOverride: Position.balls.index,
+        custom: CustomOverrides(maxDepthIndex: Position.balls.index),
         anatomy: const AnatomyProfile(hasBalls: true),
       );
       for (final s in result.session.steps) {

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:beat_bitch/career/models/career_generation_inputs.dart';
 import 'package:beat_bitch/career/models/phrase_bank.dart';
 import 'package:beat_bitch/career/models/unlock_key.dart';
 import 'package:beat_bitch/career/services/career_session_generator.dart';
@@ -61,8 +62,10 @@ CapabilityProfile _profile(Map<CapabilityAxis, double> comforts) =>
     level: level,
     bank: _bank(),
     unlockedKeys: unlocks ?? _allUnlocks,
-    capabilityProfile: profile,
-    capabilitySessionCeilings: ceilings,
+    capability: CapabilityInputs(
+      profile: profile,
+      sessionCeilings: ceilings,
+    ),
     humiliationCareer: humilCap,
     humiliationSession: 0.0,
     includeHand: includeHand,

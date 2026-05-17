@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:beat_bitch/career/models/career_generation_inputs.dart';
 import 'package:beat_bitch/career/models/phrase_bank.dart';
 import 'package:beat_bitch/career/models/unlock_key.dart';
 import 'package:beat_bitch/career/services/career_session_generator.dart';
@@ -54,7 +55,7 @@ void main() {
           humiliationCareer: 400.0,
           humiliationSession: 0.0,
           obedience: 100.0,
-          intensityFloorOverride: 0.45,
+          custom: const CustomOverrides(intensityFloor: 0.45),
         );
         final f = _finalStep(result.session);
         expect(f.mode, SessionMode.hold,
@@ -80,7 +81,7 @@ void main() {
         durationSeconds: 12 * 60,
         unlockedKeys: const {},
         humiliationCareer: 400.0,
-        maxDepthIndexOverride: Position.throat.index,
+        custom: CustomOverrides(maxDepthIndex: Position.throat.index),
       );
       final f = _finalStep(result.session);
       expect(f.mode, SessionMode.hold);

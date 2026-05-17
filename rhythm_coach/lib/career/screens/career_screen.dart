@@ -21,6 +21,7 @@ import '../../services/user_profile_service.dart';
 import '../../theme/app_theme.dart';
 import '../../l10n/enum_labels.dart';
 import '../../main.dart' show coachService, milestoneService;
+import '../models/career_generation_inputs.dart';
 import '../models/career_level.dart';
 import '../models/coach.dart';
 import '../models/level_milestone.dart';
@@ -290,18 +291,20 @@ class _CareerScreenState extends State<CareerScreen> {
       humiliationCareer: humiliationScore,
       humiliationSession: 0.0,
       obedience: obedienceScore,
-      // 2ᵉ enveloppe : profil de capacités persisté. Pas de
-      // `capabilitySessionCeilings` ici — la séance démarre, aucun fail
-      // n'a encore figé de plafond.
-      capabilityProfile: bundle.capabilityProfile,
-      insertedBodies: insertedBodies,
-      finalMilestone: finalMilestone,
       unlockedKeys: unlockedKeys,
-      milestoneTextResolver: milestoneService.getStepText,
       coachModeWeights: activeCoach.modeWeights,
       sessionName: t.careerSessionName(clamped),
       sessionNameQuickie: t.careerSessionNameQuickie(clamped),
       anatomy: widget.userProfile.anatomy,
+      milestones: MilestonePlan(
+        bodies: insertedBodies,
+        finalMilestone: finalMilestone,
+        textResolver: milestoneService.getStepText,
+      ),
+      // 2ᵉ enveloppe : profil de capacités persisté. Pas de
+      // `sessionCeilings` ici — la séance démarre, aucun fail n'a encore
+      // figé de plafond.
+      capability: CapabilityInputs(profile: bundle.capabilityProfile),
     );
 
     final introText = coachBank.pickIntro(Random());
@@ -573,17 +576,19 @@ class _CareerScreenState extends State<CareerScreen> {
       humiliationCareer: humiliationCareer,
       humiliationSession: humiliationSession,
       obedience: obedienceScore,
-      // 2ᵉ enveloppe : profil persisté + plafonds figés sur les fails déjà
-      // subis cette séance (live, comme l'obédiance ci-dessus) → la régen
-      // « niveau supérieur » respecte quand même ce que la joueuse vient
-      // de prouver ne pas tenir.
-      capabilityProfile: bundle.capabilityProfile,
-      capabilitySessionCeilings: ctrl.capabilitySessionCeilings,
       unlockedKeys: milestoneService.acquiredUnlockKeys(),
       coachModeWeights: activeCoach.modeWeights,
       sessionName: t.careerSessionName(newLevel),
       sessionNameQuickie: t.careerSessionNameQuickie(newLevel),
       anatomy: widget.userProfile.anatomy,
+      // 2ᵉ enveloppe : profil persisté + plafonds figés sur les fails déjà
+      // subis cette séance (live, comme l'obédiance ci-dessus) → la régen
+      // « niveau supérieur » respecte quand même ce que la joueuse vient
+      // de prouver ne pas tenir.
+      capability: CapabilityInputs(
+        profile: bundle.capabilityProfile,
+        sessionCeilings: ctrl.capabilitySessionCeilings,
+      ),
     );
 
     final rng = Random();
@@ -655,26 +660,30 @@ class _CareerScreenState extends State<CareerScreen> {
       humiliationCareer: humiliationCareer,
       humiliationSession: humiliationSession,
       obedience: obedienceScore,
-      // 2ᵉ enveloppe : profil persisté + plafonds figés par le fail qui
-      // vient de déclencher ce retry (figés par `triggerFail` AVANT le
-      // callback, cf. SessionController) → le retry ne re-pousse pas
-      // l'axe qui a craqué.
-      capabilityProfile: bundle.capabilityProfile,
-      capabilitySessionCeilings: ctrl.capabilitySessionCeilings,
-      // Retry V1 : on régénère avec une seule body (la milestone ratée).
-      // Si la séance d'origine en avait deux, l'autre est perdue sur le
-      // retry — V2 pourrait préserver l'autre si elle n'a pas encore été
-      // jouée, mais ça complexifie la dramaturgie.
-      insertedBodies: [milestone],
       // Plan pessimiste : pour le retry, on ne suppose plus que la
       // milestone est acquittée — son unlock n'est pas dans le set, le
       // reste de la session ne réutilise donc pas la compétence ratée.
       unlockedKeys: milestoneService.acquiredUnlockKeys(),
-      milestoneTextResolver: milestoneService.getStepText,
       coachModeWeights: activeCoach.modeWeights,
       sessionName: t.careerSessionName(level),
       sessionNameQuickie: t.careerSessionNameQuickie(level),
       anatomy: widget.userProfile.anatomy,
+      // Retry V1 : on régénère avec une seule body (la milestone ratée).
+      // Si la séance d'origine en avait deux, l'autre est perdue sur le
+      // retry — V2 pourrait préserver l'autre si elle n'a pas encore été
+      // jouée, mais ça complexifie la dramaturgie.
+      milestones: MilestonePlan(
+        bodies: [milestone],
+        textResolver: milestoneService.getStepText,
+      ),
+      // 2ᵉ enveloppe : profil persisté + plafonds figés par le fail qui
+      // vient de déclencher ce retry (figés par `triggerFail` AVANT le
+      // callback, cf. SessionController) → le retry ne re-pousse pas
+      // l'axe qui a craqué.
+      capability: CapabilityInputs(
+        profile: bundle.capabilityProfile,
+        sessionCeilings: ctrl.capabilitySessionCeilings,
+      ),
     );
 
     final rng = Random();
@@ -773,18 +782,20 @@ class _CareerScreenState extends State<CareerScreen> {
       humiliationCareer: humiliationCareer,
       humiliationSession: previousSessionHumiliation,
       obedience: obedienceScore,
-      // 2ᵉ enveloppe : profil persisté + plafonds figés par les fails de la
-      // séance qu'on prolonge (l'encore est une continuation — comme on lui
-      // repasse la chauffe `seedHumiliationSession`, on lui repasse les
-      // plafonds de capacité). Le nouveau contrôleur repart sinon sur un
-      // tracker vide.
-      capabilityProfile: bundle.capabilityProfile,
-      capabilitySessionCeilings: previousSessionCeilings,
       unlockedKeys: encoreUnlockedKeys,
       coachModeWeights: activeCoach.modeWeights,
       sessionName: t.careerSessionName(level),
       sessionNameQuickie: t.careerSessionNameQuickie(level),
       anatomy: widget.userProfile.anatomy,
+      // 2ᵉ enveloppe : profil persisté + plafonds figés par les fails de la
+      // séance qu'on prolonge (l'encore est une continuation — comme on lui
+      // repasse la chauffe `seedHumiliationSession`, on lui repasse les
+      // plafonds de capacité). Le nouveau contrôleur repart sinon sur un
+      // tracker vide.
+      capability: CapabilityInputs(
+        profile: bundle.capabilityProfile,
+        sessionCeilings: previousSessionCeilings,
+      ),
     );
 
     final camService = CameraMotionService();
