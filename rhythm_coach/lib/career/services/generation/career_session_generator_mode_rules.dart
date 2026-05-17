@@ -8,7 +8,7 @@
 //
 // Méthodes du contrat — chacune a remplacé un gros `switch (mode)`
 // historique du générateur :
-//   * `delta` — Δ endurance (ex-`_StaminaModel.delta`).
+//   * `delta` — Δ endurance (ex-`StaminaModel.delta`).
 //   * `unlockKeyFor` — gate UnlockKey requis pour qu'un draft soit jouable
 //     en carrière (ex-`_HumiliationGates.unlockKeyFor`).
 //   * `clampToCapability` — bornes profondeur / BPM / durée du profil
@@ -25,10 +25,10 @@
 //     se retrouve en final d'apothéose (ex-`_categorizeFinal`).
 //   * `postFinalVariants` — palette de variantes de step post-final
 //     proposées par le mode (ex-palette hardcodée de
-//     `_FinalPicker.buildPostFinalDraft`).
+//     `FinalPicker.buildPostFinalDraft`).
 //   * `finalVariants` — palette de variantes de step final / apothéose
 //     proposées par le mode (ex-palette hardcodée de
-//     `_FinalPicker.pickFinal`).
+//     `FinalPicker.pickFinal`).
 //   * `amplitudeDiversifyCeiling` — plafond profondeur pour le décalage
 //     anti-monotonie d'amplitude (ex-switch dans `_diversifyAmplitude`).
 //   * `isIntenseForFakeBreath` — prédicat « step intense au point de
@@ -169,7 +169,7 @@ class RecoveryCtx {
 }
 
 /// Snapshot passé à `ModeRules.postFinalVariants`. Construit une fois
-/// par `_FinalPicker.buildPostFinalDraft` avec `bpm`/`duration` tirés et
+/// par `FinalPicker.buildPostFinalDraft` avec `bpm`/`duration` tirés et
 /// le mode du final tout juste joué. Les rules consomment ces données
 /// pour gater leurs variantes (`finalMode` exclut le mode du final pour
 /// l'alternance ; `holdCeilingIdx` rend les holds peu profonds obsolètes
@@ -193,7 +193,7 @@ class PostFinalCtx {
   final int holdCeilingIdx;
 
   /// Callback dose Custom : un mode à dose `none` doit être exclu
-  /// (cf. `_FinalPicker._isModeForbidden`). Threadé via fonction pour
+  /// (cf. `FinalPicker._isModeForbidden`). Threadé via fonction pour
   /// éviter de coupler la rule à `coachModeWeights`.
   final bool Function(SessionMode) isModeForbidden;
 }
@@ -297,7 +297,7 @@ class FinalVariant {
   final UnlockKey? gate;
 
   /// Draft pré-construit (durée déjà trimée pour les holds profonds via
-  /// [`_FinalPicker.trimHoldFinalDuration`]).
+  /// [`FinalPicker.trimHoldFinalDuration`]).
   final StepDraft draft;
 }
 
@@ -331,7 +331,7 @@ class IntroCtx {
 /// qui expose le générateur — la rule y consomme ses samplers / caps
 /// (`_positionPickers`, `_capRhythm*`, `_scaleDuration`) et state stable
 /// (`_rng`, `_anatomy`, `_maxDepthIndex`, `_state.unlockedKeys`, `_spec` via
-/// `_pts`). Les helpers numériques partagés vivent côté `_StaminaModel`
+/// `_pts`). Les helpers numériques partagés vivent côté `StaminaModel`
 /// (`positionDepth`, `lerp`).
 abstract class ModeRules {
   const ModeRules();
@@ -351,7 +351,7 @@ abstract class ModeRules {
   StepType classify(Position? to);
 
   /// Variante de `finale_chime` à piocher si le mode se retrouve en
-  /// final d'apothéose (cf. `_FinalPicker.pickFinal` côté palette,
+  /// final d'apothéose (cf. `FinalPicker.pickFinal` côté palette,
   /// `BeepEngine.playFinaleChime` côté audio). Default `medium` —
   /// couvre biffle, lick, rhythm, beg, breath, freestyle, suckle qui
   /// soit n'apparaissent jamais en final, soit reçoivent une finition
@@ -436,7 +436,7 @@ abstract class ModeRules {
   /// Default `const []` (opt-in) — biffle, freestyle, suckle n'ont pas
   /// de variante post-final.
   ///
-  /// Le picker (`_FinalPicker.buildPostFinalDraft`) concatène toutes
+  /// Le picker (`FinalPicker.buildPostFinalDraft`) concatène toutes
   /// les variantes, filtre sur `req <= humilCap && !blocked`, trie par
   /// `req` décroissante et tire uniformément dans le top-3 (avec biais
   /// spé sloppy → lick / obeissance → beg pour les niveaux ≥ 7).
@@ -448,7 +448,7 @@ abstract class ModeRules {
   /// full→balls). Default `const []` (opt-in) — rhythm, beg, breath,
   /// freestyle, suckle n'ont pas de variante final.
   ///
-  /// Le picker (`_FinalPicker.pickFinal`) concatène toutes les
+  /// Le picker (`FinalPicker.pickFinal`) concatène toutes les
   /// variantes, filtre par `_finalUnlocked(gate)` + `_isModeForbidden`
   /// + `humilCap >= req` + `_isUnlocked(draft)`, trie par `req`
   /// croissante et retient la plus humiliante (`valid.last`), puis
@@ -519,7 +519,7 @@ abstract class ModeRules {
 /// collision : si la descente ferait `from >= to` (ex. head→mid → head→head
 /// interdit), on retourne `null` pour passer à la stratégie suivante.
 /// Helper mutualisé par les modes à amplitude (rhythm / lick / hand).
-StepDraft? _tryDescendToWithGuard(StepDraft d) {
+StepDraft? tryDescendToWithGuard(StepDraft d) {
   if (d.to == null || d.to!.index <= Position.head.index) return null;
   final newToIdx = d.to!.index - 1;
   final fromIdx = d.from?.index ?? -1;
@@ -536,7 +536,7 @@ StepDraft? _tryDescendToWithGuard(StepDraft d) {
 
 /// Baisse `from` d'un cran en s'arrêtant à `tip`. Helper mutualisé par les
 /// modes à amplitude.
-StepDraft? _tryDescendFrom(StepDraft d) {
+StepDraft? tryDescendFrom(StepDraft d) {
   if (d.from == null || d.from!.index <= Position.tip.index) return null;
   return StepDraft(
     mode: d.mode,
@@ -551,7 +551,7 @@ StepDraft? _tryDescendFrom(StepDraft d) {
 /// Cap durée mutualisé hold + beg : convention `to` porte la position
 /// tenue (repli `from`). Pour throat / full, on prend le min des deux
 /// axes pertinents — la durée tenable de la position ET l'apnée prouvée.
-StepDraft _clampHeldDuration(StepDraft draft, CapabilityClamps c) {
+StepDraft clampHeldDuration(StepDraft draft, CapabilityClamps c) {
   var dur = draft.duration;
   final held = draft.to ?? draft.from;
   if (held != Position.throat && held != Position.full) return draft;
@@ -575,18 +575,18 @@ StepDraft _clampHeldDuration(StepDraft draft, CapabilityClamps c) {
 }
 
 /// Registry des règles par mode. Les 9 modes sont couverts par leurs
-/// fichiers dédiés ; les cinq call sites (`_StaminaModel.delta`,
+/// fichiers dédiés ; les cinq call sites (`StaminaModel.delta`,
 /// `_HumiliationGates.unlockKeyFor`, `CapabilityClamps.clampToCapability`,
 /// `_HumiliationGates.stepDownOne`, `_DifficultyDispatch._mapDifficultyToStep`)
 /// sont devenus de simples lookups + appel polymorphique sur ce registry.
 final Map<SessionMode, ModeRules> _modeRulesRegistry = {
-  SessionMode.rhythm: const _RhythmRules(),
-  SessionMode.lick: const _LickRules(),
-  SessionMode.hold: const _HoldRules(),
-  SessionMode.biffle: const _BiffleRules(),
-  SessionMode.beg: const _BegRules(),
-  SessionMode.hand: const _HandRules(),
-  SessionMode.breath: const _BreathRules(),
-  SessionMode.freestyle: const _FreestyleRules(),
-  SessionMode.suckle: const _SuckleRules(),
+  SessionMode.rhythm: const RhythmRules(),
+  SessionMode.lick: const LickRules(),
+  SessionMode.hold: const HoldRules(),
+  SessionMode.biffle: const BiffleRules(),
+  SessionMode.beg: const BegRules(),
+  SessionMode.hand: const HandRules(),
+  SessionMode.breath: const BreathRules(),
+  SessionMode.freestyle: const FreestyleRules(),
+  SessionMode.suckle: const SuckleRules(),
 };

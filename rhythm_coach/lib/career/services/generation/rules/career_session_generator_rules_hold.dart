@@ -1,14 +1,16 @@
-// Fichier part de `career_session_generator.dart` — règles du mode
+// Library autonome — règles du mode
 // `hold`. Cf. contrat `ModeRules` dans
 // `career_session_generator_mode_rules.dart`. Partage le helper
-// `_clampHeldDuration` avec `_BegRules` (cap durée sur position tenue).
+// `clampHeldDuration` avec `BegRules` (cap durée sur position tenue).
 
-part of '../career_session_generator.dart';
+import 'dart:math';
+
+import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
 
 /// Règles `hold` : coût pur lié à la profondeur tenue (`to`). Convention
 /// uniforme hold/beg : la position tenue est dans `to`.
-class _HoldRules extends ModeRules {
-  const _HoldRules();
+class HoldRules extends ModeRules {
+  const HoldRules();
 
   @override
   StepType classify(Position? to) => StepType.bouche;
@@ -40,7 +42,7 @@ class _HoldRules extends ModeRules {
   @override
   double delta(StepDraft draft, double progress, CareerLevel cfg) {
     final dur = draft.duration ?? 0;
-    final depth = _StaminaModel.positionDepth(draft.to, draft.to);
+    final depth = StaminaModel.positionDepth(draft.to, draft.to);
     return -depth * dur / 2.5;
   }
 
@@ -66,7 +68,7 @@ class _HoldRules extends ModeRules {
 
   @override
   StepDraft clampToCapability(StepDraft draft, CapabilityClamps c) =>
-      _clampHeldDuration(draft, c);
+      clampHeldDuration(draft, c);
 
   @override
   StepDraft? tryDegrade(StepDraft draft) {
@@ -103,7 +105,7 @@ class _HoldRules extends ModeRules {
     // (matche BeepEngine et le format SessionStep des JSON).
     final to = ctx.gen.pickHoldPosition(ctx.ampScore);
     final dur = ctx.gen.config.scaleDuration(
-      _StaminaModel.lerp(8.0, 30.0, max(ctx.durScore, ctx.bpmScore)),
+      StaminaModel.lerp(8.0, 30.0, max(ctx.durScore, ctx.bpmScore)),
       enduranceFactor: 0.08,
     );
     return StepDraft(
@@ -255,7 +257,7 @@ class _HoldRules extends ModeRules {
       final humilOver = max(0.0, ctx.humilCap - 10.0);
       final targetDur =
           (10 + (humilOver / 5).floor() * 2 + ctx.endPts * 2).clamp(10, 80);
-      final dur = _FinalPicker.trimHoldFinalDuration(
+      final dur = FinalPicker.trimHoldFinalDuration(
         target: targetDur,
         humilCap: ctx.humilCap,
         baseReq: 21.5, // hold throat 10s
@@ -281,7 +283,7 @@ class _HoldRules extends ModeRules {
       final humilOver = max(0.0, ctx.humilCap - 30.0);
       final targetDur =
           (10 + (humilOver / 8).floor() * 3 + ctx.endPts * 3).clamp(10, 80);
-      final dur = _FinalPicker.trimHoldFinalDuration(
+      final dur = FinalPicker.trimHoldFinalDuration(
         target: targetDur,
         humilCap: ctx.humilCap,
         baseReq: 49.0, // hold full 10s

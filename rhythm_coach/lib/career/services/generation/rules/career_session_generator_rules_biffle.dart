@@ -1,13 +1,15 @@
-// Fichier part de `career_session_generator.dart` — règles du mode
+// Library autonome — règles du mode
 // `biffle`. Cf. contrat `ModeRules` dans
 // `career_session_generator_mode_rules.dart`.
 
-part of '../career_session_generator.dart';
+import 'dart:math';
+
+import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
 
 /// Règles `biffle` : effort soutenu (la fille encaisse), conso entre
 /// rythme et hold, modulée par la profondeur.
-class _BiffleRules extends ModeRules {
-  const _BiffleRules();
+class BiffleRules extends ModeRules {
+  const BiffleRules();
 
   @override
   StepType classify(Position? to) => StepType.libreMain;
@@ -16,7 +18,7 @@ class _BiffleRules extends ModeRules {
   double delta(StepDraft draft, double progress, CareerLevel cfg) {
     final dur = draft.duration ?? 0;
     final bpm = (draft.bpm ?? 80).toDouble();
-    final depth = _StaminaModel.positionDepth(draft.from, draft.to);
+    final depth = StaminaModel.positionDepth(draft.from, draft.to);
     return -(bpm / 100.0) * depth * dur / 3.5;
   }
 
@@ -75,9 +77,9 @@ class _BiffleRules extends ModeRules {
   StepDraft build(DraftCtx ctx) {
     // Biffle = coups de queue sur le visage : pas de notion de position.
     // from/to restent null.
-    final bpm = _StaminaModel.lerp(80.0, 140.0, ctx.bpmScore).round();
+    final bpm = StaminaModel.lerp(80.0, 140.0, ctx.bpmScore).round();
     final dur = ctx.gen.config.scaleDuration(
-      _StaminaModel.lerp(15.0, 40.0, ctx.durScore),
+      StaminaModel.lerp(15.0, 40.0, ctx.durScore),
       enduranceFactor: 0.05,
     );
     return StepDraft(

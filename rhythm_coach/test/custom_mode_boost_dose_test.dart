@@ -3,7 +3,6 @@ import 'package:beat_bitch/career/models/career_generation_inputs.dart';
 import 'package:beat_bitch/career/models/phrase_bank.dart';
 import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
 import 'package:beat_bitch/models/session.dart';
-import 'package:beat_bitch/models/session_step.dart';
 
 /// Garde-fou issue #68 : en Custom Extrême avec hand=rare et rhythm=frequent,
 /// le sprint final (boosts pre-final) ne devait pas systématiquement utiliser

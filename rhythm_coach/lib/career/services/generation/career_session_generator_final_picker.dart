@@ -11,7 +11,7 @@
 // mode contrastant avec le final, échelle req croissante, top-3 tiré
 // uniformément. Biais spé sloppy/obeissance pour les niveaux avancés.
 //
-// Les deux méthodes partagent leur état — bundlé dans `_FinalPicker`
+// Les deux méthodes partagent leur état — bundlé dans `FinalPicker`
 // comme value object immuable construit une fois par `generate()`. Les 5
 // champs immuables côté config (level, anatomy, spec, coachModeWeights,
 // includeHand) sont consultés via `config.x` ; on garde `unlockedKeys` à
@@ -25,7 +25,7 @@ part of 'career_session_generator.dart';
 /// par appel à `generate()` après que `_capClamps` est posé. Toutes les
 /// décisions de gating consultent ce snapshot — les mutations d'état du
 /// tracking (`_lastMode`, etc.) ne concernent pas la palette finale.
-class _FinalPicker {
+class FinalPicker {
   /// Snapshot de la config de séance. On y lit `level`, `anatomy`, `spec`,
   /// `coachModeWeights`, `includeHand`.
   final SessionConfig config;
@@ -38,7 +38,7 @@ class _FinalPicker {
   final Random rng;
   final CapabilityClamps capClamps;
 
-  const _FinalPicker({
+  const FinalPicker({
     required this.config,
     required this.unlockedKeys,
     required this.rng,
@@ -227,7 +227,7 @@ class _FinalPicker {
       ..sort((a, b) => b.req.compareTo(a.req)); // req décroissante
     if (valid.isEmpty) {
       // Fallback safe : breath est req 0 / jamais blocked dans
-      // `_BreathRules.postFinalVariants` — `valid.isEmpty` ne devrait
+      // `BreathRules.postFinalVariants` — `valid.isEmpty` ne devrait
       // donc survenir que sur un `humilCap < 0` aberrant. On reconstruit
       // un draft breath plutôt que de plonger dans le registry pour
       // garder un comportement déterministe.

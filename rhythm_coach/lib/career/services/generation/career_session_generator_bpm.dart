@@ -1,7 +1,7 @@
 // Fichier part de `career_session_generator.dart` — outils de pacing BPM.
 //
 // Regroupe les helpers de pacing rythmique **sans état d'instance**, sortis
-// du fichier principal pour la même raison que `_StaminaModel` : leurs
+// du fichier principal pour la même raison que `StaminaModel` : leurs
 // formules sont denses et leurs entrées sont des scalaires explicites,
 // donc passer en statiques pures clarifie ce qu'ils consomment.
 //

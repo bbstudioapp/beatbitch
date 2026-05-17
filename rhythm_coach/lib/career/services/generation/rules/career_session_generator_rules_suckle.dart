@@ -1,8 +1,8 @@
-// Fichier part de `career_session_generator.dart` — règles du mode
+// Library autonome — règles du mode
 // `suckle`. Cf. contrat `ModeRules` dans
 // `career_session_generator_mode_rules.dart`.
 
-part of '../career_session_generator.dart';
+import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
 
 /// Règles `suckle` : aspiration / téter. La bouche bosse sans aller-retour.
 /// Coût par seconde modéré, plus marqué sur head (zone sensible → pompage
@@ -10,8 +10,8 @@ part of '../career_session_generator.dart';
 /// On modélise sur `_holdCostPerSec` de StaminaEngine en l'ajustant :
 /// head ≈ 60 % d'un hold mid, balls ≈ 30 % (moins d'effort de la bouche,
 /// plus de l'humil).
-class _SuckleRules extends ModeRules {
-  const _SuckleRules();
+class SuckleRules extends ModeRules {
+  const SuckleRules();
 
   /// Aspiration : bouche au contact (head ou balls). Classé `bouche` pour
   /// bénéficier de la même friction de continuité que hold / beg-tenu —
@@ -53,7 +53,7 @@ class _SuckleRules extends ModeRules {
     //   ~30 % de chances de tirer balls quand dispo, pour rester audible
     //   mais marginal.
     final dur = ctx.gen.config.scaleDuration(
-      _StaminaModel.lerp(8.0, 18.0, ctx.durScore),
+      StaminaModel.lerp(8.0, 18.0, ctx.durScore),
       enduranceFactor: 0.04,
     );
     final ballsAllowed = ctx.gen.config.anatomy.hasBalls &&

@@ -27,7 +27,7 @@ part of 'career_session_generator.dart';
 
 /// Tracker de la chaîne `rhythm` consécutive. Détient le compteur de
 /// secondes cumulées, expose la marge restante et le cap effectif au
-/// caller (le dispatcher pour `canChain()`, `_RhythmRules.build` pour
+/// caller (le dispatcher pour `canChain()`, `RhythmRules.build` pour
 /// `capDuration()`).
 ///
 /// L'état du tracker (`_consecutiveSeconds`) est par-session : `reset()`

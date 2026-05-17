@@ -1,8 +1,10 @@
-// Fichier part de `career_session_generator.dart` — règles du mode
+// Library autonome — règles du mode
 // `rhythm`. Cf. contrat `ModeRules` dans
 // `career_session_generator_mode_rules.dart`.
 
-part of '../career_session_generator.dart';
+import 'dart:math';
+
+import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
 
 /// Règles `rhythm` : coût modulé par profondeur cible (mid pèse le plus :
 /// c'est la zone où on tient le rythme le plus longtemps), atténué par le
@@ -22,8 +24,8 @@ part of '../career_session_generator.dart';
 /// → mid→full 60 bpm : −20 %
 /// → throat→full 60 bpm : −10 %
 /// → mid→full 100 bpm : 0 % (BPM trop haut)
-class _RhythmRules extends ModeRules {
-  const _RhythmRules();
+class RhythmRules extends ModeRules {
+  const RhythmRules();
 
   @override
   StepType classify(Position? to) => StepType.bouche;
@@ -48,7 +50,7 @@ class _RhythmRules extends ModeRules {
   @override
   StepDraft? tryDegrade(StepDraft draft) {
     // Cascade rythme : descendre `to` → descendre `from` → cap BPM à 80.
-    final desc = _tryDescendToWithGuard(draft) ?? _tryDescendFrom(draft);
+    final desc = tryDescendToWithGuard(draft) ?? tryDescendFrom(draft);
     if (desc != null) return desc;
     if ((draft.bpm ?? 0) > 80) {
       return StepDraft(
@@ -133,7 +135,7 @@ class _RhythmRules extends ModeRules {
   double delta(StepDraft draft, double progress, CareerLevel cfg) {
     final dur = draft.duration ?? 0;
     final bpm = (draft.bpm ?? 60).toDouble();
-    final depth = _StaminaModel.positionDepth(draft.from, draft.to);
+    final depth = StaminaModel.positionDepth(draft.from, draft.to);
     final toIdx = (draft.to ?? draft.from)?.index ?? 0;
     final depthMul = toIdx >= Position.full.index
         ? 1.15
@@ -153,10 +155,10 @@ class _RhythmRules extends ModeRules {
 
   @override
   StepDraft build(DraftCtx ctx) {
-    final bpm = _StaminaModel.lerp(60.0, 140.0, ctx.bpmScore).round();
+    final bpm = StaminaModel.lerp(60.0, 140.0, ctx.bpmScore).round();
     final (from, to) = ctx.gen.sampleFromTo(ctx.ampScore);
     var dur = ctx.gen.config.scaleDuration(
-      _StaminaModel.lerp(20.0, 60.0, ctx.durScore),
+      StaminaModel.lerp(20.0, 60.0, ctx.durScore),
       enduranceFactor: 0.05,
     );
     // Cap par nombre d'aller-retours sur les profondeurs throat/full :

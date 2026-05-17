@@ -1,14 +1,14 @@
-// Fichier part de `career_session_generator.dart` — règles du mode
+// Library autonome — règles du mode
 // `freestyle`. Cf. contrat `ModeRules` dans
 // `career_session_generator_mode_rules.dart`.
 
-part of '../career_session_generator.dart';
+import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
 
 /// Règles `freestyle` : phase libre, neutre côté endurance (ni effort
 /// ni vraie regen). Toujours gaté par `freestyle` (palier d'intro
 /// `intro_freestyle` au niveau 7).
-class _FreestyleRules extends ModeRules {
-  const _FreestyleRules();
+class FreestyleRules extends ModeRules {
+  const FreestyleRules();
 
   @override
   StepType classify(Position? to) => StepType.transit;
@@ -21,7 +21,7 @@ class _FreestyleRules extends ModeRules {
 
   @override
   StepDraft build(DraftCtx ctx) {
-    final dur = _StaminaModel.lerp(8.0, 18.0, ctx.durScore).round();
+    final dur = StaminaModel.lerp(8.0, 18.0, ctx.durScore).round();
     return StepDraft(
       mode: SessionMode.freestyle,
       bpm: null,

@@ -2,7 +2,7 @@
 // générées (Phase 5 de la spec).
 //
 // Décision projet : la sélection est strictement « max humil qui passe »
-// (parité dramaturgique avec `_FinalPicker.pickFinal`), pas de biais
+// (parité dramaturgique avec `FinalPicker.pickFinal`), pas de biais
 // d'axe surchargé. L'axe surchargé influence indirectement via le `comfort`
 // élargi côté `_clampToCapability`, mais la palette elle-même reste
 // universelle.
@@ -17,7 +17,7 @@ part of 'career_session_generator.dart';
 
 /// Composition de punition carrière (Phase 5). Tuple
 /// `(id, drafts, reqHumil, handRequired)` qui mime la palette de
-/// `_FinalPicker.pickFinal` — drafts non-clampés (le clamp se fait au
+/// `FinalPicker.pickFinal` — drafts non-clampés (le clamp se fait au
 /// moment de la matérialisation via [_PunishmentBuilder._materialize]).
 class _PunishmentCompo {
   final String id;
@@ -43,10 +43,10 @@ class _PunishmentCompo {
 /// que `_capClamps` est construit avant l'appel.
 class _PunishmentBuilder {
   /// Palette V1 : 5 compos triées par humil croissante. Parité
-  /// dramaturgique avec `_FinalPicker.pickFinal`.
+  /// dramaturgique avec `FinalPicker.pickFinal`.
   static const List<_PunishmentCompo> palette = [
     // Biffle rapide court — le moins humiliant qui reste punitif. Gaté
-    // `includeHand` (biffle implique la main, comme dans `_FinalPicker`).
+    // `includeHand` (biffle implique la main, comme dans `FinalPicker`).
     _PunishmentCompo(
       id: 'biffle_burst',
       drafts: [
@@ -188,7 +188,7 @@ class _PunishmentBuilder {
   /// `_capClamps`…).
   ///
   /// Algo : on filtre [palette] par humilCap + unlocks composants + gating
-  /// hand ; sélection = max humiliant valide (parité `_FinalPicker.pickFinal`).
+  /// hand ; sélection = max humiliant valide (parité `FinalPicker.pickFinal`).
   /// Si rien ne passe, escalier `lastResort` → `handFallback`.
   static Punishment buildFor(
     CareerSessionGenerator gen,
@@ -199,7 +199,7 @@ class _PunishmentBuilder {
         gen._config.humiliationCareer + gen._config.humiliationSession;
 
     // Filtre humilCap + unlocks composants + gating hand. Sélection = max
-    // humiliant valide (parité `_FinalPicker.pickFinal` : tri par `req`
+    // humiliant valide (parité `FinalPicker.pickFinal` : tri par `req`
     // croissante, `valid.last`).
     final valid = palette.where((c) {
       if (c.handRequired && !includeHand) return false;

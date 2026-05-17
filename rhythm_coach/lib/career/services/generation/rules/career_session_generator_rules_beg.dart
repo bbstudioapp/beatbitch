@@ -1,16 +1,18 @@
-// Fichier part de `career_session_generator.dart` — règles du mode
+// Library autonome — règles du mode
 // `beg`. Cf. contrat `ModeRules` dans
 // `career_session_generator_mode_rules.dart`. Partage le helper
-// `_clampHeldDuration` avec `_HoldRules` (cap durée sur position tenue).
+// `clampHeldDuration` avec `HoldRules` (cap durée sur position tenue).
 
-part of '../career_session_generator.dart';
+import 'dart:math';
+
+import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
 
 /// Règles `beg` : convention uniforme hold/beg, la position tenue est dans
 /// `to`. Sans `to` ou `to = head` → assimilé à du repos vocal (regen). Avec
 /// `to = mid/throat/full` → coût comme un hold à cette profondeur (la
 /// position doit être tenue pendant la supplique).
-class _BegRules extends ModeRules {
-  const _BegRules();
+class BegRules extends ModeRules {
+  const BegRules();
 
   /// Beg avec `to` tenu = la bouche reste sur la verge pendant la
   /// supplique → `bouche`. Beg libre (`to == null`) = supplique purement
@@ -25,14 +27,14 @@ class _BegRules extends ModeRules {
     final dur = draft.duration ?? 0;
     final to = draft.to;
     if (to == null || to == Position.head) {
-      final regen = _StaminaModel.lerp(
+      final regen = StaminaModel.lerp(
         cfg.regenStartMultiplier,
         cfg.regenEndMultiplier,
         progress,
       );
       return dur * 1.0 * regen;
     }
-    final depth = _StaminaModel.positionDepth(to, to);
+    final depth = StaminaModel.positionDepth(to, to);
     return -depth * dur / 2.5;
   }
 
@@ -54,7 +56,7 @@ class _BegRules extends ModeRules {
 
   @override
   StepDraft clampToCapability(StepDraft draft, CapabilityClamps c) =>
-      _clampHeldDuration(draft, c);
+      clampHeldDuration(draft, c);
 
   @override
   StepDraft? tryDegrade(StepDraft draft) {
@@ -112,7 +114,7 @@ class _BegRules extends ModeRules {
     final begAmp = (ctx.ampScore + 0.10 * obPts).clamp(0.0, 1.0);
     final to = ctx.gen.pickBegPosition(begAmp);
     final baseDur = ctx.gen.config.scaleDuration(
-      _StaminaModel.lerp(7.0, 16.0, ctx.durScore),
+      StaminaModel.lerp(7.0, 16.0, ctx.durScore),
       enduranceFactor: 0.04,
       extraFactor: obPts * 0.06,
     );

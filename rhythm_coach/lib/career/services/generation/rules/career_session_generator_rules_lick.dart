@@ -1,13 +1,15 @@
-// Fichier part de `career_session_generator.dart` — règles du mode
+// Library autonome — règles du mode
 // `lick`. Cf. contrat `ModeRules` dans
 // `career_session_generator_mode_rules.dart`.
 
-part of '../career_session_generator.dart';
+import 'dart:math';
+
+import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
 
 /// Règles `lick` : BPM ≤ 60 = vraie récup vocale (regen), au-delà = effort
 /// léger (consommation modérée, plus de regen).
-class _LickRules extends ModeRules {
-  const _LickRules();
+class LickRules extends ModeRules {
+  const LickRules();
 
   @override
   StepType classify(Position? to) => StepType.langue;
@@ -17,14 +19,14 @@ class _LickRules extends ModeRules {
     final dur = draft.duration ?? 0;
     final bpm = draft.bpm ?? 60;
     if (bpm <= 60) {
-      final regen = _StaminaModel.lerp(
+      final regen = StaminaModel.lerp(
         cfg.regenStartMultiplier,
         cfg.regenEndMultiplier,
         progress,
       );
       return dur * 1.2 * regen;
     }
-    final depth = _StaminaModel.positionDepth(draft.from, draft.to);
+    final depth = StaminaModel.positionDepth(draft.from, draft.to);
     return -depth * dur / 8.0;
   }
 
@@ -41,19 +43,19 @@ class _LickRules extends ModeRules {
 
   @override
   StepDraft? tryDegrade(StepDraft draft) =>
-      _tryDescendToWithGuard(draft) ?? _tryDescendFrom(draft);
+      tryDescendToWithGuard(draft) ?? tryDescendFrom(draft);
 
   @override
   StepDraft build(DraftCtx ctx) {
     // Sloppy : monte le BPM minimum (≥ 65 = lick humide / saliveux).
     final sloppyPts = ctx.gen.config.pts(SpecializationBranch.sloppy);
     final lickBpmScore = sloppyPts > 0 ? max(ctx.bpmScore, 0.3) : ctx.bpmScore;
-    final bpm = _StaminaModel.lerp(55.0, 80.0, lickBpmScore).round();
+    final bpm = StaminaModel.lerp(55.0, 80.0, lickBpmScore).round();
     // Tirage spécifique lick : tip→head forcé tant qu'humiliation < 2,
     // toutes amplitudes (incluant tip → throat/full) à partir de 2.
     final (from, to) = ctx.gen.sampleFromToForLick(ctx.ampScore);
     final dur = ctx.gen.config.scaleDuration(
-      _StaminaModel.lerp(10.0, 25.0, ctx.durScore),
+      StaminaModel.lerp(10.0, 25.0, ctx.durScore),
       enduranceFactor: 0.04,
     );
     return StepDraft(
@@ -144,7 +146,7 @@ class _LickRules extends ModeRules {
 
   /// Lick : profondeur d'amplitude max = `full` (4). Pas de tension de
   /// profondeur côté gating — la diversification peut décaler `to` au
-  /// plus haut sans contrainte milestone (cf. `_LickRules.unlockKeyFor`
+  /// plus haut sans contrainte milestone (cf. `LickRules.unlockKeyFor`
   /// qui gate seulement `to == full` et `balls`).
   @override
   int? amplitudeDiversifyCeiling(GenFacade gen) => Position.full.index;

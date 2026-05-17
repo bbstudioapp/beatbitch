@@ -7,7 +7,7 @@
 // `milestoneRhythmCeilingIdx`) + le samplers générique `sampleSimplex3`.
 //
 // Tous bundlés dans `_PositionPickers` (value object immuable), pattern
-// identique à `CapabilityClamps` et `_FinalPicker` : les méthodes
+// identique à `CapabilityClamps` et `FinalPicker` : les méthodes
 // s'appellent entre elles et partagent le même état (8 fields), passer
 // chaque field à chaque appel rendrait les signatures illisibles.
 
@@ -243,7 +243,7 @@ class _PositionPickers {
     // Min mid (idx 2) au lieu de head (idx 1) : l'amplitude minimale est
     // head→mid, pas tip→head.
     final ceiling = capByDepth ? config.maxDepthIndex.clamp(2, 4) : 4;
-    var deepestIdx = _StaminaModel.lerp(2.0, ceiling.toDouble(), clamped)
+    var deepestIdx = StaminaModel.lerp(2.0, ceiling.toDouble(), clamped)
         .round()
         .clamp(2, ceiling);
     // Bonus Profondeur (spé) : remonte la probabilité de profond, dans la

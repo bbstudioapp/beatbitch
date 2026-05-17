@@ -147,7 +147,7 @@ class _HumiliationGates {
   /// biffle cap BPM puis se transforme en lick. Quand toutes les rules
   /// retournent `null`, on retombe sur le fallback ultime ci-dessous.
   ///
-  /// **Garde-fou from < to** porté par les helpers `_tryDescendToWithGuard`
+  /// **Garde-fou from < to** porté par les helpers `tryDescendToWithGuard`
   /// (cf. mode rules) : la descente de `to` saute l'étape si elle
   /// ferait collision avec `from` (head→mid → head→head interdit).
   static StepDraft stepDownOne(StepDraft d) {

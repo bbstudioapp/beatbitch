@@ -173,7 +173,7 @@ class _ModePicker {
     // milieu d'une série bouche et la fragmentait. On le classe donc en
     // libre/main par défaut — quitte à manquer un peu les beg-non-libre
     // (rares, n'apparaissent qu'à ampScore haut, donc à diff haut). Le
-    // `null` passé à `classify` produit ce même verdict côté `_BegRules`,
+    // `null` passé à `classify` produit ce même verdict côté `BegRules`,
     // mais on garde le shortcut explicite pour que l'intention reste
     // lisible (« beg = libre, sauf décision contraire »).
     final cand = candidate == SessionMode.beg

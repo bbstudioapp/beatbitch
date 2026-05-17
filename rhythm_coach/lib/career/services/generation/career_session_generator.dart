@@ -18,17 +18,39 @@ import '../../models/phrase_bank.dart';
 import '../../models/specialization.dart';
 import '../../models/unlock_key.dart';
 
+// Re-exports : les rules (libraries autonomes dans `rules/`) importent
+// uniquement `career_session_generator.dart`. Pour leur épargner une
+// dizaine d'imports models/services chacune, on re-exporte ici les
+// types qu'elles consomment.
+export '../../../models/anatomy_profile.dart' show AnatomyProfile;
+export '../../../models/final_category.dart' show FinalCategory;
+export '../../../models/session.dart' show SessionMode;
+export '../../../models/session_step.dart' show Position, SessionStep;
+export '../../../services/capability_axis.dart' show CapabilityAxis;
+export '../../models/career_level.dart' show CareerLevel;
+export '../../models/phrase_bank.dart' show PhraseBank;
+export '../../models/specialization.dart'
+    show SpecializationAllocation, SpecializationBranch;
+export '../../models/unlock_key.dart' show UnlockKey;
+
+// Les 9 rules sont des libraries autonomes (cf. `rules/`) qui importent
+// cette library pour le contrat `ModeRules` + les types support. Les
+// importer ici permet à `modeRulesRegistry` (cf. `mode_rules.dart`) de
+// les instancier en const. Le cycle d'import est résolu lexicalement
+// par Dart (toutes les déclarations sont visibles avant l'évaluation
+// des const top-level).
+import 'rules/career_session_generator_rules_beg.dart';
+import 'rules/career_session_generator_rules_biffle.dart';
+import 'rules/career_session_generator_rules_breath.dart';
+import 'rules/career_session_generator_rules_freestyle.dart';
+import 'rules/career_session_generator_rules_hand.dart';
+import 'rules/career_session_generator_rules_hold.dart';
+import 'rules/career_session_generator_rules_lick.dart';
+import 'rules/career_session_generator_rules_rhythm.dart';
+import 'rules/career_session_generator_rules_suckle.dart';
+
 part 'career_session_generator_stamina.dart';
 part 'career_session_generator_mode_rules.dart';
-part 'rules/career_session_generator_rules_breath.dart';
-part 'rules/career_session_generator_rules_freestyle.dart';
-part 'rules/career_session_generator_rules_suckle.dart';
-part 'rules/career_session_generator_rules_hand.dart';
-part 'rules/career_session_generator_rules_biffle.dart';
-part 'rules/career_session_generator_rules_lick.dart';
-part 'rules/career_session_generator_rules_hold.dart';
-part 'rules/career_session_generator_rules_beg.dart';
-part 'rules/career_session_generator_rules_rhythm.dart';
 part 'career_session_generator_bpm.dart';
 part 'career_session_generator_humiliation.dart';
 part 'career_session_generator_capability.dart';
@@ -114,7 +136,7 @@ class CareerSessionGenerator {
   /// Picker du final + post-final — recréé à chaque appel à [generate]
   /// après que [_capClamps] est posé. Consomme `_capClamps` pour le clamp
   /// terminal des holds throat/full.
-  late _FinalPicker _finalPicker;
+  late FinalPicker _finalPicker;
 
   /// Pickers de position (hold / beg / from-to / simplex / etc.) —
   /// recréés à chaque appel à [generate] / [generatePunishment].
@@ -253,7 +275,7 @@ class CareerSessionGenerator {
       bpmRange: _config.bpmRange,
       holdRange: _config.holdDurationRange,
     );
-    _finalPicker = _FinalPicker(
+    _finalPicker = FinalPicker(
       config: _config,
       unlockedKeys: _state.unlockedKeys,
       rng: _rng,
@@ -299,10 +321,10 @@ class CareerSessionGenerator {
     // `SessionRuntimeState.fresh()` plus haut.
     final steps = <SessionStep>[];
     final profile =
-        List<double>.filled(effectiveDuration + 60, _StaminaModel.cap);
+        List<double>.filled(effectiveDuration + 60, StaminaModel.cap);
 
     var time = 0;
-    var stamina = _StaminaModel.cap;
+    var stamina = StaminaModel.cap;
 
     // DTO partagé par les helpers de phase. Construit une fois ici et passé
     // à chacun pour éviter de répéter les ~10 args (cfg/bank/effectiveDuration/
@@ -392,8 +414,8 @@ class CareerSessionGenerator {
       _trackPushedStep(first.mode, first.to,
           from: first.from, bpm: first.bpm, duration: first.duration);
       final staminaBefore = stamina;
-      stamina = _StaminaModel.apply(stamina, first, 0.0, cfg);
-      _StaminaModel.fillProfile(profile, 0, first.duration ?? 1, stamina,
+      stamina = StaminaModel.apply(stamina, first, 0.0, cfg);
+      StaminaModel.fillProfile(profile, 0, first.duration ?? 1, stamina,
           valueStart: staminaBefore);
       _advanceSalivaSim(first);
       time += first.duration ?? 1;
@@ -671,9 +693,9 @@ class CareerSessionGenerator {
   }) {
     ctx.steps.add(_draftToStep(draft, time: time, text: text));
     final staminaBefore = stamina;
-    final newStamina = _StaminaModel.apply(stamina, draft, progress, ctx.cfg);
+    final newStamina = StaminaModel.apply(stamina, draft, progress, ctx.cfg);
     _advanceSalivaSim(draft);
-    _StaminaModel.fillProfile(
+    StaminaModel.fillProfile(
       ctx.profile,
       time,
       draft.duration!,
@@ -787,14 +809,13 @@ class CareerSessionGenerator {
         _pickPhrase(ctx.bank, SessionMode.beg, 'hard');
     ctx.steps.add(_draftToStep(swallowDraft, time: time, text: swallowText));
     final staminaBefore = stamina;
-    stamina = _StaminaModel.apply(
+    stamina = StaminaModel.apply(
         stamina, swallowDraft, time / ctx.effectiveDuration, ctx.cfg);
     // Conséquence simulée de l'ordre : la sim retombe à 0, comme si
     // la joueuse obéissait. En runtime le SessionController fera de
     // même via `SalivaEngine.forceSwallow()`.
     _state.salivaSim.forceSwallow();
-    _StaminaModel.fillProfile(
-        ctx.profile, time, swallowDraft.duration!, stamina,
+    StaminaModel.fillProfile(ctx.profile, time, swallowDraft.duration!, stamina,
         valueStart: staminaBefore);
     _state.recordLastTransit(SessionMode.beg, swallowText);
     _trackPushedStep(SessionMode.beg, null, duration: swallowDraft.duration);
@@ -813,7 +834,7 @@ class CareerSessionGenerator {
   ///      progress + plancher quickie ; tirage `diff`.
   ///   2. Choix recovery vs `_mapDifficultyToStep(diff)` selon stamina
   ///      et seuils obédiance-modulés.
-  ///   3. Transformations en cascade : `_BegRules.stripAfterSoft` →
+  ///   3. Transformations en cascade : `BegRules.stripAfterSoft` →
   ///      `_enforceHumiliationRequired` → `_applyBpmDiversity` →
   ///      `_diversifyAmplitude` → `_BpmPacing.maybeApplyBpmRamp` →
   ///      `_clampToCapability` (2ᵉ enveloppe, dernier mot).
@@ -829,9 +850,9 @@ class CareerSessionGenerator {
     required double stamina,
   }) {
     final progress = time / ctx.effectiveDuration;
-    final windowMin = _StaminaModel.lerp(0.05, 0.50, progress);
+    final windowMin = StaminaModel.lerp(0.05, 0.50, progress);
     var windowMax =
-        min(_StaminaModel.lerp(0.30, 1.00, progress), ctx.cfg.maxDifficultyCap);
+        min(StaminaModel.lerp(0.30, 1.00, progress), ctx.cfg.maxDifficultyCap);
     // Floor d'intensité (mode bâclée) : tronque le bas de la fenêtre.
     final flooredMin = max(windowMin, ctx.intensityFloor);
     final boundedMin = min(flooredMin, windowMax - 0.05).clamp(0.0, 1.0);
@@ -863,7 +884,7 @@ class CareerSessionGenerator {
     // retire le `from` pour enchaîner sur une supplique purement vocale
     // plutôt que de redemander de tenir une position. Côté stamina,
     // beg avec from=null suit la même branche regen que from=head.
-    var draft = _BegRules.stripAfterSoft(initialDraft, ctx.steps);
+    var draft = BegRules.stripAfterSoft(initialDraft, ctx.steps);
 
     // Filtre humiliation requise : on garde uniquement ce que le cap
     // effectif (career + session projeté à `time`) permet. La rampe
@@ -897,7 +918,7 @@ class CareerSessionGenerator {
     // standard) ou si on est à <8s du genUntil (laisse la place au
     // pré-finisher / boost).
     if (draft.mode != SessionMode.breath && ctx.genUntil - time > 8) {
-      final delta = _StaminaModel.delta(draft, progress, ctx.cfg);
+      final delta = StaminaModel.delta(draft, progress, ctx.cfg);
       final projected = stamina + delta;
       if (projected < 0) {
         final breathDraft = _buildBreathRecovery(-projected, progress, ctx.cfg);
@@ -1136,7 +1157,7 @@ class CareerSessionGenerator {
     int remainingSeconds,
   ) {
     if (remainingSeconds < 12) return null;
-    final regen = _StaminaModel.lerp(
+    final regen = StaminaModel.lerp(
       cfg.regenStartMultiplier,
       cfg.regenEndMultiplier,
       progress,
@@ -1194,9 +1215,9 @@ class CareerSessionGenerator {
     );
   }
 
-  /// Adaptateur d'instance pour `_FinalPicker.buildPostFinalDraft`. Injecte
+  /// Adaptateur d'instance pour `FinalPicker.buildPostFinalDraft`. Injecte
   /// le `holdCeilingIdx` calculé depuis `_state.unlockedKeys` + `_config.maxDepthIndex`
-  /// — qui n'est pas dans `_FinalPicker` car partagé avec `_pickHoldPosition`
+  /// — qui n'est pas dans `FinalPicker` car partagé avec `_pickHoldPosition`
   /// et d'autres call sites.
   StepDraft _buildPostFinalDraft(SessionMode finalMode, double humilCap) =>
       _finalPicker.buildPostFinalDraft(
@@ -1260,9 +1281,9 @@ class CareerSessionGenerator {
       // la projection reste cohérente.
       final mDraft = _stepToDraft(mStep, SessionMode.rhythm);
       final staminaBefore = s;
-      s = _StaminaModel.apply(s, mDraft, t / ctx.effectiveDuration, ctx.cfg);
+      s = StaminaModel.apply(s, mDraft, t / ctx.effectiveDuration, ctx.cfg);
       _advanceSalivaSim(mDraft);
-      _StaminaModel.fillProfile(
+      StaminaModel.fillProfile(
           ctx.profile, t + mStep.time, mStep.duration ?? 0, s,
           valueStart: staminaBefore);
       // Tracking de continuité par type — chaque step de la séquence compte
@@ -1469,9 +1490,9 @@ class CareerSessionGenerator {
           bpm: boostDraft.bpm,
           duration: boostDraft.duration);
       final staminaBeforeBoost = s;
-      s = _StaminaModel.apply(s, boostDraft, 1.0, ctx.cfg);
+      s = StaminaModel.apply(s, boostDraft, 1.0, ctx.cfg);
       _advanceSalivaSim(boostDraft);
-      _StaminaModel.fillProfile(ctx.profile, t, boostDur, s,
+      StaminaModel.fillProfile(ctx.profile, t, boostDur, s,
           valueStart: staminaBeforeBoost);
       t += boostDur;
       // Mémorise BPM/profondeur retenus (post-dégradation humil) pour que le
@@ -1484,7 +1505,7 @@ class CareerSessionGenerator {
     return (time: t, stamina: s, lastBoostIndex: lastBoostIndex);
   }
 
-  /// Émet le step final (apothéose contemplative). Choix via [_FinalPicker.pickFinal] selon
+  /// Émet le step final (apothéose contemplative). Choix via [FinalPicker.pickFinal] selon
   /// humil cap projeté à `time` et plafond de profondeur. Phrase : annonce du
   /// changement de mode si différent du dernier boost (« sors ta langue,
   /// j'arrive »), sinon phrase d'action standard.
@@ -1820,7 +1841,7 @@ class CareerSessionGenerator {
     double progress,
     CareerLevel cfg,
   ) {
-    final regen = _StaminaModel.lerp(
+    final regen = StaminaModel.lerp(
       cfg.regenStartMultiplier,
       cfg.regenEndMultiplier,
       progress,
@@ -2066,7 +2087,7 @@ class CareerSessionGenerator {
     // `_finalPicker` et `_positionPickers` ne sont pas consommés par
     // `generatePunishment`, mais on les initialise par sécurité
     // (idempotence avec `generate()`).
-    _finalPicker = _FinalPicker(
+    _finalPicker = FinalPicker(
       config: _config,
       unlockedKeys: _state.unlockedKeys,
       rng: _rng,
@@ -2206,7 +2227,7 @@ class CareerSessionGenerator {
       );
 
   // `_finalUnlocked` n'est plus appelé depuis l'instance (consommé par
-  // `_FinalPicker` qui appelle directement `_HumiliationGates.finalUnlocked`).
+  // `FinalPicker` qui appelle directement `_HumiliationGates.finalUnlocked`).
   // Plus d'adaptateur ici.
 
   /// Adaptateur d'instance pour `_HumiliationGates.enforceRequired` : injecte

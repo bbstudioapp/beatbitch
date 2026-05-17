@@ -1,16 +1,16 @@
-// Fichier part de `career_session_generator.dart` — règles du mode
+// Library autonome — règles du mode
 // `breath`. Cf. contrat `ModeRules` dans
 // `career_session_generator_mode_rules.dart`.
 
-part of '../career_session_generator.dart';
+import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
 
 /// Règles `breath` : toujours regen. Vitesse 2.8 stamina/s — règle de
 /// design : un breath doit être plus court que les steps d'action qu'il
 /// sépare, sinon la dramaturgie ressemble à « action / longue pause /
 /// action / longue pause ». À 2.8/s, 8 s rendent ~22 stamina, ce qui
 /// couvre un step rythme moyen (~20 de coût) et permet d'enchaîner.
-class _BreathRules extends ModeRules {
-  const _BreathRules();
+class BreathRules extends ModeRules {
+  const BreathRules();
 
   @override
   StepType classify(Position? to) => StepType.transit;
@@ -18,7 +18,7 @@ class _BreathRules extends ModeRules {
   @override
   double delta(StepDraft draft, double progress, CareerLevel cfg) {
     final dur = draft.duration ?? 0;
-    final regen = _StaminaModel.lerp(
+    final regen = StaminaModel.lerp(
       cfg.regenStartMultiplier,
       cfg.regenEndMultiplier,
       progress,
@@ -28,7 +28,7 @@ class _BreathRules extends ModeRules {
 
   @override
   StepDraft build(DraftCtx ctx) {
-    final dur = _StaminaModel.lerp(6.0, 15.0, ctx.durScore).round();
+    final dur = StaminaModel.lerp(6.0, 15.0, ctx.durScore).round();
     return StepDraft(
       mode: SessionMode.breath,
       bpm: null,

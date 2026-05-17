@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../career/models/coach.dart';
-import '../career/models/phrase_bank.dart';
-import '../career/models/specialization.dart';
 import '../career/services/career_encore_gate.dart';
 import '../career/services/career_progress_service.dart';
 import '../career/services/generation/career_session_generator.dart';
