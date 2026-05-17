@@ -193,4 +193,116 @@ class _HoldRules extends _ModeRules {
       ),
     ];
   }
+
+  /// Jusqu'à 5 variantes finales :
+  ///  * `tip` (req 5, gate `finalHoldTip`) — surcote 5 : faible
+  ///    profondeur mais sauce sur la langue.
+  ///  * `head` (req 14, gate `finalHoldHead`) — surcote 14 : sauce sur
+  ///    le gland / bouche.
+  ///  * `mid` (req 10, gate `finalHoldMid`) — surcote 10 : sauce
+  ///    profonde dans la bouche.
+  ///  * `throat` (gate `finalHoldThroat`) — si `maxDepth >= throat`.
+  ///    Durée et req adaptatives : à humilCap=10 on tient 10 s minimum ;
+  ///    +2 s par tranche de 5 points d'humil au-dessus, +2 s par point
+  ///    endurance. Cap 80 s (aligné full). `trimHoldFinalDuration`
+  ///    redescend la durée si humilCap est trop juste.
+  ///  * `full` (gate `finalHoldFull`) — si `maxDepth >= full`. Même
+  ///    formule mais introduction à humilCap=30, +3 s par tranche de 8,
+  ///    +3 s par point endurance.
+  ///
+  /// Le cap haut 80 s n'est mordant qu'en mode hérité (Custom, scénarios) ;
+  /// en carrière, c'est `clampToCapability` qui pilote la durée vécue
+  /// d'après le profil de capacités prouvé.
+  @override
+  List<_FinalVariant> finalVariants(_FinalCtx ctx) {
+    final out = <_FinalVariant>[
+      _FinalVariant(
+        req: 5.0,
+        gate: UnlockKey.finalHoldTip,
+        draft: _StepDraft(
+          mode: SessionMode.hold,
+          bpm: null,
+          from: null,
+          to: Position.tip,
+          duration: ctx.shortHoldDur,
+        ),
+      ),
+      _FinalVariant(
+        req: 14.0,
+        gate: UnlockKey.finalHoldHead,
+        draft: _StepDraft(
+          mode: SessionMode.hold,
+          bpm: null,
+          from: null,
+          to: Position.head,
+          duration: ctx.shortHoldDur,
+        ),
+      ),
+      _FinalVariant(
+        req: 10.0,
+        gate: UnlockKey.finalHoldMid,
+        draft: _StepDraft(
+          mode: SessionMode.hold,
+          bpm: null,
+          from: null,
+          to: Position.mid,
+          duration: ctx.shortHoldDur,
+        ),
+      ),
+    ];
+
+    if (ctx.maxDepth >= Position.throat.index) {
+      final humilOver = max(0.0, ctx.humilCap - 10.0);
+      final targetDur =
+          (10 + (humilOver / 5).floor() * 2 + ctx.endPts * 2).clamp(10, 80);
+      final dur = _FinalPicker.trimHoldFinalDuration(
+        target: targetDur,
+        humilCap: ctx.humilCap,
+        baseReq: 21.5, // hold throat 10s
+        bonusPerSec: 1.5,
+        finishMul: ctx.finishMul,
+        maxDur: 80,
+      );
+      final req = 8.0 + (dur - 1) * 1.5;
+      out.add(_FinalVariant(
+        req: req,
+        gate: UnlockKey.finalHoldThroat,
+        draft: _StepDraft(
+          mode: SessionMode.hold,
+          bpm: null,
+          from: null,
+          to: Position.throat,
+          duration: dur,
+        ),
+      ));
+    }
+
+    if (ctx.maxDepth >= Position.full.index) {
+      final humilOver = max(0.0, ctx.humilCap - 30.0);
+      final targetDur =
+          (10 + (humilOver / 8).floor() * 3 + ctx.endPts * 3).clamp(10, 80);
+      final dur = _FinalPicker.trimHoldFinalDuration(
+        target: targetDur,
+        humilCap: ctx.humilCap,
+        baseReq: 49.0, // hold full 10s
+        bonusPerSec: 3.0,
+        finishMul: ctx.finishMul,
+        maxDur: 80,
+      );
+      final req = 22.0 + (dur - 1) * 3.0;
+      out.add(_FinalVariant(
+        req: req,
+        gate: UnlockKey.finalHoldFull,
+        draft: _StepDraft(
+          mode: SessionMode.hold,
+          bpm: null,
+          from: null,
+          to: Position.full,
+          duration: dur,
+        ),
+      ));
+    }
+
+    return out;
+  }
 }

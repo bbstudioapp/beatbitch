@@ -101,4 +101,44 @@ class _LickRules extends _ModeRules {
           ),
         ),
       ];
+
+  /// 2 variantes finales :
+  ///  * `tip→head 60 BPM dur 16` (req 8, gate `finalLickTipHead`) —
+  ///    palier intermédiaire de la palette principale.
+  ///  * `full→balls 55 BPM dur 16` (req 17, gate `lickBalls`) — variante
+  ///    « sloppy descente » introduite par la milestone
+  ///    `intro_balls_lick`. Pas de gate-final dédiée : on réutilise
+  ///    l'unlock du composant. Filtre anatomy assuré par `_isUnlocked`
+  ///    côté picker, donc on émet la variante systématiquement quand
+  ///    `anatomy.hasBalls`.
+  @override
+  List<_FinalVariant> finalVariants(_FinalCtx ctx) {
+    final out = <_FinalVariant>[
+      const _FinalVariant(
+        req: 8.0,
+        gate: UnlockKey.finalLickTipHead,
+        draft: _StepDraft(
+          mode: SessionMode.lick,
+          bpm: 60,
+          from: Position.tip,
+          to: Position.head,
+          duration: 16,
+        ),
+      ),
+    ];
+    if (ctx.anatomy.hasBalls) {
+      out.add(const _FinalVariant(
+        req: 17.0,
+        gate: UnlockKey.lickBalls,
+        draft: _StepDraft(
+          mode: SessionMode.lick,
+          bpm: 55,
+          from: Position.full,
+          to: Position.balls,
+          duration: 16,
+        ),
+      ));
+    }
+    return out;
+  }
 }

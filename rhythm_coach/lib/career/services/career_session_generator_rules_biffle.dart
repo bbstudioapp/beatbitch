@@ -109,4 +109,25 @@ class _BiffleRules extends _ModeRules {
       duration: ctx.duration,
     );
   }
+
+  /// Biffle final = coups lents (BPM 40-60) + sauce sur le visage.
+  /// Émis uniquement si le toggle Hand est actif (`ctx.biffleBpm != null`).
+  /// Gate : `finalBiffle` (niveau 5, requires `biffle_basic`).
+  @override
+  List<_FinalVariant> finalVariants(_FinalCtx ctx) {
+    if (ctx.biffleBpm == null) return const [];
+    return [
+      _FinalVariant(
+        req: 13.0,
+        gate: UnlockKey.finalBiffle,
+        draft: _StepDraft(
+          mode: SessionMode.biffle,
+          bpm: ctx.biffleBpm,
+          from: null,
+          to: null,
+          duration: ctx.fastDur,
+        ),
+      ),
+    ];
+  }
 }

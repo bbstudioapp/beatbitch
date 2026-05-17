@@ -72,4 +72,31 @@ class _HandRules extends _ModeRules {
           ),
         ),
       ];
+
+  /// Hand baseline en final (req 0, pas de gate dédiée — c'est le
+  /// fallback universel quand aucun autre final n'est unlocké).
+  /// Émis uniquement aux **niveaux 1-3** : le finish bas niveau a besoin
+  /// de cette baseline tant que les finals gated (hold tip / lick tip→head
+  /// / hold head…) ne sont pas acquittés. Niveau ≥ 4 : retiré
+  /// (`ctx.handBaselineBpm == null`) — un hand-final est trop anodin
+  /// pour clôturer une séance à ce stade. Il ne subsiste alors que
+  /// comme fallback technique ultime côté picker, ou si une
+  /// milestone-final venait à le scripter explicitement.
+  @override
+  List<_FinalVariant> finalVariants(_FinalCtx ctx) {
+    if (ctx.handBaselineBpm == null) return const [];
+    return [
+      _FinalVariant(
+        req: 0.0,
+        gate: null,
+        draft: _StepDraft(
+          mode: SessionMode.hand,
+          bpm: ctx.handBaselineBpm,
+          from: Position.head,
+          to: Position.mid,
+          duration: ctx.fastDur,
+        ),
+      ),
+    ];
+  }
 }
