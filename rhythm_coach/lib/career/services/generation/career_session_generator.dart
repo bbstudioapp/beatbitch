@@ -10,7 +10,6 @@ import '../../../models/session_step.dart';
 import '../../../services/capability_axis.dart';
 import '../../../services/capability_service.dart';
 import '../../../services/humiliation_engine.dart';
-import '../../../services/saliva_engine.dart';
 import '../../models/career_generation_inputs.dart';
 import '../../models/career_level.dart';
 import '../../models/level_milestone.dart';
@@ -50,6 +49,7 @@ import 'rules/career_session_generator_rules_rhythm.dart';
 import 'rules/career_session_generator_rules_suckle.dart';
 import 'mode_continuity_state.dart';
 import 'session_config.dart';
+import 'session_runtime_state.dart';
 import 'step_draft.dart';
 import 'step_type.dart';
 
@@ -58,6 +58,7 @@ import 'step_type.dart';
 // toujours ces types.
 export 'mode_continuity_state.dart' show ModeContinuityState;
 export 'session_config.dart' show SessionConfig;
+export 'session_runtime_state.dart' show SessionRuntimeState;
 export 'step_draft.dart' show StepDraft;
 export 'step_type.dart' show StepType;
 
@@ -73,7 +74,6 @@ part 'career_session_generator_position_pickers.dart';
 part 'career_session_generator_punishment.dart';
 part 'career_session_generator_rhythm_chain_tracker.dart';
 part 'career_session_generator_rhythmic_pattern_buffer.dart';
-part 'career_session_generator_session_runtime_state.dart';
 part 'career_session_generator_milestone_scheduler.dart';
 
 /// Résultat d'une génération : la session figée à passer au controller +
