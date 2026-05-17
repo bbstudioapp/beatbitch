@@ -162,6 +162,33 @@
   "profileCapLickDepth": "Zungentiefe",
   "profileCapLickStreak": "Ununterbrochene Zunge",
   "profileCapHandStreak": "Ununterbrochene Hand",
+  "profileDiagnosticSection": "DIAGNOSE",
+  "profileDiagnosticDescription": "Exportiere eine JSON-Datei mit deinen Fortschrittsdaten — nützlich, wenn du einen Bug melden willst. Es wird nichts automatisch verschickt, du entscheidest, was du damit machst.",
+  "profileDiagnosticExportButton": "Meine Daten exportieren",
+  "profileDiagnosticSheetTitle": "Meine Daten exportieren",
+  "profileDiagnosticSheetIntro": "Die Datei enthält:",
+  "profileDiagnosticItemCareer": "Karriere: dein Maximallevel, abgeschlossene Sessions, erreichte Meilensteine.",
+  "profileDiagnosticItemStats": "Statistiken: Sessionzähler (Gesamtzeit, Throatfucks, Holds, Streaks…).",
+  "profileDiagnosticItemCapabilities": "Fähigkeiten: deine Rekorde und Komfortzonen pro Achse.",
+  "profileDiagnosticItemAnatomy": "Anatomie: deine Profileinstellungen (Hoden vorhanden).",
+  "profileDiagnosticItemPreferences": "Einstellungen: Sprache, Stimme, Anzeige, Überraschungen, Debug.",
+  "profileDiagnosticItemBadges": "Abzeichen: die Stufen, die du freigeschaltet hast.",
+  "profileDiagnosticIncludeNicknames": "Meine persönlichen Spitznamen einschließen",
+  "profileDiagnosticIncludeNicknamesSubtitle": "Standardmäßig aus — sie können einen echten Vornamen enthalten.",
+  "profileDiagnosticShareButton": "Teilen",
+  "profileDiagnosticSaveButton": "Speichern",
+  "profileDiagnosticDownloadButton": "Herunterladen",
+  "profileDiagnosticCancel": "Abbrechen",
+  "profileDiagnosticShareSubject": "BeatBitch-Export",
+  "profileDiagnosticShareSnackbar": "Export zum Teilen bereit.",
+  "profileDiagnosticSavedSnackbar": "Datei gespeichert.",
+  "profileDiagnosticErrorSnackbar": "Export fehlgeschlagen: {error}",
+  "@profileDiagnosticErrorSnackbar": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+
   "profileResetSection": "GEFAHRENZONE",
   "profileResetButton": "Alles zurücksetzen",
   "profileResetDialogTitle": "Alles zurücksetzen?",

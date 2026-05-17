@@ -162,6 +162,33 @@
   "profileCapLickDepth": "Tongue depth",
   "profileCapLickStreak": "Unbroken tongue",
   "profileCapHandStreak": "Unbroken hand",
+  "profileDiagnosticSection": "DIAGNOSTIC",
+  "profileDiagnosticDescription": "Export a JSON file with your progress data — useful when reporting a bug. Nothing is sent automatically, you choose what to do with it.",
+  "profileDiagnosticExportButton": "Export my data",
+  "profileDiagnosticSheetTitle": "Export my data",
+  "profileDiagnosticSheetIntro": "The file contains:",
+  "profileDiagnosticItemCareer": "Career: your max level, completed sessions, milestones earned.",
+  "profileDiagnosticItemStats": "Stats: session counters (total time, throatfucks, holds, streaks…).",
+  "profileDiagnosticItemCapabilities": "Capabilities: your records and comfort zones per axis.",
+  "profileDiagnosticItemAnatomy": "Anatomy: your profile toggles (whether you have balls).",
+  "profileDiagnosticItemPreferences": "Preferences: language, voice, display, surprises, debug.",
+  "profileDiagnosticItemBadges": "Badges: the tiers you've unlocked.",
+  "profileDiagnosticIncludeNicknames": "Include my custom nicknames",
+  "profileDiagnosticIncludeNicknamesSubtitle": "Off by default — they may contain a real first name.",
+  "profileDiagnosticShareButton": "Share",
+  "profileDiagnosticSaveButton": "Save",
+  "profileDiagnosticDownloadButton": "Download",
+  "profileDiagnosticCancel": "Cancel",
+  "profileDiagnosticShareSubject": "BeatBitch export",
+  "profileDiagnosticShareSnackbar": "Export ready to share.",
+  "profileDiagnosticSavedSnackbar": "File saved.",
+  "profileDiagnosticErrorSnackbar": "Export failed: {error}",
+  "@profileDiagnosticErrorSnackbar": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+
   "profileResetSection": "DANGER ZONE",
   "profileResetButton": "Reset everything",
   "profileResetDialogTitle": "Reset everything?",

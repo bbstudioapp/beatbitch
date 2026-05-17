@@ -778,6 +778,132 @@ abstract class AppLocalizations {
   /// **'Main continue'**
   String get profileCapHandStreak;
 
+  /// No description provided for @profileDiagnosticSection.
+  ///
+  /// In fr, this message translates to:
+  /// **'DIAGNOSTIC'**
+  String get profileDiagnosticSection;
+
+  /// No description provided for @profileDiagnosticDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Exporte un fichier JSON avec ton état de progression — utile si tu veux signaler un bug. Rien n\'est envoyé automatiquement, c\'est toi qui choisis ce que tu en fais.'**
+  String get profileDiagnosticDescription;
+
+  /// No description provided for @profileDiagnosticExportButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'Exporter mes données'**
+  String get profileDiagnosticExportButton;
+
+  /// No description provided for @profileDiagnosticSheetTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Exporter mes données'**
+  String get profileDiagnosticSheetTitle;
+
+  /// No description provided for @profileDiagnosticSheetIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le fichier contient :'**
+  String get profileDiagnosticSheetIntro;
+
+  /// No description provided for @profileDiagnosticItemCareer.
+  ///
+  /// In fr, this message translates to:
+  /// **'Carrière : ton niveau max, sessions terminées, milestones acquises.'**
+  String get profileDiagnosticItemCareer;
+
+  /// No description provided for @profileDiagnosticItemStats.
+  ///
+  /// In fr, this message translates to:
+  /// **'Stats : compteurs de séance (temps total, throatfucks, holds, streaks…).'**
+  String get profileDiagnosticItemStats;
+
+  /// No description provided for @profileDiagnosticItemCapabilities.
+  ///
+  /// In fr, this message translates to:
+  /// **'Capacités : tes records et zones de confort par axe.'**
+  String get profileDiagnosticItemCapabilities;
+
+  /// No description provided for @profileDiagnosticItemAnatomy.
+  ///
+  /// In fr, this message translates to:
+  /// **'Anatomie : tes toggles de profil (présence des testicules).'**
+  String get profileDiagnosticItemAnatomy;
+
+  /// No description provided for @profileDiagnosticItemPreferences.
+  ///
+  /// In fr, this message translates to:
+  /// **'Préférences : langue, voix, affichage, surprises, debug.'**
+  String get profileDiagnosticItemPreferences;
+
+  /// No description provided for @profileDiagnosticItemBadges.
+  ///
+  /// In fr, this message translates to:
+  /// **'Badges : les paliers que tu as débloqués.'**
+  String get profileDiagnosticItemBadges;
+
+  /// No description provided for @profileDiagnosticIncludeNicknames.
+  ///
+  /// In fr, this message translates to:
+  /// **'Inclure mes surnoms personnalisés'**
+  String get profileDiagnosticIncludeNicknames;
+
+  /// No description provided for @profileDiagnosticIncludeNicknamesSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Désactivé par défaut — ils peuvent contenir un prénom réel.'**
+  String get profileDiagnosticIncludeNicknamesSubtitle;
+
+  /// No description provided for @profileDiagnosticShareButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partager'**
+  String get profileDiagnosticShareButton;
+
+  /// No description provided for @profileDiagnosticSaveButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer'**
+  String get profileDiagnosticSaveButton;
+
+  /// No description provided for @profileDiagnosticDownloadButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'Télécharger'**
+  String get profileDiagnosticDownloadButton;
+
+  /// No description provided for @profileDiagnosticCancel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get profileDiagnosticCancel;
+
+  /// No description provided for @profileDiagnosticShareSubject.
+  ///
+  /// In fr, this message translates to:
+  /// **'Export BeatBitch'**
+  String get profileDiagnosticShareSubject;
+
+  /// No description provided for @profileDiagnosticShareSnackbar.
+  ///
+  /// In fr, this message translates to:
+  /// **'Export prêt à être partagé.'**
+  String get profileDiagnosticShareSnackbar;
+
+  /// No description provided for @profileDiagnosticSavedSnackbar.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fichier enregistré.'**
+  String get profileDiagnosticSavedSnackbar;
+
+  /// No description provided for @profileDiagnosticErrorSnackbar.
+  ///
+  /// In fr, this message translates to:
+  /// **'Échec de l\'export : {error}'**
+  String profileDiagnosticErrorSnackbar(String error);
+
   /// No description provided for @profileResetSection.
   ///
   /// In fr, this message translates to:
