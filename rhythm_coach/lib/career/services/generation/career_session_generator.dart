@@ -47,6 +47,7 @@ import 'rules/career_session_generator_rules_hold.dart';
 import 'rules/career_session_generator_rules_lick.dart';
 import 'rules/career_session_generator_rules_rhythm.dart';
 import 'rules/career_session_generator_rules_suckle.dart';
+import 'bpm_pacing.dart';
 import 'mode_continuity_state.dart';
 import 'rhythm_chain_tracker.dart';
 import 'session_config.dart';
@@ -57,6 +58,7 @@ import 'step_type.dart';
 // Re-exports des types extraits — les 9 fichiers de rules et les call
 // sites externes importent `career_session_generator.dart` et y trouvent
 // toujours ces types.
+export 'bpm_pacing.dart' show BpmPacing;
 export 'mode_continuity_state.dart' show ModeContinuityState;
 export 'rhythm_chain_tracker.dart' show RhythmChainTracker;
 export 'session_config.dart' show SessionConfig;
@@ -66,7 +68,6 @@ export 'step_type.dart' show StepType;
 
 part 'career_session_generator_stamina.dart';
 part 'career_session_generator_mode_rules.dart';
-part 'career_session_generator_bpm.dart';
 part 'career_session_generator_humiliation.dart';
 part 'career_session_generator_capability.dart';
 part 'career_session_generator_mode_picker.dart';
@@ -882,10 +883,10 @@ class CareerSessionGenerator {
   ///      et seuils obédiance-modulés.
   ///   3. Transformations en cascade : `BegRules.stripAfterSoft` →
   ///      `_enforceHumiliationRequired` → `_applyBpmDiversity` →
-  ///      `_diversifyAmplitude` → `_BpmPacing.maybeApplyBpmRamp` →
+  ///      `_diversifyAmplitude` → `BpmPacing.maybeApplyBpmRamp` →
   ///      `_clampToCapability` (2ᵉ enveloppe, dernier mot).
   ///   4. Sas breath conditionnel si la stamina projetée < 0.
-  ///   5. Diversification en sous-segments (`_BpmPacing.diversifyLongSegment`)
+  ///   5. Diversification en sous-segments (`BpmPacing.diversifyLongSegment`)
   ///      + émission texte sur le 1ᵉʳ seulement.
   ///   6. Fake breath optionnel (niveau ≥ 12, post-step intense).
   ///   7. Chain action attachée (`draft.chainNext`) sans nouveau texte.
@@ -948,7 +949,7 @@ class CareerSessionGenerator {
     // moyenne (≤ mid), pose `bpmEnd` distinct pour raconter une
     // montée / descente sur la durée. Skip throat/full pour ne pas
     // violer le cap pulses (cf. `_capRhythmDurationByPulses`).
-    draft = _BpmPacing.maybeApplyBpmRamp(draft, progress, _rng, _config.level);
+    draft = BpmPacing.maybeApplyBpmRamp(draft, progress, _rng, _config.level);
     // 2ᵉ enveloppe (profil de capacités) : dernier mot après les
     // diversifications BPM/amplitude qui ont pu remonter au-dessus du
     // `comfort` prouvé. `_diversifyLongSegment` derrière ne fait que
@@ -991,7 +992,7 @@ class CareerSessionGenerator {
     // phase ne sonne pas comme un loop monotone. Les sous-segments
     // s'autorisent un léger dépassement BPM (≤ +10) — on re-borne donc
     // chacun au profil de capacités.
-    final emitDrafts = _BpmPacing.diversifyLongSegment(draft, _rng)
+    final emitDrafts = BpmPacing.diversifyLongSegment(draft, _rng)
         .map(_clampToCapability)
         .toList();
 
@@ -2023,7 +2024,7 @@ class CareerSessionGenerator {
   //
   // Les délégations consommées par les rules (`sampleFromTo`, `pickHold`,
   // `maybePickBegWithChain`, `capRhythmDurationByPulses`…) vivent désormais
-  // sur `GenFacade` qui wrappe directement `_PositionPickers` / `_BpmPacing`.
+  // sur `GenFacade` qui wrappe directement `_PositionPickers` / `BpmPacing`.
   // Restent ici uniquement les adaptateurs encore consommés par le
   // générateur lui-même (orchestration) ou ses parts (`_DifficultyDispatch`).
 
@@ -2153,7 +2154,7 @@ class CareerSessionGenerator {
     return _PunishmentBuilder.buildFor(this, bank, includeHand);
   }
 
-  /// Applique `_BpmPacing.diversifyBpm` au draft si pertinent (modes avec
+  /// Applique `BpmPacing.diversifyBpm` au draft si pertinent (modes avec
   /// BPM, hors hold/beg/breath/freestyle qui n'en ont pas), et met à jour
   /// `_state.lastBpm`. Retourne le draft (potentiellement modifié).
   ///
@@ -2161,7 +2162,7 @@ class CareerSessionGenerator {
   StepDraft _applyBpmDiversity(StepDraft d) {
     final bpm = d.bpm;
     if (bpm == null) return d;
-    final newBpm = _BpmPacing.diversifyBpm(bpm, _state.lastBpm, _rng);
+    final newBpm = BpmPacing.diversifyBpm(bpm, _state.lastBpm, _rng);
     _state.lastBpm = newBpm;
     if (newBpm == bpm) return d;
     return StepDraft(

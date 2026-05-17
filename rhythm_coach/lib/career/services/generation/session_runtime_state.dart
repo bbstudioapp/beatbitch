@@ -115,7 +115,7 @@ class SessionRuntimeState {
 
   /// Dernier BPM appliqué à un step (rhythm/lick/biffle/hand). Sert à
   /// forcer la variété : un nouveau BPM trop proche du précédent est
-  /// décalé de 18–30 BPM par `_BpmPacing.diversifyBpm`.
+  /// décalé de 18–30 BPM par `BpmPacing.diversifyBpm`.
   int? lastBpm;
 
   /// Dernier couple (from, to) appliqué pour les modes à amplitude
@@ -196,7 +196,7 @@ class SessionRuntimeState {
   ///
   /// `lastBpm` n'est **pas** touché : à mettre à jour explicitement au
   /// call site (`_state.lastBpm = d.bpm ?? _state.lastBpm`) quand le
-  /// `_BpmPacing.diversifyBpm` du prochain tour doit comparer contre ce
+  /// `BpmPacing.diversifyBpm` du prochain tour doit comparer contre ce
   /// step (intro, mini-vague). Pour les sous-segments de
   /// `_diversifyLongSegment` et le `chainNext`, on veut au contraire que
   /// `lastBpm` reste celui de l'**outer** step — ne rien faire ici donne
