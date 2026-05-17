@@ -154,8 +154,8 @@ class _RhythmRules extends _ModeRules {
   @override
   _StepDraft build(_DraftCtx ctx) {
     final bpm = _StaminaModel.lerp(60.0, 140.0, ctx.bpmScore).round();
-    final (from, to) = ctx.gen._sampleFromTo(ctx.ampScore);
-    var dur = ctx.gen._config.scaleDuration(
+    final (from, to) = ctx.gen.sampleFromTo(ctx.ampScore);
+    var dur = ctx.gen.config.scaleDuration(
       _StaminaModel.lerp(20.0, 60.0, ctx.durScore),
       enduranceFactor: 0.05,
     );
@@ -165,13 +165,13 @@ class _RhythmRules extends _ModeRules {
     // Cf. règle « passé to:throat, on se limite à un certain nombre
     // d'aller-retours par step ». Le cap est calculé en secondes :
     // durMax = maxPulses × 120 / bpm (×2 car pulse = 2 beats).
-    dur = ctx.gen._capRhythmDurationByPulses(dur, bpm, to);
+    dur = ctx.gen.capRhythmDurationByPulses(dur, bpm, to);
     // Cap rythme soutenu : tant que la milestone
     // `intro_rhythm_sustained` n'a pas été acquittée, la chaîne rythme
     // consécutive est plafonnée à 60 s. Le candidat n'arrive ici que
     // si `_rhythmChain.canChain()` était vrai au tirage, donc il reste
     // au moins `_RhythmChainTracker._minStepSeconds` de marge.
-    dur = ctx.gen._rhythmChain.capDuration(dur);
+    dur = ctx.gen.rhythmChain.capDuration(dur);
     return _StepDraft(
       mode: SessionMode.rhythm,
       bpm: bpm,
@@ -202,7 +202,7 @@ class _RhythmRules extends _ModeRules {
     // pour ne pas creuser la dette d'endurance qu'on cherche justement
     // à combler ailleurs.
     final hasThroat =
-        ctx.gen._state.unlockedKeys.contains(UnlockKey.throatHoldShort);
+        ctx.gen.state.unlockedKeys.contains(UnlockKey.throatHoldShort);
     return _StepDraft(
       mode: SessionMode.rhythm,
       bpm: ctx.bpm,
@@ -235,8 +235,8 @@ class _RhythmRules extends _ModeRules {
   /// d'amplitude : on ne décale jamais `to` au-dessus du palier de
   /// profondeur acquis.
   @override
-  int? amplitudeDiversifyCeiling(CareerSessionGenerator gen) =>
-      gen._milestoneRhythmCeilingIdx();
+  int? amplitudeDiversifyCeiling(_GenFacade gen) =>
+      gen.milestoneRhythmCeilingIdx();
 
   /// Rhythm en throat/full à BPM ≥ 90 = profil intense capable de
   /// déclencher un faux-breath taquin.

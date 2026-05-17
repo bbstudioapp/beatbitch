@@ -39,8 +39,8 @@ class _HandRules extends _ModeRules {
     // l'amplitude reste dans le haut (jamais plus profond que throat).
     // En revanche tip→head et head→head sont autorisés (le tirage
     // commun les exclut pour les autres modes).
-    final (from, to) = ctx.gen._sampleFromToForHand(ctx.ampScore);
-    final dur = ctx.gen._config.scaleDuration(
+    final (from, to) = ctx.gen.sampleFromToForHand(ctx.ampScore);
+    final dur = ctx.gen.config.scaleDuration(
       _StaminaModel.lerp(15.0, 30.0, ctx.durScore),
       enduranceFactor: 0.04,
     );
@@ -105,8 +105,7 @@ class _HandRules extends _ModeRules {
   /// profondeur côté gating (cf. règle « hand n'est jamais un levier
   /// de difficulté »).
   @override
-  int? amplitudeDiversifyCeiling(CareerSessionGenerator gen) =>
-      Position.full.index;
+  int? amplitudeDiversifyCeiling(_GenFacade gen) => Position.full.index;
 
   /// Hand en throat/full à BPM ≥ 90 = profil intense capable de
   /// déclencher un faux-breath (même logique que rhythm).

@@ -58,19 +58,64 @@ part of 'career_session_generator.dart';
 ///   continuité du type courant.
 enum _StepType { bouche, langue, libreMain, transit }
 
+/// Surface du générateur exposée aux `_ModeRules`. C'est strictement tout
+/// ce qu'une rule a le droit de consommer — ajouter une méthode ou un
+/// getter ici est un acte explicite (« j'élargis l'API que les modes
+/// peuvent voir »).
+///
+/// Le wrapper ne porte que des délégations triviales : la logique reste
+/// côté `CareerSessionGenerator` (et de ses sous-systèmes
+/// `_positionPickers`, `_BpmPacing`, `_RhythmChainTracker`). Il évite
+/// aux rules d'appeler directement les membres privés du générateur
+/// (`_sampleFromTo`, `_config`, `_rng`, …) — la barrière est mécanique
+/// dès qu'on type le ctx avec `_GenFacade` au lieu de
+/// `CareerSessionGenerator`.
+class _GenFacade {
+  const _GenFacade._(this._gen);
+
+  final CareerSessionGenerator _gen;
+
+  // ─── State stable lu par les rules ───────────────────────────────────────
+  _SessionConfig get config => _gen._config;
+  _SessionRuntimeState get state => _gen._state;
+  Random get rng => _gen._rng;
+  _RhythmChainTracker get rhythmChain => _gen._rhythmChain;
+
+  // ─── Plafonds milestone ──────────────────────────────────────────────────
+  int milestoneHoldCeilingIdx() => _gen._milestoneHoldCeilingIdx();
+  int milestoneRhythmCeilingIdx() => _gen._milestoneRhythmCeilingIdx();
+
+  // ─── Samplers position (délégués à `_positionPickers`) ───────────────────
+  (Position, Position) sampleFromTo(double ampScore,
+          {bool capByDepth = true}) =>
+      _gen._sampleFromTo(ampScore, capByDepth: capByDepth);
+  (Position, Position) sampleFromToForHand(double ampScore) =>
+      _gen._sampleFromToForHand(ampScore);
+  (Position, Position) sampleFromToForLick(double ampScore) =>
+      _gen._sampleFromToForLick(ampScore);
+  Position pickHoldPosition(double ampScore) =>
+      _gen._pickHoldPosition(ampScore);
+  Position? pickBegPosition(double ampScore) => _gen._pickBegPosition(ampScore);
+  _StepDraft? maybePickBegWithChain({
+    required Position? to,
+    required int obPts,
+  }) =>
+      _gen._maybePickBegWithChain(to: to, obPts: obPts);
+
+  // ─── Caps pacing (délégué à `_BpmPacing`) ────────────────────────────────
+  int capRhythmDurationByPulses(int dur, int bpm, Position? to) =>
+      _gen._capRhythmDurationByPulses(dur, bpm, to);
+}
+
 /// Contexte d'assemblage d'un step passé à `_ModeRules.build`. Porte les
 /// trois scores déjà budgétés par l'orchestrateur (cf.
 /// `_DifficultyDispatch._mapDifficultyToStep` pour la simplex + le bonus
-/// de spé par axe) et un handle vers le générateur pour accéder aux
-/// samplers (`_positionPickers`), caps (`_capRhythm*`, `_scaleDuration`),
-/// lecture de spé (`_pts`) et state stable (`_rng`, `_anatomy`,
-/// `_maxDepthIndex`, `_state.unlockedKeys`).
+/// de spé par axe) et un handle vers le générateur (`_GenFacade`) pour
+/// accéder aux samplers, caps, lecture de spé et state stable.
 ///
-/// Le couplage est explicite (`ctx.gen.x`) — la consolidation de la
-/// logique mode-specific dans les rules s'arrête à la frontière des
-/// services déjà extraits (`_positionPickers`, `_BpmPacing`). Le ctx
-/// n'a pas vocation à grossir : si une rule a besoin d'une donnée
-/// supplémentaire, la passer via `gen` plutôt que d'ajouter un field.
+/// Le couplage passe exclusivement par `_GenFacade` (pas d'accès direct
+/// aux internes du générateur). Si une rule a besoin d'une donnée
+/// supplémentaire, l'ajouter au facade plutôt que de gonfler le ctx.
 class _DraftCtx {
   const _DraftCtx({
     required this.bpmScore,
@@ -82,7 +127,7 @@ class _DraftCtx {
   final double bpmScore;
   final double ampScore;
   final double durScore;
-  final CareerSessionGenerator gen;
+  final _GenFacade gen;
 }
 
 /// Snapshot des conditions d'éligibilité d'un mode à la phase de récup,
@@ -118,7 +163,7 @@ class _RecoveryCtx {
     required this.duration,
   });
 
-  final CareerSessionGenerator gen;
+  final _GenFacade gen;
   final int bpm;
   final int duration;
 }
@@ -417,12 +462,12 @@ abstract class _ModeRules {
   /// est no-op (le draft est retourné tel quel).
   ///
   /// Default `null` (opt-in). Override `rhythm` consulte le plafond
-  /// milestone (`gen._milestoneRhythmCeilingIdx`) pour ne jamais
+  /// milestone (`gen.milestoneRhythmCeilingIdx`) pour ne jamais
   /// dépasser le palier d'unlock acquis. Override `lick` / `hand`
   /// retournent l'index `full` (4) — la profondeur max d'amplitude
   /// n'est pas gatée pour ces modes. `biffle` reste sur le default
   /// `null` (from/to sont null par convention).
-  int? amplitudeDiversifyCeiling(CareerSessionGenerator gen) => null;
+  int? amplitudeDiversifyCeiling(_GenFacade gen) => null;
 
   /// Vrai quand le dernier step émis dans ce mode est suffisamment
   /// intense pour déclencher un faux-breath de 2-3 s (cf.

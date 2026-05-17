@@ -46,13 +46,13 @@ class _LickRules extends _ModeRules {
   @override
   _StepDraft build(_DraftCtx ctx) {
     // Sloppy : monte le BPM minimum (≥ 65 = lick humide / saliveux).
-    final sloppyPts = ctx.gen._config.pts(SpecializationBranch.sloppy);
+    final sloppyPts = ctx.gen.config.pts(SpecializationBranch.sloppy);
     final lickBpmScore = sloppyPts > 0 ? max(ctx.bpmScore, 0.3) : ctx.bpmScore;
     final bpm = _StaminaModel.lerp(55.0, 80.0, lickBpmScore).round();
     // Tirage spécifique lick : tip→head forcé tant qu'humiliation < 2,
     // toutes amplitudes (incluant tip → throat/full) à partir de 2.
-    final (from, to) = ctx.gen._sampleFromToForLick(ctx.ampScore);
-    final dur = ctx.gen._config.scaleDuration(
+    final (from, to) = ctx.gen.sampleFromToForLick(ctx.ampScore);
+    final dur = ctx.gen.config.scaleDuration(
       _StaminaModel.lerp(10.0, 25.0, ctx.durScore),
       enduranceFactor: 0.04,
     );
@@ -72,7 +72,7 @@ class _LickRules extends _ModeRules {
 
   @override
   _StepDraft buildRecovery(_RecoveryCtx ctx) {
-    final (from, to) = ctx.gen._sampleFromTo(0.3);
+    final (from, to) = ctx.gen.sampleFromTo(0.3);
     return _StepDraft(
       mode: SessionMode.lick,
       bpm: ctx.bpm,
@@ -147,8 +147,7 @@ class _LickRules extends _ModeRules {
   /// plus haut sans contrainte milestone (cf. `_LickRules.unlockKeyFor`
   /// qui gate seulement `to == full` et `balls`).
   @override
-  int? amplitudeDiversifyCeiling(CareerSessionGenerator gen) =>
-      Position.full.index;
+  int? amplitudeDiversifyCeiling(_GenFacade gen) => Position.full.index;
 
   /// Lick post-final = consigne d'aftercare humiliant (« lèche pour
   /// nettoyer »). Pool dédié `pickPostFinalLick` avec fallback cascade

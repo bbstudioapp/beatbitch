@@ -52,15 +52,15 @@ class _SuckleRules extends _ModeRules {
     //   Position.balls.index`). On biaise vers head (zone classique) avec
     //   ~30 % de chances de tirer balls quand dispo, pour rester audible
     //   mais marginal.
-    final dur = ctx.gen._config.scaleDuration(
+    final dur = ctx.gen.config.scaleDuration(
       _StaminaModel.lerp(8.0, 18.0, ctx.durScore),
       enduranceFactor: 0.04,
     );
-    final ballsAllowed = ctx.gen._config.anatomy.hasBalls &&
-        ctx.gen._config.maxDepthIndex >= Position.balls.index &&
-        (ctx.gen._state.unlockedKeys.isEmpty ||
-            ctx.gen._state.unlockedKeys.contains(UnlockKey.suckleBalls));
-    final to = (ballsAllowed && ctx.gen._rng.nextDouble() < 0.30)
+    final ballsAllowed = ctx.gen.config.anatomy.hasBalls &&
+        ctx.gen.config.maxDepthIndex >= Position.balls.index &&
+        (ctx.gen.state.unlockedKeys.isEmpty ||
+            ctx.gen.state.unlockedKeys.contains(UnlockKey.suckleBalls));
+    final to = (ballsAllowed && ctx.gen.rng.nextDouble() < 0.30)
         ? Position.balls
         : Position.head;
     return _StepDraft(

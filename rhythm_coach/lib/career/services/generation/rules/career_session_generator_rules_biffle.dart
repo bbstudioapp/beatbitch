@@ -76,7 +76,7 @@ class _BiffleRules extends _ModeRules {
     // Biffle = coups de queue sur le visage : pas de notion de position.
     // from/to restent null.
     final bpm = _StaminaModel.lerp(80.0, 140.0, ctx.bpmScore).round();
-    final dur = ctx.gen._config.scaleDuration(
+    final dur = ctx.gen.config.scaleDuration(
       _StaminaModel.lerp(15.0, 40.0, ctx.durScore),
       enduranceFactor: 0.05,
     );
@@ -100,7 +100,7 @@ class _BiffleRules extends _ModeRules {
 
   @override
   _StepDraft buildRecovery(_RecoveryCtx ctx) {
-    final (from, to) = ctx.gen._sampleFromTo(0.3);
+    final (from, to) = ctx.gen.sampleFromTo(0.3);
     return _StepDraft(
       mode: SessionMode.biffle,
       bpm: ctx.bpm,

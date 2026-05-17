@@ -103,6 +103,10 @@ class CareerSessionGenerator {
   late final _RhythmChainTracker _rhythmChain = _RhythmChainTracker(gen: this);
   final _RhythmicPatternBuffer _patternBuffer = _RhythmicPatternBuffer();
 
+  /// Surface exposée aux `_ModeRules` (cf. `_GenFacade`). Instance unique
+  /// du générateur : les rules reçoivent toujours `_facade`, jamais `this`.
+  late final _GenFacade _facade = _GenFacade._(this);
+
   /// 2ᵉ enveloppe (immuable pour la séance) — recréée à chaque appel à
   /// [generate] après que l'axe de surcharge a été choisi.
   late _CapabilityClamps _capClamps;
@@ -1884,7 +1888,7 @@ class CareerSessionGenerator {
     // langue/libre alors que la séance vient juste de quitter bouche).
     final mode = _pickWeightedMode(pool);
     final draft = _modeRulesRegistry[mode]!.buildRecovery(_RecoveryCtx(
-      gen: this,
+      gen: _facade,
       bpm: bpm,
       duration: dur,
     ));
@@ -2113,7 +2117,8 @@ class CareerSessionGenerator {
   /// - lick / hand : full ouvert (pas de tension de profondeur)
   /// - biffle : pas concerné (from/to null par convention)
   _StepDraft _diversifyAmplitude(_StepDraft d) {
-    final ceiling = _modeRulesRegistry[d.mode]!.amplitudeDiversifyCeiling(this);
+    final ceiling =
+        _modeRulesRegistry[d.mode]!.amplitudeDiversifyCeiling(_facade);
     if (ceiling == null) return d;
     final lastFrom = _state.lastFrom;
     final lastTo = _state.lastTo;

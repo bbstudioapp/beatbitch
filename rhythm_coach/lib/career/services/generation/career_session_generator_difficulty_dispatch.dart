@@ -129,15 +129,16 @@ extension _DifficultyDispatch on CareerSessionGenerator {
         .clamp(0.0, 1.0);
 
     // Dispatch polymorphique : chaque rule consomme les 3 scores via
-    // `_DraftCtx` et accède aux samplers / caps via `ctx.gen.*`. La
-    // logique mode-specific (ranges BPM/amplitude/durée, sloppy boost
-    // pour lick, obéissance boost pour beg, anatomy gate pour suckle…)
-    // est portée par les `_ModeRules.build` correspondants.
+    // `_DraftCtx` et accède aux samplers / caps via `ctx.gen.*` (typé
+    // `_GenFacade`, surface restreinte du générateur). La logique
+    // mode-specific (ranges BPM/amplitude/durée, sloppy boost pour lick,
+    // obéissance boost pour beg, anatomy gate pour suckle…) est portée
+    // par les `_ModeRules.build` correspondants.
     return _modeRulesRegistry[mode]!.build(_DraftCtx(
       bpmScore: bpmScore,
       ampScore: ampScore,
       durScore: durScore,
-      gen: this,
+      gen: _facade,
     ));
   }
 }
