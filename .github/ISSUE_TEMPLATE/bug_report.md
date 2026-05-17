@@ -27,7 +27,7 @@ assignees: ''
 
 ## Environnement / Environment
 
-- **Version BeatBitch** : <!-- ex: 0.4.0 (Profil → bas de page) -->
+- **Version BeatBitch** : <!-- ex: 0.4.1 (Profil → bas de page) -->
 - **Plateforme / Platform** : <!-- coche / check : Android | Windows desktop | Linux desktop | autre / other -->
 - **OS** : <!-- ex: Android 15 / Samsung Galaxy S21 — ou — Windows 11 23H2 — ou — Ubuntu 24.04 -->
 - **Langue dans l'app / App language** : <!-- FR, EN, DE -->
