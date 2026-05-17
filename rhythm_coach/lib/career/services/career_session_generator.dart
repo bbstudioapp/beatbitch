@@ -631,6 +631,77 @@ class CareerSessionGenerator {
     );
   }
 
+  /// Émet **un step complet** dans `ctx.steps` + met à jour le profil
+  /// stamina + la sim salive + l'état runtime (`_state.lastX`,
+  /// `_rhythmChain`, `_patternBuffer`) + avance le curseur `time`.
+  /// Retourne `(time, stamina)` mis à jour.
+  ///
+  /// Bundle 6-7 opérations qui se répétaient à l'identique sur ~10 sites
+  /// (mini-vague, breath conditionnel, partDraft, fake breath, chain,
+  /// preFinisher, boost, finalStep, postFinal…). L'ordre interne diffère
+  /// légèrement de certains call sites historiques — c'est volontaire et
+  /// sûr : ces opérations sont **orthogonales** (chacune mute un store
+  /// distinct, aucune ne lit ce qu'une autre écrit dans la même itération).
+  ///
+  /// Non utilisé pour 3 sites qui ont des sémantiques particulières :
+  ///   * **Intro step** (`_firstStep`) — utilise `cfg` direct (sans ctx),
+  ///     fallback `?? 1` sur la durée (défensif).
+  ///   * **Swallow order** (`_tryEmitSwallowOrder`) — appelle
+  ///     `_state.salivaSim.forceSwallow()` au lieu de `_advanceSalivaSim`
+  ///     (l'ordre matérialise une obéissance → reset, pas une accumulation).
+  ///   * **Séquence milestone** (`_pushMilestoneSequence`) — émet des
+  ///     `SessionStep` raw (pas via `_draftToStep`), gère `overrideText`
+  ///     i18n, conditionne le tracking au `mStep.isTextOnly`.
+  ///
+  /// Paramètres :
+  ///   * [asTransit] : `false` → `_state.recordLastAction(draft, text)` ;
+  ///     `true` → `_state.recordLastTransit(draft.mode, text)`. Cf. doc
+  ///     `_SessionRuntimeState` pour la sémantique (action = mode/text/
+  ///     from/to ; transit = mode/text seulement, préserve `lastFrom/lastTo`).
+  ///   * [updateLastBpm] : si `true`, `_state.lastBpm = draft.bpm ?? _state.lastBpm`
+  ///     après l'émission. À mettre pour les sites où la diversification
+  ///     BPM du **prochain action step** doit comparer contre celui-ci
+  ///     (mini-vague, boost). Inutile pour les transit/parts qui préservent
+  ///     le `lastBpm` de l'outer step.
+  ({int time, double stamina}) _emitStep(
+    _GenContext ctx, {
+    required _StepDraft draft,
+    required String text,
+    required int time,
+    required double stamina,
+    required double progress,
+    required bool asTransit,
+    bool updateLastBpm = false,
+  }) {
+    ctx.steps.add(_draftToStep(draft, time: time, text: text));
+    final staminaBefore = stamina;
+    final newStamina = _StaminaModel.apply(stamina, draft, progress, ctx.cfg);
+    _advanceSalivaSim(draft);
+    _StaminaModel.fillProfile(
+      ctx.profile,
+      time,
+      draft.duration!,
+      newStamina,
+      valueStart: staminaBefore,
+    );
+    if (asTransit) {
+      _state.recordLastTransit(draft.mode, text);
+    } else {
+      _state.recordLastAction(draft, text);
+    }
+    if (updateLastBpm) {
+      _state.lastBpm = draft.bpm ?? _state.lastBpm;
+    }
+    _trackPushedStep(
+      draft.mode,
+      draft.to,
+      from: draft.from,
+      bpm: draft.bpm,
+      duration: draft.duration,
+    );
+    return (time: time + draft.duration!, stamina: newStamina);
+  }
+
   /// Phase 2 du main loop : tentative d'émission d'une **mini-vague** +
   /// **breath long post-vague**. Renvoie `null` si les conditions ne
   /// sont pas réunies (cf. [_shouldEmitMiniWave]). Sinon émet les 2-3
@@ -654,17 +725,18 @@ class CareerSessionGenerator {
     final waveDrafts = _buildMiniWave(humilCapForWave);
     for (final wd in waveDrafts) {
       final waveText = _pickPhraseForDraft(ctx.bank, wd, 'hard');
-      ctx.steps.add(_draftToStep(wd, time: time, text: waveText));
-      final staminaBefore = stamina;
-      stamina = _StaminaModel.apply(stamina, wd, progressForWave, ctx.cfg);
-      _advanceSalivaSim(wd);
-      _StaminaModel.fillProfile(ctx.profile, time, wd.duration!, stamina,
-          valueStart: staminaBefore);
-      _state.recordLastAction(wd, waveText);
-      _state.lastBpm = wd.bpm ?? _state.lastBpm;
-      _trackPushedStep(wd.mode, wd.to,
-          from: wd.from, bpm: wd.bpm, duration: wd.duration);
-      time += wd.duration!;
+      final r = _emitStep(
+        ctx,
+        draft: wd,
+        text: waveText,
+        time: time,
+        stamina: stamina,
+        progress: progressForWave,
+        asTransit: false,
+        updateLastBpm: true,
+      );
+      time = r.time;
+      stamina = r.stamina;
     }
     // Pause longue post-vague : breath dédié dimensionné pour viser
     // ~95 stamina, sortie volontaire du cap [4,12] du sas breath
@@ -679,18 +751,17 @@ class CareerSessionGenerator {
         stamina, postWaveProgress, ctx.cfg, ctx.genUntil - time);
     if (postWaveBreath != null) {
       final breathText = _pickPhrase(ctx.bank, SessionMode.breath, 'soft');
-      ctx.steps.add(_draftToStep(postWaveBreath, time: time, text: breathText));
-      final staminaBefore = stamina;
-      stamina = _StaminaModel.apply(
-          stamina, postWaveBreath, postWaveProgress, ctx.cfg);
-      _advanceSalivaSim(postWaveBreath);
-      _StaminaModel.fillProfile(
-          ctx.profile, time, postWaveBreath.duration!, stamina,
-          valueStart: staminaBefore);
-      _state.recordLastTransit(SessionMode.breath, breathText);
-      _trackPushedStep(SessionMode.breath, null,
-          duration: postWaveBreath.duration);
-      time += postWaveBreath.duration!;
+      final r = _emitStep(
+        ctx,
+        draft: postWaveBreath,
+        text: breathText,
+        time: time,
+        stamina: stamina,
+        progress: postWaveProgress,
+        asTransit: true,
+      );
+      time = r.time;
+      stamina = r.stamina;
     }
     // Replanification : 4-5 minutes après la fin de la vague émise.
     // La séance enchaîne ensuite sur du tirage classique — la stamina
@@ -835,20 +906,19 @@ class CareerSessionGenerator {
       if (projected < 0) {
         final breathDraft = _buildBreathRecovery(-projected, progress, ctx.cfg);
         final breathText = _pickPhrase(ctx.bank, SessionMode.breath, 'soft');
-        ctx.steps.add(_draftToStep(breathDraft, time: time, text: breathText));
-        final staminaBefore = stamina;
-        stamina = _StaminaModel.apply(stamina, breathDraft, progress, ctx.cfg);
-        _advanceSalivaSim(breathDraft);
-        _StaminaModel.fillProfile(
-            ctx.profile, time, breathDraft.duration!, stamina,
-            valueStart: staminaBefore);
-        time += breathDraft.duration!;
-        _state.recordLastTransit(SessionMode.breath, breathText);
-        // breath = transit → ne touche pas _state.lastType (parenthèse
-        // transparente). On l'appelle quand même pour cohérence si la
-        // règle évoluait.
-        _trackPushedStep(SessionMode.breath, null,
-            duration: breathDraft.duration);
+        // breath = transit → ne touche pas `_state.lastType` (parenthèse
+        // transparente, cf. doc `_SessionRuntimeState.recordLastTransit`).
+        final r = _emitStep(
+          ctx,
+          draft: breathDraft,
+          text: breathText,
+          time: time,
+          stamina: stamina,
+          progress: progress,
+          asTransit: true,
+        );
+        time = r.time;
+        stamina = r.stamina;
       }
     }
 
@@ -876,18 +946,17 @@ class CareerSessionGenerator {
       // ou profondeur change entre eux.
       final partText =
           partIdx == 0 ? _pickPhraseForDraft(ctx.bank, partDraft, tier) : '';
-      final staminaBefore = stamina;
-      stamina = _StaminaModel.apply(stamina, partDraft, progress, ctx.cfg);
-      _advanceSalivaSim(partDraft);
-      ctx.steps.add(_draftToStep(partDraft, time: time, text: partText));
-      _state.recordLastAction(partDraft, partText);
-      _trackPushedStep(partDraft.mode, partDraft.to,
-          from: partDraft.from,
-          bpm: partDraft.bpm,
-          duration: partDraft.duration);
-      _StaminaModel.fillProfile(ctx.profile, time, partDraft.duration!, stamina,
-          valueStart: staminaBefore);
-      time += partDraft.duration!;
+      final r = _emitStep(
+        ctx,
+        draft: partDraft,
+        text: partText,
+        time: time,
+        stamina: stamina,
+        progress: progress,
+        asTransit: false,
+      );
+      time = r.time;
+      stamina = r.stamina;
     }
 
     // **Fake breath** (à partir du niveau 12) : après un step intense
@@ -908,19 +977,17 @@ class CareerSessionGenerator {
       bank: ctx.bank,
     );
     if (fakeBreath != null) {
-      final staminaBeforeFake = stamina;
-      stamina =
-          _StaminaModel.apply(stamina, fakeBreath.draft, progress, ctx.cfg);
-      _advanceSalivaSim(fakeBreath.draft);
-      ctx.steps.add(
-          _draftToStep(fakeBreath.draft, time: time, text: fakeBreath.text));
-      _state.recordLastTransit(SessionMode.breath, fakeBreath.text);
-      _trackPushedStep(SessionMode.breath, null,
-          duration: fakeBreath.draft.duration);
-      _StaminaModel.fillProfile(
-          ctx.profile, time, fakeBreath.draft.duration!, stamina,
-          valueStart: staminaBeforeFake);
-      time += fakeBreath.draft.duration!;
+      final r = _emitStep(
+        ctx,
+        draft: fakeBreath.draft,
+        text: fakeBreath.text,
+        time: time,
+        stamina: stamina,
+        progress: progress,
+        asTransit: true,
+      );
+      time = r.time;
+      stamina = r.stamina;
     }
 
     // Chain action attachée au draft principal (beg + suite continue) :
@@ -928,16 +995,17 @@ class CareerSessionGenerator {
     // d'intro (la consigne est déjà dans la phrase du beg).
     final chain = draft.chainNext;
     if (chain != null && chain.duration != null) {
-      final staminaBefore = stamina;
-      stamina = _StaminaModel.apply(stamina, chain, progress, ctx.cfg);
-      _advanceSalivaSim(chain);
-      ctx.steps.add(_draftToStep(chain, time: time, text: ''));
-      _state.recordLastAction(chain, '');
-      _trackPushedStep(chain.mode, chain.to,
-          from: chain.from, bpm: chain.bpm, duration: chain.duration);
-      _StaminaModel.fillProfile(ctx.profile, time, chain.duration!, stamina,
-          valueStart: staminaBefore);
-      time += chain.duration!;
+      final r = _emitStep(
+        ctx,
+        draft: chain,
+        text: '',
+        time: time,
+        stamina: stamina,
+        progress: progress,
+        asTransit: false,
+      );
+      time = r.time;
+      stamina = r.stamina;
     }
 
     if (kDebugMode) {
@@ -1242,18 +1310,15 @@ class CareerSessionGenerator {
       duration: preDur,
     ));
     final preText = _pickPhraseForDraft(ctx.bank, preDraft, 'medium');
-    ctx.steps.add(_draftToStep(preDraft, time: time, text: preText));
-    _state.recordLastTransit(SessionMode.rhythm, preText);
-    _trackPushedStep(SessionMode.rhythm, preDraft.to,
-        from: preDraft.from, bpm: preDraft.bpm, duration: preDraft.duration);
-    final staminaBeforePre = stamina;
-    final newStamina = _StaminaModel.apply(
-        stamina, preDraft, time / ctx.effectiveDuration, ctx.cfg);
-    _StaminaModel.fillProfile(
-        ctx.profile, time, preDraft.duration ?? preDur, newStamina,
-        valueStart: staminaBeforePre);
-    _advanceSalivaSim(preDraft);
-    return (time: time + (preDraft.duration ?? preDur), stamina: newStamina);
+    return _emitStep(
+      ctx,
+      draft: preDraft,
+      text: preText,
+      time: time,
+      stamina: stamina,
+      progress: time / ctx.effectiveDuration,
+      asTransit: true,
+    );
   }
 
   /// Choix du mode pour la phase de boosts (`hand_burst` non humiliant vs
@@ -1479,24 +1544,18 @@ class CareerSessionGenerator {
         ? announcePhrase
         : (finalActionPhrase ?? '');
     final finalStepStartTime = time;
-    final finisherStep =
-        _draftToStep(finisherDraft, time: time, text: finalStepText);
-    _state.recordLastTransit(finalMode, finalStepText);
-    _trackPushedStep(finalMode, finisherDraft.to,
-        from: finisherDraft.from,
-        bpm: finisherDraft.bpm,
-        duration: finisherDraft.duration);
-    final finisherDuration = finisherDraft.duration!;
-    ctx.steps.add(finisherStep);
-    final staminaBeforeFinisher = stamina;
-    final newStamina =
-        _StaminaModel.apply(stamina, finisherDraft, 1.0, ctx.cfg);
-    _StaminaModel.fillProfile(ctx.profile, time, finisherDuration, newStamina,
-        valueStart: staminaBeforeFinisher);
-    _advanceSalivaSim(finisherDraft);
+    final r = _emitStep(
+      ctx,
+      draft: finisherDraft,
+      text: finalStepText,
+      time: time,
+      stamina: stamina,
+      progress: 1.0,
+      asTransit: true,
+    );
     return (
-      time: time + finisherDuration,
-      stamina: newStamina,
+      time: r.time,
+      stamina: r.stamina,
       finalCategory: finalCategory,
       finalMode: finalMode,
       finalStepStartTime: finalStepStartTime,
@@ -1525,21 +1584,15 @@ class CareerSessionGenerator {
     final postFinalText = modeSpecific ??
         ctx.bank.pickPostFinal(_rng) ??
         ctx.bank.pickCongrats(_rng);
-    final postFinalDuration = postFinalDraft.duration!;
-    ctx.steps
-        .add(_draftToStep(postFinalDraft, time: time, text: postFinalText));
-    final staminaBeforePostFinal = stamina;
-    final newStamina =
-        _StaminaModel.apply(stamina, postFinalDraft, 1.0, ctx.cfg);
-    _StaminaModel.fillProfile(ctx.profile, time, postFinalDuration, newStamina,
-        valueStart: staminaBeforePostFinal);
-    _advanceSalivaSim(postFinalDraft);
-    _state.recordLastTransit(postFinalDraft.mode, postFinalText);
-    _trackPushedStep(postFinalDraft.mode, postFinalDraft.to,
-        from: postFinalDraft.from,
-        bpm: postFinalDraft.bpm,
-        duration: postFinalDraft.duration);
-    return (time: time + postFinalDuration, stamina: newStamina);
+    return _emitStep(
+      ctx,
+      draft: postFinalDraft,
+      text: postFinalText,
+      time: time,
+      stamina: stamina,
+      progress: 1.0,
+      asTransit: true,
+    );
   }
 
   /// Construit le [CareerGenerationResult] final à partir des accumulateurs
