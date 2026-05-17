@@ -177,4 +177,35 @@ class _RhythmRules extends _ModeRules {
       duration: dur,
     );
   }
+
+  /// Rhythm très doux comme « récup en bouche » : BPM bas, tip→head ou
+  /// head→mid selon les unlocks, coût stamina modéré. Toujours candidat
+  /// — la friction de continuité (`_ModePicker`) décide s'il gagne. Sans
+  /// ça, une recovery déclenchée depuis bouche reste systématiquement
+  /// bloquée hors bouche, et le pattern « rhythm → recovery → rhythm »
+  /// fait des séries de 1 step.
+  @override
+  bool isRecoveryCandidate(_RecoveryAvailability a) => true;
+
+  @override
+  _StepDraft buildRecovery(_RecoveryCtx ctx) {
+    // La baseline (tip→head) reste ouverte tant que la joueuse n'a pas
+    // appris la gorge — gate sur `throatHoldShort` plutôt que
+    // `holdMidShort` : les premiers paliers ont besoin de variété
+    // (tip→head, tip→mid, head→mid se mélangent), ce serait trop pauvre
+    // de tout aligner sur head→mid dès le niveau 4. Dès que la gorge est
+    // débloquée, le rhythm de recovery passe à head→mid — la baseline
+    // doit refléter le niveau. BPM bas — le coût stamina reste modéré
+    // pour ne pas creuser la dette d'endurance qu'on cherche justement
+    // à combler ailleurs.
+    final hasThroat =
+        ctx.gen._unlockedKeys.contains(UnlockKey.throatHoldShort);
+    return _StepDraft(
+      mode: SessionMode.rhythm,
+      bpm: ctx.bpm,
+      from: hasThroat ? Position.head : Position.tip,
+      to: hasThroat ? Position.mid : Position.head,
+      duration: ctx.duration,
+    );
+  }
 }

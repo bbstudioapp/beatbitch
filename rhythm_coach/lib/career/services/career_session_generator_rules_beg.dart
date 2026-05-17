@@ -121,4 +121,28 @@ class _BegRules extends _ModeRules {
       duration: baseDur,
     );
   }
+
+  /// Beg n'entre dans la palette de récup que si la milestone
+  /// `intro_beg` (= clé `begLibre`) est acquittée. Sinon la supplique
+  /// libre n'est pas encore introduite ; toutes les autres formes de beg
+  /// (avec `from` tenu) sont mécaniquement plus dures et gatées par
+  /// `begThroat`.
+  @override
+  bool isRecoveryCandidate(_RecoveryAvailability a) =>
+      a.heritage || a.unlockedKeys.contains(UnlockKey.begLibre);
+
+  @override
+  _StepDraft buildRecovery(_RecoveryCtx ctx) {
+    // Récup vocale par défaut : sans position (= beg libre). Durée plus
+    // courte que la fenêtre standard de récup — une supplique tient
+    // rarement plus de 10 s sans s'essouffler.
+    final begDur = 6 + ctx.gen._rng.nextInt(6);
+    return _StepDraft(
+      mode: SessionMode.beg,
+      bpm: null,
+      from: null,
+      to: null,
+      duration: begDur,
+    );
+  }
 }

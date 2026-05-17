@@ -85,4 +85,25 @@ class _BiffleRules extends _ModeRules {
       duration: dur,
     );
   }
+
+  /// Biffle entre dans la palette de récup uniquement si le toggle Hand
+  /// est actif (le mode est mécaniquement « main libre ») ET si la
+  /// milestone d'introduction (`biffle_basic`) est acquittée. En mode
+  /// hérité (sessions hors-carrière) le gating est court-circuité.
+  @override
+  bool isRecoveryCandidate(_RecoveryAvailability a) =>
+      a.includeHand &&
+      (a.heritage || a.unlockedKeys.contains(UnlockKey.biffleBasic));
+
+  @override
+  _StepDraft buildRecovery(_RecoveryCtx ctx) {
+    final (from, to) = ctx.gen._sampleFromTo(0.3);
+    return _StepDraft(
+      mode: SessionMode.biffle,
+      bpm: ctx.bpm,
+      from: from,
+      to: to,
+      duration: ctx.duration,
+    );
+  }
 }

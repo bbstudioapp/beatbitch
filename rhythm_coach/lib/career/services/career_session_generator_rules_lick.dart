@@ -61,4 +61,21 @@ class _LickRules extends _ModeRules {
       duration: dur,
     );
   }
+
+  /// Lick est toujours candidat en récup — c'est la baseline « langue »
+  /// (variante douce, vraie regen d'endurance à BPM bas).
+  @override
+  bool isRecoveryCandidate(_RecoveryAvailability a) => true;
+
+  @override
+  _StepDraft buildRecovery(_RecoveryCtx ctx) {
+    final (from, to) = ctx.gen._sampleFromTo(0.3);
+    return _StepDraft(
+      mode: SessionMode.lick,
+      bpm: ctx.bpm,
+      from: from,
+      to: to,
+      duration: ctx.duration,
+    );
+  }
 }
