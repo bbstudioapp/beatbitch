@@ -32,7 +32,7 @@ part of 'career_session_generator.dart';
 ///
 /// L'état du tracker (`_consecutiveSeconds`) est par-session : `reset()`
 /// au début de chaque `generate()`. Il lit son cap via le générateur
-/// (`gen._capProfile`, `gen._overloadFactorFor`, `gen._unlockedKeys`)
+/// (`gen._config.capProfile`, `gen._overloadFactorFor`, `gen._unlockedKeys`)
 /// — couplage explicite assumé, comme `_DraftCtx` pour les rules.
 class _RhythmChainTracker {
   _RhythmChainTracker({required this.gen});
@@ -66,7 +66,8 @@ class _RhythmChainTracker {
   /// régime profil-pilotant si `motion_streak` est renseigné dans le
   /// profil de capacités ; régime historique sinon.
   int get effectiveCapSeconds {
-    final c = gen._capProfile?.comfortOf(CapabilityAxis.rhythmMotionStreak);
+    final c =
+        gen._config.capProfile?.comfortOf(CapabilityAxis.rhythmMotionStreak);
     if (c != null) {
       final v = (c * gen._overloadFactorFor(CapabilityAxis.rhythmMotionStreak))
           .round();

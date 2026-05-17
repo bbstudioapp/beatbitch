@@ -48,16 +48,16 @@ class _SuckleRules extends _ModeRules {
     //   plus tard ; le filtre `_isUnlocked` rejette ce qui n'est pas
     //   encore acquis et la cascade dégrade.
     // - En mode hérité (Custom) : balls n'est candidat que si l'anatomy
-    //   l'inclut et que la profondeur max le permet (`_maxDepthIndex >=
+    //   l'inclut et que la profondeur max le permet (`_config.maxDepthIndex >=
     //   Position.balls.index`). On biaise vers head (zone classique) avec
     //   ~30 % de chances de tirer balls quand dispo, pour rester audible
     //   mais marginal.
-    final dur = ctx.gen._scaleDuration(
+    final dur = ctx.gen._config.scaleDuration(
       _StaminaModel.lerp(8.0, 18.0, ctx.durScore),
       enduranceFactor: 0.04,
     );
-    final ballsAllowed = ctx.gen._anatomy.hasBalls &&
-        ctx.gen._maxDepthIndex >= Position.balls.index &&
+    final ballsAllowed = ctx.gen._config.anatomy.hasBalls &&
+        ctx.gen._config.maxDepthIndex >= Position.balls.index &&
         (ctx.gen._unlockedKeys.isEmpty ||
             ctx.gen._unlockedKeys.contains(UnlockKey.suckleBalls));
     final to = (ballsAllowed && ctx.gen._rng.nextDouble() < 0.30)

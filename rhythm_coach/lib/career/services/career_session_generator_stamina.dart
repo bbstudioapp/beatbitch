@@ -10,7 +10,7 @@
 //    de futurs tests unitaires dédiés sont triviaux à écrire.
 //
 // Restent côté instance dans le fichier principal :
-//   * `_pts` / `_scaleDuration` — tissent `_spec` à travers la pondération
+//   * `_config.pts` / `_config.scaleDuration` — tissent `_config.spec` à travers la pondération
 //     des modes, lectures éparpillées dans tout le générateur.
 
 part of 'career_session_generator.dart';

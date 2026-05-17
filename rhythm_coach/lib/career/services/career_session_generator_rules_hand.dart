@@ -40,7 +40,7 @@ class _HandRules extends _ModeRules {
     // En revanche tip→head et head→head sont autorisés (le tirage
     // commun les exclut pour les autres modes).
     final (from, to) = ctx.gen._sampleFromToForHand(ctx.ampScore);
-    final dur = ctx.gen._scaleDuration(
+    final dur = ctx.gen._config.scaleDuration(
       _StaminaModel.lerp(15.0, 30.0, ctx.durScore),
       enduranceFactor: 0.04,
     );

@@ -102,7 +102,7 @@ class _HoldRules extends _ModeRules {
     // Convention uniforme hold/beg : la position tenue est dans `to`
     // (matche BeepEngine et le format SessionStep des JSON).
     final to = ctx.gen._pickHoldPosition(ctx.ampScore);
-    final dur = ctx.gen._scaleDuration(
+    final dur = ctx.gen._config.scaleDuration(
       _StaminaModel.lerp(8.0, 30.0, max(ctx.durScore, ctx.bpmScore)),
       enduranceFactor: 0.08,
     );

@@ -195,7 +195,8 @@ class _PunishmentBuilder {
     PhraseBank bank,
     bool includeHand,
   ) {
-    final humilCap = gen._humiliationCareer + gen._humiliationSession;
+    final humilCap =
+        gen._config.humiliationCareer + gen._config.humiliationSession;
 
     // Filtre humilCap + unlocks composants + gating hand. Sélection = max
     // humiliant valide (parité `_FinalPicker.pickFinal` : tri par `req`
