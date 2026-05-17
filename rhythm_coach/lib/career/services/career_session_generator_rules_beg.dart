@@ -73,6 +73,28 @@ class _BegRules extends _ModeRules {
     return null;
   }
 
+  /// Si [draft] est un `beg` qui suit immédiatement un `lick` ou un
+  /// `breath`, retourne une copie sans position tenue (récup vocale pure).
+  /// Sinon, renvoie [draft] tel quel. Méthode pure, no-op si le mode
+  /// n'est pas `beg` — l'orchestrateur peut l'appeler en mode-blind.
+  static _StepDraft stripAfterSoft(
+    _StepDraft draft,
+    List<SessionStep> steps,
+  ) {
+    if (draft.mode != SessionMode.beg) return draft;
+    if (draft.to == null) return draft;
+    if (steps.isEmpty) return draft;
+    final prev = steps.last.mode;
+    if (prev != SessionMode.lick && prev != SessionMode.breath) return draft;
+    return _StepDraft(
+      mode: draft.mode,
+      bpm: draft.bpm,
+      from: draft.from,
+      to: null,
+      duration: draft.duration,
+    );
+  }
+
   @override
   _StepDraft build(_DraftCtx ctx) {
     // Convention uniforme hold/beg : la position tenue est dans `to`.

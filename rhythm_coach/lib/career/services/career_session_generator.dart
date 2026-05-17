@@ -901,7 +901,7 @@ class CareerSessionGenerator {
       // retire le `from` pour enchaîner sur une supplique purement vocale
       // plutôt que de redemander de tenir une position. Côté stamina,
       // beg avec from=null suit la même branche regen que from=head.
-      var draft = _stripBegFromAfterSoft(initialDraft, steps);
+      var draft = _BegRules.stripAfterSoft(initialDraft, steps);
 
       // Filtre humiliation requise : on garde uniquement ce que le cap
       // effectif (career + session projeté à `time`) permet. La rampe
@@ -2437,27 +2437,6 @@ class CareerSessionGenerator {
   }
 
   int _pts(SpecializationBranch b) => _spec.pointsIn(b);
-
-  /// Si [draft] est un `beg` qui suit immédiatement un `lick` ou un
-  /// `breath`, retourne une copie sans position tenue (récup vocale pure).
-  /// Sinon, renvoie [draft] tel quel.
-  _StepDraft _stripBegFromAfterSoft(
-    _StepDraft draft,
-    List<SessionStep> steps,
-  ) {
-    if (draft.mode != SessionMode.beg) return draft;
-    if (draft.to == null) return draft;
-    if (steps.isEmpty) return draft;
-    final prev = steps.last.mode;
-    if (prev != SessionMode.lick && prev != SessionMode.breath) return draft;
-    return _StepDraft(
-      mode: draft.mode,
-      bpm: draft.bpm,
-      from: draft.from,
-      to: null,
-      duration: draft.duration,
-    );
-  }
 
   /// Cap la durée d'un step rythmé par le **nombre d'aller-retours** sur
   /// la profondeur cible. Évite qu'un step `to=throat` à 90 bpm dure 60 s
