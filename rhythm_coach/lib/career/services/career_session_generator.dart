@@ -512,10 +512,13 @@ class CareerSessionGenerator {
     // `isLowLevel`, `useFinalMilestone`, `finalBudget`, `genUntil` désormais
     // pré-calculés en tête de [generate] (cf. construction de `ctx` plus haut).
     while (time < genUntil) {
-      // Insertion milestone : on traite les pending dans l'ordre, dès que
-      // `time` atteint la target (`>= targetTime`), OU dès qu'on dépasse
-      // la borne max (insertion en urgence pour ne pas la louper). Le cas
-      // time < target continue à empiler des steps de chauffe normalement.
+      // Phase 1 — Insertion milestone : on traite les pending dans
+      // l'ordre, dès que `time` atteint la target (`>= targetTime`),
+      // OU dès qu'on dépasse la borne max (insertion en urgence pour
+      // ne pas la louper). Le cas time < target continue à empiler des
+      // steps de chauffe normalement. L'orchestration vit en closure
+      // dans cette méthode pour pouvoir muter `time/stamina/pending` ;
+      // un futur refacto pourra l'encapsuler dans un `_MilestoneScheduler`.
       var nextPendingIndex = -1;
       for (var idx = 0; idx < pending.length; idx++) {
         if (!pending[idx].inserted) {
@@ -531,275 +534,31 @@ class CareerSessionGenerator {
           continue;
         }
       }
-      // Mini-vague : 2-3 steps enchaînés à BPM montant qui cassent la
-      // diagonale d'intensité unique du début au finish. Inséré toutes
-      // les ~4-5 minutes sur les sessions longues (≥ 12 min) à partir du
-      // niveau 5. Cf. `_shouldEmitMiniWave`.
-      if (_shouldEmitMiniWave(time, effectiveDuration, stamina, genUntil)) {
-        final progressForWave = time / effectiveDuration;
-        final humilCapForWave = _config.humilCapAt(time);
-        final waveDrafts = _buildMiniWave(humilCapForWave);
-        for (final wd in waveDrafts) {
-          final waveText = _pickPhraseForDraft(bank, wd, 'hard');
-          steps.add(_draftToStep(wd, time: time, text: waveText));
-          final staminaBefore = stamina;
-          stamina = _StaminaModel.apply(stamina, wd, progressForWave, cfg);
-          _advanceSalivaSim(wd);
-          _StaminaModel.fillProfile(profile, time, wd.duration!, stamina,
-              valueStart: staminaBefore);
-          _state.recordLastAction(wd, waveText);
-          _state.lastBpm = wd.bpm ?? _state.lastBpm;
-          _trackPushedStep(wd.mode, wd.to,
-              from: wd.from, bpm: wd.bpm, duration: wd.duration);
-          time += wd.duration!;
-        }
-        // Pause longue post-vague : breath dédié dimensionné pour viser
-        // ~95 stamina, sortie volontaire du cap [4,12] du sas breath
-        // standard — la vague est un mini-finish, on s'autorise une vraie
-        // respiration scénarisée derrière pour repartir de plein. Borne
-        // [12, 20] s : 12 = baseline minimale même si stamina déjà haute,
-        // 20 = plafond pour ne pas casser le rythme dramaturgique de la
-        // session. À niveau 9 milieu de séance (regen ≈ 1.6, ≈ 4.5/s),
-        // 15-20 s rendent ~70-90 stamina.
-        final postWaveProgress = time / effectiveDuration;
-        final postWaveBreath = _buildPostWaveBreath(
-            stamina, postWaveProgress, cfg, genUntil - time);
-        if (postWaveBreath != null) {
-          final breathText = _pickPhrase(bank, SessionMode.breath, 'soft');
-          steps.add(_draftToStep(postWaveBreath, time: time, text: breathText));
-          final staminaBefore = stamina;
-          stamina = _StaminaModel.apply(
-              stamina, postWaveBreath, postWaveProgress, cfg);
-          _advanceSalivaSim(postWaveBreath);
-          _StaminaModel.fillProfile(
-              profile, time, postWaveBreath.duration!, stamina,
-              valueStart: staminaBefore);
-          _state.recordLastTransit(SessionMode.breath, breathText);
-          _trackPushedStep(SessionMode.breath, null,
-              duration: postWaveBreath.duration);
-          time += postWaveBreath.duration!;
-        }
-        // Replanification : 4-5 minutes après la fin de la vague émise.
-        // La séance enchaîne ensuite sur du tirage classique — la stamina
-        // restaurée par la pause longue permet d'enchaîner sereinement
-        // jusqu'à la prochaine vague.
-        _state.nextMiniWaveAt = time + 240 + _rng.nextInt(61);
+      // Phase 2 — Mini-vague (+ breath long post-vague) : 2-3 steps à
+      // BPM montant qui cassent la diagonale d'intensité, suivis d'un
+      // breath long de récup. Inséré toutes les ~4-5 min sur sessions
+      // longues ≥ 12 min à partir du niveau 5.
+      final miniWave = _tryEmitMiniWaveCycle(ctx, time: time, stamina: stamina);
+      if (miniWave != null) {
+        time = miniWave.time;
+        stamina = miniWave.stamina;
         continue;
       }
-      // Ordre de déglutition forcé : quand la simulation salive sature,
-      // on transforme la jauge silencieuse en mécanique gameplay — un
-      // beg libre court « avale tout » avec phrase dédiée. Cf.
-      // `_maybeBuildSwallowOrder` pour les conditions.
-      final swallowDraft = _maybeBuildSwallowOrder(time, genUntil);
-      if (swallowDraft != null) {
-        final swallowText = bank.pickSwallowOrder(_rng) ??
-            _pickPhrase(bank, SessionMode.beg, 'hard');
-        steps.add(_draftToStep(swallowDraft, time: time, text: swallowText));
-        final staminaBefore = stamina;
-        stamina = _StaminaModel.apply(
-            stamina, swallowDraft, time / effectiveDuration, cfg);
-        // Conséquence simulée de l'ordre : la sim retombe à 0, comme si
-        // la joueuse obéissait. En runtime le SessionController fera de
-        // même via `SalivaEngine.forceSwallow()`.
-        _state.salivaSim.forceSwallow();
-        _StaminaModel.fillProfile(
-            profile, time, swallowDraft.duration!, stamina,
-            valueStart: staminaBefore);
-        _state.recordLastTransit(SessionMode.beg, swallowText);
-        _trackPushedStep(SessionMode.beg, null,
-            duration: swallowDraft.duration);
-        time += swallowDraft.duration!;
-        _state.lastSwallowOrderAt = time;
+      // Phase 3 — Ordre de déglutition forcé : beg libre court quand la
+      // simulation salive sature.
+      final swallow = _tryEmitSwallowOrder(ctx, time: time, stamina: stamina);
+      if (swallow != null) {
+        time = swallow.time;
+        stamina = swallow.stamina;
         continue;
       }
-      final progress = time / effectiveDuration;
-      final windowMin = _StaminaModel.lerp(0.05, 0.50, progress);
-      var windowMax =
-          min(_StaminaModel.lerp(0.30, 1.00, progress), cfg.maxDifficultyCap);
-      // Floor d'intensité (mode bâclée) : tronque le bas de la fenêtre.
-      final flooredMin = max(windowMin, intensityFloor);
-      final boundedMin = min(flooredMin, windowMax - 0.05).clamp(0.0, 1.0);
-      windowMax = max(windowMax, boundedMin + 0.05);
-
-      final diff = boundedMin + _rng.nextDouble() * (windowMax - boundedMin);
-
-      final _StepDraft initialDraft;
-      // Seuils de recovery modulés par l'obéissance : plus elle est haute,
-      // plus on respecte l'endurance (recovery déclenché plus tôt). Sur la
-      // dernière minute, on les coupe entièrement — la fin de séance ignore
-      // l'endurance par contrat.
-      final inLastMinute = (effectiveDuration - time) <= 60;
-      // Bonus obédiance sur le seuil de recovery : capé +25 pour pas
-      // qu'une obédiance lifetime extrême (200+) pousse le seuil à 80
-      // (= recovery quasi-permanente). À obed=100, +25 ; à obed=0, +0.
-      final obedienceBonus = (obedience / 100.0).clamp(0.0, 1.0) * 25.0;
-      final recoveryThreshold =
-          inLastMinute ? -1 : (quickie ? 15 : 30) + obedienceBonus;
-      final recoveryRandomThreshold =
-          inLastMinute ? -1 : (quickie ? 25 : 50) + obedienceBonus;
-      if (stamina < recoveryThreshold ||
-          (stamina < recoveryRandomThreshold && _rng.nextBool())) {
-        initialDraft = _buildRecoveryStep();
-      } else {
-        initialDraft = _mapDifficultyToStep(diff);
-      }
-      // Si beg arrive juste après une phase douce (lick / breath), on
-      // retire le `from` pour enchaîner sur une supplique purement vocale
-      // plutôt que de redemander de tenir une position. Côté stamina,
-      // beg avec from=null suit la même branche regen que from=head.
-      var draft = _BegRules.stripAfterSoft(initialDraft, steps);
-
-      // Filtre humiliation requise : on garde uniquement ce que le cap
-      // effectif (career + session projeté à `time`) permet. La rampe
-      // session (+1/min en clean, ×3 max avec obed, capée à sessionCap)
-      // est intégrée par `_config.humilCapAt`.
-      final humilCap = _config.humilCapAt(time);
-      draft = _enforceHumiliationRequired(draft, humilCap);
-
-      // Variété BPM : évite d'enchaîner des steps au même tempo.
-      draft = _applyBpmDiversity(draft);
-      // Variété amplitude : évite d'enchaîner deux fois exactement la
-      // même paire from/to dans le même mode.
-      draft = _diversifyAmplitude(draft);
-      // Rampe BPM intra-step : pour les steps longs (≥ 30 s) sur amplitude
-      // moyenne (≤ mid), pose `bpmEnd` distinct pour raconter une
-      // montée / descente sur la durée. Skip throat/full pour ne pas
-      // violer le cap pulses (cf. `_capRhythmDurationByPulses`).
-      draft =
-          _BpmPacing.maybeApplyBpmRamp(draft, progress, _rng, _config.level);
-      // 2ᵉ enveloppe (profil de capacités) : dernier mot après les
-      // diversifications BPM/amplitude qui ont pu remonter au-dessus du
-      // `comfort` prouvé. `_diversifyLongSegment` derrière ne fait que
-      // varier « égal ou plus doux », donc pas besoin de re-clamper.
-      draft = _clampToCapability(draft);
-
-      // Sas breath conditionnel : on insère un breath UNIQUEMENT si le
-      // draft retenu provoquerait un déficit d'endurance (stamina projetée
-      // < 0). Pas de breath gratuit quand on a encore 80% — on ne respire
-      // que quand on en a vraiment besoin pour tenir la step suivante.
-      // Le breath est à durée variable, calée pour combler le déficit.
-      // Skip si le draft est lui-même breath (jamais le cas via la boucle
-      // standard) ou si on est à <8s du genUntil (laisse la place au
-      // pré-finisher / boost).
-      if (draft.mode != SessionMode.breath && genUntil - time > 8) {
-        final delta = _StaminaModel.delta(draft, progress, cfg);
-        final projected = stamina + delta;
-        if (projected < 0) {
-          final breathDraft = _buildBreathRecovery(-projected, progress, cfg);
-          final breathText = _pickPhrase(bank, SessionMode.breath, 'soft');
-          steps.add(_draftToStep(breathDraft, time: time, text: breathText));
-          final staminaBefore = stamina;
-          stamina = _StaminaModel.apply(stamina, breathDraft, progress, cfg);
-          _advanceSalivaSim(breathDraft);
-          _StaminaModel.fillProfile(
-              profile, time, breathDraft.duration!, stamina,
-              valueStart: staminaBefore);
-          time += breathDraft.duration!;
-          _state.recordLastTransit(SessionMode.breath, breathText);
-          // breath = transit → ne touche pas _state.lastType (parenthèse
-          // transparente). On l'appelle quand même pour cohérence si la
-          // règle évoluait.
-          _trackPushedStep(SessionMode.breath, null,
-              duration: breathDraft.duration);
-        }
-      }
-
-      // Diversification interne : si la step dure plus de 40s et qu'elle
-      // est rythmique (rhythm/lick/hand), on la split en 2-3 sous-segments
-      // avec une variation BPM/profondeur entre chaque, pour qu'une longue
-      // phase ne sonne pas comme un loop monotone. Les sous-segments
-      // s'autorisent un léger dépassement BPM (≤ +10) — on re-borne donc
-      // chacun au profil de capacités.
-      final emitDrafts = _BpmPacing.diversifyLongSegment(draft, _rng)
-          .map(_clampToCapability)
-          .toList();
-
-      final tier = diff < 0.33
-          ? 'soft'
-          : diff < 0.66
-              ? 'medium'
-              : 'hard';
-
-      for (var partIdx = 0; partIdx < emitDrafts.length; partIdx++) {
-        final partDraft = emitDrafts[partIdx];
-        // Texte sur le 1er sous-segment seulement : la phrase est cohérente
-        // avec le tier global. Les sous-segments suivants déclencheront
-        // automatiquement les phrases de transition (cf. C2) puisque BPM
-        // ou profondeur change entre eux.
-        final partText =
-            partIdx == 0 ? _pickPhraseForDraft(bank, partDraft, tier) : '';
-        final staminaBefore = stamina;
-        stamina = _StaminaModel.apply(stamina, partDraft, progress, cfg);
-        _advanceSalivaSim(partDraft);
-        steps.add(_draftToStep(partDraft, time: time, text: partText));
-        _state.recordLastAction(partDraft, partText);
-        _trackPushedStep(partDraft.mode, partDraft.to,
-            from: partDraft.from,
-            bpm: partDraft.bpm,
-            duration: partDraft.duration);
-        _StaminaModel.fillProfile(profile, time, partDraft.duration!, stamina,
-            valueStart: staminaBefore);
-        time += partDraft.duration!;
-      }
-
-      // **Fake breath** (à partir du niveau 12) : après un step intense
-      // (rythme to=throat/full ou hold throat/full), on a une chance
-      // d'insérer un breath très court (2-3 s) qui mime une vraie pause
-      // mais qui ne suffit pas à reconstituer la stamina. La step suivante
-      // tirée par la boucle continuera sur sa lancée — la joueuse croit
-      // souffler, en fait elle reprend direct. Effet de surprise validé
-      // pour les niveaux avancés où la dramaturgie peut se permettre
-      // d'être trompeuse. Pas en dernière minute (on respecte le finish
-      // scriptée), pas si on est déjà en déficit (un vrai breath était
-      // déjà inséré plus haut).
-      final fakeBreath = _maybeBuildFakeBreath(
-        lastEmitted: emitDrafts.isNotEmpty ? emitDrafts.last : draft,
-        currentStamina: stamina,
-        time: time,
-        genUntil: genUntil,
-        bank: bank,
-      );
-      if (fakeBreath != null) {
-        final staminaBeforeFake = stamina;
-        stamina = _StaminaModel.apply(stamina, fakeBreath.draft, progress, cfg);
-        _advanceSalivaSim(fakeBreath.draft);
-        steps.add(
-            _draftToStep(fakeBreath.draft, time: time, text: fakeBreath.text));
-        _state.recordLastTransit(SessionMode.breath, fakeBreath.text);
-        _trackPushedStep(SessionMode.breath, null,
-            duration: fakeBreath.draft.duration);
-        _StaminaModel.fillProfile(
-            profile, time, fakeBreath.draft.duration!, stamina,
-            valueStart: staminaBeforeFake);
-        time += fakeBreath.draft.duration!;
-      }
-
-      // Chain action attachée au draft principal (beg + suite continue) :
-      // émise immédiatement après les sous-segments, sans nouveau texte
-      // d'intro (la consigne est déjà dans la phrase du beg).
-      final chain = draft.chainNext;
-      if (chain != null && chain.duration != null) {
-        final staminaBefore = stamina;
-        stamina = _StaminaModel.apply(stamina, chain, progress, cfg);
-        _advanceSalivaSim(chain);
-        steps.add(_draftToStep(chain, time: time, text: ''));
-        _state.recordLastAction(chain, '');
-        _trackPushedStep(chain.mode, chain.to,
-            from: chain.from, bpm: chain.bpm, duration: chain.duration);
-        _StaminaModel.fillProfile(profile, time, chain.duration!, stamina,
-            valueStart: staminaBefore);
-        time += chain.duration!;
-      }
-
-      if (kDebugMode) {
-        debugPrint(
-          '[career-gen] t=$time mode=${draft.mode.name} '
-          'bpm=${draft.bpm} from=${draft.from?.name} to=${draft.to?.name} '
-          'dur=${draft.duration} diff=${diff.toStringAsFixed(2)} '
-          'stamina=${stamina.toStringAsFixed(1)} '
-          'parts=${emitDrafts.length}',
-        );
-      }
+      // Phase 4 — Main step : tirage de difficulté → mode → cascade de
+      // diversification (BPM / amplitude / capacités) → sas breath
+      // conditionnel → diversification en sous-segments → fake breath
+      // optionnel → chain action attachée. Toujours émet.
+      final main = _emitMainStepCycle(ctx, time: time, stamina: stamina);
+      time = main.time;
+      stamina = main.stamina;
     }
 
     // Si la boucle main s'est terminée sans avoir inséré toutes les
@@ -972,6 +731,328 @@ class CareerSessionGenerator {
       silentFinishStartTime: silentFinishStartTime,
       finalStepStartTime: finalStepStartTime,
     );
+  }
+
+  /// Phase 2 du main loop : tentative d'émission d'une **mini-vague** +
+  /// **breath long post-vague**. Renvoie `null` si les conditions ne
+  /// sont pas réunies (cf. [_shouldEmitMiniWave]). Sinon émet les 2-3
+  /// steps de la vague puis (si la place le permet) le breath dédié, et
+  /// replanifie `_state.nextMiniWaveAt` à `time + 4-5 min`. Le caller
+  /// `continue`-ra la boucle main.
+  ///
+  /// Mute `ctx.steps`, `ctx.profile` et l'état `_state`. Retourne
+  /// `(newTime, newStamina)` quand une vague a été émise.
+  ({int time, double stamina})? _tryEmitMiniWaveCycle(
+    _GenContext ctx, {
+    required int time,
+    required double stamina,
+  }) {
+    if (!_shouldEmitMiniWave(
+        time, ctx.effectiveDuration, stamina, ctx.genUntil)) {
+      return null;
+    }
+    final progressForWave = time / ctx.effectiveDuration;
+    final humilCapForWave = _config.humilCapAt(time);
+    final waveDrafts = _buildMiniWave(humilCapForWave);
+    for (final wd in waveDrafts) {
+      final waveText = _pickPhraseForDraft(ctx.bank, wd, 'hard');
+      ctx.steps.add(_draftToStep(wd, time: time, text: waveText));
+      final staminaBefore = stamina;
+      stamina = _StaminaModel.apply(stamina, wd, progressForWave, ctx.cfg);
+      _advanceSalivaSim(wd);
+      _StaminaModel.fillProfile(ctx.profile, time, wd.duration!, stamina,
+          valueStart: staminaBefore);
+      _state.recordLastAction(wd, waveText);
+      _state.lastBpm = wd.bpm ?? _state.lastBpm;
+      _trackPushedStep(wd.mode, wd.to,
+          from: wd.from, bpm: wd.bpm, duration: wd.duration);
+      time += wd.duration!;
+    }
+    // Pause longue post-vague : breath dédié dimensionné pour viser
+    // ~95 stamina, sortie volontaire du cap [4,12] du sas breath
+    // standard — la vague est un mini-finish, on s'autorise une vraie
+    // respiration scénarisée derrière pour repartir de plein. Borne
+    // [12, 20] s : 12 = baseline minimale même si stamina déjà haute,
+    // 20 = plafond pour ne pas casser le rythme dramaturgique de la
+    // session. À niveau 9 milieu de séance (regen ≈ 1.6, ≈ 4.5/s),
+    // 15-20 s rendent ~70-90 stamina.
+    final postWaveProgress = time / ctx.effectiveDuration;
+    final postWaveBreath = _buildPostWaveBreath(
+        stamina, postWaveProgress, ctx.cfg, ctx.genUntil - time);
+    if (postWaveBreath != null) {
+      final breathText = _pickPhrase(ctx.bank, SessionMode.breath, 'soft');
+      ctx.steps.add(_draftToStep(postWaveBreath, time: time, text: breathText));
+      final staminaBefore = stamina;
+      stamina = _StaminaModel.apply(
+          stamina, postWaveBreath, postWaveProgress, ctx.cfg);
+      _advanceSalivaSim(postWaveBreath);
+      _StaminaModel.fillProfile(
+          ctx.profile, time, postWaveBreath.duration!, stamina,
+          valueStart: staminaBefore);
+      _state.recordLastTransit(SessionMode.breath, breathText);
+      _trackPushedStep(SessionMode.breath, null,
+          duration: postWaveBreath.duration);
+      time += postWaveBreath.duration!;
+    }
+    // Replanification : 4-5 minutes après la fin de la vague émise.
+    // La séance enchaîne ensuite sur du tirage classique — la stamina
+    // restaurée par la pause longue permet d'enchaîner sereinement
+    // jusqu'à la prochaine vague.
+    _state.nextMiniWaveAt = time + 240 + _rng.nextInt(61);
+    return (time: time, stamina: stamina);
+  }
+
+  /// Phase 3 du main loop : tentative d'émission d'un **ordre de
+  /// déglutition forcé** (beg libre court « avale tout ») quand la
+  /// simulation salive sature. Renvoie `null` si les conditions ne sont
+  /// pas réunies (cf. [_maybeBuildSwallowOrder]).
+  ///
+  /// La sim salive retombe à 0 (`forceSwallow`) pour mimer l'obéissance
+  /// runtime — le `SessionController` fera de même au beat suivant via
+  /// `SalivaEngine.forceSwallow()`. Pose aussi le cooldown 90 s via
+  /// `_state.lastSwallowOrderAt`.
+  ({int time, double stamina})? _tryEmitSwallowOrder(
+    _GenContext ctx, {
+    required int time,
+    required double stamina,
+  }) {
+    final swallowDraft = _maybeBuildSwallowOrder(time, ctx.genUntil);
+    if (swallowDraft == null) return null;
+    final swallowText = ctx.bank.pickSwallowOrder(_rng) ??
+        _pickPhrase(ctx.bank, SessionMode.beg, 'hard');
+    ctx.steps.add(_draftToStep(swallowDraft, time: time, text: swallowText));
+    final staminaBefore = stamina;
+    stamina = _StaminaModel.apply(
+        stamina, swallowDraft, time / ctx.effectiveDuration, ctx.cfg);
+    // Conséquence simulée de l'ordre : la sim retombe à 0, comme si
+    // la joueuse obéissait. En runtime le SessionController fera de
+    // même via `SalivaEngine.forceSwallow()`.
+    _state.salivaSim.forceSwallow();
+    _StaminaModel.fillProfile(
+        ctx.profile, time, swallowDraft.duration!, stamina,
+        valueStart: staminaBefore);
+    _state.recordLastTransit(SessionMode.beg, swallowText);
+    _trackPushedStep(SessionMode.beg, null, duration: swallowDraft.duration);
+    time += swallowDraft.duration!;
+    _state.lastSwallowOrderAt = time;
+    return (time: time, stamina: stamina);
+  }
+
+  /// Phase 4 du main loop : génération + émission d'un **main step**.
+  /// Toujours émet (jamais `null`) — c'est le cœur de la boucle, appelé
+  /// quand les phases d'insertion conditionnelles (milestone, mini-vague,
+  /// swallow) ont toutes passé leur tour.
+  ///
+  /// Flow interne :
+  ///   1. Fenêtre de difficulté `[boundedMin, windowMax]` modulée par
+  ///      progress + plancher quickie ; tirage `diff`.
+  ///   2. Choix recovery vs `_mapDifficultyToStep(diff)` selon stamina
+  ///      et seuils obédiance-modulés.
+  ///   3. Transformations en cascade : `_BegRules.stripAfterSoft` →
+  ///      `_enforceHumiliationRequired` → `_applyBpmDiversity` →
+  ///      `_diversifyAmplitude` → `_BpmPacing.maybeApplyBpmRamp` →
+  ///      `_clampToCapability` (2ᵉ enveloppe, dernier mot).
+  ///   4. Sas breath conditionnel si la stamina projetée < 0.
+  ///   5. Diversification en sous-segments (`_BpmPacing.diversifyLongSegment`)
+  ///      + émission texte sur le 1ᵉʳ seulement.
+  ///   6. Fake breath optionnel (niveau ≥ 12, post-step intense).
+  ///   7. Chain action attachée (`draft.chainNext`) sans nouveau texte.
+  ///   8. debugPrint en kDebugMode.
+  ({int time, double stamina}) _emitMainStepCycle(
+    _GenContext ctx, {
+    required int time,
+    required double stamina,
+  }) {
+    final progress = time / ctx.effectiveDuration;
+    final windowMin = _StaminaModel.lerp(0.05, 0.50, progress);
+    var windowMax =
+        min(_StaminaModel.lerp(0.30, 1.00, progress), ctx.cfg.maxDifficultyCap);
+    // Floor d'intensité (mode bâclée) : tronque le bas de la fenêtre.
+    final flooredMin = max(windowMin, ctx.intensityFloor);
+    final boundedMin = min(flooredMin, windowMax - 0.05).clamp(0.0, 1.0);
+    windowMax = max(windowMax, boundedMin + 0.05);
+
+    final diff = boundedMin + _rng.nextDouble() * (windowMax - boundedMin);
+
+    final _StepDraft initialDraft;
+    // Seuils de recovery modulés par l'obéissance : plus elle est haute,
+    // plus on respecte l'endurance (recovery déclenché plus tôt). Sur la
+    // dernière minute, on les coupe entièrement — la fin de séance ignore
+    // l'endurance par contrat.
+    final inLastMinute = (ctx.effectiveDuration - time) <= 60;
+    // Bonus obédiance sur le seuil de recovery : capé +25 pour pas
+    // qu'une obédiance lifetime extrême (200+) pousse le seuil à 80
+    // (= recovery quasi-permanente). À obed=100, +25 ; à obed=0, +0.
+    final obedienceBonus = (ctx.obedience / 100.0).clamp(0.0, 1.0) * 25.0;
+    final recoveryThreshold =
+        inLastMinute ? -1 : (ctx.quickie ? 15 : 30) + obedienceBonus;
+    final recoveryRandomThreshold =
+        inLastMinute ? -1 : (ctx.quickie ? 25 : 50) + obedienceBonus;
+    if (stamina < recoveryThreshold ||
+        (stamina < recoveryRandomThreshold && _rng.nextBool())) {
+      initialDraft = _buildRecoveryStep();
+    } else {
+      initialDraft = _mapDifficultyToStep(diff);
+    }
+    // Si beg arrive juste après une phase douce (lick / breath), on
+    // retire le `from` pour enchaîner sur une supplique purement vocale
+    // plutôt que de redemander de tenir une position. Côté stamina,
+    // beg avec from=null suit la même branche regen que from=head.
+    var draft = _BegRules.stripAfterSoft(initialDraft, ctx.steps);
+
+    // Filtre humiliation requise : on garde uniquement ce que le cap
+    // effectif (career + session projeté à `time`) permet. La rampe
+    // session (+1/min en clean, ×3 max avec obed, capée à sessionCap)
+    // est intégrée par `_config.humilCapAt`.
+    final humilCap = _config.humilCapAt(time);
+    draft = _enforceHumiliationRequired(draft, humilCap);
+
+    // Variété BPM : évite d'enchaîner des steps au même tempo.
+    draft = _applyBpmDiversity(draft);
+    // Variété amplitude : évite d'enchaîner deux fois exactement la
+    // même paire from/to dans le même mode.
+    draft = _diversifyAmplitude(draft);
+    // Rampe BPM intra-step : pour les steps longs (≥ 30 s) sur amplitude
+    // moyenne (≤ mid), pose `bpmEnd` distinct pour raconter une
+    // montée / descente sur la durée. Skip throat/full pour ne pas
+    // violer le cap pulses (cf. `_capRhythmDurationByPulses`).
+    draft = _BpmPacing.maybeApplyBpmRamp(draft, progress, _rng, _config.level);
+    // 2ᵉ enveloppe (profil de capacités) : dernier mot après les
+    // diversifications BPM/amplitude qui ont pu remonter au-dessus du
+    // `comfort` prouvé. `_diversifyLongSegment` derrière ne fait que
+    // varier « égal ou plus doux », donc pas besoin de re-clamper.
+    draft = _clampToCapability(draft);
+
+    // Sas breath conditionnel : on insère un breath UNIQUEMENT si le
+    // draft retenu provoquerait un déficit d'endurance (stamina projetée
+    // < 0). Pas de breath gratuit quand on a encore 80% — on ne respire
+    // que quand on en a vraiment besoin pour tenir la step suivante.
+    // Le breath est à durée variable, calée pour combler le déficit.
+    // Skip si le draft est lui-même breath (jamais le cas via la boucle
+    // standard) ou si on est à <8s du genUntil (laisse la place au
+    // pré-finisher / boost).
+    if (draft.mode != SessionMode.breath && ctx.genUntil - time > 8) {
+      final delta = _StaminaModel.delta(draft, progress, ctx.cfg);
+      final projected = stamina + delta;
+      if (projected < 0) {
+        final breathDraft = _buildBreathRecovery(-projected, progress, ctx.cfg);
+        final breathText = _pickPhrase(ctx.bank, SessionMode.breath, 'soft');
+        ctx.steps.add(_draftToStep(breathDraft, time: time, text: breathText));
+        final staminaBefore = stamina;
+        stamina = _StaminaModel.apply(stamina, breathDraft, progress, ctx.cfg);
+        _advanceSalivaSim(breathDraft);
+        _StaminaModel.fillProfile(
+            ctx.profile, time, breathDraft.duration!, stamina,
+            valueStart: staminaBefore);
+        time += breathDraft.duration!;
+        _state.recordLastTransit(SessionMode.breath, breathText);
+        // breath = transit → ne touche pas _state.lastType (parenthèse
+        // transparente). On l'appelle quand même pour cohérence si la
+        // règle évoluait.
+        _trackPushedStep(SessionMode.breath, null,
+            duration: breathDraft.duration);
+      }
+    }
+
+    // Diversification interne : si la step dure plus de 40s et qu'elle
+    // est rythmique (rhythm/lick/hand), on la split en 2-3 sous-segments
+    // avec une variation BPM/profondeur entre chaque, pour qu'une longue
+    // phase ne sonne pas comme un loop monotone. Les sous-segments
+    // s'autorisent un léger dépassement BPM (≤ +10) — on re-borne donc
+    // chacun au profil de capacités.
+    final emitDrafts = _BpmPacing.diversifyLongSegment(draft, _rng)
+        .map(_clampToCapability)
+        .toList();
+
+    final tier = diff < 0.33
+        ? 'soft'
+        : diff < 0.66
+            ? 'medium'
+            : 'hard';
+
+    for (var partIdx = 0; partIdx < emitDrafts.length; partIdx++) {
+      final partDraft = emitDrafts[partIdx];
+      // Texte sur le 1er sous-segment seulement : la phrase est cohérente
+      // avec le tier global. Les sous-segments suivants déclencheront
+      // automatiquement les phrases de transition (cf. C2) puisque BPM
+      // ou profondeur change entre eux.
+      final partText =
+          partIdx == 0 ? _pickPhraseForDraft(ctx.bank, partDraft, tier) : '';
+      final staminaBefore = stamina;
+      stamina = _StaminaModel.apply(stamina, partDraft, progress, ctx.cfg);
+      _advanceSalivaSim(partDraft);
+      ctx.steps.add(_draftToStep(partDraft, time: time, text: partText));
+      _state.recordLastAction(partDraft, partText);
+      _trackPushedStep(partDraft.mode, partDraft.to,
+          from: partDraft.from,
+          bpm: partDraft.bpm,
+          duration: partDraft.duration);
+      _StaminaModel.fillProfile(ctx.profile, time, partDraft.duration!, stamina,
+          valueStart: staminaBefore);
+      time += partDraft.duration!;
+    }
+
+    // **Fake breath** (à partir du niveau 12) : après un step intense
+    // (rythme to=throat/full ou hold throat/full), on a une chance
+    // d'insérer un breath très court (2-3 s) qui mime une vraie pause
+    // mais qui ne suffit pas à reconstituer la stamina. La step suivante
+    // tirée par la boucle continuera sur sa lancée — la joueuse croit
+    // souffler, en fait elle reprend direct. Effet de surprise validé
+    // pour les niveaux avancés où la dramaturgie peut se permettre
+    // d'être trompeuse. Pas en dernière minute (on respecte le finish
+    // scriptée), pas si on est déjà en déficit (un vrai breath était
+    // déjà inséré plus haut).
+    final fakeBreath = _maybeBuildFakeBreath(
+      lastEmitted: emitDrafts.isNotEmpty ? emitDrafts.last : draft,
+      currentStamina: stamina,
+      time: time,
+      genUntil: ctx.genUntil,
+      bank: ctx.bank,
+    );
+    if (fakeBreath != null) {
+      final staminaBeforeFake = stamina;
+      stamina =
+          _StaminaModel.apply(stamina, fakeBreath.draft, progress, ctx.cfg);
+      _advanceSalivaSim(fakeBreath.draft);
+      ctx.steps.add(
+          _draftToStep(fakeBreath.draft, time: time, text: fakeBreath.text));
+      _state.recordLastTransit(SessionMode.breath, fakeBreath.text);
+      _trackPushedStep(SessionMode.breath, null,
+          duration: fakeBreath.draft.duration);
+      _StaminaModel.fillProfile(
+          ctx.profile, time, fakeBreath.draft.duration!, stamina,
+          valueStart: staminaBeforeFake);
+      time += fakeBreath.draft.duration!;
+    }
+
+    // Chain action attachée au draft principal (beg + suite continue) :
+    // émise immédiatement après les sous-segments, sans nouveau texte
+    // d'intro (la consigne est déjà dans la phrase du beg).
+    final chain = draft.chainNext;
+    if (chain != null && chain.duration != null) {
+      final staminaBefore = stamina;
+      stamina = _StaminaModel.apply(stamina, chain, progress, ctx.cfg);
+      _advanceSalivaSim(chain);
+      ctx.steps.add(_draftToStep(chain, time: time, text: ''));
+      _state.recordLastAction(chain, '');
+      _trackPushedStep(chain.mode, chain.to,
+          from: chain.from, bpm: chain.bpm, duration: chain.duration);
+      _StaminaModel.fillProfile(ctx.profile, time, chain.duration!, stamina,
+          valueStart: staminaBefore);
+      time += chain.duration!;
+    }
+
+    if (kDebugMode) {
+      debugPrint(
+        '[career-gen] t=$time mode=${draft.mode.name} '
+        'bpm=${draft.bpm} from=${draft.from?.name} to=${draft.to?.name} '
+        'dur=${draft.duration} diff=${diff.toStringAsFixed(2)} '
+        'stamina=${stamina.toStringAsFixed(1)} '
+        'parts=${emitDrafts.length}',
+      );
+    }
+
+    return (time: time, stamina: stamina);
   }
 
   /// Vrai si on doit émettre une **mini-vague** au pas courant de la
