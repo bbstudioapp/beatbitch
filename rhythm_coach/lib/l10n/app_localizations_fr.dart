@@ -373,6 +373,80 @@ class AppLocalizationsFr extends AppLocalizations {
   String get profileCapHandStreak => 'Main continue';
 
   @override
+  String get profileDiagnosticSection => 'DIAGNOSTIC';
+
+  @override
+  String get profileDiagnosticDescription =>
+      'Exporte un fichier JSON avec ton état de progression — utile si tu veux signaler un bug. Rien n\'est envoyé automatiquement, c\'est toi qui choisis ce que tu en fais.';
+
+  @override
+  String get profileDiagnosticExportButton => 'Exporter mes données';
+
+  @override
+  String get profileDiagnosticSheetTitle => 'Exporter mes données';
+
+  @override
+  String get profileDiagnosticSheetIntro => 'Le fichier contient :';
+
+  @override
+  String get profileDiagnosticItemCareer =>
+      'Carrière : ton niveau max, sessions terminées, milestones acquises.';
+
+  @override
+  String get profileDiagnosticItemStats =>
+      'Stats : compteurs de séance (temps total, throatfucks, holds, streaks…).';
+
+  @override
+  String get profileDiagnosticItemCapabilities =>
+      'Capacités : tes records et zones de confort par axe.';
+
+  @override
+  String get profileDiagnosticItemAnatomy =>
+      'Anatomie : tes toggles de profil (présence des testicules).';
+
+  @override
+  String get profileDiagnosticItemPreferences =>
+      'Préférences : langue, voix, affichage, surprises, debug.';
+
+  @override
+  String get profileDiagnosticItemBadges =>
+      'Badges : les paliers que tu as débloqués.';
+
+  @override
+  String get profileDiagnosticIncludeNicknames =>
+      'Inclure mes surnoms personnalisés';
+
+  @override
+  String get profileDiagnosticIncludeNicknamesSubtitle =>
+      'Désactivé par défaut — ils peuvent contenir un prénom réel.';
+
+  @override
+  String get profileDiagnosticShareButton => 'Partager';
+
+  @override
+  String get profileDiagnosticSaveButton => 'Enregistrer';
+
+  @override
+  String get profileDiagnosticDownloadButton => 'Télécharger';
+
+  @override
+  String get profileDiagnosticCancel => 'Annuler';
+
+  @override
+  String get profileDiagnosticShareSubject => 'Export BeatBitch';
+
+  @override
+  String get profileDiagnosticShareSnackbar => 'Export prêt à être partagé.';
+
+  @override
+  String get profileDiagnosticSavedSnackbar => 'Fichier enregistré.';
+
+  @override
+  String profileDiagnosticErrorSnackbar(String error) {
+    return 'Échec de l\'export : $error';
+  }
+
+  @override
   String get profileResetSection => 'ZONE DANGER';
 
   @override

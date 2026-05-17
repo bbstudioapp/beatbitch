@@ -17,6 +17,7 @@ import '../services/stats_service.dart';
 import '../services/tts_service.dart';
 import '../services/user_profile_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/diagnostic_export_section.dart';
 import '../widgets/identity_section.dart';
 import '../widgets/language_picker_row.dart';
 import '../widgets/voice_settings_section.dart';
@@ -198,6 +199,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _SectionLabel(t.profileSessionDisplaySection),
               const SizedBox(height: 8),
               const _SessionDisplaySection(),
+              const SizedBox(height: 24),
+              _SectionLabel(t.profileDiagnosticSection),
+              const SizedBox(height: 8),
+              const DiagnosticExportSection(),
               const SizedBox(height: 32),
               _ResetSection(
                 resetting: _resetting,
