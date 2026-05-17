@@ -1,0 +1,102 @@
+// Fichier part de `career_session_generator.dart` — règles du mode
+// `beg`. Cf. contrat `_ModeRules` dans
+// `career_session_generator_mode_rules.dart`. Partage le helper
+// `_clampHeldDuration` avec `_HoldRules` (cap durée sur position tenue).
+
+part of 'career_session_generator.dart';
+
+/// Règles `beg` : convention uniforme hold/beg, la position tenue est dans
+/// `to`. Sans `to` ou `to = head` → assimilé à du repos vocal (regen). Avec
+/// `to = mid/throat/full` → coût comme un hold à cette profondeur (la
+/// position doit être tenue pendant la supplique).
+class _BegRules extends _ModeRules {
+  const _BegRules();
+
+  @override
+  double delta(_StepDraft draft, double progress, CareerLevel cfg) {
+    final dur = draft.duration ?? 0;
+    final to = draft.to;
+    if (to == null || to == Position.head) {
+      final regen = _StaminaModel.lerp(
+        cfg.regenStartMultiplier,
+        cfg.regenEndMultiplier,
+        progress,
+      );
+      return dur * 1.0 * regen;
+    }
+    final depth = _StaminaModel.positionDepth(to, to);
+    return -depth * dur / 2.5;
+  }
+
+  @override
+  UnlockKey? unlockKeyFor(_StepDraft draft) {
+    if (draft.from == Position.balls || draft.to == Position.balls) {
+      return UnlockKey.begBalls;
+    }
+    // Convention : hold/beg portent leur position dans `to`.
+    if (draft.to == null) return UnlockKey.begLibre;
+    if (draft.to == Position.full) return UnlockKey.begFull;
+    // Toute supplique avec position tenue (head/mid/throat) reste gated
+    // par begThroat (palier niveau 14). Avant ça, seule la supplique
+    // libre (to=null) doit apparaître. Évite que le générateur produise
+    // des beg head/mid après l'unlock de begLibre alors qu'aucune
+    // milestone ne les a explicitement introduits.
+    return UnlockKey.begThroat;
+  }
+
+  @override
+  _StepDraft clampToCapability(_StepDraft draft, _CapabilityClamps c) =>
+      _clampHeldDuration(draft, c);
+
+  @override
+  _StepDraft? tryDegrade(_StepDraft draft) {
+    // (1) Descendre `to` d'un cran (beg jusqu'à `tip` comme hold).
+    if (draft.to != null && draft.to!.index > Position.tip.index) {
+      return _StepDraft(
+        mode: draft.mode,
+        bpm: draft.bpm,
+        from: draft.from,
+        to: Position.values[draft.to!.index - 1],
+        duration: draft.duration,
+      );
+    }
+    // (2) Beg avec position tenue → repli sur beg libre.
+    if (draft.to != null) {
+      return _StepDraft(
+        mode: draft.mode,
+        bpm: draft.bpm,
+        from: null,
+        to: null,
+        duration: draft.duration,
+      );
+    }
+    return null;
+  }
+
+  @override
+  _StepDraft build(_DraftCtx ctx) {
+    // Convention uniforme hold/beg : la position tenue est dans `to`.
+    // Obéissance : beg plus profonds (ampScore boosté localement) et
+    // plus longs.
+    final obPts = ctx.gen._pts(SpecializationBranch.obeissance);
+    final begAmp = (ctx.ampScore + 0.10 * obPts).clamp(0.0, 1.0);
+    final to = ctx.gen._pickBegPosition(begAmp);
+    final baseDur = ctx.gen._scaleDuration(
+      _StaminaModel.lerp(7.0, 16.0, ctx.durScore),
+      enduranceFactor: 0.04,
+      extraFactor: obPts * 0.06,
+    );
+    final chained = ctx.gen._maybePickBegWithChain(
+      to: to,
+      obPts: obPts,
+    );
+    if (chained != null) return chained;
+    return _StepDraft(
+      mode: SessionMode.beg,
+      bpm: null,
+      from: null,
+      to: to,
+      duration: baseDur,
+    );
+  }
+}

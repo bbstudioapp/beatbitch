@@ -19,6 +19,15 @@ import '../models/unlock_key.dart';
 
 part 'career_session_generator_stamina.dart';
 part 'career_session_generator_mode_rules.dart';
+part 'career_session_generator_rules_breath.dart';
+part 'career_session_generator_rules_freestyle.dart';
+part 'career_session_generator_rules_suckle.dart';
+part 'career_session_generator_rules_hand.dart';
+part 'career_session_generator_rules_biffle.dart';
+part 'career_session_generator_rules_lick.dart';
+part 'career_session_generator_rules_hold.dart';
+part 'career_session_generator_rules_beg.dart';
+part 'career_session_generator_rules_rhythm.dart';
 part 'career_session_generator_bpm.dart';
 part 'career_session_generator_humiliation.dart';
 part 'career_session_generator_capability.dart';
