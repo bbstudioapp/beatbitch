@@ -295,17 +295,6 @@ class CareerSessionGenerator {
   /// profil est null pour Custom).
   (int, int)? _holdDurationRange;
 
-  // ─── CATALOGUE STATIQUE ──────────────────────────────────────────────────
-
-  // `_overloadableAxes` (set des axes pilotants pour la surcharge),
-  // `_minNullable`, `_rhythmBpmCeilAxisFor`, `_capabilityCapFor`,
-  // `_overloadFactorFor`, `_pickOverloadAxis`, `_clampToCapability` et
-  // `_clampToCustomLimits` ont migré dans
-  // `career_session_generator_capability.dart` (`_CapabilityClamps`).
-  // Le générateur construit un `_CapabilityClamps` au début de chaque
-  // `generate()` (après que l'axe de surcharge a été choisi) et l'expose
-  // via des adaptateurs courts plus bas.
-
   /// 2ᵉ enveloppe (immuable pour la séance) — recréée à chaque appel à
   /// [generate] après que l'axe de surcharge a été choisi.
   late _CapabilityClamps _capClamps;
@@ -1130,7 +1119,7 @@ class CareerSessionGenerator {
 
     // Position cible du pré-finisher : profondeur « normale » du niveau,
     // capée par `_maxDepthIndex`. Sert de transition vers le final.
-    final preFinisherTarget = _pickFinisherPosition(level);
+    final preFinisherTarget = _positionPickers.pickFinisherPosition();
 
     // Pré-finisher : pour les bas niveaux, courte accélération (rythme
     // un peu plus rapide que le plafond habituel du niveau) qui débouche
@@ -1698,7 +1687,7 @@ class CareerSessionGenerator {
     return (time: t, stamina: s, lastBoostIndex: lastBoostIndex);
   }
 
-  /// Émet le step final (apothéose contemplative). Choix via [_pickFinal] selon
+  /// Émet le step final (apothéose contemplative). Choix via [_FinalPicker.pickFinal] selon
   /// humil cap projeté à `time` et plafond de profondeur. Phrase : annonce du
   /// changement de mode si différent du dernier boost (« sors ta langue,
   /// j'arrive »), sinon phrase d'action standard.
@@ -1725,11 +1714,10 @@ class CareerSessionGenerator {
     final finalHumilCap = _humilCapAt(time);
     // En chaîne encore, on allonge le final pour que la dramaturgie de
     // « tu en veux encore » se traduise aussi côté apothéose. Bornée par
-    // le clamp de `_pickFinal` pour rester raisonnable.
+    // le clamp de `_finalPicker.pickFinal` pour rester raisonnable.
     final finishMul = 1.0 + max(0, ctx.encoreChainIndex) * 0.10;
-    final finisherDraft = _pickFinal(
+    final finisherDraft = _finalPicker.pickFinal(
       humilCap: finalHumilCap,
-      includeHand: ctx.includeHand,
       maxDepth: _maxDepthIndex,
       finishMul: finishMul,
     );
@@ -2282,12 +2270,6 @@ class CareerSessionGenerator {
         rng: _rng,
       );
 
-  // `_modeWeight` est consommé uniquement par `_ModePicker.pickWeighted`
-  // (inline). Plus d'adaptateur ici.
-
-  // `_continuityMultiplier` a migré dans `_ModePicker.continuityMultiplier`
-  // (passé un `_ModeContinuityState`). Plus de call site externe.
-
   /// Met à jour `_lastType` / `_stepsInLastType` après push d'un step,
   /// notifie `_rhythmChain` du mode/durée, et alimente le buffer
   /// `_patternBuffer` (rythmés uniquement, filtré en interne) pour la
@@ -2318,9 +2300,6 @@ class CareerSessionGenerator {
     _patternBuffer.record(mode, from: from, to: to, bpm: bpm);
   }
 
-  // `_modeBaseWeight` a migré dans `_ModePicker.baseWeight` (prend
-  // `SpecializationAllocation` en param). Plus de call site externe.
-
   /// Applique aux durées les multiplicateurs de spé, capés.
   /// `enduranceFactor` = bonus par point Endurance ; `extraFactor` = bonus
   /// brut additionnel.
@@ -2338,25 +2317,9 @@ class CareerSessionGenerator {
 
   int _pts(SpecializationBranch b) => _spec.pointsIn(b);
 
-  /// Cap la durée d'un step rythmé par le **nombre d'aller-retours** sur
-  /// la profondeur cible. Évite qu'un step `to=throat` à 90 bpm dure 60 s
-  /// (= 45 pulses = la joueuse n'a aucune respi). Au-delà de mid, on borne
-  /// le nombre de pulses par step. Mid et plus haut : pas de cap.
-  ///
-  /// Convention : 1 pulse = 1 aller-retour from↔to (= 2 beats à BPM donné).
-  /// Donc `durMax = maxPulses × 120 / bpm` secondes.
-  ///
-  /// **Cap dynamique selon l'humiliation career** : à la première fois où
-  /// la joueuse aborde la profondeur, son humil career est faible (juste
-  /// au seuil de la milestone : ~10 pour throat, ~25 pour full), donc cap
-  /// bas (6/4 pulses). À mesure qu'elle accumule l'humil, le cap monte —
-  /// et la spé pertinente (profondeur, rythmeBiffle) le pousse encore.
-  /// On se base sur l'humil plutôt que le niveau global parce que c'est
-  /// l'humil qui mesure la pratique réelle de la profondeur, pas le
-  /// passage de palier (un niveau 20 spé sloppy a peu d'humil profondeur,
-  /// un niveau 12 spé profondeur en a beaucoup plus).
-  /// Adapteur de `_BpmPacing.capRhythmDurationByPulses` qui injecte les
-  /// 3 champs d'état nécessaires depuis l'instance.
+  /// Adapteur d'instance de `_BpmPacing.capRhythmDurationByPulses` qui
+  /// injecte `_humiliationCareer` et les points de spé (l'algo lui-même
+  /// vit côté `_BpmPacing`).
   int _capRhythmDurationByPulses(int dur, int bpm, Position? to) =>
       _BpmPacing.capRhythmDurationByPulses(
         dur,
@@ -2368,11 +2331,6 @@ class CareerSessionGenerator {
       );
 
   // ─── Position pickers (adapteurs vers `_PositionPickers`) ────────────────
-  // _sampleFromTo, _sampleFromToForHand, _sampleFromToForLick,
-  // _milestoneHoldCeilingIdx, _pickHoldPosition, _milestoneRhythmCeilingIdx,
-  // _pickFinisherPosition, _maybePickBegWithChain, _pickBegPosition,
-  // _sampleSimplex3 + le tableau _begChainTemplates ont migré dans
-  // `career_session_generator_position_pickers.dart`.
 
   (Position, Position) _sampleFromTo(double ampScore,
           {bool capByDepth = true}) =>
@@ -2392,11 +2350,6 @@ class CareerSessionGenerator {
   Position _pickHoldPosition(double ampScore) =>
       _positionPickers.pickHoldPosition(ampScore);
 
-  /// L'arg `level` est ignoré — kept pour compat historique (le picker
-  /// consulte `_milestoneRhythmCeilingIdx`, pas le niveau).
-  Position _pickFinisherPosition(int level) =>
-      _positionPickers.pickFinisherPosition();
-
   Position? _pickBegPosition(double ampScore) =>
       _positionPickers.pickBegPosition(ampScore);
 
@@ -2408,11 +2361,6 @@ class CareerSessionGenerator {
     required int obPts,
   }) =>
       _positionPickers.maybePickBegWithChain(to: to, obPts: obPts);
-
-  // _lerp, _fillProfile, _positionDepth, _staminaDelta, _applyStaminaChange
-  // + constante `_StaminaModel.cap` (renommée `_StaminaModel.cap`) ont migré dans
-  // `career_session_generator_stamina.dart` (fichier part). Accès toujours
-  // gratuit depuis cette classe — c'est la même library.
 
   /// Avance la simulation salive pour un draft. Mute `_salivaSim` et
   /// `_salivaSimSecond`. Appelé en parallèle de chaque simulation excit
@@ -2432,31 +2380,15 @@ class CareerSessionGenerator {
     }
   }
 
-  /// Adaptateur d'instance pour `_FinalPicker.pickFinal`. Le paramètre
-  /// `includeHand` est ignoré (lu depuis `_finalPicker.includeHand` qui
-  /// est posé une fois par `generate()`) — l'API reste pour compat
-  /// historique.
-  _StepDraft _pickFinal({
-    required double humilCap,
-    required bool includeHand,
-    required int maxDepth,
-    required double finishMul,
-  }) =>
-      _finalPicker.pickFinal(
-        humilCap: humilCap,
-        maxDepth: maxDepth,
-        finishMul: finishMul,
-      );
-
   // ─── Phase 5 — Punitions générées & bornées ────────────────────────────
 
   /// Génère une punition contextuelle pour la séance carrière (cf. §7 de la
   /// spec). À utiliser à la place du tirage dans `punishments.json` en mode
-  /// carrière. Hors carrière (Custom, scénarios JSON, mini-punition
-  /// résilience), le contrôleur garde le tirage statique.
+  /// carrière. Hors carrière (Custom, scénarios JSON, mini-punitions
+  /// inopinées), le contrôleur garde le tirage statique.
   ///
   /// Algo : palette hardcodée de compositions « max humiliation qui passe »
-  /// (parité avec `_pickFinal`), bornée par les ceilings de session et le
+  /// (parité avec `_finalPicker.pickFinal`), bornée par les ceilings de session et le
   /// `comfort` du profil de capacités via `_clampToCapability`. Fallback en
   /// escalier (rythme `head→mid` rapide → hand ultime) pour rester jouable
   /// même à humilCap quasi-nul.
@@ -2637,13 +2569,6 @@ class CareerSessionGenerator {
     );
   }
 
-  // _diversifyBpm, _diversifyLongSegment, _maybeApplyBpmRamp,
-  // _capRhythmDurationByPulses (statique) ont migré dans
-  // `career_session_generator_bpm.dart` (`_BpmPacing`). Les sites d'appel
-  // passent directement par cette classe, sauf _capRhythmDurationByPulses
-  // qui garde un adaptateur d'instance plus haut pour injecter
-  // `_humiliationCareer` et les points de spé.
-
   /// Convertit un [_StepDraft] interne en [SessionStep] sérialisable.
   /// Pour les modes hold/beg, swap `from` (position cible interne au draft)
   /// vers `to` côté SessionStep — sémantique « on tient jusqu'à cette
@@ -2665,14 +2590,14 @@ class CareerSessionGenerator {
     );
   }
 
-  /// Catégorise le draft retenu par `_pickFinal` pour piocher la bonne
+  /// Catégorise le draft retenu par `_finalPicker.pickFinal` pour piocher la bonne
   /// variante de `finale_chime` côté `BeepEngine`. Mapping :
   /// - hand any, hold tip → easy
   /// - hold head, hold mid, biffle → medium
   /// - hold throat → hard
   /// - hold full → extreme
   /// Cas non couverts (ne devraient pas survenir vu les options de
-  /// `_pickFinal`) → `medium` par défaut.
+  /// `_finalPicker.pickFinal`) → `medium` par défaut.
   FinalCategory _categorizeFinal(_StepDraft d) {
     if (d.mode == SessionMode.hand) return FinalCategory.easy;
     if (d.mode == SessionMode.biffle) return FinalCategory.medium;
@@ -2916,9 +2841,6 @@ class _StepDraft {
         duration: duration,
       );
 }
-
-// `_PunishmentCompo` a migré dans `career_session_generator_punishment.dart`
-// avec `_PunishmentBuilder` qui le consomme.
 
 /// Bundle des paramètres « figés pour la session » consommés par les helpers
 /// de phase de [CareerSessionGenerator.generate]. Construit une seule fois
