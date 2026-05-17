@@ -179,6 +179,38 @@ class _SessionRuntimeState {
         lastMode: lastMode,
       );
 
+  /// Met à jour l'état « dernier *action* step émis » à partir du draft
+  /// qu'on vient d'émettre : `lastMode`, `lastText`, `lastFrom`, `lastTo`.
+  /// Inclut explicitement les positions (y compris `null` pour
+  /// breath/biffle/beg-sans-from) — les call sites comptent dessus pour
+  /// la diversification d'amplitude au tour suivant.
+  ///
+  /// `lastBpm` n'est **pas** touché : à mettre à jour explicitement au
+  /// call site (`_state.lastBpm = d.bpm ?? _state.lastBpm`) quand le
+  /// `_BpmPacing.diversifyBpm` du prochain tour doit comparer contre ce
+  /// step (intro, mini-vague). Pour les sous-segments de
+  /// `_diversifyLongSegment` et le `chainNext`, on veut au contraire que
+  /// `lastBpm` reste celui de l'**outer** step — ne rien faire ici donne
+  /// la bonne sémantique.
+  void recordLastAction(_StepDraft d, String text) {
+    lastMode = d.mode;
+    lastText = text;
+    lastFrom = d.from;
+    lastTo = d.to;
+  }
+
+  /// Met à jour l'état « dernier step émis » pour une **parenthèse
+  /// transit** (breath / fakeBreath / swallow-beg / pré-finisher / boost
+  /// / final / post-final) : `lastMode` + `lastText` seulement.
+  /// `lastBpm` / `lastFrom` / `lastTo` sont **préservés** — le prochain
+  /// action step compare bien contre le dernier *action* step, pas
+  /// contre la parenthèse. Les boosts mettent à jour `lastBpm` à part
+  /// au call site (cf. doc de [recordLastAction]).
+  void recordLastTransit(SessionMode mode, String text) {
+    lastMode = mode;
+    lastText = text;
+  }
+
   /// Avance la simulation salive pour la durée d'un draft : un tick par
   /// seconde, en propageant `salivaSimSecond` qui sert d'index temporel
   /// à `SalivaEngine.onTickSecond`. Mute `salivaSim` (via `onTickSecond`)

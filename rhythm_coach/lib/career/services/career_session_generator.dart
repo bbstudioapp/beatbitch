@@ -491,11 +491,8 @@ class CareerSessionGenerator {
           openingPhrase ??
           _pickPhraseForDraft(bank, first, 'soft');
       steps.add(_draftToStep(first, time: 0, text: firstText));
-      _state.lastMode = first.mode;
-      _state.lastText = firstText;
+      _state.recordLastAction(first, firstText);
       _state.lastBpm = first.bpm ?? _state.lastBpm;
-      _state.lastFrom = first.from;
-      _state.lastTo = first.to;
       _trackPushedStep(first.mode, first.to,
           from: first.from, bpm: first.bpm, duration: first.duration);
       final staminaBefore = stamina;
@@ -550,10 +547,7 @@ class CareerSessionGenerator {
           _advanceSalivaSim(wd);
           _StaminaModel.fillProfile(profile, time, wd.duration!, stamina,
               valueStart: staminaBefore);
-          _state.lastMode = wd.mode;
-          _state.lastText = waveText;
-          _state.lastFrom = wd.from;
-          _state.lastTo = wd.to;
+          _state.recordLastAction(wd, waveText);
           _state.lastBpm = wd.bpm ?? _state.lastBpm;
           _trackPushedStep(wd.mode, wd.to,
               from: wd.from, bpm: wd.bpm, duration: wd.duration);
@@ -580,8 +574,7 @@ class CareerSessionGenerator {
           _StaminaModel.fillProfile(
               profile, time, postWaveBreath.duration!, stamina,
               valueStart: staminaBefore);
-          _state.lastMode = SessionMode.breath;
-          _state.lastText = breathText;
+          _state.recordLastTransit(SessionMode.breath, breathText);
           _trackPushedStep(SessionMode.breath, null,
               duration: postWaveBreath.duration);
           time += postWaveBreath.duration!;
@@ -612,8 +605,7 @@ class CareerSessionGenerator {
         _StaminaModel.fillProfile(
             profile, time, swallowDraft.duration!, stamina,
             valueStart: staminaBefore);
-        _state.lastMode = SessionMode.beg;
-        _state.lastText = swallowText;
+        _state.recordLastTransit(SessionMode.beg, swallowText);
         _trackPushedStep(SessionMode.beg, null,
             duration: swallowDraft.duration);
         time += swallowDraft.duration!;
@@ -703,8 +695,7 @@ class CareerSessionGenerator {
               profile, time, breathDraft.duration!, stamina,
               valueStart: staminaBefore);
           time += breathDraft.duration!;
-          _state.lastMode = SessionMode.breath;
-          _state.lastText = breathText;
+          _state.recordLastTransit(SessionMode.breath, breathText);
           // breath = transit → ne touche pas _state.lastType (parenthèse
           // transparente). On l'appelle quand même pour cohérence si la
           // règle évoluait.
@@ -741,10 +732,7 @@ class CareerSessionGenerator {
         stamina = _StaminaModel.apply(stamina, partDraft, progress, cfg);
         _advanceSalivaSim(partDraft);
         steps.add(_draftToStep(partDraft, time: time, text: partText));
-        _state.lastMode = partDraft.mode;
-        _state.lastText = partText;
-        _state.lastFrom = partDraft.from;
-        _state.lastTo = partDraft.to;
+        _state.recordLastAction(partDraft, partText);
         _trackPushedStep(partDraft.mode, partDraft.to,
             from: partDraft.from,
             bpm: partDraft.bpm,
@@ -777,8 +765,7 @@ class CareerSessionGenerator {
         _advanceSalivaSim(fakeBreath.draft);
         steps.add(
             _draftToStep(fakeBreath.draft, time: time, text: fakeBreath.text));
-        _state.lastMode = SessionMode.breath;
-        _state.lastText = fakeBreath.text;
+        _state.recordLastTransit(SessionMode.breath, fakeBreath.text);
         _trackPushedStep(SessionMode.breath, null,
             duration: fakeBreath.draft.duration);
         _StaminaModel.fillProfile(
@@ -796,10 +783,7 @@ class CareerSessionGenerator {
         stamina = _StaminaModel.apply(stamina, chain, progress, cfg);
         _advanceSalivaSim(chain);
         steps.add(_draftToStep(chain, time: time, text: ''));
-        _state.lastMode = chain.mode;
-        _state.lastText = '';
-        _state.lastFrom = chain.from;
-        _state.lastTo = chain.to;
+        _state.recordLastAction(chain, '');
         _trackPushedStep(chain.mode, chain.to,
             from: chain.from, bpm: chain.bpm, duration: chain.duration);
         _StaminaModel.fillProfile(profile, time, chain.duration!, stamina,
@@ -1280,8 +1264,7 @@ class CareerSessionGenerator {
     ));
     final preText = _pickPhraseForDraft(ctx.bank, preDraft, 'medium');
     ctx.steps.add(_draftToStep(preDraft, time: time, text: preText));
-    _state.lastMode = SessionMode.rhythm;
-    _state.lastText = preText;
+    _state.recordLastTransit(SessionMode.rhythm, preText);
     _trackPushedStep(SessionMode.rhythm, preDraft.to,
         from: preDraft.from, bpm: preDraft.bpm, duration: preDraft.duration);
     final staminaBeforePre = stamina;
@@ -1438,8 +1421,7 @@ class CareerSessionGenerator {
       }
       ctx.steps.add(_draftToStep(boostDraft, time: t, text: boostText));
       lastBoostIndex = ctx.steps.length - 1;
-      _state.lastMode = boostDraft.mode;
-      _state.lastText = boostText;
+      _state.recordLastTransit(boostDraft.mode, boostText);
       _state.lastBpm = boostDraft.bpm ?? _state.lastBpm;
       _trackPushedStep(boostDraft.mode, boostDraft.to,
           from: boostDraft.from,
@@ -1520,8 +1502,7 @@ class CareerSessionGenerator {
     final finalStepStartTime = time;
     final finisherStep =
         _draftToStep(finisherDraft, time: time, text: finalStepText);
-    _state.lastMode = finalMode;
-    _state.lastText = finalStepText;
+    _state.recordLastTransit(finalMode, finalStepText);
     _trackPushedStep(finalMode, finisherDraft.to,
         from: finisherDraft.from,
         bpm: finisherDraft.bpm,
@@ -1574,8 +1555,7 @@ class CareerSessionGenerator {
     _StaminaModel.fillProfile(ctx.profile, time, postFinalDuration, newStamina,
         valueStart: staminaBeforePostFinal);
     _advanceSalivaSim(postFinalDraft);
-    _state.lastMode = postFinalDraft.mode;
-    _state.lastText = postFinalText;
+    _state.recordLastTransit(postFinalDraft.mode, postFinalText);
     _trackPushedStep(postFinalDraft.mode, postFinalDraft.to,
         from: postFinalDraft.from,
         bpm: postFinalDraft.bpm,
