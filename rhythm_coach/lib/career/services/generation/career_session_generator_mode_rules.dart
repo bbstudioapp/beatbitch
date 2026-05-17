@@ -44,19 +44,9 @@
 
 part of 'career_session_generator.dart';
 
-/// Cluster sémantique d'un step, utilisé pour assurer la cohérence de
-/// la séance : on doit rester plusieurs steps consécutifs sur le même
-/// type avant d'en changer (sauf `transit` qui est une parenthèse
-/// transparente : breath de récup, freestyle).
-///
-/// - `bouche` (rhythm, hold, beg-non-libre, suckle) : cœur de l'app, on
-///   y passe la majorité du temps.
-/// - `langue` (lick) : variante douce, intros et transitions.
-/// - `libreMain` (hand, biffle, beg-libre) : la bouche est libre, la
-///   stim vient de la main / d'un coup / d'une supplique vocale pure.
-/// - `transit` (breath, freestyle) : pause neutre, ne casse pas la
-///   continuité du type courant.
-enum StepType { bouche, langue, libreMain, transit }
+// `StepType` vit désormais dans `step_type.dart` (library autonome),
+// importé et re-exporté par `career_session_generator.dart`. Les call
+// sites internes du générateur (et ses parts) y accèdent directement.
 
 /// Surface du générateur exposée aux `ModeRules`. C'est strictement tout
 /// ce qu'une rule a le droit de consommer — ajouter une méthode ou un

@@ -1,30 +1,39 @@
-// Fichier part de `career_session_generator.dart` — value object
-// mutable `SessionRuntimeState` : état muté pendant une séance.
+// Library autonome — value object mutable `SessionRuntimeState` :
+// état muté pendant une séance.
+//
+// Extrait de `career_session_generator.dart` : sa sortie en library
+// autonome est préalable à l'extraction de `gen_facade.dart` (la
+// facade expose `SessionRuntimeState` comme field).
 //
 // Pendant l'exécution de `generate()`, le générateur tient un
 // scratchpad de compteurs / derniers émis / cooldowns / simulation
-// salive qui est lu et muté à chaque step poussé. Ces ~13 fields
-// vivaient sur l'instance du générateur ; ils sont désormais regroupés
-// dans ce value object mutable, posé en début de chaque `generate()`
-// / `generatePunishment()`.
+// salive qui est lu et muté à chaque step poussé.
 //
 // Pendant que `SessionConfig` est **immuable** (inputs figés de la
 // séance), `SessionRuntimeState` est **mutable par contrat** — c'est
 // le moteur de la boucle main. Les call sites externes (rules,
-// dispatcher, trackers) lisent toujours via `gen._foo` grâce à des
-// getters d'adapteur ; les mutations sont locales au générateur.
+// dispatcher, trackers) lisent toujours via `gen._state.foo` grâce à
+// des getters d'adapteur ; les mutations sont locales au générateur.
 //
 // `unlockedKeys` vit ici (et pas dans `SessionConfig`) parce qu'il est
 // **étendu** en cours de séance : quand une milestone est acquittée,
 // ses unlocks rejoignent l'ensemble pour les steps suivants.
 //
-// Sous-systèmes runtime déjà extraits **séparément** (pas dans ce state) :
+// Sous-systèmes runtime **non inclus** dans ce state :
 //   * `RhythmChainTracker` — sait gérer sa propre vie (reset + onStepPushed).
 //   * `_RhythmicPatternBuffer` — idem (clear + record).
 // Ils restent des objets autonomes du générateur ; ce state regroupe
 // juste les fields plats.
 
-part of 'career_session_generator.dart';
+import 'dart:math';
+
+import '../../../models/session.dart';
+import '../../../models/session_step.dart';
+import '../../../services/saliva_engine.dart';
+import '../../models/unlock_key.dart';
+import 'mode_continuity_state.dart';
+import 'step_draft.dart';
+import 'step_type.dart';
 
 /// État muté pendant une séance — scratchpad de la boucle `generate()`.
 /// Posé une fois en début de `generate()` / `generatePunishment()` via
