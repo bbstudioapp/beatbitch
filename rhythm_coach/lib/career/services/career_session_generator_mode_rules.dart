@@ -21,6 +21,8 @@
 //   * `classify` — cluster sémantique (`_StepType`) consommé par la
 //     friction de continuité (`_ModePicker.continuityMultiplier`) et le
 //     tracking (`_SessionRuntimeState.recordContinuity`).
+//   * `finalCategory` — variante de `finale_chime` à piocher si le mode
+//     se retrouve en final d'apothéose (ex-`_categorizeFinal`).
 
 part of 'career_session_generator.dart';
 
@@ -130,6 +132,16 @@ abstract class _ModeRules {
   /// le caller passe `null` — un beg-candidat est traité comme libre par
   /// défaut (cf. doc du caller).
   _StepType classify(Position? to);
+
+  /// Variante de `finale_chime` à piocher si le mode se retrouve en
+  /// final d'apothéose (cf. `_FinalPicker.pickFinal` côté palette,
+  /// `BeepEngine.playFinaleChime` côté audio). Default `medium` —
+  /// couvre biffle, lick, rhythm, beg, breath, freestyle, suckle qui
+  /// soit n'apparaissent jamais en final, soit reçoivent une finition
+  /// neutre. Hand override en `easy` (finition douce), hold override
+  /// avec un switch sur `to` (tip→easy, head/mid→medium, throat→hard,
+  /// full→extreme, balls→hard).
+  FinalCategory finalCategory(_StepDraft draft) => FinalCategory.medium;
 
   /// Clé d'unlock requise pour qu'un step de ce mode soit jouable en mode
   /// carrière, ou `null` quand le step est dans le socle de base (pas de

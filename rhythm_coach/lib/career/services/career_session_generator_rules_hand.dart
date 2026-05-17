@@ -12,6 +12,11 @@ class _HandRules extends _ModeRules {
   @override
   _StepType classify(Position? to) => _StepType.libreMain;
 
+  /// Hand final → chime `easy` : la finition à la main reste douce, on
+  /// ne dramatise pas avec un chime de gorge.
+  @override
+  FinalCategory finalCategory(_StepDraft draft) => FinalCategory.easy;
+
   @override
   double delta(_StepDraft draft, double progress, CareerLevel cfg) {
     final dur = draft.duration ?? 0;
