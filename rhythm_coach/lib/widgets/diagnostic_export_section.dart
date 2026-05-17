@@ -45,14 +45,20 @@ class DiagnosticExportSection extends StatelessWidget {
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: () => _openSheet(context),
-                icon: const Icon(Icons.ios_share),
-                label: Text(t.profileDiagnosticExportButton),
+                icon: const Icon(Icons.ios_share, size: 18),
+                label: Text(
+                  t.profileDiagnosticExportButton,
+                  textAlign: TextAlign.center,
+                ),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppTheme.accent,
                   side: BorderSide(
                     color: AppTheme.accent.withValues(alpha: 0.6),
                   ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 14,
+                  ),
                 ),
               ),
             ],
