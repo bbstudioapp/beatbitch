@@ -87,4 +87,45 @@ class _HoldRules extends _ModeRules {
       duration: dur,
     );
   }
+
+  /// Hold court tip/head/mid/throat/full en recovery : bisou prolongé /
+  /// immobilisation douce qui insère l'alternance rhythm/hold même
+  /// pendant les phases où la stamina est basse (sinon on n'a que des
+  /// hold sur les rares moments hors recovery). Toujours candidat — le
+  /// choix de la position dépend du plafond milestone.
+  @override
+  bool isRecoveryCandidate(_RecoveryAvailability a) => true;
+
+  @override
+  _StepDraft buildRecovery(_RecoveryCtx ctx) {
+    // La position dépend du niveau de la joueuse : tant qu'elle n'a pas
+    // dépassé hold mid, c'est tip ou head (bisou / gland tenu, vraie
+    // respiration). Dès que throat est débloqué, le hold de récup n'a
+    // plus de sens à profondeur basse — on garde le hold mais à la
+    // profondeur max (= throat ou full), assumée comme l'unique geste
+    // de tenue. La durée courte (4-7 s) garde une marge de respi avant
+    // de redescendre.
+    final ceilingIdx = ctx.gen._milestoneHoldCeilingIdx();
+    final holdDur = 4 + ctx.gen._rng.nextInt(4);
+    final Position to;
+    if (ceilingIdx >= Position.throat.index) {
+      // Throat ou full débloqué : on tient profond même en récup. Le
+      // user a explicitement validé la règle — pas de hold doux quand
+      // tu sais tenir gorge.
+      to = ceilingIdx >= Position.full.index && ctx.gen._rng.nextDouble() < 0.30
+          ? Position.full
+          : Position.throat;
+    } else if (ceilingIdx >= Position.mid.index) {
+      to = Position.mid;
+    } else {
+      to = ctx.gen._rng.nextBool() ? Position.tip : Position.head;
+    }
+    return _StepDraft(
+      mode: SessionMode.hold,
+      bpm: null,
+      from: null,
+      to: to,
+      duration: holdDur,
+    );
+  }
 }

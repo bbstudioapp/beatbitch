@@ -48,6 +48,44 @@ class _DraftCtx {
   final CareerSessionGenerator gen;
 }
 
+/// Snapshot des conditions d'éligibilité d'un mode à la phase de récup,
+/// passé à `_ModeRules.isRecoveryCandidate`. Construit une seule fois par
+/// `_buildRecoveryStep` et partagé avec toutes les rules consultées.
+///
+/// `heritage` (= `unlockedKeys.isEmpty`) marque les sessions hors-carrière :
+/// dans ce mode, le gating par milestone est court-circuité (tous les
+/// modes passent par défaut). Symétrique de la convention déjà appliquée
+/// par `_isUnlocked` ailleurs.
+class _RecoveryAvailability {
+  const _RecoveryAvailability({
+    required this.heritage,
+    required this.unlockedKeys,
+    required this.includeHand,
+  });
+
+  final bool heritage;
+  final Set<UnlockKey> unlockedKeys;
+  final bool includeHand;
+}
+
+/// Contexte d'assemblage d'un draft de récup passé à
+/// `_ModeRules.buildRecovery`. Le BPM et la durée par défaut sont tirés
+/// une seule fois par `_buildRecoveryStep` pour garantir une cohérence
+/// inter-modes du contrat de récup (BPM ≤ 60, fenêtre 10–18 s) ; les
+/// rules qui dérivent leur propre durée (beg 6–11 s, freestyle 8–15 s,
+/// hold 4–7 s) peuvent simplement les ignorer.
+class _RecoveryCtx {
+  const _RecoveryCtx({
+    required this.gen,
+    required this.bpm,
+    required this.duration,
+  });
+
+  final CareerSessionGenerator gen;
+  final int bpm;
+  final int duration;
+}
+
 /// Règles d'un mode : tout ce qui est spécifique au mode et qui était
 /// auparavant porté par les gros switches du générateur (stamina,
 /// unlock gate, capability clamp, dégradation, construction de step).
@@ -110,6 +148,28 @@ abstract class _ModeRules {
   _StepDraft build(_DraftCtx ctx) {
     throw UnimplementedError(
       '_ModeRules.build non implémenté pour $runtimeType',
+    );
+  }
+
+  /// Indique si ce mode est candidat à la phase de récup étant donné
+  /// les unlocks acquis et le toggle Hand. Default `false` (opt-in
+  /// explicite) — `hand`, `breath` et `suckle` ne sont jamais tirés
+  /// en récup, ils gardent le défaut.
+  ///
+  /// Le filtrage par dose Custom (`coachModeWeights`), la friction de
+  /// continuité (`_ModePicker.filterRepeated` / `pickWeighted`) et le
+  /// check final `_isUnlocked` (qui dégrade en cascade) restent côté
+  /// orchestrateur — ce gate est uniquement « éligibilité par défaut
+  /// + unlock requis pour entrer dans la palette ».
+  bool isRecoveryCandidate(_RecoveryAvailability a) => false;
+
+  /// Construit le draft de récup pour ce mode. Appelé uniquement après
+  /// que le mode a été retenu par le tirage pondéré (donc après que
+  /// `isRecoveryCandidate` a retourné `true`). Default throw — toute
+  /// rule qui opt-in doit override.
+  _StepDraft buildRecovery(_RecoveryCtx ctx) {
+    throw UnimplementedError(
+      '_ModeRules.buildRecovery non implémenté pour $runtimeType',
     );
   }
 }

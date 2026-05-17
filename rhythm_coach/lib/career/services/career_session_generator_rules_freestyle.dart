@@ -27,4 +27,24 @@ class _FreestyleRules extends _ModeRules {
       duration: dur,
     );
   }
+
+  /// Freestyle n'entre dans la palette de récup qu'après acquittement
+  /// de sa milestone (`intro_freestyle`, niveau 7) — sa phase libre
+  /// neutre est introduite explicitement, pas un fallback de récup
+  /// permanent.
+  @override
+  bool isRecoveryCandidate(_RecoveryAvailability a) =>
+      a.heritage || a.unlockedKeys.contains(UnlockKey.freestyle);
+
+  @override
+  _StepDraft buildRecovery(_RecoveryCtx ctx) {
+    final freeDur = 8 + ctx.gen._rng.nextInt(8);
+    return _StepDraft(
+      mode: SessionMode.freestyle,
+      bpm: null,
+      from: null,
+      to: null,
+      duration: freeDur,
+    );
+  }
 }

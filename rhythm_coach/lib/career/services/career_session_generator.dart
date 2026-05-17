@@ -1948,41 +1948,30 @@ class CareerSessionGenerator {
     );
   }
 
-  /// Tirage d'un step "respi active" : mode parmi lick/biffle/beg/freestyle,
-  /// BPM ≤ 60 pour déclencher la regen d'endurance. Le mode `breath` n'est
-  /// plus tiré ici — il est désormais inséré strictement sur déficit
-  /// d'endurance projeté (cf. `_buildBreathRecovery`), pas comme une option
-  /// d'humeur générale.
+  /// Tirage d'un step "respi active" : mode parmi les `_ModeRules` qui
+  /// opt-in à `isRecoveryCandidate`, BPM ≤ 60 pour déclencher la regen
+  /// d'endurance. Le mode `breath` n'est plus tiré ici — il est désormais
+  /// inséré strictement sur déficit d'endurance projeté (cf.
+  /// `_buildBreathRecovery`), pas comme une option d'humeur générale.
+  ///
+  /// L'orchestration est mode-agnostique : on collecte les candidats via
+  /// le registry, on applique les filtres communs (dose Custom, friction
+  /// de continuité), on délègue l'assemblage à la rule retenue. La
+  /// logique mode-specific (durée, gating unlock, choix de position) vit
+  /// dans `_ModeRules.isRecoveryCandidate` / `buildRecovery`.
   _StepDraft _buildRecoveryStep() {
+    final bpm = 45 + _rng.nextInt(14); // [45, 58]
+    final dur = 10 + _rng.nextInt(9); // [10, 18]
     // Convention `_unlockedKeys.isEmpty` = mode hérité : pas de gating, tous
-    // les modes sont candidats (cf. `_isUnlocked`). Pour les modes carrière,
-    // on ne propose que ceux dont la milestone d'introduction est acquittée.
-    final heritage = _unlockedKeys.isEmpty;
-    final canBeg = heritage || _unlockedKeys.contains(UnlockKey.begLibre);
-    final canBiffleRecovery =
-        heritage || _unlockedKeys.contains(UnlockKey.biffleBasic);
-    // Freestyle gaté uniquement par sa milestone (intro_freestyle, niveau
-    // 7) — on ne double-check plus le niveau, l'acquittement de la
-    // milestone est l'unique source de vérité.
-    final canFreestyle =
-        heritage || _unlockedKeys.contains(UnlockKey.freestyle);
-    final candidates = [
-      SessionMode.lick,
-      if (_includeHand && canBiffleRecovery) SessionMode.biffle,
-      if (canBeg) SessionMode.beg,
-      if (canFreestyle) SessionMode.freestyle,
-      // Rhythm très doux comme « récup en bouche » : BPM bas, tip→head,
-      // coût stamina modéré. Toujours candidat — la friction de continuité
-      // décide s'il gagne (en bouche : ×3.0, hors bouche : ×3.0 voire +
-      // selon la durée d'excursion). Sans ça, une recovery déclenchée
-      // depuis bouche reste systématiquement bloquée hors bouche, et le
-      // pattern « rhythm → recovery → rhythm » fait des séries de 1 step.
-      SessionMode.rhythm,
-      // Hold court tip/head : bisou prolongé / immobilisation douce. Sert
-      // à insérer l'alternance rhythm/hold même pendant les phases où la
-      // stamina est basse (sinon on n'a que des hold sur les rares moments
-      // hors recovery). Coût stamina faible à cette profondeur.
-      SessionMode.hold,
+    // les modes opt-in passent par défaut (cf. `_isUnlocked`).
+    final avail = _RecoveryAvailability(
+      heritage: _unlockedKeys.isEmpty,
+      unlockedKeys: _unlockedKeys,
+      includeHand: _includeHand,
+    );
+    final candidates = <SessionMode>[
+      for (final entry in _modeRulesRegistry.entries)
+        if (entry.value.isRecoveryCandidate(avail)) entry.key,
     ];
     // Exclusions Custom (dose `none`) : la recovery ne doit pas ramener un
     // mode que la joueuse a explicitement banni. Si tout est exclu, on
@@ -1996,89 +1985,11 @@ class CareerSessionGenerator {
     // aussi à la recovery (sans ça, une recovery uniforme repousse souvent
     // langue/libre alors que la séance vient juste de quitter bouche).
     final mode = _pickWeightedMode(pool);
-    final bpm = 45 + _rng.nextInt(14); // [45, 58]
-    final dur = 10 + _rng.nextInt(9); // [10, 18]
-    _StepDraft draft;
-    if (mode == SessionMode.beg) {
-      // Récup vocale par défaut : sans position (= beg libre). Si begLibre
-      // n'est pas encore débloqué, on dégrade via _enforceHumiliationRequired
-      // qui retombera sur beg head ou lick selon la situation.
-      final begDur = 6 + _rng.nextInt(6);
-      draft = _StepDraft(
-        mode: mode,
-        bpm: null,
-        from: null,
-        to: null,
-        duration: begDur,
-      );
-    } else if (mode == SessionMode.freestyle) {
-      // Phase libre : neutre. Encadre le repos sans bip de loop.
-      final freeDur = 8 + _rng.nextInt(8);
-      draft = _StepDraft(
-        mode: mode,
-        bpm: null,
-        from: null,
-        to: null,
-        duration: freeDur,
-      );
-    } else if (mode == SessionMode.rhythm) {
-      // Rhythm en recovery = bouche douce. La baseline (tip→head) reste
-      // ouverte tant que la joueuse n'a pas appris la gorge — gate sur
-      // `throatHoldShort` plutôt que `holdMidShort` : les premiers paliers
-      // ont besoin de variété (tip→head, tip→mid, head→mid se mélangent),
-      // ce serait trop pauvre de tout aligner sur head→mid dès le niveau 4.
-      // À partir du moment où la gorge est débloquée, le rhythm de
-      // recovery passe à head→mid — la baseline doit refléter le niveau.
-      // BPM bas — le coût stamina reste modéré pour ne pas creuser la
-      // dette d'endurance qu'on cherche justement à combler ailleurs.
-      final hasThroat = _unlockedKeys.contains(UnlockKey.throatHoldShort);
-      draft = _StepDraft(
-        mode: mode,
-        bpm: bpm,
-        from: hasThroat ? Position.head : Position.tip,
-        to: hasThroat ? Position.mid : Position.head,
-        duration: dur,
-      );
-    } else if (mode == SessionMode.hold) {
-      // Hold court en recovery — la position dépend du niveau de la
-      // joueuse : tant qu'elle n'a pas dépassé hold mid, c'est tip ou head
-      // (bisou / gland tenu, vraie respiration). Dès que throat est
-      // débloqué, le hold de récup n'a plus de sens à profondeur basse —
-      // on garde le hold mais à la profondeur max (= throat ou full),
-      // assumée comme l'unique geste de tenue. La durée courte (4-7s)
-      // garde une marge de respi avant de redescendre.
-      final ceilingIdx = _milestoneHoldCeilingIdx();
-      final holdDur = 4 + _rng.nextInt(4);
-      final Position to;
-      if (ceilingIdx >= Position.throat.index) {
-        // Throat ou full débloqué : on tient profond même en récup.
-        // Le user a explicitement validé la règle — pas de hold doux quand
-        // tu sais tenir gorge.
-        to = ceilingIdx >= Position.full.index && _rng.nextDouble() < 0.30
-            ? Position.full
-            : Position.throat;
-      } else if (ceilingIdx >= Position.mid.index) {
-        to = Position.mid;
-      } else {
-        to = _rng.nextBool() ? Position.tip : Position.head;
-      }
-      draft = _StepDraft(
-        mode: mode,
-        bpm: null,
-        from: null,
-        to: to,
-        duration: holdDur,
-      );
-    } else {
-      final (from, to) = _sampleFromTo(0.3);
-      draft = _StepDraft(
-        mode: mode,
-        bpm: bpm,
-        from: from,
-        to: to,
-        duration: dur,
-      );
-    }
+    final draft = _modeRulesRegistry[mode]!.buildRecovery(_RecoveryCtx(
+      gen: this,
+      bpm: bpm,
+      duration: dur,
+    ));
     // Gating unlock : si le mode/draft tiré n'est pas encore débloqué (ex :
     // biffle avant niveau 5, beg libre avant niveau 3, freestyle avant
     // niveau 4), on dégrade. Évite que la phase de récup laisse passer une
