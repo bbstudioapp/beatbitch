@@ -39,6 +39,7 @@ part 'career_session_generator_punishment.dart';
 part 'career_session_generator_rhythm_chain_tracker.dart';
 part 'career_session_generator_rhythmic_pattern_buffer.dart';
 part 'career_session_generator_session_config.dart';
+part 'career_session_generator_session_runtime_state.dart';
 
 /// Résultat d'une génération : la session figée à passer au controller +
 /// le profil d'endurance projeté (utile à l'overlay debug `StaminaBar`) +
@@ -90,102 +91,56 @@ class CareerSessionGenerator {
   int get _level => _config.level;
 
   // ─── ÉTAT DE TRACKING (mutable pendant la génération) ────────────────────
-  // Champs mis à jour à chaque step poussé. Servent à la continuité, à la
-  // variété (anti-répétition mode/BPM/profondeur) et au pacing (mini-vagues,
-  // ordres salive). Tous reset au début de `generate`.
+  // 13 fields scratchpad regroupés dans `_SessionRuntimeState`, re-posé en
+  // début de chaque `generate()` / `generatePunishment()` via
+  // `_SessionRuntimeState.fresh(rng:)`. Les getters/setters ci-dessous ne
+  // sont qu'une projection — toute lecture/écriture passe par `_state.xxx`.
+  // Cf. `career_session_generator_session_runtime_state.dart` pour la liste
+  // complète et la doc des champs.
 
-  /// `time` (en secondes) à partir duquel une **mini-vague** peut être
-  /// insérée dans la boucle main. Cf. `_shouldEmitMiniWave` pour les
-  /// conditions cumulatives. Initialisée à 5-6 min dans `generate`. Une
-  /// vague émise repousse à `time + 6-7 min`. Vise à casser la diagonale
-  /// d'intensité unique du début au finish sur les sessions longues —
-  /// 1 à 3 mini-vagues sur une session de 25-45 min.
-  int _nextMiniWaveAt = 0;
+  late _SessionRuntimeState _state;
 
-  /// `time` du dernier ordre de déglutition forcé (`swallow_order`).
-  /// Sert au cooldown 90 s entre deux ordres : sans ça, une joueuse spé
-  /// sloppy avec lick à fond sature en permanence et le coach radoterait
-  /// « avale » toutes les 30 s. Initialisée à -120 dans `generate` pour
-  /// laisser un premier ordre arriver dès la fin de la rampe initiale
-  /// si la salive monte vite.
-  int _lastSwallowOrderAt = -120;
+  int get _nextMiniWaveAt => _state.nextMiniWaveAt;
+  set _nextMiniWaveAt(int v) => _state.nextMiniWaveAt = v;
 
-  /// Dernier mode poussé dans la séance, pour éviter qu'un même mode
-  /// (breath, beg, …) se déclenche deux steps d'affilé. Reset dans `generate`.
-  SessionMode? _lastMode;
+  int get _lastSwallowOrderAt => _state.lastSwallowOrderAt;
+  set _lastSwallowOrderAt(int v) => _state.lastSwallowOrderAt = v;
 
-  /// Tracker de la chaîne `rhythm` consécutive (compteur + caps + reset).
-  /// Cf. `_RhythmChainTracker` pour le détail. Couplé à `_trackPushedStep`
-  /// (qui appelle `onStepPushed`), au dispatcher (`canChain()` filtre
-  /// `rhythm` des candidats) et à `_RhythmRules.build` (`capDuration` borne
-  /// la durée tirée).
+  SessionMode? get _lastMode => _state.lastMode;
+  set _lastMode(SessionMode? v) => _state.lastMode = v;
+
+  _StepType? get _lastType => _state.lastType;
+  set _lastType(_StepType? v) => _state.lastType = v;
+
+  int get _stepsInLastType => _state.stepsInLastType;
+  set _stepsInLastType(int v) => _state.stepsInLastType = v;
+
+  int get _stepsOutsideBouche => _state.stepsOutsideBouche;
+  set _stepsOutsideBouche(int v) => _state.stepsOutsideBouche = v;
+
+  String get _lastText => _state.lastText;
+  set _lastText(String v) => _state.lastText = v;
+
+  int? get _lastBpm => _state.lastBpm;
+  set _lastBpm(int? v) => _state.lastBpm = v;
+
+  Position? get _lastFrom => _state.lastFrom;
+  set _lastFrom(Position? v) => _state.lastFrom = v;
+
+  Position? get _lastTo => _state.lastTo;
+  set _lastTo(Position? v) => _state.lastTo = v;
+
+  SalivaEngine get _salivaSim => _state.salivaSim;
+
+  int get _salivaSimSecond => _state.salivaSimSecond;
+  set _salivaSimSecond(int v) => _state.salivaSimSecond = v;
+
+  Set<UnlockKey> get _unlockedKeys => _state.unlockedKeys;
+  set _unlockedKeys(Set<UnlockKey> v) => _state.unlockedKeys = v;
+
+  // Sous-systèmes runtime autonomes (gèrent leur reset eux-mêmes).
   late final _RhythmChainTracker _rhythmChain = _RhythmChainTracker(gen: this);
-
-  /// Type effectif du dernier step poussé (= cluster sémantique :
-  /// bouche / langue / libre-main). Sert à forcer une continuité par
-  /// type sur plusieurs steps consécutifs : la séance est censée se
-  /// concentrer sur la bouche, les autres types sont des intros / des
-  /// respirations entre deux phases bouche.
-  ///
-  /// Les steps `transit` (breath / freestyle) sont des parenthèses
-  /// transparentes : ils ne touchent ni `_lastType` ni `_stepsInLastType`,
-  /// pour qu'un breath de récup au milieu d'une série bouche n'efface pas
-  /// la continuité.
-  _StepType? _lastType;
-  int _stepsInLastType = 0;
-
-  /// Nombre de steps **consécutifs** posés en dehors du type `bouche`.
-  /// Reset à 0 dès qu'un step bouche est poussé. Sert à imposer un cap
-  /// dur sur la durée d'une excursion hors bouche : passé un certain
-  /// nombre de steps cumulés (peu importe que ce soit langue ou
-  /// libre-main), on force le retour à bouche.
-  ///
-  /// Distinct de `_stepsInLastType` qui reset à chaque changement de
-  /// type — ce compteur-là tient sur tout l'écart bouche → bouche.
-  int _stepsOutsideBouche = 0;
-
-  /// Dernière phrase TTS poussée, pour éviter de répéter la même phrase
-  /// scriptée d'un step à l'autre. Reset dans `generate`.
-  String _lastText = '';
-
-  /// Dernier BPM appliqué à un step (rhythm/lick/biffle/hand). Sert à
-  /// forcer la variété : un nouveau BPM trop proche du précédent est
-  /// décalé de 18–30 BPM par `_diversifyBpm`.
-  int? _lastBpm;
-
-  /// Dernier couple (from, to) appliqué pour les modes à amplitude
-  /// (rhythm/lick/hand/biffle). Sert à forcer une variation de profondeur
-  /// quand le step suivant tombe sur exactement la même paire.
-  Position? _lastFrom;
-  Position? _lastTo;
-
-  /// Buffer roulant des derniers steps rythmés émis + détecteur de
-  /// pattern plat. Cf. `_RhythmicPatternBuffer` pour le détail. Couplé
-  /// à `_trackPushedStep` (qui appelle `record`) et consulté via
-  /// `wouldBeFlat(draft)` par `_diversifyAmplitude`.
   final _RhythmicPatternBuffer _patternBuffer = _RhythmicPatternBuffer();
-
-  // ─── SIMULATION SALIVE ───────────────────────────────────────────────────
-  // Mime le runtime `SalivaEngine` pour anticiper les ordres de déglutition
-  // au moment du draft. Reset à chaque `generate`.
-
-  /// Simulateur de salive utilisé pendant la génération. Mime le
-  /// comportement du `SalivaEngine` runtime : production par mode/position,
-  /// auto-déglutition au-dessus de 75. Sert à projeter la lubrification
-  /// au moment du draft d'un step throat/full (cf. Phase 4). En V1 le
-  /// SwallowMode est assumé `allowed` (le générateur n'émet pas encore de
-  /// steps forbidden auto-générés ; les milestones les portent en dur).
-  late SalivaEngine _salivaSim;
-  int _salivaSimSecond = 0;
-
-  // ─── GATING & CONTENU AUTORISÉ ───────────────────────────────────────────
-  // Set d'unlocks, profil anatomique, poids coach. Posés par `generate`,
-  // lus partout pour autoriser/exclure des modes ou des actions.
-
-  /// Set des `UnlockKey` débloquées pour la génération en cours. Une action
-  /// dont la clé n'est pas dedans est rejetée par `_isUnlocked` et dégradée
-  /// par `_stepDownOne`. Vide = aucune clé requise (mode héritage).
-  Set<UnlockKey> _unlockedKeys = const {};
 
   AnatomyProfile get _anatomy => _config.anatomy;
 
@@ -397,21 +352,8 @@ class CareerSessionGenerator {
       overloadAxis: overload.axis,
       overloadFactor: overload.factor,
     );
-    _unlockedKeys = unlockedKeys;
-    // Première mini-vague entre 4 et 5 minutes : laisse l'intro et le
-    // début de chauffe se dérouler sans rupture, puis le générateur peut
-    // poser un mini-finish pour casser la monotonie. Cadence resserrée
-    // (vs 5-6 min initial) pour viser 3 vagues sur une session 19 min.
-    _nextMiniWaveAt = 240 + _rng.nextInt(61);
-    _lastSwallowOrderAt = -120;
-    _lastMode = null;
-    _lastText = '';
-    _lastBpm = null;
-    _lastFrom = null;
-    _lastTo = null;
-    _lastType = null;
-    _stepsInLastType = 0;
-    _stepsOutsideBouche = 0;
+    _state = _SessionRuntimeState.fresh(rng: _rng);
+    _state.unlockedKeys = unlockedKeys;
     _rhythmChain.reset();
     _patternBuffer.clear();
     // 2ᵉ enveloppe immuable construite après le choix de l'axe de surcharge —
@@ -476,8 +418,8 @@ class CareerSessionGenerator {
         finalBudget -
         (isLowLevel && !useFinalMilestone ? _preFinisherBudgetSeconds : 0);
 
-    _salivaSim = SalivaEngine()..reset();
-    _salivaSimSecond = 0;
+    // `_salivaSim` et `_salivaSimSecond` sont posés par
+    // `_SessionRuntimeState.fresh()` plus haut.
     final steps = <SessionStep>[];
     final profile =
         List<double>.filled(effectiveDuration + 60, _StaminaModel.cap);
@@ -2356,8 +2298,8 @@ class CareerSessionGenerator {
       overloadAxis: capabilityOverloadAxis,
       overloadFactor: overloadFactor,
     );
-    _unlockedKeys = unlockedKeys;
-    _lastText = '';
+    _state = _SessionRuntimeState.fresh(rng: _rng);
+    _state.unlockedKeys = unlockedKeys;
     // Punition générée hors `generate()` → on doit aussi (re)bâtir
     // `_capClamps` ici, sinon le `_clampToCapability` qui sert à matérialiser
     // chaque step de la compo lit un field non initialisé.
