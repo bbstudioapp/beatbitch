@@ -11,6 +11,9 @@ class _FreestyleRules extends _ModeRules {
   const _FreestyleRules();
 
   @override
+  _StepType classify(Position? to) => _StepType.transit;
+
+  @override
   double delta(_StepDraft draft, double progress, CareerLevel cfg) => 0.0;
 
   @override

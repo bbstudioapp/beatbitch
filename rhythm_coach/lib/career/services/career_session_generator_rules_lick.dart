@@ -10,6 +10,9 @@ class _LickRules extends _ModeRules {
   const _LickRules();
 
   @override
+  _StepType classify(Position? to) => _StepType.langue;
+
+  @override
   double delta(_StepDraft draft, double progress, CareerLevel cfg) {
     final dur = draft.duration ?? 0;
     final bpm = draft.bpm ?? 60;

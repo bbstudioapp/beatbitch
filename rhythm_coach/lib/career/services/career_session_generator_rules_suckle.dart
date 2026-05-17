@@ -13,6 +13,12 @@ part of 'career_session_generator.dart';
 class _SuckleRules extends _ModeRules {
   const _SuckleRules();
 
+  /// Aspiration : bouche au contact (head ou balls). Classé `bouche` pour
+  /// bénéficier de la même friction de continuité que hold / beg-tenu —
+  /// éviter d'enchaîner deux modes bouche sans pause.
+  @override
+  _StepType classify(Position? to) => _StepType.bouche;
+
   @override
   double delta(_StepDraft draft, double progress, CareerLevel cfg) {
     final dur = draft.duration ?? 0;

@@ -10,6 +10,9 @@ class _HandRules extends _ModeRules {
   const _HandRules();
 
   @override
+  _StepType classify(Position? to) => _StepType.libreMain;
+
+  @override
   double delta(_StepDraft draft, double progress, CareerLevel cfg) {
     final dur = draft.duration ?? 0;
     final bpm = (draft.bpm ?? 80).toDouble();

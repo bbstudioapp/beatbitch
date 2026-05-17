@@ -12,6 +12,14 @@ part of 'career_session_generator.dart';
 class _BegRules extends _ModeRules {
   const _BegRules();
 
+  /// Beg avec `to` tenu = la bouche reste sur la verge pendant la
+  /// supplique → `bouche`. Beg libre (`to == null`) = supplique purement
+  /// vocale, bouche libre → `libreMain`. Seul mode dont la classification
+  /// dépend du paramètre `to`.
+  @override
+  _StepType classify(Position? to) =>
+      to == null ? _StepType.libreMain : _StepType.bouche;
+
   @override
   double delta(_StepDraft draft, double progress, CareerLevel cfg) {
     final dur = draft.duration ?? 0;

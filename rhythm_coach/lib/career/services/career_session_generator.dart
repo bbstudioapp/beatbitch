@@ -2026,7 +2026,7 @@ class CareerSessionGenerator {
   void _trackPushedStep(SessionMode mode, Position? to,
       {Position? from, int? bpm, int? duration}) {
     _rhythmChain.onStepPushed(mode, duration);
-    _state.recordContinuity(_classifyStep(mode, to));
+    _state.recordContinuity(_modeRulesRegistry[mode]!.classify(to));
     _patternBuffer.record(mode, from: from, to: to, bpm: bpm);
   }
 
@@ -2478,47 +2478,6 @@ class CareerSessionGenerator {
       return roll < pMediumToHard ? 'hard' : tier;
     }
     return tier;
-  }
-}
-
-/// Cluster sémantique d'un step, utilisé pour assurer la cohérence de
-/// la séance : on doit rester plusieurs steps consécutifs sur le même
-/// type avant d'en changer (sauf `transit` qui est une parenthèse
-/// transparente : breath de récup, freestyle).
-///
-/// - `bouche` (rhythm, hold, beg-non-libre) : cœur de l'app, on y
-///   passe la majorité du temps.
-/// - `langue` (lick) : variante douce, intros et transitions.
-/// - `libreMain` (hand, biffle, beg-libre) : la bouche est libre, la
-///   stim vient de la main / d'un coup / d'une supplique vocale pure.
-/// - `transit` (breath, freestyle) : pause neutre, ne casse pas la
-///   continuité du type courant.
-enum _StepType { bouche, langue, libreMain, transit }
-
-/// Classe un step (mode + position éventuelle) en `_StepType`. La
-/// position est nécessaire pour `beg` : un beg avec `to` tenu = la
-/// bouche reste sur la verge pendant la supplique → `bouche` ; un
-/// beg libre (sans `to`) = supplique purement vocale → `libreMain`.
-_StepType _classifyStep(SessionMode mode, Position? to) {
-  switch (mode) {
-    case SessionMode.rhythm:
-    case SessionMode.hold:
-      return _StepType.bouche;
-    case SessionMode.lick:
-      return _StepType.langue;
-    case SessionMode.hand:
-    case SessionMode.biffle:
-      return _StepType.libreMain;
-    case SessionMode.beg:
-      return to == null ? _StepType.libreMain : _StepType.bouche;
-    case SessionMode.breath:
-    case SessionMode.freestyle:
-      return _StepType.transit;
-    case SessionMode.suckle:
-      // Aspiration : bouche au contact (head ou balls). On classe comme
-      // `bouche` pour bénéficier de la même friction de continuité que
-      // hold/beg-tenu — éviter d'enchaîner deux modes bouche sans pause.
-      return _StepType.bouche;
   }
 }
 

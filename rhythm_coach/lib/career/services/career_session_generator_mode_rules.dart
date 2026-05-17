@@ -18,8 +18,25 @@
 //   * `build` — assemblage du `_StepDraft` final à partir des scores
 //     (bpm/amp/dur) budgétés par l'orchestrateur (ex-switch de
 //     `_DifficultyDispatch._mapDifficultyToStep`).
+//   * `classify` — cluster sémantique (`_StepType`) consommé par la
+//     friction de continuité (`_ModePicker.continuityMultiplier`) et le
+//     tracking (`_SessionRuntimeState.recordContinuity`).
 
 part of 'career_session_generator.dart';
+
+/// Cluster sémantique d'un step, utilisé pour assurer la cohérence de
+/// la séance : on doit rester plusieurs steps consécutifs sur le même
+/// type avant d'en changer (sauf `transit` qui est une parenthèse
+/// transparente : breath de récup, freestyle).
+///
+/// - `bouche` (rhythm, hold, beg-non-libre, suckle) : cœur de l'app, on
+///   y passe la majorité du temps.
+/// - `langue` (lick) : variante douce, intros et transitions.
+/// - `libreMain` (hand, biffle, beg-libre) : la bouche est libre, la
+///   stim vient de la main / d'un coup / d'une supplique vocale pure.
+/// - `transit` (breath, freestyle) : pause neutre, ne casse pas la
+///   continuité du type courant.
+enum _StepType { bouche, langue, libreMain, transit }
 
 /// Contexte d'assemblage d'un step passé à `_ModeRules.build`. Porte les
 /// trois scores déjà budgétés par l'orchestrateur (cf.
@@ -102,6 +119,17 @@ abstract class _ModeRules {
 
   /// Coût (négatif) ou regen (positif) d'endurance pour le step.
   double delta(_StepDraft draft, double progress, CareerLevel cfg);
+
+  /// Cluster sémantique du step (`bouche` / `langue` / `libreMain` /
+  /// `transit`) consommé par la friction de continuité (`_ModePicker`)
+  /// et le tracking (`_SessionRuntimeState.recordContinuity`).
+  ///
+  /// Le paramètre `to` n'est utilisé que par `beg` (avec position tenue
+  /// → `bouche`, libre → `libreMain`) ; les autres rules l'ignorent. Au
+  /// moment du tirage d'un candidat (`_ModePicker.continuityMultiplier`),
+  /// le caller passe `null` — un beg-candidat est traité comme libre par
+  /// défaut (cf. doc du caller).
+  _StepType classify(Position? to);
 
   /// Clé d'unlock requise pour qu'un step de ce mode soit jouable en mode
   /// carrière, ou `null` quand le step est dans le socle de base (pas de
