@@ -81,4 +81,24 @@ class _LickRules extends _ModeRules {
       duration: ctx.duration,
     );
   }
+
+  /// Lick post-final = lèche douce tip→head. Blocked si lick vient juste
+  /// d'être joué en final (alternance) ou si la dose Custom lick est 0.
+  /// Cible privilégiée par le biais spé sloppy ≥ 2 pts (« lèche pour
+  /// nettoyer »).
+  @override
+  List<_PostFinalVariant> postFinalVariants(_PostFinalCtx ctx) => [
+        _PostFinalVariant(
+          req: 35.0,
+          blocked: ctx.finalMode == SessionMode.lick ||
+              ctx.isModeForbidden(SessionMode.lick),
+          draft: _StepDraft(
+            mode: SessionMode.lick,
+            bpm: ctx.bpm,
+            from: Position.tip,
+            to: Position.head,
+            duration: ctx.duration,
+          ),
+        ),
+      ];
 }

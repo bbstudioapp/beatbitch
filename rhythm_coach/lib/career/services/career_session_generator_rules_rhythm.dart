@@ -210,4 +210,23 @@ class _RhythmRules extends _ModeRules {
       duration: ctx.duration,
     );
   }
+
+  /// Rhythm post-final = reprise douce tip→head. Blocked si rhythm vient
+  /// juste d'être joué en final (alternance) ou si la dose Custom rhythm
+  /// est 0.
+  @override
+  List<_PostFinalVariant> postFinalVariants(_PostFinalCtx ctx) => [
+        _PostFinalVariant(
+          req: 55.0,
+          blocked: ctx.finalMode == SessionMode.rhythm ||
+              ctx.isModeForbidden(SessionMode.rhythm),
+          draft: _StepDraft(
+            mode: SessionMode.rhythm,
+            bpm: ctx.bpm,
+            from: Position.tip,
+            to: Position.head,
+            duration: ctx.duration,
+          ),
+        ),
+      ];
 }

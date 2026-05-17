@@ -23,6 +23,11 @@
 //     tracking (`_SessionRuntimeState.recordContinuity`).
 //   * `finalCategory` — variante de `finale_chime` à piocher si le mode
 //     se retrouve en final d'apothéose (ex-`_categorizeFinal`).
+//   * `postFinalVariants` — palette de variantes de step post-final
+//     proposées par le mode (ex-palette hardcodée de
+//     `_FinalPicker.buildPostFinalDraft`).
+//   * `finalCategory` — variante de `finale_chime` à piocher si le mode
+//     se retrouve en final d'apothéose (ex-`_categorizeFinal`).
 
 part of 'career_session_generator.dart';
 
@@ -103,6 +108,61 @@ class _RecoveryCtx {
   final CareerSessionGenerator gen;
   final int bpm;
   final int duration;
+}
+
+/// Snapshot passé à `_ModeRules.postFinalVariants`. Construit une fois
+/// par `_FinalPicker.buildPostFinalDraft` avec `bpm`/`duration` tirés et
+/// le mode du final tout juste joué. Les rules consomment ces données
+/// pour gater leurs variantes (`finalMode` exclut le mode du final pour
+/// l'alternance ; `holdCeilingIdx` rend les holds peu profonds obsolètes
+/// si la joueuse a acquis un palier plus profond).
+class _PostFinalCtx {
+  const _PostFinalCtx({
+    required this.finalMode,
+    required this.bpm,
+    required this.duration,
+    required this.includeHand,
+    required this.unlockedKeys,
+    required this.holdCeilingIdx,
+    required this.isModeForbidden,
+  });
+
+  final SessionMode finalMode;
+  final int bpm;
+  final int duration;
+  final bool includeHand;
+  final Set<UnlockKey> unlockedKeys;
+  final int holdCeilingIdx;
+
+  /// Callback dose Custom : un mode à dose `none` doit être exclu
+  /// (cf. `_FinalPicker._isModeForbidden`). Threadé via fonction pour
+  /// éviter de coupler la rule à `coachModeWeights`.
+  final bool Function(SessionMode) isModeForbidden;
+}
+
+/// Variante de step post-final proposée par une rule. Plusieurs
+/// variantes par mode sont autorisées (`hold` propose tip + head, `beg`
+/// propose libre + head). Le picker concatène toutes les variantes de
+/// toutes les rules, filtre sur `req <= humilCap && !blocked`, trie par
+/// `req` décroissante et tire uniformément dans le top-3 (avec biais
+/// spé sloppy → lick / obeissance → beg).
+class _PostFinalVariant {
+  const _PostFinalVariant({
+    required this.req,
+    required this.blocked,
+    required this.draft,
+  });
+
+  /// Seuil humiliation requis pour que la variante entre dans la palette.
+  final double req;
+
+  /// Variante exclue par les contraintes du contexte (mode déjà joué en
+  /// final, profondeur de hold obsolète, dose Custom à 0, unlock absent).
+  final bool blocked;
+
+  /// Draft pré-construit. Allocation négligeable (~7 fields) — pas de
+  /// gain mesurable à laisser ce build paresseux.
+  final _StepDraft draft;
 }
 
 /// Règles d'un mode : tout ce qui est spécifique au mode et qui était
@@ -212,6 +272,18 @@ abstract class _ModeRules {
       '_ModeRules.buildRecovery non implémenté pour $runtimeType',
     );
   }
+
+  /// Variantes de step post-final (aftercare ~12 s après l'orgasme)
+  /// proposées par ce mode. Plusieurs variantes par mode sont
+  /// autorisées (hold propose tip + head, beg propose libre + head).
+  /// Default `const []` (opt-in) — biffle, freestyle, suckle n'ont pas
+  /// de variante post-final.
+  ///
+  /// Le picker (`_FinalPicker.buildPostFinalDraft`) concatène toutes
+  /// les variantes, filtre sur `req <= humilCap && !blocked`, trie par
+  /// `req` décroissante et tire uniformément dans le top-3 (avec biais
+  /// spé sloppy → lick / obeissance → beg pour les niveaux ≥ 7).
+  List<_PostFinalVariant> postFinalVariants(_PostFinalCtx ctx) => const [];
 }
 
 /// Baisse `to` d'un cran en s'arrêtant à `head` (jamais à `tip` — un step

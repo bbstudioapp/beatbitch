@@ -153,4 +153,40 @@ class _BegRules extends _ModeRules {
       duration: begDur,
     );
   }
+
+  /// Beg post-final = 2 variantes (libre + head). Blocked si la dose
+  /// Custom beg est 0, ou si la joueuse n'a pas encore acquitté la
+  /// milestone d'introduction `begLibre` (pédagogiquement faux de
+  /// demander une supplique post-orgasme à une débutante). Cible
+  /// privilégiée par le biais spé obeissance ≥ 2 pts (« remercie-moi »).
+  @override
+  List<_PostFinalVariant> postFinalVariants(_PostFinalCtx ctx) {
+    final canBeg = ctx.unlockedKeys.isEmpty ||
+        ctx.unlockedKeys.contains(UnlockKey.begLibre);
+    final blocked = !canBeg || ctx.isModeForbidden(SessionMode.beg);
+    return [
+      _PostFinalVariant(
+        req: 25.0,
+        blocked: blocked,
+        draft: _StepDraft(
+          mode: SessionMode.beg,
+          bpm: null,
+          from: null,
+          to: null,
+          duration: ctx.duration,
+        ),
+      ),
+      _PostFinalVariant(
+        req: 60.0,
+        blocked: blocked,
+        draft: _StepDraft(
+          mode: SessionMode.beg,
+          bpm: null,
+          from: null,
+          to: Position.head,
+          duration: ctx.duration,
+        ),
+      ),
+    ];
+  }
 }

@@ -368,116 +368,41 @@ class _FinalPicker {
   }) {
     final dur = 10 + rng.nextInt(6); // [10, 15]
     final bpm = 38 + rng.nextInt(11); // [38, 48]
-    // Builders à la volée — un `const` figerait dur/bpm tirés ici.
-    _StepDraft breath() => _StepDraft(
-          mode: SessionMode.breath,
-          bpm: null,
-          from: null,
-          to: null,
-          duration: dur,
-        );
-    _StepDraft hand() => _StepDraft(
-          mode: SessionMode.hand,
-          bpm: bpm,
-          from: Position.tip,
-          to: Position.head,
-          duration: dur,
-        );
-    _StepDraft holdTip() => _StepDraft(
-          mode: SessionMode.hold,
-          bpm: null,
-          from: null,
-          to: Position.tip,
-          duration: dur,
-        );
-    _StepDraft lick() => _StepDraft(
-          mode: SessionMode.lick,
-          bpm: bpm,
-          from: Position.tip,
-          to: Position.head,
-          duration: dur,
-        );
-    _StepDraft rhythm() => _StepDraft(
-          mode: SessionMode.rhythm,
-          bpm: bpm,
-          from: Position.tip,
-          to: Position.head,
-          duration: dur,
-        );
-    _StepDraft holdHead() => _StepDraft(
-          mode: SessionMode.hold,
-          bpm: null,
-          from: null,
-          to: Position.head,
-          duration: dur,
-        );
-    _StepDraft begLibre() => _StepDraft(
-          mode: SessionMode.beg,
-          bpm: null,
-          from: null,
-          to: null,
-          duration: dur,
-        );
-    _StepDraft begHead() => _StepDraft(
-          mode: SessionMode.beg,
-          bpm: null,
-          from: null,
-          to: Position.head,
-          duration: dur,
-        );
-    // Échelle ordonnée. `blocked` exclut le mode du final (alternance) et,
-    // pour les beg, vérifie l'unlock `begLibre` (sinon on demanderait à
-    // une utilisatrice qui n'a pas encore validé la milestone d'introduction
-    // au beg de supplier post-orgasme — pédagogiquement faux).
-    //
-    // Holds tip/head : bloqués dès que la joueuse a débloqué un palier de
-    // hold plus profond (`holdMidShort` ou plus). Cohérent avec la philo
-    // design « le seul hold qui a du sens est le plus profond que tu sais
-    // tenir » — un hold tip/head post-orgasme alors que mid est acquis
-    // est juste une régression arbitraire.
-    final isFinalHold = finalMode == SessionMode.hold;
-    final canBeg =
-        unlockedKeys.isEmpty || unlockedKeys.contains(UnlockKey.begLibre);
-    final holdTipObsolete = holdCeilingIdx > Position.tip.index;
-    final holdHeadObsolete = holdCeilingIdx > Position.head.index;
-    // Note : breath n'est pas dosable côté Custom (cf. CustomSessionConfig.
-    // dosableModes), donc `_isModeForbidden(breath)` est toujours false.
-    final candidates =
-        <(double req, bool blocked, _StepDraft Function() build)>[
-      (0.0, false, breath),
-      (
-        8.0,
-        !includeHand ||
-            finalMode == SessionMode.hand ||
-            _isModeForbidden(SessionMode.hand),
-        hand
-      ),
-      (
-        20.0,
-        isFinalHold || holdTipObsolete || _isModeForbidden(SessionMode.hold),
-        holdTip
-      ),
-      (25.0, !canBeg || _isModeForbidden(SessionMode.beg), begLibre),
-      (
-        35.0,
-        finalMode == SessionMode.lick || _isModeForbidden(SessionMode.lick),
-        lick
-      ),
-      (
-        55.0,
-        finalMode == SessionMode.rhythm || _isModeForbidden(SessionMode.rhythm),
-        rhythm
-      ),
-      (60.0, !canBeg || _isModeForbidden(SessionMode.beg), begHead),
-      (
-        70.0,
-        isFinalHold || holdHeadObsolete || _isModeForbidden(SessionMode.hold),
-        holdHead
-      ),
+    // Échelle ordonnée. `blocked` (mode du final, holds obsolètes,
+    // unlock beg, dose Custom) est calculé par chaque rule à partir du
+    // ctx ci-dessous. Cf. `_ModeRules.postFinalVariants` et la doc
+    // mode-par-mode dans les rules.
+    final ctx = _PostFinalCtx(
+      finalMode: finalMode,
+      bpm: bpm,
+      duration: dur,
+      includeHand: includeHand,
+      unlockedKeys: unlockedKeys,
+      holdCeilingIdx: holdCeilingIdx,
+      isModeForbidden: _isModeForbidden,
+    );
+    final candidates = <_PostFinalVariant>[
+      for (final rule in _modeRulesRegistry.values)
+        ...rule.postFinalVariants(ctx),
     ];
-    final valid = candidates.where((c) => c.$1 <= humilCap && !c.$2).toList()
-      ..sort((a, b) => b.$1.compareTo(a.$1)); // req décroissante
-    if (valid.isEmpty) return breath();
+    final valid = candidates
+        .where((c) => c.req <= humilCap && !c.blocked)
+        .toList()
+      ..sort((a, b) => b.req.compareTo(a.req)); // req décroissante
+    if (valid.isEmpty) {
+      // Fallback safe : breath est req 0 / jamais blocked dans
+      // `_BreathRules.postFinalVariants` — `valid.isEmpty` ne devrait
+      // donc survenir que sur un `humilCap < 0` aberrant. On reconstruit
+      // un draft breath plutôt que de plonger dans le registry pour
+      // garder un comportement déterministe.
+      return _StepDraft(
+        mode: SessionMode.breath,
+        bpm: null,
+        from: null,
+        to: null,
+        duration: dur,
+      );
+    }
     // Biais spé pour les niveaux avancés : sloppy → lick (« lèche pour
     // nettoyer »), obeissance → beg (« remercie-moi », supplique
     // post-orgasme). Conditions cumulatives : level ≥ 7 (bas niveau on
@@ -494,23 +419,19 @@ class _FinalPicker {
       // privilégie celle qui a le plus de pts. À égalité, sloppy d'abord
       // (l'aftercare de nettoyage colle mieux au ton « finition »).
       if (sloppyPts >= 2 && sloppyPts >= obPts && rng.nextDouble() < 0.60) {
-        final lickCandidate = valid.where((c) {
-          final draft = c.$3();
-          return draft.mode == SessionMode.lick;
-        }).firstOrNull;
-        if (lickCandidate != null) return lickCandidate.$3();
+        final lickCandidate =
+            valid.where((c) => c.draft.mode == SessionMode.lick).firstOrNull;
+        if (lickCandidate != null) return lickCandidate.draft;
       }
       if (obPts >= 2 && rng.nextDouble() < 0.60) {
-        final begCandidate = valid.where((c) {
-          final draft = c.$3();
-          return draft.mode == SessionMode.beg;
-        }).firstOrNull;
-        if (begCandidate != null) return begCandidate.$3();
+        final begCandidate =
+            valid.where((c) => c.draft.mode == SessionMode.beg).firstOrNull;
+        if (begCandidate != null) return begCandidate.draft;
       }
     }
     // Top 3 : tirage uniforme dans les 3 plus humiliantes accessibles.
     // Donne de la variété sans casser la progression d'humiliation.
     final top = valid.take(3).toList();
-    return top[rng.nextInt(top.length)].$3();
+    return top[rng.nextInt(top.length)].draft;
   }
 }
