@@ -34,6 +34,21 @@ import '../../services/capability_axis.dart';
 import '../../services/capability_service.dart';
 import 'level_milestone.dart';
 
+/// Helper interne : trie `(min, max)` d'une plage utilisateur (l'éditeur
+/// Custom n'empêche pas l'utilisatrice de poser min > max). Renvoie
+/// `null` si l'entrée l'est. Partagé par les getters normalisés de
+/// [CustomOverrides].
+(int, int)? _sortPair((int, int)? raw) {
+  if (raw == null) return null;
+  var (lo, hi) = raw;
+  if (lo > hi) {
+    final tmp = lo;
+    lo = hi;
+    hi = tmp;
+  }
+  return (lo, hi);
+}
+
 /// Surcharges propres au mode **Custom** (et utilisées par certains
 /// scénarios de tests). Tous null / false par défaut = mode carrière
 /// standard, aucune contrainte custom appliquée. L'éditeur Custom
@@ -78,6 +93,23 @@ class CustomOverrides {
 
   /// Aucune surcharge — comportement carrière standard.
   static const CustomOverrides none = CustomOverrides();
+
+  /// Plage BPM normalisée : `(min, max)` réordonné si l'utilisatrice a
+  /// posé min > max dans l'éditeur Custom. Le générateur consomme cette
+  /// valeur — un range hors-bornes ne sera jamais atteint, c'est OK.
+  (int, int)? get normalizedBpmRange => _sortPair(bpmRange);
+
+  /// Plage durée hold normalisée : `(min, max)` réordonné + plancher à
+  /// 1 s (un hold à 0 s n'a aucun sens — le step est consommé en un
+  /// tick, ce serait juste un bip).
+  (int, int)? get normalizedHoldDurationRange {
+    final sorted = _sortPair(holdDurationRange);
+    if (sorted == null) return null;
+    var (lo, hi) = sorted;
+    if (lo < 1) lo = 1;
+    if (hi < 1) hi = 1;
+    return (lo, hi);
+  }
 }
 
 /// Plan d'insertion des milestones pédagogiques pour la séance courante.
@@ -91,8 +123,10 @@ class MilestonePlan {
   /// Jusqu'à 2 milestones body insérées dans la fenêtre `[30 %, 65 %]`
   /// de la durée par défaut (surchargeable via les champs
   /// `insertAtMinSeconds` / `insertAtMaxSeconds` de chaque milestone).
-  /// L'invariant `bodies.length ≤ 2` est vérifié par un `assert` côté
-  /// générateur.
+  /// L'invariant `bodies.length ≤ 2` et le placement body sont validés
+  /// par les asserts en tête de `generate()` (impossible de les placer
+  /// dans ce constructeur const : `.placement` et `.every` ne sont pas
+  /// const-evaluable, ce qui casserait `static const MilestonePlan.none`).
   final List<LevelMilestone> bodies;
 
   /// Milestone d'apothéose qui remplace l'enchaînement
@@ -153,4 +187,19 @@ class CapabilityInputs {
   /// Aucune donnée capacité — pas de gating, le générateur ne consulte
   /// pas le profil. Default pour Custom / scénarios / tests neufs.
   static const CapabilityInputs none = CapabilityInputs();
+
+  /// Facteur de surcharge imposé à l'axe [overloadAxis] : dérivé du
+  /// `successRate` persisté via [CapabilityRegulator.surchargeFactor].
+  /// Renvoie `1.0` (no-op) si l'axe ou le profil sont absents — c'est le
+  /// cas par défaut côté `generate()` (qui choisit son axe + son facteur
+  /// via `_pickOverload` et ignore donc ce getter).
+  ///
+  /// Consommé par `generatePunishment` pour honorer l'axe surchargé
+  /// **imposé par la séance principale**, sans re-tirer un nouveau facteur.
+  double get overloadFactor {
+    final axis = overloadAxis;
+    final p = profile;
+    if (axis == null || p == null) return 1.0;
+    return CapabilityRegulator.surchargeFactor(p.stateOf(axis).successRate);
+  }
 }
