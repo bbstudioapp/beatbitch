@@ -48,6 +48,7 @@ import 'rules/career_session_generator_rules_lick.dart';
 import 'rules/career_session_generator_rules_rhythm.dart';
 import 'rules/career_session_generator_rules_suckle.dart';
 import 'bpm_pacing.dart';
+import 'capability_clamp_surface.dart';
 import 'mode_continuity_state.dart';
 import 'rhythm_chain_tracker.dart';
 import 'session_config.dart';
@@ -59,6 +60,7 @@ import 'step_type.dart';
 // sites externes importent `career_session_generator.dart` et y trouvent
 // toujours ces types.
 export 'bpm_pacing.dart' show BpmPacing;
+export 'capability_clamp_surface.dart' show CapabilityClampSurface;
 export 'mode_continuity_state.dart' show ModeContinuityState;
 export 'rhythm_chain_tracker.dart' show RhythmChainTracker;
 export 'session_config.dart' show SessionConfig;

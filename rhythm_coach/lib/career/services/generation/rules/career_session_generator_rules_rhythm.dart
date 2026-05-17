@@ -65,7 +65,7 @@ class RhythmRules extends ModeRules {
   }
 
   @override
-  StepDraft clampToCapability(StepDraft draft, CapabilityClamps c) {
+  StepDraft clampToCapability(StepDraft draft, CapabilityClampSurface c) {
     var from = draft.from;
     var to = draft.to;
     var bpm = draft.bpm;

@@ -379,7 +379,14 @@ abstract class ModeRules {
   /// avec `clampToCustomLimits` (bornes utilisateur Custom) reste côté
   /// `CapabilityClamps.clampToCapability` — chaque rule ne touche qu'à
   /// son draft principal.
-  StepDraft clampToCapability(StepDraft draft, CapabilityClamps c) => draft;
+  ///
+  /// Le second paramètre est typé [CapabilityClampSurface] (interface) et
+  /// non `CapabilityClamps` (classe concrète) : la rule ne consomme que
+  /// `capabilityCapFor` / `overloadFactorFor` / `clampToCapability(d)`.
+  /// Le helper statique `CapabilityClamps.minNullable` reste appelé par
+  /// nom de classe — pas dans l'interface (cf. A.PR1 du plan de refacto).
+  StepDraft clampToCapability(StepDraft draft, CapabilityClampSurface c) =>
+      draft;
 
   /// Une étape de dégradation : retourne le draft modifié si la rule sait
   /// adoucir, ou `null` pour passer la main au fallback global (lick
@@ -550,7 +557,7 @@ StepDraft? tryDescendFrom(StepDraft d) {
 /// Cap durée mutualisé hold + beg : convention `to` porte la position
 /// tenue (repli `from`). Pour throat / full, on prend le min des deux
 /// axes pertinents — la durée tenable de la position ET l'apnée prouvée.
-StepDraft clampHeldDuration(StepDraft draft, CapabilityClamps c) {
+StepDraft clampHeldDuration(StepDraft draft, CapabilityClampSurface c) {
   var dur = draft.duration;
   final held = draft.to ?? draft.from;
   if (held != Position.throat && held != Position.full) return draft;
