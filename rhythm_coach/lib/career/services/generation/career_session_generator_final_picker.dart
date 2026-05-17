@@ -38,11 +38,16 @@ class FinalPicker {
   final Random rng;
   final CapabilityClamps capClamps;
 
+  /// Registry des rules injecté par le générateur — consulté pour
+  /// itérer sur les modes (`finalVariants`, `postFinalVariants`).
+  final Map<SessionMode, ModeRules> rules;
+
   const FinalPicker({
     required this.config,
     required this.unlockedKeys,
     required this.rng,
     required this.capClamps,
+    required this.rules,
   });
 
   int _pts(SpecializationBranch b) => config.spec.pointsIn(b);
@@ -53,6 +58,7 @@ class FinalPicker {
         d,
         anatomy: config.anatomy,
         unlockedKeys: unlockedKeys,
+        rules: rules,
       );
 
   bool _finalUnlocked(UnlockKey? key) =>
@@ -125,7 +131,7 @@ class FinalPicker {
       biffleBpm: biffleBpm,
     );
     final candidates = <FinalVariant>[
-      for (final rule in _modeRulesRegistry.values) ...rule.finalVariants(ctx),
+      for (final rule in rules.values) ...rule.finalVariants(ctx),
     ];
 
     // Filtre humilCap + gate + unlocks composants, prend le plus humiliant
@@ -218,8 +224,7 @@ class FinalPicker {
       isModeForbidden: _isModeForbidden,
     );
     final candidates = <PostFinalVariant>[
-      for (final rule in _modeRulesRegistry.values)
-        ...rule.postFinalVariants(ctx),
+      for (final rule in rules.values) ...rule.postFinalVariants(ctx),
     ];
     final valid = candidates
         .where((c) => c.req <= humilCap && !c.blocked)
