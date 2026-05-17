@@ -36,6 +36,7 @@ part 'career_session_generator_final_picker.dart';
 part 'career_session_generator_difficulty_dispatch.dart';
 part 'career_session_generator_position_pickers.dart';
 part 'career_session_generator_punishment.dart';
+part 'career_session_generator_rhythm_chain_tracker.dart';
 
 /// Résultat d'une génération : la session figée à passer au controller +
 /// le profil d'endurance projeté (utile à l'overlay debug `StaminaBar`) +
@@ -126,14 +127,12 @@ class CareerSessionGenerator {
   /// (breath, beg, …) se déclenche deux steps d'affilé. Reset dans `generate`.
   SessionMode? _lastMode;
 
-  /// Durée cumulée (en secondes) des steps `rhythm` poussés consécutivement.
-  /// Tout step d'un autre mode (breath compris) reset à 0. Sert au cap
-  /// « rythme soutenu » : tant que `rhythmHeadMidSustained` n'est pas
-  /// débloqué, la chaîne rythme consécutive est plafonnée à 60 s par
-  /// `_capRhythmConsecutive` / `_canChainRhythm` dans `_mapDifficultyToStep`.
-  /// La milestone `intro_rhythm_sustained` enseigne et débloque ce
-  /// dépassement.
-  int _consecutiveRhythmSeconds = 0;
+  /// Tracker de la chaîne `rhythm` consécutive (compteur + caps + reset).
+  /// Cf. `_RhythmChainTracker` pour le détail. Couplé à `_trackPushedStep`
+  /// (qui appelle `onStepPushed`), au dispatcher (`canChain()` filtre
+  /// `rhythm` des candidats) et à `_RhythmRules.build` (`capDuration` borne
+  /// la durée tirée).
+  late final _RhythmChainTracker _rhythmChain = _RhythmChainTracker(gen: this);
 
   /// Type effectif du dernier step poussé (= cluster sémantique :
   /// bouche / langue / libre-main). Sert à forcer une continuité par
@@ -351,8 +350,8 @@ class CareerSessionGenerator {
   // ─── Profil de capacités — 2ᵉ enveloppe de difficulté ────────────────────
 
   /// Adaptateur d'instance pour `_CapabilityClamps.overloadFactorFor` —
-  /// utilisé par `_effectiveRhythmChainCapSeconds` pour étendre le cap de
-  /// chaîne rythme si `rhythmMotionStreak` est l'axe surchargé.
+  /// utilisé par `_RhythmChainTracker.effectiveCapSeconds` pour étendre
+  /// le cap de chaîne rythme si `rhythmMotionStreak` est l'axe surchargé.
   double _overloadFactorFor(CapabilityAxis axis) =>
       _capClamps.overloadFactorFor(axis);
 
@@ -507,7 +506,7 @@ class CareerSessionGenerator {
     _lastType = null;
     _stepsInLastType = 0;
     _stepsOutsideBouche = 0;
-    _consecutiveRhythmSeconds = 0;
+    _rhythmChain.reset();
     _recentEmits.clear();
     _unlockedKeys = unlockedKeys;
     _coachModeWeights = coachModeWeights;
@@ -2296,75 +2295,19 @@ class CareerSessionGenerator {
   // (passé un `_ModeContinuityState`). Plus de call site externe.
 
   /// Met à jour `_lastType` / `_stepsInLastType` après push d'un step,
-  /// et alimente `_recentEmits` (buffer 3 derniers, modes rythmés
-  /// uniquement) pour la détection de pattern plat.
+  /// notifie `_rhythmChain` du mode/durée, et alimente `_recentEmits`
+  /// (buffer 3 derniers, modes rythmés uniquement) pour la détection
+  /// de pattern plat.
   ///
   /// Les steps `transit` (breath / freestyle) sont une parenthèse
-  /// transparente : ils ne touchent ni le tracking de type ni le buffer
-  /// `_recentEmits` — un breath de récup au milieu d'une série rythmée ne
-  /// doit pas remettre le compteur à zéro côté détection de monotonie.
-  /// Plafond (en secondes) de la chaîne `rhythm` consécutive — comportement
-  /// **historique**, utilisé tant que le profil de capacités n'a pas de donnée
-  /// `motion_streak` : tant que `rhythmHeadMidSustained` n'est pas acquis, le
-  /// générateur force une rupture au-delà ; la milestone `intro_rhythm_sustained`
-  /// lève ce mur. En carrière avec un profil renseigné, c'est l'endurance
-  /// **prouvée par la joueuse** (`motion_streak.comfort`) qui gouverne — cf.
-  /// `_effectiveRhythmChainCapSeconds`.
-  static const int _rhythmChainCapSeconds = 60;
-
-  /// Borne basse du cap de chaîne rythme dérivé du profil — qu'une donnée
-  /// `motion_streak` anormalement courte ne hache pas tout le rythme.
-  static const int _rhythmChainCapFloorSeconds = 24;
-
-  /// Plancher de durée d'un step `rhythm` poussé via `_mapDifficultyToStep`.
-  /// Sert à éviter qu'un step soit tronqué à 1-2 s par `_capRhythmConsecutive`
-  /// quand on est presque au cap. En dessous, on retire `rhythm` des
-  /// candidats au tirage (`_canChainRhythm`).
-  static const int _minRhythmStepSeconds = 8;
-
-  /// Cap effectif (en secondes) de la chaîne `rhythm` consécutive :
-  /// - profil renseigné (carrière) → `motion_streak.comfort` (surchargé si
-  ///   `motion_streak` est l'axe poussé), planché à `_rhythmChainCapFloorSeconds` ;
-  /// - sinon → comportement historique (`_rhythmChainCapSeconds`, levé par
-  ///   l'unlock `rhythmHeadMidSustained`).
-  int get _effectiveRhythmChainCapSeconds {
-    final c = _capProfile?.comfortOf(CapabilityAxis.rhythmMotionStreak);
-    if (c != null) {
-      final v =
-          (c * _overloadFactorFor(CapabilityAxis.rhythmMotionStreak)).round();
-      return v < _rhythmChainCapFloorSeconds ? _rhythmChainCapFloorSeconds : v;
-    }
-    return _unlockedKeys.contains(UnlockKey.rhythmHeadMidSustained)
-        ? 1 << 20 // de fait illimité
-        : _rhythmChainCapSeconds;
-  }
-
-  /// Vrai si on peut encore ajouter un step `rhythm` à la chaîne sans
-  /// dépasser le cap (cf. `_effectiveRhythmChainCapSeconds`).
-  bool _canChainRhythm() {
-    return _consecutiveRhythmSeconds + _minRhythmStepSeconds <=
-        _effectiveRhythmChainCapSeconds;
-  }
-
-  /// Tronque la durée d'un step `rhythm` pour respecter le cap chaîne
-  /// consécutive. No-op si la marge restante est suffisante.
-  int _capRhythmConsecutive(int dur) {
-    final remaining =
-        _effectiveRhythmChainCapSeconds - _consecutiveRhythmSeconds;
-    if (remaining <= 0) return dur; // _canChainRhythm aurait dû filtrer
-    return min(dur, remaining);
-  }
-
+  /// transparente côté `_lastType` / `_stepsInLastType` : ils ne touchent
+  /// ni le tracking de type ni le buffer `_recentEmits` — un breath de
+  /// récup au milieu d'une série rythmée ne doit pas remettre le compteur
+  /// de continuité à zéro. Note : pour `_rhythmChain`, un breath *reset*
+  /// le cumul (c'est une vraie pause), géré dans `onStepPushed`.
   void _trackPushedStep(SessionMode mode, Position? to,
       {Position? from, int? bpm, int? duration}) {
-    // Cap rythme soutenu : on cumule la durée des `rhythm` consécutifs.
-    // Tout autre mode (breath compris — c'est une vraie pause de souffle)
-    // remet le compteur à zéro.
-    if (mode == SessionMode.rhythm) {
-      _consecutiveRhythmSeconds += duration ?? 0;
-    } else {
-      _consecutiveRhythmSeconds = 0;
-    }
+    _rhythmChain.onStepPushed(mode, duration);
     final type = _classifyStep(mode, to);
     if (type == _StepType.transit) return;
     if (type == _StepType.bouche) {
@@ -2584,7 +2527,7 @@ class CareerSessionGenerator {
     // Réinitialise l'état comme le ferait `generate`, pour que les helpers
     // (`_clampToCapability`, `_isUnlocked`, `_pickPhrase`...) lisent les
     // mêmes invariants. On ne touche pas aux champs spécifiques au tirage
-    // de session (`_lastMode`, `_consecutiveRhythmSeconds`, etc.) — sans
+    // de session (`_lastMode`, `_rhythmChain`, etc.) — sans
     // objet ici.
     _level = level;
     _includeHand = includeHand;
