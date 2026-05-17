@@ -1734,45 +1734,27 @@ class CareerSessionGenerator {
       // Custom : rhythm exclu → on retombe sur hand (rythmé proche), sinon
       // lick (langue) ou hold (statique) en dernier recours. Cascade
       // pilotée par `introPriority` côté rules (rhythm=0 → hand=1 → lick=2
-      // → hold=3).
+      // → hold=3). Construction déléguée à `buildIntroStep` : les rules
+      // rythmées consomment les 4 params straight, hold ignore bpm/from.
       final intenseMode = _pickIntroMode();
-      if (intenseMode == SessionMode.hold) {
-        return _StepDraft(
-          mode: SessionMode.hold,
-          bpm: null,
-          from: null,
-          to: to,
-          duration: 10,
-        );
-      }
-      return _StepDraft(
-        mode: intenseMode,
+      return _modeRulesRegistry[intenseMode]!.buildIntroStep(_IntroCtx(
         bpm: 90,
         from: Position.head,
         to: to,
         duration: 10,
-      );
+      ));
     }
     if (quickie) {
       // Quickie : même cascade que l'intense (rhythm → hand → lick →
-      // hold) via `introPriority` côté rules.
+      // hold) via `introPriority` côté rules, construction via
+      // `buildIntroStep`.
       final quickieMode = _pickIntroMode();
-      if (quickieMode == SessionMode.hold) {
-        return const _StepDraft(
-          mode: SessionMode.hold,
-          bpm: null,
-          from: null,
-          to: Position.mid,
-          duration: 8,
-        );
-      }
-      return _StepDraft(
-        mode: quickieMode,
+      return _modeRulesRegistry[quickieMode]!.buildIntroStep(const _IntroCtx(
         bpm: 75,
         from: Position.head,
         to: Position.mid,
         duration: 8,
-      );
+      ));
     }
     // Panel de variantes filtré par milestones : `rhythm_mid_basic`
     // (intro_deeper_basics, niveau 2) gate les variantes head→mid /

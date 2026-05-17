@@ -314,8 +314,17 @@ class _HoldRules extends _ModeRules {
 
   /// Rang 3 (fallback ultime) dans la chaîne d'intro intense/quickie :
   /// hold statique quand tous les modes rythmés/langue sont exclus.
-  /// Construction de step différente (pas de BPM, juste `to` + dur) —
-  /// le caller branche explicitement dessus.
   @override
   int? get introPriority => 3;
+
+  /// Intro hold : ignore bpm/from du ctx, garde seulement la position
+  /// tenue (`to`) et la durée. Le hold n'a ni tempo ni amplitude.
+  @override
+  _StepDraft buildIntroStep(_IntroCtx ctx) => _StepDraft(
+        mode: SessionMode.hold,
+        bpm: null,
+        from: null,
+        to: ctx.to,
+        duration: ctx.duration,
+      );
 }

@@ -248,4 +248,15 @@ class _RhythmRules extends _ModeRules {
   /// rythme bouche profond reste l'ouverture canonique.
   @override
   int? get introPriority => 0;
+
+  /// Intro rythmée : consomme les 4 params du ctx straight (la fixture
+  /// posée par `_firstStep` choisit déjà bpm/from/to/dur appropriés).
+  @override
+  _StepDraft buildIntroStep(_IntroCtx ctx) => _StepDraft(
+        mode: SessionMode.rhythm,
+        bpm: ctx.bpm,
+        from: ctx.from,
+        to: ctx.to,
+        duration: ctx.duration,
+      );
 }

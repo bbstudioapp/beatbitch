@@ -38,6 +38,9 @@
 //   * `introPriority` — rang du mode dans la chaîne de fallback
 //     « intro intense / quickie » de `_firstStep` (ex-cascade `rhythm →
 //     hand → lick → hold`).
+//   * `buildIntroStep` — assemblage du step d'intro intense/quickie
+//     pour ce mode (ex-branche `if (mode == hold) … else …` dans
+//     `_firstStep`).
 
 part of 'career_session_generator.dart';
 
@@ -253,6 +256,27 @@ class _FinalVariant {
   final _StepDraft draft;
 }
 
+/// Contexte d'assemblage d'un step d'intro intense/quickie passé à
+/// `_ModeRules.buildIntroStep`. Construit par `_firstStep` avec les
+/// valeurs « fixture » (intense : bpm=90 / from=head / to=clamped /
+/// dur=10 ; quickie : bpm=75 / from=head / to=mid / dur=8). Les rules
+/// rythmées (rhythm/hand/lick) consomment les 4 params straight ; hold
+/// ignore bpm/from et garde uniquement to+duration (la position tenue +
+/// la durée).
+class _IntroCtx {
+  const _IntroCtx({
+    required this.bpm,
+    required this.from,
+    required this.to,
+    required this.duration,
+  });
+
+  final int bpm;
+  final Position from;
+  final Position to;
+  final int duration;
+}
+
 /// Règles d'un mode : tout ce qui est spécifique au mode et qui était
 /// auparavant porté par les gros switches du générateur (stamina,
 /// unlock gate, capability clamp, dégradation, construction de step).
@@ -430,6 +454,19 @@ abstract class _ModeRules {
   /// `_isModeForbidden(hold)` (sinon en Custom dose à 0 partout on
   /// retombe sans candidat).
   int? get introPriority => null;
+
+  /// Assemble le step d'intro intense/quickie pour ce mode à partir
+  /// des fixture values posées par `_firstStep` (cf. `_IntroCtx`).
+  /// Appelée uniquement après que `_pickIntroMode` a retenu ce mode
+  /// (donc seuls les modes avec `introPriority != null` reçoivent
+  /// l'appel). Default throw — toute rule qui opt-in à `introPriority`
+  /// doit override. Rhythm/hand/lick consomment les 4 params straight ;
+  /// hold ignore bpm/from et ne garde que `to`+`duration`.
+  _StepDraft buildIntroStep(_IntroCtx ctx) {
+    throw UnimplementedError(
+      '_ModeRules.buildIntroStep non implémenté pour $runtimeType',
+    );
+  }
 }
 
 /// Baisse `to` d'un cran en s'arrêtant à `head` (jamais à `tip` — un step

@@ -161,4 +161,14 @@ class _LickRules extends _ModeRules {
   /// langue prend le relais quand rhythm ET hand sont exclus.
   @override
   int? get introPriority => 2;
+
+  /// Intro langue : consomme les 4 params du ctx straight.
+  @override
+  _StepDraft buildIntroStep(_IntroCtx ctx) => _StepDraft(
+        mode: SessionMode.lick,
+        bpm: ctx.bpm,
+        from: ctx.from,
+        to: ctx.to,
+        duration: ctx.duration,
+      );
 }
