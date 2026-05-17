@@ -149,7 +149,7 @@ class LickRules extends ModeRules {
   /// plus haut sans contrainte milestone (cf. `LickRules.unlockKeyFor`
   /// qui gate seulement `to == full` et `balls`).
   @override
-  int? amplitudeDiversifyCeiling(GenFacade gen) => Position.full.index;
+  int? amplitudeDiversifyCeiling(GenFacadeSurface gen) => Position.full.index;
 
   /// Lick post-final = consigne d'aftercare humiliant (« lèche pour
   /// nettoyer »). Pool dédié `pickPostFinalLick` avec fallback cascade

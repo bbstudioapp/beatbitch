@@ -237,7 +237,7 @@ class RhythmRules extends ModeRules {
   /// d'amplitude : on ne décale jamais `to` au-dessus du palier de
   /// profondeur acquis.
   @override
-  int? amplitudeDiversifyCeiling(GenFacade gen) =>
+  int? amplitudeDiversifyCeiling(GenFacadeSurface gen) =>
       gen.milestoneRhythmCeilingIdx();
 
   /// Rhythm en throat/full à BPM ≥ 90 = profil intense capable de

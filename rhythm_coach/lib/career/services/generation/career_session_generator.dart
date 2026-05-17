@@ -50,6 +50,7 @@ import 'rules/career_session_generator_rules_suckle.dart';
 import 'bpm_pacing.dart';
 import 'capability_clamp_surface.dart';
 import 'mode_continuity_state.dart';
+import 'mode_rules.dart';
 import 'rhythm_chain_tracker.dart';
 import 'session_config.dart';
 import 'session_runtime_state.dart';
@@ -62,6 +63,21 @@ import 'step_type.dart';
 export 'bpm_pacing.dart' show BpmPacing;
 export 'capability_clamp_surface.dart' show CapabilityClampSurface;
 export 'mode_continuity_state.dart' show ModeContinuityState;
+export 'mode_rules.dart'
+    show
+        DraftCtx,
+        FinalCtx,
+        FinalVariant,
+        GenFacadeSurface,
+        IntroCtx,
+        ModeRules,
+        PostFinalCtx,
+        PostFinalVariant,
+        RecoveryAvailability,
+        RecoveryCtx,
+        clampHeldDuration,
+        tryDescendFrom,
+        tryDescendToWithGuard;
 export 'rhythm_chain_tracker.dart' show RhythmChainTracker;
 export 'session_config.dart' show SessionConfig;
 export 'session_runtime_state.dart' show SessionRuntimeState;
@@ -79,6 +95,30 @@ part 'career_session_generator_position_pickers.dart';
 part 'career_session_generator_punishment.dart';
 part 'career_session_generator_rhythmic_pattern_buffer.dart';
 part 'career_session_generator_milestone_scheduler.dart';
+
+/// Registry par défaut des règles par mode — couvre les 9 modes du jeu.
+/// Injecté au `CareerSessionGenerator` quand aucun `rules` n'est passé au
+/// constructeur (cas standard). Un test ou un module externe peut passer
+/// un registry de sa fabrication (par exemple pour mocker une rule).
+///
+/// Const map : les rules sont stateless avec des const constructors, donc
+/// la map est const-évaluable et thread-safe.
+///
+/// Vit ici (et non dans `mode_rules.dart`, library autonome) pour éviter
+/// un cycle d'import : la const map référence les 9 implémentations
+/// concrètes qui dépendent de `career_session_generator.dart` via le
+/// re-export de `ModeRules` / `DraftCtx` / etc.
+const Map<SessionMode, ModeRules> defaultModeRulesRegistry = {
+  SessionMode.rhythm: RhythmRules(),
+  SessionMode.lick: LickRules(),
+  SessionMode.hold: HoldRules(),
+  SessionMode.biffle: BiffleRules(),
+  SessionMode.beg: BegRules(),
+  SessionMode.hand: HandRules(),
+  SessionMode.breath: BreathRules(),
+  SessionMode.freestyle: FreestyleRules(),
+  SessionMode.suckle: SuckleRules(),
+};
 
 /// Résultat d'une génération : la session figée à passer au controller +
 /// le profil d'endurance projeté (utile à l'overlay debug `StaminaBar`) +
