@@ -38,6 +38,7 @@ part 'career_session_generator_position_pickers.dart';
 part 'career_session_generator_punishment.dart';
 part 'career_session_generator_rhythm_chain_tracker.dart';
 part 'career_session_generator_rhythmic_pattern_buffer.dart';
+part 'career_session_generator_session_config.dart';
 
 /// Résultat d'une génération : la session figée à passer au controller +
 /// le profil d'endurance projeté (utile à l'overlay debug `StaminaBar`) +
@@ -73,35 +74,20 @@ class CareerSessionGenerator {
 
   final Random _rng;
 
-  // ─── PARAMÈTRES DE SESSION (settables par [generate]) ────────────────────
-  // Posés au début de chaque appel à `generate`. Lus par les helpers de
-  // tirage / clamp tout au long de la génération. Aucun n'est modifié au
-  // cours d'une même session.
+  // ─── PARAMÈTRES DE SESSION (figés par [generate]) ────────────────────────
+  // 16 inputs immuables regroupés dans `_SessionConfig`, re-posé en début
+  // de chaque `generate()` / `generatePunishment()`. Les getters ci-dessous
+  // ne sont qu'une projection — toute lecture passe par `_config.xxx`.
+  // Cf. `career_session_generator_session_config.dart` pour la liste
+  // complète et la doc des champs.
 
-  /// Toggle propagé depuis [generate]. Filtre hand ET biffle des candidats
-  /// (les coups de queue impliquent de tenir avec la main, donc cohérent
-  /// d'exclure les deux ensemble).
-  bool _includeHand = true;
+  late _SessionConfig _config;
 
-  /// Plafond de profondeur autorisé (index Position) — appliqué à
-  /// `_sampleFromTo` et `_pickHoldPosition`. Valeur par défaut 4 (full).
-  /// Renseigné par `generate` à partir du `CareerLevel`.
-  int _maxDepthIndex = 4;
-
-  /// Probabilité de retenir une position profonde (throat/full) quand le
-  /// plafond la permet. Permet de raréfier sans bannir.
-  double _deepProbability = 1.0;
-
-  /// Allocation de spécialisation propagée pour pondérer le tirage des
-  /// candidats et les paramètres internes (BPM, amplitude, durée). Si
-  /// non fournie : map vide → comportement neutre.
-  SpecializationAllocation _spec = SpecializationAllocation.empty();
-
-  /// Niveau global du joueur passé à `generate`. Utilisé pour gater les
-  /// branches de tirage qui n'ont de sens qu'à un certain niveau (ex :
-  /// post-final humiliant biaisé par spé sloppy/obeissance, réservé aux
-  /// niveaux avancés où la dramaturgie peut sortir du cadre doux).
-  int _level = 1;
+  bool get _includeHand => _config.includeHand;
+  int get _maxDepthIndex => _config.maxDepthIndex;
+  double get _deepProbability => _config.deepProbability;
+  SpecializationAllocation get _spec => _config.spec;
+  int get _level => _config.level;
 
   // ─── ÉTAT DE TRACKING (mutable pendant la génération) ────────────────────
   // Champs mis à jour à chaque step poussé. Servent à la continuité, à la
@@ -201,22 +187,13 @@ class CareerSessionGenerator {
   /// par `_stepDownOne`. Vide = aucune clé requise (mode héritage).
   Set<UnlockKey> _unlockedKeys = const {};
 
-  /// Profil anatomique de la joueuse — pour gater les zones non disponibles
-  /// dans son setup (testicules absents → tous les steps `Position.balls`
-  /// rejetés par `_isUnlocked`). Default = tout disponible (rétrocompat
-  /// pour tests / mode hérité). Le call site carrière / Custom passe la
-  /// valeur lue depuis `UserProfileService.anatomy`.
-  AnatomyProfile _anatomy = AnatomyProfile.defaults;
+  AnatomyProfile get _anatomy => _config.anatomy;
 
-  /// Multiplicateur de poids par mode, fourni par le coach actif. Combiné
-  /// **multiplicativement** par-dessus la pondération spé dans `_modeWeight`.
-  /// Mode absent = 1.0 (neutre). Cf. CoachMeta.modeWeights.
-  ///
-  /// **Convention** : un poids strictement à 0 est lu comme une exclusion
-  /// dure (utilisé par le Mode Custom — dose `none` ⇒ 0.0). `_isModeForbidden`
-  /// l'expose et est consulté par tous les call sites qui tirent ou
-  /// hardcodent un mode pour ne jamais émettre un mode exclu.
-  Map<SessionMode, double> _coachModeWeights = const {};
+  /// **Convention** : un poids `coachModeWeights[m] == 0` est lu comme
+  /// une exclusion dure (utilisé par le Mode Custom — dose `none` ⇒ 0.0).
+  /// `_isModeForbidden` l'expose et est consulté par tous les call sites
+  /// qui tirent ou hardcodent un mode pour ne jamais émettre un mode exclu.
+  Map<SessionMode, double> get _coachModeWeights => _config.coachModeWeights;
 
   /// True si le mode est exclu par le caller via `coachModeWeights[m] == 0`.
   /// Un coach normal ne pose jamais 0 (cf. CoachMeta) → toujours false hors
@@ -228,72 +205,20 @@ class CareerSessionGenerator {
     return w != null && w <= 0;
   }
 
-  // ─── HUMILIATION & OBÉDIANCE (snapshot au start de session) ──────────────
-  // Lus par `_humilCapAt` (cascade humil) et `_pickPhrase` (bump tier).
-  // Pas modifiés pendant la génération.
+  // Scores au moment t=0 (lus par `_humilCapAt` et `_pickPhrase`).
+  double get _humiliationCareer => _config.humiliationCareer;
+  double get _humiliationSession => _config.humiliationSession;
+  double get _obedience => _config.obedience;
 
-  /// Score career d'humiliation (persisté lifetime) au démarrage de la
-  /// session. Sert au tirage spécifique de certains modes (lick :
-  /// amplitudes complètes seulement à partir de 2).
-  double _humiliationCareer = 0.0;
+  // Capacité & surcharge (lus par `_clampToCapability` / `_capabilityCapFor`).
+  CapabilityProfile? get _capProfile => _config.capProfile;
+  Map<CapabilityAxis, double> get _capCeilings => _config.capCeilings;
+  CapabilityAxis? get _overloadAxis => _config.overloadAxis;
+  double get _overloadFactor => _config.overloadFactor;
 
-  /// Score session d'humiliation (intra-session) au moment de la
-  /// génération. Vaut 0 pour une session normale, > 0 sur encore
-  /// enchaîné ou régénération en cours de séance (Supplier / retry
-  /// milestone). Le générateur projette une rampe par-dessus ce score
-  /// basée sur le tick automatique (cf. [_humilCapAt]).
-  double _humiliationSession = 0.0;
-
-  /// Score d'obédiance au démarrage de la session (cf. param `obedience`
-  /// de `generate`). Pilote le tier de phrase auto-bumpé dans `_pickPhrase`
-  /// (plus c'est élevé, plus la coach pioche dans `medium`/`hard`) et le
-  /// `recoveryThreshold` (plus c'est élevé, plus on respecte l'endurance).
-  double _obedience = 0.0;
-
-  // ─── CAPACITÉ & SURCHARGE (2ᵉ enveloppe carrière) ────────────────────────
-  // Profil persisté + plafonds figés sur fail + axe surchargé cette séance.
-  // Lus par `_clampToCapability` / `_capabilityCapFor`.
-
-  /// Profil de capacités (2ᵉ enveloppe de difficulté, carrière uniquement).
-  /// `null` = pas de gating capacité (mode Custom, scénarios JSON, tests
-  /// hérités) — convention parallèle à `_unlockedKeys.isEmpty`. On lit
-  /// `comfort` (rendu adaptatif par `CapabilityRegulator`) pour borner les
-  /// steps, et `successRate` pour moduler la surcharge.
-  CapabilityProfile? _capProfile;
-
-  /// Plafonds figés sur un appui FAIL pendant la session courante (§6 de la
-  /// spec) — propagés par `SessionController.capabilitySessionCeilings` aux
-  /// régénérations en cours de séance (Supplier / retry milestone) et au
-  /// premier maillon d'un encore enchaîné. Vide hors carrière.
-  Map<CapabilityAxis, double> _capCeilings = const {};
-
-  /// Axe surchargé cette session (surcharge **isolée** : un seul axe est
-  /// poussé au-delà de son `comfort`, les autres restent clampés — c'est ce
-  /// qui rend un « je peux pas » attribuable, cf. §5/§6). `null` hors carrière
-  /// ou si le profil n'a aucune donnée exploitable (joueuse neuve).
-  CapabilityAxis? _overloadAxis;
-
-  /// Facteur de surcharge appliqué au `comfort` de [_overloadAxis] (1.03→1.15,
-  /// modulé par sa `successRate`). 1.0 pour tout autre axe.
-  double _overloadFactor = 1.0;
-
-  // ─── SURCHARGES MODE CUSTOM ──────────────────────────────────────────────
-  // Bornes utilisateur (BPM, durée des holds) qui priment sur la capacité.
-  // Hors mode Custom → tuple `null` → aucun bornage supplémentaire.
-
-  /// Bornes BPM imposées par l'utilisateur en mode Custom (cf. `generate(
-  /// bpmRange:)`). `null` = pas de bornage utilisateur (carrière, scénario,
-  /// custom à valeurs par défaut). Le `_clampToCapability` final passe par
-  /// `_clampToCustomLimits` qui force le BPM des modes rythmés (rhythm /
-  /// lick / biffle / hand) dans cet intervalle.
-  (int, int)? _bpmRange;
-
-  /// Bornes de durée pour les steps tenus (hold + beg avec position) imposées
-  /// par l'utilisateur en mode Custom. `null` = pas de bornage. Appliqué
-  /// après `_clampToCapability` — donc compatible avec les caps profil de
-  /// capacité, qui peuvent encore raboter par-dessus (mais en pratique le
-  /// profil est null pour Custom).
-  (int, int)? _holdDurationRange;
+  // Bornes utilisateur Custom (null hors Custom = pas de bornage).
+  (int, int)? get _bpmRange => _config.bpmRange;
+  (int, int)? get _holdDurationRange => _config.holdDurationRange;
 
   /// 2ᵉ enveloppe (immuable pour la séance) — recréée à chaque appel à
   /// [generate] après que l'axe de surcharge a été choisi.
@@ -338,24 +263,27 @@ class CareerSessionGenerator {
   double _overloadFactorFor(CapabilityAxis axis) =>
       _capClamps.overloadFactorFor(axis);
 
-  /// Sélectionne l'axe de surcharge via `_CapabilityClamps.pickOverloadAxis`
-  /// et persiste le résultat dans les fields d'instance — consommés en aval
-  /// par les autres helpers (`_emitFinalStep`, etc.) et exposés sur le
-  /// `CareerGenerationResult`.
-  void _pickOverloadAxis() {
+  /// Sélectionne l'axe de surcharge pour la séance via
+  /// `_CapabilityClamps.pickOverloadAxis`. Retourne `(axis, factor)`
+  /// (jamais null) — au caller (`generate` / `generatePunishment`) de
+  /// l'injecter dans `_SessionConfig`. Émet un debugPrint si un axe est
+  /// effectivement surchargé.
+  ({CapabilityAxis? axis, double factor}) _pickOverload({
+    required CapabilityProfile? profile,
+    required Map<CapabilityAxis, double> ceilings,
+  }) {
     final pick = _CapabilityClamps.pickOverloadAxis(
-      profile: _capProfile,
-      ceilings: _capCeilings,
+      profile: profile,
+      ceilings: ceilings,
       rng: _rng,
     );
-    _overloadAxis = pick.axis;
-    _overloadFactor = pick.factor;
     if (kDebugMode && pick.axis != null) {
-      final sr = _capProfile?.stateOf(pick.axis!).successRate ?? 0.0;
+      final sr = profile?.stateOf(pick.axis!).successRate ?? 0.0;
       debugPrint('[career-gen] overload axis=${pick.axis!.storageKey} '
           'factor=${pick.factor.toStringAsFixed(3)} '
           'sr=${sr.toStringAsFixed(2)}');
     }
+    return (axis: pick.axis, factor: pick.factor);
   }
 
   /// Adaptateur d'instance pour `_CapabilityClamps.clampToCapability` —
@@ -470,11 +398,29 @@ class CareerSessionGenerator {
       'insertedBodies : au plus 2 milestones body par séance pour l\'instant',
     );
     final cfg = CareerLevel.forLevel(level);
-    _includeHand = includeHand;
-    _maxDepthIndex = maxDepthIndexOverride ?? cfg.maxDepthIndex;
-    _deepProbability = cfg.deepProbability;
-    _spec = specialization ?? SpecializationAllocation.empty();
-    _level = level;
+    final overload = _pickOverload(
+      profile: capabilityProfile,
+      ceilings: capabilitySessionCeilings,
+    );
+    _config = _SessionConfig(
+      level: level,
+      includeHand: includeHand,
+      maxDepthIndex: maxDepthIndexOverride ?? cfg.maxDepthIndex,
+      deepProbability: cfg.deepProbability,
+      spec: specialization ?? SpecializationAllocation.empty(),
+      anatomy: anatomy,
+      coachModeWeights: coachModeWeights,
+      bpmRange: _normalizeBpmRange(bpmRange),
+      holdDurationRange: _normalizeHoldRange(holdDurationRange),
+      humiliationCareer: humiliationCareer,
+      humiliationSession: humiliationSession,
+      obedience: obedience,
+      capProfile: capabilityProfile,
+      capCeilings: capabilitySessionCeilings,
+      overloadAxis: overload.axis,
+      overloadFactor: overload.factor,
+    );
+    _unlockedKeys = unlockedKeys;
     // Première mini-vague entre 4 et 5 minutes : laisse l'intro et le
     // début de chauffe se dérouler sans rupture, puis le générateur peut
     // poser un mini-finish pour casser la monotonie. Cadence resserrée
@@ -491,17 +437,6 @@ class CareerSessionGenerator {
     _stepsOutsideBouche = 0;
     _rhythmChain.reset();
     _patternBuffer.clear();
-    _unlockedKeys = unlockedKeys;
-    _coachModeWeights = coachModeWeights;
-    _humiliationCareer = humiliationCareer;
-    _humiliationSession = humiliationSession;
-    _obedience = obedience;
-    _capProfile = capabilityProfile;
-    _capCeilings = capabilitySessionCeilings;
-    _anatomy = anatomy;
-    _bpmRange = _normalizeBpmRange(bpmRange);
-    _holdDurationRange = _normalizeHoldRange(holdDurationRange);
-    _pickOverloadAxis();
     // 2ᵉ enveloppe immuable construite après le choix de l'axe de surcharge —
     // recréée à chaque appel à `generate()` pour intégrer profile/ceilings/
     // overload/bornes-Custom courants. Consommée via les adaptateurs
@@ -2416,34 +2351,44 @@ class CareerSessionGenerator {
     // Réinitialise l'état comme le ferait `generate`, pour que les helpers
     // (`_clampToCapability`, `_isUnlocked`, `_pickPhrase`...) lisent les
     // mêmes invariants. On ne touche pas aux champs spécifiques au tirage
-    // de session (`_lastMode`, `_rhythmChain`, etc.) — sans
-    // objet ici.
-    _level = level;
-    _includeHand = includeHand;
-    _unlockedKeys = unlockedKeys;
-    _capProfile = capabilityProfile;
-    _capCeilings = capabilitySessionCeilings;
-    _anatomy = anatomy;
-    _spec = specialization ?? SpecializationAllocation.empty();
-    _humiliationCareer = humiliationCareer;
-    _humiliationSession = humiliationSession;
-    _obedience = obedience;
-    _coachModeWeights = coachModeWeights;
-    _lastText = '';
+    // de session (`_lastMode`, `_rhythmChain`, etc.) — sans objet ici.
+    //
     // Surcharge : on honore l'axe imposé par la séance (pas de re-tirage).
     // Le facteur est reconstruit depuis la `successRate` du profil (même
-    // formule que `_pickOverloadAxis`). Si pas de profil → 1.0 (no-op).
-    _overloadAxis = capabilityOverloadAxis;
-    _overloadFactor =
+    // formule que `_pickOverload`). Si pas de profil → 1.0 (no-op).
+    final overloadFactor =
         (capabilityOverloadAxis != null && capabilityProfile != null)
             ? CapabilityRegulator.surchargeFactor(
                 capabilityProfile.stateOf(capabilityOverloadAxis).successRate)
             : 1.0;
+    _config = _SessionConfig(
+      level: level,
+      includeHand: includeHand,
+      // `generatePunishment` n'expose pas ces 2 bornes — défauts neutres
+      // (full ouvert, deepProbability à 1.0) cohérents avec l'ancien comportement.
+      maxDepthIndex: Position.values.length - 1,
+      deepProbability: 1.0,
+      spec: specialization ?? SpecializationAllocation.empty(),
+      anatomy: anatomy,
+      coachModeWeights: coachModeWeights,
+      // Pas de bornes utilisateur Custom : les punitions ne sont pas
+      // générées en Custom (cf. _generateCareerPunishmentOrNull côté
+      // SessionController qui retourne null hors carrière).
+      bpmRange: null,
+      holdDurationRange: null,
+      humiliationCareer: humiliationCareer,
+      humiliationSession: humiliationSession,
+      obedience: obedience,
+      capProfile: capabilityProfile,
+      capCeilings: capabilitySessionCeilings,
+      overloadAxis: capabilityOverloadAxis,
+      overloadFactor: overloadFactor,
+    );
+    _unlockedKeys = unlockedKeys;
+    _lastText = '';
     // Punition générée hors `generate()` → on doit aussi (re)bâtir
     // `_capClamps` ici, sinon le `_clampToCapability` qui sert à matérialiser
-    // chaque step de la compo lit un field non initialisé. Pas de
-    // `_bpmRange`/`_holdDurationRange` côté Custom (les punitions ne sont pas
-    // générées en Custom), donc on laisse les bornes utilisateur à null.
+    // chaque step de la compo lit un field non initialisé.
     _capClamps = _CapabilityClamps(
       profile: _capProfile,
       ceilings: _capCeilings,
