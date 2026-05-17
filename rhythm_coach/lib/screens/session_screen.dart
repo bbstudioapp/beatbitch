@@ -395,8 +395,12 @@ class _SessionScreenState extends State<SessionScreen>
     // aucune ne l'était — catalogue épuisé, pas de piège). On consulte
     // pendingFor avec les scores post-finish (≈ ceux que la séance suivante
     // verra au start) pour rester cohérent avec ce que `pendingFor` choisirait
-    // la prochaine fois. Skip si le caller a déjà bloqué le palier (quickie /
-    // fail / niveau insuffisant / coach hors palier).
+    // la prochaine fois. Tous les filtres consommés par `pendingFor` au start
+    // (career_screen) doivent être passés ici aussi — sinon une milestone
+    // exclue au start (ex. balls quand `hasBalls=false`) redevient candidate
+    // au end et bloque le level-up indéfiniment. Skip si le caller a déjà
+    // bloqué le palier (quickie / fail / niveau insuffisant / coach hors
+    // palier).
     final cleanSession = !_controller.hadFailThisSession;
     bool hasPendingAtCurrentLevel = false;
     if (atMaxLevel &&
@@ -409,6 +413,7 @@ class _SessionScreenState extends State<SessionScreen>
         playerLevel: currentMax,
         allocation: widget.specialization,
         capabilityProfile: widget.capabilityProfile,
+        anatomy: widget.anatomy,
       );
       hasPendingAtCurrentLevel = pending != null;
     }
