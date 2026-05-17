@@ -1,7 +1,7 @@
 // Fichier part de `career_session_generator.dart` — outils de pacing BPM.
 //
 // Regroupe les helpers de pacing rythmique **sans état d'instance**, sortis
-// du fichier principal pour la même raison que `_StaminaModel` : leurs
+// du fichier principal pour la même raison que `StaminaModel` : leurs
 // formules sont denses et leurs entrées sont des scalaires explicites,
 // donc passer en statiques pures clarifie ce qu'ils consomment.
 //
@@ -48,7 +48,7 @@ class _BpmPacing {
   /// re-passer par `_enforceHumiliationRequired`.
   ///
   /// Retourne `[d]` si pas de split applicable.
-  static List<_StepDraft> diversifyLongSegment(_StepDraft d, Random rng) {
+  static List<StepDraft> diversifyLongSegment(StepDraft d, Random rng) {
     final dur = d.duration ?? 0;
     if (dur < 40) return [d];
     final mode = d.mode;
@@ -59,7 +59,7 @@ class _BpmPacing {
     }
     final parts = dur >= 60 ? 3 : 2;
     final basePart = dur ~/ parts;
-    final result = <_StepDraft>[];
+    final result = <StepDraft>[];
     for (var i = 0; i < parts; i++) {
       var bpm = d.bpm;
       var to = d.to;
@@ -83,7 +83,7 @@ class _BpmPacing {
         }
       }
       final partDur = i == parts - 1 ? dur - i * basePart : basePart;
-      result.add(_StepDraft(
+      result.add(StepDraft(
         mode: d.mode,
         bpm: bpm,
         from: d.from,
@@ -108,8 +108,8 @@ class _BpmPacing {
   /// le mode (plafond très haut à 300 — c'est le `comfort` du profil de
   /// capacités qui borne en pratique, le cap n'est qu'un garde-fou pour
   /// les modes hors carrière).
-  static _StepDraft maybeApplyBpmRamp(
-    _StepDraft d,
+  static StepDraft maybeApplyBpmRamp(
+    StepDraft d,
     double progress,
     Random rng,
     int level,
@@ -139,7 +139,7 @@ class _BpmPacing {
     final raw = goesUp ? bpm + delta : bpm - delta;
     final clamped = raw.clamp(50, hardCap);
     if (clamped == bpm) return d; // Rampe nulle = pas la peine.
-    return _StepDraft(
+    return StepDraft(
       mode: d.mode,
       bpm: d.bpm,
       bpmEnd: clamped,
@@ -172,7 +172,7 @@ class _BpmPacing {
     int dur,
     int bpm,
     Position? to, {
-    required _SessionConfig config,
+    required SessionConfig config,
   }) {
     if (to == null || bpm <= 0) return dur;
     if (to != Position.throat && to != Position.full) return dur;

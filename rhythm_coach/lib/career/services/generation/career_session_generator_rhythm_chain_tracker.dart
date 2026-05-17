@@ -27,15 +27,15 @@ part of 'career_session_generator.dart';
 
 /// Tracker de la chaîne `rhythm` consécutive. Détient le compteur de
 /// secondes cumulées, expose la marge restante et le cap effectif au
-/// caller (le dispatcher pour `canChain()`, `_RhythmRules.build` pour
+/// caller (le dispatcher pour `canChain()`, `RhythmRules.build` pour
 /// `capDuration()`).
 ///
 /// L'état du tracker (`_consecutiveSeconds`) est par-session : `reset()`
 /// au début de chaque `generate()`. Il lit son cap via le générateur
 /// (`gen._config.capProfile`, `gen._overloadFactorFor`, `gen._state.unlockedKeys`)
-/// — couplage explicite assumé, comme `_DraftCtx` pour les rules.
-class _RhythmChainTracker {
-  _RhythmChainTracker({required this.gen});
+/// — couplage explicite assumé, comme `DraftCtx` pour les rules.
+class RhythmChainTracker {
+  RhythmChainTracker({required this.gen});
 
   final CareerSessionGenerator gen;
 

@@ -1,24 +1,24 @@
-// Fichier part de `career_session_generator.dart` — règles du mode
-// `breath`. Cf. contrat `_ModeRules` dans
+// Library autonome — règles du mode
+// `breath`. Cf. contrat `ModeRules` dans
 // `career_session_generator_mode_rules.dart`.
 
-part of '../career_session_generator.dart';
+import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
 
 /// Règles `breath` : toujours regen. Vitesse 2.8 stamina/s — règle de
 /// design : un breath doit être plus court que les steps d'action qu'il
 /// sépare, sinon la dramaturgie ressemble à « action / longue pause /
 /// action / longue pause ». À 2.8/s, 8 s rendent ~22 stamina, ce qui
 /// couvre un step rythme moyen (~20 de coût) et permet d'enchaîner.
-class _BreathRules extends _ModeRules {
-  const _BreathRules();
+class BreathRules extends ModeRules {
+  const BreathRules();
 
   @override
-  _StepType classify(Position? to) => _StepType.transit;
+  StepType classify(Position? to) => StepType.transit;
 
   @override
-  double delta(_StepDraft draft, double progress, CareerLevel cfg) {
+  double delta(StepDraft draft, double progress, CareerLevel cfg) {
     final dur = draft.duration ?? 0;
-    final regen = _StaminaModel.lerp(
+    final regen = StaminaModel.lerp(
       cfg.regenStartMultiplier,
       cfg.regenEndMultiplier,
       progress,
@@ -27,9 +27,9 @@ class _BreathRules extends _ModeRules {
   }
 
   @override
-  _StepDraft build(_DraftCtx ctx) {
-    final dur = _StaminaModel.lerp(6.0, 15.0, ctx.durScore).round();
-    return _StepDraft(
+  StepDraft build(DraftCtx ctx) {
+    final dur = StaminaModel.lerp(6.0, 15.0, ctx.durScore).round();
+    return StepDraft(
       mode: SessionMode.breath,
       bpm: null,
       from: null,
@@ -43,11 +43,11 @@ class _BreathRules extends _ModeRules {
   /// dosableModes`). Sert de fallback safe quand humilCap est trop bas
   /// pour les autres variantes.
   @override
-  List<_PostFinalVariant> postFinalVariants(_PostFinalCtx ctx) => [
-        _PostFinalVariant(
+  List<PostFinalVariant> postFinalVariants(PostFinalCtx ctx) => [
+        PostFinalVariant(
           req: 0.0,
           blocked: false,
-          draft: _StepDraft(
+          draft: StepDraft(
             mode: SessionMode.breath,
             bpm: null,
             from: null,

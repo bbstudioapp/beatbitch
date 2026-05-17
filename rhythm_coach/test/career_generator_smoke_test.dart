@@ -2,10 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:beat_bitch/career/models/career_generation_inputs.dart';
 import 'package:beat_bitch/career/models/level_milestone.dart';
 import 'package:beat_bitch/career/models/phrase_bank.dart';
-import 'package:beat_bitch/career/models/unlock_key.dart';
 import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
-import 'package:beat_bitch/models/session.dart';
-import 'package:beat_bitch/models/session_step.dart';
 import 'package:beat_bitch/services/humiliation_engine.dart';
 
 List<PhraseEntry> _p(List<String> texts) =>

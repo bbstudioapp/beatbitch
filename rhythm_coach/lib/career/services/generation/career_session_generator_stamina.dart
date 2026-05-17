@@ -20,7 +20,7 @@ part of 'career_session_generator.dart';
 ///
 /// Toutes les méthodes sont statiques et pures. Le test unitaire de
 /// référence vit dans `test/career_stamina_model_test.dart`.
-class _StaminaModel {
+class StaminaModel {
   /// Plafond de la jauge — l'endurance est clampée à cette valeur en haut,
   /// mais peut descendre en négatif (dette d'endurance) pour signaler au
   /// caller qu'un sas breath est nécessaire avant le step suivant.
@@ -91,7 +91,7 @@ class _StaminaModel {
   /// Comptabilité endurance : modes effort consomment, modes respi régénèrent
   /// (multiplicateur qui monte avec `progress`), freestyle est neutre.
   static double delta(
-    _StepDraft draft,
+    StepDraft draft,
     double progress,
     CareerLevel cfg,
   ) =>
@@ -106,7 +106,7 @@ class _StaminaModel {
   /// alors quasiment jamais.
   static double apply(
     double stamina,
-    _StepDraft draft,
+    StepDraft draft,
     double progress,
     CareerLevel cfg,
   ) {

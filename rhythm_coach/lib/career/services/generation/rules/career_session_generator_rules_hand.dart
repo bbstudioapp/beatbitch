@@ -1,50 +1,50 @@
-// Fichier part de `career_session_generator.dart` — règles du mode
-// `hand`. Cf. contrat `_ModeRules` dans
+// Library autonome — règles du mode
+// `hand`. Cf. contrat `ModeRules` dans
 // `career_session_generator_mode_rules.dart`.
 
-part of '../career_session_generator.dart';
+import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
 
 /// Règles `hand` : effort modéré côté endurance (la bouche se repose, mais
 /// la main travaille). On consomme moins que rhythm équivalent.
-class _HandRules extends _ModeRules {
-  const _HandRules();
+class HandRules extends ModeRules {
+  const HandRules();
 
   @override
-  _StepType classify(Position? to) => _StepType.libreMain;
+  StepType classify(Position? to) => StepType.libreMain;
 
   /// Hand final → chime `easy` : la finition à la main reste douce, on
   /// ne dramatise pas avec un chime de gorge.
   @override
-  FinalCategory finalCategory(_StepDraft draft) => FinalCategory.easy;
+  FinalCategory finalCategory(StepDraft draft) => FinalCategory.easy;
 
   @override
-  double delta(_StepDraft draft, double progress, CareerLevel cfg) {
+  double delta(StepDraft draft, double progress, CareerLevel cfg) {
     final dur = draft.duration ?? 0;
     final bpm = (draft.bpm ?? 80).toDouble();
-    final depth = _StaminaModel.positionDepth(draft.from, draft.to);
+    final depth = StaminaModel.positionDepth(draft.from, draft.to);
     return -(bpm / 100.0) * depth * dur / 6.0;
   }
 
   @override
-  _StepDraft? tryDegrade(_StepDraft draft) =>
-      _tryDescendToWithGuard(draft) ?? _tryDescendFrom(draft);
+  StepDraft? tryDegrade(StepDraft draft) =>
+      tryDescendToWithGuard(draft) ?? tryDescendFrom(draft);
 
   @override
-  _StepDraft build(_DraftCtx ctx) {
+  StepDraft build(DraftCtx ctx) {
     // Hand sert d'outil d'excitation/endurance pure : sa fréquence peut
     // grimper sans coût d'humiliation. Plage très large pour permettre
     // récup lente (60 BPM) jusqu'à burst frénétique (180 BPM).
-    final bpm = _StaminaModel.lerp(60.0, 180.0, ctx.bpmScore).round();
+    final bpm = StaminaModel.lerp(60.0, 180.0, ctx.bpmScore).round();
     // Tirage spécifique hand : la main tient la base de la queue, donc
     // l'amplitude reste dans le haut (jamais plus profond que throat).
     // En revanche tip→head et head→head sont autorisés (le tirage
     // commun les exclut pour les autres modes).
     final (from, to) = ctx.gen.sampleFromToForHand(ctx.ampScore);
     final dur = ctx.gen.config.scaleDuration(
-      _StaminaModel.lerp(15.0, 30.0, ctx.durScore),
+      StaminaModel.lerp(15.0, 30.0, ctx.durScore),
       enduranceFactor: 0.04,
     );
-    return _StepDraft(
+    return StepDraft(
       mode: SessionMode.hand,
       bpm: bpm,
       from: from,
@@ -57,13 +57,13 @@ class _HandRules extends _ModeRules {
   /// Hand est off, si hand vient juste d'être joué en final (alternance),
   /// ou si la dose Custom hand est 0.
   @override
-  List<_PostFinalVariant> postFinalVariants(_PostFinalCtx ctx) => [
-        _PostFinalVariant(
+  List<PostFinalVariant> postFinalVariants(PostFinalCtx ctx) => [
+        PostFinalVariant(
           req: 8.0,
           blocked: !ctx.includeHand ||
               ctx.finalMode == SessionMode.hand ||
               ctx.isModeForbidden(SessionMode.hand),
-          draft: _StepDraft(
+          draft: StepDraft(
             mode: SessionMode.hand,
             bpm: ctx.bpm,
             from: Position.tip,
@@ -83,13 +83,13 @@ class _HandRules extends _ModeRules {
   /// comme fallback technique ultime côté picker, ou si une
   /// milestone-final venait à le scripter explicitement.
   @override
-  List<_FinalVariant> finalVariants(_FinalCtx ctx) {
+  List<FinalVariant> finalVariants(FinalCtx ctx) {
     if (ctx.handBaselineBpm == null) return const [];
     return [
-      _FinalVariant(
+      FinalVariant(
         req: 0.0,
         gate: null,
-        draft: _StepDraft(
+        draft: StepDraft(
           mode: SessionMode.hand,
           bpm: ctx.handBaselineBpm,
           from: Position.head,
@@ -105,12 +105,12 @@ class _HandRules extends _ModeRules {
   /// profondeur côté gating (cf. règle « hand n'est jamais un levier
   /// de difficulté »).
   @override
-  int? amplitudeDiversifyCeiling(_GenFacade gen) => Position.full.index;
+  int? amplitudeDiversifyCeiling(GenFacade gen) => Position.full.index;
 
   /// Hand en throat/full à BPM ≥ 90 = profil intense capable de
   /// déclencher un faux-breath (même logique que rhythm).
   @override
-  bool isIntenseForFakeBreath(_StepDraft draft) =>
+  bool isIntenseForFakeBreath(StepDraft draft) =>
       (draft.to == Position.throat || draft.to == Position.full) &&
       (draft.bpm ?? 0) >= 90;
 
@@ -123,7 +123,7 @@ class _HandRules extends _ModeRules {
   /// Intro main : consomme les 4 params du ctx straight, comme rhythm
   /// (l'acoustique change mais la forme du step est identique).
   @override
-  _StepDraft buildIntroStep(_IntroCtx ctx) => _StepDraft(
+  StepDraft buildIntroStep(IntroCtx ctx) => StepDraft(
         mode: SessionMode.hand,
         bpm: ctx.bpm,
         from: ctx.from,

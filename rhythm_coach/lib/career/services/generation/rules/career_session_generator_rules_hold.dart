@@ -1,17 +1,19 @@
-// Fichier part de `career_session_generator.dart` — règles du mode
-// `hold`. Cf. contrat `_ModeRules` dans
+// Library autonome — règles du mode
+// `hold`. Cf. contrat `ModeRules` dans
 // `career_session_generator_mode_rules.dart`. Partage le helper
-// `_clampHeldDuration` avec `_BegRules` (cap durée sur position tenue).
+// `clampHeldDuration` avec `BegRules` (cap durée sur position tenue).
 
-part of '../career_session_generator.dart';
+import 'dart:math';
+
+import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
 
 /// Règles `hold` : coût pur lié à la profondeur tenue (`to`). Convention
 /// uniforme hold/beg : la position tenue est dans `to`.
-class _HoldRules extends _ModeRules {
-  const _HoldRules();
+class HoldRules extends ModeRules {
+  const HoldRules();
 
   @override
-  _StepType classify(Position? to) => _StepType.bouche;
+  StepType classify(Position? to) => StepType.bouche;
 
   /// Hold final → chime escaladé sur la profondeur tenue. Échelle :
   /// tip → easy (bisou final, geste doux), head/mid → medium (en bouche
@@ -19,7 +21,7 @@ class _HoldRules extends _ModeRules {
   /// (apnée + gorge). Balls = `hard` (sloppy + soumis mais sans apnée).
   /// `to == null` ne devrait pas survenir pour un hold ; fallback medium.
   @override
-  FinalCategory finalCategory(_StepDraft draft) {
+  FinalCategory finalCategory(StepDraft draft) {
     switch (draft.to) {
       case Position.tip:
         return FinalCategory.easy;
@@ -38,14 +40,14 @@ class _HoldRules extends _ModeRules {
   }
 
   @override
-  double delta(_StepDraft draft, double progress, CareerLevel cfg) {
+  double delta(StepDraft draft, double progress, CareerLevel cfg) {
     final dur = draft.duration ?? 0;
-    final depth = _StaminaModel.positionDepth(draft.to, draft.to);
+    final depth = StaminaModel.positionDepth(draft.to, draft.to);
     return -depth * dur / 2.5;
   }
 
   @override
-  UnlockKey? unlockKeyFor(_StepDraft draft) {
+  UnlockKey? unlockKeyFor(StepDraft draft) {
     if (draft.from == Position.balls || draft.to == Position.balls) {
       return UnlockKey.holdBalls;
     }
@@ -65,16 +67,16 @@ class _HoldRules extends _ModeRules {
   }
 
   @override
-  _StepDraft clampToCapability(_StepDraft draft, _CapabilityClamps c) =>
-      _clampHeldDuration(draft, c);
+  StepDraft clampToCapability(StepDraft draft, CapabilityClamps c) =>
+      clampHeldDuration(draft, c);
 
   @override
-  _StepDraft? tryDegrade(_StepDraft draft) {
+  StepDraft? tryDegrade(StepDraft draft) {
     // (1) Hold throat/full long → raccourcir d'abord (la durée pèse
     // beaucoup sur l'humiliation requise, la position reste contractuelle).
     if ((draft.to == Position.throat || draft.to == Position.full) &&
         (draft.duration ?? 0) > 5) {
-      return _StepDraft(
+      return StepDraft(
         mode: draft.mode,
         bpm: draft.bpm,
         from: draft.from,
@@ -86,7 +88,7 @@ class _HoldRules extends _ModeRules {
     // descend jusqu'à `tip`, contrairement aux modes rythmiques qui
     // s'arrêtent à `head`.
     if (draft.to != null && draft.to!.index > Position.tip.index) {
-      return _StepDraft(
+      return StepDraft(
         mode: draft.mode,
         bpm: draft.bpm,
         from: draft.from,
@@ -98,15 +100,15 @@ class _HoldRules extends _ModeRules {
   }
 
   @override
-  _StepDraft build(_DraftCtx ctx) {
+  StepDraft build(DraftCtx ctx) {
     // Convention uniforme hold/beg : la position tenue est dans `to`
     // (matche BeepEngine et le format SessionStep des JSON).
     final to = ctx.gen.pickHoldPosition(ctx.ampScore);
     final dur = ctx.gen.config.scaleDuration(
-      _StaminaModel.lerp(8.0, 30.0, max(ctx.durScore, ctx.bpmScore)),
+      StaminaModel.lerp(8.0, 30.0, max(ctx.durScore, ctx.bpmScore)),
       enduranceFactor: 0.08,
     );
-    return _StepDraft(
+    return StepDraft(
       mode: SessionMode.hold,
       bpm: null,
       from: null,
@@ -121,10 +123,10 @@ class _HoldRules extends _ModeRules {
   /// hold sur les rares moments hors recovery). Toujours candidat — le
   /// choix de la position dépend du plafond milestone.
   @override
-  bool isRecoveryCandidate(_RecoveryAvailability a) => true;
+  bool isRecoveryCandidate(RecoveryAvailability a) => true;
 
   @override
-  _StepDraft buildRecovery(_RecoveryCtx ctx) {
+  StepDraft buildRecovery(RecoveryCtx ctx) {
     // La position dépend du niveau de la joueuse : tant qu'elle n'a pas
     // dépassé hold mid, c'est tip ou head (bisou / gland tenu, vraie
     // respiration). Dès que throat est débloqué, le hold de récup n'a
@@ -147,7 +149,7 @@ class _HoldRules extends _ModeRules {
     } else {
       to = ctx.gen.rng.nextBool() ? Position.tip : Position.head;
     }
-    return _StepDraft(
+    return StepDraft(
       mode: SessionMode.hold,
       bpm: null,
       from: null,
@@ -163,16 +165,16 @@ class _HoldRules extends _ModeRules {
   /// profond que tu sais tenir » — un hold tip/head post-orgasme alors
   /// que mid est acquis est juste une régression arbitraire).
   @override
-  List<_PostFinalVariant> postFinalVariants(_PostFinalCtx ctx) {
+  List<PostFinalVariant> postFinalVariants(PostFinalCtx ctx) {
     final isFinalHold = ctx.finalMode == SessionMode.hold;
     final forbidden = ctx.isModeForbidden(SessionMode.hold);
     final tipObsolete = ctx.holdCeilingIdx > Position.tip.index;
     final headObsolete = ctx.holdCeilingIdx > Position.head.index;
     return [
-      _PostFinalVariant(
+      PostFinalVariant(
         req: 20.0,
         blocked: isFinalHold || tipObsolete || forbidden,
-        draft: _StepDraft(
+        draft: StepDraft(
           mode: SessionMode.hold,
           bpm: null,
           from: null,
@@ -180,10 +182,10 @@ class _HoldRules extends _ModeRules {
           duration: ctx.duration,
         ),
       ),
-      _PostFinalVariant(
+      PostFinalVariant(
         req: 70.0,
         blocked: isFinalHold || headObsolete || forbidden,
-        draft: _StepDraft(
+        draft: StepDraft(
           mode: SessionMode.hold,
           bpm: null,
           from: null,
@@ -214,12 +216,12 @@ class _HoldRules extends _ModeRules {
   /// en carrière, c'est `clampToCapability` qui pilote la durée vécue
   /// d'après le profil de capacités prouvé.
   @override
-  List<_FinalVariant> finalVariants(_FinalCtx ctx) {
-    final out = <_FinalVariant>[
-      _FinalVariant(
+  List<FinalVariant> finalVariants(FinalCtx ctx) {
+    final out = <FinalVariant>[
+      FinalVariant(
         req: 5.0,
         gate: UnlockKey.finalHoldTip,
-        draft: _StepDraft(
+        draft: StepDraft(
           mode: SessionMode.hold,
           bpm: null,
           from: null,
@@ -227,10 +229,10 @@ class _HoldRules extends _ModeRules {
           duration: ctx.shortHoldDur,
         ),
       ),
-      _FinalVariant(
+      FinalVariant(
         req: 14.0,
         gate: UnlockKey.finalHoldHead,
-        draft: _StepDraft(
+        draft: StepDraft(
           mode: SessionMode.hold,
           bpm: null,
           from: null,
@@ -238,10 +240,10 @@ class _HoldRules extends _ModeRules {
           duration: ctx.shortHoldDur,
         ),
       ),
-      _FinalVariant(
+      FinalVariant(
         req: 10.0,
         gate: UnlockKey.finalHoldMid,
-        draft: _StepDraft(
+        draft: StepDraft(
           mode: SessionMode.hold,
           bpm: null,
           from: null,
@@ -255,7 +257,7 @@ class _HoldRules extends _ModeRules {
       final humilOver = max(0.0, ctx.humilCap - 10.0);
       final targetDur =
           (10 + (humilOver / 5).floor() * 2 + ctx.endPts * 2).clamp(10, 80);
-      final dur = _FinalPicker.trimHoldFinalDuration(
+      final dur = FinalPicker.trimHoldFinalDuration(
         target: targetDur,
         humilCap: ctx.humilCap,
         baseReq: 21.5, // hold throat 10s
@@ -264,10 +266,10 @@ class _HoldRules extends _ModeRules {
         maxDur: 80,
       );
       final req = 8.0 + (dur - 1) * 1.5;
-      out.add(_FinalVariant(
+      out.add(FinalVariant(
         req: req,
         gate: UnlockKey.finalHoldThroat,
-        draft: _StepDraft(
+        draft: StepDraft(
           mode: SessionMode.hold,
           bpm: null,
           from: null,
@@ -281,7 +283,7 @@ class _HoldRules extends _ModeRules {
       final humilOver = max(0.0, ctx.humilCap - 30.0);
       final targetDur =
           (10 + (humilOver / 8).floor() * 3 + ctx.endPts * 3).clamp(10, 80);
-      final dur = _FinalPicker.trimHoldFinalDuration(
+      final dur = FinalPicker.trimHoldFinalDuration(
         target: targetDur,
         humilCap: ctx.humilCap,
         baseReq: 49.0, // hold full 10s
@@ -290,10 +292,10 @@ class _HoldRules extends _ModeRules {
         maxDur: 80,
       );
       final req = 22.0 + (dur - 1) * 3.0;
-      out.add(_FinalVariant(
+      out.add(FinalVariant(
         req: req,
         gate: UnlockKey.finalHoldFull,
-        draft: _StepDraft(
+        draft: StepDraft(
           mode: SessionMode.hold,
           bpm: null,
           from: null,
@@ -309,7 +311,7 @@ class _HoldRules extends _ModeRules {
   /// Hold en throat/full = profil intense capable de déclencher un
   /// faux-breath. Pas de check BPM (hold n'a pas de tempo).
   @override
-  bool isIntenseForFakeBreath(_StepDraft draft) =>
+  bool isIntenseForFakeBreath(StepDraft draft) =>
       draft.to == Position.throat || draft.to == Position.full;
 
   /// Rang 3 (fallback ultime) dans la chaîne d'intro intense/quickie :
@@ -320,7 +322,7 @@ class _HoldRules extends _ModeRules {
   /// Intro hold : ignore bpm/from du ctx, garde seulement la position
   /// tenue (`to`) et la durée. Le hold n'a ni tempo ni amplitude.
   @override
-  _StepDraft buildIntroStep(_IntroCtx ctx) => _StepDraft(
+  StepDraft buildIntroStep(IntroCtx ctx) => StepDraft(
         mode: SessionMode.hold,
         bpm: null,
         from: null,

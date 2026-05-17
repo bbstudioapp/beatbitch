@@ -1,8 +1,8 @@
-// Fichier part de `career_session_generator.dart` — règles du mode
-// `suckle`. Cf. contrat `_ModeRules` dans
+// Library autonome — règles du mode
+// `suckle`. Cf. contrat `ModeRules` dans
 // `career_session_generator_mode_rules.dart`.
 
-part of '../career_session_generator.dart';
+import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
 
 /// Règles `suckle` : aspiration / téter. La bouche bosse sans aller-retour.
 /// Coût par seconde modéré, plus marqué sur head (zone sensible → pompage
@@ -10,17 +10,17 @@ part of '../career_session_generator.dart';
 /// On modélise sur `_holdCostPerSec` de StaminaEngine en l'ajustant :
 /// head ≈ 60 % d'un hold mid, balls ≈ 30 % (moins d'effort de la bouche,
 /// plus de l'humil).
-class _SuckleRules extends _ModeRules {
-  const _SuckleRules();
+class SuckleRules extends ModeRules {
+  const SuckleRules();
 
   /// Aspiration : bouche au contact (head ou balls). Classé `bouche` pour
   /// bénéficier de la même friction de continuité que hold / beg-tenu —
   /// éviter d'enchaîner deux modes bouche sans pause.
   @override
-  _StepType classify(Position? to) => _StepType.bouche;
+  StepType classify(Position? to) => StepType.bouche;
 
   @override
-  double delta(_StepDraft draft, double progress, CareerLevel cfg) {
+  double delta(StepDraft draft, double progress, CareerLevel cfg) {
     final dur = draft.duration ?? 0;
     final pos = draft.to ?? draft.from;
     if (pos == Position.head) return -0.30 * dur;
@@ -29,7 +29,7 @@ class _SuckleRules extends _ModeRules {
   }
 
   @override
-  UnlockKey? unlockKeyFor(_StepDraft draft) {
+  UnlockKey? unlockKeyFor(StepDraft draft) {
     // Suckle hors balls (filtré ailleurs) → forcément head. Gating
     // dédié, indépendant de la profondeur générique (suckle head n'est
     // pas une généralisation de hold head — c'est un geste explicite à
@@ -41,7 +41,7 @@ class _SuckleRules extends _ModeRules {
   }
 
   @override
-  _StepDraft build(_DraftCtx ctx) {
+  StepDraft build(DraftCtx ctx) {
     // Aspiration : pas de BPM (pulse fixe ~1.2s côté audio), position
     // tenue dans `to`. Cibles valides = head ou balls (cf. `_isUnlocked`).
     // - En carrière : unlock `suckleHead` au level 4-5, `suckleBalls`
@@ -53,7 +53,7 @@ class _SuckleRules extends _ModeRules {
     //   ~30 % de chances de tirer balls quand dispo, pour rester audible
     //   mais marginal.
     final dur = ctx.gen.config.scaleDuration(
-      _StaminaModel.lerp(8.0, 18.0, ctx.durScore),
+      StaminaModel.lerp(8.0, 18.0, ctx.durScore),
       enduranceFactor: 0.04,
     );
     final ballsAllowed = ctx.gen.config.anatomy.hasBalls &&
@@ -63,7 +63,7 @@ class _SuckleRules extends _ModeRules {
     final to = (ballsAllowed && ctx.gen.rng.nextDouble() < 0.30)
         ? Position.balls
         : Position.head;
-    return _StepDraft(
+    return StepDraft(
       mode: SessionMode.suckle,
       bpm: null,
       from: null,

@@ -1,8 +1,10 @@
-// Fichier part de `career_session_generator.dart` — règles du mode
-// `rhythm`. Cf. contrat `_ModeRules` dans
+// Library autonome — règles du mode
+// `rhythm`. Cf. contrat `ModeRules` dans
 // `career_session_generator_mode_rules.dart`.
 
-part of '../career_session_generator.dart';
+import 'dart:math';
+
+import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
 
 /// Règles `rhythm` : coût modulé par profondeur cible (mid pèse le plus :
 /// c'est la zone où on tient le rythme le plus longtemps), atténué par le
@@ -22,14 +24,14 @@ part of '../career_session_generator.dart';
 /// → mid→full 60 bpm : −20 %
 /// → throat→full 60 bpm : −10 %
 /// → mid→full 100 bpm : 0 % (BPM trop haut)
-class _RhythmRules extends _ModeRules {
-  const _RhythmRules();
+class RhythmRules extends ModeRules {
+  const RhythmRules();
 
   @override
-  _StepType classify(Position? to) => _StepType.bouche;
+  StepType classify(Position? to) => StepType.bouche;
 
   @override
-  UnlockKey? unlockKeyFor(_StepDraft draft) {
+  UnlockKey? unlockKeyFor(StepDraft draft) {
     // Rhythm n'a pas de variante balls valide (les modes-incompatibles
     // balls sont filtrés en amont par `_HumiliationGates.isUnlocked`).
     // Pour rester strictement isomorphe au switch historique on retourne
@@ -46,12 +48,12 @@ class _RhythmRules extends _ModeRules {
   }
 
   @override
-  _StepDraft? tryDegrade(_StepDraft draft) {
+  StepDraft? tryDegrade(StepDraft draft) {
     // Cascade rythme : descendre `to` → descendre `from` → cap BPM à 80.
-    final desc = _tryDescendToWithGuard(draft) ?? _tryDescendFrom(draft);
+    final desc = tryDescendToWithGuard(draft) ?? tryDescendFrom(draft);
     if (desc != null) return desc;
     if ((draft.bpm ?? 0) > 80) {
-      return _StepDraft(
+      return StepDraft(
         mode: draft.mode,
         bpm: 80,
         from: draft.from,
@@ -63,7 +65,7 @@ class _RhythmRules extends _ModeRules {
   }
 
   @override
-  _StepDraft clampToCapability(_StepDraft draft, _CapabilityClamps c) {
+  StepDraft clampToCapability(StepDraft draft, CapabilityClamps c) {
     var from = draft.from;
     var to = draft.to;
     var bpm = draft.bpm;
@@ -86,11 +88,11 @@ class _RhythmRules extends _ModeRules {
     // franchissant (`from ≤ mid` ET `to ≥ throat`).
     if (to != null && (bpm != null || bpmEnd != null)) {
       var bpmCap =
-          c.capabilityCapFor(_CapabilityClamps.rhythmBpmCeilAxisFor(to));
+          c.capabilityCapFor(CapabilityClamps.rhythmBpmCeilAxisFor(to));
       if (from != null &&
           from.index <= Position.mid.index &&
           to.index >= Position.throat.index) {
-        bpmCap = _CapabilityClamps.minNullable(
+        bpmCap = CapabilityClamps.minNullable(
           bpmCap,
           c.capabilityCapFor(to == Position.throat
               ? CapabilityAxis.gorgeCrossingsBpmThroat
@@ -118,7 +120,7 @@ class _RhythmRules extends _ModeRules {
         dur == draft.duration) {
       return draft;
     }
-    return _StepDraft(
+    return StepDraft(
       mode: draft.mode,
       bpm: bpm,
       bpmEnd: bpmEnd,
@@ -130,10 +132,10 @@ class _RhythmRules extends _ModeRules {
   }
 
   @override
-  double delta(_StepDraft draft, double progress, CareerLevel cfg) {
+  double delta(StepDraft draft, double progress, CareerLevel cfg) {
     final dur = draft.duration ?? 0;
     final bpm = (draft.bpm ?? 60).toDouble();
-    final depth = _StaminaModel.positionDepth(draft.from, draft.to);
+    final depth = StaminaModel.positionDepth(draft.from, draft.to);
     final toIdx = (draft.to ?? draft.from)?.index ?? 0;
     final depthMul = toIdx >= Position.full.index
         ? 1.15
@@ -152,11 +154,11 @@ class _RhythmRules extends _ModeRules {
   }
 
   @override
-  _StepDraft build(_DraftCtx ctx) {
-    final bpm = _StaminaModel.lerp(60.0, 140.0, ctx.bpmScore).round();
+  StepDraft build(DraftCtx ctx) {
+    final bpm = StaminaModel.lerp(60.0, 140.0, ctx.bpmScore).round();
     final (from, to) = ctx.gen.sampleFromTo(ctx.ampScore);
     var dur = ctx.gen.config.scaleDuration(
-      _StaminaModel.lerp(20.0, 60.0, ctx.durScore),
+      StaminaModel.lerp(20.0, 60.0, ctx.durScore),
       enduranceFactor: 0.05,
     );
     // Cap par nombre d'aller-retours sur les profondeurs throat/full :
@@ -170,9 +172,9 @@ class _RhythmRules extends _ModeRules {
     // `intro_rhythm_sustained` n'a pas été acquittée, la chaîne rythme
     // consécutive est plafonnée à 60 s. Le candidat n'arrive ici que
     // si `_rhythmChain.canChain()` était vrai au tirage, donc il reste
-    // au moins `_RhythmChainTracker._minStepSeconds` de marge.
+    // au moins `RhythmChainTracker._minStepSeconds` de marge.
     dur = ctx.gen.rhythmChain.capDuration(dur);
-    return _StepDraft(
+    return StepDraft(
       mode: SessionMode.rhythm,
       bpm: bpm,
       from: from,
@@ -188,10 +190,10 @@ class _RhythmRules extends _ModeRules {
   /// bloquée hors bouche, et le pattern « rhythm → recovery → rhythm »
   /// fait des séries de 1 step.
   @override
-  bool isRecoveryCandidate(_RecoveryAvailability a) => true;
+  bool isRecoveryCandidate(RecoveryAvailability a) => true;
 
   @override
-  _StepDraft buildRecovery(_RecoveryCtx ctx) {
+  StepDraft buildRecovery(RecoveryCtx ctx) {
     // La baseline (tip→head) reste ouverte tant que la joueuse n'a pas
     // appris la gorge — gate sur `throatHoldShort` plutôt que
     // `holdMidShort` : les premiers paliers ont besoin de variété
@@ -203,7 +205,7 @@ class _RhythmRules extends _ModeRules {
     // à combler ailleurs.
     final hasThroat =
         ctx.gen.state.unlockedKeys.contains(UnlockKey.throatHoldShort);
-    return _StepDraft(
+    return StepDraft(
       mode: SessionMode.rhythm,
       bpm: ctx.bpm,
       from: hasThroat ? Position.head : Position.tip,
@@ -216,12 +218,12 @@ class _RhythmRules extends _ModeRules {
   /// juste d'être joué en final (alternance) ou si la dose Custom rhythm
   /// est 0.
   @override
-  List<_PostFinalVariant> postFinalVariants(_PostFinalCtx ctx) => [
-        _PostFinalVariant(
+  List<PostFinalVariant> postFinalVariants(PostFinalCtx ctx) => [
+        PostFinalVariant(
           req: 55.0,
           blocked: ctx.finalMode == SessionMode.rhythm ||
               ctx.isModeForbidden(SessionMode.rhythm),
-          draft: _StepDraft(
+          draft: StepDraft(
             mode: SessionMode.rhythm,
             bpm: ctx.bpm,
             from: Position.tip,
@@ -235,13 +237,13 @@ class _RhythmRules extends _ModeRules {
   /// d'amplitude : on ne décale jamais `to` au-dessus du palier de
   /// profondeur acquis.
   @override
-  int? amplitudeDiversifyCeiling(_GenFacade gen) =>
+  int? amplitudeDiversifyCeiling(GenFacade gen) =>
       gen.milestoneRhythmCeilingIdx();
 
   /// Rhythm en throat/full à BPM ≥ 90 = profil intense capable de
   /// déclencher un faux-breath taquin.
   @override
-  bool isIntenseForFakeBreath(_StepDraft draft) =>
+  bool isIntenseForFakeBreath(StepDraft draft) =>
       (draft.to == Position.throat || draft.to == Position.full) &&
       (draft.bpm ?? 0) >= 90;
 
@@ -253,7 +255,7 @@ class _RhythmRules extends _ModeRules {
   /// Intro rythmée : consomme les 4 params du ctx straight (la fixture
   /// posée par `_firstStep` choisit déjà bpm/from/to/dur appropriés).
   @override
-  _StepDraft buildIntroStep(_IntroCtx ctx) => _StepDraft(
+  StepDraft buildIntroStep(IntroCtx ctx) => StepDraft(
         mode: SessionMode.rhythm,
         bpm: ctx.bpm,
         from: ctx.from,

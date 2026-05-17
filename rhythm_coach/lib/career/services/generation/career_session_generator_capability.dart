@@ -2,7 +2,7 @@
 // difficulté carrière (profil de capacités + surcharge isolée + bornes
 // utilisateur Custom).
 //
-// `_CapabilityClamps` est un **value object immuable** construit une fois
+// `CapabilityClamps` est un **value object immuable** construit une fois
 // par `generate()` après que l'axe de surcharge a été choisi. Toute la
 // logique de clamp (profondeur / BPM / durée) y vit en méthodes d'instance
 // qui consomment les fields. Les helpers vraiment statiques (mapping
@@ -12,7 +12,7 @@
 // Conception : les méthodes de clamp s'appellent entre elles, et toutes
 // ont besoin du même bundle (profil, ceilings, axe/facteur de surcharge,
 // bornes Custom). Plutôt qu'une longue liste de paramètres répétés, on
-// snapshot une référence vers le `_SessionConfig` de la séance pour les 4
+// snapshot une référence vers le `SessionConfig` de la séance pour les 4
 // fields capacités (profil + ceilings + axe + facteur), et on garde
 // `bpmRange` / `holdRange` comme fields explicites — la path punition
 // les nullifie alors que la session principale les hérite de `_config`.
@@ -23,11 +23,11 @@ part of 'career_session_generator.dart';
 /// figés en cours de session + axe surchargé + bornes utilisateur Custom.
 /// Immutable : le générateur en construit un par appel à `generate()`,
 /// après que `pickOverloadAxis` a choisi l'axe à pousser cette séance.
-class _CapabilityClamps {
+class CapabilityClamps {
   /// Snapshot de la config de séance. On y lit `capProfile`,
   /// `capCeilings`, `overloadAxis`, `overloadFactor` — figés au début de
   /// `generate()`.
-  final _SessionConfig config;
+  final SessionConfig config;
 
   /// Bornes BPM utilisateur (mode Custom). `null` hors Custom **ou** quand
   /// le caller veut explicitement désactiver le clamp (cf. path punition
@@ -38,7 +38,7 @@ class _CapabilityClamps {
   /// Même semantics que [bpmRange] côté override.
   final (int, int)? holdRange;
 
-  const _CapabilityClamps({
+  const CapabilityClamps({
     required this.config,
     required this.bpmRange,
     required this.holdRange,
@@ -182,14 +182,14 @@ class _CapabilityClamps {
   /// La récursion sur `chainNext` et la composition avec
   /// [clampToCustomLimits] (bornes utilisateur Custom) restent
   /// orchestrées ici.
-  _StepDraft clampToCapability(_StepDraft d) {
+  StepDraft clampToCapability(StepDraft d) {
     if (config.capProfile == null) return clampToCustomLimits(d);
     final clampedChain =
         d.chainNext == null ? null : clampToCapability(d.chainNext!);
     final clamped = _modeRulesRegistry[d.mode]!.clampToCapability(d, this);
     final composed = identical(clampedChain, d.chainNext)
         ? clamped
-        : _StepDraft(
+        : StepDraft(
             mode: clamped.mode,
             bpm: clamped.bpm,
             bpmEnd: clamped.bpmEnd,
@@ -206,7 +206,7 @@ class _CapabilityClamps {
   /// compatible avec le profil (qui ne sert qu'en carrière, désactivé en
   /// Custom). `chainNext` est récursé. No-op si aucune borne n'est
   /// fournie (carrière / scénario JSON).
-  _StepDraft clampToCustomLimits(_StepDraft d) {
+  StepDraft clampToCustomLimits(StepDraft d) {
     if (bpmRange == null && holdRange == null) return d;
     final clampedChain =
         d.chainNext == null ? null : clampToCustomLimits(d.chainNext!);
@@ -238,7 +238,7 @@ class _CapabilityClamps {
         identical(clampedChain, d.chainNext)) {
       return d;
     }
-    return _StepDraft(
+    return StepDraft(
       mode: d.mode,
       bpm: bpm,
       bpmEnd: bpmEnd,

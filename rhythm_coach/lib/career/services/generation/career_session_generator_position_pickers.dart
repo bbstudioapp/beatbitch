@@ -7,7 +7,7 @@
 // `milestoneRhythmCeilingIdx`) + le samplers générique `sampleSimplex3`.
 //
 // Tous bundlés dans `_PositionPickers` (value object immuable), pattern
-// identique à `_CapabilityClamps` et `_FinalPicker` : les méthodes
+// identique à `CapabilityClamps` et `FinalPicker` : les méthodes
 // s'appellent entre elles et partagent le même état (8 fields), passer
 // chaque field à chaque appel rendrait les signatures illisibles.
 
@@ -21,7 +21,7 @@ class _PositionPickers {
   /// Snapshot de la config de séance. On y lit `maxDepthIndex`,
   /// `deepProbability`, `humiliationCareer`, `spec`, `coachModeWeights`,
   /// `anatomy` — figés au début de `generate()`.
-  final _SessionConfig config;
+  final SessionConfig config;
 
   /// Unlocks acquittés par milestones. Convention héritée :
   /// `unlockedKeys.isEmpty` = pas de gating milestone, on retombe sur le
@@ -40,7 +40,7 @@ class _PositionPickers {
 
   bool _isModeForbidden(SessionMode m) => config.isModeForbidden(m);
 
-  bool _isUnlocked(_StepDraft d) => _HumiliationGates.isUnlocked(
+  bool _isUnlocked(StepDraft d) => _HumiliationGates.isUnlocked(
         d,
         anatomy: config.anatomy,
         unlockedKeys: unlockedKeys,
@@ -50,17 +50,17 @@ class _PositionPickers {
   /// La durée du beg est l'enveloppe : pour un beg libre on l'écrase par
   /// `baseDuration` clampé entre les deux bornes définies ici (utilisé
   /// comme min/max). Pour un beg ancré (`to != null`), on garde tel quel.
-  static const List<(_StepDraft, _StepDraft)> begChainTemplates = [
+  static const List<(StepDraft, StepDraft)> begChainTemplates = [
     // Beg libre + rhythm tip→head 80 BPM 18 s.
     (
-      _StepDraft(
+      StepDraft(
         mode: SessionMode.beg,
         bpm: null,
         from: null,
         to: null,
         duration: 12,
       ),
-      _StepDraft(
+      StepDraft(
         mode: SessionMode.rhythm,
         bpm: 80,
         from: Position.tip,
@@ -70,14 +70,14 @@ class _PositionPickers {
     ),
     // Beg libre + lick tip→head 70 BPM 14 s.
     (
-      _StepDraft(
+      StepDraft(
         mode: SessionMode.beg,
         bpm: null,
         from: null,
         to: null,
         duration: 10,
       ),
-      _StepDraft(
+      StepDraft(
         mode: SessionMode.lick,
         bpm: 70,
         from: Position.tip,
@@ -87,14 +87,14 @@ class _PositionPickers {
     ),
     // Beg libre + hold head 6 s.
     (
-      _StepDraft(
+      StepDraft(
         mode: SessionMode.beg,
         bpm: null,
         from: null,
         to: null,
         duration: 12,
       ),
-      _StepDraft(
+      StepDraft(
         mode: SessionMode.hold,
         bpm: null,
         from: null,
@@ -105,14 +105,14 @@ class _PositionPickers {
     // Beg head + lick head→mid 65 BPM 12 s — profil obéissance avancée
     // (gated par begThroat car beg to non-null).
     (
-      _StepDraft(
+      StepDraft(
         mode: SessionMode.beg,
         bpm: null,
         from: null,
         to: Position.head,
         duration: 8,
       ),
-      _StepDraft(
+      StepDraft(
         mode: SessionMode.lick,
         bpm: 65,
         from: Position.head,
@@ -243,7 +243,7 @@ class _PositionPickers {
     // Min mid (idx 2) au lieu de head (idx 1) : l'amplitude minimale est
     // head→mid, pas tip→head.
     final ceiling = capByDepth ? config.maxDepthIndex.clamp(2, 4) : 4;
-    var deepestIdx = _StaminaModel.lerp(2.0, ceiling.toDouble(), clamped)
+    var deepestIdx = StaminaModel.lerp(2.0, ceiling.toDouble(), clamped)
         .round()
         .clamp(2, ceiling);
     // Bonus Profondeur (spé) : remonte la probabilité de profond, dans la
@@ -324,7 +324,7 @@ class _PositionPickers {
   ///
   /// Le tirage est uniforme parmi les templates dont les deux composants
   /// passent `_isUnlocked`. `null` si aucun ne passe.
-  _StepDraft? maybePickBegWithChain({
+  StepDraft? maybePickBegWithChain({
     required Position? to,
     required int obPts,
   }) {
@@ -336,7 +336,7 @@ class _PositionPickers {
     if (rng.nextDouble() > probability.clamp(0.20, 0.60)) return null;
 
     final holdCeilingIdx = milestoneHoldCeilingIdx();
-    final candidates = <(_StepDraft, _StepDraft)>[];
+    final candidates = <(StepDraft, StepDraft)>[];
     for (final tpl in begChainTemplates) {
       // Si le chainNext est un hold à profondeur sous le palier de hold
       // débloqué par milestones, on filtre — un hold tip/head qui suit
@@ -361,7 +361,7 @@ class _PositionPickers {
     }
     if (candidates.isEmpty) return null;
     final pick = candidates[rng.nextInt(candidates.length)];
-    return _StepDraft(
+    return StepDraft(
       mode: pick.$1.mode,
       bpm: pick.$1.bpm,
       from: pick.$1.from,
