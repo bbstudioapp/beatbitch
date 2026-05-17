@@ -29,8 +29,6 @@
 //   * `finalVariants` — palette de variantes de step final / apothéose
 //     proposées par le mode (ex-palette hardcodée de
 //     `_FinalPicker.pickFinal`).
-//   * `finalCategory` — variante de `finale_chime` à piocher si le mode
-//     se retrouve en final d'apothéose (ex-`_categorizeFinal`).
 
 part of 'career_session_generator.dart';
 
