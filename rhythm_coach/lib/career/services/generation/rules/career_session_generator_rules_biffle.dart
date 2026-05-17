@@ -27,7 +27,7 @@ class BiffleRules extends ModeRules {
       (draft.bpm ?? 0) > 100 ? UnlockKey.biffleFast : UnlockKey.biffleBasic;
 
   @override
-  StepDraft clampToCapability(StepDraft draft, CapabilityClamps c) {
+  StepDraft clampToCapability(StepDraft draft, CapabilityClampSurface c) {
     var bpm = draft.bpm;
     var dur = draft.duration;
     final durCap = c.capabilityCapFor(CapabilityAxis.biffleStreak);

@@ -55,7 +55,7 @@ class BegRules extends ModeRules {
   }
 
   @override
-  StepDraft clampToCapability(StepDraft draft, CapabilityClamps c) =>
+  StepDraft clampToCapability(StepDraft draft, CapabilityClampSurface c) =>
       clampHeldDuration(draft, c);
 
   @override

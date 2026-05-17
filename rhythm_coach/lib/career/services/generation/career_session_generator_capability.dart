@@ -23,7 +23,13 @@ part of 'career_session_generator.dart';
 /// figés en cours de session + axe surchargé + bornes utilisateur Custom.
 /// Immutable : le générateur en construit un par appel à `generate()`,
 /// après que `pickOverloadAxis` a choisi l'axe à pousser cette séance.
-class CapabilityClamps {
+///
+/// Implémente [CapabilityClampSurface] : la surface vue par les
+/// `ModeRules`. Les rules consomment l'interface (cf. A.PR1 du plan de
+/// refacto) ; cette classe concrète garde en plus les helpers statiques
+/// (mapping position → axe BPM, `minNullable`, `pickOverloadAxis`,
+/// `overloadableAxes`) que les rules appellent directement par nom.
+class CapabilityClamps implements CapabilityClampSurface {
   /// Snapshot de la config de séance. On y lit `capProfile`,
   /// `capCeilings`, `overloadAxis`, `overloadFactor` — figés au début de
   /// `generate()`.
@@ -144,6 +150,7 @@ class CapabilityClamps {
   /// `null` si aucune donnée — l'enveloppe ne contraint alors rien
   /// (joueuse neuve ou axe jamais sollicité ; le profil prend le relais
   /// après ~3-5 sessions).
+  @override
   double? capabilityCapFor(CapabilityAxis axis) {
     final p = config.capProfile;
     if (p == null) return null;
@@ -167,6 +174,7 @@ class CapabilityClamps {
   /// Renvoie le facteur de surcharge applicable à [axis] (1.0 hors
   /// surcharge). Pour `rhythmDepthMax` la surcharge est un cran, pas un
   /// facteur — utiliser [capabilityCapFor] directement.
+  @override
   double overloadFactorFor(CapabilityAxis axis) =>
       axis == config.overloadAxis ? config.overloadFactor : 1.0;
 
@@ -187,6 +195,7 @@ class CapabilityClamps {
   /// La récursion sur `chainNext` et la composition avec
   /// [clampToCustomLimits] (bornes utilisateur Custom) restent
   /// orchestrées ici.
+  @override
   StepDraft clampToCapability(StepDraft d) {
     if (config.capProfile == null) return clampToCustomLimits(d);
     final clampedChain =
