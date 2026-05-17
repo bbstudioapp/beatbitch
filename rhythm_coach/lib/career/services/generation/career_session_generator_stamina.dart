@@ -86,16 +86,17 @@ class StaminaModel {
   /// le gain (positif) sans clamp, pour pouvoir détecter un déficit projeté
   /// (= dette d'endurance qu'il faut combler par un breath, cf. D3 du plan).
   ///
-  /// Dispatch polymorphique : chaque mode a sa règle dans
-  /// `_modeRulesRegistry` (cf. `career_session_generator_mode_rules.dart`).
-  /// Comptabilité endurance : modes effort consomment, modes respi régénèrent
+  /// Dispatch polymorphique : chaque mode a sa règle dans le registry
+  /// `rules` injecté par le caller (= `_rules` du générateur). Comptabilité
+  /// endurance : modes effort consomment, modes respi régénèrent
   /// (multiplicateur qui monte avec `progress`), freestyle est neutre.
   static double delta(
     StepDraft draft,
     double progress,
-    CareerLevel cfg,
-  ) =>
-      _modeRulesRegistry[draft.mode]!.delta(draft, progress, cfg);
+    CareerLevel cfg, {
+    required Map<SessionMode, ModeRules> rules,
+  }) =>
+      rules[draft.mode]!.delta(draft, progress, cfg);
 
   /// Applique [delta] à `stamina`, en plafonnant à [cap].
   ///
@@ -108,9 +109,10 @@ class StaminaModel {
     double stamina,
     StepDraft draft,
     double progress,
-    CareerLevel cfg,
-  ) {
-    final next = stamina + delta(draft, progress, cfg);
+    CareerLevel cfg, {
+    required Map<SessionMode, ModeRules> rules,
+  }) {
+    final next = stamina + delta(draft, progress, cfg, rules: rules);
     return next > cap ? cap : next;
   }
 }

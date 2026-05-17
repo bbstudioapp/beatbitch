@@ -40,8 +40,11 @@ class _HumiliationGates {
   /// caller) : `unlockedKeys.isEmpty` = mode hérité, aucun gating. Cette
   /// fonction ne tient pas compte de cette convention — elle retourne
   /// toujours la clé mécanique.
-  static UnlockKey? unlockKeyFor(StepDraft d) =>
-      _modeRulesRegistry[d.mode]!.unlockKeyFor(d);
+  static UnlockKey? unlockKeyFor(
+    StepDraft d, {
+    required Map<SessionMode, ModeRules> rules,
+  }) =>
+      rules[d.mode]!.unlockKeyFor(d);
 
   /// Position la plus profonde du couple (a, b). `null` est traité comme
   /// « non spécifié » et l'autre l'emporte.
@@ -71,6 +74,7 @@ class _HumiliationGates {
     StepDraft d, {
     required AnatomyProfile anatomy,
     required Set<UnlockKey> unlockedKeys,
+    required Map<SessionMode, ModeRules> rules,
   }) {
     // Anatomy gate (toujours actif, même en mode hérité) : la zone balls
     // n'est pas dans le setup → aucun step jouable dessus.
@@ -100,7 +104,7 @@ class _HumiliationGates {
         !unlockedKeys.contains(UnlockKey.begLibre)) {
       return false;
     }
-    final key = unlockKeyFor(d);
+    final key = unlockKeyFor(d, rules: rules);
     return key == null || unlockedKeys.contains(key);
   }
 
@@ -150,8 +154,11 @@ class _HumiliationGates {
   /// **Garde-fou from < to** porté par les helpers `tryDescendToWithGuard`
   /// (cf. mode rules) : la descente de `to` saute l'étape si elle
   /// ferait collision avec `from` (head→mid → head→head interdit).
-  static StepDraft stepDownOne(StepDraft d) {
-    final degraded = _modeRulesRegistry[d.mode]!.tryDegrade(d);
+  static StepDraft stepDownOne(
+    StepDraft d, {
+    required Map<SessionMode, ModeRules> rules,
+  }) {
+    final degraded = rules[d.mode]!.tryDegrade(d);
     if (degraded != null) return degraded;
     // Fallback ultime : lick tip→head — le geste le plus doux qu'on
     // puisse poser sans contrainte d'unlock (toujours disponible).
@@ -183,6 +190,7 @@ class _HumiliationGates {
     required AnatomyProfile anatomy,
     required Set<UnlockKey> unlockedKeys,
     required double saliva,
+    required Map<SessionMode, ModeRules> rules,
   }) {
     // 2ᵉ enveloppe : on borne d'abord aux capacités prouvées (profondeur /
     // BPM / durée), puis la cascade humiliation ne fait que dégrader plus —
@@ -203,10 +211,11 @@ class _HumiliationGates {
       final lubeDelta = lubricationCapDelta(current, saliva);
       final effectiveAvailable = available + lubeDelta;
       if (r <= effectiveAvailable &&
-          isUnlocked(current, anatomy: anatomy, unlockedKeys: unlockedKeys)) {
+          isUnlocked(current,
+              anatomy: anatomy, unlockedKeys: unlockedKeys, rules: rules)) {
         return current;
       }
-      current = stepDownOne(current);
+      current = stepDownOne(current, rules: rules);
     }
     return StepDraft(
       mode: SessionMode.lick,

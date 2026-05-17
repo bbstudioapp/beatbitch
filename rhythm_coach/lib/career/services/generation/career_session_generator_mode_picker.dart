@@ -156,8 +156,9 @@ class _ModePicker {
   ///   par [pickWeighted], mais on reste neutre par sécurité)
   static double continuityMultiplier(
     SessionMode candidate,
-    ModeContinuityState state,
-  ) {
+    ModeContinuityState state, {
+    required Map<SessionMode, ModeRules> rules,
+  }) {
     final last = state.lastType;
     if (last == null) return 1.0;
     if (last == StepType.transit) return 1.0;
@@ -178,7 +179,7 @@ class _ModePicker {
     // lisible (« beg = libre, sauf décision contraire »).
     final cand = candidate == SessionMode.beg
         ? StepType.libreMain
-        : _modeRulesRegistry[candidate]!.classify(null);
+        : rules[candidate]!.classify(null);
     if (cand == StepType.transit) return 1.0;
 
     // Verrou strict : si on a déjà 2+ steps consécutifs hors bouche
@@ -220,10 +221,11 @@ class _ModePicker {
     required SpecializationAllocation spec,
     required Map<SessionMode, double> coachWeights,
     required ModeContinuityState continuity,
+    required Map<SessionMode, ModeRules> rules,
   }) {
     final base = baseWeight(m, spec);
     final coachFactor = coachWeights[m] ?? 1.0;
-    final continuityMul = continuityMultiplier(m, continuity);
+    final continuityMul = continuityMultiplier(m, continuity, rules: rules);
     final result = base * coachFactor * continuityMul;
     return result < 0 ? 0 : result;
   }
@@ -270,6 +272,7 @@ class _ModePicker {
     required Map<SessionMode, double> coachWeights,
     required ModeContinuityState continuity,
     required Random rng,
+    required Map<SessionMode, ModeRules> rules,
   }) {
     final weights = <double>[];
     for (final m in candidates) {
@@ -278,6 +281,7 @@ class _ModePicker {
         spec: spec,
         coachWeights: coachWeights,
         continuity: continuity,
+        rules: rules,
       ));
     }
     final total = weights.fold<double>(0, (a, b) => a + b);

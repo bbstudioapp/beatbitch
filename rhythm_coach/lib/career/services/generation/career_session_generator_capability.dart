@@ -38,10 +38,15 @@ class CapabilityClamps {
   /// Même semantics que [bpmRange] côté override.
   final (int, int)? holdRange;
 
+  /// Registry des rules injecté par le générateur — consulté pour
+  /// dispatcher `clampToCapability` au mode du draft.
+  final Map<SessionMode, ModeRules> rules;
+
   const CapabilityClamps({
     required this.config,
     required this.bpmRange,
     required this.holdRange,
+    required this.rules,
   });
 
   /// Axes éligibles à la surcharge : pilotants, hors `hand` / `lick` /
@@ -186,7 +191,7 @@ class CapabilityClamps {
     if (config.capProfile == null) return clampToCustomLimits(d);
     final clampedChain =
         d.chainNext == null ? null : clampToCapability(d.chainNext!);
-    final clamped = _modeRulesRegistry[d.mode]!.clampToCapability(d, this);
+    final clamped = rules[d.mode]!.clampToCapability(d, this);
     final composed = identical(clampedChain, d.chainNext)
         ? clamped
         : StepDraft(

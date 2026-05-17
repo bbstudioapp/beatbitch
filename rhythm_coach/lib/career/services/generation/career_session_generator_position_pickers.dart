@@ -30,10 +30,15 @@ class _PositionPickers {
 
   final Random rng;
 
+  /// Registry des rules injecté par le générateur — propagé à
+  /// `_HumiliationGates.isUnlocked` quand un draft template est validé.
+  final Map<SessionMode, ModeRules> rules;
+
   const _PositionPickers({
     required this.config,
     required this.unlockedKeys,
     required this.rng,
+    required this.rules,
   });
 
   int _pts(SpecializationBranch b) => config.spec.pointsIn(b);
@@ -44,6 +49,7 @@ class _PositionPickers {
         d,
         anatomy: config.anatomy,
         unlockedKeys: unlockedKeys,
+        rules: rules,
       );
 
   /// Templates `(beg, chainAction)` pour la palette [maybePickBegWithChain].

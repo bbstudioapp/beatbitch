@@ -574,19 +574,21 @@ StepDraft clampHeldDuration(StepDraft draft, CapabilityClamps c) {
   );
 }
 
-/// Registry des règles par mode. Les 9 modes sont couverts par leurs
-/// fichiers dédiés ; les cinq call sites (`StaminaModel.delta`,
-/// `_HumiliationGates.unlockKeyFor`, `CapabilityClamps.clampToCapability`,
-/// `_HumiliationGates.stepDownOne`, `_DifficultyDispatch._mapDifficultyToStep`)
-/// sont devenus de simples lookups + appel polymorphique sur ce registry.
-final Map<SessionMode, ModeRules> _modeRulesRegistry = {
-  SessionMode.rhythm: const RhythmRules(),
-  SessionMode.lick: const LickRules(),
-  SessionMode.hold: const HoldRules(),
-  SessionMode.biffle: const BiffleRules(),
-  SessionMode.beg: const BegRules(),
-  SessionMode.hand: const HandRules(),
-  SessionMode.breath: const BreathRules(),
-  SessionMode.freestyle: const FreestyleRules(),
-  SessionMode.suckle: const SuckleRules(),
+/// Registry par défaut des règles par mode — couvre les 9 modes du jeu.
+/// Injecté au `CareerSessionGenerator` quand aucun `rules` n'est passé au
+/// constructeur (cas standard). Un test ou un module externe peut passer
+/// un registry de sa fabrication (par exemple pour mocker une rule).
+///
+/// Const map : les rules sont stateless avec des const constructors, donc
+/// la map est const-évaluable et thread-safe.
+const Map<SessionMode, ModeRules> defaultModeRulesRegistry = {
+  SessionMode.rhythm: RhythmRules(),
+  SessionMode.lick: LickRules(),
+  SessionMode.hold: HoldRules(),
+  SessionMode.biffle: BiffleRules(),
+  SessionMode.beg: BegRules(),
+  SessionMode.hand: HandRules(),
+  SessionMode.breath: BreathRules(),
+  SessionMode.freestyle: FreestyleRules(),
+  SessionMode.suckle: SuckleRules(),
 };

@@ -134,7 +134,7 @@ extension _DifficultyDispatch on CareerSessionGenerator {
     // mode-specific (ranges BPM/amplitude/durée, sloppy boost pour lick,
     // obéissance boost pour beg, anatomy gate pour suckle…) est portée
     // par les `ModeRules.build` correspondants.
-    return _modeRulesRegistry[mode]!.build(DraftCtx(
+    return _rules[mode]!.build(DraftCtx(
       bpmScore: bpmScore,
       ampScore: ampScore,
       durScore: durScore,
