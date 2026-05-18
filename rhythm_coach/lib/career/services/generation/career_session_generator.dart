@@ -43,7 +43,6 @@ import 'final_picker.dart';
 import 'gen_facade.dart';
 import 'generation_context.dart';
 import 'humiliation_gates.dart';
-import 'mode_picker.dart';
 import 'milestone_scheduler.dart';
 import 'mode_rules.dart';
 import 'mode_rules_registry.dart';
@@ -54,6 +53,7 @@ import 'rhythmic_pattern_buffer.dart';
 import 'session_config.dart';
 import 'session_runtime_state.dart';
 import 'stamina_model.dart';
+import 'step_builders.dart';
 import 'step_draft.dart';
 
 // Re-exports des types extraits — les 9 fichiers de rules et les call
@@ -102,6 +102,7 @@ export 'rhythmic_pattern_buffer.dart' show RhythmicPatternBuffer;
 export 'session_config.dart' show SessionConfig;
 export 'session_runtime_state.dart' show SessionRuntimeState;
 export 'stamina_model.dart' show StaminaModel;
+export 'step_builders.dart' show StepBuilders;
 export 'step_draft.dart' show StepDraft;
 export 'step_type.dart' show StepType;
 
@@ -222,6 +223,11 @@ class CareerSessionGenerator {
   /// appel à [generate] / [generatePunishment] après que `_facade` et
   /// `_positionPickers` sont posés. Cf. `difficulty_dispatch.dart`.
   late DifficultyDispatch _dispatch;
+
+  /// Helpers de construction de drafts spécialisés (breath recovery,
+  /// fake breath, swallow order, post-wave breath). Recréé à chaque
+  /// `_initScratchpad`. Cf. `step_builders.dart`.
+  late StepBuilders _stepBuilders;
 
   /// Registry des règles par mode injecté au constructeur. Par défaut le
   /// `_rules` standard ; un test ou un module externe
@@ -367,6 +373,17 @@ class CareerSessionGenerator {
       rhythmChain: _rhythmChain,
       facade: _facade,
       positionPickers: _positionPickers,
+    );
+    _stepBuilders = StepBuilders(
+      config: _config,
+      state: _state,
+      rng: _rng,
+      rules: _rules,
+      facade: _facade,
+      positionPickers: _positionPickers,
+      enforceHumiliationRequired: _enforceHumiliationRequired,
+      clampToCapability: _clampToCapability,
+      isUnlocked: _isUnlocked,
     );
   }
 
@@ -544,7 +561,7 @@ class CareerSessionGenerator {
     if (milestoneScheduler.replacesIntro) {
       milestoneScheduler.insertIntroReplacement(ctx);
     } else {
-      final first = _clampToCapability(_firstStep(
+      final first = _clampToCapability(_stepBuilders.firstStep(
         quickie: quickie,
         intense: intense,
       ));
@@ -854,7 +871,7 @@ class CareerSessionGenerator {
     }
     final progressForWave = ctx.progress;
     final humilCapForWave = _config.humilCapAt(ctx.time);
-    final waveDrafts = _buildMiniWave(humilCapForWave);
+    final waveDrafts = _stepBuilders.buildMiniWave(humilCapForWave);
     for (final wd in waveDrafts) {
       final waveText = _pickPhraseForDraft(ctx.bank, wd, 'hard');
       _emitStep(
@@ -875,7 +892,7 @@ class CareerSessionGenerator {
     // session. À niveau 9 milieu de séance (regen ≈ 1.6, ≈ 4.5/s),
     // 15-20 s rendent ~70-90 stamina.
     final postWaveProgress = ctx.progress;
-    final postWaveBreath = _buildPostWaveBreath(
+    final postWaveBreath = _stepBuilders.buildPostWaveBreath(
         ctx.stamina, postWaveProgress, ctx.cfg, ctx.genUntil - ctx.time);
     if (postWaveBreath != null) {
       final breathText = _pickPhrase(
@@ -909,7 +926,8 @@ class CareerSessionGenerator {
   /// `SalivaEngine.forceSwallow()`. Pose aussi le cooldown 90 s via
   /// `_state.lastSwallowOrderAt`.
   bool _tryEmitSwallowOrder(GenerationContext ctx) {
-    final swallowDraft = _maybeBuildSwallowOrder(ctx.time, ctx.genUntil);
+    final swallowDraft =
+        _stepBuilders.maybeBuildSwallowOrder(ctx.time, ctx.genUntil);
     if (swallowDraft == null) return false;
     // Le mode du draft est celui que la rule a choisi (= mode porteur du
     // rôle swallowOrder). On le réutilise pour le pickPhrase fallback,
@@ -986,7 +1004,7 @@ class CareerSessionGenerator {
         inLastMinute ? -1 : (ctx.quickie ? 25 : 50) + obedienceBonus;
     if (ctx.stamina < recoveryThreshold ||
         (ctx.stamina < recoveryRandomThreshold && _rng.nextBool())) {
-      initialDraft = _buildRecoveryStep();
+      initialDraft = _stepBuilders.buildRecoveryStep();
     } else {
       initialDraft = _dispatch.mapDifficultyToStep(diff);
     }
@@ -1037,7 +1055,8 @@ class CareerSessionGenerator {
       final delta = StaminaModel.delta(draft, progress, ctx.cfg, rules: _rules);
       final projected = ctx.stamina + delta;
       if (projected < 0) {
-        final breathDraft = _buildBreathRecovery(-projected, progress, ctx.cfg);
+        final breathDraft =
+            _stepBuilders.buildBreathRecovery(-projected, progress, ctx.cfg);
         final breathText = _pickPhrase(
           ctx.bank,
           _resolveModeForRole(ModeSemanticRole.breath),
@@ -1098,12 +1117,13 @@ class CareerSessionGenerator {
     // d'être trompeuse. Pas en dernière minute (on respecte le finish
     // scriptée), pas si on est déjà en déficit (un vrai breath était
     // déjà inséré plus haut).
-    final fakeBreath = _maybeBuildFakeBreath(
+    final fakeBreath = _stepBuilders.maybeBuildFakeBreath(
       lastEmitted: emitDrafts.isNotEmpty ? emitDrafts.last : draft,
       currentStamina: ctx.stamina,
       time: ctx.time,
       genUntil: ctx.genUntil,
       bank: ctx.bank,
+      pickPhrase: _pickPhrase,
     );
     if (fakeBreath != null) {
       _emitStep(
@@ -1169,120 +1189,6 @@ class CareerSessionGenerator {
     final coreMode = _resolveModeForRole(ModeSemanticRole.miniWaveCore);
     if (_config.isModeForbidden(coreMode)) return false;
     return true;
-  }
-
-  /// Construit la séquence de la mini-vague : 2 à 3 steps rythmés à BPM
-  /// montant, chacun à profondeur progressive (head→mid puis head→mid
-  /// puis head→throat si débloqué). Variations de `to` choisies pour ne
-  /// pas trigger le détecteur de pattern plat (`_patternBuffer.wouldBeFlat`)
-  /// et pour matérialiser la montée à l'oreille (BPMs espacés de 20).
-  ///
-  /// Chaque step est filtré par `_enforceHumiliationRequired(humilCap)` :
-  /// si la vague propose un step trop humiliant pour le cap courant, il
-  /// dégrade vers du plus doux automatiquement (ex throat → mid). Si après
-  /// dégradation un step duplique le précédent, il est skip plutôt que
-  /// re-poussé — la vague peut donc se réduire à 2 steps en pratique.
-  List<StepDraft> _buildMiniWave(double humilCap) {
-    final hasThroat = _state.unlockedKeys.contains(UnlockKey.throatHoldShort) ||
-        _config.maxDepthIndex >= Position.throat.index;
-    // La séquence brute de la mini-vague est désormais déléguée au mode
-    // qui porte le rôle `miniWaveCore` (cf. B.PR5). Le filtrage humil
-    // + clamp capacité + dédoublonnage post-cascade reste ici parce
-    // qu'il consomme `_enforceHumiliationRequired` / `_clampToCapability`
-    // (sur l'instance du générateur).
-    final coreMode = _resolveModeForRole(ModeSemanticRole.miniWaveCore);
-    final raw = _rules[coreMode]!
-            .buildMiniWaveSegment(MiniWaveCtx(hasThroat: hasThroat)) ??
-        const <StepDraft>[];
-    final out = <StepDraft>[];
-    Position? prevTo;
-    int? prevBpm;
-    for (final s in raw) {
-      final filtered = _enforceHumiliationRequired(s, humilCap);
-      // Skip si la dégradation rend ce step identique au précédent
-      // (mêmes from/to/bpm) — la vague compresserait sinon en plat.
-      if (filtered.to == prevTo && filtered.bpm == prevBpm) continue;
-      out.add(filtered);
-      prevTo = filtered.to;
-      prevBpm = filtered.bpm;
-    }
-    // Garde au minimum 2 steps : si la cascade a tout aplati (cas humil
-    // très basse en début de niveau 5), on retombe sur les 2 premiers
-    // steps de `raw` sans filtre humil, qui sont volontairement modérés
-    // (head→mid 100/120 — req mécanique très basse). On les borne quand
-    // même au profil de capacités.
-    if (out.length < 2) {
-      return raw.take(2).map(_clampToCapability).toList();
-    }
-    return out;
-  }
-
-  /// Construit la **pause longue post-vague** : breath dédié dont la
-  /// durée vise à remonter la stamina à ~95 (`_postWaveBreathTarget`).
-  /// Distinct du sas breath standard (`_buildBreathRecovery`) qui cap à
-  /// 12 s — ici on s'autorise jusqu'à 20 s parce que la vague est un
-  /// mini-finish dramatique : on assume une vraie respiration scénarisée
-  /// derrière, pas un soupir de 6 s.
-  ///
-  /// Borne basse 12 s : même si la stamina est déjà haute (cas vague
-  /// dégradée par humilCap qui n'a pas creusé), on garde une pause
-  /// audible — le silence post-vague est un moment dramaturgique.
-  ///
-  /// Borne haute 20 s : au-delà, la pause devient plus longue que la
-  /// vague elle-même (~30 s) et le coach radoterait du soft. La regen
-  /// finit le job sur les phases libres suivantes si besoin.
-  ///
-  /// Retourne null si moins de 12 s sont disponibles avant `genUntil`
-  /// (rare : la vague checke déjà `genUntil - time >= 90`, mais la
-  /// vague elle-même consomme jusqu'à 30 s, donc on revérifie ici).
-  StepDraft? _buildPostWaveBreath(
-    double stamina,
-    double progress,
-    CareerLevel cfg,
-    int remainingSeconds,
-  ) {
-    // Délégué au mode qui porte le rôle `postWaveBreath` (cf. B.PR7).
-    // Le calcul de durée (visée ~95 stamina, fenêtre [12, 20]) vit
-    // désormais dans `BreathRules.buildPostWaveBreath`.
-    final mode = _resolveModeForRole(ModeSemanticRole.postWaveBreath);
-    return _rules[mode]!.buildPostWaveBreath(PostWaveBreathCtx(
-      stamina: stamina,
-      progress: progress,
-      cfg: cfg,
-      remainingSeconds: remainingSeconds,
-    ));
-  }
-
-  /// Construit éventuellement un step **swallow_order** : beg libre court
-  /// (5-7 s) qui matérialise l'ordre coach « avale tout » quand la sim
-  /// salive sature. Sans ce mécanisme, `SalivaEngine` est un compteur
-  /// silencieux — la jauge monte, l'auto-déglutition se déclenche
-  /// silencieusement, et la mécanique "saliva" n'a aucun rendu côté
-  /// dramaturgie. Avec ce step, un overflow projeté devient un moment
-  /// audible : phrase impérative + mini-pause beg libre.
-  ///
-  /// Conditions cumulatives :
-  /// - `_state.salivaSim.value >= 80` : marge de 10 sous le seuil overflow (90)
-  ///   pour anticiper et ne pas attendre que ça déborde réellement
-  ///   (l'auto-swallow runtime peut intercepter à 75 et masquer).
-  /// - `time - _state.lastSwallowOrderAt >= 90` : cooldown 90 s pour ne pas
-  ///   spammer les ordres en série (cas spé sloppy à fond sur lick).
-  /// - `genUntil - time >= 60` : marge avant le finish — la dramaturgie
-  ///   scriptée ne doit pas être interrompue par un ordre opportuniste.
-  /// - `begLibre` débloqué (sinon on imposerait une mécanique avant la
-  ///   pédagogie qui la déverrouille).
-  ///
-  /// Retourne null si une condition manque.
-  StepDraft? _maybeBuildSwallowOrder(int time, int genUntil) {
-    if (_state.salivaSim.value < 80.0) return null;
-    if (time - _state.lastSwallowOrderAt < 90) return null;
-    if (genUntil - time < 60) return null;
-    if (!_state.unlockedKeys.contains(UnlockKey.begLibre)) return null;
-    // Construction du draft déléguée au mode qui porte le rôle
-    // `swallowOrder` (cf. B.PR6). La rule décide de la durée (5-7 s) et
-    // de la forme du draft (mode `beg`, sans BPM, sans position).
-    final swallowMode = _resolveModeForRole(ModeSemanticRole.swallowOrder);
-    return _rules[swallowMode]!.buildSwallowOrder(SwallowCtx(rng: _rng));
   }
 
   /// Adaptateur d'instance pour `FinalPicker.buildPostFinalDraft`. Injecte
@@ -1760,251 +1666,6 @@ class CareerSessionGenerator {
     );
   }
 
-  /// Step d'intro. Modes hardcodés pour quickie / intense (besoins
-  /// dramaturgiques spécifiques). En séance normale, panel de variantes
-  /// douces : lick et rhythm en amplitude limitée, plus une option hand
-  /// pour la variété. Filtré par `_config.maxDepthIndex` (head→mid n'apparaît pas
-  /// si le niveau plafonne à head) et `_config.includeHand`.
-  StepDraft _firstStep({
-    bool quickie = false,
-    bool intense = false,
-  }) {
-    if (intense) {
-      // Plus profond et plus rapide que quickie : la régen post-Supplier
-      // est censée prouver que l'utilisatrice « monte d'un niveau ».
-      // Profondeur plafonnée par les milestones acquittées (jamais throat
-      // sans `throat_pulse`, jamais full sans `full_pulse`) — on borne aussi
-      // à throat (idx 3) pour ne jamais lancer un intense full d'amorce.
-      final to = Position.values[_milestoneRhythmCeilingIdx().clamp(2, 3)];
-      // Custom : rhythm exclu → on retombe sur hand (rythmé proche), sinon
-      // lick (langue) ou hold (statique) en dernier recours. Cascade
-      // pilotée par `introPriority` côté rules (rhythm=0 → hand=1 → lick=2
-      // → hold=3). Construction déléguée à `buildIntroStep` : les rules
-      // rythmées consomment les 4 params straight, hold ignore bpm/from.
-      final intenseMode = _pickIntroMode();
-      return _rules[intenseMode]!.buildIntroStep(IntroCtx(
-        bpm: 90,
-        from: Position.head,
-        to: to,
-        duration: 10,
-      ));
-    }
-    if (quickie) {
-      // Quickie : même cascade que l'intense (rhythm → hand → lick →
-      // hold) via `introPriority` côté rules, construction via
-      // `buildIntroStep`.
-      final quickieMode = _pickIntroMode();
-      return _rules[quickieMode]!.buildIntroStep(const IntroCtx(
-        bpm: 75,
-        from: Position.head,
-        to: Position.mid,
-        duration: 8,
-      ));
-    }
-    // Panel de variantes filtré par milestones : `rhythm_mid_basic`
-    // (intro_deeper_basics, niveau 2) gate les variantes rhythm
-    // head→mid / tip→mid. Sans cette milestone, on retombe sur lick /
-    // rhythm tip→head / hand tip→head (toutes débloquées via
-    // intro_basics niveau 1). Construction déléguée aux rules via
-    // `firstStepVariants` (cf. B.PR9) : chaque mode opt-in renvoie sa
-    // palette pré-construite, le générateur les concatène dans l'ordre
-    // d'itération du registry (rhythm → lick → hold → biffle → beg →
-    // hand → breath → freestyle → suckle) — `HandRules` porte
-    // désormais son propre guard `includeHand` via le ctx.
-    final introCtx = IntroStandardCtx(includeHand: _config.includeHand);
-    final variants = <StepDraft>[
-      for (final rule in _rules.values) ...rule.firstStepVariants(introCtx),
-    ];
-    final allowed = variants
-        .where(_isUnlocked)
-        .where((v) => !_config.isModeForbidden(v.mode))
-        .toList();
-    if (allowed.isEmpty) {
-      // Pas de variante alignée à la fois sur les unlocks et le dosage —
-      // on retombe sur la 1ʳᵉ variante non interdite, sinon la 1ʳᵉ tout court.
-      final notForbidden =
-          variants.where((v) => !_config.isModeForbidden(v.mode)).toList();
-      return notForbidden.isEmpty ? variants.first : notForbidden.first;
-    }
-    return allowed[_rng.nextInt(allowed.length)];
-  }
-
-  /// Construit un step `breath` dont la durée est calculée pour combler
-  /// exactement un déficit d'endurance projeté. Borné à [3, 15] secondes :
-  /// au-delà, on préfère raccourcir la step suivante plutôt qu'imposer
-  /// une respi interminable.
-  /// Tente de générer un « faux breath » : un breath ultra-court (2-3 s)
-  /// inséré juste après un step intense pour faire croire à une pause,
-  /// alors que la step suivante reprendra direct sur son tirage normal.
-  /// Effet de surprise réservé aux profils déjà habitués à l'humiliation
-  /// — sur les débutantes (humil career bas), le contrat pédagogique
-  /// reste « breath = vraie respiration » ; mentir à une joueuse qui
-  /// vient d'apprendre à respirer briserait sa confiance dans le moteur.
-  ///
-  /// Conditions cumulatives :
-  /// - humiliation career ≥ 20 (seuil = la joueuse a déjà été poussée
-  ///   suffisamment pour que le ton taquin/dominateur fasse sens)
-  /// - dernier step émis = effort intense (rhythm/hand to ∈ {throat, full}
-  ///   à BPM ≥ 90, ou hold to ∈ {throat, full})
-  /// - pas dans la dernière minute (on laisse le finish scripté tranquille)
-  /// - stamina courante ≥ 30 (sinon un vrai breath était déjà inséré, pas
-  ///   besoin de tromperie supplémentaire)
-  /// - probabilité 25 % (rare = surprise ; trop fréquent = effet usé)
-  ///
-  /// Retourne null si une condition n'est pas remplie.
-  ({StepDraft draft, String text})? _maybeBuildFakeBreath({
-    required StepDraft lastEmitted,
-    required double currentStamina,
-    required int time,
-    required int genUntil,
-    required PhraseBank bank,
-  }) {
-    // Convention `_state.unlockedKeys.isEmpty` = mode hérité (Custom / scénarios /
-    // debug) : pas de gating, le mécanisme reste actif. En carrière le
-    // déblocage passe par la milestone `intro_fake_breath` qui accorde la
-    // clé `fakeBreath` ; tant qu'elle n'est pas acquittée, rien ne sort.
-    if (_state.unlockedKeys.isNotEmpty &&
-        !_state.unlockedKeys.contains(UnlockKey.fakeBreath)) {
-      return null;
-    }
-    if (genUntil - time < 30) return null; // pas trop près du finish
-    if (currentStamina < 30) return null; // déjà en dette, vrai breath plus bas
-    if (!_rules[lastEmitted.mode]!.isIntenseForFakeBreath(lastEmitted)) {
-      return null;
-    }
-    if (_rng.nextDouble() >= 0.25) return null;
-    // Construction du draft déléguée à la rule qui porte le rôle
-    // `breath` (cf. B.PR7). La rule décide de la durée (2-3 s, peanuts
-    // face au coût d'un step intense ~25-40). La rule retourne toujours
-    // un draft non-null pour ce rôle, donc le `!` est sûr.
-    final breathMode = _resolveModeForRole(ModeSemanticRole.breath);
-    final draft =
-        _rules[breathMode]!.buildFakeBreath(FakeBreathCtx(rng: _rng))!;
-    // Phrase : on tire d'abord dans le tier `fake_breath` (phrases taquines
-    // « une seconde, c'est tout », « tu crois qu'on s'arrête ? »). Fallback
-    // sur `hard` si la bank n'a pas encore le pool dédié — au moins le ton
-    // reste sec/dominateur, pas une phrase douce qui casse la surprise.
-    var text = _pickPhrase(bank, breathMode, 'fake_breath');
-    if (text.isEmpty) {
-      text = _pickPhrase(bank, breathMode, 'hard');
-    }
-    return (draft: draft, text: text);
-  }
-
-  StepDraft _buildBreathRecovery(
-    double deficit,
-    double progress,
-    CareerLevel cfg,
-  ) {
-    // Délégué au mode qui porte le rôle `breath` (cf. B.PR7). Le calcul
-    // de durée (deficit + buffer, fenêtre [4, 12]) vit désormais dans
-    // `BreathRules.buildBreathRecovery`. La rule retourne toujours un
-    // draft non-null pour ce rôle, donc le `!` est sûr.
-    final mode = _resolveModeForRole(ModeSemanticRole.breath);
-    return _rules[mode]!.buildBreathRecovery(BreathRecoveryCtx(
-      deficit: deficit,
-      progress: progress,
-      cfg: cfg,
-    ))!;
-  }
-
-  /// Tirage d'un step "respi active" : mode parmi les `ModeRules` qui
-  /// opt-in à `isRecoveryCandidate`, BPM ≤ 60 pour déclencher la regen
-  /// d'endurance. Le mode `breath` n'est plus tiré ici — il est désormais
-  /// inséré strictement sur déficit d'endurance projeté (cf.
-  /// `_buildBreathRecovery`), pas comme une option d'humeur générale.
-  ///
-  /// L'orchestration est mode-agnostique : on collecte les candidats via
-  /// le registry, on applique les filtres communs (dose Custom, friction
-  /// de continuité), on délègue l'assemblage à la rule retenue. La
-  /// logique mode-specific (durée, gating unlock, choix de position) vit
-  /// dans `ModeRules.isRecoveryCandidate` / `buildRecovery`.
-  StepDraft _buildRecoveryStep() {
-    final bpm = 45 + _rng.nextInt(14); // [45, 58]
-    final dur = 10 + _rng.nextInt(9); // [10, 18]
-    // Convention `_state.unlockedKeys.isEmpty` = mode hérité : pas de gating, tous
-    // les modes opt-in passent par défaut (cf. `_isUnlocked`).
-    final avail = RecoveryAvailability(
-      heritage: _state.unlockedKeys.isEmpty,
-      unlockedKeys: _state.unlockedKeys,
-      includeHand: _config.includeHand,
-    );
-    final candidates = <SessionMode>[
-      for (final entry in _rules.entries)
-        if (entry.value.isRecoveryCandidate(avail)) entry.key,
-    ];
-    // Exclusions Custom (dose `none`) : la recovery ne doit pas ramener un
-    // mode que la joueuse a explicitement banni. Si tout est exclu, on
-    // retombe sur le mode `recoveryDegradeFallback` (lick historique) — le
-    // garde-fou de l'éditeur Custom assure que lick OU rhythm OU hold est
-    // resté ≥ rare ; si le mode fallback lui-même est exclu, le mode
-    // bouche restant reprendra la main au step suivant via mapDifficulty.
-    // Cf. C.PR5.
-    candidates.removeWhere(_config.isModeForbidden);
-    final degradeFallbackMode =
-        _resolveModeForRole(ModeSemanticRole.recoveryDegradeFallback);
-    if (candidates.isEmpty) candidates.add(degradeFallbackMode);
-    final pool = _filterRepeated(candidates);
-    // Tirage pondéré pour que la friction de continuité par type s'applique
-    // aussi à la recovery (sans ça, une recovery uniforme repousse souvent
-    // langue/libre alors que la séance vient juste de quitter bouche).
-    final mode = _pickWeightedMode(pool);
-    final draft = _rules[mode]!.buildRecovery(RecoveryCtx(
-      gen: _facade,
-      bpm: bpm,
-      duration: dur,
-    ));
-    // Gating unlock : si le mode/draft tiré n'est pas encore débloqué (ex :
-    // biffle avant niveau 5, beg libre avant niveau 3, freestyle avant
-    // niveau 4), on dégrade. Évite que la phase de récup laisse passer une
-    // action contractuellement réservée à plus tard. `tip → head` sur le
-    // mode `recoveryDegradeFallback` reste le « mode bouche le plus doux »
-    // — dramaturgie hardcodée (positions imposées), seul le mode est
-    // mappable via le rôle. Cf. C.PR5.
-    if (!_isUnlocked(draft)) {
-      return StepDraft(
-        mode: degradeFallbackMode,
-        bpm: bpm,
-        from: Position.tip,
-        to: Position.head,
-        duration: dur,
-      );
-    }
-    return draft;
-  }
-
-  /// Adaptateur d'instance pour `ModePicker.pickWeighted` — injecte `_config.spec`,
-  /// `_config.coachModeWeights`, le snapshot de continuité et `_rng`.
-  SessionMode _pickWeightedMode(List<SessionMode> candidates) =>
-      ModePicker.pickWeighted(
-        candidates,
-        spec: _config.spec,
-        coachWeights: _config.coachModeWeights,
-        continuity: _state.continuitySnapshot(),
-        rng: _rng,
-        rules: _rules,
-      );
-
-  /// Mode retenu pour la chaîne de fallback « intro intense / quickie »
-  /// (cf. `_firstStep`). Trie les rules par `introPriority` croissante,
-  /// retient la première non-forbidden. Le mode de rang max (hold)
-  /// reste le fallback ultime même quand `_config.isModeForbidden(hold)` —
-  /// l'éditeur Custom garantit qu'au moins un mode bouche reste, mais
-  /// si tout est exclu, hold doit sortir pour préserver le contrat
-  /// historique (la cascade `rhythm → hand → lick → hold` finissait
-  /// toujours par hold).
-  SessionMode _pickIntroMode() {
-    final ranked = _rules.entries
-        .where((e) => e.value.introPriority != null)
-        .toList()
-      ..sort(
-          (a, b) => a.value.introPriority!.compareTo(b.value.introPriority!));
-    for (final e in ranked) {
-      if (!_config.isModeForbidden(e.key)) return e.key;
-    }
-    return ranked.last.key;
-  }
-
   /// Notifie les 3 sous-systèmes runtime après un step poussé :
   ///   * `_rhythmChain` : cumule / reset selon mode et durée.
   ///   * `_state.recordContinuity(type)` : `lastType` / `stepsInLastType`
@@ -2262,22 +1923,6 @@ class CareerSessionGenerator {
         saliva: _state.salivaSim.value,
         rules: _rules,
       );
-
-  /// Retire `_state.lastMode` des candidats si une alternative existe et que le
-  /// mode est « ponctuel » (breath / beg / biffle / hold / freestyle) — deux
-  /// events identiques d'affilé y sonneraient comme un bug.
-  ///
-  /// Pour les modes « flow » (rhythm / lick / hand), on **accepte la
-  /// répétition** : la variété passe par les paramètres (BPM via
-  /// `_applyBpmDiversity` qui force ≥18 BPM de delta, profondeur via
-  /// `_diversifyAmplitude` qui décale d'un cran). Sans cette fenêtre de
-  /// rester sur le même mode, on sortait nécessairement de rythme à chaque
-  /// step ; l'utilisateur a relevé que la séance ressemblait à une rotation
-  /// stricte au lieu de phases prolongées avec variation.
-  /// Adaptateur d'instance pour `ModePicker.filterRepeated` — injecte
-  /// `_state.lastMode` et `_rules`.
-  List<SessionMode> _filterRepeated(List<SessionMode> candidates) =>
-      ModePicker.filterRepeated(candidates, _state.lastMode, rules: _rules);
 
   /// Tire une phrase pour [mode]/[tier] en évitant la même qu'au step
   /// précédent (`_state.lastText`). Quelques essais suffisent : si la banque ne
