@@ -73,7 +73,9 @@ export 'mode_continuity_state.dart' show ModeContinuityState;
 export 'position_pickers.dart' show PositionPickers;
 export 'mode_rules.dart'
     show
+        BreathRecoveryCtx,
         DraftCtx,
+        FakeBreathCtx,
         FinalCtx,
         FinalVariant,
         GenFacadeSurface,
@@ -83,6 +85,7 @@ export 'mode_rules.dart'
         ModeSemanticRole,
         PostFinalCtx,
         PostFinalVariant,
+        PostWaveBreathCtx,
         RecoveryAvailability,
         RecoveryCtx,
         SwallowCtx,
@@ -1279,28 +1282,16 @@ class CareerSessionGenerator {
     CareerLevel cfg,
     int remainingSeconds,
   ) {
-    if (remainingSeconds < 12) return null;
-    final regen = StaminaModel.lerp(
-      cfg.regenStartMultiplier,
-      cfg.regenEndMultiplier,
-      progress,
-    );
-    final regenPerSec = 2.8 * regen;
-    const target = 95.0;
-    final deficit = (target - stamina).clamp(0.0, target);
-    final raw = regenPerSec <= 0 ? 12.0 : deficit / regenPerSec;
-    // Borne dur entre [12, 20] et capée par le temps restant avant le
-    // pré-finisher / boosts pour ne pas marcher sur la dramaturgie de
-    // fin de session.
-    final upperBound = remainingSeconds < 20 ? remainingSeconds : 20;
-    final dur = raw.ceil().clamp(12, upperBound);
-    return StepDraft(
-      mode: SessionMode.breath,
-      bpm: null,
-      from: null,
-      to: null,
-      duration: dur,
-    );
+    // Délégué au mode qui porte le rôle `postWaveBreath` (cf. B.PR7).
+    // Le calcul de durée (visée ~95 stamina, fenêtre [12, 20]) vit
+    // désormais dans `BreathRules.buildPostWaveBreath`.
+    final mode = _resolveModeForRole(ModeSemanticRole.postWaveBreath);
+    return _rules[mode]!.buildPostWaveBreath(PostWaveBreathCtx(
+      stamina: stamina,
+      progress: progress,
+      cfg: cfg,
+      remainingSeconds: remainingSeconds,
+    ));
   }
 
   /// Construit éventuellement un step **swallow_order** : beg libre court
@@ -1950,24 +1941,20 @@ class CareerSessionGenerator {
       return null;
     }
     if (_rng.nextDouble() >= 0.25) return null;
-    // 2-3 s : assez pour entendre un soupir, trop peu pour vraiment
-    // récupérer (à 2.8 stamina/s = 5-8 stamina rendus, peanuts face au
-    // coût d'un step intense ~25-40).
-    final dur = 2 + _rng.nextInt(2);
-    final draft = StepDraft(
-      mode: SessionMode.breath,
-      bpm: null,
-      from: null,
-      to: null,
-      duration: dur,
-    );
+    // Construction du draft déléguée à la rule qui porte le rôle
+    // `breath` (cf. B.PR7). La rule décide de la durée (2-3 s, peanuts
+    // face au coût d'un step intense ~25-40). La rule retourne toujours
+    // un draft non-null pour ce rôle, donc le `!` est sûr.
+    final breathMode = _resolveModeForRole(ModeSemanticRole.breath);
+    final draft =
+        _rules[breathMode]!.buildFakeBreath(FakeBreathCtx(rng: _rng))!;
     // Phrase : on tire d'abord dans le tier `fake_breath` (phrases taquines
     // « une seconde, c'est tout », « tu crois qu'on s'arrête ? »). Fallback
     // sur `hard` si la bank n'a pas encore le pool dédié — au moins le ton
     // reste sec/dominateur, pas une phrase douce qui casse la surprise.
-    var text = _pickPhrase(bank, SessionMode.breath, 'fake_breath');
+    var text = _pickPhrase(bank, breathMode, 'fake_breath');
     if (text.isEmpty) {
-      text = _pickPhrase(bank, SessionMode.breath, 'hard');
+      text = _pickPhrase(bank, breathMode, 'hard');
     }
     return (draft: draft, text: text);
   }
@@ -1977,33 +1964,16 @@ class CareerSessionGenerator {
     double progress,
     CareerLevel cfg,
   ) {
-    final regen = StaminaModel.lerp(
-      cfg.regenStartMultiplier,
-      cfg.regenEndMultiplier,
-      progress,
-    );
-    // Cohérent avec `_staminaDelta` pour breath : `dur * 2.8 * regen`
-    // (vitesse de récup poussée pour que le breath reste plus court
-    // que les steps d'action — cf. règle de design dans `_staminaDelta`).
-    final regenPerSec = 2.8 * regen;
-    // Cible : combler le déficit ET reconstruire un petit buffer de
-    // stamina pour pouvoir enchaîner 2-3 steps derrière. Buffer baissé
-    // (35 → 22) : à 2.8 stamina/s, 22 = 8 s déjà — au-delà le breath
-    // devient plus long que l'action qu'il sépare. Cap haut 18 → 12 s
-    // dans la même logique : un soupir, pas une vraie phase. Si la
-    // dette reste après 12 s, c'est au moteur d'insérer un nouveau
-    // breath plus tard, pas à un breath unique de tout absorber.
-    const targetBuffer = 22.0;
-    final raw =
-        (deficit + targetBuffer) / (regenPerSec <= 0 ? 1.0 : regenPerSec);
-    final dur = raw.ceil().clamp(4, 12);
-    return StepDraft(
-      mode: SessionMode.breath,
-      bpm: null,
-      from: null,
-      to: null,
-      duration: dur,
-    );
+    // Délégué au mode qui porte le rôle `breath` (cf. B.PR7). Le calcul
+    // de durée (deficit + buffer, fenêtre [4, 12]) vit désormais dans
+    // `BreathRules.buildBreathRecovery`. La rule retourne toujours un
+    // draft non-null pour ce rôle, donc le `!` est sûr.
+    final mode = _resolveModeForRole(ModeSemanticRole.breath);
+    return _rules[mode]!.buildBreathRecovery(BreathRecoveryCtx(
+      deficit: deficit,
+      progress: progress,
+      cfg: cfg,
+    ))!;
   }
 
   /// Tirage d'un step "respi active" : mode parmi les `ModeRules` qui

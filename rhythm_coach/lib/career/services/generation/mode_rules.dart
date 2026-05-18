@@ -314,6 +314,72 @@ class SwallowCtx {
   final Random rng;
 }
 
+/// Contexte d'assemblage d'un **breath de récupération** passé à
+/// `ModeRules.buildBreathRecovery`. La rule calcule la durée à partir
+/// du déficit projeté de stamina et de la regen courante, et retourne
+/// un draft court (typiquement 4-12 s) qui comble juste assez pour
+/// reprendre 2-3 steps derrière.
+///
+/// Toutes les conditions d'éligibilité (`draft.mode != breath`, marge
+/// `genUntil - time > 8`, `projected < 0`) sont pré-filtrées côté
+/// générateur — la rule est appelée uniquement quand l'insertion est
+/// décidée.
+class BreathRecoveryCtx {
+  const BreathRecoveryCtx({
+    required this.deficit,
+    required this.progress,
+    required this.cfg,
+  });
+
+  /// Manque de stamina projeté (positif = combien il manque pour
+  /// terminer le step suivant à zéro).
+  final double deficit;
+
+  /// Progression dans la séance ∈ [0, 1] — pilote la regen via
+  /// `CareerLevel.regen{Start,End}Multiplier`.
+  final double progress;
+
+  final CareerLevel cfg;
+}
+
+/// Contexte d'assemblage de la **pause longue post-vague** passé à
+/// `ModeRules.buildPostWaveBreath`. Distinct de [BreathRecoveryCtx]
+/// parce que la pause post-vague vise un plafond de stamina (~95)
+/// plutôt qu'à combler un déficit, et s'autorise une fenêtre plus
+/// large (12-20 s vs 4-12 s) — c'est un moment dramaturgique
+/// scénarisé, pas un sas opportuniste.
+///
+/// Peut retourner `null` côté rule si le contexte ne permet pas
+/// d'émettre la pause (cas `remainingSeconds < 12`).
+class PostWaveBreathCtx {
+  const PostWaveBreathCtx({
+    required this.stamina,
+    required this.progress,
+    required this.cfg,
+    required this.remainingSeconds,
+  });
+
+  final double stamina;
+  final double progress;
+  final CareerLevel cfg;
+  final int remainingSeconds;
+}
+
+/// Contexte d'assemblage d'un **faux-breath** passé à
+/// `ModeRules.buildFakeBreath`. La rule retourne un draft très court
+/// (typiquement 2-3 s) qui matérialise un soupir feint sans vraie
+/// récup — phrase taquine, pas un sas d'endurance.
+///
+/// Le test de profil intense (`isIntenseForFakeBreath`), le check
+/// d'unlock `fakeBreath`, le dé 25 % et les gates stamina/marge finish
+/// sont pré-filtrés côté générateur — la rule est appelée uniquement
+/// quand l'insertion est décidée.
+class FakeBreathCtx {
+  const FakeBreathCtx({required this.rng});
+
+  final Random rng;
+}
+
 /// Rôles sémantiques d'un mode au sein du générateur. Chaque rôle
 /// désigne une **fonction dramaturgique** (sas breath, ordre
 /// d'avalement, boost humiliant, etc.) — pas une identité technique.
@@ -410,6 +476,34 @@ abstract class ModeRules {
   /// (sim salive saturée, cooldown, marge finish, begLibre débloqué)
   /// sont déjà pré-filtrées en amont — la rule n'a pas à les revérifier.
   StepDraft? buildSwallowOrder(SwallowCtx ctx) => null;
+
+  /// Construit un **breath de récupération** (cf. `_buildBreathRecovery`
+  /// côté générateur). Default `null` — opt-in : seul le mode qui joue
+  /// le rôle [ModeSemanticRole.breath] doit override.
+  ///
+  /// La rule calcule la durée à partir du déficit projeté et de la regen
+  /// courante, et retourne un draft court (typiquement 4-12 s).
+  StepDraft? buildBreathRecovery(BreathRecoveryCtx ctx) => null;
+
+  /// Construit la **pause longue post-vague** (cf. `_buildPostWaveBreath`
+  /// côté générateur). Default `null` — opt-in : seul le mode qui joue
+  /// le rôle [ModeSemanticRole.postWaveBreath] doit override.
+  ///
+  /// Peut retourner `null` si la fenêtre disponible est trop courte
+  /// (cf. `ctx.remainingSeconds < 12`) — le générateur traite ce cas
+  /// comme « pas de pause cette fois ».
+  StepDraft? buildPostWaveBreath(PostWaveBreathCtx ctx) => null;
+
+  /// Construit un **faux-breath** (cf. `_maybeBuildFakeBreath` côté
+  /// générateur). Default `null` — opt-in : seul le mode qui joue le
+  /// rôle [ModeSemanticRole.breath] doit override.
+  ///
+  /// La rule retourne un draft très court (typiquement 2-3 s). Le
+  /// gating (unlock `fakeBreath`, conditions stamina/marge, dé 25 %,
+  /// test `isIntenseForFakeBreath` sur le step précédent) est fait
+  /// côté générateur — la rule est appelée uniquement quand l'insertion
+  /// est décidée.
+  StepDraft? buildFakeBreath(FakeBreathCtx ctx) => null;
 
   /// Coût (négatif) ou regen (positif) d'endurance pour le step.
   double delta(StepDraft draft, double progress, CareerLevel cfg);
