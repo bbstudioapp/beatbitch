@@ -14,7 +14,7 @@ part of 'career_session_generator.dart';
 /// Composition explicite : la facade ne détient pas de référence au
 /// générateur. Elle reçoit en constructeur les collaborateurs dont les
 /// rules ont besoin — state stable (`config`, `state`, `rng`,
-/// `rhythmChain`) et sous-systèmes (`_PositionPickers`). Les méthodes
+/// `rhythmChain`) et sous-systèmes (`PositionPickers`). Les méthodes
 /// `BpmPacing` consommées passent par le `config` field. Le générateur
 /// recrée la facade à chaque `generate()` / `generatePunishment()`,
 /// après que ses sous-systèmes sont posés.
@@ -29,7 +29,7 @@ class GenFacade implements GenFacadeSurface {
     required this.state,
     required this.rng,
     required this.rhythmChain,
-    required _PositionPickers positionPickers,
+    required PositionPickers positionPickers,
   }) : _positionPickers = positionPickers;
 
   // ─── State stable lu par les rules ───────────────────────────────────────
@@ -43,7 +43,7 @@ class GenFacade implements GenFacadeSurface {
   final RhythmChainTracker rhythmChain;
 
   // ─── Sous-systèmes wrappés (privés — accès via les méthodes ci-dessous) ──
-  final _PositionPickers _positionPickers;
+  final PositionPickers _positionPickers;
 
   // ─── Plafonds milestone (délégués à `_positionPickers`) ──────────────────
   @override

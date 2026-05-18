@@ -1,23 +1,36 @@
-// Fichier part de `career_session_generator.dart` — pickers de position
-// pour les modes à amplitude / hold / beg / suckle.
+// Library autonome — pickers de position pour les modes à amplitude /
+// hold / beg / suckle.
 //
 // Regroupe les tirages géographiques (from/to, position de hold, position
 // de beg, position du pré-finisher) + les calculs de plafond profondeur
 // dérivés des milestones acquittées (`milestoneHoldCeilingIdx`,
 // `milestoneRhythmCeilingIdx`) + le samplers générique `sampleSimplex3`.
 //
-// Tous bundlés dans `_PositionPickers` (value object immuable), pattern
+// Tous bundlés dans `PositionPickers` (value object immuable), pattern
 // identique à `CapabilityClamps` et `FinalPicker` : les méthodes
 // s'appellent entre elles et partagent le même état (8 fields), passer
 // chaque field à chaque appel rendrait les signatures illisibles.
+//
+// Sortie du `part of 'career_session_generator.dart'` historique (A.PR5
+// du plan de refacto) — renommée `PositionPickers` (sans `_`) puisque
+// l'API est désormais visible cross-library. `career_session_generator.dart`
+// la re-exporte pour préserver la rétrocompat des call sites externes.
+//
+// Importe le générateur pour accéder à `StaminaModel` (toujours `part of`
+// — extraction non planifiée dans la phase A). Cycle d'import résolu
+// lexicalement par Dart : les références à `StaminaModel.lerp` /
+// `positionDepth` sont dans les corps de méthode, évaluées au runtime.
+// Même pattern que les rules dans `rules/`.
 
-part of 'career_session_generator.dart';
+import 'dart:math';
+
+import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
 
 /// Pickers de position : profondeurs des holds/beg/finisher, tirages de
 /// couple from/to par mode, samplers RNG. Immuable : le générateur en
 /// construit un par appel à `generate()` / `generatePunishment()` après
 /// que `_capClamps` est posé.
-class _PositionPickers {
+class PositionPickers {
   /// Snapshot de la config de séance. On y lit `maxDepthIndex`,
   /// `deepProbability`, `humiliationCareer`, `spec`, `coachModeWeights`,
   /// `anatomy` — figés au début de `generate()`.
@@ -34,7 +47,7 @@ class _PositionPickers {
   /// `HumiliationGates.isUnlocked` quand un draft template est validé.
   final Map<SessionMode, ModeRules> rules;
 
-  const _PositionPickers({
+  const PositionPickers({
     required this.config,
     required this.unlockedKeys,
     required this.rng,
