@@ -1686,9 +1686,16 @@ class CareerSessionGenerator {
             rng: _rng,
           )
         : null;
+    // Convention design : seul un mode `staticHeld` (= hold) porte une
+    // « position tenue » à annoncer ; les autres modes finaux (rhythm,
+    // lick, hand, biffle, beg) jouent une action sans tenue scriptée.
+    // On consulte le rôle plutôt que de hardcoder `SessionMode.hold`
+    // (cf. B.PR3 du plan de refacto).
+    final isStaticHeldFinal =
+        _rules[finalMode]!.roles.contains(ModeSemanticRole.staticHeld);
     final finalActionPhrase = ctx.bank.pickFinalAction(
       mode: finalMode,
-      holdPosition: finalMode == SessionMode.hold ? finisherDraft.from : null,
+      holdPosition: isStaticHeldFinal ? finisherDraft.from : null,
       rng: _rng,
     );
     final finalStepText = (announcePhrase != null && announcePhrase.isNotEmpty)
