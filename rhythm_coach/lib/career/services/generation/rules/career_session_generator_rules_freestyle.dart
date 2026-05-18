@@ -13,6 +13,16 @@ class FreestyleRules extends ModeRules {
   @override
   StepType classify(Position? to) => StepType.transit;
 
+  /// Freestyle = vraie pause libre, sans bip ni guidage. Seul mode
+  /// tiré uniquement par `_buildRecoveryStep`, donc son poids doit
+  /// rester marginal pour ne pas dominer toutes les récup une fois
+  /// débloqué (sinon ~25 % des récup partaient en freestyle parce
+  /// que son multiplicateur de continuité est neutre — `transit` —
+  /// alors que les autres candidats prennent la friction de quitter
+  /// bouche). Un poids bas le garde comme option ponctuelle.
+  @override
+  double baseWeight(SpecializationAllocation spec) => 0.25;
+
   @override
   double delta(StepDraft draft, double progress, CareerLevel cfg) => 0.0;
 

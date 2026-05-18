@@ -35,64 +35,17 @@ class _ModePicker {
   /// Pondération issue de la spé seule, sans le filtre coach. Le coach
   /// (s'il en fournit) multiplie ce score dans [weight].
   ///
-  /// Coefficients de spé renforcés (passe de +0.20..+0.60 à +0.35..+0.90
-  /// par point investi). À 5 pts dans la branche, le mode correspondant
-  /// pèse jusqu'à ×5.5 pour beg/obeissance, ×4.5 pour lick/sloppy, etc.
-  /// — assez pour que la couleur de la séance soit clairement audible
-  /// dès 3 pts dans une branche.
-  static double baseWeight(SessionMode m, SpecializationAllocation spec) {
-    int pts(SpecializationBranch b) => spec.pointsIn(b);
-    switch (m) {
-      case SessionMode.rhythm:
-        return 1.0 +
-            0.35 * pts(SpecializationBranch.rythmeBiffle) +
-            0.10 * pts(SpecializationBranch.profondeur);
-      case SessionMode.biffle:
-        return 1.0 +
-            0.60 * pts(SpecializationBranch.rythmeBiffle) +
-            0.25 * pts(SpecializationBranch.sloppy);
-      case SessionMode.hold:
-        return 1.0 +
-            0.60 * pts(SpecializationBranch.endurance) +
-            0.40 * pts(SpecializationBranch.profondeur);
-      case SessionMode.lick:
-        // Base abaissée (retour utilisateur « moins de lèche ») : sans
-        // point sloppy, le lick pèse ~0.6 contre ~1.0 pour un mode neutre.
-        // Le boost sloppy (+0.70/pt) reste pleinement effectif → une
-        // joueuse spé sloppy en voit toujours beaucoup (×4.1 à 5 pts).
-        return 0.6 + 0.70 * pts(SpecializationBranch.sloppy);
-      case SessionMode.beg:
-        return 1.0 + 0.90 * pts(SpecializationBranch.obeissance);
-      case SessionMode.hand:
-        // Poids neutre + boost léger rythmeBiffle (hand est un mode
-        // rythmé — cohérent qu'une joueuse rythmeBiffle en voie un peu
-        // plus). La friction de continuité par type pilote toujours son
-        // apparition principale (intro + reprises de souffle).
-        return 1.0 + 0.15 * pts(SpecializationBranch.rythmeBiffle);
-      case SessionMode.breath:
-        return 1.0;
-      case SessionMode.freestyle:
-        // Freestyle = vraie pause libre, sans bip ni guidage. Seul mode
-        // tiré uniquement par `_buildRecoveryStep`, donc son poids doit
-        // rester marginal pour ne pas dominer toutes les récup une fois
-        // débloqué (sinon ~25 % des récup partaient en freestyle parce
-        // que son multiplicateur de continuité est neutre — `transit` —
-        // alors que les autres candidats prennent la friction de quitter
-        // bouche). Un poids bas le garde comme option ponctuelle.
-        return 0.25;
-      case SessionMode.suckle:
-        // Aspiration : geste actif-statique. Sloppy boost (bouche humide)
-        // et un peu d'obéissance (geste explicite et soumis). Pas de
-        // boost profondeur — suckle n'est jamais une profondeur de
-        // pompage, c'est une pratique latérale (head ou balls). Base 0.6
-        // pour rester dans la veine « palette ponctuelle » comme
-        // freestyle/breath — c'est un mode de couleur, pas un mode de
-        // chauffe.
-        return 0.6 +
-            0.40 * pts(SpecializationBranch.sloppy) +
-            0.15 * pts(SpecializationBranch.obeissance);
-    }
-  }
+  /// Depuis C.PR2 : chaque équation vit côté rule
+  /// (`ModeRules.baseWeight`). Cette méthode est un thin delegate
+  /// — l'orchestrateur reste mode-agnostic, les coefficients de spé
+  /// éditoriaux (boosts par branche) restent versionnés avec la rule
+  /// du mode concerné.
+  static double baseWeight(
+    SessionMode m,
+    SpecializationAllocation spec, {
+    required Map<SessionMode, ModeRules> rules,
+  }) =>
+      rules[m]!.baseWeight(spec);
 
   /// Multiplicateur appliqué à [weight] pour favoriser la continuité par
   /// type de step. Le but est que la séance ressente une cohérence : on
@@ -198,7 +151,7 @@ class _ModePicker {
     required ModeContinuityState continuity,
     required Map<SessionMode, ModeRules> rules,
   }) {
-    final base = baseWeight(m, spec);
+    final base = baseWeight(m, spec, rules: rules);
     final coachFactor = coachWeights[m] ?? 1.0;
     final continuityMul = continuityMultiplier(m, continuity, rules: rules);
     final result = base * coachFactor * continuityMul;

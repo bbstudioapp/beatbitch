@@ -41,6 +41,12 @@ class RhythmRules extends ModeRules {
   bool get isRhythmic => true;
 
   @override
+  double baseWeight(SpecializationAllocation spec) =>
+      1.0 +
+      0.35 * spec.pointsIn(SpecializationBranch.rythmeBiffle) +
+      0.10 * spec.pointsIn(SpecializationBranch.profondeur);
+
+  @override
   UnlockKey? unlockKeyFor(StepDraft draft) {
     // Rhythm n'a pas de variante balls valide (les modes-incompatibles
     // balls sont filtrés en amont par `HumiliationGates.isUnlocked`).

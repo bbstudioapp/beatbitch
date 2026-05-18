@@ -17,6 +17,10 @@ class BegRules extends ModeRules {
   @override
   Set<ModeSemanticRole> get roles => const {ModeSemanticRole.swallowOrder};
 
+  @override
+  double baseWeight(SpecializationAllocation spec) =>
+      1.0 + 0.90 * spec.pointsIn(SpecializationBranch.obeissance);
+
   /// Step swallow_order : beg libre court 5-7 s. Pas de position tenue,
   /// pas de BPM — c'est une mini-pause vocale qui matérialise l'ordre
   /// coach « avale tout » quand la sim salive sature. Le filtre

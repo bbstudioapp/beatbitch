@@ -18,6 +18,12 @@ class BiffleRules extends ModeRules {
   bool get isRhythmic => true;
 
   @override
+  double baseWeight(SpecializationAllocation spec) =>
+      1.0 +
+      0.60 * spec.pointsIn(SpecializationBranch.rythmeBiffle) +
+      0.25 * spec.pointsIn(SpecializationBranch.sloppy);
+
+  @override
   double delta(StepDraft draft, double progress, CareerLevel cfg) {
     final dur = draft.duration ?? 0;
     final bpm = (draft.bpm ?? 80).toDouble();

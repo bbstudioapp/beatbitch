@@ -19,6 +19,19 @@ class SuckleRules extends ModeRules {
   @override
   StepType classify(Position? to) => StepType.bouche;
 
+  /// Aspiration : geste actif-statique. Sloppy boost (bouche humide)
+  /// et un peu d'obéissance (geste explicite et soumis). Pas de
+  /// boost profondeur — suckle n'est jamais une profondeur de
+  /// pompage, c'est une pratique latérale (head ou balls). Base 0.6
+  /// pour rester dans la veine « palette ponctuelle » comme
+  /// freestyle/breath — c'est un mode de couleur, pas un mode de
+  /// chauffe.
+  @override
+  double baseWeight(SpecializationAllocation spec) =>
+      0.6 +
+      0.40 * spec.pointsIn(SpecializationBranch.sloppy) +
+      0.15 * spec.pointsIn(SpecializationBranch.obeissance);
+
   @override
   double delta(StepDraft draft, double progress, CareerLevel cfg) {
     final dur = draft.duration ?? 0;

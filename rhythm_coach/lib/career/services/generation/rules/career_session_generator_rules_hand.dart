@@ -18,6 +18,14 @@ class HandRules extends ModeRules {
   @override
   bool get isRhythmic => true;
 
+  /// Poids neutre + boost léger rythmeBiffle (hand est un mode rythmé
+  /// — cohérent qu'une joueuse rythmeBiffle en voie un peu plus). La
+  /// friction de continuité par type pilote toujours son apparition
+  /// principale (intro + reprises de souffle).
+  @override
+  double baseWeight(SpecializationAllocation spec) =>
+      1.0 + 0.15 * spec.pointsIn(SpecializationBranch.rythmeBiffle);
+
   /// Hand final → chime `easy` : la finition à la main reste douce, on
   /// ne dramatise pas avec un chime de gorge.
   @override
