@@ -121,28 +121,22 @@ part 'career_session_generator_milestone_scheduler.dart';
 /// concrètes qui dépendent de `career_session_generator.dart` via le
 /// re-export de `ModeRules` / `DraftCtx` / etc.
 ///
-/// ─── Audit `SessionMode.*` literal résiduels (B.PR11, MAJ C.PR5) ──
+/// ─── Audit `SessionMode.*` literal résiduels (B.PR11, MAJ C.PR6) ──
 /// Après les phases B + C (en cours) du plan de refacto
-/// (`~/beatbitch_refacto_career_gen.md`), les `SessionMode.X` qui
-/// subsistent dans ce fichier sont les suivants et tous documentés
-/// en place :
+/// (`~/beatbitch_refacto_career_gen.md`), les seuls `SessionMode.X`
+/// qui subsistent dans ce fichier sont les **clés du registry**
+/// ci-dessous — famille F : inhérent au pattern « map d'enum vers
+/// handler ». Chaque clé est l'identité technique du mode, pas un
+/// choix dramaturgique — ne peut pas être abstrait via un rôle
+/// sémantique.
 ///
-/// 1. **Clés du registry ci-dessous (lignes 134-142)** — famille F :
-///    inhérent au pattern « map d'enum vers handler ». Chaque clé est
-///    l'identité technique du mode, pas un choix dramaturgique — ne peut
-///    pas être abstrait via un rôle sémantique.
-///
-/// 2. **`Session(defaultMode: SessionMode.rhythm)` côté `_assembleResult`** —
-///    famille E : champ de signature du modèle `Session` utilisé pour les
-///    sessions JSON-driven (où un step peut omettre `mode` et hériter de
-///    `Session.mode`). Pour les sessions carrière, **chaque step porte
-///    son mode explicitement** → ce defaultMode est inert. La valeur
-///    `rhythm` est conventionnelle ; n'importe quel mode aurait le même
-///    effet (= aucun). Migration prévue en C.PR6.
-///
-/// Le fallback `SessionMode.lick` historique de `_buildRecoveryStep`
-/// (famille D) est passé sur `_resolveModeForRole(recoveryDegradeFallback)`
-/// en C.PR5.
+/// Historique des migrations :
+/// - C.PR5 : `SessionMode.lick` fallback de `_buildRecoveryStep`
+///   (famille D) → `_resolveModeForRole(recoveryDegradeFallback)`.
+/// - C.PR6 : `Session(defaultMode: SessionMode.rhythm)` de
+///   `_assembleResult` (famille E) → `_rules.keys.first` (le champ
+///   est inert pour la carrière, mais on n'a plus besoin de pointer
+///   `rhythm` explicitement).
 ///
 /// Les rôles sémantiques (cf. [ModeSemanticRole]) couvrent toutes les
 /// autres références mode-aware : sas breath, ordre swallow, burst
@@ -1849,9 +1843,10 @@ class CareerSessionGenerator {
         // `Session.defaultMode` est le fallback pour les sessions
         // JSON-driven (où un step peut omettre `mode` et hériter de la
         // session). Pour la carrière, chaque step a son mode explicite
-        // → ce champ est **inert**. La valeur `rhythm` est
-        // conventionnelle. Cf. audit B.PR11 sur `defaultModeRulesRegistry`.
-        defaultMode: SessionMode.rhythm,
+        // → ce champ est **inert**. La valeur est conventionnellement
+        // la première clé du registry (= rhythm historiquement) ;
+        // n'importe quelle clé donnerait le même résultat. Cf. C.PR6.
+        defaultMode: _rules.keys.first,
         steps: ctx.steps,
         milestoneId:
             ctx.insertedBodies.isNotEmpty ? ctx.insertedBodies[0].id : null,
