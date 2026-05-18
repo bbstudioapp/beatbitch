@@ -277,6 +277,27 @@ class RhythmRules extends ModeRules {
         ),
       ];
 
+  /// Pré-finisher rhythm : courte accélération `head → preFinisherTarget`
+  /// qui prépare la phase boosts pour les bas niveaux. BPM 62-70 et
+  /// durée 22-30 s — fenêtres historiques, deux tirages rng dans cet
+  /// ordre exact pour préserver les sessions reproductibles à seed égal.
+  /// La position cible est pré-pickée par le générateur via
+  /// `_positionPickers.pickFinisherPosition` (consomme rng + état) et
+  /// threadée via `ctx.preFinisherTarget`. Le clamp capacité et le pick
+  /// de phrase restent côté générateur.
+  @override
+  StepDraft? buildPreFinisher(PreFinisherCtx ctx) {
+    final dur = 22 + ctx.rng.nextInt(9); // [22, 30]
+    final bpm = 62 + ctx.rng.nextInt(9); // [62, 70]
+    return StepDraft(
+      mode: SessionMode.rhythm,
+      bpm: bpm,
+      from: Position.head,
+      to: ctx.preFinisherTarget,
+      duration: dur,
+    );
+  }
+
   /// Rhythm consulte le plafond milestone pour la diversification
   /// d'amplitude : on ne décale jamais `to` au-dessus du palier de
   /// profondeur acquis.

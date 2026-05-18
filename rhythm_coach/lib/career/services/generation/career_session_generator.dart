@@ -86,6 +86,7 @@ export 'mode_rules.dart'
         PostFinalCtx,
         PostFinalVariant,
         PostWaveBreathCtx,
+        PreFinisherCtx,
         RecoveryAvailability,
         RecoveryCtx,
         SwallowCtx,
@@ -682,9 +683,13 @@ class CareerSessionGenerator {
     // Pré-finisher : pour les bas niveaux, courte accélération (rythme
     // un peu plus rapide que le plafond habituel du niveau) qui débouche
     // sur le final, dans une position d'amorce.
-    // Custom : rhythm exclu → skip le pré-finisher (les boosts substitueront
-    // le sprint via leur propre fallback de mode).
-    if (isLowLevel && !_config.isModeForbidden(SessionMode.rhythm)) {
+    // Custom : si le mode qui porte le rôle `preFinisherCore` est exclu,
+    // on skip le pré-finisher (les boosts substitueront le sprint via
+    // leur propre fallback de mode). Symétrie avec le guard de
+    // `_shouldEmitMiniWave`.
+    final preFinisherMode =
+        _resolveModeForRole(ModeSemanticRole.preFinisherCore);
+    if (isLowLevel && !_config.isModeForbidden(preFinisherMode)) {
       final preResult = _emitPreFinisher(
         ctx,
         time: time,
@@ -1414,11 +1419,17 @@ class CareerSessionGenerator {
     return (time: t, stamina: s);
   }
 
-  /// Émet le step de pré-finisher (courte accélération rythme `head→target`
-  /// qui prépare la phase boosts). Utilisé uniquement pour les bas niveaux —
-  /// le caller garde la guard `isLowLevel && !_config.isModeForbidden(rhythm)` autour
-  /// de l'appel pour ne pas changer la séquence RNG (la position est pickée
-  /// avant l'appel).
+  /// Émet le step de pré-finisher (courte accélération `head→target`
+  /// qui prépare la phase boosts). Utilisé uniquement pour les bas
+  /// niveaux — le caller garde la guard `isLowLevel &&
+  /// !isModeForbidden(preFinisherCore)` autour de l'appel pour ne pas
+  /// changer la séquence RNG (la position est pickée avant l'appel).
+  ///
+  /// La construction du draft (BPM 62-70, dur 22-30 s) est désormais
+  /// déléguée au mode qui porte le rôle `preFinisherCore` (cf. B.PR8).
+  /// Le clamp capacité, le pick de phrase et l'émission du step restent
+  /// ici parce qu'ils consomment du state d'instance (`_clampToCapability`,
+  /// `_pickPhraseForDraft`, `_emitStep`).
   ///
   /// Mute `ctx.steps` et `ctx.profile` en place. Met à jour
   /// `_state.lastMode/_state.lastText` et tracke la continuité.
@@ -1429,15 +1440,12 @@ class CareerSessionGenerator {
     required double stamina,
     required Position preFinisherTarget,
   }) {
-    final preDur = 22 + _rng.nextInt(9); // [22, 30]
-    final preBpm = 62 + _rng.nextInt(9); // [62, 70]
-    final preDraft = _clampToCapability(StepDraft(
-      mode: SessionMode.rhythm,
-      bpm: preBpm,
-      from: Position.head,
-      to: preFinisherTarget,
-      duration: preDur,
-    ));
+    final preFinisherMode =
+        _resolveModeForRole(ModeSemanticRole.preFinisherCore);
+    final preDraft =
+        _clampToCapability(_rules[preFinisherMode]!.buildPreFinisher(
+      PreFinisherCtx(rng: _rng, preFinisherTarget: preFinisherTarget),
+    )!);
     final preText = _pickPhraseForDraft(ctx.bank, preDraft, 'medium');
     return _emitStep(
       ctx,

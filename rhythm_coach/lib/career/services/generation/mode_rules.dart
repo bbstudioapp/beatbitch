@@ -380,6 +380,31 @@ class FakeBreathCtx {
   final Random rng;
 }
 
+/// Contexte d'assemblage du **pré-finisher** passé à
+/// `ModeRules.buildPreFinisher`. La rule retourne un draft court
+/// `head → preFinisherTarget` qui prépare la phase boosts (transition
+/// rythmique avant l'apothéose, bas niveaux uniquement — cf.
+/// `_emitPreFinisher` côté générateur).
+///
+/// `preFinisherTarget` est **pré-pickée** par l'orchestrateur via
+/// `_positionPickers.pickFinisherPosition` (consomme du rng + état) ;
+/// la rule la consomme telle quelle. Seules les **tirages bpm/durée**
+/// (2 appels rng) restent côté rule pour préserver la sémantique
+/// « courte accélération 62-70 BPM × 22-30 s » sans hardcoder les
+/// fenêtres dans l'orchestrateur. Le clamp capacité et le pick de
+/// phrase restent côté générateur — la rule est appelée uniquement
+/// quand l'insertion est décidée (guard `isLowLevel &&
+/// !isModeForbidden(preFinisherCore)`).
+class PreFinisherCtx {
+  const PreFinisherCtx({
+    required this.rng,
+    required this.preFinisherTarget,
+  });
+
+  final Random rng;
+  final Position preFinisherTarget;
+}
+
 /// Rôles sémantiques d'un mode au sein du générateur. Chaque rôle
 /// désigne une **fonction dramaturgique** (sas breath, ordre
 /// d'avalement, boost humiliant, etc.) — pas une identité technique.
@@ -504,6 +529,19 @@ abstract class ModeRules {
   /// côté générateur — la rule est appelée uniquement quand l'insertion
   /// est décidée.
   StepDraft? buildFakeBreath(FakeBreathCtx ctx) => null;
+
+  /// Construit un step **pré-finisher** (cf. `_emitPreFinisher` côté
+  /// générateur). Default `null` — opt-in : seul le mode qui joue le
+  /// rôle [ModeSemanticRole.preFinisherCore] doit override (consulté
+  /// via `_resolveModeForRole(preFinisherCore)`).
+  ///
+  /// La rule tire elle-même BPM (62-70) et durée (22-30 s) — la
+  /// position `head → preFinisherTarget` est pré-pickée et threadée
+  /// via `ctx.preFinisherTarget`. Le clamp capacité, le pick de phrase
+  /// et l'émission du step restent côté générateur ; les conditions
+  /// d'éligibilité (bas niveau, mode non banni) sont déjà pré-filtrées
+  /// en amont — la rule n'a pas à les revérifier.
+  StepDraft? buildPreFinisher(PreFinisherCtx ctx) => null;
 
   /// Coût (négatif) ou regen (positif) d'endurance pour le step.
   double delta(StepDraft draft, double progress, CareerLevel cfg);
