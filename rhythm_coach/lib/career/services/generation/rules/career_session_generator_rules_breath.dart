@@ -13,6 +13,13 @@ class BreathRules extends ModeRules {
   const BreathRules();
 
   @override
+  Set<ModeSemanticRole> get roles => const {
+        ModeSemanticRole.breath,
+        ModeSemanticRole.postWaveBreath,
+        ModeSemanticRole.recoveryFallback,
+      };
+
+  @override
   StepType classify(Position? to) => StepType.transit;
 
   @override

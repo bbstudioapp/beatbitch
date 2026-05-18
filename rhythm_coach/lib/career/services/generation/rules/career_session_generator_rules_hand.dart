@@ -10,6 +10,9 @@ class HandRules extends ModeRules {
   const HandRules();
 
   @override
+  Set<ModeSemanticRole> get roles => const {ModeSemanticRole.burstNeutral};
+
+  @override
   StepType classify(Position? to) => StepType.libreMain;
 
   /// Hand final → chime `easy` : la finition à la main reste douce, on

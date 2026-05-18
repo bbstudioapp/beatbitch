@@ -12,6 +12,9 @@ class LickRules extends ModeRules {
   const LickRules();
 
   @override
+  Set<ModeSemanticRole> get roles => const {ModeSemanticRole.burstFallback};
+
+  @override
   StepType classify(Position? to) => StepType.langue;
 
   @override

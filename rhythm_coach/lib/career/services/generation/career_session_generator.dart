@@ -79,6 +79,7 @@ export 'mode_rules.dart'
         GenFacadeSurface,
         IntroCtx,
         ModeRules,
+        ModeSemanticRole,
         PostFinalCtx,
         PostFinalVariant,
         RecoveryAvailability,
@@ -222,6 +223,34 @@ class CareerSessionGenerator {
     Map<SessionMode, ModeRules>? rules,
   })  : _rng = seed != null ? Random(seed) : Random(),
         _rules = rules ?? defaultModeRulesRegistry;
+
+  // ─── Rôles sémantiques (cf. phase B du plan de refacto) ──────────────────
+
+  /// Résout un [ModeSemanticRole] vers le `SessionMode` du registre qui le
+  /// déclare. Permet à l'orchestration d'invoquer « le mode qui joue le
+  /// rôle X » au lieu d'un literal hardcodé.
+  ///
+  /// Convention : chaque rôle doit être déclaré par **au plus un** mode du
+  /// registre. Si plusieurs modes le déclarent, on retient le premier dans
+  /// l'ordre d'itération du registry (déterministe car `defaultModeRulesRegistry`
+  /// est une const map ordonnée — rhythm → lick → hold → biffle → beg →
+  /// hand → breath → freestyle → suckle). Si aucun ne le déclare, throws
+  /// `StateError` — un rôle non-résolvable signale un mapping cassé entre
+  /// l'orchestration et le registry.
+  ///
+  /// **Pas encore consommé** : B.PR1 introduit l'infra, les call sites
+  /// hardcodés migreront en B.PR2 (`_pickBurstMode`), B.PR3 (`_emitFinalStep`
+  /// holdPosition), B.PR4 (sas breath). L'invariant « un rôle → un mode »
+  /// est validé par `test/mode_semantic_role_test.dart`.
+  // ignore: unused_element
+  SessionMode _resolveModeForRole(ModeSemanticRole role) {
+    for (final entry in _rules.entries) {
+      if (entry.value.roles.contains(role)) return entry.key;
+    }
+    throw StateError(
+      'ModeSemanticRole.$role : aucun mode du registry ne le déclare',
+    );
+  }
 
   // ─── Profil de capacités — 2ᵉ enveloppe de difficulté ────────────────────
 

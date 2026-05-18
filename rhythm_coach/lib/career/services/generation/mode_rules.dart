@@ -281,6 +281,54 @@ class IntroCtx {
   final int duration;
 }
 
+/// Rôles sémantiques d'un mode au sein du générateur. Chaque rôle
+/// désigne une **fonction dramaturgique** (sas breath, ordre
+/// d'avalement, boost humiliant, etc.) — pas une identité technique.
+/// Permet au générateur d'invoquer « le mode qui joue le rôle X »
+/// plutôt que de hardcoder `SessionMode.rhythm` / `SessionMode.beg` /
+/// `SessionMode.breath` dans la logique d'orchestration.
+///
+/// Cf. phase B du plan de refacto `~/beatbitch_refacto_career_gen.md` :
+/// les rôles remplacent progressivement les literals `SessionMode.*` du
+/// générateur, ouvrant la voie à des modes additionnels ou à un re-mapping
+/// éditorial (ex. confier le `swallowOrder` à un autre mode que `beg`)
+/// sans toucher au cœur de l'orchestration.
+enum ModeSemanticRole {
+  /// Mode de respiration / récup neutre (sas breath, fallback recovery,
+  /// gate du sas « si mode != breath »).
+  breath,
+
+  /// Mode utilisé pour l'ordre de déglutition forcé.
+  swallowOrder,
+
+  /// Boost humiliant en phase finish (rhythm historique).
+  burstHumiliating,
+
+  /// Boost non-humiliant en phase finish (hand historique).
+  burstNeutral,
+
+  /// Fallback si les deux `burstX` ci-dessus sont exclus (lick
+  /// historique).
+  burstFallback,
+
+  /// Mode des steps de mini-vague (rhythm historique).
+  miniWaveCore,
+
+  /// Mode du pré-finisher bas niveau (rhythm historique).
+  preFinisherCore,
+
+  /// Mode du breath long post-mini-vague (= [breath] dans la palette
+  /// actuelle, distingué pour permettre un re-mapping futur).
+  postWaveBreath,
+
+  /// Fallback recovery si rien d'autre n'est candidat (breath historique).
+  recoveryFallback,
+
+  /// Mode statique tenu (hold) — utilisé pour la condition `holdPosition`
+  /// du step final.
+  staticHeld,
+}
+
 /// Règles d'un mode : tout ce qui est spécifique au mode et qui était
 /// auparavant porté par les gros switches du générateur (stamina,
 /// unlock gate, capability clamp, dégradation, construction de step).
@@ -294,6 +342,19 @@ class IntroCtx {
 /// (`positionDepth`, `lerp`).
 abstract class ModeRules {
   const ModeRules();
+
+  /// Rôles sémantiques joués par ce mode dans l'orchestration. Consulté
+  /// par le générateur via `_resolveModeForRole(role)` qui retourne le
+  /// `SessionMode` du registre dont la rule déclare ce rôle. Default
+  /// `const {}` (opt-in) — les modes sans rôle dramaturgique particulier
+  /// (freestyle, suckle, biffle) gardent le défaut.
+  ///
+  /// Un même mode peut porter plusieurs rôles (breath couvre `breath` +
+  /// `postWaveBreath` + `recoveryFallback`). Inversement, chaque rôle
+  /// doit être déclaré par **au plus un** mode du registre — la
+  /// résolution `_resolveModeForRole` n'est pas définie sinon (cf. son
+  /// `assert` côté générateur).
+  Set<ModeSemanticRole> get roles => const {};
 
   /// Coût (négatif) ou regen (positif) d'endurance pour le step.
   double delta(StepDraft draft, double progress, CareerLevel cfg);
