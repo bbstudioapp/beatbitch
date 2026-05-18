@@ -12,7 +12,10 @@ class LickRules extends ModeRules {
   const LickRules();
 
   @override
-  Set<ModeSemanticRole> get roles => const {ModeSemanticRole.burstFallback};
+  Set<ModeSemanticRole> get roles => const {
+        ModeSemanticRole.burstFallback,
+        ModeSemanticRole.recoveryDegradeFallback,
+      };
 
   /// Lick est la baseline « bouche douce » : seul mode candidat sous
   /// `diff < 0.30`. Bornage strict sur la haute (`< 0.30`) pour

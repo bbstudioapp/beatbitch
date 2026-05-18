@@ -46,6 +46,7 @@ void main() {
         ModeSemanticRole.recoveryFallback: SessionMode.breath,
         ModeSemanticRole.staticHeld: SessionMode.hold,
         ModeSemanticRole.mainLoopFallback: SessionMode.rhythm,
+        ModeSemanticRole.recoveryDegradeFallback: SessionMode.lick,
       });
     });
 
