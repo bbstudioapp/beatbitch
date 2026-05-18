@@ -44,6 +44,7 @@ import 'gen_facade.dart';
 import 'generation_context.dart';
 import 'humiliation_gates.dart';
 import 'mode_picker.dart';
+import 'milestone_scheduler.dart';
 import 'mode_rules.dart';
 import 'mode_rules_registry.dart';
 import 'position_pickers.dart';
@@ -65,6 +66,7 @@ export 'difficulty_dispatch.dart' show DifficultyDispatch;
 export 'final_picker.dart' show FinalPicker;
 export 'gen_facade.dart' show GenFacade;
 export 'generation_context.dart' show GenerationContext;
+export 'milestone_scheduler.dart' show MilestoneScheduler;
 export 'humiliation_gates.dart' show HumiliationGates;
 export 'mode_continuity_state.dart' show ModeContinuityState;
 export 'mode_picker.dart' show ModePicker;
@@ -102,8 +104,6 @@ export 'session_runtime_state.dart' show SessionRuntimeState;
 export 'stamina_model.dart' show StaminaModel;
 export 'step_draft.dart' show StepDraft;
 export 'step_type.dart' show StepType;
-
-part 'career_session_generator_milestone_scheduler.dart';
 
 /// ─── Audit `SessionMode.*` literal résiduels (B.PR11, MAJ C.PR7) ──
 /// Après les phases B + C closes du plan de refacto
@@ -510,8 +510,9 @@ class CareerSessionGenerator {
     // milestones : la 1ʳᵉ vers 30 % de la durée, la 2ᵉ vers 65 %, avec un
     // buffer de 60 s minimum entre la fin de la 1ʳᵉ et le début de la 2ᵉ
     // — sans quoi on ferme la 2ᵉ (fallback à 1 body, comportement actuel).
-    final milestoneScheduler = _MilestoneScheduler.fromBodies(
-      this,
+    final milestoneScheduler = MilestoneScheduler.fromBodies(
+      state: _state,
+      pushMilestoneSequence: _pushMilestoneSequence,
       bodies: milestones.bodies,
       effectiveDuration: effectiveDuration,
     );
