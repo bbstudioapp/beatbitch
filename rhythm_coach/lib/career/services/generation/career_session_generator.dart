@@ -715,17 +715,16 @@ class CareerSessionGenerator {
     // on skip le pré-finisher (les boosts substitueront le sprint via
     // leur propre fallback de mode). Symétrie avec le guard de
     // `_shouldEmitMiniWave`.
+    // Sync ctx avec les compteurs locaux avant la phase finish — les
+    // helpers `_emitPreFinisher` / `_emitBoosts` / `_emitFinalStep` /
+    // `_emitPostFinal` lisent/mutent désormais directement
+    // `ctx.time` / `ctx.stamina`.
+    ctx.time = time;
+    ctx.stamina = stamina;
     final preFinisherMode =
         _resolveModeForRole(ModeSemanticRole.preFinisherCore);
     if (isLowLevel && !_config.isModeForbidden(preFinisherMode)) {
-      final preResult = _emitPreFinisher(
-        ctx,
-        time: time,
-        stamina: stamina,
-        preFinisherTarget: preFinisherTarget,
-      );
-      time = preResult.time;
-      stamina = preResult.stamina;
+      _emitPreFinisher(ctx, preFinisherTarget: preFinisherTarget);
     }
 
     // Choix du template de finish : `hand_burst` (non humiliant, pure
@@ -751,16 +750,11 @@ class CareerSessionGenerator {
     final useHandBurst = burstPick.useHandBurst;
     final burstMode = burstPick.burstMode;
 
-    final boostResult = _emitBoosts(
+    final lastBoostIndex = _emitBoosts(
       ctx,
-      time: time,
-      stamina: stamina,
       useHandBurst: useHandBurst,
       burstMode: burstMode,
     );
-    time = boostResult.time;
-    stamina = boostResult.stamina;
-    final lastBoostIndex = boostResult.lastBoostIndex;
 
     // Final : action longue tenue qui clôture la séance. Distinct de la
     // phase « finish » (boosts) ; le final est l'apothéose contemplative.
@@ -773,25 +767,19 @@ class CareerSessionGenerator {
     // automatique — donc c'est volontairement conservateur.
     final finalResult = _emitFinalStep(
       ctx,
-      time: time,
-      stamina: stamina,
       lastBoostIndex: lastBoostIndex,
       burstMode: burstMode,
     );
-    time = finalResult.time;
-    stamina = finalResult.stamina;
     final finalCategory = finalResult.finalCategory;
     final finalMode = finalResult.finalMode;
     final finalStepStartTime = finalResult.finalStepStartTime;
 
-    final postFinalResult = _emitPostFinal(
-      ctx,
-      time: time,
-      stamina: stamina,
-      finalMode: finalMode,
-    );
-    time = postFinalResult.time;
-    stamina = postFinalResult.stamina;
+    _emitPostFinal(ctx, finalMode: finalMode);
+    // Recopie le curseur muté vers les locales pour le passage à
+    // `_assembleResult` (qui prend encore time/stamina en param,
+    // sera nettoyé en step 6).
+    time = ctx.time;
+    stamina = ctx.stamina;
 
     return _assembleResult(
       ctx,
@@ -1447,10 +1435,8 @@ class CareerSessionGenerator {
   /// Mute `ctx.steps` et `ctx.profile` en place. Met à jour
   /// `_state.lastMode/_state.lastText` et tracke la continuité.
   /// Retourne `(newTime, newStamina)`.
-  ({int time, double stamina}) _emitPreFinisher(
+  void _emitPreFinisher(
     GenerationContext ctx, {
-    required int time,
-    required double stamina,
     required Position preFinisherTarget,
   }) {
     final preFinisherMode =
@@ -1460,16 +1446,13 @@ class CareerSessionGenerator {
       PreFinisherCtx(rng: _rng, preFinisherTarget: preFinisherTarget),
     )!);
     final preText = _pickPhraseForDraft(ctx.bank, preDraft, 'medium');
-    ctx.time = time;
-    ctx.stamina = stamina;
     _emitStep(
       ctx,
       draft: preDraft,
       text: preText,
-      progress: time / ctx.effectiveDuration,
+      progress: ctx.progress,
       asTransit: true,
     );
-    return (time: ctx.time, stamina: ctx.stamina);
   }
 
   /// Choix du mode pour la phase de boosts (`burstNeutral` non humiliant
@@ -1528,20 +1511,18 @@ class CareerSessionGenerator {
   /// Les listes `ctx.steps` et `ctx.profile` sont mutées en place. Met à
   /// jour `_state.lastMode/_state.lastText/_state.lastBpm` à chaque boost émis et tracke la
   /// continuité.
-  ({int time, double stamina, int? lastBoostIndex}) _emitBoosts(
+  int? _emitBoosts(
     GenerationContext ctx, {
-    required int time,
-    required double stamina,
     required bool useHandBurst,
     required SessionMode burstMode,
   }) {
     // Plafond humiliation pour les bursts. Hand n'est pas gating par
     // humiliation (cap inutile), mais on laisse `_enforceHumiliationRequired`
     // tourner — il rejettera juste si la profondeur du draft demande trop.
-    // Cap assoupli pour les boosts : projection au temps `time` du début
+    // Cap assoupli pour les boosts : projection au temps courant du début
     // de la phase finish, +8 de tolérance pour permettre des bursts un
     // poil au-dessus du cap mécanique strict (tradition du finish).
-    final boostHumilCap = _config.humilCapAt(time) + 8.0;
+    final boostHumilCap = _config.humilCapAt(ctx.time) + 8.0;
     // Nombre total de boosts : table par niveau + bonus encore (fixé en
     // amont via `boostsCount`). Plus de boucle conditionnelle sur la
     // jauge — le sprint est entièrement déterministe.
@@ -1573,8 +1554,6 @@ class CareerSessionGenerator {
     int prevBoostBpm = 0;
     int prevBoostToIdx = 0;
     final plannedBoosts = totalBoosts;
-    var t = time;
-    var s = stamina;
     for (var boostsAdded = 0; boostsAdded < totalBoosts; boostsAdded++) {
       // Durée variable : 12 à 16 s par défaut, +1s par cran de chaîne
       // encore pour allonger un peu chaque sprint.
@@ -1625,7 +1604,7 @@ class CareerSessionGenerator {
       if (boostText.isEmpty) {
         boostText = _pickPhraseForDraft(ctx.bank, boostDraft, 'hard');
       }
-      ctx.steps.add(_draftToStep(boostDraft, time: t, text: boostText));
+      ctx.steps.add(_draftToStep(boostDraft, time: ctx.time, text: boostText));
       lastBoostIndex = ctx.steps.length - 1;
       _state.recordLastTransit(boostDraft.mode, boostText);
       _state.lastBpm = boostDraft.bpm ?? _state.lastBpm;
@@ -1633,12 +1612,13 @@ class CareerSessionGenerator {
           from: boostDraft.from,
           bpm: boostDraft.bpm,
           duration: boostDraft.duration);
-      final staminaBeforeBoost = s;
-      s = StaminaModel.apply(s, boostDraft, 1.0, ctx.cfg, rules: _rules);
+      final staminaBeforeBoost = ctx.stamina;
+      ctx.stamina = StaminaModel.apply(ctx.stamina, boostDraft, 1.0, ctx.cfg,
+          rules: _rules);
       _advanceSalivaSim(boostDraft);
-      StaminaModel.fillProfile(ctx.profile, t, boostDur, s,
+      StaminaModel.fillProfile(ctx.profile, ctx.time, boostDur, ctx.stamina,
           valueStart: staminaBeforeBoost);
-      t += boostDur;
+      ctx.time += boostDur;
       // Mémorise BPM/profondeur retenus (post-dégradation humil) pour que le
       // boost suivant ne puisse pas redescendre sous ce palier.
       prevBoostBpm = boostDraft.bpm ?? prevBoostBpm;
@@ -1646,7 +1626,7 @@ class CareerSessionGenerator {
         prevBoostToIdx = max(prevBoostToIdx, boostDraft.to!.index);
       }
     }
-    return (time: t, stamina: s, lastBoostIndex: lastBoostIndex);
+    return lastBoostIndex;
   }
 
   /// Émet le step final (apothéose contemplative). Choix via [FinalPicker.pickFinal] selon
@@ -1657,15 +1637,11 @@ class CareerSessionGenerator {
   /// Retourne `(time, stamina, finalCategory, finalMode, finalStepStartTime)`.
   /// Mute `ctx.steps` et `ctx.profile` en place.
   ({
-    int time,
-    double stamina,
     FinalCategory finalCategory,
     SessionMode finalMode,
     int finalStepStartTime,
   }) _emitFinalStep(
     GenerationContext ctx, {
-    required int time,
-    required double stamina,
     required int? lastBoostIndex,
     required SessionMode burstMode,
   }) {
@@ -1673,7 +1649,7 @@ class CareerSessionGenerator {
     // probablement saturé). Le générateur ne bénéficie pas des bumps
     // évènementiels (punition complétée etc.) — uniquement de la rampe
     // automatique — donc c'est volontairement conservateur.
-    final finalHumilCap = _config.humilCapAt(time);
+    final finalHumilCap = _config.humilCapAt(ctx.time);
     // En chaîne encore, on allonge le final pour que la dramaturgie de
     // « tu en veux encore » se traduise aussi côté apothéose. Bornée par
     // le clamp de `_finalPicker.pickFinal` pour rester raisonnable.
@@ -1712,9 +1688,7 @@ class CareerSessionGenerator {
     final finalStepText = (announcePhrase != null && announcePhrase.isNotEmpty)
         ? announcePhrase
         : (finalActionPhrase ?? '');
-    final finalStepStartTime = time;
-    ctx.time = time;
-    ctx.stamina = stamina;
+    final finalStepStartTime = ctx.time;
     _emitStep(
       ctx,
       draft: finisherDraft,
@@ -1723,8 +1697,6 @@ class CareerSessionGenerator {
       asTransit: true,
     );
     return (
-      time: ctx.time,
-      stamina: ctx.stamina,
       finalCategory: finalCategory,
       finalMode: finalMode,
       finalStepStartTime: finalStepStartTime,
@@ -1734,15 +1706,13 @@ class CareerSessionGenerator {
   /// Émet le step post-final (aftercare ~12 s après l'orgasme). Mode
   /// contrastant choisi par [_buildPostFinalDraft] selon le mode final +
   /// l'humil. Phrase : cascade `post_final_beg` / `post_final_lick` /
-  /// `post_final` / `congrats`. Retourne `(time, stamina)`.
-  ({int time, double stamina}) _emitPostFinal(
+  /// `post_final` / `congrats`. Mute `ctx.time` / `ctx.stamina`.
+  void _emitPostFinal(
     GenerationContext ctx, {
-    required int time,
-    required double stamina,
     required SessionMode finalMode,
   }) {
     final postFinalDraft = _clampToCapability(
-        _buildPostFinalDraft(finalMode, _config.humilCapAt(time)));
+        _buildPostFinalDraft(finalMode, _config.humilCapAt(ctx.time)));
     // Phrase : pool mode-spécifique (beg = CONSIGNE de supplique ;
     // lick = consigne d'aftercare humiliant) puis cascade sur le pool
     // générique. Default `pickPostFinalText` retourne `null` → on saute
@@ -1753,8 +1723,6 @@ class CareerSessionGenerator {
     final postFinalText = modeSpecific ??
         ctx.bank.pickPostFinal(_rng) ??
         ctx.bank.pickCongrats(_rng);
-    ctx.time = time;
-    ctx.stamina = stamina;
     _emitStep(
       ctx,
       draft: postFinalDraft,
@@ -1762,7 +1730,6 @@ class CareerSessionGenerator {
       progress: 1.0,
       asTransit: true,
     );
-    return (time: ctx.time, stamina: ctx.stamina);
   }
 
   /// Construit le [CareerGenerationResult] final à partir des accumulateurs
