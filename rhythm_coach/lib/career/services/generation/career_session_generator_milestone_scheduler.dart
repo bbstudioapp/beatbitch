@@ -107,7 +107,7 @@ class _MilestoneScheduler {
   /// Insère la 1ʳᵉ pending en remplacement du step #0. Le caller doit
   /// avoir vérifié [replacesIntro]. Idempotent (no-op si déjà posée).
   ({int time, double stamina}) insertIntroReplacement(
-    _GenContext ctx, {
+    GenerationContext ctx, {
     required int time,
     required double stamina,
   }) {
@@ -119,7 +119,7 @@ class _MilestoneScheduler {
   /// `null` quand aucune insertion n'est due (laisser la boucle main
   /// continuer son tirage normal).
   ({int time, double stamina})? tryInsertAt(
-    _GenContext ctx, {
+    GenerationContext ctx, {
     required int time,
     required double stamina,
   }) {
@@ -134,7 +134,7 @@ class _MilestoneScheduler {
   /// posée. Cas rare (sessions courtes / `genUntil` faible après le
   /// first step) — on ne veut pas perdre une milestone silencieusement.
   ({int time, double stamina}) insertAllRemaining(
-    _GenContext ctx, {
+    GenerationContext ctx, {
     required int time,
     required double stamina,
   }) {
@@ -164,7 +164,7 @@ class _MilestoneScheduler {
   /// unlocks dans `_state.unlockedKeys`, et recale le `minInsert` de
   /// la pending suivante (buffer ≥ 60 s).
   ({int time, double stamina}) _insertAt(
-    _GenContext ctx,
+    GenerationContext ctx,
     int index, {
     required int time,
     required double stamina,
