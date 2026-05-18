@@ -327,4 +327,34 @@ class RhythmRules extends ModeRules {
         to: ctx.to,
         duration: ctx.duration,
       );
+
+  /// Palette d'intro standard rythme : 3 variantes douces qui couvrent
+  /// le socle de base. `tip→head 65 BPM 16s` (variante d'amorce, dispo
+  /// dès `intro_basics`), `head→mid 70 BPM 14s` et `tip→mid 65 BPM 16s`
+  /// (gatées par `rhythm_mid_basic` = `intro_deeper_basics`, niveau 2).
+  /// Le gating est appliqué côté générateur via `_isUnlocked`.
+  @override
+  List<StepDraft> firstStepVariants(IntroStandardCtx ctx) => const [
+        StepDraft(
+          mode: SessionMode.rhythm,
+          bpm: 65,
+          from: Position.tip,
+          to: Position.head,
+          duration: 16,
+        ),
+        StepDraft(
+          mode: SessionMode.rhythm,
+          bpm: 70,
+          from: Position.head,
+          to: Position.mid,
+          duration: 14,
+        ),
+        StepDraft(
+          mode: SessionMode.rhythm,
+          bpm: 65,
+          from: Position.tip,
+          to: Position.mid,
+          duration: 16,
+        ),
+      ];
 }

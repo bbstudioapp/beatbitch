@@ -175,4 +175,18 @@ class LickRules extends ModeRules {
         to: ctx.to,
         duration: ctx.duration,
       );
+
+  /// Palette d'intro standard lick : une seule variante d'amorce douce,
+  /// `tip→head 60 BPM 20s`, toujours dispo (lick n'a pas de gating
+  /// milestone côté socle de base).
+  @override
+  List<StepDraft> firstStepVariants(IntroStandardCtx ctx) => const [
+        StepDraft(
+          mode: SessionMode.lick,
+          bpm: 60,
+          from: Position.tip,
+          to: Position.head,
+          duration: 20,
+        ),
+      ];
 }

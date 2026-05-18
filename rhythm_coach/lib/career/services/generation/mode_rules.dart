@@ -405,6 +405,23 @@ class PreFinisherCtx {
   final Position preFinisherTarget;
 }
 
+/// Contexte d'assemblage des variantes de **step d'intro standard**
+/// (= sessions normales, hors intense/quickie qui passent par
+/// [IntroCtx]) passé à `ModeRules.firstStepVariants`. Chaque rule
+/// opt-in renvoie sa palette pré-construite ; le générateur concatène
+/// toutes les variantes du registry, filtre par `_isUnlocked` +
+/// `!isModeForbidden`, tire au hasard.
+///
+/// `includeHand` est threadé pour que `HandRules` sache si sa variante
+/// d'amorce doit entrer dans la palette (ancien guard
+/// `if (_config.includeHand)` côté générateur, désormais porté par la
+/// rule). Les autres rules ignorent ce champ.
+class IntroStandardCtx {
+  const IntroStandardCtx({required this.includeHand});
+
+  final bool includeHand;
+}
+
 /// Rôles sémantiques d'un mode au sein du générateur. Chaque rôle
 /// désigne une **fonction dramaturgique** (sas breath, ordre
 /// d'avalement, boost humiliant, etc.) — pas une identité technique.
@@ -726,6 +743,21 @@ abstract class ModeRules {
       'ModeRules.buildIntroStep non implémenté pour $runtimeType',
     );
   }
+
+  /// Variantes de **step d'intro standard** (sessions normales, hors
+  /// intense/quickie qui passent par `buildIntroStep`) proposées par
+  /// ce mode. Default `const []` (opt-in) — `rhythm` propose 3
+  /// variantes (tip→head 65BPM, head→mid 70BPM, tip→mid 65BPM) ; `lick`
+  /// propose tip→head 60BPM 20s ; `hand` propose tip→head 55BPM 18s
+  /// quand `ctx.includeHand`. Les autres modes restent silencieux.
+  ///
+  /// Le générateur (`_firstStep`) concatène toutes les variantes du
+  /// registry dans l'ordre d'itération (rhythm → lick → hold → biffle →
+  /// beg → hand → breath → freestyle → suckle), filtre par `_isUnlocked`
+  /// (gating milestone) et `!_config.isModeForbidden` (dose Custom), puis
+  /// tire uniformément. Si tout est filtré, fallback sur la 1ʳᵉ variante
+  /// non interdite (sinon la 1ʳᵉ tout court).
+  List<StepDraft> firstStepVariants(IntroStandardCtx ctx) => const [];
 }
 
 /// Baisse `to` d'un cran en s'arrêtant à `head` (jamais à `tip` — un step

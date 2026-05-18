@@ -133,4 +133,23 @@ class HandRules extends ModeRules {
         to: ctx.to,
         duration: ctx.duration,
       );
+
+  /// Palette d'intro standard main : une seule variante `tip→head 55
+  /// BPM 18s` quand le toggle `includeHand` est actif (le générateur
+  /// thread la valeur via `IntroStandardCtx.includeHand`). Sinon palette
+  /// vide — la rule porte elle-même le guard, plus de
+  /// `if (_config.includeHand)` côté `_firstStep`.
+  @override
+  List<StepDraft> firstStepVariants(IntroStandardCtx ctx) {
+    if (!ctx.includeHand) return const [];
+    return const [
+      StepDraft(
+        mode: SessionMode.hand,
+        bpm: 55,
+        from: Position.tip,
+        to: Position.head,
+        duration: 18,
+      ),
+    ];
+  }
 }
