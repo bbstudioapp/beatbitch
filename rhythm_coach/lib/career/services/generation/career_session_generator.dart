@@ -890,7 +890,11 @@ class CareerSessionGenerator {
     final postWaveBreath = _buildPostWaveBreath(
         stamina, postWaveProgress, ctx.cfg, ctx.genUntil - time);
     if (postWaveBreath != null) {
-      final breathText = _pickPhrase(ctx.bank, SessionMode.breath, 'soft');
+      final breathText = _pickPhrase(
+        ctx.bank,
+        _resolveModeForRole(ModeSemanticRole.breath),
+        'soft',
+      );
       final r = _emitStep(
         ctx,
         draft: postWaveBreath,
@@ -1037,15 +1041,21 @@ class CareerSessionGenerator {
     // < 0). Pas de breath gratuit quand on a encore 80% — on ne respire
     // que quand on en a vraiment besoin pour tenir la step suivante.
     // Le breath est à durée variable, calée pour combler le déficit.
-    // Skip si le draft est lui-même breath (jamais le cas via la boucle
-    // standard) ou si on est à <8s du genUntil (laisse la place au
-    // pré-finisher / boost).
-    if (draft.mode != SessionMode.breath && ctx.genUntil - time > 8) {
+    // Skip si le draft joue déjà le rôle `breath` (jamais le cas via la
+    // boucle standard) ou si on est à <8s du genUntil (laisse la place
+    // au pré-finisher / boost).
+    final draftIsBreath =
+        _rules[draft.mode]!.roles.contains(ModeSemanticRole.breath);
+    if (!draftIsBreath && ctx.genUntil - time > 8) {
       final delta = StaminaModel.delta(draft, progress, ctx.cfg, rules: _rules);
       final projected = stamina + delta;
       if (projected < 0) {
         final breathDraft = _buildBreathRecovery(-projected, progress, ctx.cfg);
-        final breathText = _pickPhrase(ctx.bank, SessionMode.breath, 'soft');
+        final breathText = _pickPhrase(
+          ctx.bank,
+          _resolveModeForRole(ModeSemanticRole.breath),
+          'soft',
+        );
         // breath = transit → ne touche pas `_state.lastType` (parenthèse
         // transparente, cf. doc `SessionRuntimeState.recordLastTransit`).
         final r = _emitStep(
