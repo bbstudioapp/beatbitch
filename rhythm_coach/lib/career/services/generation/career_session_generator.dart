@@ -38,6 +38,7 @@ export '../../models/unlock_key.dart' show UnlockKey;
 // la re-exporte plus bas pour les call sites externes.
 import 'bpm_pacing.dart';
 import 'capability_clamps.dart';
+import 'difficulty_dispatch.dart';
 import 'final_picker.dart';
 import 'gen_facade.dart';
 import 'humiliation_gates.dart';
@@ -58,6 +59,7 @@ import 'step_draft.dart';
 export 'bpm_pacing.dart' show BpmPacing;
 export 'capability_clamp_surface.dart' show CapabilityClampSurface;
 export 'capability_clamps.dart' show CapabilityClamps;
+export 'difficulty_dispatch.dart' show DifficultyDispatch;
 export 'final_picker.dart' show FinalPicker;
 export 'gen_facade.dart' show GenFacade;
 export 'humiliation_gates.dart' show HumiliationGates;
@@ -97,7 +99,6 @@ export 'stamina_model.dart' show StaminaModel;
 export 'step_draft.dart' show StepDraft;
 export 'step_type.dart' show StepType;
 
-part 'career_session_generator_difficulty_dispatch.dart';
 part 'career_session_generator_punishment.dart';
 part 'career_session_generator_milestone_scheduler.dart';
 
@@ -213,6 +214,11 @@ class CareerSessionGenerator {
   /// Pickers de position (hold / beg / from-to / simplex / etc.) —
   /// recréés à chaque appel à [generate] / [generatePunishment].
   late PositionPickers _positionPickers;
+
+  /// Dispatch difficulté → step (cœur du main loop). Recréé à chaque
+  /// appel à [generate] / [generatePunishment] après que `_facade` et
+  /// `_positionPickers` sont posés. Cf. `difficulty_dispatch.dart`.
+  late DifficultyDispatch _dispatch;
 
   /// Registry des règles par mode injecté au constructeur. Par défaut le
   /// `_rules` standard ; un test ou un module externe
@@ -413,6 +419,15 @@ class CareerSessionGenerator {
       state: _state,
       rng: _rng,
       rhythmChain: _rhythmChain,
+      positionPickers: _positionPickers,
+    );
+    _dispatch = DifficultyDispatch(
+      config: _config,
+      state: _state,
+      rng: _rng,
+      rules: _rules,
+      rhythmChain: _rhythmChain,
+      facade: _facade,
       positionPickers: _positionPickers,
     );
     // Mode "Session bâclée" : 6 min par défaut, intense tout du long. Floor
@@ -1030,7 +1045,7 @@ class CareerSessionGenerator {
         (stamina < recoveryRandomThreshold && _rng.nextBool())) {
       initialDraft = _buildRecoveryStep();
     } else {
-      initialDraft = _mapDifficultyToStep(diff);
+      initialDraft = _dispatch.mapDifficultyToStep(diff);
     }
     // Si beg arrive juste après une phase douce (lick / breath), on
     // retire le `from` pour enchaîner sur une supplique purement vocale
@@ -2117,9 +2132,6 @@ class CareerSessionGenerator {
   int _milestoneRhythmCeilingIdx() =>
       _positionPickers.milestoneRhythmCeilingIdx();
 
-  (double, double, double) _sampleSimplex3() =>
-      _positionPickers.sampleSimplex3();
-
   /// Délégué à [`SessionRuntimeState.advanceSalivaSim`].
   void _advanceSalivaSim(StepDraft draft) => _state.advanceSalivaSim(draft);
 
@@ -2228,6 +2240,15 @@ class CareerSessionGenerator {
       state: _state,
       rng: _rng,
       rhythmChain: _rhythmChain,
+      positionPickers: _positionPickers,
+    );
+    _dispatch = DifficultyDispatch(
+      config: _config,
+      state: _state,
+      rng: _rng,
+      rules: _rules,
+      rhythmChain: _rhythmChain,
+      facade: _facade,
       positionPickers: _positionPickers,
     );
 
