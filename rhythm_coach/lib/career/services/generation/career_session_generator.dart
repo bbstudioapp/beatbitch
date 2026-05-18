@@ -860,24 +860,27 @@ class CareerSessionGenerator {
   ///     BPM du **prochain action step** doit comparer contre celui-ci
   ///     (mini-vague, boost). Inutile pour les transit/parts qui préservent
   ///     le `lastBpm` de l'outer step.
-  ({int time, double stamina}) _emitStep(
+  void _emitStep(
     GenerationContext ctx, {
     required StepDraft draft,
     required String text,
-    required int time,
-    required double stamina,
     required double progress,
     required bool asTransit,
     bool updateLastBpm = false,
   }) {
-    ctx.steps.add(_draftToStep(draft, time: time, text: text));
-    final staminaBefore = stamina;
-    final newStamina =
-        StaminaModel.apply(stamina, draft, progress, ctx.cfg, rules: _rules);
+    ctx.steps.add(_draftToStep(draft, time: ctx.time, text: text));
+    final staminaBefore = ctx.stamina;
+    final newStamina = StaminaModel.apply(
+      ctx.stamina,
+      draft,
+      progress,
+      ctx.cfg,
+      rules: _rules,
+    );
     _advanceSalivaSim(draft);
     StaminaModel.fillProfile(
       ctx.profile,
-      time,
+      ctx.time,
       draft.duration!,
       newStamina,
       valueStart: staminaBefore,
@@ -897,7 +900,8 @@ class CareerSessionGenerator {
       bpm: draft.bpm,
       duration: draft.duration,
     );
-    return (time: time + draft.duration!, stamina: newStamina);
+    ctx.time += draft.duration!;
+    ctx.stamina = newStamina;
   }
 
   /// Phase 2 du main loop : tentative d'émission d'une **mini-vague** +
@@ -923,18 +927,18 @@ class CareerSessionGenerator {
     final waveDrafts = _buildMiniWave(humilCapForWave);
     for (final wd in waveDrafts) {
       final waveText = _pickPhraseForDraft(ctx.bank, wd, 'hard');
-      final r = _emitStep(
+      ctx.time = time;
+      ctx.stamina = stamina;
+      _emitStep(
         ctx,
         draft: wd,
         text: waveText,
-        time: time,
-        stamina: stamina,
         progress: progressForWave,
         asTransit: false,
         updateLastBpm: true,
       );
-      time = r.time;
-      stamina = r.stamina;
+      time = ctx.time;
+      stamina = ctx.stamina;
     }
     // Pause longue post-vague : breath dédié dimensionné pour viser
     // ~95 stamina, sortie volontaire du cap [4,12] du sas breath
@@ -953,17 +957,17 @@ class CareerSessionGenerator {
         _resolveModeForRole(ModeSemanticRole.breath),
         'soft',
       );
-      final r = _emitStep(
+      ctx.time = time;
+      ctx.stamina = stamina;
+      _emitStep(
         ctx,
         draft: postWaveBreath,
         text: breathText,
-        time: time,
-        stamina: stamina,
         progress: postWaveProgress,
         asTransit: true,
       );
-      time = r.time;
-      stamina = r.stamina;
+      time = ctx.time;
+      stamina = ctx.stamina;
     }
     // Replanification : 4-5 minutes après la fin de la vague émise.
     // La séance enchaîne ensuite sur du tirage classique — la stamina
@@ -1125,17 +1129,17 @@ class CareerSessionGenerator {
         );
         // breath = transit → ne touche pas `_state.lastType` (parenthèse
         // transparente, cf. doc `SessionRuntimeState.recordLastTransit`).
-        final r = _emitStep(
+        ctx.time = time;
+        ctx.stamina = stamina;
+        _emitStep(
           ctx,
           draft: breathDraft,
           text: breathText,
-          time: time,
-          stamina: stamina,
           progress: progress,
           asTransit: true,
         );
-        time = r.time;
-        stamina = r.stamina;
+        time = ctx.time;
+        stamina = ctx.stamina;
       }
     }
 
@@ -1163,17 +1167,17 @@ class CareerSessionGenerator {
       // ou profondeur change entre eux.
       final partText =
           partIdx == 0 ? _pickPhraseForDraft(ctx.bank, partDraft, tier) : '';
-      final r = _emitStep(
+      ctx.time = time;
+      ctx.stamina = stamina;
+      _emitStep(
         ctx,
         draft: partDraft,
         text: partText,
-        time: time,
-        stamina: stamina,
         progress: progress,
         asTransit: false,
       );
-      time = r.time;
-      stamina = r.stamina;
+      time = ctx.time;
+      stamina = ctx.stamina;
     }
 
     // **Fake breath** (à partir du niveau 12) : après un step intense
@@ -1194,17 +1198,17 @@ class CareerSessionGenerator {
       bank: ctx.bank,
     );
     if (fakeBreath != null) {
-      final r = _emitStep(
+      ctx.time = time;
+      ctx.stamina = stamina;
+      _emitStep(
         ctx,
         draft: fakeBreath.draft,
         text: fakeBreath.text,
-        time: time,
-        stamina: stamina,
         progress: progress,
         asTransit: true,
       );
-      time = r.time;
-      stamina = r.stamina;
+      time = ctx.time;
+      stamina = ctx.stamina;
     }
 
     // Chain action attachée au draft principal (beg + suite continue) :
@@ -1212,17 +1216,17 @@ class CareerSessionGenerator {
     // d'intro (la consigne est déjà dans la phrase du beg).
     final chain = draft.chainNext;
     if (chain != null && chain.duration != null) {
-      final r = _emitStep(
+      ctx.time = time;
+      ctx.stamina = stamina;
+      _emitStep(
         ctx,
         draft: chain,
         text: '',
-        time: time,
-        stamina: stamina,
         progress: progress,
         asTransit: false,
       );
-      time = r.time;
-      stamina = r.stamina;
+      time = ctx.time;
+      stamina = ctx.stamina;
     }
 
     if (kDebugMode) {
@@ -1513,15 +1517,16 @@ class CareerSessionGenerator {
       PreFinisherCtx(rng: _rng, preFinisherTarget: preFinisherTarget),
     )!);
     final preText = _pickPhraseForDraft(ctx.bank, preDraft, 'medium');
-    return _emitStep(
+    ctx.time = time;
+    ctx.stamina = stamina;
+    _emitStep(
       ctx,
       draft: preDraft,
       text: preText,
-      time: time,
-      stamina: stamina,
       progress: time / ctx.effectiveDuration,
       asTransit: true,
     );
+    return (time: ctx.time, stamina: ctx.stamina);
   }
 
   /// Choix du mode pour la phase de boosts (`burstNeutral` non humiliant
@@ -1765,18 +1770,18 @@ class CareerSessionGenerator {
         ? announcePhrase
         : (finalActionPhrase ?? '');
     final finalStepStartTime = time;
-    final r = _emitStep(
+    ctx.time = time;
+    ctx.stamina = stamina;
+    _emitStep(
       ctx,
       draft: finisherDraft,
       text: finalStepText,
-      time: time,
-      stamina: stamina,
       progress: 1.0,
       asTransit: true,
     );
     return (
-      time: r.time,
-      stamina: r.stamina,
+      time: ctx.time,
+      stamina: ctx.stamina,
       finalCategory: finalCategory,
       finalMode: finalMode,
       finalStepStartTime: finalStepStartTime,
@@ -1805,15 +1810,16 @@ class CareerSessionGenerator {
     final postFinalText = modeSpecific ??
         ctx.bank.pickPostFinal(_rng) ??
         ctx.bank.pickCongrats(_rng);
-    return _emitStep(
+    ctx.time = time;
+    ctx.stamina = stamina;
+    _emitStep(
       ctx,
       draft: postFinalDraft,
       text: postFinalText,
-      time: time,
-      stamina: stamina,
       progress: 1.0,
       asTransit: true,
     );
+    return (time: ctx.time, stamina: ctx.stamina);
   }
 
   /// Construit le [CareerGenerationResult] final à partir des accumulateurs
