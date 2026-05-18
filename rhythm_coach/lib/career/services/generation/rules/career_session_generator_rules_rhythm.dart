@@ -33,7 +33,7 @@ class RhythmRules extends ModeRules {
   @override
   UnlockKey? unlockKeyFor(StepDraft draft) {
     // Rhythm n'a pas de variante balls valide (les modes-incompatibles
-    // balls sont filtrés en amont par `_HumiliationGates.isUnlocked`).
+    // balls sont filtrés en amont par `HumiliationGates.isUnlocked`).
     // Pour rester strictement isomorphe au switch historique on retourne
     // null si touchesBalls — le filtre amont coupe avant.
     if (draft.from == Position.balls || draft.to == Position.balls) {

@@ -54,7 +54,7 @@ class FinalPicker {
 
   bool _isModeForbidden(SessionMode m) => config.isModeForbidden(m);
 
-  bool _isUnlocked(StepDraft d) => _HumiliationGates.isUnlocked(
+  bool _isUnlocked(StepDraft d) => HumiliationGates.isUnlocked(
         d,
         anatomy: config.anatomy,
         unlockedKeys: unlockedKeys,
@@ -62,7 +62,7 @@ class FinalPicker {
       );
 
   bool _finalUnlocked(UnlockKey? key) =>
-      _HumiliationGates.finalUnlocked(key, unlockedKeys);
+      HumiliationGates.finalUnlocked(key, unlockedKeys);
 
   /// Tronque la durée d'un hold final pour qu'elle reste finançable par
   /// `humilCap`. Le `target` peut être visé si l'humil suffit, sinon on
