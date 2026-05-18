@@ -38,13 +38,17 @@ export '../../models/unlock_key.dart' show UnlockKey;
 // la re-exporte plus bas pour les call sites externes.
 import 'bpm_pacing.dart';
 import 'capability_clamps.dart';
+import 'difficulty_dispatch.dart';
 import 'final_picker.dart';
 import 'gen_facade.dart';
+import 'generation_context.dart';
 import 'humiliation_gates.dart';
 import 'mode_picker.dart';
+import 'milestone_scheduler.dart';
 import 'mode_rules.dart';
 import 'mode_rules_registry.dart';
 import 'position_pickers.dart';
+import 'punishment_builder.dart';
 import 'rhythm_chain_tracker.dart';
 import 'rhythmic_pattern_buffer.dart';
 import 'session_config.dart';
@@ -58,12 +62,16 @@ import 'step_draft.dart';
 export 'bpm_pacing.dart' show BpmPacing;
 export 'capability_clamp_surface.dart' show CapabilityClampSurface;
 export 'capability_clamps.dart' show CapabilityClamps;
+export 'difficulty_dispatch.dart' show DifficultyDispatch;
 export 'final_picker.dart' show FinalPicker;
 export 'gen_facade.dart' show GenFacade;
+export 'generation_context.dart' show GenerationContext;
+export 'milestone_scheduler.dart' show MilestoneScheduler;
 export 'humiliation_gates.dart' show HumiliationGates;
 export 'mode_continuity_state.dart' show ModeContinuityState;
 export 'mode_picker.dart' show ModePicker;
 export 'position_pickers.dart' show PositionPickers;
+export 'punishment_builder.dart' show PunishmentBuilder;
 export 'mode_rules.dart'
     show
         BreathRecoveryCtx,
@@ -96,10 +104,6 @@ export 'session_runtime_state.dart' show SessionRuntimeState;
 export 'stamina_model.dart' show StaminaModel;
 export 'step_draft.dart' show StepDraft;
 export 'step_type.dart' show StepType;
-
-part 'career_session_generator_difficulty_dispatch.dart';
-part 'career_session_generator_punishment.dart';
-part 'career_session_generator_milestone_scheduler.dart';
 
 /// ─── Audit `SessionMode.*` literal résiduels (B.PR11, MAJ C.PR7) ──
 /// Après les phases B + C closes du plan de refacto
@@ -213,6 +217,11 @@ class CareerSessionGenerator {
   /// Pickers de position (hold / beg / from-to / simplex / etc.) —
   /// recréés à chaque appel à [generate] / [generatePunishment].
   late PositionPickers _positionPickers;
+
+  /// Dispatch difficulté → step (cœur du main loop). Recréé à chaque
+  /// appel à [generate] / [generatePunishment] après que `_facade` et
+  /// `_positionPickers` sont posés. Cf. `difficulty_dispatch.dart`.
+  late DifficultyDispatch _dispatch;
 
   /// Registry des règles par mode injecté au constructeur. Par défaut le
   /// `_rules` standard ; un test ou un module externe
@@ -415,6 +424,15 @@ class CareerSessionGenerator {
       rhythmChain: _rhythmChain,
       positionPickers: _positionPickers,
     );
+    _dispatch = DifficultyDispatch(
+      config: _config,
+      state: _state,
+      rng: _rng,
+      rules: _rules,
+      rhythmChain: _rhythmChain,
+      facade: _facade,
+      positionPickers: _positionPickers,
+    );
     // Mode "Session bâclée" : 6 min par défaut, intense tout du long. Floor
     // d'intensité appliqué au tirage de difficulté + on saute l'intro douce
     // et la pré-finition. Une durée explicite reste prioritaire (cas de la
@@ -433,7 +451,7 @@ class CareerSessionGenerator {
     // gating `_canEncore`.
     final boostsCount = cfg.boostsCount + max(0, encoreChainIndex) * 2;
     // Pré-calculés ici (et non plus juste avant la pré-finition) pour
-    // pouvoir construire [_GenContext] en une seule fois après les locaux
+    // pouvoir construire [GenerationContext] en une seule fois après les locaux
     // dérivés. Aucune dépendance sur l'opening step / la boucle main —
     // tout vient de `level`, `quickie`, `intense`, `milestones.finalMilestone`.
     final isLowLevel = level <= 2 && !quickie && !intense;
@@ -459,7 +477,7 @@ class CareerSessionGenerator {
     // à chacun pour éviter de répéter les ~10 args (cfg/bank/effectiveDuration/
     // level/...) à chaque appel. Le curseur `(time, stamina)` reste hors-ctx
     // et threadé via record return values.
-    final ctx = _GenContext(
+    final ctx = GenerationContext(
       steps: steps,
       profile: profile,
       encoreChainIndex: encoreChainIndex,
@@ -492,8 +510,9 @@ class CareerSessionGenerator {
     // milestones : la 1ʳᵉ vers 30 % de la durée, la 2ᵉ vers 65 %, avec un
     // buffer de 60 s minimum entre la fin de la 1ʳᵉ et le début de la 2ᵉ
     // — sans quoi on ferme la 2ᵉ (fallback à 1 body, comportement actuel).
-    final milestoneScheduler = _MilestoneScheduler.fromBodies(
-      this,
+    final milestoneScheduler = MilestoneScheduler.fromBodies(
+      state: _state,
+      pushMilestoneSequence: _pushMilestoneSequence,
       bodies: milestones.bodies,
       effectiveDuration: effectiveDuration,
     );
@@ -823,7 +842,7 @@ class CareerSessionGenerator {
   ///     (mini-vague, boost). Inutile pour les transit/parts qui préservent
   ///     le `lastBpm` de l'outer step.
   ({int time, double stamina}) _emitStep(
-    _GenContext ctx, {
+    GenerationContext ctx, {
     required StepDraft draft,
     required String text,
     required int time,
@@ -872,7 +891,7 @@ class CareerSessionGenerator {
   /// Mute `ctx.steps`, `ctx.profile` et l'état `_state`. Retourne
   /// `(newTime, newStamina)` quand une vague a été émise.
   ({int time, double stamina})? _tryEmitMiniWaveCycle(
-    _GenContext ctx, {
+    GenerationContext ctx, {
     required int time,
     required double stamina,
   }) {
@@ -945,7 +964,7 @@ class CareerSessionGenerator {
   /// `SalivaEngine.forceSwallow()`. Pose aussi le cooldown 90 s via
   /// `_state.lastSwallowOrderAt`.
   ({int time, double stamina})? _tryEmitSwallowOrder(
-    _GenContext ctx, {
+    GenerationContext ctx, {
     required int time,
     required double stamina,
   }) {
@@ -997,7 +1016,7 @@ class CareerSessionGenerator {
   ///   7. Chain action attachée (`draft.chainNext`) sans nouveau texte.
   ///   8. debugPrint en kDebugMode.
   ({int time, double stamina}) _emitMainStepCycle(
-    _GenContext ctx, {
+    GenerationContext ctx, {
     required int time,
     required double stamina,
   }) {
@@ -1030,7 +1049,7 @@ class CareerSessionGenerator {
         (stamina < recoveryRandomThreshold && _rng.nextBool())) {
       initialDraft = _buildRecoveryStep();
     } else {
-      initialDraft = _mapDifficultyToStep(diff);
+      initialDraft = _dispatch.mapDifficultyToStep(diff);
     }
     // Si beg arrive juste après une phase douce (lick / breath), on
     // retire le `from` pour enchaîner sur une supplique purement vocale
@@ -1393,7 +1412,7 @@ class CareerSessionGenerator {
   /// `time` ressort incrémenté de `milestone.durationSeconds`. Les listes
   /// `ctx.steps` et `ctx.profile` sont mutées en place.
   ({int time, double stamina}) _pushMilestoneSequence(
-    _GenContext ctx, {
+    GenerationContext ctx, {
     required LevelMilestone milestone,
     required int time,
     required double stamina,
@@ -1463,7 +1482,7 @@ class CareerSessionGenerator {
   /// `_state.lastMode/_state.lastText` et tracke la continuité.
   /// Retourne `(newTime, newStamina)`.
   ({int time, double stamina}) _emitPreFinisher(
-    _GenContext ctx, {
+    GenerationContext ctx, {
     required int time,
     required double stamina,
     required Position preFinisherTarget,
@@ -1501,7 +1520,8 @@ class CareerSessionGenerator {
   /// neutre via ce booléen, le renommer est hors scope).
   ///
   /// Consomme un tirage RNG quand les deux modes sont autorisés.
-  ({bool useHandBurst, SessionMode burstMode}) _pickBurstMode(_GenContext ctx) {
+  ({bool useHandBurst, SessionMode burstMode}) _pickBurstMode(
+      GenerationContext ctx) {
     final humiliating = _resolveModeForRole(ModeSemanticRole.burstHumiliating);
     final neutral = _resolveModeForRole(ModeSemanticRole.burstNeutral);
     final fallback = _resolveModeForRole(ModeSemanticRole.burstFallback);
@@ -1542,7 +1562,7 @@ class CareerSessionGenerator {
   /// jour `_state.lastMode/_state.lastText/_state.lastBpm` à chaque boost émis et tracke la
   /// continuité.
   ({int time, double stamina, int? lastBoostIndex}) _emitBoosts(
-    _GenContext ctx, {
+    GenerationContext ctx, {
     required int time,
     required double stamina,
     required bool useHandBurst,
@@ -1676,7 +1696,7 @@ class CareerSessionGenerator {
     SessionMode finalMode,
     int finalStepStartTime,
   }) _emitFinalStep(
-    _GenContext ctx, {
+    GenerationContext ctx, {
     required int time,
     required double stamina,
     required int? lastBoostIndex,
@@ -1749,7 +1769,7 @@ class CareerSessionGenerator {
   /// l'humil. Phrase : cascade `post_final_beg` / `post_final_lick` /
   /// `post_final` / `congrats`. Retourne `(time, stamina)`.
   ({int time, double stamina}) _emitPostFinal(
-    _GenContext ctx, {
+    GenerationContext ctx, {
     required int time,
     required double stamina,
     required SessionMode finalMode,
@@ -1785,7 +1805,7 @@ class CareerSessionGenerator {
   /// Partagé entre le path final-milestone (early return) et le path
   /// standard (boosts + final + post-final).
   CareerGenerationResult _assembleResult(
-    _GenContext ctx, {
+    GenerationContext ctx, {
     required int time,
     required double stamina,
     required int? milestoneStartTime,
@@ -2117,9 +2137,6 @@ class CareerSessionGenerator {
   int _milestoneRhythmCeilingIdx() =>
       _positionPickers.milestoneRhythmCeilingIdx();
 
-  (double, double, double) _sampleSimplex3() =>
-      _positionPickers.sampleSimplex3();
-
   /// Délégué à [`SessionRuntimeState.advanceSalivaSim`].
   void _advanceSalivaSim(StepDraft draft) => _state.advanceSalivaSim(draft);
 
@@ -2230,12 +2247,31 @@ class CareerSessionGenerator {
       rhythmChain: _rhythmChain,
       positionPickers: _positionPickers,
     );
+    _dispatch = DifficultyDispatch(
+      config: _config,
+      state: _state,
+      rng: _rng,
+      rules: _rules,
+      rhythmChain: _rhythmChain,
+      facade: _facade,
+      positionPickers: _positionPickers,
+    );
 
     // Palette + sélection + matérialisation déléguées à
-    // `_PunishmentBuilder` (cf. `career_session_generator_punishment.dart`).
-    // Le state d'instance a été (re)posé en haut de cette méthode — le
-    // builder lit gen._xxx directement.
-    return _PunishmentBuilder.buildFor(this, bank, includeHand);
+    // `PunishmentBuilder` (cf. `punishment_builder.dart`). Les
+    // dépendances d'instance (`isUnlocked`, `clampToCapability`,
+    // `pickPhraseForDraft`) sont threadées par callbacks au
+    // constructeur ; l'état du générateur a été (re)posé en haut de
+    // cette méthode pour que ces callbacks lisent des invariants
+    // cohérents.
+    return PunishmentBuilder(
+      humilCap: _config.humiliationCareer + _config.humiliationSession,
+      includeHand: includeHand,
+      bank: bank,
+      isUnlocked: _isUnlocked,
+      clampToCapability: _clampToCapability,
+      pickPhraseForDraft: _pickPhraseForDraft,
+    ).build();
   }
 
   /// Applique `BpmPacing.diversifyBpm` au draft si pertinent (modes avec
@@ -2500,40 +2536,3 @@ class CareerSessionGenerator {
 /// **Mutables internes** : [steps] et [profile] sont des `List` mutées en
 /// place par les helpers. Le DTO les expose comme `final` (la référence
 /// liste ne change pas), mais le contenu est l'accumulateur de la séance.
-class _GenContext {
-  final List<SessionStep> steps;
-  final List<double> profile;
-
-  final int encoreChainIndex;
-  final int effectiveDuration;
-  final int boostsCount;
-  final int genUntil;
-  final double intensityFloor;
-  final bool quickie;
-  final bool noStats;
-  final CareerLevel cfg;
-  final PhraseBank bank;
-  final String? sessionName;
-  final String? sessionNameQuickie;
-  final String? Function(String milestoneId, int stepTime)?
-      milestoneTextResolver;
-  final List<LevelMilestone> insertedBodies;
-
-  const _GenContext({
-    required this.steps,
-    required this.profile,
-    required this.encoreChainIndex,
-    required this.effectiveDuration,
-    required this.boostsCount,
-    required this.genUntil,
-    required this.intensityFloor,
-    required this.quickie,
-    required this.noStats,
-    required this.cfg,
-    required this.bank,
-    required this.sessionName,
-    required this.sessionNameQuickie,
-    required this.milestoneTextResolver,
-    required this.insertedBodies,
-  });
-}
