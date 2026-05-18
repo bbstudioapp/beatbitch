@@ -1,6 +1,5 @@
-// Fichier part de `career_session_generator.dart` — 2ᵉ enveloppe de
-// difficulté carrière (profil de capacités + surcharge isolée + bornes
-// utilisateur Custom).
+// Library autonome — 2ᵉ enveloppe de difficulté carrière (profil de
+// capacités + surcharge isolée + bornes utilisateur Custom).
 //
 // `CapabilityClamps` est un **value object immuable** construit une fois
 // par `generate()` après que l'axe de surcharge a été choisi. Toute la
@@ -16,8 +15,26 @@
 // fields capacités (profil + ceilings + axe + facteur), et on garde
 // `bpmRange` / `holdRange` comme fields explicites — la path punition
 // les nullifie alors que la session principale les hérite de `_config`.
+//
+// Sortie du `part of 'career_session_generator.dart'` historique (A.PR3
+// du plan de refacto). Le dispatch polymorphique passe par `ModeRules`
+// (library autonome) ; l'interface `CapabilityClampSurface` reste vue
+// par les rules. Plus de cycle avec `ModeRules` : les rules dépendent
+// de l'interface, pas de la classe concrète. `career_session_generator.dart`
+// re-exporte `CapabilityClamps` pour préserver la rétrocompat des call
+// sites (rules notamment, qui appellent `CapabilityClamps.minNullable`
+// et `CapabilityClamps.rhythmBpmCeilAxisFor` en statique).
 
-part of 'career_session_generator.dart';
+import 'dart:math';
+
+import '../../../models/session.dart';
+import '../../../models/session_step.dart';
+import '../../../services/capability_axis.dart';
+import '../../../services/capability_service.dart';
+import 'capability_clamp_surface.dart';
+import 'mode_rules.dart';
+import 'session_config.dart';
+import 'step_draft.dart';
 
 /// 2ᵉ enveloppe de difficulté : profil de capacités persisté + plafonds
 /// figés en cours de session + axe surchargé + bornes utilisateur Custom.
@@ -184,13 +201,13 @@ class CapabilityClamps implements CapabilityClampSurface {
   /// que si **les deux** passent. No-op hors carrière ([profile] = null).
   ///
   /// Dispatch polymorphique : chaque mode porte ses propres caps dans
-  /// `_*Rules.clampToCapability` (cf. `career_session_generator_mode_rules.dart`).
-  /// Modes hors gating (default identité) : `hand` (exclu de tout axe de
-  /// difficulté — cf. règle « hand n'est jamais un levier »), `lick`
-  /// (enregistré seulement, pas pilotant), `breath` / `freestyle` /
-  /// `suckle` (aucun axe). Les steps scriptés (séquences milestone, beg
-  /// insistant du Supplier) passent par d'autres chemins et ne sont pas
-  /// clampés — comme ils ne sont pas gatés par l'humiliation non plus.
+  /// `_*Rules.clampToCapability` (cf. `mode_rules.dart`). Modes hors
+  /// gating (default identité) : `hand` (exclu de tout axe de difficulté
+  /// — cf. règle « hand n'est jamais un levier »), `lick` (enregistré
+  /// seulement, pas pilotant), `breath` / `freestyle` / `suckle` (aucun
+  /// axe). Les steps scriptés (séquences milestone, beg insistant du
+  /// Supplier) passent par d'autres chemins et ne sont pas clampés —
+  /// comme ils ne sont pas gatés par l'humiliation non plus.
   ///
   /// La récursion sur `chainNext` et la composition avec
   /// [clampToCustomLimits] (bornes utilisateur Custom) restent

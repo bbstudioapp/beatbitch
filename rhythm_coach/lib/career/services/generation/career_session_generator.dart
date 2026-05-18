@@ -48,7 +48,7 @@ import 'rules/career_session_generator_rules_lick.dart';
 import 'rules/career_session_generator_rules_rhythm.dart';
 import 'rules/career_session_generator_rules_suckle.dart';
 import 'bpm_pacing.dart';
-import 'capability_clamp_surface.dart';
+import 'capability_clamps.dart';
 import 'mode_continuity_state.dart';
 import 'mode_rules.dart';
 import 'rhythm_chain_tracker.dart';
@@ -62,6 +62,7 @@ import 'step_type.dart';
 // toujours ces types.
 export 'bpm_pacing.dart' show BpmPacing;
 export 'capability_clamp_surface.dart' show CapabilityClampSurface;
+export 'capability_clamps.dart' show CapabilityClamps;
 export 'mode_continuity_state.dart' show ModeContinuityState;
 export 'mode_rules.dart'
     show
@@ -87,7 +88,6 @@ export 'step_type.dart' show StepType;
 part 'career_session_generator_stamina.dart';
 part 'career_session_generator_mode_rules.dart';
 part 'career_session_generator_humiliation.dart';
-part 'career_session_generator_capability.dart';
 part 'career_session_generator_mode_picker.dart';
 part 'career_session_generator_final_picker.dart';
 part 'career_session_generator_difficulty_dispatch.dart';
