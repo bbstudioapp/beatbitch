@@ -40,6 +40,7 @@ import 'bpm_pacing.dart';
 import 'capability_clamps.dart';
 import 'difficulty_dispatch.dart';
 import 'final_picker.dart';
+import 'finish_phase.dart';
 import 'gen_facade.dart';
 import 'generation_context.dart';
 import 'humiliation_gates.dart';
@@ -64,6 +65,7 @@ export 'capability_clamp_surface.dart' show CapabilityClampSurface;
 export 'capability_clamps.dart' show CapabilityClamps;
 export 'difficulty_dispatch.dart' show DifficultyDispatch;
 export 'final_picker.dart' show FinalPicker;
+export 'finish_phase.dart' show FinishPhase;
 export 'gen_facade.dart' show GenFacade;
 export 'generation_context.dart' show GenerationContext;
 export 'milestone_scheduler.dart' show MilestoneScheduler;
@@ -229,6 +231,11 @@ class CareerSessionGenerator {
   /// `_initScratchpad`. Cf. `step_builders.dart`.
   late StepBuilders _stepBuilders;
 
+  /// Helpers d'orchestration de la phase finish (pré-finisher,
+  /// boosts, final, post-final, assemble). Recréé à chaque
+  /// `_initScratchpad`. Cf. `finish_phase.dart`.
+  late FinishPhase _finishPhase;
+
   /// Registry des règles par mode injecté au constructeur. Par défaut le
   /// `_rules` standard ; un test ou un module externe
   /// peut passer un registry alternatif (mocker une rule, ajouter un mode
@@ -384,6 +391,13 @@ class CareerSessionGenerator {
       enforceHumiliationRequired: _enforceHumiliationRequired,
       clampToCapability: _clampToCapability,
       isUnlocked: _isUnlocked,
+    );
+    _finishPhase = FinishPhase(
+      config: _config,
+      state: _state,
+      rng: _rng,
+      rules: _rules,
+      finalPicker: _finalPicker,
     );
   }
 
@@ -735,7 +749,7 @@ class CareerSessionGenerator {
     // toutes neutres). Avant fix #68, les doses ne servaient qu'à exclure
     // (poids 0) : hand=rare + rhythm=frequent en Extrême → 25 % de boosts
     // hand constants. Désormais : 0.4/(0.4+2.2) ≈ 15 %.
-    final burstPick = _pickBurstMode(ctx);
+    final burstPick = _finishPhase.pickBurstMode();
     final useHandBurst = burstPick.useHandBurst;
     final burstMode = burstPick.burstMode;
 
@@ -1191,17 +1205,6 @@ class CareerSessionGenerator {
     return true;
   }
 
-  /// Adaptateur d'instance pour `FinalPicker.buildPostFinalDraft`. Injecte
-  /// le `holdCeilingIdx` calculé depuis `_state.unlockedKeys` + `_config.maxDepthIndex`
-  /// — qui n'est pas dans `FinalPicker` car partagé avec `_pickHoldPosition`
-  /// et d'autres call sites.
-  StepDraft _buildPostFinalDraft(SessionMode finalMode, double humilCap) =>
-      _finalPicker.buildPostFinalDraft(
-        finalMode: finalMode,
-        humilCap: humilCap,
-        holdCeilingIdx: _milestoneHoldCeilingIdx(),
-      );
-
   /// Convertit un [SessionStep] de configuration (non text-only) en
   /// [StepDraft] interne pour pouvoir le passer aux helpers stamina /
   /// saliva. Convention uniforme : hold/beg portent leur position dans
@@ -1323,53 +1326,6 @@ class CareerSessionGenerator {
       text: preText,
       progress: ctx.progress,
       asTransit: true,
-    );
-  }
-
-  /// Choix du mode pour la phase de boosts (`burstNeutral` non humiliant
-  /// vs `burstHumiliating` humiliant). Gère :
-  ///  - le biais dramaturgique 70/30 vs 25/75 selon humil + niveau ;
-  ///  - les exclusions Custom (`_config.isModeForbidden`) avec repli
-  ///    `burstFallback` quand neutre ET humiliant sont bannis ;
-  ///  - le ratio de poids brut quand les doses neutre/humiliant sont
-  ///    asymétriques (cf. issue #68).
-  ///
-  /// Le mapping concret (rhythm/hand/lick) est désormais résolu via
-  /// `_resolveModeForRole` — cf. B.PR2 du plan de refacto. `useHandBurst`
-  /// reste le nom historique du flag (les call sites en aval — caps BPM,
-  /// pondération dramaturgique — distinguent encore l'axe humiliant vs
-  /// neutre via ce booléen, le renommer est hors scope).
-  ///
-  /// Consomme un tirage RNG quand les deux modes sont autorisés.
-  ({bool useHandBurst, SessionMode burstMode}) _pickBurstMode(
-      GenerationContext ctx) {
-    final humiliating = _resolveModeForRole(ModeSemanticRole.burstHumiliating);
-    final neutral = _resolveModeForRole(ModeSemanticRole.burstNeutral);
-    final fallback = _resolveModeForRole(ModeSemanticRole.burstFallback);
-    final handForbidden = _config.isModeForbidden(neutral);
-    final rhythmForbidden = _config.isModeForbidden(humiliating);
-    final preferHandBase =
-        _config.humiliationCareer < 5 && _config.level <= 3 ? 0.70 : 0.25;
-    if (handForbidden && rhythmForbidden) {
-      // chemin "rhythm-like" : BPM cap/floor rhythm
-      return (useHandBurst: false, burstMode: fallback);
-    }
-    if (handForbidden) {
-      return (useHandBurst: false, burstMode: humiliating);
-    }
-    if (rhythmForbidden) {
-      return (useHandBurst: true, burstMode: neutral);
-    }
-    final handWeight = _config.coachModeWeights[neutral] ?? 1.0;
-    final rhythmWeight = _config.coachModeWeights[humiliating] ?? 1.0;
-    final dosesAreSymmetric = (handWeight - rhythmWeight).abs() < 0.01;
-    final preferHand = dosesAreSymmetric
-        ? preferHandBase
-        : handWeight / (handWeight + rhythmWeight);
-    final useHandBurst = _rng.nextDouble() < preferHand;
-    return (
-      useHandBurst: useHandBurst,
-      burstMode: useHandBurst ? neutral : humiliating,
     );
   }
 
@@ -1582,8 +1538,11 @@ class CareerSessionGenerator {
     GenerationContext ctx, {
     required SessionMode finalMode,
   }) {
-    final postFinalDraft = _clampToCapability(
-        _buildPostFinalDraft(finalMode, _config.humilCapAt(ctx.time)));
+    final postFinalDraft = _clampToCapability(_finishPhase.buildPostFinalDraft(
+      finalMode: finalMode,
+      humilCap: _config.humilCapAt(ctx.time),
+      holdCeilingIdx: _milestoneHoldCeilingIdx(),
+    ));
     // Phrase : pool mode-spécifique (beg = CONSIGNE de supplique ;
     // lick = consigne d'aftercare humiliant) puis cascade sur le pool
     // générique. Default `pickPostFinalText` retourne `null` → on saute
