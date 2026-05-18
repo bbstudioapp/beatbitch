@@ -15,6 +15,16 @@ class HoldRules extends ModeRules {
   @override
   Set<ModeSemanticRole> get roles => const {ModeSemanticRole.staticHeld};
 
+  /// Hold entre normalement dès `diff ≥ 0.20`, abaissé à `0.10` quand
+  /// on est déjà en bouche — sinon les phases de chauffe restaient
+  /// 100 % rhythm uniforme alors que l'alternance rhythm/hold est
+  /// attendue pendant les premiers steps en bouche.
+  @override
+  ({double min, double max})? difficultyRange(DifficultyCtx ctx) {
+    final min = ctx.lastType == StepType.bouche ? 0.10 : 0.20;
+    return (min: min, max: double.infinity);
+  }
+
   @override
   StepType classify(Position? to) => StepType.bouche;
 

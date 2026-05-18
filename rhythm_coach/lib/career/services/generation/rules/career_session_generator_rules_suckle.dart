@@ -19,6 +19,18 @@ class SuckleRules extends ModeRules {
   @override
   StepType classify(Position? to) => StepType.bouche;
 
+  /// Suckle candidat à toute difficulté tant que `suckleHead` est acquis.
+  /// En mode hérité (Custom, scénarios), pas de gating — sa dose Custom
+  /// le retire ensuite via `_config.isModeForbidden` (cf. note historique
+  /// dans `_DifficultyDispatch`).
+  @override
+  ({double min, double max})? difficultyRange(DifficultyCtx ctx) {
+    final canSuckle = ctx.unlockedKeys.isEmpty ||
+        ctx.unlockedKeys.contains(UnlockKey.suckleHead);
+    if (!canSuckle) return null;
+    return (min: 0.0, max: double.infinity);
+  }
+
   /// Aspiration : geste actif-statique. Sloppy boost (bouche humide)
   /// et un peu d'obéissance (geste explicite et soumis). Pas de
   /// boost profondeur — suckle n'est jamais une profondeur de

@@ -27,7 +27,7 @@ void main() {
 
     test(
         'mapping attendu — chaque rôle pointe vers le mode prévu '
-        '(figé par le plan de refacto, phase B)', () {
+        '(figé par les plans de refacto, phases B + C)', () {
       final mapping = {
         for (final role in ModeSemanticRole.values)
           role: defaultModeRulesRegistry.entries
@@ -45,6 +45,7 @@ void main() {
         ModeSemanticRole.postWaveBreath: SessionMode.breath,
         ModeSemanticRole.recoveryFallback: SessionMode.breath,
         ModeSemanticRole.staticHeld: SessionMode.hold,
+        ModeSemanticRole.mainLoopFallback: SessionMode.rhythm,
       });
     });
 

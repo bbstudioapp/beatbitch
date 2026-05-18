@@ -469,6 +469,62 @@ enum ModeSemanticRole {
   /// Mode statique tenu (hold) — utilisé pour la condition `holdPosition`
   /// du step final.
   staticHeld,
+
+  /// Fallback ultime du main loop quand toutes les candidates ont été
+  /// exclues par les filtres (custom doses, range, cascade soft-mouth).
+  /// Préserve l'invariant historique du dispatcher : si tout est filtré,
+  /// le générateur retombe sur le mode rythmé canonique (rhythm), même
+  /// quand `_config.isModeForbidden(rhythm)` — crash-prevention pour les
+  /// configs Custom corrompues. Cf. C.PR3.
+  mainLoopFallback,
+}
+
+/// Snapshot des conditions d'éligibilité d'un mode à la boucle main du
+/// dispatcher difficulté, passé à `ModeRules.difficultyRange`. Construit
+/// une seule fois par `_DifficultyDispatch._mapDifficultyToStep` et
+/// partagé avec toutes les rules consultées.
+///
+/// Le contexte porte ce qui pilotait l'ancienne cascade de `if` dans le
+/// dispatcher : profil d'unlocks acquis, toggle hand, état runtime
+/// (`lastType`, `stepsOutsideBouche`) qui relaxe la fenêtre rhythm/hold,
+/// et la capacité courante du tracker de chaîne rythmée
+/// (`canChainRhythm`). Chaque rule consomme uniquement ce dont elle a
+/// besoin pour décider de sa fenêtre `[min, max)` ou de l'exclusion
+/// (`null`).
+///
+/// `heritage` (= `unlockedKeys.isEmpty`) marque les sessions hors-carrière :
+/// même convention que [RecoveryAvailability] — dans ce mode, le gating
+/// par milestone est court-circuité (canBiffle / canBeg / canSuckle
+/// passent par défaut).
+class DifficultyCtx {
+  const DifficultyCtx({
+    required this.unlockedKeys,
+    required this.includeHand,
+    required this.lastType,
+    required this.stepsOutsideBouche,
+    required this.canChainRhythm,
+  });
+
+  final Set<UnlockKey> unlockedKeys;
+  final bool includeHand;
+
+  /// Type sémantique du dernier step émis (`null` au tout début de
+  /// séance). Consulté par `RhythmRules` / `HoldRules` qui relaxent leur
+  /// fenêtre minimale quand on est déjà en bouche.
+  final StepType? lastType;
+
+  /// Nombre de steps consécutifs hors `StepType.bouche` (incrémenté par
+  /// `SessionRuntimeState.recordContinuity`). Consulté par `RhythmRules` :
+  /// au-delà de 2, on relaxe sa fenêtre min même hors bouche (la
+  /// continuité « phase de chauffe » a besoin de pouvoir rentrer en
+  /// bouche).
+  final int stepsOutsideBouche;
+
+  /// Sortie courante de `RhythmChainTracker.canChain()`. Consulté
+  /// uniquement par `RhythmRules` (les autres modes l'ignorent). `false`
+  /// = la chaîne rythmée est plafonnée pour ce moment de la séance ; le
+  /// candidat rhythm doit sortir de la palette.
+  final bool canChainRhythm;
 }
 
 /// Règles d'un mode : tout ce qui est spécifique au mode et qui était
@@ -576,6 +632,19 @@ abstract class ModeRules {
   /// - `biffle` : loop BPM sample dédié (pas de from/to mais BPM
   ///   significatif → entre dans le filtre).
   bool get isRhythmic => false;
+
+  /// Fenêtre de difficulté `[min, max)` dans laquelle le mode est
+  /// candidat à la boucle main, ou `null` si le mode n'est pas
+  /// éligible compte tenu du contexte (unlock absent, toggle hand off,
+  /// chaîne rythmée plafonnée, ou mode non-candidat par construction —
+  /// breath / freestyle).
+  ///
+  /// Sémantique : le dispatcher inclut le mode dans les candidats si
+  /// `range != null && range.min ≤ diff < range.max`. La borne haute
+  /// est volontairement exclusive (cas lick `[0.0, 0.30)`). Default
+  /// `null` (opt-in) — les rules sans fenêtre main loop (breath,
+  /// freestyle) gardent le défaut. Cf. C.PR3.
+  ({double min, double max})? difficultyRange(DifficultyCtx ctx) => null;
 
   /// Pondération brute issue de la spécialisation seule (sans coach,
   /// sans friction de continuité) consommée par `_ModePicker.weight`

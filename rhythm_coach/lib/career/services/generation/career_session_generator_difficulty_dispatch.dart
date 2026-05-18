@@ -4,8 +4,11 @@
 // `_mapDifficultyToStep` est le cœur de la boucle main : à partir d'une
 // difficulté `diff ∈ [0, 1]` tirée par `generate`, il construit le
 // StepDraft concret du step suivant. Sa logique :
-//   1. Sélection des candidats de mode (gating profil + Custom + chaîne
-//      rythme + unlocks).
+//   1. Sélection des candidats de mode via `ModeRules.difficultyRange` —
+//      chaque rule expose sa propre fenêtre `[min, max)` éventuellement
+//      gating-aware (unlocks, includeHand, état runtime). Le dispatcher
+//      itère un ordre fixe `_mainLoopCandidateOrder` pour préserver le
+//      tirage rng historique (cf. C.PR3).
 //   2. Tirage pondéré du mode via `_ModePicker.pickWeighted` (couleur spé
 //      + dose coach + continuité par type).
 //   3. Découpe simplex du budget de difficulté entre BPM / amplitude /
@@ -21,94 +24,71 @@
 
 part of 'career_session_generator.dart';
 
+/// Ordre d'itération des candidats main loop. Préserve l'ordre historique
+/// du dispatcher (`lick → rhythm → hold → biffle → hand → beg → suckle`)
+/// — différent de l'ordre du registry (`rhythm, lick, hold, biffle, beg,
+/// hand, breath, freestyle, suckle`). L'ordre est sémantiquement
+/// important car `_ModePicker.pickWeighted` consomme un seul tirage rng
+/// et itère les candidats : un changement d'ordre rebattrait les
+/// sessions reproductibles à seed égal. Les modes non listés (breath /
+/// freestyle) retournent `null` à `difficultyRange` et ne sont pas
+/// candidats. Cf. C.PR3.
+const List<SessionMode> _mainLoopCandidateOrder = [
+  SessionMode.lick,
+  SessionMode.rhythm,
+  SessionMode.hold,
+  SessionMode.biffle,
+  SessionMode.hand,
+  SessionMode.beg,
+  SessionMode.suckle,
+];
+
+/// Cascade soft-mouth pour le cas Custom où **toutes** les candidates
+/// main loop ont été retirées par `_config.isModeForbidden` (doses
+/// `none`). On privilégie le mode le plus doux encore autorisé : lick
+/// (langue) → hold (statique) → rhythm (rythme bouche). Si même rhythm
+/// est forbidden, le fallback `mainLoopFallback` ci-dessous prend le
+/// relais et force rhythm pour ne jamais crasher.
+const List<SessionMode> _softMouthCascade = [
+  SessionMode.lick,
+  SessionMode.hold,
+  SessionMode.rhythm,
+];
+
 extension _DifficultyDispatch on CareerSessionGenerator {
   /// Convertit la difficulté `diff ∈ [0, 1]` en step concret. Le budget est
   /// réparti aléatoirement entre les axes BPM, amplitude et durée — donc un
   /// step "hard" peut être lent profond endurant, ou rapide plus court, etc.
   StepDraft _mapDifficultyToStep(double diff) {
+    final ctx = DifficultyCtx(
+      unlockedKeys: _state.unlockedKeys,
+      includeHand: _config.includeHand,
+      lastType: _state.lastType,
+      stepsOutsideBouche: _state.stepsOutsideBouche,
+      canChainRhythm: _rhythmChain.canChain(),
+    );
     final candidates = <SessionMode>[];
-    if (diff < 0.30) {
-      candidates.add(SessionMode.lick);
+    for (final m in _mainLoopCandidateOrder) {
+      final range = _rules[m]!.difficultyRange(ctx);
+      if (range == null) continue;
+      if (diff >= range.min && diff < range.max) candidates.add(m);
     }
-    // Bouche disponible quoi qu'il arrive si on y est déjà ou si on en
-    // est sorti depuis longtemps : à diff < 0.20 le panel par défaut ne
-    // contient que lick/hand, donc sans cette injection on est mécaniquement
-    // forcé de quitter bouche au step suivant — la friction de continuité
-    // n'a plus rien à pousser. La cohérence par type (séries de plusieurs
-    // steps sur bouche) ne marche que si rhythm reste un candidat valide
-    // pendant la phase de chauffe.
-    if ((diff >= 0.20 ||
-            _state.stepsOutsideBouche >= 2 ||
-            _state.lastType == StepType.bouche) &&
-        _rhythmChain.canChain()) {
-      candidates.add(SessionMode.rhythm);
-    }
-    // Hold candidat dès diff >= 0.20 normalement, mais aussi dès diff >= 0.10
-    // si on est déjà en bouche : permet l'alternance rhythm/hold à
-    // l'intérieur d'une série bouche (sinon les phases de chauffe restaient
-    // 100 % rhythm uniforme — l'utilisateur attend rythme/rythme/hold/…).
-    if (diff >= 0.20 || (_state.lastType == StepType.bouche && diff >= 0.10)) {
-      candidates.add(SessionMode.hold);
-    }
-    // biffle : candidat seulement si `biffleBasic` est débloqué (pré-filtre
-    // sur le mode pour éviter une cascade systématique de dégradation
-    // biffle → lick quand la milestone n'est pas acquise). Le pré-filtre
-    // respecte la convention héritée (`_state.unlockedKeys.isEmpty` = pas de
-    // gating) pour ne pas casser les sessions hors carrière.
-    final canBiffle = _state.unlockedKeys.isEmpty ||
-        _state.unlockedKeys.contains(UnlockKey.biffleBasic);
-    if (diff >= 0.40 && _config.includeHand && canBiffle) {
-      candidates.add(SessionMode.biffle);
-    }
-    if (_config.includeHand && diff >= 0.10) {
-      // Hand est dispo dès le début : repose la bouche, aide à varier le
-      // tempo. Seuil bas pour qu'il apparaisse aussi en bas niveau (sinon
-      // les fenêtres de difficulté basses des premiers paliers le bloquent
-      // trop souvent — feedback : « aucune au premier niveau »).
-      candidates.add(SessionMode.hand);
-    }
-    // beg : candidat seulement si begLibre est déjà acquis (prérequis
-    // transverse à toutes les formes de beg, cf. `_isUnlocked`). Convention
-    // héritée appliquée aussi (set vide = pas de gating).
-    final canBeg = _state.unlockedKeys.isEmpty ||
-        _state.unlockedKeys.contains(UnlockKey.begLibre);
-    if (canBeg) {
-      // Sa difficulté effective est portée par `from` (head = doux,
-      // full = comme un hold profond), pas par diff.
-      candidates.add(SessionMode.beg);
-    }
-    // suckle : geste latéral (head ou balls). En carrière, gaté par la
-    // milestone `intro_suckle_head` qui accorde `UnlockKey.suckleHead`. En
-    // mode hérité (Custom, scénarios), on l'ajoute inconditionnellement —
-    // sa dose Custom (ModeDose.none ⇒ forbidden) le retire ensuite via
-    // `removeWhere(_config.isModeForbidden)`. Sans cet ajout, la dose Custom
-    // était de fait ignorée : suckle n'était jamais tiré.
-    final canSuckle = _state.unlockedKeys.isEmpty ||
-        _state.unlockedKeys.contains(UnlockKey.suckleHead);
-    if (canSuckle) {
-      candidates.add(SessionMode.suckle);
-    }
-    // breath n'est jamais un step "d'effort" : il n'est tiré que par
-    // _buildRecoveryStep quand l'endurance est basse, jamais ici.
     // Exclusions Custom (dose `none`) : retirer les modes interdits avant
-    // tirage. Si tout est exclu, on retombe sur un mode bouche encore
-    // actif (l'éditeur Custom garantit qu'au moins un mouth mode reste
-    // ≥ rare via son garde-fou). On essaie lick → hold → rhythm pour
-    // privilégier le mode le plus doux disponible, et rhythm en dernier
-    // ressort pour ne jamais crasher si une config était corrompue.
+    // tirage. Si tout est exclu, cascade soft-mouth (le mode le plus doux
+    // encore autorisé) ; si même la cascade ne donne rien, fallback
+    // `mainLoopFallback` (rhythm) pour ne jamais crasher si une config
+    // était corrompue.
     candidates.removeWhere(_config.isModeForbidden);
     if (candidates.isEmpty) {
-      for (final m in const [
-        SessionMode.lick,
-        SessionMode.hold,
-        SessionMode.rhythm,
-      ]) {
+      for (final m in _softMouthCascade) {
         if (!_config.isModeForbidden(m)) {
           candidates.add(m);
           break;
         }
       }
-      if (candidates.isEmpty) candidates.add(SessionMode.rhythm);
+      if (candidates.isEmpty) {
+        candidates.add(_resolveModeForRole(ModeSemanticRole.mainLoopFallback));
+      }
     }
     final mode = _pickWeightedMode(_filterRepeated(candidates));
 

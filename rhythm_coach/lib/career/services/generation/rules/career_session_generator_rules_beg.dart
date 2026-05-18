@@ -17,6 +17,19 @@ class BegRules extends ModeRules {
   @override
   Set<ModeSemanticRole> get roles => const {ModeSemanticRole.swallowOrder};
 
+  /// Beg toujours candidat dès que `begLibre` est acquis : sa difficulté
+  /// effective est portée par `from` (head doux, full ≈ hold profond) et
+  /// non par `diff`. `begLibre` est le prérequis transverse à toutes les
+  /// formes de beg (cf. doc `_isUnlocked`). Convention héritée
+  /// (`unlockedKeys.isEmpty` = pas de gating) préservée.
+  @override
+  ({double min, double max})? difficultyRange(DifficultyCtx ctx) {
+    final canBeg = ctx.unlockedKeys.isEmpty ||
+        ctx.unlockedKeys.contains(UnlockKey.begLibre);
+    if (!canBeg) return null;
+    return (min: 0.0, max: double.infinity);
+  }
+
   @override
   double baseWeight(SpecializationAllocation spec) =>
       1.0 + 0.90 * spec.pointsIn(SpecializationBranch.obeissance);
