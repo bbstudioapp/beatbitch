@@ -32,7 +32,22 @@ class RhythmRules extends ModeRules {
         ModeSemanticRole.burstHumiliating,
         ModeSemanticRole.miniWaveCore,
         ModeSemanticRole.preFinisherCore,
+        ModeSemanticRole.mainLoopFallback,
       };
+
+  /// Rhythm entre dans la palette dès `diff ≥ 0.20`, ou plus tôt si on
+  /// est déjà en bouche / récemment sorti (la continuité de phase
+  /// bouche a besoin de pouvoir rentrer en rythme sans attendre le
+  /// seuil). Subordonné à la chaîne rythme (`canChainRhythm`) : si le
+  /// tracker a plafonné la durée consécutive, rhythm est exclu pour le
+  /// step courant.
+  @override
+  ({double min, double max})? difficultyRange(DifficultyCtx ctx) {
+    if (!ctx.canChainRhythm) return null;
+    final relaxed =
+        ctx.stepsOutsideBouche >= 2 || ctx.lastType == StepType.bouche;
+    return (min: relaxed ? 0.0 : 0.20, max: double.infinity);
+  }
 
   @override
   StepType classify(Position? to) => StepType.bouche;

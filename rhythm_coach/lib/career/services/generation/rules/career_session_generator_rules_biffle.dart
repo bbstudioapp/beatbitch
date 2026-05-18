@@ -17,6 +17,21 @@ class BiffleRules extends ModeRules {
   @override
   bool get isRhythmic => true;
 
+  /// Biffle candidat dès `diff ≥ 0.40`, gaté par `includeHand` (le
+  /// biffle implique un coup de queue, pas joué quand l'utilisateur
+  /// désactive le toggle hand) et par l'unlock `biffleBasic`. Pré-filtre
+  /// au tirage : sinon une cascade systématique biffle → lick se
+  /// déclenchait au moindre tirage hors palier. Convention héritée
+  /// (`unlockedKeys.isEmpty` = pas de gating) préservée.
+  @override
+  ({double min, double max})? difficultyRange(DifficultyCtx ctx) {
+    if (!ctx.includeHand) return null;
+    final canBiffle = ctx.unlockedKeys.isEmpty ||
+        ctx.unlockedKeys.contains(UnlockKey.biffleBasic);
+    if (!canBiffle) return null;
+    return (min: 0.40, max: double.infinity);
+  }
+
   @override
   double baseWeight(SpecializationAllocation spec) =>
       1.0 +

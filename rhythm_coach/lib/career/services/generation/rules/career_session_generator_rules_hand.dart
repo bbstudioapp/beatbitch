@@ -18,6 +18,16 @@ class HandRules extends ModeRules {
   @override
   bool get isRhythmic => true;
 
+  /// Hand candidat dès `diff ≥ 0.10` (seuil bas pour qu'il apparaisse
+  /// aussi en bas niveau : sinon les fenêtres de difficulté basses des
+  /// premiers paliers le bloquaient trop souvent — feedback historique
+  /// « aucune au premier niveau »). Gaté par `includeHand`.
+  @override
+  ({double min, double max})? difficultyRange(DifficultyCtx ctx) {
+    if (!ctx.includeHand) return null;
+    return (min: 0.10, max: double.infinity);
+  }
+
   /// Poids neutre + boost léger rythmeBiffle (hand est un mode rythmé
   /// — cohérent qu'une joueuse rythmeBiffle en voie un peu plus). La
   /// friction de continuité par type pilote toujours son apparition

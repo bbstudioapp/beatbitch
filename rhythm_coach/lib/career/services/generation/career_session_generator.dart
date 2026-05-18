@@ -74,6 +74,7 @@ export 'position_pickers.dart' show PositionPickers;
 export 'mode_rules.dart'
     show
         BreathRecoveryCtx,
+        DifficultyCtx,
         DraftCtx,
         FakeBreathCtx,
         FinalCtx,
