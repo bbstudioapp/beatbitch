@@ -640,12 +640,21 @@ class CareerSessionGenerator {
 
       // Catégorise le final pour piocher le bon `finale_chime` côté
       // BeepEngine. Basé sur le dernier step de config de la séquence
-      // (= l'action sur laquelle la coach jouit).
+      // (= l'action sur laquelle la coach jouit). Si `lastWhere` retombe
+      // sur un step text-only via `orElse` (cas dégénéré d'une milestone
+      // purement vocale), `mode == null` → chime neutre `medium` —
+      // équivalent à l'ancien fallback `SessionMode.rhythm` dont la
+      // `finalCategory` était `medium` par défaut.
       final lastConfigStep = finalMilestone.sequence.lastWhere(
           (s) => !s.isTextOnly,
           orElse: () => finalMilestone.sequence.last);
-      final lastDraft = _stepToDraft(lastConfigStep, SessionMode.rhythm);
-      final finalCategory = _rules[lastDraft.mode]!.finalCategory(lastDraft);
+      final FinalCategory finalCategory;
+      if (lastConfigStep.mode != null) {
+        final lastDraft = _stepToDraft(lastConfigStep);
+        finalCategory = _rules[lastDraft.mode]!.finalCategory(lastDraft);
+      } else {
+        finalCategory = FinalCategory.medium;
+      }
 
       // Marque l'instant où le dernier step de config de la milestone
       // démarre (= moment où le chime doit retentir). `time` (avant ce
@@ -1343,14 +1352,23 @@ class CareerSessionGenerator {
         holdCeilingIdx: _milestoneHoldCeilingIdx(),
       );
 
-  /// Convertit un [SessionStep] (issu du JSON ou d'une milestone) en
-  /// [StepDraft] interne pour pouvoir le passer à `_applyStaminaChange`.
-  /// Convention uniforme : hold/beg portent leur position dans `to` ;
-  /// aucun swap.
-  StepDraft _stepToDraft(SessionStep step, SessionMode defaultMode) {
-    final mode = step.mode ?? defaultMode;
+  /// Convertit un [SessionStep] de configuration (non text-only) en
+  /// [StepDraft] interne pour pouvoir le passer aux helpers stamina /
+  /// saliva. Convention uniforme : hold/beg portent leur position dans
+  /// `to` ; aucun swap.
+  ///
+  /// **Requiert `step.mode != null`** — c'est au call site de filtrer
+  /// les steps text-only en amont (un text-only a `mode = null` par
+  /// définition, et n'a ni coût stamina ni avancement de simu salive à
+  /// calculer puisque sa durée est nulle). Plus de fallback
+  /// `SessionMode.rhythm` interne (cf. B.PR10) — le défaut implicite
+  /// masquait des bugs et ajoutait un literal qui n'a aucun sens
+  /// dramaturgique.
+  StepDraft _stepToDraft(SessionStep step) {
+    assert(step.mode != null,
+        '_stepToDraft: step text-only — filtrer le caller en amont');
     return StepDraft(
-      mode: mode,
+      mode: step.mode!,
       bpm: step.bpm,
       from: step.from,
       to: step.to,
@@ -1394,13 +1412,18 @@ class CareerSessionGenerator {
         duration: mStep.duration,
         swallowMode: mStep.swallowMode,
       ));
-      // Simulation stamina/salive pour chaque step de la séquence, pour que
-      // la projection reste cohérente.
-      final mDraft = _stepToDraft(mStep, SessionMode.rhythm);
+      // Simulation stamina/salive pour chaque step de config de la
+      // séquence, pour que la projection reste cohérente. Les steps
+      // text-only (`mode == null`) sont skippés : leur durée est nulle
+      // → coût stamina nul et saliva inchangée (= no-op de l'ancien
+      // fallback `SessionMode.rhythm` sur un draft à durée 0).
       final staminaBefore = s;
-      s = StaminaModel.apply(s, mDraft, t / ctx.effectiveDuration, ctx.cfg,
-          rules: _rules);
-      _advanceSalivaSim(mDraft);
+      if (mStep.mode != null) {
+        final mDraft = _stepToDraft(mStep);
+        s = StaminaModel.apply(s, mDraft, t / ctx.effectiveDuration, ctx.cfg,
+            rules: _rules);
+        _advanceSalivaSim(mDraft);
+      }
       StaminaModel.fillProfile(
           ctx.profile, t + mStep.time, mStep.duration ?? 0, s,
           valueStart: staminaBefore);
