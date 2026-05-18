@@ -754,6 +754,14 @@ abstract class ModeRules {
   /// externe de re-vérifier l'humil/unlock après chaque pas.
   StepDraft? tryDegrade(StepDraft draft) => null;
 
+  /// Hook de transformation post-tirage : la rule peut adapter son
+  /// draft selon la queue de steps déjà émise. Override `BegRules` :
+  /// retire `to` quand le step précédent était doux (`lick` ou
+  /// `breath`) pour enchaîner sur une supplique purement vocale.
+  /// Default = identité — la plupart des rules n'ont pas de couplage
+  /// avec le passé. Cf. C.PR7.
+  StepDraft stripAfterSoft(StepDraft draft, List<SessionStep> steps) => draft;
+
   /// Assemble le `StepDraft` final du mode à partir des scores déjà
   /// budgétés par l'orchestrateur. Voir `DraftCtx` pour la surface du
   /// contexte. La rule consomme ses propres samplers / caps mode-specific

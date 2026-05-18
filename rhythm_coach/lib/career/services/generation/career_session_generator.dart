@@ -31,21 +31,11 @@ export '../../models/specialization.dart'
     show SpecializationAllocation, SpecializationBranch;
 export '../../models/unlock_key.dart' show UnlockKey;
 
-// Les 9 rules sont des libraries autonomes (cf. `rules/`) qui importent
-// cette library pour le contrat `ModeRules` + les types support. Les
-// importer ici permet à `modeRulesRegistry` (cf. `mode_rules.dart`) de
-// les instancier en const. Le cycle d'import est résolu lexicalement
-// par Dart (toutes les déclarations sont visibles avant l'évaluation
-// des const top-level).
-import 'rules/career_session_generator_rules_beg.dart';
-import 'rules/career_session_generator_rules_biffle.dart';
-import 'rules/career_session_generator_rules_breath.dart';
-import 'rules/career_session_generator_rules_freestyle.dart';
-import 'rules/career_session_generator_rules_hand.dart';
-import 'rules/career_session_generator_rules_hold.dart';
-import 'rules/career_session_generator_rules_lick.dart';
-import 'rules/career_session_generator_rules_rhythm.dart';
-import 'rules/career_session_generator_rules_suckle.dart';
+// `defaultModeRulesRegistry` est extrait dans sa propre library
+// `mode_rules_registry.dart` (C.PR7) : le fichier principal n'importe
+// plus les 9 implémentations concrètes des rules. Il consomme
+// uniquement la const map injectée au constructeur (cf. `_rules`) et
+// la re-exporte plus bas pour les call sites externes.
 import 'bpm_pacing.dart';
 import 'capability_clamps.dart';
 import 'final_picker.dart';
@@ -53,6 +43,7 @@ import 'gen_facade.dart';
 import 'humiliation_gates.dart';
 import 'mode_continuity_state.dart';
 import 'mode_rules.dart';
+import 'mode_rules_registry.dart';
 import 'position_pickers.dart';
 import 'rhythm_chain_tracker.dart';
 import 'session_config.dart';
@@ -95,6 +86,7 @@ export 'mode_rules.dart'
         clampHeldDuration,
         tryDescendFrom,
         tryDescendToWithGuard;
+export 'mode_rules_registry.dart' show defaultModeRulesRegistry;
 export 'rhythm_chain_tracker.dart' show RhythmChainTracker;
 export 'session_config.dart' show SessionConfig;
 export 'session_runtime_state.dart' show SessionRuntimeState;
@@ -108,59 +100,35 @@ part 'career_session_generator_punishment.dart';
 part 'career_session_generator_rhythmic_pattern_buffer.dart';
 part 'career_session_generator_milestone_scheduler.dart';
 
-/// Registry par défaut des règles par mode — couvre les 9 modes du jeu.
-/// Injecté au `CareerSessionGenerator` quand aucun `rules` n'est passé au
-/// constructeur (cas standard). Un test ou un module externe peut passer
-/// un registry de sa fabrication (par exemple pour mocker une rule).
-///
-/// Const map : les rules sont stateless avec des const constructors, donc
-/// la map est const-évaluable et thread-safe.
-///
-/// Vit ici (et non dans `mode_rules.dart`, library autonome) pour éviter
-/// un cycle d'import : la const map référence les 9 implémentations
-/// concrètes qui dépendent de `career_session_generator.dart` via le
-/// re-export de `ModeRules` / `DraftCtx` / etc.
-///
-/// ─── Audit `SessionMode.*` literal résiduels (B.PR11, MAJ C.PR6) ──
-/// Après les phases B + C (en cours) du plan de refacto
-/// (`~/beatbitch_refacto_career_gen.md`), les seuls `SessionMode.X`
-/// qui subsistent dans ce fichier sont les **clés du registry**
-/// ci-dessous — famille F : inhérent au pattern « map d'enum vers
-/// handler ». Chaque clé est l'identité technique du mode, pas un
-/// choix dramaturgique — ne peut pas être abstrait via un rôle
-/// sémantique.
+/// ─── Audit `SessionMode.*` literal résiduels (B.PR11, MAJ C.PR7) ──
+/// Après les phases B + C closes du plan de refacto
+/// (`~/beatbitch_refacto_career_gen.md`), **aucun `SessionMode.X`
+/// literal de logique** ne subsiste dans le fichier principal (ni les
+/// part files orchestrateurs). Toutes les références mode-aware
+/// passent par :
+/// - le **registry injecté** `_rules` (extrait en library autonome
+///   `mode_rules_registry.dart` en C.PR7), pour les sites qui itèrent
+///   ou indexent par mode ;
+/// - les **rôles sémantiques** (cf. [ModeSemanticRole]) résolus via
+///   `_resolveModeForRole`, pour les choix dramaturgiques ;
+/// - les **contrats `ModeRules`** (`classify`, `isFlow`, `isRhythmic`,
+///   `difficultyRange`, `baseWeight`, `unlockKeyFor`…), pour les
+///   décisions mode-specific qui restent côté rule.
 ///
 /// Historique des migrations :
 /// - C.PR5 : `SessionMode.lick` fallback de `_buildRecoveryStep`
 ///   (famille D) → `_resolveModeForRole(recoveryDegradeFallback)`.
 /// - C.PR6 : `Session(defaultMode: SessionMode.rhythm)` de
-///   `_assembleResult` (famille E) → `_rules.keys.first` (le champ
-///   est inert pour la carrière, mais on n'a plus besoin de pointer
-///   `rhythm` explicitement).
-///
-/// Les rôles sémantiques (cf. [ModeSemanticRole]) couvrent toutes les
-/// autres références mode-aware : sas breath, ordre swallow, burst
-/// humiliant/neutre/fallback, mini-vague, pré-finisher, holdPosition,
-/// post-wave breath. Cf. `_resolveModeForRole` côté générateur.
+///   `_assembleResult` (famille E) → `_rules.keys.first`.
+/// - C.PR7 : extraction du registry (famille F) vers
+///   `mode_rules_registry.dart`.
 ///
 /// Les literals dans les **part files** (`_punishment.dart` palette de
-/// compos, `_mode_picker.dart` switch exhaustifs, `_difficulty_dispatch.dart`
-/// candidats par tranche de difficulté, `_rhythmic_pattern_buffer.dart`
-/// filtre des modes rythmiques) sont également légitimes : ce sont soit
-/// du contenu (palette punition), soit des switches exhaustifs sur
-/// l'enum, soit des dispatchers de candidats — pas des choix
+/// compos, `_mode_picker.dart` switch exhaustifs sur `StepType`,
+/// `_rhythmic_pattern_buffer.dart` filtre des modes rythmiques) sont
+/// également légitimes : ce sont soit du contenu (palette punition),
+/// soit des switches exhaustifs sur l'enum — pas des choix
 /// dramaturgiques portables sur un rôle.
-const Map<SessionMode, ModeRules> defaultModeRulesRegistry = {
-  SessionMode.rhythm: RhythmRules(),
-  SessionMode.lick: LickRules(),
-  SessionMode.hold: HoldRules(),
-  SessionMode.biffle: BiffleRules(),
-  SessionMode.beg: BegRules(),
-  SessionMode.hand: HandRules(),
-  SessionMode.breath: BreathRules(),
-  SessionMode.freestyle: FreestyleRules(),
-  SessionMode.suckle: SuckleRules(),
-};
 
 /// Résultat d'une génération : la session figée à passer au controller +
 /// le profil d'endurance projeté (utile à l'overlay debug `StaminaBar`) +
@@ -1017,7 +985,7 @@ class CareerSessionGenerator {
   ///      progress + plancher quickie ; tirage `diff`.
   ///   2. Choix recovery vs `_mapDifficultyToStep(diff)` selon stamina
   ///      et seuils obédiance-modulés.
-  ///   3. Transformations en cascade : `BegRules.stripAfterSoft` →
+  ///   3. Transformations en cascade : `ModeRules.stripAfterSoft` →
   ///      `_enforceHumiliationRequired` → `_applyBpmDiversity` →
   ///      `_diversifyAmplitude` → `BpmPacing.maybeApplyBpmRamp` →
   ///      `_clampToCapability` (2ᵉ enveloppe, dernier mot).
@@ -1067,7 +1035,11 @@ class CareerSessionGenerator {
     // retire le `from` pour enchaîner sur une supplique purement vocale
     // plutôt que de redemander de tenir une position. Côté stamina,
     // beg avec from=null suit la même branche regen que from=head.
-    var draft = BegRules.stripAfterSoft(initialDraft, ctx.steps);
+    // Délégation polymorphique : la branche « no-op » pour les autres
+    // modes est portée par le default `ModeRules.stripAfterSoft`
+    // (cf. C.PR7).
+    var draft =
+        _rules[initialDraft.mode]!.stripAfterSoft(initialDraft, ctx.steps);
 
     // Filtre humiliation requise : on garde uniquement ce que le cap
     // effectif (career + session projeté à `time`) permet. La rampe
