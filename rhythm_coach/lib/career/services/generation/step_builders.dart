@@ -23,6 +23,7 @@ import '../../models/phrase_bank.dart';
 import '../../models/unlock_key.dart';
 import 'mode_picker.dart';
 import 'mode_rules.dart';
+import 'position_pickers.dart';
 import 'session_config.dart';
 import 'session_runtime_state.dart';
 import 'step_draft.dart';
@@ -63,6 +64,7 @@ class StepBuilders {
     required this.rng,
     required this.rules,
     required this.facade,
+    required this.positionPickers,
     required this.enforceHumiliationRequired,
     required this.clampToCapability,
     required this.isUnlocked,
@@ -79,6 +81,7 @@ class StepBuilders {
   final Random rng;
   final Map<SessionMode, ModeRules> rules;
   final GenFacadeSurface facade;
+  final PositionPickers positionPickers;
   final EnforceHumiliationRequired enforceHumiliationRequired;
   final ClampToCapability clampToCapability;
   final IsUnlocked isUnlocked;
@@ -322,5 +325,96 @@ class StepBuilders {
       );
     }
     return draft;
+  }
+
+  /// Construit le **step #0** (intro) de la séance. Trois variantes :
+  /// - `intense` : sas régen post-Supplier — head → cap milestone
+  ///   rhythm, BPM 90, 10 s. Cascade mode via `introPriority` (rhythm
+  ///   → hand → lick → hold).
+  /// - `quickie` : sas bâclée — head → mid, BPM 75, 8 s. Même cascade
+  ///   `introPriority`.
+  /// - Standard : palette `firstStepVariants` collectée sur toutes
+  ///   les rules, filtrée par [isUnlocked] et `config.isModeForbidden`,
+  ///   tirée uniformément. Fallback non-forbidden si tout filtré, sinon
+  ///   1ʳᵉ variante tout court.
+  ///
+  /// Le caller (`generate()`) borne le résultat via
+  /// `_clampToCapability` (2ᵉ enveloppe profondeur / BPM / durée).
+  StepDraft firstStep({
+    bool quickie = false,
+    bool intense = false,
+  }) {
+    if (intense) {
+      // Plus profond et plus rapide que quickie : la régen
+      // post-Supplier prouve que l'utilisatrice « monte d'un niveau ».
+      // Profondeur plafonnée par les milestones acquittées (jamais
+      // throat sans `throat_pulse`, jamais full sans `full_pulse`) —
+      // on borne aussi à throat (idx 3) pour ne jamais lancer un
+      // intense full d'amorce.
+      final to = Position
+          .values[positionPickers.milestoneRhythmCeilingIdx().clamp(2, 3)];
+      final intenseMode = _pickIntroMode();
+      return rules[intenseMode]!.buildIntroStep(IntroCtx(
+        bpm: 90,
+        from: Position.head,
+        to: to,
+        duration: 10,
+      ));
+    }
+    if (quickie) {
+      final quickieMode = _pickIntroMode();
+      return rules[quickieMode]!.buildIntroStep(const IntroCtx(
+        bpm: 75,
+        from: Position.head,
+        to: Position.mid,
+        duration: 8,
+      ));
+    }
+    // Panel de variantes filtré par milestones : `rhythm_mid_basic`
+    // (intro_deeper_basics, niveau 2) gate les variantes rhythm
+    // head→mid / tip→mid. Sans cette milestone, on retombe sur lick /
+    // rhythm tip→head / hand tip→head (toutes débloquées via
+    // intro_basics niveau 1). Construction déléguée aux rules via
+    // `firstStepVariants` (cf. B.PR9) : chaque mode opt-in renvoie sa
+    // palette pré-construite, le générateur les concatène dans l'ordre
+    // d'itération du registry (rhythm → lick → hold → biffle → beg →
+    // hand → breath → freestyle → suckle) — `HandRules` porte son
+    // propre guard `includeHand` via le ctx.
+    final introCtx = IntroStandardCtx(includeHand: config.includeHand);
+    final variants = <StepDraft>[
+      for (final rule in rules.values) ...rule.firstStepVariants(introCtx),
+    ];
+    final allowed = variants
+        .where(isUnlocked)
+        .where((v) => !config.isModeForbidden(v.mode))
+        .toList();
+    if (allowed.isEmpty) {
+      // Pas de variante alignée à la fois sur les unlocks et le
+      // dosage — on retombe sur la 1ʳᵉ variante non interdite, sinon
+      // la 1ʳᵉ tout court.
+      final notForbidden =
+          variants.where((v) => !config.isModeForbidden(v.mode)).toList();
+      return notForbidden.isEmpty ? variants.first : notForbidden.first;
+    }
+    return allowed[rng.nextInt(allowed.length)];
+  }
+
+  /// Mode retenu pour la chaîne de fallback « intro intense / quickie ».
+  /// Trie les rules par `introPriority` croissante, retient la première
+  /// non-forbidden. Le mode de rang max (hold) reste le fallback ultime
+  /// même quand `config.isModeForbidden(hold)` — l'éditeur Custom
+  /// garantit qu'au moins un mode bouche reste, mais si tout est exclu,
+  /// hold doit sortir pour préserver le contrat historique (la cascade
+  /// `rhythm → hand → lick → hold` finissait toujours par hold).
+  SessionMode _pickIntroMode() {
+    final ranked = rules.entries
+        .where((e) => e.value.introPriority != null)
+        .toList()
+      ..sort(
+          (a, b) => a.value.introPriority!.compareTo(b.value.introPriority!));
+    for (final e in ranked) {
+      if (!config.isModeForbidden(e.key)) return e.key;
+    }
+    return ranked.last.key;
   }
 }
