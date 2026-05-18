@@ -1,5 +1,4 @@
-// Fichier part de `career_session_generator.dart` — tirage pondéré du mode
-// pour la boucle main.
+// Library autonome — tirage pondéré du mode pour la boucle main.
 //
 // Le picker combine 3 leviers indépendants :
 //   1. Pondération par spécialisation (`baseWeight`) — quelle est la
@@ -13,25 +12,26 @@
 // Le 3ᵉ levier dépend de l'état mutable du tracking (`_state.lastType`,
 // `_stepsInLastType`, `_state.stepsOutsideBouche`). On le capture dans un
 // snapshot [ModeContinuityState] que le générateur reconstruit à chaque
-// pick — c'est cheap (4 lectures de fields), et ça garde [_ModePicker]
+// pick — c'est cheap (4 lectures de fields), et ça garde [ModePicker]
 // 100 % statique-pur.
 //
-// Restent côté instance dans le fichier principal :
-//   * `_isModeForbidden` — exposé par d'autres call sites (boosts, palette
-//     finale, mini-vagues…) qui ne passent pas par le picker.
-//   * `_pts` / `_scaleDuration` — partagés avec d'autres pondérations (cf.
-//     `_mapDifficultyToStep`).
+// Sortie du `part of 'career_session_generator.dart'` historique en
+// D.PR3 du plan de refacto. Toutes les méthodes étaient déjà statiques
+// pures depuis B.PR1 — l'extraction est triviale, juste un renommage
+// `_ModePicker` → `ModePicker`.
 
-part of 'career_session_generator.dart';
+import 'dart:math';
 
-// `ModeContinuityState` vit désormais dans `mode_continuity_state.dart`
-// (library autonome), importé et re-exporté par
-// `career_session_generator.dart`.
+import '../../../models/session.dart';
+import '../../models/specialization.dart';
+import 'mode_continuity_state.dart';
+import 'mode_rules.dart';
+import 'step_type.dart';
 
 /// Tirage pondéré du mode pour la boucle main. Toutes les méthodes sont
 /// statiques + pures — l'état mutable est consommé via [ModeContinuityState]
 /// + [SpecializationAllocation] + `coachWeights` + `Random`.
-class _ModePicker {
+class ModePicker {
   /// Pondération issue de la spé seule, sans le filtre coach. Le coach
   /// (s'il en fournit) multiplie ce score dans [weight].
   ///

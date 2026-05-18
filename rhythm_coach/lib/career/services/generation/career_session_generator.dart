@@ -41,7 +41,7 @@ import 'capability_clamps.dart';
 import 'final_picker.dart';
 import 'gen_facade.dart';
 import 'humiliation_gates.dart';
-import 'mode_continuity_state.dart';
+import 'mode_picker.dart';
 import 'mode_rules.dart';
 import 'mode_rules_registry.dart';
 import 'position_pickers.dart';
@@ -51,7 +51,6 @@ import 'session_config.dart';
 import 'session_runtime_state.dart';
 import 'stamina_model.dart';
 import 'step_draft.dart';
-import 'step_type.dart';
 
 // Re-exports des types extraits — les 9 fichiers de rules et les call
 // sites externes importent `career_session_generator.dart` et y trouvent
@@ -63,6 +62,7 @@ export 'final_picker.dart' show FinalPicker;
 export 'gen_facade.dart' show GenFacade;
 export 'humiliation_gates.dart' show HumiliationGates;
 export 'mode_continuity_state.dart' show ModeContinuityState;
+export 'mode_picker.dart' show ModePicker;
 export 'position_pickers.dart' show PositionPickers;
 export 'mode_rules.dart'
     show
@@ -97,7 +97,6 @@ export 'stamina_model.dart' show StaminaModel;
 export 'step_draft.dart' show StepDraft;
 export 'step_type.dart' show StepType;
 
-part 'career_session_generator_mode_picker.dart';
 part 'career_session_generator_difficulty_dispatch.dart';
 part 'career_session_generator_punishment.dart';
 part 'career_session_generator_milestone_scheduler.dart';
@@ -222,7 +221,7 @@ class CareerSessionGenerator {
   ///
   /// Propagé à chaque sous-système qui consomme polymorphiquement les
   /// rules (`CapabilityClamps`, `FinalPicker`, `StaminaModel.delta`,
-  /// `_ModePicker.continuityMultiplier`, `HumiliationGates.*`,
+  /// `ModePicker.continuityMultiplier`, `HumiliationGates.*`,
   /// `_DifficultyDispatch._mapDifficultyToStep`).
   final Map<SessionMode, ModeRules> _rules;
 
@@ -2056,10 +2055,10 @@ class CareerSessionGenerator {
     return draft;
   }
 
-  /// Adaptateur d'instance pour `_ModePicker.pickWeighted` — injecte `_config.spec`,
+  /// Adaptateur d'instance pour `ModePicker.pickWeighted` — injecte `_config.spec`,
   /// `_config.coachModeWeights`, le snapshot de continuité et `_rng`.
   SessionMode _pickWeightedMode(List<SessionMode> candidates) =>
-      _ModePicker.pickWeighted(
+      ModePicker.pickWeighted(
         candidates,
         spec: _config.spec,
         coachWeights: _config.coachModeWeights,
@@ -2388,10 +2387,10 @@ class CareerSessionGenerator {
   /// rester sur le même mode, on sortait nécessairement de rythme à chaque
   /// step ; l'utilisateur a relevé que la séance ressemblait à une rotation
   /// stricte au lieu de phases prolongées avec variation.
-  /// Adaptateur d'instance pour `_ModePicker.filterRepeated` — injecte
+  /// Adaptateur d'instance pour `ModePicker.filterRepeated` — injecte
   /// `_state.lastMode` et `_rules`.
   List<SessionMode> _filterRepeated(List<SessionMode> candidates) =>
-      _ModePicker.filterRepeated(candidates, _state.lastMode, rules: _rules);
+      ModePicker.filterRepeated(candidates, _state.lastMode, rules: _rules);
 
   /// Tire une phrase pour [mode]/[tier] en évitant la même qu'au step
   /// précédent (`_state.lastText`). Quelques essais suffisent : si la banque ne
