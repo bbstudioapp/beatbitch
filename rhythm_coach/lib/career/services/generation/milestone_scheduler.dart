@@ -6,14 +6,14 @@
 // part). Chaque body milestone vise une **fenêtre** `[minInsert,
 // maxInsert]` avec une `targetTime` cible (par défaut 30 % / 65 % de
 // la durée pour la 1ʳᵉ / 2ᵉ). Le générateur ouvre l'insertion dès que
-// `time` atteint la target, ou en urgence dès que `time >= maxInsert`
-// (pour ne pas la louper si la chauffe traîne).
+// `ctx.time` atteint la target, ou en urgence dès que
+// `ctx.time >= maxInsert` (pour ne pas la louper si la chauffe traîne).
 //
 // Ce scheduler porte tout l'état + les 3 points d'entrée de la boucle :
 //   * [insertIntroReplacement] — cas spécial où la milestone unique
 //     a `insertAtMinSeconds <= 0` et joue le rôle de step #0.
 //   * [tryInsertAt] — phase 1 du main loop : insère si la fenêtre
-//     est ouverte au tps courant, sinon null.
+//     est ouverte au tps courant, sinon false.
 //   * [insertAllRemaining] — drain post-loop : force l'insertion
 //     de toute pending non encore posée (cas sessions très courtes
 //     ou genUntil bas qui n'ont pas atteint la fenêtre).
@@ -24,7 +24,9 @@
 // Sortie du `part of 'career_session_generator.dart'` historique en
 // D.PR6 du plan de refacto. Les 2 dépendances d'instance (mutation de
 // `_state.unlockedKeys` + appel à `_pushMilestoneSequence`) sont
-// threadées par référence et callback au constructeur.
+// threadées par référence et callback au constructeur. D.PR7-2 a
+// migré les compteurs `time`/`stamina` sur `ctx` — le callback mute
+// le ctx au lieu de retourner un tuple.
 
 import 'dart:math';
 
@@ -33,15 +35,15 @@ import 'generation_context.dart';
 import 'session_runtime_state.dart';
 
 /// Signature du callback `pushMilestoneSequence` : émet la séquence
-/// d'une milestone au temps courant, retourne `(newTime, newStamina)`.
-/// L'implémentation vit côté `CareerSessionGenerator`
-/// (`_pushMilestoneSequence`) — le scheduler ne réimplémente pas la
-/// logique d'émission, il décide juste **quand** déclencher.
-typedef PushMilestoneSequence = ({int time, double stamina}) Function(
+/// d'une milestone au temps courant en mutant `ctx.time` / `ctx.stamina`
+/// (incrémente `time` de `milestone.durationSeconds`, met à jour
+/// l'endurance projetée). L'implémentation vit côté
+/// `CareerSessionGenerator` (`_pushMilestoneSequence`) — le scheduler
+/// ne réimplémente pas la logique d'émission, il décide juste **quand**
+/// déclencher.
+typedef PushMilestoneSequence = void Function(
   GenerationContext ctx, {
   required LevelMilestone milestone,
-  required int time,
-  required double stamina,
 });
 
 /// État mutable d'une milestone body en attente d'insertion dans la séance.
@@ -130,46 +132,34 @@ class MilestoneScheduler {
 
   /// Insère la 1ʳᵉ pending en remplacement du step #0. Le caller doit
   /// avoir vérifié [replacesIntro]. Idempotent (no-op si déjà posée).
-  ({int time, double stamina}) insertIntroReplacement(
-    GenerationContext ctx, {
-    required int time,
-    required double stamina,
-  }) {
-    return _insertAt(ctx, 0, time: time, stamina: stamina);
+  /// Mute `ctx.time` / `ctx.stamina`.
+  void insertIntroReplacement(GenerationContext ctx) {
+    _insertAt(ctx, 0);
   }
 
-  /// Phase 1 du main loop : insère la prochaine milestone si `time`
+  /// Phase 1 du main loop : insère la prochaine milestone si `ctx.time`
   /// a atteint sa `targetTime` OU sa `maxInsert` (urgence). Renvoie
-  /// `null` quand aucune insertion n'est due (laisser la boucle main
-  /// continuer son tirage normal).
-  ({int time, double stamina})? tryInsertAt(
-    GenerationContext ctx, {
-    required int time,
-    required double stamina,
-  }) {
+  /// `true` quand une milestone a été insérée (la boucle main doit
+  /// `continue`), `false` sinon (laisser la boucle main continuer son
+  /// tirage normal).
+  bool tryInsertAt(GenerationContext ctx) {
     final nextIdx = _nextPendingIndex();
-    if (nextIdx < 0) return null;
+    if (nextIdx < 0) return false;
     final p = _pending[nextIdx];
-    if (time < p.targetTime && time < p.maxInsert) return null;
-    return _insertAt(ctx, nextIdx, time: time, stamina: stamina);
+    if (ctx.time < p.targetTime && ctx.time < p.maxInsert) return false;
+    _insertAt(ctx, nextIdx);
+    return true;
   }
 
   /// Drain post-loop : force l'insertion de toute pending non encore
   /// posée. Cas rare (sessions courtes / `genUntil` faible après le
   /// first step) — on ne veut pas perdre une milestone silencieusement.
-  ({int time, double stamina}) insertAllRemaining(
-    GenerationContext ctx, {
-    required int time,
-    required double stamina,
-  }) {
+  void insertAllRemaining(GenerationContext ctx) {
     for (var idx = 0; idx < _pending.length; idx++) {
       if (!_pending[idx].inserted) {
-        final r = _insertAt(ctx, idx, time: time, stamina: stamina);
-        time = r.time;
-        stamina = r.stamina;
+        _insertAt(ctx, idx);
       }
     }
-    return (time: time, stamina: stamina);
   }
 
   /// Index de la prochaine pending non encore posée (−1 si tout est
@@ -187,24 +177,12 @@ class MilestoneScheduler {
   /// le bookkeeping `bodyStartTime` / `bodyDurationSeconds`, étend les
   /// unlocks dans `_state.unlockedKeys`, et recale le `minInsert` de
   /// la pending suivante (buffer ≥ 60 s).
-  ({int time, double stamina}) _insertAt(
-    GenerationContext ctx,
-    int index, {
-    required int time,
-    required double stamina,
-  }) {
+  void _insertAt(GenerationContext ctx, int index) {
     final p = _pending[index];
-    if (p.inserted) return (time: time, stamina: stamina);
+    if (p.inserted) return;
     p.inserted = true;
-    final startedAt = time;
-    final result = _pushMilestoneSequence(
-      ctx,
-      milestone: p.milestone,
-      time: time,
-      stamina: stamina,
-    );
-    time = result.time;
-    stamina = result.stamina;
+    final startedAt = ctx.time;
+    _pushMilestoneSequence(ctx, milestone: p.milestone);
     if (index == 0) {
       bodyStartTime = startedAt;
       bodyDurationSeconds = p.milestone.durationSeconds;
@@ -226,7 +204,7 @@ class MilestoneScheduler {
     // Recale le min de la prochaine pending : `m.endTime + 60s` buffer
     // (sinon les 2 séquences pédagogiques s'enchaînent sans souffle).
     if (index + 1 < _pending.length) {
-      final nextMin = time + 60;
+      final nextMin = ctx.time + 60;
       final next = _pending[index + 1];
       next.minInsert = max(next.minInsert, nextMin);
       // Si le buffer pousse au-delà du maxInsert de la 2ᵉ, on le repousse
@@ -236,6 +214,5 @@ class MilestoneScheduler {
       }
       next.targetTime = next.targetTime.clamp(next.minInsert, next.maxInsert);
     }
-    return (time: time, stamina: stamina);
   }
 }
