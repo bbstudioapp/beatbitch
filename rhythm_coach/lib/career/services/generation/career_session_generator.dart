@@ -46,6 +46,7 @@ import 'mode_picker.dart';
 import 'mode_rules.dart';
 import 'mode_rules_registry.dart';
 import 'position_pickers.dart';
+import 'punishment_builder.dart';
 import 'rhythm_chain_tracker.dart';
 import 'rhythmic_pattern_buffer.dart';
 import 'session_config.dart';
@@ -66,6 +67,7 @@ export 'humiliation_gates.dart' show HumiliationGates;
 export 'mode_continuity_state.dart' show ModeContinuityState;
 export 'mode_picker.dart' show ModePicker;
 export 'position_pickers.dart' show PositionPickers;
+export 'punishment_builder.dart' show PunishmentBuilder;
 export 'mode_rules.dart'
     show
         BreathRecoveryCtx,
@@ -99,7 +101,6 @@ export 'stamina_model.dart' show StaminaModel;
 export 'step_draft.dart' show StepDraft;
 export 'step_type.dart' show StepType;
 
-part 'career_session_generator_punishment.dart';
 part 'career_session_generator_milestone_scheduler.dart';
 
 /// ─── Audit `SessionMode.*` literal résiduels (B.PR11, MAJ C.PR7) ──
@@ -2253,10 +2254,20 @@ class CareerSessionGenerator {
     );
 
     // Palette + sélection + matérialisation déléguées à
-    // `_PunishmentBuilder` (cf. `career_session_generator_punishment.dart`).
-    // Le state d'instance a été (re)posé en haut de cette méthode — le
-    // builder lit gen._xxx directement.
-    return _PunishmentBuilder.buildFor(this, bank, includeHand);
+    // `PunishmentBuilder` (cf. `punishment_builder.dart`). Les
+    // dépendances d'instance (`isUnlocked`, `clampToCapability`,
+    // `pickPhraseForDraft`) sont threadées par callbacks au
+    // constructeur ; l'état du générateur a été (re)posé en haut de
+    // cette méthode pour que ces callbacks lisent des invariants
+    // cohérents.
+    return PunishmentBuilder(
+      humilCap: _config.humiliationCareer + _config.humiliationSession,
+      includeHand: includeHand,
+      bank: bank,
+      isUnlocked: _isUnlocked,
+      clampToCapability: _clampToCapability,
+      pickPhraseForDraft: _pickPhraseForDraft,
+    ).build();
   }
 
   /// Applique `BpmPacing.diversifyBpm` au draft si pertinent (modes avec
