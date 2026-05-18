@@ -15,6 +15,9 @@ class BiffleRules extends ModeRules {
   StepType classify(Position? to) => StepType.libreMain;
 
   @override
+  bool get isRhythmic => true;
+
+  @override
   double delta(StepDraft draft, double progress, CareerLevel cfg) {
     final dur = draft.duration ?? 0;
     final bpm = (draft.bpm ?? 80).toDouble();

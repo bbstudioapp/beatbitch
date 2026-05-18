@@ -38,6 +38,9 @@ class RhythmRules extends ModeRules {
   StepType classify(Position? to) => StepType.bouche;
 
   @override
+  bool get isRhythmic => true;
+
+  @override
   UnlockKey? unlockKeyFor(StepDraft draft) {
     // Rhythm n'a pas de variante balls valide (les modes-incompatibles
     // balls sont filtrés en amont par `HumiliationGates.isUnlocked`).

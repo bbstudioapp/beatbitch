@@ -2125,12 +2125,16 @@ class CareerSessionGenerator {
   ///   * `_state.recordContinuity(type)` : `lastType` / `stepsInLastType`
   ///     / `stepsOutsideBouche`.
   ///   * `_patternBuffer.record(...)` : buffer roulant des 3 derniers
-  ///     rythmés (filtre interne sur mode).
+  ///     rythmés. Filtré ici par `ModeRules.isRhythmic` (cf. C.PR1) ;
+  ///     le buffer est mode-agnostic en aval.
   void _trackPushedStep(SessionMode mode, Position? to,
       {Position? from, int? bpm, int? duration}) {
     _rhythmChain.onStepPushed(mode, duration);
-    _state.recordContinuity(_rules[mode]!.classify(to));
-    _patternBuffer.record(mode, from: from, to: to, bpm: bpm);
+    final rule = _rules[mode]!;
+    _state.recordContinuity(rule.classify(to));
+    if (rule.isRhythmic) {
+      _patternBuffer.record(mode, from: from, to: to, bpm: bpm);
+    }
   }
 
   // ─── Position pickers (adapteurs vers `PositionPickers`) ────────────────

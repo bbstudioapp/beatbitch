@@ -15,6 +15,9 @@ class HandRules extends ModeRules {
   @override
   StepType classify(Position? to) => StepType.libreMain;
 
+  @override
+  bool get isRhythmic => true;
+
   /// Hand final → chime `easy` : la finition à la main reste douce, on
   /// ne dramatise pas avec un chime de gorge.
   @override

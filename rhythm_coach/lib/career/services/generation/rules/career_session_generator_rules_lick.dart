@@ -18,6 +18,9 @@ class LickRules extends ModeRules {
   StepType classify(Position? to) => StepType.langue;
 
   @override
+  bool get isRhythmic => true;
+
+  @override
   double delta(StepDraft draft, double progress, CareerLevel cfg) {
     final dur = draft.duration ?? 0;
     final bpm = draft.bpm ?? 60;
