@@ -1,30 +1,46 @@
-// Fichier part de `career_session_generator.dart`. Depuis A.PR2, ne porte
-// plus que `GenFacade` — implémentation unique de `GenFacadeSurface`
-// (interface dans `mode_rules.dart`, library autonome). Tout le reste
-// (contrat `ModeRules`, value objects de contexte, helpers, default
-// registry) a déménagé.
+// Library autonome — `GenFacade`, implémentation unique de
+// `GenFacadeSurface` (interface dans `mode_rules.dart`).
+//
+// Surface du générateur exposée aux `ModeRules`. C'est strictement tout
+// ce qu'une rule a le droit de consommer — ajouter une méthode ou un
+// getter ici est un acte explicite (« j'élargis l'API que les modes
+// peuvent voir »).
+//
+// Composition explicite : la facade ne détient pas de référence au
+// générateur. Elle reçoit en constructeur les collaborateurs dont les
+// rules ont besoin — state stable (`config`, `state`, `rng`,
+// `rhythmChain`) et sous-systèmes (`PositionPickers`). Les méthodes
+// `BpmPacing` consommées passent par le `config` field. Le générateur
+// recrée la facade à chaque `generate()` / `generatePunishment()`,
+// après que ses sous-systèmes sont posés.
+//
+// Sortie du `part of 'career_session_generator.dart'` historique
+// (aboutissement de la phase A, A.PR7 du plan de refacto). Le
+// constructeur a perdu son `_` privé : la classe vit désormais dans sa
+// propre library, donc « privé à la library » suffit à préserver
+// l'intention (les rules n'importent pas `gen_facade.dart`, elles
+// reçoivent un `ctx.gen` typé via `GenFacadeSurface`).
+//
+// `career_session_generator.dart` re-exporte `GenFacade` pour préserver
+// la rétrocompat des call sites externes (tests, scénarios JSON, etc.).
 
-part of 'career_session_generator.dart';
+import 'dart:math';
 
-/// Surface du générateur exposée aux `ModeRules`. C'est strictement tout
-/// ce qu'une rule a le droit de consommer — ajouter une méthode ou un
-/// getter ici est un acte explicite (« j'élargis l'API que les modes
-/// peuvent voir »).
-///
-/// Composition explicite : la facade ne détient pas de référence au
-/// générateur. Elle reçoit en constructeur les collaborateurs dont les
-/// rules ont besoin — state stable (`config`, `state`, `rng`,
-/// `rhythmChain`) et sous-systèmes (`PositionPickers`). Les méthodes
-/// `BpmPacing` consommées passent par le `config` field. Le générateur
-/// recrée la facade à chaque `generate()` / `generatePunishment()`,
-/// après que ses sous-systèmes sont posés.
-///
-/// `implements GenFacadeSurface` (cf. `mode_rules.dart`) : les rules
-/// reçoivent un `ctx.gen` typé via l'interface — `GenFacade` reste la
-/// seule implémentation concrète, mais aucune rule ne référence cette
-/// classe directement.
+import '../../../models/session_step.dart';
+import 'bpm_pacing.dart';
+import 'mode_rules.dart';
+import 'position_pickers.dart';
+import 'rhythm_chain_tracker.dart';
+import 'session_config.dart';
+import 'session_runtime_state.dart';
+import 'step_draft.dart';
+
+/// Implémentation unique de [GenFacadeSurface] (cf. `mode_rules.dart`) :
+/// les rules reçoivent un `ctx.gen` typé via l'interface — `GenFacade`
+/// reste la seule implémentation concrète, mais aucune rule ne référence
+/// cette classe directement.
 class GenFacade implements GenFacadeSurface {
-  GenFacade._({
+  GenFacade({
     required this.config,
     required this.state,
     required this.rng,
