@@ -1,4 +1,4 @@
-// Fichier part de `career_session_generator.dart` — modèle d'endurance pure.
+// Library autonome — modèle d'endurance pure.
 //
 // Regroupe les fonctions sans état d'instance qui calculent comment chaque
 // step consomme ou régénère l'endurance (`stamina` 0..100). Tirées hors du
@@ -9,14 +9,21 @@
 //    de leurs arguments. Pas de bénéfice à les laisser sur l'instance, et
 //    de futurs tests unitaires dédiés sont triviaux à écrire.
 //
-// Restent côté instance dans le fichier principal :
-//   * `_config.pts` / `_config.scaleDuration` — tissent `_config.spec` à travers la pondération
-//     des modes, lectures éparpillées dans tout le générateur.
+// Sortie du `part of 'career_session_generator.dart'` historique en D.PR2
+// du plan de refacto. La library est consommée par les rules concrètes
+// (qui importent déjà `career_session_generator.dart` et y trouvent
+// `StaminaModel` via re-export) et par le générateur lui-même.
 
-part of 'career_session_generator.dart';
+import 'dart:math';
+
+import '../../../models/session.dart';
+import '../../../models/session_step.dart';
+import '../../models/career_level.dart';
+import 'mode_rules.dart';
+import 'step_draft.dart';
 
 /// Modèle d'endurance procédural : delta par mode/profondeur/BPM/durée,
-/// plafond [max], helpers de remplissage de profil.
+/// plafond [cap], helpers de remplissage de profil.
 ///
 /// Toutes les méthodes sont statiques et pures. Le test unitaire de
 /// référence vit dans `test/career_stamina_model_test.dart`.
