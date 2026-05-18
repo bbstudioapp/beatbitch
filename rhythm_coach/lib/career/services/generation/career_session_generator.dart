@@ -489,13 +489,11 @@ class CareerSessionGenerator {
     final profile =
         List<double>.filled(effectiveDuration + 60, StaminaModel.cap);
 
-    var time = 0;
-    var stamina = StaminaModel.cap;
-
-    // DTO partagé par les helpers de phase. Construit une fois ici et passé
-    // à chacun pour éviter de répéter les ~10 args (cfg/bank/effectiveDuration/
-    // level/...) à chaque appel. Le curseur `(time, stamina)` reste hors-ctx
-    // et threadé via record return values.
+    // Ctx partagé par tous les helpers de phase : DTO des paramètres
+    // figés + curseur courant (`time`, `stamina`, `progress` getter)
+    // muté par chaque step émis. Les `_emit*` / `_pushMilestoneSequence`
+    // / scheduler.tryInsertAt mute en place — plus de threading
+    // `(time, stamina)` en cascade. Cf. D.PR7-2.
     final ctx = GenerationContext(
       steps: steps,
       profile: profile,
@@ -544,11 +542,7 @@ class CareerSessionGenerator {
     // Si la milestone remplace l'intro, on l'insère ici à t=0 et c'est
     // son premier step qui tient le rôle de step #0 non text-only.
     if (milestoneScheduler.replacesIntro) {
-      ctx.time = time;
-      ctx.stamina = stamina;
       milestoneScheduler.insertIntroReplacement(ctx);
-      time = ctx.time;
-      stamina = ctx.stamina;
     } else {
       final first = _clampToCapability(_firstStep(
         quickie: quickie,
@@ -578,12 +572,13 @@ class CareerSessionGenerator {
       _state.lastBpm = first.bpm ?? _state.lastBpm;
       _trackPushedStep(first.mode, first.to,
           from: first.from, bpm: first.bpm, duration: first.duration);
-      final staminaBefore = stamina;
-      stamina = StaminaModel.apply(stamina, first, 0.0, cfg, rules: _rules);
-      StaminaModel.fillProfile(profile, 0, first.duration ?? 1, stamina,
+      final staminaBefore = ctx.stamina;
+      ctx.stamina =
+          StaminaModel.apply(ctx.stamina, first, 0.0, cfg, rules: _rules);
+      StaminaModel.fillProfile(profile, 0, first.duration ?? 1, ctx.stamina,
           valueStart: staminaBefore);
       _advanceSalivaSim(first);
-      time += first.duration ?? 1;
+      ctx.time += first.duration ?? 1;
     }
 
     // Pour les bas niveaux on réserve un créneau supplémentaire avant le
@@ -594,12 +589,6 @@ class CareerSessionGenerator {
     //
     // `isLowLevel`, `useFinalMilestone`, `finalBudget`, `genUntil` désormais
     // pré-calculés en tête de [generate] (cf. construction de `ctx` plus haut).
-    // Sync ctx avec les compteurs locaux avant d'entrer dans la boucle.
-    // Les 4 helpers (`tryInsertAt`, `_tryEmitMiniWaveCycle`,
-    // `_tryEmitSwallowOrder`, `_emitMainStepCycle`) lisent/mutent
-    // directement `ctx.time` et `ctx.stamina`.
-    ctx.time = time;
-    ctx.stamina = stamina;
     while (ctx.time < genUntil) {
       // Phase 1 — Insertion milestone : on traite les pending dans
       // l'ordre, dès que `time` atteint la target (`>= targetTime`),
@@ -630,18 +619,13 @@ class CareerSessionGenerator {
     // pour qu'elles soient jouées avant le finisher. Cas rare mais on ne
     // veut pas perdre une milestone silencieusement.
     milestoneScheduler.insertAllRemaining(ctx);
-    // Recopie le curseur muté vers les locales — utilisé par la phase
-    // finish ci-dessous (qui thread encore time/stamina jusqu'au
-    // step 5 de D.PR7-2).
-    time = ctx.time;
-    stamina = ctx.stamina;
 
     // À partir d'ici on entre dans la fenêtre **finish** (pré-finisher +
     // boosts + final + son d'orgasme). Les commentaires aléatoires sont
     // coupés sur cette fenêtre par le contrôleur, pour ne pas qu'une
     // phrase random vienne se chevaucher avec la dramaturgie scriptée
     // (boost « continue je viens », chime, annonce milestone, etc.).
-    final silentFinishStartTime = time;
+    final silentFinishStartTime = ctx.time;
 
     // Cas milestone-final : la séquence imposée remplace l'ensemble
     // pré-finisher + boosts + step finisher. Pas d'amorce générée — la
@@ -649,12 +633,8 @@ class CareerSessionGenerator {
     // session juste après la séquence (+ congrats text-only) pour laisser
     // `_finish` enchaîner sur la phrase finale + finale_chime.
     if (useFinalMilestone) {
-      final finalMilestoneStartTime = time;
-      ctx.time = time;
-      ctx.stamina = stamina;
+      final finalMilestoneStartTime = ctx.time;
       _pushMilestoneSequence(ctx, milestone: finalMilestone);
-      time = ctx.time;
-      stamina = ctx.stamina;
 
       // Catégorise le final pour piocher le bon `finale_chime` côté
       // BeepEngine. Basé sur le dernier step de config de la séquence
@@ -682,14 +662,12 @@ class CareerSessionGenerator {
       final finalStepStartTime = finalMilestoneStartTime + lastConfigStep.time;
 
       steps.add(SessionStep(
-        time: time,
+        time: ctx.time,
         text: bank.pickCongrats(_rng),
       ));
 
       return _assembleResult(
         ctx,
-        time: time,
-        stamina: stamina,
         milestoneStartTime: milestoneScheduler.bodyStartTime,
         milestoneDurationSeconds: milestoneScheduler.bodyDurationSeconds,
         secondMilestoneStartTime: milestoneScheduler.secondBodyStartTime,
@@ -715,12 +693,6 @@ class CareerSessionGenerator {
     // on skip le pré-finisher (les boosts substitueront le sprint via
     // leur propre fallback de mode). Symétrie avec le guard de
     // `_shouldEmitMiniWave`.
-    // Sync ctx avec les compteurs locaux avant la phase finish — les
-    // helpers `_emitPreFinisher` / `_emitBoosts` / `_emitFinalStep` /
-    // `_emitPostFinal` lisent/mutent désormais directement
-    // `ctx.time` / `ctx.stamina`.
-    ctx.time = time;
-    ctx.stamina = stamina;
     final preFinisherMode =
         _resolveModeForRole(ModeSemanticRole.preFinisherCore);
     if (isLowLevel && !_config.isModeForbidden(preFinisherMode)) {
@@ -775,16 +747,9 @@ class CareerSessionGenerator {
     final finalStepStartTime = finalResult.finalStepStartTime;
 
     _emitPostFinal(ctx, finalMode: finalMode);
-    // Recopie le curseur muté vers les locales pour le passage à
-    // `_assembleResult` (qui prend encore time/stamina en param,
-    // sera nettoyé en step 6).
-    time = ctx.time;
-    stamina = ctx.stamina;
 
     return _assembleResult(
       ctx,
-      time: time,
-      stamina: stamina,
       milestoneStartTime: milestoneScheduler.bodyStartTime,
       milestoneDurationSeconds: milestoneScheduler.bodyDurationSeconds,
       secondMilestoneStartTime: milestoneScheduler.secondBodyStartTime,
@@ -1741,8 +1706,6 @@ class CareerSessionGenerator {
   /// standard (boosts + final + post-final).
   CareerGenerationResult _assembleResult(
     GenerationContext ctx, {
-    required int time,
-    required double stamina,
     required int? milestoneStartTime,
     required int? milestoneDurationSeconds,
     required int? secondMilestoneStartTime,
@@ -1754,10 +1717,10 @@ class CareerSessionGenerator {
     int? finalMilestoneStartTime,
     int? finalMilestoneDurationSeconds,
   }) {
-    final finalDuration = time + 2;
+    final finalDuration = ctx.time + 2;
     final trimmedProfile = List<double>.generate(
       finalDuration,
-      (i) => i < ctx.profile.length ? ctx.profile[i] : stamina,
+      (i) => i < ctx.profile.length ? ctx.profile[i] : ctx.stamina,
     );
     return CareerGenerationResult(
       session: Session(
