@@ -119,6 +119,46 @@ part 'career_session_generator_milestone_scheduler.dart';
 /// un cycle d'import : la const map référence les 9 implémentations
 /// concrètes qui dépendent de `career_session_generator.dart` via le
 /// re-export de `ModeRules` / `DraftCtx` / etc.
+///
+/// ─── Audit `SessionMode.*` literal résiduels (B.PR11) ──────────────
+/// Après la phase B du plan de refacto (`~/beatbitch_refacto_career_gen.md`),
+/// les `SessionMode.X` qui subsistent dans ce fichier sont les suivants
+/// et tous documentés en place :
+///
+/// 1. **Clés du registry ci-dessous (lignes 134-142)** — famille F :
+///    inhérent au pattern « map d'enum vers handler ». Chaque clé est
+///    l'identité technique du mode, pas un choix dramaturgique — ne peut
+///    pas être abstrait via un rôle sémantique.
+///
+/// 2. **`Session(defaultMode: SessionMode.rhythm)` côté `_assembleResult`** —
+///    famille E : champ de signature du modèle `Session` utilisé pour les
+///    sessions JSON-driven (où un step peut omettre `mode` et hériter de
+///    `Session.mode`). Pour les sessions carrière, **chaque step porte
+///    son mode explicitement** → ce defaultMode est inert. La valeur
+///    `rhythm` est conventionnelle ; n'importe quel mode aurait le même
+///    effet (= aucun).
+///
+/// 3. **`SessionMode.lick` fallback dans `_buildRecoveryStep`** —
+///    famille D : anchor sémantique « mode bouche le plus doux comme
+///    dernier recours » quand le filtrage Custom a vidé les candidates
+///    ou quand le draft tiré échoue le gating unlock. Cas marginal en
+///    pratique (le garde-fou de l'éditeur Custom assure qu'au moins un
+///    mode bouche reste actif). Un rôle dédié `recoveryDegradeFallback`
+///    pourrait être introduit, mais l'overhead d'un rôle pour un literal
+///    qui ne fire quasi jamais n'est pas justifié.
+///
+/// Les rôles sémantiques (cf. [ModeSemanticRole]) couvrent toutes les
+/// autres références mode-aware : sas breath, ordre swallow, burst
+/// humiliant/neutre/fallback, mini-vague, pré-finisher, holdPosition,
+/// post-wave breath. Cf. `_resolveModeForRole` côté générateur.
+///
+/// Les literals dans les **part files** (`_punishment.dart` palette de
+/// compos, `_mode_picker.dart` switch exhaustifs, `_difficulty_dispatch.dart`
+/// candidats par tranche de difficulté, `_rhythmic_pattern_buffer.dart`
+/// filtre des modes rythmiques) sont également légitimes : ce sont soit
+/// du contenu (palette punition), soit des switches exhaustifs sur
+/// l'enum, soit des dispatchers de candidats — pas des choix
+/// dramaturgiques portables sur un rôle.
 const Map<SessionMode, ModeRules> defaultModeRulesRegistry = {
   SessionMode.rhythm: RhythmRules(),
   SessionMode.lick: LickRules(),
@@ -1809,6 +1849,11 @@ class CareerSessionGenerator {
             : (ctx.sessionName ?? 'Carrière niveau ${_config.level}'),
         description: 'Session générée — ${ctx.effectiveDuration} s',
         durationSeconds: finalDuration,
+        // `Session.defaultMode` est le fallback pour les sessions
+        // JSON-driven (où un step peut omettre `mode` et hériter de la
+        // session). Pour la carrière, chaque step a son mode explicite
+        // → ce champ est **inert**. La valeur `rhythm` est
+        // conventionnelle. Cf. audit B.PR11 sur `defaultModeRulesRegistry`.
         defaultMode: SessionMode.rhythm,
         steps: ctx.steps,
         milestoneId:
@@ -2010,6 +2055,9 @@ class CareerSessionGenerator {
     // retombe sur lick (le garde-fou de l'éditeur Custom assure que lick
     // OU rhythm OU hold est resté ≥ rare — si lick lui-même est exclu, le
     // mode bouche restant reprend la main au step suivant via mapDifficulty).
+    // Le literal `SessionMode.lick` est conservé ici comme anchor
+    // sémantique « mode bouche le plus doux comme dernier recours » ;
+    // cas marginal en pratique. Cf. audit B.PR11 sur `defaultModeRulesRegistry`.
     candidates.removeWhere(_config.isModeForbidden);
     if (candidates.isEmpty) candidates.add(SessionMode.lick);
     final pool = _filterRepeated(candidates);
@@ -2025,7 +2073,9 @@ class CareerSessionGenerator {
     // Gating unlock : si le mode/draft tiré n'est pas encore débloqué (ex :
     // biffle avant niveau 5, beg libre avant niveau 3, freestyle avant
     // niveau 4), on dégrade. Évite que la phase de récup laisse passer une
-    // action contractuellement réservée à plus tard.
+    // action contractuellement réservée à plus tard. Même anchor que
+    // ci-dessus : lick tip→head reste le « mode bouche le plus doux »
+    // qui sert de dégrade universel. Cf. audit B.PR11.
     if (!_isUnlocked(draft)) {
       return StepDraft(
         mode: SessionMode.lick,
