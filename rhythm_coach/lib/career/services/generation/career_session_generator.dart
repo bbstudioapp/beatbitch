@@ -85,6 +85,7 @@ export 'mode_rules.dart'
         PostFinalVariant,
         RecoveryAvailability,
         RecoveryCtx,
+        SwallowCtx,
         clampHeldDuration,
         tryDescendFrom,
         tryDescendToWithGuard;
@@ -932,8 +933,13 @@ class CareerSessionGenerator {
   }) {
     final swallowDraft = _maybeBuildSwallowOrder(time, ctx.genUntil);
     if (swallowDraft == null) return null;
+    // Le mode du draft est celui que la rule a choisi (= mode porteur du
+    // rôle swallowOrder). On le réutilise pour le pickPhrase fallback,
+    // le tracking de continuité et le pushed-step accounting — pas de
+    // recours au literal `SessionMode.beg`.
+    final swallowMode = swallowDraft.mode;
     final swallowText = ctx.bank.pickSwallowOrder(_rng) ??
-        _pickPhrase(ctx.bank, SessionMode.beg, 'hard');
+        _pickPhrase(ctx.bank, swallowMode, 'hard');
     ctx.steps.add(_draftToStep(swallowDraft, time: time, text: swallowText));
     final staminaBefore = stamina;
     stamina = StaminaModel.apply(
@@ -945,8 +951,8 @@ class CareerSessionGenerator {
     _state.salivaSim.forceSwallow();
     StaminaModel.fillProfile(ctx.profile, time, swallowDraft.duration!, stamina,
         valueStart: staminaBefore);
-    _state.recordLastTransit(SessionMode.beg, swallowText);
-    _trackPushedStep(SessionMode.beg, null, duration: swallowDraft.duration);
+    _state.recordLastTransit(swallowMode, swallowText);
+    _trackPushedStep(swallowMode, null, duration: swallowDraft.duration);
     time += swallowDraft.duration!;
     _state.lastSwallowOrderAt = time;
     return (time: time, stamina: stamina);
@@ -1322,14 +1328,11 @@ class CareerSessionGenerator {
     if (time - _state.lastSwallowOrderAt < 90) return null;
     if (genUntil - time < 60) return null;
     if (!_state.unlockedKeys.contains(UnlockKey.begLibre)) return null;
-    final dur = 5 + _rng.nextInt(3); // [5, 7]
-    return StepDraft(
-      mode: SessionMode.beg,
-      bpm: null,
-      from: null,
-      to: null,
-      duration: dur,
-    );
+    // Construction du draft déléguée au mode qui porte le rôle
+    // `swallowOrder` (cf. B.PR6). La rule décide de la durée (5-7 s) et
+    // de la forme du draft (mode `beg`, sans BPM, sans position).
+    final swallowMode = _resolveModeForRole(ModeSemanticRole.swallowOrder);
+    return _rules[swallowMode]!.buildSwallowOrder(SwallowCtx(rng: _rng));
   }
 
   /// Adaptateur d'instance pour `FinalPicker.buildPostFinalDraft`. Injecte

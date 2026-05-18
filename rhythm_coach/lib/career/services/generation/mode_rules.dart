@@ -297,6 +297,23 @@ class MiniWaveCtx {
   final bool hasThroat;
 }
 
+/// Contexte d'assemblage d'un step **swallow_order** passé à
+/// `ModeRules.buildSwallowOrder`. La rule retourne un draft court qui
+/// matérialise l'ordre coach « avale tout » quand la sim salive sature
+/// (cf. `_maybeBuildSwallowOrder` côté générateur).
+///
+/// Le seul paramètre est la rng — la rule décide elle-même de la durée
+/// pour préserver la sémantique « beg libre court 5-7 s » sans
+/// hardcoder la fenêtre dans l'orchestrateur. Le check `begLibre` et
+/// les conditions d'éligibilité (sim ≥ 80, cooldown, marge finish) sont
+/// pré-filtrés par le générateur en amont — la rule peut compter sur
+/// le fait qu'on est dans une fenêtre dramaturgique valide.
+class SwallowCtx {
+  const SwallowCtx({required this.rng});
+
+  final Random rng;
+}
+
 /// Rôles sémantiques d'un mode au sein du générateur. Chaque rôle
 /// désigne une **fonction dramaturgique** (sas breath, ordre
 /// d'avalement, boost humiliant, etc.) — pas une identité technique.
@@ -381,6 +398,18 @@ abstract class ModeRules {
   /// pas trigger `_patternBuffer.wouldBeFlat`). Le filtrage humil +
   /// clamp capacité + dédoublonnage post-cascade restent côté générateur.
   List<StepDraft>? buildMiniWaveSegment(MiniWaveCtx ctx) => null;
+
+  /// Construit un step **swallow_order** (cf. `_maybeBuildSwallowOrder`
+  /// côté générateur). Default `null` — opt-in : seul le mode qui joue
+  /// le rôle [ModeSemanticRole.swallowOrder] doit override (consulté via
+  /// `_resolveModeForRole(swallowOrder)`).
+  ///
+  /// La rule décide elle-même de la durée (typiquement courte, 5-7 s)
+  /// pour préserver la sémantique « ordre coach » sans hardcoder la
+  /// fenêtre dans l'orchestrateur. Les conditions d'éligibilité
+  /// (sim salive saturée, cooldown, marge finish, begLibre débloqué)
+  /// sont déjà pré-filtrées en amont — la rule n'a pas à les revérifier.
+  StepDraft? buildSwallowOrder(SwallowCtx ctx) => null;
 
   /// Coût (négatif) ou regen (positif) d'endurance pour le step.
   double delta(StepDraft draft, double progress, CareerLevel cfg);

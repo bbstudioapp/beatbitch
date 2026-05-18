@@ -17,6 +17,24 @@ class BegRules extends ModeRules {
   @override
   Set<ModeSemanticRole> get roles => const {ModeSemanticRole.swallowOrder};
 
+  /// Step swallow_order : beg libre court 5-7 s. Pas de position tenue,
+  /// pas de BPM — c'est une mini-pause vocale qui matérialise l'ordre
+  /// coach « avale tout » quand la sim salive sature. Le filtre
+  /// d'éligibilité (sim ≥ 80, cooldown, marge finish, begLibre débloqué)
+  /// est appliqué côté générateur — la rule peut donc retourner sans
+  /// re-vérifier.
+  @override
+  StepDraft? buildSwallowOrder(SwallowCtx ctx) {
+    final dur = 5 + ctx.rng.nextInt(3); // [5, 7]
+    return StepDraft(
+      mode: SessionMode.beg,
+      bpm: null,
+      from: null,
+      to: null,
+      duration: dur,
+    );
+  }
+
   /// Beg avec `to` tenu = la bouche reste sur la verge pendant la
   /// supplique → `bouche`. Beg libre (`to == null`) = supplique purement
   /// vocale, bouche libre → `libreMain`. Seul mode dont la classification
