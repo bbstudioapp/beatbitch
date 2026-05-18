@@ -49,6 +49,7 @@ import 'rules/career_session_generator_rules_suckle.dart';
 import 'bpm_pacing.dart';
 import 'capability_clamps.dart';
 import 'final_picker.dart';
+import 'gen_facade.dart';
 import 'humiliation_gates.dart';
 import 'mode_continuity_state.dart';
 import 'mode_rules.dart';
@@ -66,6 +67,7 @@ export 'bpm_pacing.dart' show BpmPacing;
 export 'capability_clamp_surface.dart' show CapabilityClampSurface;
 export 'capability_clamps.dart' show CapabilityClamps;
 export 'final_picker.dart' show FinalPicker;
+export 'gen_facade.dart' show GenFacade;
 export 'humiliation_gates.dart' show HumiliationGates;
 export 'mode_continuity_state.dart' show ModeContinuityState;
 export 'position_pickers.dart' show PositionPickers;
@@ -91,7 +93,6 @@ export 'step_draft.dart' show StepDraft;
 export 'step_type.dart' show StepType;
 
 part 'career_session_generator_stamina.dart';
-part 'career_session_generator_mode_rules.dart';
 part 'career_session_generator_mode_picker.dart';
 part 'career_session_generator_difficulty_dispatch.dart';
 part 'career_session_generator_punishment.dart';
@@ -369,7 +370,7 @@ class CareerSessionGenerator {
       rng: _rng,
       rules: _rules,
     );
-    _facade = GenFacade._(
+    _facade = GenFacade(
       config: _config,
       state: _state,
       rng: _rng,
@@ -2183,7 +2184,7 @@ class CareerSessionGenerator {
       rng: _rng,
       rules: _rules,
     );
-    _facade = GenFacade._(
+    _facade = GenFacade(
       config: _config,
       state: _state,
       rng: _rng,
