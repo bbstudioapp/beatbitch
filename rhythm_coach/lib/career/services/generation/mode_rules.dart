@@ -477,6 +477,15 @@ enum ModeSemanticRole {
   /// quand `_config.isModeForbidden(rhythm)` — crash-prevention pour les
   /// configs Custom corrompues. Cf. C.PR3.
   mainLoopFallback,
+
+  /// Mode « bouche le plus doux » retenu comme dégrade universel dans
+  /// `_buildRecoveryStep` : (a) quand `_config.isModeForbidden` a vidé
+  /// les candidates de récup, on retombe sur ce mode ; (b) quand le
+  /// draft tiré échoue le gating unlock, on retourne un step
+  /// `tip → head` sur ce mode. Cas marginal en pratique (le garde-fou
+  /// de l'éditeur Custom assure qu'au moins un mode bouche reste
+  /// actif). Cf. C.PR5. Lick historique.
+  recoveryDegradeFallback,
 }
 
 /// Snapshot des conditions d'éligibilité d'un mode à la boucle main du

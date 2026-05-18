@@ -121,10 +121,11 @@ part 'career_session_generator_milestone_scheduler.dart';
 /// concrètes qui dépendent de `career_session_generator.dart` via le
 /// re-export de `ModeRules` / `DraftCtx` / etc.
 ///
-/// ─── Audit `SessionMode.*` literal résiduels (B.PR11) ──────────────
-/// Après la phase B du plan de refacto (`~/beatbitch_refacto_career_gen.md`),
-/// les `SessionMode.X` qui subsistent dans ce fichier sont les suivants
-/// et tous documentés en place :
+/// ─── Audit `SessionMode.*` literal résiduels (B.PR11, MAJ C.PR5) ──
+/// Après les phases B + C (en cours) du plan de refacto
+/// (`~/beatbitch_refacto_career_gen.md`), les `SessionMode.X` qui
+/// subsistent dans ce fichier sont les suivants et tous documentés
+/// en place :
 ///
 /// 1. **Clés du registry ci-dessous (lignes 134-142)** — famille F :
 ///    inhérent au pattern « map d'enum vers handler ». Chaque clé est
@@ -137,16 +138,11 @@ part 'career_session_generator_milestone_scheduler.dart';
 ///    `Session.mode`). Pour les sessions carrière, **chaque step porte
 ///    son mode explicitement** → ce defaultMode est inert. La valeur
 ///    `rhythm` est conventionnelle ; n'importe quel mode aurait le même
-///    effet (= aucun).
+///    effet (= aucun). Migration prévue en C.PR6.
 ///
-/// 3. **`SessionMode.lick` fallback dans `_buildRecoveryStep`** —
-///    famille D : anchor sémantique « mode bouche le plus doux comme
-///    dernier recours » quand le filtrage Custom a vidé les candidates
-///    ou quand le draft tiré échoue le gating unlock. Cas marginal en
-///    pratique (le garde-fou de l'éditeur Custom assure qu'au moins un
-///    mode bouche reste actif). Un rôle dédié `recoveryDegradeFallback`
-///    pourrait être introduit, mais l'overhead d'un rôle pour un literal
-///    qui ne fire quasi jamais n'est pas justifié.
+/// Le fallback `SessionMode.lick` historique de `_buildRecoveryStep`
+/// (famille D) est passé sur `_resolveModeForRole(recoveryDegradeFallback)`
+/// en C.PR5.
 ///
 /// Les rôles sémantiques (cf. [ModeSemanticRole]) couvrent toutes les
 /// autres références mode-aware : sas breath, ordre swallow, burst
@@ -2053,14 +2049,15 @@ class CareerSessionGenerator {
     ];
     // Exclusions Custom (dose `none`) : la recovery ne doit pas ramener un
     // mode que la joueuse a explicitement banni. Si tout est exclu, on
-    // retombe sur lick (le garde-fou de l'éditeur Custom assure que lick
-    // OU rhythm OU hold est resté ≥ rare — si lick lui-même est exclu, le
-    // mode bouche restant reprend la main au step suivant via mapDifficulty).
-    // Le literal `SessionMode.lick` est conservé ici comme anchor
-    // sémantique « mode bouche le plus doux comme dernier recours » ;
-    // cas marginal en pratique. Cf. audit B.PR11 sur `defaultModeRulesRegistry`.
+    // retombe sur le mode `recoveryDegradeFallback` (lick historique) — le
+    // garde-fou de l'éditeur Custom assure que lick OU rhythm OU hold est
+    // resté ≥ rare ; si le mode fallback lui-même est exclu, le mode
+    // bouche restant reprendra la main au step suivant via mapDifficulty.
+    // Cf. C.PR5.
     candidates.removeWhere(_config.isModeForbidden);
-    if (candidates.isEmpty) candidates.add(SessionMode.lick);
+    final degradeFallbackMode =
+        _resolveModeForRole(ModeSemanticRole.recoveryDegradeFallback);
+    if (candidates.isEmpty) candidates.add(degradeFallbackMode);
     final pool = _filterRepeated(candidates);
     // Tirage pondéré pour que la friction de continuité par type s'applique
     // aussi à la recovery (sans ça, une recovery uniforme repousse souvent
@@ -2074,12 +2071,13 @@ class CareerSessionGenerator {
     // Gating unlock : si le mode/draft tiré n'est pas encore débloqué (ex :
     // biffle avant niveau 5, beg libre avant niveau 3, freestyle avant
     // niveau 4), on dégrade. Évite que la phase de récup laisse passer une
-    // action contractuellement réservée à plus tard. Même anchor que
-    // ci-dessus : lick tip→head reste le « mode bouche le plus doux »
-    // qui sert de dégrade universel. Cf. audit B.PR11.
+    // action contractuellement réservée à plus tard. `tip → head` sur le
+    // mode `recoveryDegradeFallback` reste le « mode bouche le plus doux »
+    // — dramaturgie hardcodée (positions imposées), seul le mode est
+    // mappable via le rôle. Cf. C.PR5.
     if (!_isUnlocked(draft)) {
       return StepDraft(
-        mode: SessionMode.lick,
+        mode: degradeFallbackMode,
         bpm: bpm,
         from: Position.tip,
         to: Position.head,
