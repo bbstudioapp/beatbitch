@@ -1,13 +1,13 @@
-// Fichier part de `career_session_generator.dart` — palette du final
-// d'apothéose + step post-final (aftercare).
+// Library autonome — palette du final d'apothéose + step post-final
+// (aftercare).
 //
-// `_pickFinal` choisit l'**action longue tenue** qui clôture la séance :
+// `pickFinal` choisit l'**action longue tenue** qui clôture la séance :
 // tri par humil croissante des candidats valides (filtre humilCap + gate
 // final + unlock du composant + dose Custom), puis on prend le plus
 // humiliant qui passe. Fallback dur sur un hand head→mid 50 BPM si la
 // palette est vide.
 //
-// `_buildPostFinalDraft` choisit le **step post-orgasme** (aftercare ~12s) :
+// `buildPostFinalDraft` choisit le **step post-orgasme** (aftercare ~12s) :
 // mode contrastant avec le final, échelle req croissante, top-3 tiré
 // uniformément. Biais spé sloppy/obeissance pour les niveaux avancés.
 //
@@ -18,8 +18,24 @@
 // part parce qu'il vit côté `_state` (mutable inter-séance via
 // `markCompleted`, capturé en snapshot ici), et `rng` / `capClamps` sont
 // des références non-config injectées par le caller.
+//
+// Sortie du `part of 'career_session_generator.dart'` historique (A.PR6
+// du plan de refacto). `career_session_generator.dart` re-exporte
+// `FinalPicker` pour préserver la rétrocompat des call sites externes
+// (les rules `hold` appellent `FinalPicker.trimHoldFinalDuration` en
+// statique).
 
-part of 'career_session_generator.dart';
+import 'dart:math';
+
+import '../../../models/session.dart';
+import '../../../models/session_step.dart';
+import '../../models/specialization.dart';
+import '../../models/unlock_key.dart';
+import 'capability_clamps.dart';
+import 'humiliation_gates.dart';
+import 'mode_rules.dart';
+import 'session_config.dart';
+import 'step_draft.dart';
 
 /// Picker du final + post-final. Immuable : le générateur en construit un
 /// par appel à `generate()` après que `_capClamps` est posé. Toutes les
