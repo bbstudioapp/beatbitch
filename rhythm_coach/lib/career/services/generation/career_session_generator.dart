@@ -46,6 +46,7 @@ import 'mode_rules.dart';
 import 'mode_rules_registry.dart';
 import 'position_pickers.dart';
 import 'rhythm_chain_tracker.dart';
+import 'rhythmic_pattern_buffer.dart';
 import 'session_config.dart';
 import 'session_runtime_state.dart';
 import 'step_draft.dart';
@@ -88,6 +89,7 @@ export 'mode_rules.dart'
         tryDescendToWithGuard;
 export 'mode_rules_registry.dart' show defaultModeRulesRegistry;
 export 'rhythm_chain_tracker.dart' show RhythmChainTracker;
+export 'rhythmic_pattern_buffer.dart' show RhythmicPatternBuffer;
 export 'session_config.dart' show SessionConfig;
 export 'session_runtime_state.dart' show SessionRuntimeState;
 export 'step_draft.dart' show StepDraft;
@@ -97,7 +99,6 @@ part 'career_session_generator_stamina.dart';
 part 'career_session_generator_mode_picker.dart';
 part 'career_session_generator_difficulty_dispatch.dart';
 part 'career_session_generator_punishment.dart';
-part 'career_session_generator_rhythmic_pattern_buffer.dart';
 part 'career_session_generator_milestone_scheduler.dart';
 
 /// ─── Audit `SessionMode.*` literal résiduels (B.PR11, MAJ C.PR7) ──
@@ -125,7 +126,7 @@ part 'career_session_generator_milestone_scheduler.dart';
 ///
 /// Les literals dans les **part files** (`_punishment.dart` palette de
 /// compos, `_mode_picker.dart` switch exhaustifs sur `StepType`,
-/// `_rhythmic_pattern_buffer.dart` filtre des modes rythmiques) sont
+/// `rhythmic_pattern_buffer.dart` filtre des modes rythmiques) sont
 /// également légitimes : ce sont soit du contenu (palette punition),
 /// soit des switches exhaustifs sur l'enum — pas des choix
 /// dramaturgiques portables sur un rôle.
@@ -191,7 +192,7 @@ class CareerSessionGenerator {
   // `motion_streak` comfort + overload factor projetés). Le pattern buffer
   // reste un objet stable avec son propre `clear()` au début de séance.
   late RhythmChainTracker _rhythmChain;
-  final _RhythmicPatternBuffer _patternBuffer = _RhythmicPatternBuffer();
+  final RhythmicPatternBuffer _patternBuffer = RhythmicPatternBuffer();
 
   /// Surface exposée aux `ModeRules` (cf. `GenFacade`). Recréée à chaque
   /// `generate()` / `generatePunishment()` après que `_positionPickers` et

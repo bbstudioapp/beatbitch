@@ -1,5 +1,5 @@
-// Fichier part de `career_session_generator.dart` — buffer roulant des
-// 3 derniers steps rythmés émis + détecteur de pattern plat.
+// Library autonome — buffer roulant des 3 derniers steps rythmés émis +
+// détecteur de pattern plat.
 //
 // L'oreille perçoit comme « plat » une série de 3 steps consécutifs
 // même mode + même profondeur cible + variance BPM < 10. Le check
@@ -15,16 +15,20 @@
 // de récup au milieu d'une série rythmée ne casse pas la perception du
 // pattern, on veut qu'il continue à compter.
 //
-// Depuis C.PR1 du plan de refacto : le filtre par mode n'est plus dans
-// le buffer. Le caller (`_trackPushedStep`) consulte
-// `_rules[mode]!.isRhythmic` avant d'appeler `record()`. Le buffer
-// devient pur (stocke ce qu'on lui donne, détecte le pattern plat sur
-// le contenu), n'a plus à connaître le registre des modes.
+// Sortie du `part of 'career_session_generator.dart'` historique en
+// D.PR1 du plan de refacto. Le buffer est mode-agnostic depuis C.PR1
+// (le caller `_trackPushedStep` filtre via `ModeRules.isRhythmic`
+// avant `record()`) → aucune dépendance d'instance, l'extraction est
+// triviale.
 
-part of 'career_session_generator.dart';
+import 'dart:math';
+
+import '../../../models/session.dart';
+import '../../../models/session_step.dart';
+import 'step_draft.dart';
 
 /// Snapshot léger d'un step rythmé déjà émis, conservé dans le buffer
-/// roulant de `_RhythmicPatternBuffer`.
+/// roulant de [RhythmicPatternBuffer].
 typedef _RecentEmit = ({
   SessionMode mode,
   Position? from,
@@ -33,15 +37,15 @@ typedef _RecentEmit = ({
 });
 
 /// Buffer roulant des 3 derniers steps rythmés émis + détecteur de
-/// pattern plat. État par-session : `clear()` au début de chaque
+/// pattern plat. État par-session : [clear] au début de chaque
 /// `generate()`. Mode-agnostic depuis C.PR1 : le filtrage par
 /// `ModeRules.isRhythmic` est appliqué par le caller (`_trackPushedStep`)
-/// avant chaque `record()`.
-class _RhythmicPatternBuffer {
-  _RhythmicPatternBuffer();
+/// avant chaque [record].
+class RhythmicPatternBuffer {
+  RhythmicPatternBuffer();
 
   /// Taille du buffer (3 derniers émis). Combinée au draft candidat,
-  /// `wouldBeFlat` raisonne sur une fenêtre de 4 valeurs.
+  /// [wouldBeFlat] raisonne sur une fenêtre de 4 valeurs.
   static const int _windowSize = 3;
 
   /// Variance BPM (en BPM) en dessous de laquelle on considère le
@@ -67,7 +71,7 @@ class _RhythmicPatternBuffer {
   /// Vrai si le draft proposé prolongerait un **pattern plat** : les 3
   /// derniers émis + le draft sont tous (a) du même mode rythmé,
   /// (b) à la même profondeur cible `to`, (c) avec une variance BPM
-  /// < `_flatBpmSpread` sur les 4 valeurs.
+  /// < [_flatBpmSpread] sur les 4 valeurs.
   bool wouldBeFlat(StepDraft d) {
     if (_emits.length < _windowSize) return false;
     if (d.bpm == null || d.to == null) return false;
