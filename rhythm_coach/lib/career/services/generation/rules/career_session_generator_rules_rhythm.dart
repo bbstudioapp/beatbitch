@@ -190,6 +190,43 @@ class RhythmRules extends ModeRules {
     );
   }
 
+  /// Mini-vague rhythm : 3 steps head→mid puis head→mid puis
+  /// head→throat-or-mid, BPMs montants 100 / 120 / 135. Durées
+  /// décroissantes (12 / 10 / 8) — la vague accélère et se condense.
+  /// Le `to` du dernier step est `throat` si débloqué (cf.
+  /// `MiniWaveCtx.hasThroat`), sinon `mid` (vague plus douce mais
+  /// dramaturgie préservée). Les BPMs sont volontairement espacés ≥ 20
+  /// pour que `_patternBuffer.wouldBeFlat` ne déclenche pas.
+  ///
+  /// Le filtrage humil + clamp capacité + dédoublonnage post-cascade
+  /// restent côté générateur (cf. `_buildMiniWave`).
+  @override
+  List<StepDraft>? buildMiniWaveSegment(MiniWaveCtx ctx) {
+    return [
+      const StepDraft(
+        mode: SessionMode.rhythm,
+        bpm: 100,
+        from: Position.head,
+        to: Position.mid,
+        duration: 12,
+      ),
+      const StepDraft(
+        mode: SessionMode.rhythm,
+        bpm: 120,
+        from: Position.head,
+        to: Position.mid,
+        duration: 10,
+      ),
+      StepDraft(
+        mode: SessionMode.rhythm,
+        bpm: 135,
+        from: Position.head,
+        to: ctx.hasThroat ? Position.throat : Position.mid,
+        duration: 8,
+      ),
+    ];
+  }
+
   /// Rhythm très doux comme « récup en bouche » : BPM bas, tip→head ou
   /// head→mid selon les unlocks, coût stamina modéré. Toujours candidat
   /// — la friction de continuité (`_ModePicker`) décide s'il gagne. Sans
