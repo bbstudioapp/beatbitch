@@ -380,6 +380,8 @@ class CareerSessionGenerator {
       state: _state,
       rng: _rng,
       rules: _rules,
+      enforceHumiliationRequired: _enforceHumiliationRequired,
+      clampToCapability: _clampToCapability,
     );
   }
 
@@ -867,7 +869,7 @@ class CareerSessionGenerator {
     }
     final progressForWave = ctx.progress;
     final humilCapForWave = _config.humilCapAt(ctx.time);
-    final waveDrafts = _buildMiniWave(humilCapForWave);
+    final waveDrafts = _stepBuilders.buildMiniWave(humilCapForWave);
     for (final wd in waveDrafts) {
       final waveText = _pickPhraseForDraft(ctx.bank, wd, 'hard');
       _emitStep(
@@ -1185,52 +1187,6 @@ class CareerSessionGenerator {
     final coreMode = _resolveModeForRole(ModeSemanticRole.miniWaveCore);
     if (_config.isModeForbidden(coreMode)) return false;
     return true;
-  }
-
-  /// Construit la séquence de la mini-vague : 2 à 3 steps rythmés à BPM
-  /// montant, chacun à profondeur progressive (head→mid puis head→mid
-  /// puis head→throat si débloqué). Variations de `to` choisies pour ne
-  /// pas trigger le détecteur de pattern plat (`_patternBuffer.wouldBeFlat`)
-  /// et pour matérialiser la montée à l'oreille (BPMs espacés de 20).
-  ///
-  /// Chaque step est filtré par `_enforceHumiliationRequired(humilCap)` :
-  /// si la vague propose un step trop humiliant pour le cap courant, il
-  /// dégrade vers du plus doux automatiquement (ex throat → mid). Si après
-  /// dégradation un step duplique le précédent, il est skip plutôt que
-  /// re-poussé — la vague peut donc se réduire à 2 steps en pratique.
-  List<StepDraft> _buildMiniWave(double humilCap) {
-    final hasThroat = _state.unlockedKeys.contains(UnlockKey.throatHoldShort) ||
-        _config.maxDepthIndex >= Position.throat.index;
-    // La séquence brute de la mini-vague est désormais déléguée au mode
-    // qui porte le rôle `miniWaveCore` (cf. B.PR5). Le filtrage humil
-    // + clamp capacité + dédoublonnage post-cascade reste ici parce
-    // qu'il consomme `_enforceHumiliationRequired` / `_clampToCapability`
-    // (sur l'instance du générateur).
-    final coreMode = _resolveModeForRole(ModeSemanticRole.miniWaveCore);
-    final raw = _rules[coreMode]!
-            .buildMiniWaveSegment(MiniWaveCtx(hasThroat: hasThroat)) ??
-        const <StepDraft>[];
-    final out = <StepDraft>[];
-    Position? prevTo;
-    int? prevBpm;
-    for (final s in raw) {
-      final filtered = _enforceHumiliationRequired(s, humilCap);
-      // Skip si la dégradation rend ce step identique au précédent
-      // (mêmes from/to/bpm) — la vague compresserait sinon en plat.
-      if (filtered.to == prevTo && filtered.bpm == prevBpm) continue;
-      out.add(filtered);
-      prevTo = filtered.to;
-      prevBpm = filtered.bpm;
-    }
-    // Garde au minimum 2 steps : si la cascade a tout aplati (cas humil
-    // très basse en début de niveau 5), on retombe sur les 2 premiers
-    // steps de `raw` sans filtre humil, qui sont volontairement modérés
-    // (head→mid 100/120 — req mécanique très basse). On les borne quand
-    // même au profil de capacités.
-    if (out.length < 2) {
-      return raw.take(2).map(_clampToCapability).toList();
-    }
-    return out;
   }
 
   /// Adaptateur d'instance pour `FinalPicker.buildPostFinalDraft`. Injecte

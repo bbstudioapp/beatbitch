@@ -17,6 +17,7 @@
 import 'dart:math';
 
 import '../../../models/session.dart';
+import '../../../models/session_step.dart';
 import '../../models/career_level.dart';
 import '../../models/phrase_bank.dart';
 import '../../models/unlock_key.dart';
@@ -33,6 +34,18 @@ import 'step_draft.dart';
 typedef PickPhrase = String Function(
     PhraseBank bank, SessionMode mode, String tier);
 
+/// Callback de filtrage humiliation cascade. Pointe sur
+/// `_enforceHumiliationRequired(draft, humilCap)` côté générateur.
+/// Threadé pour [StepBuilders.buildMiniWave] qui filtre chaque step
+/// de la vague brute avant émission.
+typedef EnforceHumiliationRequired = StepDraft Function(
+    StepDraft draft, double humilCap);
+
+/// Callback de bornage capacité. Pointe sur
+/// `_clampToCapability(draft)` côté générateur (= 2ᵉ enveloppe
+/// profondeur / BPM / durée).
+typedef ClampToCapability = StepDraft Function(StepDraft draft);
+
 /// Constructeurs de drafts d'instance. Instancié une fois par
 /// `generate()` après que `_state` / `_config` / `_capClamps` sont
 /// posés, partagé avec les helpers d'émission de la chaîne main loop +
@@ -43,21 +56,27 @@ class StepBuilders {
     required this.state,
     required this.rng,
     required this.rules,
+    required this.enforceHumiliationRequired,
+    required this.clampToCapability,
   })  : _breathMode = _resolveRole(rules, ModeSemanticRole.breath),
         _postWaveBreathMode =
             _resolveRole(rules, ModeSemanticRole.postWaveBreath),
-        _swallowOrderMode = _resolveRole(rules, ModeSemanticRole.swallowOrder);
+        _swallowOrderMode = _resolveRole(rules, ModeSemanticRole.swallowOrder),
+        _miniWaveCoreMode = _resolveRole(rules, ModeSemanticRole.miniWaveCore);
 
   final SessionConfig config;
   final SessionRuntimeState state;
   final Random rng;
   final Map<SessionMode, ModeRules> rules;
+  final EnforceHumiliationRequired enforceHumiliationRequired;
+  final ClampToCapability clampToCapability;
 
   /// Modes résolus une fois à la construction pour éviter d'itérer le
   /// registre à chaque appel.
   final SessionMode _breathMode;
   final SessionMode _postWaveBreathMode;
   final SessionMode _swallowOrderMode;
+  final SessionMode _miniWaveCoreMode;
 
   /// Résolution de rôle — itère le registre, retourne le 1er mode qui
   /// déclare le rôle. Dupliqué depuis `_resolveModeForRole` /
@@ -177,5 +196,48 @@ class StepBuilders {
     if (genUntil - time < 60) return null;
     if (!state.unlockedKeys.contains(UnlockKey.begLibre)) return null;
     return rules[_swallowOrderMode]!.buildSwallowOrder(SwallowCtx(rng: rng));
+  }
+
+  /// Construit la séquence de la mini-vague : 2 à 3 steps rythmés à BPM
+  /// montant, chacun à profondeur progressive (head→mid puis head→mid
+  /// puis head→throat si débloqué). Variations de `to` choisies pour
+  /// ne pas trigger le détecteur de pattern plat
+  /// (`_patternBuffer.wouldBeFlat`) et pour matérialiser la montée à
+  /// l'oreille (BPMs espacés de 20).
+  ///
+  /// Chaque step est filtré par [enforceHumiliationRequired] avec le
+  /// `humilCap` courant : si la vague propose un step trop humiliant,
+  /// il dégrade vers du plus doux automatiquement (ex throat → mid).
+  /// Si après dégradation un step duplique le précédent, il est skip
+  /// plutôt que re-poussé — la vague peut donc se réduire à 2 steps
+  /// en pratique. La séquence brute est déléguée au mode qui porte
+  /// le rôle `miniWaveCore` (cf. B.PR5).
+  List<StepDraft> buildMiniWave(double humilCap) {
+    final hasThroat = state.unlockedKeys.contains(UnlockKey.throatHoldShort) ||
+        config.maxDepthIndex >= Position.throat.index;
+    final raw = rules[_miniWaveCoreMode]!
+            .buildMiniWaveSegment(MiniWaveCtx(hasThroat: hasThroat)) ??
+        const <StepDraft>[];
+    final out = <StepDraft>[];
+    Position? prevTo;
+    int? prevBpm;
+    for (final s in raw) {
+      final filtered = enforceHumiliationRequired(s, humilCap);
+      // Skip si la dégradation rend ce step identique au précédent
+      // (mêmes from/to/bpm) — la vague compresserait sinon en plat.
+      if (filtered.to == prevTo && filtered.bpm == prevBpm) continue;
+      out.add(filtered);
+      prevTo = filtered.to;
+      prevBpm = filtered.bpm;
+    }
+    // Garde au minimum 2 steps : si la cascade a tout aplati (cas humil
+    // très basse en début de niveau 5), on retombe sur les 2 premiers
+    // steps de `raw` sans filtre humil, qui sont volontairement modérés
+    // (head→mid 100/120 — req mécanique très basse). On les borne quand
+    // même au profil de capacités.
+    if (out.length < 2) {
+      return raw.take(2).map(clampToCapability).toList();
+    }
+    return out;
   }
 }
