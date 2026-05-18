@@ -28,6 +28,13 @@ class RhythmRules extends ModeRules {
   const RhythmRules();
 
   @override
+  Set<ModeSemanticRole> get roles => const {
+        ModeSemanticRole.burstHumiliating,
+        ModeSemanticRole.miniWaveCore,
+        ModeSemanticRole.preFinisherCore,
+      };
+
+  @override
   StepType classify(Position? to) => StepType.bouche;
 
   @override

@@ -14,6 +14,9 @@ import 'package:beat_bitch/career/services/generation/career_session_generator.d
 class BegRules extends ModeRules {
   const BegRules();
 
+  @override
+  Set<ModeSemanticRole> get roles => const {ModeSemanticRole.swallowOrder};
+
   /// Beg avec `to` tenu = la bouche reste sur la verge pendant la
   /// supplique → `bouche`. Beg libre (`to == null`) = supplique purement
   /// vocale, bouche libre → `libreMain`. Seul mode dont la classification

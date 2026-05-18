@@ -13,6 +13,9 @@ class HoldRules extends ModeRules {
   const HoldRules();
 
   @override
+  Set<ModeSemanticRole> get roles => const {ModeSemanticRole.staticHeld};
+
+  @override
   StepType classify(Position? to) => StepType.bouche;
 
   /// Hold final → chime escaladé sur la profondeur tenue. Échelle :
