@@ -21,6 +21,7 @@ import '../../../models/session_step.dart';
 import '../../models/career_level.dart';
 import '../../models/phrase_bank.dart';
 import '../../models/unlock_key.dart';
+import 'mode_picker.dart';
 import 'mode_rules.dart';
 import 'session_config.dart';
 import 'session_runtime_state.dart';
@@ -46,6 +47,11 @@ typedef EnforceHumiliationRequired = StepDraft Function(
 /// profondeur / BPM / durée).
 typedef ClampToCapability = StepDraft Function(StepDraft draft);
 
+/// Callback de gating unlock d'un draft. Pointe sur `_isUnlocked(draft)`
+/// côté générateur (qui adapte `HumiliationGates.isUnlocked` avec
+/// `_config.anatomy`, `_state.unlockedKeys`, `_rules`).
+typedef IsUnlocked = bool Function(StepDraft draft);
+
 /// Constructeurs de drafts d'instance. Instancié une fois par
 /// `generate()` après que `_state` / `_config` / `_capClamps` sont
 /// posés, partagé avec les helpers d'émission de la chaîne main loop +
@@ -56,20 +62,26 @@ class StepBuilders {
     required this.state,
     required this.rng,
     required this.rules,
+    required this.facade,
     required this.enforceHumiliationRequired,
     required this.clampToCapability,
+    required this.isUnlocked,
   })  : _breathMode = _resolveRole(rules, ModeSemanticRole.breath),
         _postWaveBreathMode =
             _resolveRole(rules, ModeSemanticRole.postWaveBreath),
         _swallowOrderMode = _resolveRole(rules, ModeSemanticRole.swallowOrder),
-        _miniWaveCoreMode = _resolveRole(rules, ModeSemanticRole.miniWaveCore);
+        _miniWaveCoreMode = _resolveRole(rules, ModeSemanticRole.miniWaveCore),
+        _recoveryDegradeFallbackMode =
+            _resolveRole(rules, ModeSemanticRole.recoveryDegradeFallback);
 
   final SessionConfig config;
   final SessionRuntimeState state;
   final Random rng;
   final Map<SessionMode, ModeRules> rules;
+  final GenFacadeSurface facade;
   final EnforceHumiliationRequired enforceHumiliationRequired;
   final ClampToCapability clampToCapability;
+  final IsUnlocked isUnlocked;
 
   /// Modes résolus une fois à la construction pour éviter d'itérer le
   /// registre à chaque appel.
@@ -77,6 +89,7 @@ class StepBuilders {
   final SessionMode _postWaveBreathMode;
   final SessionMode _swallowOrderMode;
   final SessionMode _miniWaveCoreMode;
+  final SessionMode _recoveryDegradeFallbackMode;
 
   /// Résolution de rôle — itère le registre, retourne le 1er mode qui
   /// déclare le rôle. Dupliqué depuis `_resolveModeForRole` /
@@ -239,5 +252,75 @@ class StepBuilders {
       return raw.take(2).map(clampToCapability).toList();
     }
     return out;
+  }
+
+  /// Tirage d'un step « respi active » : mode parmi les `ModeRules`
+  /// qui opt-in à `isRecoveryCandidate`, BPM ≤ 60 pour déclencher la
+  /// regen d'endurance. Le mode `breath` n'est plus tiré ici — il est
+  /// inséré strictement sur déficit d'endurance projeté via
+  /// [buildBreathRecovery], pas comme une option d'humeur générale.
+  ///
+  /// Orchestration mode-agnostic : collecte les candidats via le
+  /// registry, applique les filtres communs (dose Custom, friction de
+  /// continuité), délègue l'assemblage à la rule retenue. La logique
+  /// mode-specific (durée, gating unlock, choix de position) vit dans
+  /// `ModeRules.isRecoveryCandidate` / `buildRecovery`.
+  ///
+  /// Si le draft tiré échoue le gating unlock (mode pas encore
+  /// débloqué), on dégrade en `tip → head` sur le mode
+  /// `recoveryDegradeFallback` — dramaturgie hardcodée (positions
+  /// imposées), seul le mode est mappable via le rôle. Cf. C.PR5.
+  StepDraft buildRecoveryStep() {
+    final bpm = 45 + rng.nextInt(14); // [45, 58]
+    final dur = 10 + rng.nextInt(9); // [10, 18]
+    // Convention `state.unlockedKeys.isEmpty` = mode hérité : pas de
+    // gating, tous les modes opt-in passent par défaut.
+    final avail = RecoveryAvailability(
+      heritage: state.unlockedKeys.isEmpty,
+      unlockedKeys: state.unlockedKeys,
+      includeHand: config.includeHand,
+    );
+    final candidates = <SessionMode>[
+      for (final entry in rules.entries)
+        if (entry.value.isRecoveryCandidate(avail)) entry.key,
+    ];
+    // Exclusions Custom (dose `none`) : la recovery ne doit pas
+    // ramener un mode que la joueuse a explicitement banni. Si tout
+    // est exclu, on retombe sur `recoveryDegradeFallback` (lick
+    // historique).
+    candidates.removeWhere(config.isModeForbidden);
+    if (candidates.isEmpty) candidates.add(_recoveryDegradeFallbackMode);
+    final pool =
+        ModePicker.filterRepeated(candidates, state.lastMode, rules: rules);
+    // Tirage pondéré pour que la friction de continuité par type
+    // s'applique aussi à la recovery (sans ça, une recovery uniforme
+    // repousse souvent langue/libre alors que la séance vient juste
+    // de quitter bouche).
+    final mode = ModePicker.pickWeighted(
+      pool,
+      spec: config.spec,
+      coachWeights: config.coachModeWeights,
+      continuity: state.continuitySnapshot(),
+      rng: rng,
+      rules: rules,
+    );
+    final draft = rules[mode]!.buildRecovery(RecoveryCtx(
+      gen: facade,
+      bpm: bpm,
+      duration: dur,
+    ));
+    // Gating unlock : si le mode/draft tiré n'est pas encore débloqué
+    // (ex : biffle avant niveau 5, beg libre avant niveau 3,
+    // freestyle avant niveau 4), on dégrade.
+    if (!isUnlocked(draft)) {
+      return StepDraft(
+        mode: _recoveryDegradeFallbackMode,
+        bpm: bpm,
+        from: Position.tip,
+        to: Position.head,
+        duration: dur,
+      );
+    }
+    return draft;
   }
 }

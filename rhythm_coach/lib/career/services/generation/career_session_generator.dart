@@ -43,7 +43,6 @@ import 'final_picker.dart';
 import 'gen_facade.dart';
 import 'generation_context.dart';
 import 'humiliation_gates.dart';
-import 'mode_picker.dart';
 import 'milestone_scheduler.dart';
 import 'mode_rules.dart';
 import 'mode_rules_registry.dart';
@@ -380,8 +379,10 @@ class CareerSessionGenerator {
       state: _state,
       rng: _rng,
       rules: _rules,
+      facade: _facade,
       enforceHumiliationRequired: _enforceHumiliationRequired,
       clampToCapability: _clampToCapability,
+      isUnlocked: _isUnlocked,
     );
   }
 
@@ -1002,7 +1003,7 @@ class CareerSessionGenerator {
         inLastMinute ? -1 : (ctx.quickie ? 25 : 50) + obedienceBonus;
     if (ctx.stamina < recoveryThreshold ||
         (ctx.stamina < recoveryRandomThreshold && _rng.nextBool())) {
-      initialDraft = _buildRecoveryStep();
+      initialDraft = _stepBuilders.buildRecoveryStep();
     } else {
       initialDraft = _dispatch.mapDifficultyToStep(diff);
     }
@@ -1733,83 +1734,6 @@ class CareerSessionGenerator {
     return allowed[_rng.nextInt(allowed.length)];
   }
 
-  /// Tirage d'un step "respi active" : mode parmi les `ModeRules` qui
-  /// opt-in à `isRecoveryCandidate`, BPM ≤ 60 pour déclencher la regen
-  /// d'endurance. Le mode `breath` n'est plus tiré ici — il est désormais
-  /// inséré strictement sur déficit d'endurance projeté (cf.
-  /// `_buildBreathRecovery`), pas comme une option d'humeur générale.
-  ///
-  /// L'orchestration est mode-agnostique : on collecte les candidats via
-  /// le registry, on applique les filtres communs (dose Custom, friction
-  /// de continuité), on délègue l'assemblage à la rule retenue. La
-  /// logique mode-specific (durée, gating unlock, choix de position) vit
-  /// dans `ModeRules.isRecoveryCandidate` / `buildRecovery`.
-  StepDraft _buildRecoveryStep() {
-    final bpm = 45 + _rng.nextInt(14); // [45, 58]
-    final dur = 10 + _rng.nextInt(9); // [10, 18]
-    // Convention `_state.unlockedKeys.isEmpty` = mode hérité : pas de gating, tous
-    // les modes opt-in passent par défaut (cf. `_isUnlocked`).
-    final avail = RecoveryAvailability(
-      heritage: _state.unlockedKeys.isEmpty,
-      unlockedKeys: _state.unlockedKeys,
-      includeHand: _config.includeHand,
-    );
-    final candidates = <SessionMode>[
-      for (final entry in _rules.entries)
-        if (entry.value.isRecoveryCandidate(avail)) entry.key,
-    ];
-    // Exclusions Custom (dose `none`) : la recovery ne doit pas ramener un
-    // mode que la joueuse a explicitement banni. Si tout est exclu, on
-    // retombe sur le mode `recoveryDegradeFallback` (lick historique) — le
-    // garde-fou de l'éditeur Custom assure que lick OU rhythm OU hold est
-    // resté ≥ rare ; si le mode fallback lui-même est exclu, le mode
-    // bouche restant reprendra la main au step suivant via mapDifficulty.
-    // Cf. C.PR5.
-    candidates.removeWhere(_config.isModeForbidden);
-    final degradeFallbackMode =
-        _resolveModeForRole(ModeSemanticRole.recoveryDegradeFallback);
-    if (candidates.isEmpty) candidates.add(degradeFallbackMode);
-    final pool = _filterRepeated(candidates);
-    // Tirage pondéré pour que la friction de continuité par type s'applique
-    // aussi à la recovery (sans ça, une recovery uniforme repousse souvent
-    // langue/libre alors que la séance vient juste de quitter bouche).
-    final mode = _pickWeightedMode(pool);
-    final draft = _rules[mode]!.buildRecovery(RecoveryCtx(
-      gen: _facade,
-      bpm: bpm,
-      duration: dur,
-    ));
-    // Gating unlock : si le mode/draft tiré n'est pas encore débloqué (ex :
-    // biffle avant niveau 5, beg libre avant niveau 3, freestyle avant
-    // niveau 4), on dégrade. Évite que la phase de récup laisse passer une
-    // action contractuellement réservée à plus tard. `tip → head` sur le
-    // mode `recoveryDegradeFallback` reste le « mode bouche le plus doux »
-    // — dramaturgie hardcodée (positions imposées), seul le mode est
-    // mappable via le rôle. Cf. C.PR5.
-    if (!_isUnlocked(draft)) {
-      return StepDraft(
-        mode: degradeFallbackMode,
-        bpm: bpm,
-        from: Position.tip,
-        to: Position.head,
-        duration: dur,
-      );
-    }
-    return draft;
-  }
-
-  /// Adaptateur d'instance pour `ModePicker.pickWeighted` — injecte `_config.spec`,
-  /// `_config.coachModeWeights`, le snapshot de continuité et `_rng`.
-  SessionMode _pickWeightedMode(List<SessionMode> candidates) =>
-      ModePicker.pickWeighted(
-        candidates,
-        spec: _config.spec,
-        coachWeights: _config.coachModeWeights,
-        continuity: _state.continuitySnapshot(),
-        rng: _rng,
-        rules: _rules,
-      );
-
   /// Mode retenu pour la chaîne de fallback « intro intense / quickie »
   /// (cf. `_firstStep`). Trie les rules par `introPriority` croissante,
   /// retient la première non-forbidden. Le mode de rang max (hold)
@@ -2087,22 +2011,6 @@ class CareerSessionGenerator {
         saliva: _state.salivaSim.value,
         rules: _rules,
       );
-
-  /// Retire `_state.lastMode` des candidats si une alternative existe et que le
-  /// mode est « ponctuel » (breath / beg / biffle / hold / freestyle) — deux
-  /// events identiques d'affilé y sonneraient comme un bug.
-  ///
-  /// Pour les modes « flow » (rhythm / lick / hand), on **accepte la
-  /// répétition** : la variété passe par les paramètres (BPM via
-  /// `_applyBpmDiversity` qui force ≥18 BPM de delta, profondeur via
-  /// `_diversifyAmplitude` qui décale d'un cran). Sans cette fenêtre de
-  /// rester sur le même mode, on sortait nécessairement de rythme à chaque
-  /// step ; l'utilisateur a relevé que la séance ressemblait à une rotation
-  /// stricte au lieu de phases prolongées avec variation.
-  /// Adaptateur d'instance pour `ModePicker.filterRepeated` — injecte
-  /// `_state.lastMode` et `_rules`.
-  List<SessionMode> _filterRepeated(List<SessionMode> candidates) =>
-      ModePicker.filterRepeated(candidates, _state.lastMode, rules: _rules);
 
   /// Tire une phrase pour [mode]/[tier] en évitant la même qu'au step
   /// précédent (`_state.lastText`). Quelques essais suffisent : si la banque ne
