@@ -49,6 +49,7 @@ import 'rhythm_chain_tracker.dart';
 import 'rhythmic_pattern_buffer.dart';
 import 'session_config.dart';
 import 'session_runtime_state.dart';
+import 'stamina_model.dart';
 import 'step_draft.dart';
 import 'step_type.dart';
 
@@ -92,10 +93,10 @@ export 'rhythm_chain_tracker.dart' show RhythmChainTracker;
 export 'rhythmic_pattern_buffer.dart' show RhythmicPatternBuffer;
 export 'session_config.dart' show SessionConfig;
 export 'session_runtime_state.dart' show SessionRuntimeState;
+export 'stamina_model.dart' show StaminaModel;
 export 'step_draft.dart' show StepDraft;
 export 'step_type.dart' show StepType;
 
-part 'career_session_generator_stamina.dart';
 part 'career_session_generator_mode_picker.dart';
 part 'career_session_generator_difficulty_dispatch.dart';
 part 'career_session_generator_punishment.dart';
