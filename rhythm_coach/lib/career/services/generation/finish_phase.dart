@@ -12,11 +12,34 @@
 import 'dart:math';
 
 import '../../../models/session.dart';
+import '../../../models/session_step.dart';
+import '../../models/phrase_bank.dart';
 import 'final_picker.dart';
+import 'generation_context.dart';
 import 'mode_rules.dart';
 import 'session_config.dart';
 import 'session_runtime_state.dart';
+import 'step_builders.dart' show ClampToCapability;
 import 'step_draft.dart';
+
+/// Callback d'émission d'un step. Pointe sur `_emitStep` côté
+/// générateur (qui mute `ctx.time` / `ctx.stamina`, ajoute le step à
+/// `ctx.steps`, met à jour stamina/saliva/tracking).
+typedef EmitStep = void Function(
+  GenerationContext ctx, {
+  required StepDraft draft,
+  required String text,
+  required double progress,
+  required bool asTransit,
+  bool updateLastBpm,
+});
+
+/// Callback de tirage de phrase contextualisée. Pointe sur
+/// `_pickPhraseForDraft(bank, draft, tier)` côté générateur (qui
+/// applique auto-bump par obédiance + filtre par contraintes
+/// profondeur/BPM via `PhraseContext`).
+typedef PickPhraseForDraft = String Function(
+    PhraseBank bank, StepDraft draft, String tier);
 
 /// Helpers d'orchestration de la phase finish. Instancié une fois par
 /// `generate()` après que `_state` / `_config` / `_facade` /
@@ -29,24 +52,33 @@ class FinishPhase {
     required this.rng,
     required this.rules,
     required this.finalPicker,
+    required this.emitStep,
+    required this.pickPhraseForDraft,
+    required this.clampToCapability,
   })  : _staticHeldMode = _resolveRole(rules, ModeSemanticRole.staticHeld),
         _burstHumiliatingMode =
             _resolveRole(rules, ModeSemanticRole.burstHumiliating),
         _burstNeutralMode = _resolveRole(rules, ModeSemanticRole.burstNeutral),
         _burstFallbackMode =
-            _resolveRole(rules, ModeSemanticRole.burstFallback);
+            _resolveRole(rules, ModeSemanticRole.burstFallback),
+        _preFinisherCoreMode =
+            _resolveRole(rules, ModeSemanticRole.preFinisherCore);
 
   final SessionConfig config;
   final SessionRuntimeState state;
   final Random rng;
   final Map<SessionMode, ModeRules> rules;
   final FinalPicker finalPicker;
+  final EmitStep emitStep;
+  final PickPhraseForDraft pickPhraseForDraft;
+  final ClampToCapability clampToCapability;
 
   /// Modes résolus une fois à la construction.
   final SessionMode _staticHeldMode;
   final SessionMode _burstHumiliatingMode;
   final SessionMode _burstNeutralMode;
   final SessionMode _burstFallbackMode;
+  final SessionMode _preFinisherCoreMode;
 
   /// Résolution de rôle — duplication minimale depuis les autres
   /// libraries autonomes (`DifficultyDispatch`, `StepBuilders`).
@@ -124,4 +156,67 @@ class FinishPhase {
   /// Mode résolu une fois pour le rôle `staticHeld` (hold), exposé
   /// aux callers pour le check `holdPosition` côté `_emitFinalStep`.
   SessionMode get staticHeldMode => _staticHeldMode;
+
+  /// Émet le step de **pré-finisher** : courte accélération
+  /// `head → preFinisherTarget` qui prépare la phase boosts. Utilisé
+  /// uniquement pour les bas niveaux — le caller garde la guard
+  /// `isLowLevel && !isModeForbidden(preFinisherCore)` autour de
+  /// l'appel pour ne pas changer la séquence RNG (la position est
+  /// pickée avant l'appel).
+  ///
+  /// La construction du draft (BPM 62-70, dur 22-30 s) est déléguée
+  /// au mode qui porte le rôle `preFinisherCore` (cf. B.PR8). Le
+  /// clamp capacité, le pick de phrase et l'émission du step
+  /// consomment les callbacks threadés ([clampToCapability],
+  /// [pickPhraseForDraft], [emitStep]).
+  void emitPreFinisher(
+    GenerationContext ctx, {
+    required Position preFinisherTarget,
+  }) {
+    final preDraft =
+        clampToCapability(rules[_preFinisherCoreMode]!.buildPreFinisher(
+      PreFinisherCtx(rng: rng, preFinisherTarget: preFinisherTarget),
+    )!);
+    final preText = pickPhraseForDraft(ctx.bank, preDraft, 'medium');
+    emitStep(
+      ctx,
+      draft: preDraft,
+      text: preText,
+      progress: ctx.progress,
+      asTransit: true,
+    );
+  }
+
+  /// Émet le step **post-final** (aftercare ~12 s après l'orgasme).
+  /// Mode contrastant choisi par [buildPostFinalDraft] selon le mode
+  /// final + l'humil. Phrase : cascade `post_final_<mode>` (rules) /
+  /// `post_final` / `congrats`. Mute `ctx.time` / `ctx.stamina`.
+  void emitPostFinal(
+    GenerationContext ctx, {
+    required SessionMode finalMode,
+    required int holdCeilingIdx,
+  }) {
+    final postFinalDraft = clampToCapability(buildPostFinalDraft(
+      finalMode: finalMode,
+      humilCap: config.humilCapAt(ctx.time),
+      holdCeilingIdx: holdCeilingIdx,
+    ));
+    // Phrase : pool mode-spécifique (beg = CONSIGNE de supplique ;
+    // lick = consigne d'aftercare humiliant) puis cascade sur le pool
+    // générique. Default `pickPostFinalText` retourne `null` → on
+    // saute direct à la cascade générique. Garantit un text non-vide
+    // via le fallback final `pickCongrats`.
+    final modeSpecific =
+        rules[postFinalDraft.mode]!.pickPostFinalText(ctx.bank, rng);
+    final postFinalText = modeSpecific ??
+        ctx.bank.pickPostFinal(rng) ??
+        ctx.bank.pickCongrats(rng);
+    emitStep(
+      ctx,
+      draft: postFinalDraft,
+      text: postFinalText,
+      progress: 1.0,
+      asTransit: true,
+    );
+  }
 }

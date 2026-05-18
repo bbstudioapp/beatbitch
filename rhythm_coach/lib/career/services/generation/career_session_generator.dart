@@ -398,6 +398,9 @@ class CareerSessionGenerator {
       rng: _rng,
       rules: _rules,
       finalPicker: _finalPicker,
+      emitStep: _emitStep,
+      pickPhraseForDraft: _pickPhraseForDraft,
+      clampToCapability: _clampToCapability,
     );
   }
 
@@ -727,7 +730,7 @@ class CareerSessionGenerator {
     final preFinisherMode =
         _resolveModeForRole(ModeSemanticRole.preFinisherCore);
     if (isLowLevel && !_config.isModeForbidden(preFinisherMode)) {
-      _emitPreFinisher(ctx, preFinisherTarget: preFinisherTarget);
+      _finishPhase.emitPreFinisher(ctx, preFinisherTarget: preFinisherTarget);
     }
 
     // Choix du template de finish : `hand_burst` (non humiliant, pure
@@ -777,7 +780,8 @@ class CareerSessionGenerator {
     final finalMode = finalResult.finalMode;
     final finalStepStartTime = finalResult.finalStepStartTime;
 
-    _emitPostFinal(ctx, finalMode: finalMode);
+    _finishPhase.emitPostFinal(ctx,
+        finalMode: finalMode, holdCeilingIdx: _milestoneHoldCeilingIdx());
 
     return _assembleResult(
       ctx,
@@ -1294,41 +1298,6 @@ class CareerSessionGenerator {
     ctx.stamina = s;
   }
 
-  /// Émet le step de pré-finisher (courte accélération `head→target`
-  /// qui prépare la phase boosts). Utilisé uniquement pour les bas
-  /// niveaux — le caller garde la guard `isLowLevel &&
-  /// !isModeForbidden(preFinisherCore)` autour de l'appel pour ne pas
-  /// changer la séquence RNG (la position est pickée avant l'appel).
-  ///
-  /// La construction du draft (BPM 62-70, dur 22-30 s) est désormais
-  /// déléguée au mode qui porte le rôle `preFinisherCore` (cf. B.PR8).
-  /// Le clamp capacité, le pick de phrase et l'émission du step restent
-  /// ici parce qu'ils consomment du state d'instance (`_clampToCapability`,
-  /// `_pickPhraseForDraft`, `_emitStep`).
-  ///
-  /// Mute `ctx.steps` et `ctx.profile` en place. Met à jour
-  /// `_state.lastMode/_state.lastText` et tracke la continuité.
-  /// Retourne `(newTime, newStamina)`.
-  void _emitPreFinisher(
-    GenerationContext ctx, {
-    required Position preFinisherTarget,
-  }) {
-    final preFinisherMode =
-        _resolveModeForRole(ModeSemanticRole.preFinisherCore);
-    final preDraft =
-        _clampToCapability(_rules[preFinisherMode]!.buildPreFinisher(
-      PreFinisherCtx(rng: _rng, preFinisherTarget: preFinisherTarget),
-    )!);
-    final preText = _pickPhraseForDraft(ctx.bank, preDraft, 'medium');
-    _emitStep(
-      ctx,
-      draft: preDraft,
-      text: preText,
-      progress: ctx.progress,
-      asTransit: true,
-    );
-  }
-
   /// Boucle des boosts de la phase finish — sprint déterministe de
   /// `ctx.boostsCount` steps qui ramp BPM et profondeur de manière monotone
   /// croissante. Renvoie l'index du dernier step ajouté à `ctx.steps` (pour
@@ -1527,38 +1496,6 @@ class CareerSessionGenerator {
       finalCategory: finalCategory,
       finalMode: finalMode,
       finalStepStartTime: finalStepStartTime,
-    );
-  }
-
-  /// Émet le step post-final (aftercare ~12 s après l'orgasme). Mode
-  /// contrastant choisi par [_buildPostFinalDraft] selon le mode final +
-  /// l'humil. Phrase : cascade `post_final_beg` / `post_final_lick` /
-  /// `post_final` / `congrats`. Mute `ctx.time` / `ctx.stamina`.
-  void _emitPostFinal(
-    GenerationContext ctx, {
-    required SessionMode finalMode,
-  }) {
-    final postFinalDraft = _clampToCapability(_finishPhase.buildPostFinalDraft(
-      finalMode: finalMode,
-      humilCap: _config.humilCapAt(ctx.time),
-      holdCeilingIdx: _milestoneHoldCeilingIdx(),
-    ));
-    // Phrase : pool mode-spécifique (beg = CONSIGNE de supplique ;
-    // lick = consigne d'aftercare humiliant) puis cascade sur le pool
-    // générique. Default `pickPostFinalText` retourne `null` → on saute
-    // direct à la cascade générique. Garantit un text non-vide via le
-    // fallback final `pickCongrats`.
-    final modeSpecific =
-        _rules[postFinalDraft.mode]!.pickPostFinalText(ctx.bank, _rng);
-    final postFinalText = modeSpecific ??
-        ctx.bank.pickPostFinal(_rng) ??
-        ctx.bank.pickCongrats(_rng);
-    _emitStep(
-      ctx,
-      draft: postFinalDraft,
-      text: postFinalText,
-      progress: 1.0,
-      asTransit: true,
     );
   }
 
