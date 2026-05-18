@@ -300,6 +300,76 @@ class CareerSessionGenerator {
   /// utilisateur Custom en cascade.
   StepDraft _clampToCapability(StepDraft d) => _capClamps.clampToCapability(d);
 
+  /// (Re)pose le scratchpad d'instance partagé par `generate()` et
+  /// `generatePunishment()` : `_state`, `_capClamps`, `_rhythmChain`,
+  /// `_finalPicker`, `_positionPickers`, `_facade`, `_dispatch`. Doit
+  /// être appelé **après** que `_config` est posé — chaque sous-système
+  /// le consomme.
+  ///
+  /// [clearPatternBuffer] : `true` pour `generate()` (séance neuve,
+  /// pattern buffer à vider) ; `false` pour `generatePunishment()` (pas
+  /// de tirage rythmé dans la palette, le buffer n'est pas consulté).
+  void _initScratchpad({
+    required Set<UnlockKey> unlockedKeys,
+    required bool clearPatternBuffer,
+  }) {
+    _state = SessionRuntimeState.fresh(rng: _rng);
+    _state.unlockedKeys = unlockedKeys;
+    if (clearPatternBuffer) _patternBuffer.clear();
+    // 2ᵉ enveloppe immuable construite après le choix de l'axe de
+    // surcharge — recréée à chaque séance pour intégrer
+    // profile / ceilings / overload / bornes-Custom courants. Consommée
+    // via les adaptateurs `_clampToCapability` / `_capabilityCapFor` /
+    // `_overloadFactorFor`. En punition, `_config.bpmRange` et
+    // `_config.holdDurationRange` sont null (pas de bornes Custom), le
+    // clamps tombe gracieusement.
+    _capClamps = CapabilityClamps(
+      config: _config,
+      bpmRange: _config.bpmRange,
+      holdRange: _config.holdDurationRange,
+      rules: _rules,
+    );
+    // Compteur à 0 naturellement après `_capClamps` dont on lit le
+    // facteur de surcharge `motion_streak`. Plus de `reset()` explicite
+    // — la composition rend l'invariant mécanique.
+    _rhythmChain = RhythmChainTracker(
+      state: _state,
+      motionStreakComfort:
+          _config.capProfile?.comfortOf(CapabilityAxis.rhythmMotionStreak),
+      motionStreakOverloadFactor:
+          _capClamps.overloadFactorFor(CapabilityAxis.rhythmMotionStreak),
+    );
+    _finalPicker = FinalPicker(
+      config: _config,
+      unlockedKeys: _state.unlockedKeys,
+      rng: _rng,
+      capClamps: _capClamps,
+      rules: _rules,
+    );
+    _positionPickers = PositionPickers(
+      config: _config,
+      unlockedKeys: _state.unlockedKeys,
+      rng: _rng,
+      rules: _rules,
+    );
+    _facade = GenFacade(
+      config: _config,
+      state: _state,
+      rng: _rng,
+      rhythmChain: _rhythmChain,
+      positionPickers: _positionPickers,
+    );
+    _dispatch = DifficultyDispatch(
+      config: _config,
+      state: _state,
+      rng: _rng,
+      rules: _rules,
+      rhythmChain: _rhythmChain,
+      facade: _facade,
+      positionPickers: _positionPickers,
+    );
+  }
+
   CareerGenerationResult generate({
     required int level,
     required PhraseBank bank,
@@ -381,58 +451,7 @@ class CareerSessionGenerator {
       overloadAxis: overload.axis,
       overloadFactor: overload.factor,
     );
-    _state = SessionRuntimeState.fresh(rng: _rng);
-    _state.unlockedKeys = unlockedKeys;
-    _patternBuffer.clear();
-    // 2ᵉ enveloppe immuable construite après le choix de l'axe de surcharge —
-    // recréée à chaque appel à `generate()` pour intégrer profile/ceilings/
-    // overload/bornes-Custom courants. Consommée via les adaptateurs
-    // `_clampToCapability` / `_capabilityCapFor` / `_overloadFactorFor`.
-    _capClamps = CapabilityClamps(
-      config: _config,
-      bpmRange: _config.bpmRange,
-      holdRange: _config.holdDurationRange,
-      rules: _rules,
-    );
-    // Recréé à chaque séance (compteur à 0 naturellement) après `_capClamps`
-    // dont on lit le facteur de surcharge `motion_streak`. Plus de
-    // `reset()` explicite — la composition rend l'invariant mécanique.
-    _rhythmChain = RhythmChainTracker(
-      state: _state,
-      motionStreakComfort:
-          _config.capProfile?.comfortOf(CapabilityAxis.rhythmMotionStreak),
-      motionStreakOverloadFactor:
-          _capClamps.overloadFactorFor(CapabilityAxis.rhythmMotionStreak),
-    );
-    _finalPicker = FinalPicker(
-      config: _config,
-      unlockedKeys: _state.unlockedKeys,
-      rng: _rng,
-      capClamps: _capClamps,
-      rules: _rules,
-    );
-    _positionPickers = PositionPickers(
-      config: _config,
-      unlockedKeys: _state.unlockedKeys,
-      rng: _rng,
-      rules: _rules,
-    );
-    _facade = GenFacade(
-      config: _config,
-      state: _state,
-      rng: _rng,
-      rhythmChain: _rhythmChain,
-      positionPickers: _positionPickers,
-    );
-    _dispatch = DifficultyDispatch(
-      config: _config,
-      state: _state,
-      rng: _rng,
-      rules: _rules,
-      rhythmChain: _rhythmChain,
-      facade: _facade,
-      positionPickers: _positionPickers,
-    );
+    _initScratchpad(unlockedKeys: unlockedKeys, clearPatternBuffer: true);
     // Mode "Session bâclée" : 6 min par défaut, intense tout du long. Floor
     // d'intensité appliqué au tirage de difficulté + on saute l'intro douce
     // et la pré-finition. Une durée explicite reste prioritaire (cas de la
@@ -2202,60 +2221,13 @@ class CareerSessionGenerator {
       overloadAxis: capability.overloadAxis,
       overloadFactor: capability.overloadFactor,
     );
-    _state = SessionRuntimeState.fresh(rng: _rng);
-    _state.unlockedKeys = unlockedKeys;
-    // Punition générée hors `generate()` → on doit aussi (re)bâtir
-    // `_capClamps` ici, sinon le `_clampToCapability` qui sert à matérialiser
-    // chaque step de la compo lit un field non initialisé.
-    _capClamps = CapabilityClamps(
-      config: _config,
-      bpmRange: null,
-      holdRange: null,
-      rules: _rules,
-    );
-    // `_rhythmChain` n'est pas consommé par `generatePunishment` (les
-    // compositions ne déclenchent pas de chaîne rythme), mais on le
-    // (re)pose pour idempotence avec `generate()` — la facade le tient
-    // en field, un null planterait au moment du `_facade` construct.
-    _rhythmChain = RhythmChainTracker(
-      state: _state,
-      motionStreakComfort:
-          _config.capProfile?.comfortOf(CapabilityAxis.rhythmMotionStreak),
-      motionStreakOverloadFactor:
-          _capClamps.overloadFactorFor(CapabilityAxis.rhythmMotionStreak),
-    );
-    // `_finalPicker` et `_positionPickers` ne sont pas consommés par
-    // `generatePunishment`, mais on les initialise par sécurité
-    // (idempotence avec `generate()`).
-    _finalPicker = FinalPicker(
-      config: _config,
-      unlockedKeys: _state.unlockedKeys,
-      rng: _rng,
-      capClamps: _capClamps,
-      rules: _rules,
-    );
-    _positionPickers = PositionPickers(
-      config: _config,
-      unlockedKeys: _state.unlockedKeys,
-      rng: _rng,
-      rules: _rules,
-    );
-    _facade = GenFacade(
-      config: _config,
-      state: _state,
-      rng: _rng,
-      rhythmChain: _rhythmChain,
-      positionPickers: _positionPickers,
-    );
-    _dispatch = DifficultyDispatch(
-      config: _config,
-      state: _state,
-      rng: _rng,
-      rules: _rules,
-      rhythmChain: _rhythmChain,
-      facade: _facade,
-      positionPickers: _positionPickers,
-    );
+    // `generatePunishment` n'a pas de pattern buffer à clear (pas de
+    // tirage rythmé dans la palette de punition), mais les autres
+    // sous-systèmes doivent être (re)posés pour que `_clampToCapability`,
+    // `_isUnlocked` et `_pickPhraseForDraft` lisent des invariants
+    // cohérents. `_finalPicker` et `_positionPickers` sont initialisés par
+    // sécurité (idempotence avec `generate()`).
+    _initScratchpad(unlockedKeys: unlockedKeys, clearPatternBuffer: false);
 
     // Palette + sélection + matérialisation déléguées à
     // `PunishmentBuilder` (cf. `punishment_builder.dart`). Les
