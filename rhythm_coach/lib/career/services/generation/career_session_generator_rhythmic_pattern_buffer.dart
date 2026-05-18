@@ -7,12 +7,19 @@
 // strictement précédent et laissait passer `head→mid 90 / 92 / 88`
 // (BPMs « différents ») alors que c'est uniforme à l'oreille.
 //
-// Concerne uniquement les 4 modes à amplitude rythmée (rhythm / lick /
-// hand / biffle). Les hold / beg n'ont pas de BPM et leur monotonie
-// est gérée ailleurs (variation de position dans `_pickHoldPosition`
-// / `_state.lastFrom`). Les steps transit (breath / freestyle) sont
-// transparents — un breath de récup au milieu d'une série rythmée ne
-// casse pas la perception du pattern, on veut qu'il continue à compter.
+// Concerne uniquement les modes pour lesquels `ModeRules.isRhythmic`
+// est vrai (rhythm / lick / hand / biffle dans le registry par défaut).
+// Les hold / beg n'ont pas de BPM et leur monotonie est gérée ailleurs
+// (variation de position dans `_pickHoldPosition` / `_state.lastFrom`).
+// Les steps transit (breath / freestyle) sont transparents — un breath
+// de récup au milieu d'une série rythmée ne casse pas la perception du
+// pattern, on veut qu'il continue à compter.
+//
+// Depuis C.PR1 du plan de refacto : le filtre par mode n'est plus dans
+// le buffer. Le caller (`_trackPushedStep`) consulte
+// `_rules[mode]!.isRhythmic` avant d'appeler `record()`. Le buffer
+// devient pur (stocke ce qu'on lui donne, détecte le pattern plat sur
+// le contenu), n'a plus à connaître le registre des modes.
 
 part of 'career_session_generator.dart';
 
@@ -27,8 +34,9 @@ typedef _RecentEmit = ({
 
 /// Buffer roulant des 3 derniers steps rythmés émis + détecteur de
 /// pattern plat. État par-session : `clear()` au début de chaque
-/// `generate()`. Méthode `record(...)` filtre elle-même les modes
-/// non-rythmés (no-op si `mode` n'est pas dans le quatuor à amplitude).
+/// `generate()`. Mode-agnostic depuis C.PR1 : le filtrage par
+/// `ModeRules.isRhythmic` est appliqué par le caller (`_trackPushedStep`)
+/// avant chaque `record()`.
 class _RhythmicPatternBuffer {
   _RhythmicPatternBuffer();
 
@@ -46,16 +54,10 @@ class _RhythmicPatternBuffer {
   /// Vide le buffer. Appelé au début de chaque `generate()`.
   void clear() => _emits.clear();
 
-  /// Enregistre un step poussé. No-op si `mode` n'est pas un mode
-  /// rythmé (rhythm / lick / hand / biffle) — le caller peut appeler
-  /// mode-blind, le filtre est interne.
+  /// Enregistre un step poussé. **Le caller filtre en amont via
+  /// `ModeRules.isRhythmic`** — le buffer ne re-vérifie pas, il stocke
+  /// ce qu'on lui donne. Mode-agnostic depuis C.PR1.
   void record(SessionMode mode, {Position? from, Position? to, int? bpm}) {
-    if (mode != SessionMode.rhythm &&
-        mode != SessionMode.lick &&
-        mode != SessionMode.hand &&
-        mode != SessionMode.biffle) {
-      return;
-    }
     _emits.add((mode: mode, from: from, to: to, bpm: bpm));
     while (_emits.length > _windowSize) {
       _emits.removeAt(0);

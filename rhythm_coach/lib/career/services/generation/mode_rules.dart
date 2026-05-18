@@ -560,6 +560,22 @@ abstract class ModeRules {
   /// en amont — la rule n'a pas à les revérifier.
   StepDraft? buildPreFinisher(PreFinisherCtx ctx) => null;
 
+  /// Mode rythmé à amplitude (`rhythm` / `lick` / `hand` / `biffle`) ?
+  /// Consulté par `_RhythmicPatternBuffer` pour ne tracker que les
+  /// steps qui ont une mécanique BPM + position pertinents pour la
+  /// détection de pattern plat. Les hold / beg / breath / freestyle /
+  /// suckle n'ont pas de pattern plat à détecter — leur monotonie est
+  /// gérée ailleurs (variation de position dans `_pickHoldPosition` /
+  /// `_state.lastFrom`). Default `false` (opt-in).
+  ///
+  /// Couvre les 4 modes du quatuor rythmé historique :
+  /// - `rhythm` : loop BPM alternant from↔to.
+  /// - `lick` : variante volume réduit du rhythm.
+  /// - `hand` : sample dédié, même mécanique que rhythm.
+  /// - `biffle` : loop BPM sample dédié (pas de from/to mais BPM
+  ///   significatif → entre dans le filtre).
+  bool get isRhythmic => false;
+
   /// Coût (négatif) ou regen (positif) d'endurance pour le step.
   double delta(StepDraft draft, double progress, CareerLevel cfg);
 
