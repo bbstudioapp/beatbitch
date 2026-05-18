@@ -9,7 +9,6 @@ import '../../../models/session.dart';
 import '../../../models/session_step.dart';
 import '../../../services/capability_axis.dart';
 import '../../../services/capability_service.dart';
-import '../../../services/humiliation_engine.dart';
 import '../../models/career_generation_inputs.dart';
 import '../../models/career_level.dart';
 import '../../models/level_milestone.dart';
@@ -49,6 +48,7 @@ import 'rules/career_session_generator_rules_rhythm.dart';
 import 'rules/career_session_generator_rules_suckle.dart';
 import 'bpm_pacing.dart';
 import 'capability_clamps.dart';
+import 'humiliation_gates.dart';
 import 'mode_continuity_state.dart';
 import 'mode_rules.dart';
 import 'rhythm_chain_tracker.dart';
@@ -63,6 +63,7 @@ import 'step_type.dart';
 export 'bpm_pacing.dart' show BpmPacing;
 export 'capability_clamp_surface.dart' show CapabilityClampSurface;
 export 'capability_clamps.dart' show CapabilityClamps;
+export 'humiliation_gates.dart' show HumiliationGates;
 export 'mode_continuity_state.dart' show ModeContinuityState;
 export 'mode_rules.dart'
     show
@@ -87,7 +88,6 @@ export 'step_type.dart' show StepType;
 
 part 'career_session_generator_stamina.dart';
 part 'career_session_generator_mode_rules.dart';
-part 'career_session_generator_humiliation.dart';
 part 'career_session_generator_mode_picker.dart';
 part 'career_session_generator_final_picker.dart';
 part 'career_session_generator_difficulty_dispatch.dart';
@@ -210,7 +210,7 @@ class CareerSessionGenerator {
   ///
   /// Propagé à chaque sous-système qui consomme polymorphiquement les
   /// rules (`CapabilityClamps`, `FinalPicker`, `StaminaModel.delta`,
-  /// `_ModePicker.continuityMultiplier`, `_HumiliationGates.*`,
+  /// `_ModePicker.continuityMultiplier`, `HumiliationGates.*`,
   /// `_DifficultyDispatch._mapDifficultyToStep`).
   final Map<SessionMode, ModeRules> _rules;
 
@@ -2303,13 +2303,13 @@ class CareerSessionGenerator {
   /// (cf. `assets/career/milestones.json`).
   // _unlockKeyFor, _stepDownOne, _lubricationCapDelta, _deepestOf et
   // _isUnlocked + _finalUnlocked vivent désormais dans
-  // `career_session_generator_humiliation.dart` (`_HumiliationGates`).
+  // `career_session_generator_humiliation.dart` (`HumiliationGates`).
   // Adaptateurs d'instance pour ceux qui restent appelés directement :
 
-  /// Adaptateurs d'instance pour `_HumiliationGates` : injectent
+  /// Adaptateurs d'instance pour `HumiliationGates` : injectent
   /// `_config.anatomy`, `_state.unlockedKeys` et la projection salive `_state.salivaSim.value`
   /// pour garder les call sites brefs (un seul argument au lieu de quatre).
-  bool _isUnlocked(StepDraft d) => _HumiliationGates.isUnlocked(
+  bool _isUnlocked(StepDraft d) => HumiliationGates.isUnlocked(
         d,
         anatomy: _config.anatomy,
         unlockedKeys: _state.unlockedKeys,
@@ -2317,14 +2317,14 @@ class CareerSessionGenerator {
       );
 
   // `_finalUnlocked` n'est plus appelé depuis l'instance (consommé par
-  // `FinalPicker` qui appelle directement `_HumiliationGates.finalUnlocked`).
+  // `FinalPicker` qui appelle directement `HumiliationGates.finalUnlocked`).
   // Plus d'adaptateur ici.
 
-  /// Adaptateur d'instance pour `_HumiliationGates.enforceRequired` : injecte
+  /// Adaptateur d'instance pour `HumiliationGates.enforceRequired` : injecte
   /// `_config.anatomy`, `_state.unlockedKeys`, la salive courante, et le callback de
   /// clamp capacité (qui reste sur l'instance car il consulte `_config.capProfile`).
   StepDraft _enforceHumiliationRequired(StepDraft draft, double available) =>
-      _HumiliationGates.enforceRequired(
+      HumiliationGates.enforceRequired(
         draft,
         available,
         clampToCapability: _clampToCapability,

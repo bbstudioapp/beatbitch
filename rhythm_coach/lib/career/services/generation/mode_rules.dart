@@ -350,7 +350,7 @@ abstract class ModeRules {
 
   /// Une étape de dégradation : retourne le draft modifié si la rule sait
   /// adoucir, ou `null` pour passer la main au fallback global (lick
-  /// tip→head). Appelée en boucle par `_HumiliationGates.enforceRequired`
+  /// tip→head). Appelée en boucle par `HumiliationGates.enforceRequired`
   /// jusqu'à ce que le draft satisfasse `humilCap` ET `isUnlocked`.
   ///
   /// Chaque rule choisit l'ordre de ses propres stratégies (raccourcir,

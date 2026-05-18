@@ -1,5 +1,4 @@
-// Fichier part de `career_session_generator.dart` — gating humiliation
-// + unlocks + lubrification.
+// Library autonome — gating humiliation + unlocks + lubrification.
 //
 // Toutes les méthodes sont statiques. Les fonctions purement liées au
 // `StepDraft` (mapping unlock-key, descente d'un cran, deepestOf) n'ont
@@ -10,31 +9,42 @@
 //   * `lubricationCapDelta` ← projection salive
 //   * `enforceRequired` ← `available` (humil cap), `anatomy`, `unlockedKeys`,
 //     `saliva`, + un callback `clampToCapability` pour appliquer la 2ᵉ
-//     enveloppe (qui reste côté instance car elle consulte `_capProfile`).
+//     enveloppe (qui reste côté instance car elle consulte le profil
+//     capability courant).
 //
-// Les adapteurs d'instance (préfixés `_`) du fichier principal injectent
+// Les adapteurs d'instance (préfixés `_`) du générateur principal injectent
 // le contexte courant pour garder les call sites brefs (un seul argument
 // au lieu de quatre).
+//
+// Sortie du `part of 'career_session_generator.dart'` historique (A.PR4
+// du plan de refacto) — renommée `HumiliationGates` (sans `_`) puisque
+// l'API est désormais visible cross-library. `career_session_generator.dart`
+// la re-exporte pour préserver les call sites externes.
 
-part of 'career_session_generator.dart';
+import '../../../models/anatomy_profile.dart';
+import '../../../models/session.dart';
+import '../../../models/session_step.dart';
+import '../../../services/humiliation_engine.dart';
+import '../../models/unlock_key.dart';
+import 'mode_rules.dart';
+import 'step_draft.dart';
 
 /// Gating humiliation et unlocks : mapping draft → clé requise, vérification
 /// d'éligibilité, descente d'un cran, et cascade
-/// d'`enforceHumiliationRequired` qui dégrade un draft jusqu'à acceptation.
+/// d'`enforceRequired` qui dégrade un draft jusqu'à acceptation.
 ///
 /// Aucun état mutable. Toutes les méthodes sont statiques + pures (modulo
 /// les arguments injectés par le caller).
-class _HumiliationGates {
+class HumiliationGates {
   /// Map un step vers la `UnlockKey` requise pour qu'il soit jouable en
   /// mode carrière. Retourne `null` quand le step est dans le socle de
   /// base (pas de gate explicite).
   ///
   /// Dispatch polymorphique : chaque mode porte sa propre logique dans
-  /// `_*Rules.unlockKeyFor` (cf. `career_session_generator_mode_rules.dart`),
-  /// y compris la gestion des variantes balls (lickBalls / holdBalls /
-  /// begBalls / suckleBalls). Les modes-incompatibles balls
-  /// (rhythm / hand / biffle) sont déjà filtrés par [isUnlocked] avant
-  /// d'arriver ici.
+  /// `_*Rules.unlockKeyFor` (cf. `mode_rules.dart`), y compris la gestion
+  /// des variantes balls (lickBalls / holdBalls / begBalls / suckleBalls).
+  /// Les modes-incompatibles balls (rhythm / hand / biffle) sont déjà
+  /// filtrés par [isUnlocked] avant d'arriver ici.
   ///
   /// Convention `_isUnlocked` (hors interface ici, mais appliquée par le
   /// caller) : `unlockedKeys.isEmpty` = mode hérité, aucun gating. Cette
@@ -145,11 +155,11 @@ class _HumiliationGates {
   }
 
   /// Une étape de dégradation. Chaque mode porte sa propre stratégie
-  /// dans `_*Rules.tryDegrade` (cf. `career_session_generator_mode_rules.dart`) :
-  /// hold raccourcit puis baisse `to`, beg baisse `to` puis repli libre,
-  /// rhythm/lick/hand cascade desc-to → desc-from (+ cap BPM pour rhythm),
-  /// biffle cap BPM puis se transforme en lick. Quand toutes les rules
-  /// retournent `null`, on retombe sur le fallback ultime ci-dessous.
+  /// dans `_*Rules.tryDegrade` (cf. `mode_rules.dart`) : hold raccourcit
+  /// puis baisse `to`, beg baisse `to` puis repli libre, rhythm/lick/hand
+  /// cascade desc-to → desc-from (+ cap BPM pour rhythm), biffle cap BPM
+  /// puis se transforme en lick. Quand toutes les rules retournent `null`,
+  /// on retombe sur le fallback ultime ci-dessous.
   ///
   /// **Garde-fou from < to** porté par les helpers `tryDescendToWithGuard`
   /// (cf. mode rules) : la descente de `to` saute l'étape si elle
@@ -178,11 +188,10 @@ class _HumiliationGates {
   /// lick tip→head.
   ///
   /// Le callback [clampToCapability] applique la 2ᵉ enveloppe (profil de
-  /// capacités) — il reste côté instance car il dépend de `_capProfile`,
-  /// `_capCeilings`, `_overloadAxis` et `_overloadFactor` qui sont des
-  /// snapshots de la session courante. La cascade ne fait que dégrader
-  /// après le clamp initial, donc le clamp n'est appelé qu'une fois en
-  /// tête de boucle.
+  /// capacités) — il reste côté instance car il dépend du snapshot
+  /// `CapabilityClamps` de la session courante. La cascade ne fait que
+  /// dégrader après le clamp initial, donc le clamp n'est appelé qu'une
+  /// fois en tête de boucle.
   static StepDraft enforceRequired(
     StepDraft draft,
     double available, {

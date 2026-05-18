@@ -31,7 +31,7 @@ class _PositionPickers {
   final Random rng;
 
   /// Registry des rules injecté par le générateur — propagé à
-  /// `_HumiliationGates.isUnlocked` quand un draft template est validé.
+  /// `HumiliationGates.isUnlocked` quand un draft template est validé.
   final Map<SessionMode, ModeRules> rules;
 
   const _PositionPickers({
@@ -45,7 +45,7 @@ class _PositionPickers {
 
   bool _isModeForbidden(SessionMode m) => config.isModeForbidden(m);
 
-  bool _isUnlocked(StepDraft d) => _HumiliationGates.isUnlocked(
+  bool _isUnlocked(StepDraft d) => HumiliationGates.isUnlocked(
         d,
         anatomy: config.anatomy,
         unlockedKeys: unlockedKeys,
