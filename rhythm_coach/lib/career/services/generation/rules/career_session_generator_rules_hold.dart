@@ -18,6 +18,12 @@ class HoldRules extends ModeRules {
   @override
   StepType classify(Position? to) => StepType.bouche;
 
+  @override
+  double baseWeight(SpecializationAllocation spec) =>
+      1.0 +
+      0.60 * spec.pointsIn(SpecializationBranch.endurance) +
+      0.40 * spec.pointsIn(SpecializationBranch.profondeur);
+
   /// Hold final → chime escaladé sur la profondeur tenue. Échelle :
   /// tip → easy (bisou final, geste doux), head/mid → medium (en bouche
   /// sans gorge), throat → hard (gorge profonde tenue), full → extreme

@@ -23,6 +23,7 @@ import '../../../models/session_step.dart';
 import '../../../services/capability_axis.dart';
 import '../../models/career_level.dart';
 import '../../models/phrase_bank.dart';
+import '../../models/specialization.dart';
 import '../../models/unlock_key.dart';
 import 'capability_clamp_surface.dart';
 import 'rhythm_chain_tracker.dart';
@@ -575,6 +576,24 @@ abstract class ModeRules {
   /// - `biffle` : loop BPM sample dédié (pas de from/to mais BPM
   ///   significatif → entre dans le filtre).
   bool get isRhythmic => false;
+
+  /// Pondération brute issue de la spécialisation seule (sans coach,
+  /// sans friction de continuité) consommée par `_ModePicker.weight`
+  /// pour pondérer le tirage du mode dans la boucle main. Default
+  /// `1.0` (= neutre, pas de biais spé).
+  ///
+  /// Chaque rule porte sa propre équation : `RhythmRules` boost
+  /// rythmeBiffle + un peu profondeur ; `LickRules` baseline 0.6 +
+  /// gros boost sloppy ; `BegRules` boost obeissance ; `HoldRules`
+  /// endurance + profondeur ; `BiffleRules` rythmeBiffle + sloppy ;
+  /// `HandRules` boost rythmeBiffle léger ; `BreathRules` neutre ;
+  /// `FreestyleRules` baseline 0.25 ; `SuckleRules` baseline 0.6 +
+  /// sloppy + obéissance.
+  ///
+  /// Les coefficients exacts vivent côté rule (chaque mode a une
+  /// éditorialisation propre — pas extractible vers un mécanisme plus
+  /// abstrait sans perdre du sens).
+  double baseWeight(SpecializationAllocation spec) => 1.0;
 
   /// Coût (négatif) ou regen (positif) d'endurance pour le step.
   double delta(StepDraft draft, double progress, CareerLevel cfg);

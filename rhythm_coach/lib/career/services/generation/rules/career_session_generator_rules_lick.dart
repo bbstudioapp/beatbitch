@@ -20,6 +20,14 @@ class LickRules extends ModeRules {
   @override
   bool get isRhythmic => true;
 
+  /// Base abaissée (retour utilisateur « moins de lèche ») : sans
+  /// point sloppy, le lick pèse ~0.6 contre ~1.0 pour un mode neutre.
+  /// Le boost sloppy (+0.70/pt) reste pleinement effectif → une
+  /// joueuse spé sloppy en voit toujours beaucoup (×4.1 à 5 pts).
+  @override
+  double baseWeight(SpecializationAllocation spec) =>
+      0.6 + 0.70 * spec.pointsIn(SpecializationBranch.sloppy);
+
   @override
   double delta(StepDraft draft, double progress, CareerLevel cfg) {
     final dur = draft.duration ?? 0;
