@@ -78,6 +78,7 @@ export 'mode_rules.dart'
         FinalVariant,
         GenFacadeSurface,
         IntroCtx,
+        MiniWaveCtx,
         ModeRules,
         ModeSemanticRole,
         PostFinalCtx,
@@ -1193,10 +1194,12 @@ class CareerSessionGenerator {
     if (time < _state.nextMiniWaveAt) return false;
     if (genUntil - time < 90) return false;
     if (stamina < 35) return false;
-    // La mini-vague est intégralement rhythm (cf. `_buildMiniWave`) : si
-    // rhythm est exclu en Custom, on ne sait pas la jouer — on la skip
-    // proprement plutôt que d'émettre un mode banni.
-    if (_config.isModeForbidden(SessionMode.rhythm)) return false;
+    // La mini-vague est jouée par le mode qui porte le rôle
+    // `miniWaveCore` (cf. `_buildMiniWave`) : si ce mode est exclu en
+    // Custom, on ne sait pas la jouer — on la skip proprement plutôt
+    // que d'émettre un mode banni.
+    final coreMode = _resolveModeForRole(ModeSemanticRole.miniWaveCore);
+    if (_config.isModeForbidden(coreMode)) return false;
     return true;
   }
 
@@ -1214,34 +1217,15 @@ class CareerSessionGenerator {
   List<StepDraft> _buildMiniWave(double humilCap) {
     final hasThroat = _state.unlockedKeys.contains(UnlockKey.throatHoldShort) ||
         _config.maxDepthIndex >= Position.throat.index;
-    // Steps montants : BPMs espacés de 20 pour que la variance détectée
-    // par `_patternBuffer.wouldBeFlat` (< 10) ne déclenche pas. Choix
-    // mode=rhythm sur les 3 steps pour cohérence dramaturgique (un seul
-    // mode = montée homogène). `to` qui change évite aussi le pattern
-    // plat — la diversification interne ne peut pas le casser.
-    final raw = <StepDraft>[
-      const StepDraft(
-        mode: SessionMode.rhythm,
-        bpm: 100,
-        from: Position.head,
-        to: Position.mid,
-        duration: 12,
-      ),
-      const StepDraft(
-        mode: SessionMode.rhythm,
-        bpm: 120,
-        from: Position.head,
-        to: Position.mid,
-        duration: 10,
-      ),
-      StepDraft(
-        mode: SessionMode.rhythm,
-        bpm: 135,
-        from: Position.head,
-        to: hasThroat ? Position.throat : Position.mid,
-        duration: 8,
-      ),
-    ];
+    // La séquence brute de la mini-vague est désormais déléguée au mode
+    // qui porte le rôle `miniWaveCore` (cf. B.PR5). Le filtrage humil
+    // + clamp capacité + dédoublonnage post-cascade reste ici parce
+    // qu'il consomme `_enforceHumiliationRequired` / `_clampToCapability`
+    // (sur l'instance du générateur).
+    final coreMode = _resolveModeForRole(ModeSemanticRole.miniWaveCore);
+    final raw = _rules[coreMode]!
+            .buildMiniWaveSegment(MiniWaveCtx(hasThroat: hasThroat)) ??
+        const <StepDraft>[];
     final out = <StepDraft>[];
     Position? prevTo;
     int? prevBpm;

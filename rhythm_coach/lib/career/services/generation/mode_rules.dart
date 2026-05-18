@@ -281,6 +281,22 @@ class IntroCtx {
   final int duration;
 }
 
+/// Contexte d'assemblage d'une mini-vague passé à
+/// `ModeRules.buildMiniWaveSegment`. La rule retourne la séquence brute
+/// de drafts (2-3 steps montants) ; le filtrage humil + clamp capacité +
+/// dédoublonnage post-cascade reste côté générateur (qui consomme les
+/// snapshots d'instance `_enforceHumiliationRequired` / `_clampToCapability`).
+///
+/// `hasThroat` permet à la rule de varier le `to` du dernier step de la
+/// vague (throat si débloqué, sinon mid). Pas d'autre paramètre — la
+/// vague est dramaturgiquement homogène (mode unique, BPMs hardcodés à
+/// 100 / 120 / 135 dans l'implémentation rhythm).
+class MiniWaveCtx {
+  const MiniWaveCtx({required this.hasThroat});
+
+  final bool hasThroat;
+}
+
 /// Rôles sémantiques d'un mode au sein du générateur. Chaque rôle
 /// désigne une **fonction dramaturgique** (sas breath, ordre
 /// d'avalement, boost humiliant, etc.) — pas une identité technique.
@@ -355,6 +371,16 @@ abstract class ModeRules {
   /// résolution `_resolveModeForRole` n'est pas définie sinon (cf. son
   /// `assert` côté générateur).
   Set<ModeSemanticRole> get roles => const {};
+
+  /// Construit la séquence brute d'une mini-vague (cf. `_buildMiniWave`
+  /// côté générateur). Default `null` — opt-in : seul le mode qui joue
+  /// le rôle [ModeSemanticRole.miniWaveCore] doit override (consulté via
+  /// `_resolveModeForRole(miniWaveCore)`).
+  ///
+  /// La rule retourne 2-3 drafts montants (BPMs espacés ≥ 20 pour ne
+  /// pas trigger `_patternBuffer.wouldBeFlat`). Le filtrage humil +
+  /// clamp capacité + dédoublonnage post-cascade restent côté générateur.
+  List<StepDraft>? buildMiniWaveSegment(MiniWaveCtx ctx) => null;
 
   /// Coût (négatif) ou regen (positif) d'endurance pour le step.
   double delta(StepDraft draft, double progress, CareerLevel cfg);
