@@ -633,6 +633,23 @@ abstract class ModeRules {
   ///   significatif → entre dans le filtre).
   bool get isRhythmic => false;
 
+  /// Mode « flow » consommé par `_ModePicker.filterRepeated` — accepte
+  /// la répétition immédiate (deux steps identiques d'affilé) parce
+  /// que la variété passe par les paramètres (BPM via
+  /// `_applyBpmDiversity` ≥ 18 BPM de delta, profondeur via
+  /// `_diversifyAmplitude` qui décale d'un cran). Sans cette
+  /// tolérance, le générateur sortait nécessairement de rythme à
+  /// chaque step — retour utilisateur « la séance ressemble à une
+  /// rotation stricte ».
+  ///
+  /// Distinct de [isRhythmic] : biffle est rhythmic (loop BPM) mais
+  /// pas flow — ses coups de queue sur le visage sonneraient comme un
+  /// bug s'ils enchaînaient deux fois. Couvre `rhythm`, `lick`,
+  /// `hand`. Default `false` (opt-in) — tous les autres modes (hold,
+  /// biffle, beg, breath, freestyle, suckle) sont « ponctuels » et
+  /// passent par le filtre `lastMode != m` de `filterRepeated`.
+  bool get isFlow => false;
+
   /// Fenêtre de difficulté `[min, max)` dans laquelle le mode est
   /// candidat à la boucle main, ou `null` si le mode n'est pas
   /// éligible compte tenu du contexte (unlock absent, toggle hand off,

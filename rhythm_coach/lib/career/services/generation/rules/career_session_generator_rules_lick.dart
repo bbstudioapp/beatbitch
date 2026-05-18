@@ -27,6 +27,9 @@ class LickRules extends ModeRules {
   @override
   bool get isRhythmic => true;
 
+  @override
+  bool get isFlow => true;
+
   /// Base abaissée (retour utilisateur « moins de lèche ») : sans
   /// point sloppy, le lick pèse ~0.6 contre ~1.0 pour un mode neutre.
   /// Le boost sloppy (+0.70/pt) reste pleinement effectif → une

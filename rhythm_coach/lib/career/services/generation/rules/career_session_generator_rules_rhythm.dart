@@ -56,6 +56,9 @@ class RhythmRules extends ModeRules {
   bool get isRhythmic => true;
 
   @override
+  bool get isFlow => true;
+
+  @override
   double baseWeight(SpecializationAllocation spec) =>
       1.0 +
       0.35 * spec.pointsIn(SpecializationBranch.rythmeBiffle) +

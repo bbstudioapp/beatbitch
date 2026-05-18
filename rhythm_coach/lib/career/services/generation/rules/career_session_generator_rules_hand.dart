@@ -18,6 +18,9 @@ class HandRules extends ModeRules {
   @override
   bool get isRhythmic => true;
 
+  @override
+  bool get isFlow => true;
+
   /// Hand candidat dès `diff ≥ 0.10` (seuil bas pour qu'il apparaisse
   /// aussi en bas niveau : sinon les fenêtres de difficulté basses des
   /// premiers paliers le bloquaient trop souvent — feedback historique
