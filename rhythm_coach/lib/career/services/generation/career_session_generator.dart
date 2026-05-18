@@ -80,6 +80,7 @@ export 'mode_rules.dart'
         FinalVariant,
         GenFacadeSurface,
         IntroCtx,
+        IntroStandardCtx,
         MiniWaveCtx,
         ModeRules,
         ModeSemanticRole,
@@ -1850,46 +1851,18 @@ class CareerSessionGenerator {
       ));
     }
     // Panel de variantes filtré par milestones : `rhythm_mid_basic`
-    // (intro_deeper_basics, niveau 2) gate les variantes head→mid /
-    // tip→mid. Sans cette milestone, on retombe sur lick / rhythm tip→head
-    // / hand tip→head (toutes débloquées via intro_basics niveau 1).
+    // (intro_deeper_basics, niveau 2) gate les variantes rhythm
+    // head→mid / tip→mid. Sans cette milestone, on retombe sur lick /
+    // rhythm tip→head / hand tip→head (toutes débloquées via
+    // intro_basics niveau 1). Construction déléguée aux rules via
+    // `firstStepVariants` (cf. B.PR9) : chaque mode opt-in renvoie sa
+    // palette pré-construite, le générateur les concatène dans l'ordre
+    // d'itération du registry (rhythm → lick → hold → biffle → beg →
+    // hand → breath → freestyle → suckle) — `HandRules` porte
+    // désormais son propre guard `includeHand` via le ctx.
+    final introCtx = IntroStandardCtx(includeHand: _config.includeHand);
     final variants = <StepDraft>[
-      const StepDraft(
-        mode: SessionMode.lick,
-        bpm: 60,
-        from: Position.tip,
-        to: Position.head,
-        duration: 20,
-      ),
-      const StepDraft(
-        mode: SessionMode.rhythm,
-        bpm: 65,
-        from: Position.tip,
-        to: Position.head,
-        duration: 16,
-      ),
-      const StepDraft(
-        mode: SessionMode.rhythm,
-        bpm: 70,
-        from: Position.head,
-        to: Position.mid,
-        duration: 14,
-      ),
-      const StepDraft(
-        mode: SessionMode.rhythm,
-        bpm: 65,
-        from: Position.tip,
-        to: Position.mid,
-        duration: 16,
-      ),
-      if (_config.includeHand)
-        const StepDraft(
-          mode: SessionMode.hand,
-          bpm: 55,
-          from: Position.tip,
-          to: Position.head,
-          duration: 18,
-        ),
+      for (final rule in _rules.values) ...rule.firstStepVariants(introCtx),
     ];
     final allowed = variants
         .where(_isUnlocked)
