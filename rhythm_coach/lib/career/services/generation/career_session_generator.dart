@@ -51,6 +51,7 @@ import 'capability_clamps.dart';
 import 'humiliation_gates.dart';
 import 'mode_continuity_state.dart';
 import 'mode_rules.dart';
+import 'position_pickers.dart';
 import 'rhythm_chain_tracker.dart';
 import 'session_config.dart';
 import 'session_runtime_state.dart';
@@ -65,6 +66,7 @@ export 'capability_clamp_surface.dart' show CapabilityClampSurface;
 export 'capability_clamps.dart' show CapabilityClamps;
 export 'humiliation_gates.dart' show HumiliationGates;
 export 'mode_continuity_state.dart' show ModeContinuityState;
+export 'position_pickers.dart' show PositionPickers;
 export 'mode_rules.dart'
     show
         DraftCtx,
@@ -91,7 +93,6 @@ part 'career_session_generator_mode_rules.dart';
 part 'career_session_generator_mode_picker.dart';
 part 'career_session_generator_final_picker.dart';
 part 'career_session_generator_difficulty_dispatch.dart';
-part 'career_session_generator_position_pickers.dart';
 part 'career_session_generator_punishment.dart';
 part 'career_session_generator_rhythmic_pattern_buffer.dart';
 part 'career_session_generator_milestone_scheduler.dart';
@@ -201,7 +202,7 @@ class CareerSessionGenerator {
 
   /// Pickers de position (hold / beg / from-to / simplex / etc.) —
   /// recréés à chaque appel à [generate] / [generatePunishment].
-  late _PositionPickers _positionPickers;
+  late PositionPickers _positionPickers;
 
   /// Registry des règles par mode injecté au constructeur. Par défaut le
   /// `_rules` standard ; un test ou un module externe
@@ -361,7 +362,7 @@ class CareerSessionGenerator {
       capClamps: _capClamps,
       rules: _rules,
     );
-    _positionPickers = _PositionPickers(
+    _positionPickers = PositionPickers(
       config: _config,
       unlockedKeys: _state.unlockedKeys,
       rng: _rng,
@@ -2062,11 +2063,11 @@ class CareerSessionGenerator {
     _patternBuffer.record(mode, from: from, to: to, bpm: bpm);
   }
 
-  // ─── Position pickers (adapteurs vers `_PositionPickers`) ────────────────
+  // ─── Position pickers (adapteurs vers `PositionPickers`) ────────────────
   //
   // Les délégations consommées par les rules (`sampleFromTo`, `pickHold`,
   // `maybePickBegWithChain`, `capRhythmDurationByPulses`…) vivent désormais
-  // sur `GenFacade` qui wrappe directement `_PositionPickers` / `BpmPacing`.
+  // sur `GenFacade` qui wrappe directement `PositionPickers` / `BpmPacing`.
   // Restent ici uniquement les adaptateurs encore consommés par le
   // générateur lui-même (orchestration) ou ses parts (`_DifficultyDispatch`).
 
@@ -2175,7 +2176,7 @@ class CareerSessionGenerator {
       capClamps: _capClamps,
       rules: _rules,
     );
-    _positionPickers = _PositionPickers(
+    _positionPickers = PositionPickers(
       config: _config,
       unlockedKeys: _state.unlockedKeys,
       rng: _rng,
