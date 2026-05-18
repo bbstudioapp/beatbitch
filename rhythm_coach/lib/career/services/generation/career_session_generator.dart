@@ -238,11 +238,13 @@ class CareerSessionGenerator {
   /// `StateError` — un rôle non-résolvable signale un mapping cassé entre
   /// l'orchestration et le registry.
   ///
-  /// **Pas encore consommé** : B.PR1 introduit l'infra, les call sites
-  /// hardcodés migreront en B.PR2 (`_pickBurstMode`), B.PR3 (`_emitFinalStep`
-  /// holdPosition), B.PR4 (sas breath). L'invariant « un rôle → un mode »
-  /// est validé par `test/mode_semantic_role_test.dart`.
-  // ignore: unused_element
+  /// Premiers call sites migrés (cf. plan de refacto) :
+  /// - B.PR2 — `_pickBurstMode` (burstHumiliating / burstNeutral /
+  ///   burstFallback).
+  /// - B.PR3 — `_emitFinalStep` (holdPosition via staticHeld).
+  /// - B.PR4 — sas breath (breath).
+  /// L'invariant « un rôle → exactement un mode » est validé par
+  /// `test/mode_semantic_role_test.dart`.
   SessionMode _resolveModeForRole(ModeSemanticRole role) {
     for (final entry in _rules.entries) {
       if (entry.value.roles.contains(role)) return entry.key;
@@ -1460,32 +1462,41 @@ class CareerSessionGenerator {
     );
   }
 
-  /// Choix du mode pour la phase de boosts (`hand_burst` non humiliant vs
-  /// `rhythm_burst` humiliant). Gère :
+  /// Choix du mode pour la phase de boosts (`burstNeutral` non humiliant
+  /// vs `burstHumiliating` humiliant). Gère :
   ///  - le biais dramaturgique 70/30 vs 25/75 selon humil + niveau ;
-  ///  - les exclusions Custom (`_config.isModeForbidden`) avec repli `lick` quand
-  ///    hand ET rhythm sont bannis ;
-  ///  - le ratio de poids brut quand les doses hand/rhythm sont asymétriques
-  ///    (cf. issue #68).
+  ///  - les exclusions Custom (`_config.isModeForbidden`) avec repli
+  ///    `burstFallback` quand neutre ET humiliant sont bannis ;
+  ///  - le ratio de poids brut quand les doses neutre/humiliant sont
+  ///    asymétriques (cf. issue #68).
+  ///
+  /// Le mapping concret (rhythm/hand/lick) est désormais résolu via
+  /// `_resolveModeForRole` — cf. B.PR2 du plan de refacto. `useHandBurst`
+  /// reste le nom historique du flag (les call sites en aval — caps BPM,
+  /// pondération dramaturgique — distinguent encore l'axe humiliant vs
+  /// neutre via ce booléen, le renommer est hors scope).
   ///
   /// Consomme un tirage RNG quand les deux modes sont autorisés.
   ({bool useHandBurst, SessionMode burstMode}) _pickBurstMode(_GenContext ctx) {
-    final handForbidden = _config.isModeForbidden(SessionMode.hand);
-    final rhythmForbidden = _config.isModeForbidden(SessionMode.rhythm);
+    final humiliating = _resolveModeForRole(ModeSemanticRole.burstHumiliating);
+    final neutral = _resolveModeForRole(ModeSemanticRole.burstNeutral);
+    final fallback = _resolveModeForRole(ModeSemanticRole.burstFallback);
+    final handForbidden = _config.isModeForbidden(neutral);
+    final rhythmForbidden = _config.isModeForbidden(humiliating);
     final preferHandBase =
         _config.humiliationCareer < 5 && _config.level <= 3 ? 0.70 : 0.25;
     if (handForbidden && rhythmForbidden) {
       // chemin "rhythm-like" : BPM cap/floor rhythm
-      return (useHandBurst: false, burstMode: SessionMode.lick);
+      return (useHandBurst: false, burstMode: fallback);
     }
     if (handForbidden) {
-      return (useHandBurst: false, burstMode: SessionMode.rhythm);
+      return (useHandBurst: false, burstMode: humiliating);
     }
     if (rhythmForbidden) {
-      return (useHandBurst: true, burstMode: SessionMode.hand);
+      return (useHandBurst: true, burstMode: neutral);
     }
-    final handWeight = _config.coachModeWeights[SessionMode.hand] ?? 1.0;
-    final rhythmWeight = _config.coachModeWeights[SessionMode.rhythm] ?? 1.0;
+    final handWeight = _config.coachModeWeights[neutral] ?? 1.0;
+    final rhythmWeight = _config.coachModeWeights[humiliating] ?? 1.0;
     final dosesAreSymmetric = (handWeight - rhythmWeight).abs() < 0.01;
     final preferHand = dosesAreSymmetric
         ? preferHandBase
@@ -1493,7 +1504,7 @@ class CareerSessionGenerator {
     final useHandBurst = _rng.nextDouble() < preferHand;
     return (
       useHandBurst: useHandBurst,
-      burstMode: useHandBurst ? SessionMode.hand : SessionMode.rhythm,
+      burstMode: useHandBurst ? neutral : humiliating,
     );
   }
 
