@@ -775,7 +775,7 @@ class CareerSessionGenerator {
     // probablement saturé). Le générateur ne bénéficie pas des bumps
     // évènementiels (punition complétée etc.) — uniquement de la rampe
     // automatique — donc c'est volontairement conservateur.
-    final finalResult = _emitFinalStep(
+    final finalResult = _finishPhase.emitFinalStep(
       ctx,
       lastBoostIndex: lastBoostIndex,
       burstMode: burstMode,
@@ -1300,80 +1300,6 @@ class CareerSessionGenerator {
     _state.lastText = lastStep.text;
     ctx.time = t + milestone.durationSeconds;
     ctx.stamina = s;
-  }
-
-  /// Émet le step final (apothéose contemplative). Choix via [FinalPicker.pickFinal] selon
-  /// humil cap projeté à `time` et plafond de profondeur. Phrase : annonce du
-  /// changement de mode si différent du dernier boost (« sors ta langue,
-  /// j'arrive »), sinon phrase d'action standard.
-  ///
-  /// Retourne `(time, stamina, finalCategory, finalMode, finalStepStartTime)`.
-  /// Mute `ctx.steps` et `ctx.profile` en place.
-  ({
-    FinalCategory finalCategory,
-    SessionMode finalMode,
-    int finalStepStartTime,
-  }) _emitFinalStep(
-    GenerationContext ctx, {
-    required int? lastBoostIndex,
-    required SessionMode burstMode,
-  }) {
-    // Cap effectif au moment du final (=quasi fin de session, sessionCap
-    // probablement saturé). Le générateur ne bénéficie pas des bumps
-    // évènementiels (punition complétée etc.) — uniquement de la rampe
-    // automatique — donc c'est volontairement conservateur.
-    final finalHumilCap = _config.humilCapAt(ctx.time);
-    // En chaîne encore, on allonge le final pour que la dramaturgie de
-    // « tu en veux encore » se traduise aussi côté apothéose. Bornée par
-    // le clamp de `_finalPicker.pickFinal` pour rester raisonnable.
-    final finishMul = 1.0 + max(0, ctx.encoreChainIndex) * 0.10;
-    final finisherDraft = _finalPicker.pickFinal(
-      humilCap: finalHumilCap,
-      maxDepth: _config.maxDepthIndex,
-      finishMul: finishMul,
-    );
-    final finalCategory =
-        _rules[finisherDraft.mode]!.finalCategory(finisherDraft);
-    final finalMode = finisherDraft.mode;
-
-    // Annonce du final : si le finisher change de mode (ex. dernier boost =
-    // hand, finisher = lick), on pose une phrase qui annonce le changement
-    // physique imminent. Sinon, phrase d'action standard.
-    final announcePhrase = (lastBoostIndex != null && burstMode != finalMode)
-        ? ctx.bank.pickFinalAnnouncement(
-            preMode: burstMode,
-            finalMode: finalMode,
-            rng: _rng,
-          )
-        : null;
-    // Convention design : seul un mode `staticHeld` (= hold) porte une
-    // « position tenue » à annoncer ; les autres modes finaux (rhythm,
-    // lick, hand, biffle, beg) jouent une action sans tenue scriptée.
-    // On consulte le rôle plutôt que de hardcoder `SessionMode.hold`
-    // (cf. B.PR3 du plan de refacto).
-    final isStaticHeldFinal =
-        _rules[finalMode]!.roles.contains(ModeSemanticRole.staticHeld);
-    final finalActionPhrase = ctx.bank.pickFinalAction(
-      mode: finalMode,
-      holdPosition: isStaticHeldFinal ? finisherDraft.from : null,
-      rng: _rng,
-    );
-    final finalStepText = (announcePhrase != null && announcePhrase.isNotEmpty)
-        ? announcePhrase
-        : (finalActionPhrase ?? '');
-    final finalStepStartTime = ctx.time;
-    _emitStep(
-      ctx,
-      draft: finisherDraft,
-      text: finalStepText,
-      progress: 1.0,
-      asTransit: true,
-    );
-    return (
-      finalCategory: finalCategory,
-      finalMode: finalMode,
-      finalStepStartTime: finalStepStartTime,
-    );
   }
 
   /// Construit le [CareerGenerationResult] final à partir des accumulateurs

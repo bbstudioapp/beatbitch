@@ -11,6 +11,7 @@
 
 import 'dart:math';
 
+import '../../../models/final_category.dart';
 import '../../../models/session.dart';
 import '../../../models/session_step.dart';
 import '../../models/phrase_bank.dart';
@@ -363,6 +364,82 @@ class FinishPhase {
       from: draft.from,
       to: draft.to,
       duration: draft.duration,
+    );
+  }
+
+  /// Émet le step **final** (apothéose contemplative). Choix via
+  /// `FinalPicker.pickFinal` selon humil cap projeté à `ctx.time` et
+  /// plafond de profondeur. Phrase : annonce du changement de mode si
+  /// différent du dernier boost (« sors ta langue, j'arrive »), sinon
+  /// phrase d'action standard.
+  ///
+  /// Retourne `(finalCategory, finalMode, finalStepStartTime)` —
+  /// consommé par `_assembleResult`. Mute `ctx.time` / `ctx.stamina`
+  /// via [emitStep].
+  ({
+    FinalCategory finalCategory,
+    SessionMode finalMode,
+    int finalStepStartTime,
+  }) emitFinalStep(
+    GenerationContext ctx, {
+    required int? lastBoostIndex,
+    required SessionMode burstMode,
+  }) {
+    // Cap effectif au moment du final (=quasi fin de session,
+    // sessionCap probablement saturé). Le générateur ne bénéficie pas
+    // des bumps évènementiels (punition complétée etc.) — uniquement
+    // de la rampe automatique — donc c'est volontairement conservateur.
+    final finalHumilCap = config.humilCapAt(ctx.time);
+    // En chaîne encore, on allonge le final pour que la dramaturgie
+    // de « tu en veux encore » se traduise aussi côté apothéose.
+    // Bornée par le clamp de `_finalPicker.pickFinal` pour rester
+    // raisonnable.
+    final finishMul = 1.0 + max(0, ctx.encoreChainIndex) * 0.10;
+    final finisherDraft = finalPicker.pickFinal(
+      humilCap: finalHumilCap,
+      maxDepth: config.maxDepthIndex,
+      finishMul: finishMul,
+    );
+    final finalCategory =
+        rules[finisherDraft.mode]!.finalCategory(finisherDraft);
+    final finalMode = finisherDraft.mode;
+
+    // Annonce du final : si le finisher change de mode (ex. dernier
+    // boost = hand, finisher = lick), on pose une phrase qui annonce
+    // le changement physique imminent. Sinon, phrase d'action
+    // standard.
+    final announcePhrase = (lastBoostIndex != null && burstMode != finalMode)
+        ? ctx.bank.pickFinalAnnouncement(
+            preMode: burstMode,
+            finalMode: finalMode,
+            rng: rng,
+          )
+        : null;
+    // Convention design : seul un mode `staticHeld` (= hold) porte
+    // une « position tenue » à annoncer ; les autres modes finaux
+    // (rhythm, lick, hand, biffle, beg) jouent une action sans tenue
+    // scriptée. Mode résolu au cache (cf. B.PR3 du plan).
+    final isStaticHeldFinal = finalMode == _staticHeldMode;
+    final finalActionPhrase = ctx.bank.pickFinalAction(
+      mode: finalMode,
+      holdPosition: isStaticHeldFinal ? finisherDraft.from : null,
+      rng: rng,
+    );
+    final finalStepText = (announcePhrase != null && announcePhrase.isNotEmpty)
+        ? announcePhrase
+        : (finalActionPhrase ?? '');
+    final finalStepStartTime = ctx.time;
+    emitStep(
+      ctx,
+      draft: finisherDraft,
+      text: finalStepText,
+      progress: 1.0,
+      asTransit: true,
+    );
+    return (
+      finalCategory: finalCategory,
+      finalMode: finalMode,
+      finalStepStartTime: finalStepStartTime,
     );
   }
 
