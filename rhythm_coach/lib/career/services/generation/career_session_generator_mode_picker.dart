@@ -91,23 +91,15 @@ class _ModePicker {
     if (last == null) return 1.0;
     if (last == StepType.transit) return 1.0;
 
-    if (candidate == SessionMode.breath || candidate == SessionMode.freestyle) {
-      return 1.0;
-    }
-
-    // beg est ambivalent au moment du tirage : son `to` est décidé après
-    // dans `_mapDifficultyToStep`. À diff bas (= début de session,
-    // chauffe), `ampScore` tend vers 0 et le beg sort en libre (`to=null`).
-    // Si on le traitait neutre (×1.0), il sortait ~14 % du temps en plein
-    // milieu d'une série bouche et la fragmentait. On le classe donc en
-    // libre/main par défaut — quitte à manquer un peu les beg-non-libre
-    // (rares, n'apparaissent qu'à ampScore haut, donc à diff haut). Le
-    // `null` passé à `classify` produit ce même verdict côté `BegRules`,
-    // mais on garde le shortcut explicite pour que l'intention reste
-    // lisible (« beg = libre, sauf décision contraire »).
-    final cand = candidate == SessionMode.beg
-        ? StepType.libreMain
-        : rules[candidate]!.classify(null);
+    // `classify(null)` retourne le type effectif du mode au moment du
+    // tirage : breath/freestyle → `transit` (filtré juste en dessous),
+    // beg → `libreMain` (sa convention « to-null ⇒ libre » s'applique
+    // tant que le `to` n'est pas encore décidé ; le beg-non-libre est
+    // rare en pratique — il n'apparaît qu'à ampScore haut, donc à diff
+    // haut, et on accepte de le manquer pour ne pas fragmenter les
+    // séries bouche en début de session). Les rules portent désormais
+    // leur propre classification ; le picker reste mode-agnostic.
+    final cand = rules[candidate]!.classify(null);
     if (cand == StepType.transit) return 1.0;
 
     // Verrou strict : si on a déjà 2+ steps consécutifs hors bouche
@@ -159,27 +151,23 @@ class _ModePicker {
   }
 
   /// Retire `lastMode` des candidats si une alternative existe et que le
-  /// mode est « ponctuel » (breath / beg / biffle / hold / freestyle) —
-  /// deux events identiques d'affilé y sonneraient comme un bug.
+  /// mode n'est pas « flow » : deux events ponctuels identiques
+  /// d'affilé sonneraient comme un bug.
   ///
-  /// Pour les modes « flow » (rhythm / lick / hand), on **accepte la
-  /// répétition** : la variété passe par les paramètres (BPM via
-  /// `_applyBpmDiversity` qui force ≥18 BPM de delta, profondeur via
-  /// `_diversifyAmplitude` qui décale d'un cran). Sans cette fenêtre de
-  /// rester sur le même mode, on sortait nécessairement de rythme à chaque
-  /// step ; l'utilisateur a relevé que la séance ressemblait à une rotation
-  /// stricte au lieu de phases prolongées avec variation.
+  /// Les modes « flow » ([ModeRules.isFlow] — rhythm / lick / hand)
+  /// **acceptent la répétition** : la variété passe par les paramètres
+  /// (BPM via `_applyBpmDiversity` qui force ≥18 BPM de delta,
+  /// profondeur via `_diversifyAmplitude` qui décale d'un cran). Sans
+  /// cette fenêtre, on sortait nécessairement de rythme à chaque step ;
+  /// retour utilisateur « la séance ressemble à une rotation stricte
+  /// au lieu de phases prolongées avec variation ».
   static List<SessionMode> filterRepeated(
     List<SessionMode> candidates,
-    SessionMode? lastMode,
-  ) {
+    SessionMode? lastMode, {
+    required Map<SessionMode, ModeRules> rules,
+  }) {
     if (lastMode == null || candidates.length <= 1) return candidates;
-    const flowModes = {
-      SessionMode.rhythm,
-      SessionMode.lick,
-      SessionMode.hand,
-    };
-    if (flowModes.contains(lastMode)) return candidates;
+    if (rules[lastMode]!.isFlow) return candidates;
     final filtered = candidates.where((m) => m != lastMode).toList();
     if (filtered.isEmpty) return candidates;
     return filtered;

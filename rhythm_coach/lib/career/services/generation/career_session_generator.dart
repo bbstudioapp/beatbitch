@@ -2422,9 +2422,9 @@ class CareerSessionGenerator {
   /// step ; l'utilisateur a relevé que la séance ressemblait à une rotation
   /// stricte au lieu de phases prolongées avec variation.
   /// Adaptateur d'instance pour `_ModePicker.filterRepeated` — injecte
-  /// `_state.lastMode`.
+  /// `_state.lastMode` et `_rules`.
   List<SessionMode> _filterRepeated(List<SessionMode> candidates) =>
-      _ModePicker.filterRepeated(candidates, _state.lastMode);
+      _ModePicker.filterRepeated(candidates, _state.lastMode, rules: _rules);
 
   /// Tire une phrase pour [mode]/[tier] en évitant la même qu'au step
   /// précédent (`_state.lastText`). Quelques essais suffisent : si la banque ne
