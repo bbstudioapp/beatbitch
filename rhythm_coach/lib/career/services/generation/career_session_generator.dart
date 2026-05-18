@@ -40,6 +40,7 @@ import 'bpm_pacing.dart';
 import 'capability_clamps.dart';
 import 'difficulty_dispatch.dart';
 import 'final_picker.dart';
+import 'finish_phase.dart';
 import 'gen_facade.dart';
 import 'generation_context.dart';
 import 'humiliation_gates.dart';
@@ -64,6 +65,7 @@ export 'capability_clamp_surface.dart' show CapabilityClampSurface;
 export 'capability_clamps.dart' show CapabilityClamps;
 export 'difficulty_dispatch.dart' show DifficultyDispatch;
 export 'final_picker.dart' show FinalPicker;
+export 'finish_phase.dart' show FinishPhase;
 export 'gen_facade.dart' show GenFacade;
 export 'generation_context.dart' show GenerationContext;
 export 'milestone_scheduler.dart' show MilestoneScheduler;
@@ -229,6 +231,11 @@ class CareerSessionGenerator {
   /// `_initScratchpad`. Cf. `step_builders.dart`.
   late StepBuilders _stepBuilders;
 
+  /// Helpers d'orchestration de la phase finish (pré-finisher,
+  /// boosts, final, post-final, assemble). Recréé à chaque
+  /// `_initScratchpad`. Cf. `finish_phase.dart`.
+  late FinishPhase _finishPhase;
+
   /// Registry des règles par mode injecté au constructeur. Par défaut le
   /// `_rules` standard ; un test ou un module externe
   /// peut passer un registry alternatif (mocker une rule, ajouter un mode
@@ -384,6 +391,20 @@ class CareerSessionGenerator {
       enforceHumiliationRequired: _enforceHumiliationRequired,
       clampToCapability: _clampToCapability,
       isUnlocked: _isUnlocked,
+    );
+    _finishPhase = FinishPhase(
+      config: _config,
+      state: _state,
+      rng: _rng,
+      rules: _rules,
+      finalPicker: _finalPicker,
+      positionPickers: _positionPickers,
+      emitStep: _emitStep,
+      pickPhraseForDraft: _pickPhraseForDraft,
+      clampToCapability: _clampToCapability,
+      enforceHumiliationRequired: _enforceHumiliationRequired,
+      trackPushedStep: _trackPushedStep,
+      advanceSalivaSim: _advanceSalivaSim,
     );
   }
 
@@ -713,7 +734,7 @@ class CareerSessionGenerator {
     final preFinisherMode =
         _resolveModeForRole(ModeSemanticRole.preFinisherCore);
     if (isLowLevel && !_config.isModeForbidden(preFinisherMode)) {
-      _emitPreFinisher(ctx, preFinisherTarget: preFinisherTarget);
+      _finishPhase.emitPreFinisher(ctx, preFinisherTarget: preFinisherTarget);
     }
 
     // Choix du template de finish : `hand_burst` (non humiliant, pure
@@ -735,11 +756,11 @@ class CareerSessionGenerator {
     // toutes neutres). Avant fix #68, les doses ne servaient qu'à exclure
     // (poids 0) : hand=rare + rhythm=frequent en Extrême → 25 % de boosts
     // hand constants. Désormais : 0.4/(0.4+2.2) ≈ 15 %.
-    final burstPick = _pickBurstMode(ctx);
+    final burstPick = _finishPhase.pickBurstMode();
     final useHandBurst = burstPick.useHandBurst;
     final burstMode = burstPick.burstMode;
 
-    final lastBoostIndex = _emitBoosts(
+    final lastBoostIndex = _finishPhase.emitBoosts(
       ctx,
       useHandBurst: useHandBurst,
       burstMode: burstMode,
@@ -754,7 +775,7 @@ class CareerSessionGenerator {
     // probablement saturé). Le générateur ne bénéficie pas des bumps
     // évènementiels (punition complétée etc.) — uniquement de la rampe
     // automatique — donc c'est volontairement conservateur.
-    final finalResult = _emitFinalStep(
+    final finalResult = _finishPhase.emitFinalStep(
       ctx,
       lastBoostIndex: lastBoostIndex,
       burstMode: burstMode,
@@ -763,7 +784,8 @@ class CareerSessionGenerator {
     final finalMode = finalResult.finalMode;
     final finalStepStartTime = finalResult.finalStepStartTime;
 
-    _emitPostFinal(ctx, finalMode: finalMode);
+    _finishPhase.emitPostFinal(ctx,
+        finalMode: finalMode, holdCeilingIdx: _milestoneHoldCeilingIdx());
 
     return _assembleResult(
       ctx,
@@ -1191,17 +1213,6 @@ class CareerSessionGenerator {
     return true;
   }
 
-  /// Adaptateur d'instance pour `FinalPicker.buildPostFinalDraft`. Injecte
-  /// le `holdCeilingIdx` calculé depuis `_state.unlockedKeys` + `_config.maxDepthIndex`
-  /// — qui n'est pas dans `FinalPicker` car partagé avec `_pickHoldPosition`
-  /// et d'autres call sites.
-  StepDraft _buildPostFinalDraft(SessionMode finalMode, double humilCap) =>
-      _finalPicker.buildPostFinalDraft(
-        finalMode: finalMode,
-        humilCap: humilCap,
-        holdCeilingIdx: _milestoneHoldCeilingIdx(),
-      );
-
   /// Convertit un [SessionStep] de configuration (non text-only) en
   /// [StepDraft] interne pour pouvoir le passer aux helpers stamina /
   /// saliva. Convention uniforme : hold/beg portent leur position dans
@@ -1289,318 +1300,6 @@ class CareerSessionGenerator {
     _state.lastText = lastStep.text;
     ctx.time = t + milestone.durationSeconds;
     ctx.stamina = s;
-  }
-
-  /// Émet le step de pré-finisher (courte accélération `head→target`
-  /// qui prépare la phase boosts). Utilisé uniquement pour les bas
-  /// niveaux — le caller garde la guard `isLowLevel &&
-  /// !isModeForbidden(preFinisherCore)` autour de l'appel pour ne pas
-  /// changer la séquence RNG (la position est pickée avant l'appel).
-  ///
-  /// La construction du draft (BPM 62-70, dur 22-30 s) est désormais
-  /// déléguée au mode qui porte le rôle `preFinisherCore` (cf. B.PR8).
-  /// Le clamp capacité, le pick de phrase et l'émission du step restent
-  /// ici parce qu'ils consomment du state d'instance (`_clampToCapability`,
-  /// `_pickPhraseForDraft`, `_emitStep`).
-  ///
-  /// Mute `ctx.steps` et `ctx.profile` en place. Met à jour
-  /// `_state.lastMode/_state.lastText` et tracke la continuité.
-  /// Retourne `(newTime, newStamina)`.
-  void _emitPreFinisher(
-    GenerationContext ctx, {
-    required Position preFinisherTarget,
-  }) {
-    final preFinisherMode =
-        _resolveModeForRole(ModeSemanticRole.preFinisherCore);
-    final preDraft =
-        _clampToCapability(_rules[preFinisherMode]!.buildPreFinisher(
-      PreFinisherCtx(rng: _rng, preFinisherTarget: preFinisherTarget),
-    )!);
-    final preText = _pickPhraseForDraft(ctx.bank, preDraft, 'medium');
-    _emitStep(
-      ctx,
-      draft: preDraft,
-      text: preText,
-      progress: ctx.progress,
-      asTransit: true,
-    );
-  }
-
-  /// Choix du mode pour la phase de boosts (`burstNeutral` non humiliant
-  /// vs `burstHumiliating` humiliant). Gère :
-  ///  - le biais dramaturgique 70/30 vs 25/75 selon humil + niveau ;
-  ///  - les exclusions Custom (`_config.isModeForbidden`) avec repli
-  ///    `burstFallback` quand neutre ET humiliant sont bannis ;
-  ///  - le ratio de poids brut quand les doses neutre/humiliant sont
-  ///    asymétriques (cf. issue #68).
-  ///
-  /// Le mapping concret (rhythm/hand/lick) est désormais résolu via
-  /// `_resolveModeForRole` — cf. B.PR2 du plan de refacto. `useHandBurst`
-  /// reste le nom historique du flag (les call sites en aval — caps BPM,
-  /// pondération dramaturgique — distinguent encore l'axe humiliant vs
-  /// neutre via ce booléen, le renommer est hors scope).
-  ///
-  /// Consomme un tirage RNG quand les deux modes sont autorisés.
-  ({bool useHandBurst, SessionMode burstMode}) _pickBurstMode(
-      GenerationContext ctx) {
-    final humiliating = _resolveModeForRole(ModeSemanticRole.burstHumiliating);
-    final neutral = _resolveModeForRole(ModeSemanticRole.burstNeutral);
-    final fallback = _resolveModeForRole(ModeSemanticRole.burstFallback);
-    final handForbidden = _config.isModeForbidden(neutral);
-    final rhythmForbidden = _config.isModeForbidden(humiliating);
-    final preferHandBase =
-        _config.humiliationCareer < 5 && _config.level <= 3 ? 0.70 : 0.25;
-    if (handForbidden && rhythmForbidden) {
-      // chemin "rhythm-like" : BPM cap/floor rhythm
-      return (useHandBurst: false, burstMode: fallback);
-    }
-    if (handForbidden) {
-      return (useHandBurst: false, burstMode: humiliating);
-    }
-    if (rhythmForbidden) {
-      return (useHandBurst: true, burstMode: neutral);
-    }
-    final handWeight = _config.coachModeWeights[neutral] ?? 1.0;
-    final rhythmWeight = _config.coachModeWeights[humiliating] ?? 1.0;
-    final dosesAreSymmetric = (handWeight - rhythmWeight).abs() < 0.01;
-    final preferHand = dosesAreSymmetric
-        ? preferHandBase
-        : handWeight / (handWeight + rhythmWeight);
-    final useHandBurst = _rng.nextDouble() < preferHand;
-    return (
-      useHandBurst: useHandBurst,
-      burstMode: useHandBurst ? neutral : humiliating,
-    );
-  }
-
-  /// Boucle des boosts de la phase finish — sprint déterministe de
-  /// `ctx.boostsCount` steps qui ramp BPM et profondeur de manière monotone
-  /// croissante. Renvoie l'index du dernier step ajouté à `ctx.steps` (pour
-  /// que l'annonce du final puisse y faire référence si besoin), ainsi que
-  /// les nouveaux `(time, stamina)`.
-  ///
-  /// Les listes `ctx.steps` et `ctx.profile` sont mutées en place. Met à
-  /// jour `_state.lastMode/_state.lastText/_state.lastBpm` à chaque boost émis et tracke la
-  /// continuité.
-  int? _emitBoosts(
-    GenerationContext ctx, {
-    required bool useHandBurst,
-    required SessionMode burstMode,
-  }) {
-    // Plafond humiliation pour les bursts. Hand n'est pas gating par
-    // humiliation (cap inutile), mais on laisse `_enforceHumiliationRequired`
-    // tourner — il rejettera juste si la profondeur du draft demande trop.
-    // Cap assoupli pour les boosts : projection au temps courant du début
-    // de la phase finish, +8 de tolérance pour permettre des bursts un
-    // poil au-dessus du cap mécanique strict (tradition du finish).
-    final boostHumilCap = _config.humilCapAt(ctx.time) + 8.0;
-    // Nombre total de boosts : table par niveau + bonus encore (fixé en
-    // amont via `boostsCount`). Plus de boucle conditionnelle sur la
-    // jauge — le sprint est entièrement déterministe.
-    final totalBoosts = max(1, ctx.boostsCount);
-    // **BPM cap qui scale par niveau ET par chaîne d'encore** : niveau 1
-    // plafonne à ~110 BPM (hand) / 130 (rhythm), +4 BPM/niveau jusqu'à un
-    // plafond de garde-fou à 300 (très haut — c'est le `comfort` du profil
-    // de capacités qui borne en pratique, via `_clampToCapability`). Le
-    // mode encore ajoute +8 BPM par cran de chaîne pour intensifier le
-    // sprint sans changer le nombre de boosts.
-    final levelBpmBoost =
-        ((_config.level - 1) * 4 + max(0, ctx.encoreChainIndex) * 8)
-            .clamp(0, 70);
-    final bpmCap = useHandBurst
-        ? (110 + levelBpmBoost).clamp(110, 300)
-        : (130 + levelBpmBoost).clamp(130, 300);
-    final bpmFloor = useHandBurst ? 80 : 100;
-    // Cap de profondeur des boosts gaté par les milestones effectivement
-    // acquittées (cf. `_milestoneRhythmCeilingIdx`) : throat ouvert si
-    // `throatPulse` débloqué (intro_throat_pulse), full si `fullPulse`
-    // (intro_full_pulse). Indépendant du niveau seul — sauter des milestones
-    // ne donne pas accès aux profondeurs. Borné par `_config.maxDepthIndex` en
-    // sécurité, et par mid (idx 2) au minimum (un boost ne descend jamais
-    // sous mid pour rester reconnaissable comme un sprint).
-    final boostMaxToIdx = max(2, _milestoneRhythmCeilingIdx());
-    int? lastBoostIndex;
-    // Monotonie ascendante : la phase finish ne doit JAMAIS ralentir. Chaque
-    // boost démarre sur un BPM ≥ au précédent (idem pour la profondeur `to`).
-    int prevBoostBpm = 0;
-    int prevBoostToIdx = 0;
-    final plannedBoosts = totalBoosts;
-    for (var boostsAdded = 0; boostsAdded < totalBoosts; boostsAdded++) {
-      // Durée variable : 12 à 16 s par défaut, +1s par cran de chaîne
-      // encore pour allonger un peu chaque sprint.
-      final boostDur =
-          12 + _rng.nextInt(5) + max(0, ctx.encoreChainIndex).clamp(0, 4);
-      // Progression linéaire 0→1 sur les `plannedBoosts`. Plancher 0.4 :
-      // pas de démarrage mou.
-      final progress = plannedBoosts <= 1
-          ? 1.0
-          : ((boostsAdded + 1) / plannedBoosts).clamp(0.4, 1.0);
-      final targetBpm = (bpmFloor + progress * (bpmCap - bpmFloor)).round();
-      // Jitter ±5 BPM autour de la cible pour ne pas répéter exactement
-      // le même tempo deux boosts d'affilée. Capé par bpmCap.
-      final shift = _rng.nextInt(11) - 5;
-      final bpmRaw = (targetBpm + shift).clamp(bpmFloor, bpmCap);
-      // Plancher monotone : on ne descend jamais sous le BPM du boost
-      // précédent.
-      final bpm =
-          bpmRaw <= prevBoostBpm ? min(prevBoostBpm + 4, bpmCap) : bpmRaw;
-      // Profondeur : ramp aussi sur la progression. Plancher `prevBoostToIdx`
-      // garantit la monotonie.
-      final rampDenom = plannedBoosts <= 1 ? 1 : (plannedBoosts - 1);
-      final progressionToIdx =
-          (boostMaxToIdx - 2 + 2 * (boostsAdded / rampDenom).clamp(0.0, 1.0))
-              .round()
-              .clamp(2, boostMaxToIdx);
-      final toIdx = max(prevBoostToIdx, progressionToIdx);
-      final boostTo = Position.values[toIdx];
-      // `from` : 2 crans au-dessus si possible (amplitude max), sinon 1 cran.
-      final boostFromIdx =
-          _rng.nextBool() && toIdx >= 2 ? max(0, toIdx - 2) : max(0, toIdx - 1);
-      final boostFrom = Position.values[boostFromIdx];
-      final boostDraftRaw = StepDraft(
-        mode: burstMode,
-        bpm: bpm,
-        from: boostFrom,
-        to: boostTo,
-        duration: boostDur,
-      );
-      // Hand : pas de gating humil → on garde amplitude max. Rhythm : cap
-      // normal du finish. Dans les deux cas, `_clampToCapability` (qui
-      // applique aussi les bornes utilisateur Custom).
-      final boostDraft = useHandBurst
-          ? _clampToCapability(boostDraftRaw)
-          : _enforceHumiliationRequired(boostDraftRaw, boostHumilCap);
-      // Tier dédié `boost` ; fallback `hard` si la bank n'a rien.
-      var boostText = _pickPhraseForDraft(ctx.bank, boostDraft, 'boost');
-      if (boostText.isEmpty) {
-        boostText = _pickPhraseForDraft(ctx.bank, boostDraft, 'hard');
-      }
-      ctx.steps.add(_draftToStep(boostDraft, time: ctx.time, text: boostText));
-      lastBoostIndex = ctx.steps.length - 1;
-      _state.recordLastTransit(boostDraft.mode, boostText);
-      _state.lastBpm = boostDraft.bpm ?? _state.lastBpm;
-      _trackPushedStep(boostDraft.mode, boostDraft.to,
-          from: boostDraft.from,
-          bpm: boostDraft.bpm,
-          duration: boostDraft.duration);
-      final staminaBeforeBoost = ctx.stamina;
-      ctx.stamina = StaminaModel.apply(ctx.stamina, boostDraft, 1.0, ctx.cfg,
-          rules: _rules);
-      _advanceSalivaSim(boostDraft);
-      StaminaModel.fillProfile(ctx.profile, ctx.time, boostDur, ctx.stamina,
-          valueStart: staminaBeforeBoost);
-      ctx.time += boostDur;
-      // Mémorise BPM/profondeur retenus (post-dégradation humil) pour que le
-      // boost suivant ne puisse pas redescendre sous ce palier.
-      prevBoostBpm = boostDraft.bpm ?? prevBoostBpm;
-      if (boostDraft.to != null) {
-        prevBoostToIdx = max(prevBoostToIdx, boostDraft.to!.index);
-      }
-    }
-    return lastBoostIndex;
-  }
-
-  /// Émet le step final (apothéose contemplative). Choix via [FinalPicker.pickFinal] selon
-  /// humil cap projeté à `time` et plafond de profondeur. Phrase : annonce du
-  /// changement de mode si différent du dernier boost (« sors ta langue,
-  /// j'arrive »), sinon phrase d'action standard.
-  ///
-  /// Retourne `(time, stamina, finalCategory, finalMode, finalStepStartTime)`.
-  /// Mute `ctx.steps` et `ctx.profile` en place.
-  ({
-    FinalCategory finalCategory,
-    SessionMode finalMode,
-    int finalStepStartTime,
-  }) _emitFinalStep(
-    GenerationContext ctx, {
-    required int? lastBoostIndex,
-    required SessionMode burstMode,
-  }) {
-    // Cap effectif au moment du final (=quasi fin de session, sessionCap
-    // probablement saturé). Le générateur ne bénéficie pas des bumps
-    // évènementiels (punition complétée etc.) — uniquement de la rampe
-    // automatique — donc c'est volontairement conservateur.
-    final finalHumilCap = _config.humilCapAt(ctx.time);
-    // En chaîne encore, on allonge le final pour que la dramaturgie de
-    // « tu en veux encore » se traduise aussi côté apothéose. Bornée par
-    // le clamp de `_finalPicker.pickFinal` pour rester raisonnable.
-    final finishMul = 1.0 + max(0, ctx.encoreChainIndex) * 0.10;
-    final finisherDraft = _finalPicker.pickFinal(
-      humilCap: finalHumilCap,
-      maxDepth: _config.maxDepthIndex,
-      finishMul: finishMul,
-    );
-    final finalCategory =
-        _rules[finisherDraft.mode]!.finalCategory(finisherDraft);
-    final finalMode = finisherDraft.mode;
-
-    // Annonce du final : si le finisher change de mode (ex. dernier boost =
-    // hand, finisher = lick), on pose une phrase qui annonce le changement
-    // physique imminent. Sinon, phrase d'action standard.
-    final announcePhrase = (lastBoostIndex != null && burstMode != finalMode)
-        ? ctx.bank.pickFinalAnnouncement(
-            preMode: burstMode,
-            finalMode: finalMode,
-            rng: _rng,
-          )
-        : null;
-    // Convention design : seul un mode `staticHeld` (= hold) porte une
-    // « position tenue » à annoncer ; les autres modes finaux (rhythm,
-    // lick, hand, biffle, beg) jouent une action sans tenue scriptée.
-    // On consulte le rôle plutôt que de hardcoder `SessionMode.hold`
-    // (cf. B.PR3 du plan de refacto).
-    final isStaticHeldFinal =
-        _rules[finalMode]!.roles.contains(ModeSemanticRole.staticHeld);
-    final finalActionPhrase = ctx.bank.pickFinalAction(
-      mode: finalMode,
-      holdPosition: isStaticHeldFinal ? finisherDraft.from : null,
-      rng: _rng,
-    );
-    final finalStepText = (announcePhrase != null && announcePhrase.isNotEmpty)
-        ? announcePhrase
-        : (finalActionPhrase ?? '');
-    final finalStepStartTime = ctx.time;
-    _emitStep(
-      ctx,
-      draft: finisherDraft,
-      text: finalStepText,
-      progress: 1.0,
-      asTransit: true,
-    );
-    return (
-      finalCategory: finalCategory,
-      finalMode: finalMode,
-      finalStepStartTime: finalStepStartTime,
-    );
-  }
-
-  /// Émet le step post-final (aftercare ~12 s après l'orgasme). Mode
-  /// contrastant choisi par [_buildPostFinalDraft] selon le mode final +
-  /// l'humil. Phrase : cascade `post_final_beg` / `post_final_lick` /
-  /// `post_final` / `congrats`. Mute `ctx.time` / `ctx.stamina`.
-  void _emitPostFinal(
-    GenerationContext ctx, {
-    required SessionMode finalMode,
-  }) {
-    final postFinalDraft = _clampToCapability(
-        _buildPostFinalDraft(finalMode, _config.humilCapAt(ctx.time)));
-    // Phrase : pool mode-spécifique (beg = CONSIGNE de supplique ;
-    // lick = consigne d'aftercare humiliant) puis cascade sur le pool
-    // générique. Default `pickPostFinalText` retourne `null` → on saute
-    // direct à la cascade générique. Garantit un text non-vide via le
-    // fallback final `pickCongrats`.
-    final modeSpecific =
-        _rules[postFinalDraft.mode]!.pickPostFinalText(ctx.bank, _rng);
-    final postFinalText = modeSpecific ??
-        ctx.bank.pickPostFinal(_rng) ??
-        ctx.bank.pickCongrats(_rng);
-    _emitStep(
-      ctx,
-      draft: postFinalDraft,
-      text: postFinalText,
-      progress: 1.0,
-      asTransit: true,
-    );
   }
 
   /// Construit le [CareerGenerationResult] final à partir des accumulateurs
@@ -1692,9 +1391,6 @@ class CareerSessionGenerator {
   // générateur lui-même (orchestration) ou ses parts (`_DifficultyDispatch`).
 
   int _milestoneHoldCeilingIdx() => _positionPickers.milestoneHoldCeilingIdx();
-
-  int _milestoneRhythmCeilingIdx() =>
-      _positionPickers.milestoneRhythmCeilingIdx();
 
   /// Délégué à [`SessionRuntimeState.advanceSalivaSim`].
   void _advanceSalivaSim(StepDraft draft) => _state.advanceSalivaSim(draft);
