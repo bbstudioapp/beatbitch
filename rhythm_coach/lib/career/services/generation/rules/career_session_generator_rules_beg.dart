@@ -121,15 +121,18 @@ class BegRules extends ModeRules {
     return null;
   }
 
-  /// Si [draft] est un `beg` qui suit immédiatement un `lick` ou un
-  /// `breath`, retourne une copie sans position tenue (récup vocale pure).
-  /// Sinon, renvoie [draft] tel quel. Méthode pure, no-op si le mode
-  /// n'est pas `beg` — l'orchestrateur peut l'appeler en mode-blind.
-  static StepDraft stripAfterSoft(
+  /// Si [draft] est un `beg` avec position tenue qui suit immédiatement
+  /// un step doux (`lick` ou `breath`), retourne une copie sans `to`
+  /// pour enchaîner sur une supplique purement vocale. Sinon, renvoie
+  /// [draft] tel quel. Override de la méthode polymorphique
+  /// `ModeRules.stripAfterSoft` (default = identité) — la branche
+  /// historique « no-op si draft.mode != beg » devient inutile depuis
+  /// que l'orchestrateur dispatche via `_rules[draft.mode]!`. Cf. C.PR7.
+  @override
+  StepDraft stripAfterSoft(
     StepDraft draft,
     List<SessionStep> steps,
   ) {
-    if (draft.mode != SessionMode.beg) return draft;
     if (draft.to == null) return draft;
     if (steps.isEmpty) return draft;
     final prev = steps.last.mode;
