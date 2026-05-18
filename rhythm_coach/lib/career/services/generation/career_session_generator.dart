@@ -544,13 +544,11 @@ class CareerSessionGenerator {
     // Si la milestone remplace l'intro, on l'insère ici à t=0 et c'est
     // son premier step qui tient le rôle de step #0 non text-only.
     if (milestoneScheduler.replacesIntro) {
-      final r = milestoneScheduler.insertIntroReplacement(
-        ctx,
-        time: time,
-        stamina: stamina,
-      );
-      time = r.time;
-      stamina = r.stamina;
+      ctx.time = time;
+      ctx.stamina = stamina;
+      milestoneScheduler.insertIntroReplacement(ctx);
+      time = ctx.time;
+      stamina = ctx.stamina;
     } else {
       final first = _clampToCapability(_firstStep(
         quickie: quickie,
@@ -608,14 +606,7 @@ class CareerSessionGenerator {
       // OU dès qu'on dépasse la borne max (insertion en urgence pour
       // ne pas la louper). Le cas time < target continue à empiler des
       // steps de chauffe normalement.
-      final milestoneInsert = milestoneScheduler.tryInsertAt(
-        ctx,
-        time: ctx.time,
-        stamina: ctx.stamina,
-      );
-      if (milestoneInsert != null) {
-        ctx.time = milestoneInsert.time;
-        ctx.stamina = milestoneInsert.stamina;
+      if (milestoneScheduler.tryInsertAt(ctx)) {
         if (ctx.time >= genUntil) break;
         continue;
       }
@@ -633,24 +624,17 @@ class CareerSessionGenerator {
       // optionnel → chain action attachée. Toujours émet.
       _emitMainStepCycle(ctx);
     }
-    // Recopie le curseur muté vers les locales — utilisé par la phase
-    // finish ci-dessous (qui thread encore time/stamina jusqu'au
-    // step 5 de D.PR7-2).
-    time = ctx.time;
-    stamina = ctx.stamina;
-
     // Si la boucle main s'est terminée sans avoir inséré toutes les
     // milestones (durée trop courte pour atteindre la fenêtre, ou
     // `genUntil` faible après le first step), on force l'insertion ici
     // pour qu'elles soient jouées avant le finisher. Cas rare mais on ne
     // veut pas perdre une milestone silencieusement.
-    final drain = milestoneScheduler.insertAllRemaining(
-      ctx,
-      time: time,
-      stamina: stamina,
-    );
-    time = drain.time;
-    stamina = drain.stamina;
+    milestoneScheduler.insertAllRemaining(ctx);
+    // Recopie le curseur muté vers les locales — utilisé par la phase
+    // finish ci-dessous (qui thread encore time/stamina jusqu'au
+    // step 5 de D.PR7-2).
+    time = ctx.time;
+    stamina = ctx.stamina;
 
     // À partir d'ici on entre dans la fenêtre **finish** (pré-finisher +
     // boosts + final + son d'orgasme). Les commentaires aléatoires sont
@@ -666,14 +650,11 @@ class CareerSessionGenerator {
     // `_finish` enchaîner sur la phrase finale + finale_chime.
     if (useFinalMilestone) {
       final finalMilestoneStartTime = time;
-      final finalResult = _pushMilestoneSequence(
-        ctx,
-        milestone: finalMilestone,
-        time: time,
-        stamina: stamina,
-      );
-      time = finalResult.time;
-      stamina = finalResult.stamina;
+      ctx.time = time;
+      ctx.stamina = stamina;
+      _pushMilestoneSequence(ctx, milestone: finalMilestone);
+      time = ctx.time;
+      stamina = ctx.stamina;
 
       // Catégorise le final pour piocher le bon `finale_chime` côté
       // BeepEngine. Basé sur le dernier step de config de la séquence
@@ -1395,17 +1376,15 @@ class CareerSessionGenerator {
   /// stamina + simu salive, fillProfile, et tracke la continuité par type.
   /// À la fin, met à jour `_state.lastMode` / `_state.lastText` à partir du dernier step.
   ///
-  /// Retourne `(newTime, newStamina)` — le caller continue avec ces valeurs.
-  /// `time` ressort incrémenté de `milestone.durationSeconds`. Les listes
-  /// `ctx.steps` et `ctx.profile` sont mutées en place.
-  ({int time, double stamina}) _pushMilestoneSequence(
+  /// `ctx.time` ressort incrémenté de `milestone.durationSeconds` ;
+  /// `ctx.stamina` reflète l'endurance projetée après la séquence. Les
+  /// listes `ctx.steps` et `ctx.profile` sont mutées en place.
+  void _pushMilestoneSequence(
     GenerationContext ctx, {
     required LevelMilestone milestone,
-    required int time,
-    required double stamina,
   }) {
-    var t = time;
-    var s = stamina;
+    final t = ctx.time;
+    var s = ctx.stamina;
     for (final mStep in milestone.sequence) {
       // Si une surcharge i18n existe pour ce step (clé = offset `time` du
       // step dans la sequence), on l'utilise à la place du `text` du JSON
@@ -1449,8 +1428,8 @@ class CareerSessionGenerator {
     final lastStep = milestone.sequence.last;
     _state.lastMode = lastStep.mode ?? _state.lastMode;
     _state.lastText = lastStep.text;
-    t += milestone.durationSeconds;
-    return (time: t, stamina: s);
+    ctx.time = t + milestone.durationSeconds;
+    ctx.stamina = s;
   }
 
   /// Émet le step de pré-finisher (courte accélération `head→target`
