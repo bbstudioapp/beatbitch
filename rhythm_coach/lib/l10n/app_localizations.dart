@@ -2710,19 +2710,6 @@ abstract class AppLocalizations {
   /// **'{coachName} demande le niveau {minLevel} minimum.'**
   String coachErrorMinLevel(String coachName, int minLevel);
 
-  /// No description provided for @coachErrorMissingSpecialization.
-  ///
-  /// In fr, this message translates to:
-  /// **'Ce coach demande au moins 1 point dans une spécialisation que tu n\'as pas investie.'**
-  String get coachErrorMissingSpecialization;
-
-  /// No description provided for @coachErrorInsufficientBranchPoints.
-  ///
-  /// In fr, this message translates to:
-  /// **'{coachName} demande : {requirements}. Investis tes points de spécialisation.'**
-  String coachErrorInsufficientBranchPoints(
-      String coachName, String requirements);
-
   /// Annonce TTS post-finale_chime quand la milestone qui débloque sloppy_drool_basic est acquittée.
   ///
   /// In fr, this message translates to:

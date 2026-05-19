@@ -708,15 +708,6 @@
       "minLevel": { "type": "int" }
     }
   },
-  "coachErrorMissingSpecialization": "This coach requires at least 1 point in a specialization you haven't invested in.",
-  "coachErrorInsufficientBranchPoints": "{coachName} requires: {requirements}. Spend your specialization points.",
-  "@coachErrorInsufficientBranchPoints": {
-    "placeholders": {
-      "coachName": { "type": "String" },
-      "requirements": { "type": "String" }
-    }
-  },
-
   "unlockAnnouncementSloppyDroolBasic": "From now on your mouth holds more spit, and your licking makes more. Drool on me, be filthy.",
   "@unlockAnnouncementSloppyDroolBasic": {
     "description": "Post-finale_chime TTS announcement when the milestone unlocking sloppy_drool_basic is acknowledged."

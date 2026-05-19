@@ -3,7 +3,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:beat_bitch/career/models/coach.dart';
 import 'package:beat_bitch/career/models/coach_catalog.dart';
-import 'package:beat_bitch/career/models/specialization.dart';
 import 'package:beat_bitch/career/services/coach_service.dart';
 
 void main() {
@@ -87,7 +86,6 @@ void main() {
         tier1,
         playerMaxLevel: 13,
         handsEnabled: true,
-        branchPoints: const {},
       );
       expect(status, CoachSelectionStatus.selectedFreeTraining);
     });
@@ -100,7 +98,6 @@ void main() {
         tier3,
         playerMaxLevel: 1,
         handsEnabled: true,
-        branchPoints: const {},
       );
       expect(status, CoachSelectionStatus.lockedTier);
     });
@@ -114,7 +111,6 @@ void main() {
         jade,
         playerMaxLevel: 20,
         handsEnabled: false,
-        branchPoints: const {},
       );
       expect(status, CoachSelectionStatus.blockedRequiresHands);
     });
@@ -151,7 +147,6 @@ void main() {
         phantom,
         playerMaxLevel: 1,
         handsEnabled: true,
-        branchPoints: const {},
       );
       expect(status, CoachSelectionStatus.lockedTier);
     });
@@ -168,96 +163,6 @@ void main() {
       expect(s2.currentTier, 2);
       expect(s2.selectedCoachId, tier2.id);
       expect(s2.isUnlocked(tier2), isTrue);
-    });
-
-    test(
-        'evaluate avec branches requises non investies → blockedMissingSpecialization',
-        () async {
-      const phantom = Coach(
-        id: 'phantom_spec',
-        name: 'Phantom',
-        title: 'Test',
-        archetype: CoachArchetype.strict,
-        publicBio: '',
-        specialties: [],
-        tier: 1,
-        isPrincipal: false,
-        requirements: CoachRequirement(
-          mustHaveUnlockedBranches: [SpecializationBranch.profondeur],
-        ),
-      );
-      final s = CoachService(coaches: [phantom, ...CoachCatalog.defaults]);
-      await s.load();
-      // phantom n'est pas Principal du tier 1, donc pas débloqué par défaut →
-      // l'évaluation retournera lockedTier avant même de tester les branches.
-      // On le marque comme débloqué via une sélection forcée pour atteindre
-      // la branche de specialisation manquante.
-      // Plus simple : on prend Lina (tier 1, débloquée) et on lui ajoute la
-      // contrainte via un coach maison du même tier.
-      const phantomTier1 = Coach(
-        id: 'phantom_t1',
-        name: 'Phantom T1',
-        title: '',
-        archetype: CoachArchetype.bienveillant,
-        publicBio: '',
-        specialties: [],
-        tier: 1,
-        isPrincipal: true, // débloqué par défaut comme Principal
-        requirements: CoachRequirement(
-          mustHaveUnlockedBranches: [SpecializationBranch.profondeur],
-        ),
-      );
-      // Catalogue ne contient qu'un Principal par tier. Le service prend le
-      // premier match : on remplace.
-      final s2 = CoachService(
-          coaches: [phantomTier1, ...CoachCatalog.defaults.skip(1)]);
-      await s2.load();
-      final status = s2.evaluate(
-        phantomTier1,
-        playerMaxLevel: 1,
-        handsEnabled: true,
-        branchPoints: const {},
-      );
-      expect(status, CoachSelectionStatus.blockedMissingSpecialization);
-    });
-
-    test('requiredBranchPoints non atteint → blockedInsufficientBranchPoints',
-        () async {
-      const phantomTier1 = Coach(
-        id: 'phantom_pts',
-        name: 'P',
-        title: '',
-        archetype: CoachArchetype.bienveillant,
-        publicBio: '',
-        specialties: [],
-        tier: 1,
-        isPrincipal: true,
-        requirements: CoachRequirement(
-          requiredBranchPoints: {SpecializationBranch.endurance: 3},
-        ),
-      );
-      final s = CoachService(
-          coaches: [phantomTier1, ...CoachCatalog.defaults.skip(1)]);
-      await s.load();
-
-      // 0 point en endurance → blocked.
-      var status = s.evaluate(
-        phantomTier1,
-        playerMaxLevel: 1,
-        handsEnabled: true,
-        branchPoints: const {SpecializationBranch.endurance: 1},
-      );
-      expect(status, CoachSelectionStatus.blockedInsufficientBranchPoints,
-          reason: '1 < 3');
-
-      // 3 points → OK (et c'est le Principal du tier courant).
-      status = s.evaluate(
-        phantomTier1,
-        playerMaxLevel: 1,
-        handsEnabled: true,
-        branchPoints: const {SpecializationBranch.endurance: 3},
-      );
-      expect(status, CoachSelectionStatus.selectedAdvancing);
     });
   });
 }

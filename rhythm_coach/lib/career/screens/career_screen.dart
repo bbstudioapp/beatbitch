@@ -131,7 +131,6 @@ class _CareerScreenState extends State<CareerScreen> {
           service: coachService,
           playerMaxLevel: bundle.maxLevel,
           handsEnabled: _includeHandOverride ?? bundle.includeHand,
-          specialization: bundle.specialization,
         ),
       ),
     );

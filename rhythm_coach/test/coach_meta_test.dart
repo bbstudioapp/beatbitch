@@ -17,7 +17,6 @@ void main() {
         'requirements': {
           'requiresHands': true,
           'minPlayerLevel': 12,
-          'mustHaveUnlockedBranches': ['profondeur'],
         },
       });
       expect(m.name, 'Lina Override');
@@ -28,8 +27,6 @@ void main() {
       expect(m.isPrincipal, isTrue);
       expect(m.requirements!.requiresHands, isTrue);
       expect(m.requirements!.minPlayerLevel, 12);
-      expect(m.requirements!.mustHaveUnlockedBranches,
-          [SpecializationBranch.profondeur]);
     });
 
     test('JSON vide → CoachMeta.empty', () {

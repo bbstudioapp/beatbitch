@@ -3,7 +3,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/coach.dart';
 import '../models/coach_catalog.dart';
-import '../models/specialization.dart';
 
 /// Résultat d'une demande de sélection de coach.
 enum CoachSelectionStatus {
@@ -26,14 +25,6 @@ enum CoachSelectionStatus {
   /// Le niveau global du joueur est en-dessous du `minPlayerLevel` requis
   /// par le coach.
   blockedMinLevel,
-
-  /// Le coach demande une branche de spécialisation non investie
-  /// (au moins 1 point requis via `mustHaveUnlockedBranches`).
-  blockedMissingSpecialization,
-
-  /// Le coach demande un seuil de points dans une branche, non atteint
-  /// (via `requiredBranchPoints`).
-  blockedInsufficientBranchPoints,
 }
 
 /// Source de vérité pour : palier courant, coach sélectionné, set des
@@ -199,14 +190,10 @@ class CoachService extends ChangeNotifier {
   /// ce soit le Principal — c'est l'appelant qui décide d'avertir
   /// l'utilisateur avant de confirmer la sélection d'un coach
   /// non-Principal.
-  ///
-  /// [branchPoints] : points investis par branche. Sert aux deux checks
-  /// `mustHaveUnlockedBranches` (>= 1) et `requiredBranchPoints` (seuils).
   CoachSelectionStatus evaluate(
     Coach c, {
     required int playerMaxLevel,
     required bool handsEnabled,
-    required Map<SpecializationBranch, int> branchPoints,
   }) {
     if (!isUnlocked(c)) return CoachSelectionStatus.lockedTier;
     if (c.requirements.requiresHands && !handsEnabled) {
@@ -214,16 +201,6 @@ class CoachService extends ChangeNotifier {
     }
     if (playerMaxLevel < c.requirements.minPlayerLevel) {
       return CoachSelectionStatus.blockedMinLevel;
-    }
-    for (final b in c.requirements.mustHaveUnlockedBranches) {
-      if ((branchPoints[b] ?? 0) < 1) {
-        return CoachSelectionStatus.blockedMissingSpecialization;
-      }
-    }
-    for (final entry in c.requirements.requiredBranchPoints.entries) {
-      if ((branchPoints[entry.key] ?? 0) < entry.value) {
-        return CoachSelectionStatus.blockedInsufficientBranchPoints;
-      }
     }
     return advancesTier(c)
         ? CoachSelectionStatus.selectedAdvancing
