@@ -26,7 +26,7 @@ class BreathRules extends ModeRules {
   double delta(StepDraft draft, double progress, CareerLevel cfg) {
     final dur = draft.duration ?? 0;
     final regen = StaminaModel.lerp(
-      cfg.regenStartMultiplier,
+      1.0,
       cfg.regenEndMultiplier,
       progress,
     );
@@ -54,7 +54,7 @@ class BreathRules extends ModeRules {
   @override
   StepDraft? buildBreathRecovery(BreathRecoveryCtx ctx) {
     final regen = StaminaModel.lerp(
-      ctx.cfg.regenStartMultiplier,
+      1.0,
       ctx.cfg.regenEndMultiplier,
       ctx.progress,
     );
@@ -81,7 +81,7 @@ class BreathRules extends ModeRules {
   StepDraft? buildPostWaveBreath(PostWaveBreathCtx ctx) {
     if (ctx.remainingSeconds < 12) return null;
     final regen = StaminaModel.lerp(
-      ctx.cfg.regenStartMultiplier,
+      1.0,
       ctx.cfg.regenEndMultiplier,
       ctx.progress,
     );

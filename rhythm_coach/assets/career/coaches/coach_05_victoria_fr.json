@@ -231,20 +231,6 @@
         "Encaisse encore. Une vraie pute ne s'arrête pas.",
         "Tu vas encaisser parce que je le décide."
       ]
-    },
-    "resilience": {
-      "soft": [
-        "Tu encaisses sans te plaindre {name}. C'est ce qu'on attend d'une chose comme toi.",
-        "Tu sais souffrir en silence {name}. Bien."
-      ],
-      "medium": [
-        "Tu prends tout ce que je te donne {name}. Sans broncher.",
-        "Tu ne craques pas {name}. Continue à encaisser."
-      ],
-      "hard": [
-        "Tu encaisses ce qui ferait flancher les autres {name}. Reste comme ça.",
-        "Indestructible quand je le décide {name}. Prouve-le."
-      ]
     }
   },
   "progressPhrases": {

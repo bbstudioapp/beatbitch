@@ -66,7 +66,7 @@ class BegRules extends ModeRules {
     final to = draft.to;
     if (to == null || to == Position.head) {
       final regen = StaminaModel.lerp(
-        cfg.regenStartMultiplier,
+        1.0,
         cfg.regenEndMultiplier,
         progress,
       );

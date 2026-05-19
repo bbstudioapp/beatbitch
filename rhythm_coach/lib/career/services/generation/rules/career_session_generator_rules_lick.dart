@@ -47,7 +47,7 @@ class LickRules extends ModeRules {
     final bpm = draft.bpm ?? 60;
     if (bpm <= 60) {
       final regen = StaminaModel.lerp(
-        cfg.regenStartMultiplier,
+        1.0,
         cfg.regenEndMultiplier,
         progress,
       );
