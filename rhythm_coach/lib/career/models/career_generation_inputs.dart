@@ -55,17 +55,17 @@ import 'level_milestone.dart';
 /// (`custom_mode_screen.dart`) pousse les 5 champs simultanément.
 ///
 /// Sémantique des champs : cf. doc inline. Ces overrides s'appliquent
-/// **par-dessus** les valeurs dérivées du `CareerLevel` (`maxDepthIndex`
-/// du niveau, plancher de difficulté `quickie`/`intense`, etc.) — ils
-/// ne les remplacent que quand non-null.
+/// **par-dessus** les valeurs par défaut du générateur (profondeur max =
+/// full, plancher de difficulté `quickie`/`intense`, etc.) — ils ne les
+/// remplacent que quand non-null.
 class CustomOverrides {
   /// Plancher de difficulté appliqué au tirage dès le début de séance
   /// (prime sur la valeur dérivée de `quickie`/`intense`).
   final double? intensityFloor;
 
-  /// Plafond de profondeur (index `Position`) qui prime sur celui du
-  /// `CareerLevel`. Permet au mode custom de borner rhythm/hold sans
-  /// toucher au niveau virtuel.
+  /// Plafond de profondeur (index `Position`) qui prime sur le défaut
+  /// `full` du générateur. Permet au mode custom de borner rhythm/hold
+  /// sans toucher au niveau virtuel.
   final int? maxDepthIndex;
 
   /// Bornes BPM utilisateur (mode Custom). Tuple `(min, max)`. Appliquées

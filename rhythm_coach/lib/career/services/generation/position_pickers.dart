@@ -32,8 +32,8 @@ import 'package:beat_bitch/career/services/generation/career_session_generator.d
 /// que `_capClamps` est posé.
 class PositionPickers {
   /// Snapshot de la config de séance. On y lit `maxDepthIndex`,
-  /// `deepProbability`, `humiliationCareer`, `spec`, `coachModeWeights`,
-  /// `anatomy` — figés au début de `generate()`.
+  /// `humiliationCareer`, `spec`, `coachModeWeights`, `anatomy` — figés
+  /// au début de `generate()`.
   final SessionConfig config;
 
   /// Unlocks acquittés par milestones. Convention héritée :
@@ -201,15 +201,12 @@ class PositionPickers {
     final ceilingIdx = milestoneHoldCeilingIdx();
     final depthPts = _pts(SpecializationBranch.profondeur);
     // Cas full ouvert : choix throat / full pondéré par ampScore + spé.
+    // La probabilité de full croît avec l'ampScore et la spé profondeur ;
+    // le clamp à `_capabilityProfile` côté `_clampToCapability` joue le
+    // rôle de garde-fou pour ne pas spammer du full dès l'ouverture.
     if (ceilingIdx >= Position.full.index) {
       final adjusted = (ampScore + 0.10 * depthPts).clamp(0.0, 1.0);
-      final boostedFullProb =
-          (config.deepProbability + 0.10 * depthPts).clamp(0.0, 1.0);
-      // Plus ampScore est haut, plus on penche full ; mais on respecte
-      // aussi `deepProbability` du niveau pour ne pas spammer du full dès
-      // le palier d'ouverture.
-      final wantsFull = adjusted >= 0.55 && rng.nextDouble() < boostedFullProb;
-      return wantsFull ? Position.full : Position.throat;
+      return adjusted >= 0.55 ? Position.full : Position.throat;
     }
     // Cap inférieur ou égal à throat : on tient strictement le max.
     return Position.values[ceilingIdx];
@@ -252,30 +249,20 @@ class PositionPickers {
   /// possible mais minoritaire (~15%) — sinon on se retrouve avec une
   /// majorité de tip→head en début de session, alors que la position de
   /// référence pour la coach est head.
-  /// [capByDepth] = true → ceiling et probabilité de profondeur appliqués
-  /// (rythme : la profondeur est gated par milestone). false → toutes
-  /// profondeurs autorisées (lick : la langue n'a pas de tension de
-  /// profondeur ; le filtre se fait en aval via `_isUnlocked` quand `to`
-  /// requiert une milestone, ex: `lick_full`).
+  /// [capByDepth] = true → ceiling de profondeur appliqué (rythme : la
+  /// profondeur est gated par milestone). false → toutes profondeurs
+  /// autorisées (lick : la langue n'a pas de tension de profondeur ; le
+  /// filtre se fait en aval via `_isUnlocked` quand `to` requiert une
+  /// milestone, ex: `lick_full`). Dans tous les cas, `_clampToCapability`
+  /// borne la profondeur en aval selon ce qui a été prouvé sur l'axe.
   (Position, Position) sampleFromTo(double ampScore, {bool capByDepth = true}) {
     final clamped = ampScore.clamp(0.0, 1.0);
     // Min mid (idx 2) au lieu de head (idx 1) : l'amplitude minimale est
     // head→mid, pas tip→head.
     final ceiling = capByDepth ? config.maxDepthIndex.clamp(2, 4) : 4;
-    var deepestIdx = StaminaModel.lerp(2.0, ceiling.toDouble(), clamped)
+    final deepestIdx = StaminaModel.lerp(2.0, ceiling.toDouble(), clamped)
         .round()
         .clamp(2, ceiling);
-    // Bonus Profondeur (spé) : remonte la probabilité de profond, dans la
-    // limite du plafond du tirage.
-    final depthPts = _pts(SpecializationBranch.profondeur);
-    final effectiveDeepProb = capByDepth ? config.deepProbability : 1.0;
-    final boostedDeepProb =
-        (effectiveDeepProb + 0.08 * depthPts).clamp(0.0, 1.0);
-    // Si le tirage demande une position profonde (≥ throat) mais que la
-    // probabilité ne le permet pas, on rabat sur mid.
-    if (deepestIdx >= 3 && rng.nextDouble() >= boostedDeepProb) {
-      deepestIdx = 2;
-    }
     final int shallowestIdx;
     if (deepestIdx >= 3 && rng.nextDouble() < 0.15) {
       // ~15% : tip pour les amplitudes pleines (tip→full marque bien).

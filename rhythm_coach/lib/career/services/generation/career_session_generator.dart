@@ -474,8 +474,7 @@ class CareerSessionGenerator {
     _config = SessionConfig(
       level: level,
       includeHand: includeHand,
-      maxDepthIndex: custom.maxDepthIndex ?? cfg.maxDepthIndex,
-      deepProbability: cfg.deepProbability,
+      maxDepthIndex: custom.maxDepthIndex ?? Position.full.index,
       spec: specialization ?? SpecializationAllocation.empty(),
       anatomy: anatomy,
       coachModeWeights: coachModeWeights,
@@ -1437,10 +1436,9 @@ class CareerSessionGenerator {
     _config = SessionConfig(
       level: level,
       includeHand: includeHand,
-      // `generatePunishment` n'expose pas ces 2 bornes — défauts neutres
-      // (full ouvert, deepProbability à 1.0) cohérents avec l'ancien comportement.
+      // `generatePunishment` n'expose pas la borne de profondeur — défaut
+      // neutre (full ouvert) cohérent avec l'ancien comportement.
       maxDepthIndex: Position.values.length - 1,
-      deepProbability: 1.0,
       spec: specialization ?? SpecializationAllocation.empty(),
       anatomy: anatomy,
       coachModeWeights: coachModeWeights,

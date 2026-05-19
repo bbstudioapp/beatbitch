@@ -26,8 +26,7 @@ import '../../models/specialization.dart';
 /// durée de l'opération.
 ///
 /// Champs regroupés par catégorie :
-///   * Bornes globales (`level`, `includeHand`, `maxDepthIndex`,
-///     `deepProbability`).
+///   * Bornes globales (`level`, `includeHand`, `maxDepthIndex`).
 ///   * Profil joueuse (`spec`, `anatomy`, `coachModeWeights`).
 ///   * Bornes utilisateur Custom (`bpmRange`, `holdDurationRange`).
 ///   * Scores au moment t=0 (`humiliationCareer`, `humiliationSession`,
@@ -39,7 +38,6 @@ class SessionConfig {
     required this.level,
     required this.includeHand,
     required this.maxDepthIndex,
-    required this.deepProbability,
     required this.spec,
     required this.anatomy,
     required this.coachModeWeights,
@@ -58,7 +56,6 @@ class SessionConfig {
   final int level;
   final bool includeHand;
   final int maxDepthIndex;
-  final double deepProbability;
 
   // Profil joueuse
   final SpecializationAllocation spec;
