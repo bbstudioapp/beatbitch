@@ -23,10 +23,6 @@ class CareerLevel {
   /// difficulté/endurance avec durée — niveau 1 court, niveau 15+ long.
   final int durationSeconds;
 
-  /// Titre affichable du niveau (peut être partagé entre plusieurs niveaux
-  /// consécutifs).
-  final String title;
-
   /// Profondeur maximale autorisée pour les rhythm/hold à ce niveau.
   /// Niveau 1 : interdit throat et full. Au-delà : full possible.
   final int maxDepthIndex;
@@ -46,7 +42,6 @@ class CareerLevel {
     required this.regenStartMultiplier,
     required this.regenEndMultiplier,
     required this.durationSeconds,
-    required this.title,
     required this.maxDepthIndex,
     required this.deepProbability,
     required this.boostsCount,
@@ -65,7 +60,6 @@ class CareerLevel {
       regenStartMultiplier: 1.0,
       regenEndMultiplier: regenEnd,
       durationSeconds: _durationForLevel(level),
-      title: _titleForLevel(level),
       maxDepthIndex: _maxDepthForLevel(level),
       deepProbability: _deepProbabilityForLevel(level),
       boostsCount: _boostsCountForLevel(level),
@@ -82,20 +76,6 @@ class CareerLevel {
     if (level <= 14) return 25 * 60;
     if (level <= 17) return 35 * 60;
     return 45 * 60;
-  }
-
-  /// Titres figés par paliers (doublons consécutifs assumés).
-  static String _titleForLevel(int level) {
-    if (level <= 2) return 'Débutante';
-    if (level <= 4) return 'Apprentie Suceuse';
-    if (level <= 6) return 'Petite Salope Confirmée';
-    if (level <= 8) return 'Bouche à Pipe';
-    if (level == 9) return 'Avaleuse';
-    if (level <= 12) return 'Throat Queen';
-    if (level <= 14) return 'Reine du Sloppy';
-    if (level <= 17) return 'Trou à Bite Officiel';
-    if (level <= 19) return 'Vide-Couilles Pro';
-    return 'Reine des Putes';
   }
 
   /// Profondeur max autorisée (index de Position) pour rhythm + hold :

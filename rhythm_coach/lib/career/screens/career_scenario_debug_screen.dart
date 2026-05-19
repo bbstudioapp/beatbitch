@@ -583,7 +583,7 @@ class _CareerScenarioDebugScreenState extends State<CareerScenarioDebugScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              '${cfg.title} • ${_formatTime(session.durationSeconds)} • ${session.steps.length} steps',
+              '${localizedCareerLevelTitle(context, cfg.level)} • ${_formatTime(session.durationSeconds)} • ${session.steps.length} steps',
               style: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
             ),
             if (_appliedMilestone != null)
