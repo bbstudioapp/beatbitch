@@ -218,9 +218,39 @@
   "careerChallengesToggle": "In-session challenges",
   "careerChallengesDescription": "An opt-in challenge around 60% of the session. Calibrates fast, can speed up your level progression.",
   "challengePassButton": "SKIP",
-  "challengeExtendButton": "I CAN HOLD MORE",
-  "challengeStopButton": "I STOP",
-  "challengeTutorialBanner": "First challenge: hold the position for the requested time. You'll be able to stop or extend at the threshold.",
+  "challengeExtendButton": "MORE",
+  "challengeStopButton": "STOP",
+  "challengeTutorialBanner": "First challenge: you'll hold a position for the requested time. At the threshold, you can stop or extend. Tap SKIP if you'd rather skip it.",
+  "challengeAttemptDefault": "Today we push. Ready?",
+  "challengeAttemptTutorialHoldThroat": "First challenge: you'll hold deep ten seconds. When I say go, go.",
+  "challengeExtensionDefault": "You can stay there if you want.",
+  "challengeSuccessDefault": "Held it. Good.",
+  "challengeStopDefault": "You chose to stop. Good.",
+  "challengeFailDefault": "You could have stayed if you'd held it.",
+  "challengeTimeoutDefault": "Time's up. Well done.",
+  "challengeSkipDefault": "As you wish.",
+  "challengeBannerHoldThroat": "Hold deep {seconds} seconds",
+  "@challengeBannerHoldThroat": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerHoldFull": "Hold all the way {seconds} seconds",
+  "@challengeBannerHoldFull": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerHoldGeneric": "Hold the position {seconds} seconds",
+  "@challengeBannerHoldGeneric": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerRhythm": "Keep up the rhythm at {bpm} BPM",
+  "@challengeBannerRhythm": {
+    "placeholders": { "bpm": { "type": "int" } }
+  },
+  "challengeBannerBiffle": "Take the slaps at {bpm} BPM",
+  "@challengeBannerBiffle": {
+    "placeholders": { "bpm": { "type": "int" } }
+  },
+  "challengeBannerGeneric": "Push your limit",
+  "challengeBannerThresholdReached": "Threshold reached — keep going or stop",
   "careerIncludeHandToggle": "Include hand stimulation",
   "careerIncludeHandSubtitle": "Also disables cock slaps (biffle) — both need the hand.",
   "careerIncludeHandMilestoneLocked": "Locked for this session — the learning milestone uses the hand.",

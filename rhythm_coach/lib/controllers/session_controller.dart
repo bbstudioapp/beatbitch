@@ -1254,13 +1254,86 @@ class SessionController extends ChangeNotifier {
         _challengePhase == ChallengePhase.none) {
       _activeChallenge = ch;
       _challengePhase = ChallengePhase.breath;
-      _challengeCurrentText = step.text.isNotEmpty ? step.text : null;
+      // Texte de l'annonce coach : phrase scriptée du step si présente,
+      // sinon phrase coach `challengePhrases[axis].attempt`, sinon
+      // libellé de fallback localisé (le coach n'a peut-être pas de
+      // pool dédié — on assure une annonce minimale). Le speak est fait
+      // ici pour que la joueuse entende l'instruction pendant le
+      // countdown breath.
+      _challengeCurrentText = step.text.isNotEmpty
+          ? step.text
+          : (_pickChallengePhrase(ch, 'attempt') ??
+              _fallbackChallengeText(ch, 'attempt'));
+      _speakChallengePhraseIfAny();
     } else if (stepStart != null &&
         step.time == stepStart &&
         _challengePhase == ChallengePhase.breath) {
       _challengePhase = ChallengePhase.live;
       _challengeStepStartedAtSec = elapsedSeconds;
       _challengeCurrentText = null;
+    }
+  }
+
+  /// Libellé de fallback localisé pour un tier donné, quand le coach
+  /// n'a pas de `challengePhrases` rédigée pour cet axe. Évite que la
+  /// joueuse se retrouve sans annonce / sans feedback visuel pendant
+  /// les transitions de phase défi.
+  String? _fallbackChallengeText(Challenge ch, String tier) {
+    final l10n = _appLocalizations;
+    if (l10n == null) return null;
+    switch (tier) {
+      case 'attempt':
+        // Tutoriel hold throat = annonce dédiée plus pédagogique.
+        if (ch.isTutorial && ch.axis == CapabilityAxis.holdThroatStreak) {
+          return l10n.challengeAttemptTutorialHoldThroat;
+        }
+        return l10n.challengeAttemptDefault;
+      case 'extension':
+        return l10n.challengeExtensionDefault;
+      case 'success':
+        return l10n.challengeSuccessDefault;
+      case 'stop':
+        return l10n.challengeStopDefault;
+      case 'fail':
+        return l10n.challengeFailDefault;
+      case 'timeout':
+        return l10n.challengeTimeoutDefault;
+      case 'skip':
+        return l10n.challengeSkipDefault;
+      default:
+        return null;
+    }
+  }
+
+  /// Libellé d'objectif du défi (ex. « Tiens gorge 10 secondes ») —
+  /// affiché en sous-titre du banner UI pendant `live`/`preExtend` pour
+  /// rappeler à la joueuse ce qu'elle doit faire. Pas dit en TTS (la
+  /// coach a déjà fait l'annonce pendant le breath).
+  String? challengeObjectiveText() {
+    final ch = _activeChallenge;
+    final l10n = _appLocalizations;
+    if (ch == null || l10n == null) return null;
+    switch (ch.kind) {
+      case ChallengeAxisKind.duration:
+        if (ch.axis == CapabilityAxis.holdThroatStreak ||
+            ch.axis == CapabilityAxis.gorgeApneeStreak ||
+            ch.axis == CapabilityAxis.gorgeEngagementStreak) {
+          return l10n.challengeBannerHoldThroat(ch.targetThreshold);
+        }
+        if (ch.axis == CapabilityAxis.holdFullStreak) {
+          return l10n.challengeBannerHoldFull(ch.targetThreshold);
+        }
+        if (ch.mode == SessionMode.hold) {
+          return l10n.challengeBannerHoldGeneric(ch.targetThreshold);
+        }
+        return l10n.challengeBannerGeneric;
+      case ChallengeAxisKind.bpm:
+        if (ch.mode == SessionMode.biffle) {
+          return l10n.challengeBannerBiffle(ch.targetThreshold);
+        }
+        return l10n.challengeBannerRhythm(ch.targetThreshold);
+      case ChallengeAxisKind.depthCran:
+        return l10n.challengeBannerGeneric;
     }
   }
 
@@ -1305,7 +1378,8 @@ class SessionController extends ChangeNotifier {
           phase == ChallengePhase.live &&
           elapsedInStep >= target - 3) {
         _challengePhase = ChallengePhase.preExtend;
-        _challengeCurrentText = _pickChallengePhrase(ch, 'extension');
+        _challengeCurrentText = _pickChallengePhrase(ch, 'extension') ??
+            _fallbackChallengeText(ch, 'extension');
         _speakChallengePhraseIfAny();
       }
       if (elapsedInStep >= target) {
@@ -1370,7 +1444,8 @@ class SessionController extends ChangeNotifier {
         ChallengeOutcome.extendedSuccess => 'success',
         ChallengeOutcome.skipped => 'skip',
       };
-      _challengeCurrentText = _pickChallengePhrase(ch, tier);
+      _challengeCurrentText =
+          _pickChallengePhrase(ch, tier) ?? _fallbackChallengeText(ch, tier);
       _speakChallengePhraseIfAny();
     }
     notifyListeners();

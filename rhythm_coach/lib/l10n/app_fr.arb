@@ -218,9 +218,39 @@
   "careerChallengesToggle": "Défis intra-séance",
   "careerChallengesDescription": "Un défi opt-in vers 60 % de la séance. Calibre vite, peut faire monter le niveau plus rapidement.",
   "challengePassButton": "PASSE",
-  "challengeExtendButton": "JE TIENS ENCORE",
-  "challengeStopButton": "JE M'ARRÊTE",
-  "challengeTutorialBanner": "Premier défi : tiens la position le temps demandé. Tu pourras arrêter ou prolonger au seuil.",
+  "challengeExtendButton": "ENCORE",
+  "challengeStopButton": "STOP",
+  "challengeTutorialBanner": "Premier défi : tu vas tenir une position le temps demandé. Au seuil, tu pourras t'arrêter ou prolonger. Tape PASSE si tu préfères skipper.",
+  "challengeAttemptDefault": "Aujourd'hui on pousse. Prête ?",
+  "challengeAttemptTutorialHoldThroat": "Premier défi : tu vas tenir en gorge dix secondes. Quand je dis go, vas-y.",
+  "challengeExtensionDefault": "Tu peux rester là si tu veux.",
+  "challengeSuccessDefault": "Bien tenu.",
+  "challengeStopDefault": "Tu as choisi d'arrêter. Bien.",
+  "challengeFailDefault": "Tu pouvais rester si tu avais tenu.",
+  "challengeTimeoutDefault": "Temps écoulé. Bien fait.",
+  "challengeSkipDefault": "Comme tu veux.",
+  "challengeBannerHoldThroat": "Tiens gorge {seconds} secondes",
+  "@challengeBannerHoldThroat": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerHoldFull": "Tiens à fond {seconds} secondes",
+  "@challengeBannerHoldFull": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerHoldGeneric": "Tiens la position {seconds} secondes",
+  "@challengeBannerHoldGeneric": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerRhythm": "Tiens le rythme à {bpm} BPM",
+  "@challengeBannerRhythm": {
+    "placeholders": { "bpm": { "type": "int" } }
+  },
+  "challengeBannerBiffle": "Encaisse les coups à {bpm} BPM",
+  "@challengeBannerBiffle": {
+    "placeholders": { "bpm": { "type": "int" } }
+  },
+  "challengeBannerGeneric": "Pousse ta limite",
+  "challengeBannerThresholdReached": "Seuil atteint — continue ou arrête",
   "careerIncludeHandToggle": "Inclure la stimulation à la main",
   "careerIncludeHandSubtitle": "Désactive aussi les coups de queue (biffle) — les deux nécessitent la main.",
   "careerIncludeHandMilestoneLocked": "Verrouillé pour cette séance — le milestone d'apprentissage utilise la main.",

@@ -217,10 +217,40 @@
   "careerQuickieDescription": "6 Min., durchgehend intensiv. Für wenn du keine Zeit hast.",
   "careerChallengesToggle": "Herausforderungen in der Sitzung",
   "careerChallengesDescription": "Eine optionale Herausforderung etwa bei 60 % der Sitzung. Kalibriert schnell, kann das Level-Up beschleunigen.",
-  "challengePassButton": "ÜBERSPRINGEN",
-  "challengeExtendButton": "ICH HALTE NOCH",
-  "challengeStopButton": "ICH HÖRE AUF",
-  "challengeTutorialBanner": "Erste Herausforderung: Halte die Position für die geforderte Zeit. Beim Schwellenwert kannst du aufhören oder verlängern.",
+  "challengePassButton": "ÜBERSPR.",
+  "challengeExtendButton": "WEITER",
+  "challengeStopButton": "STOPP",
+  "challengeTutorialBanner": "Erste Herausforderung: Du wirst eine Position für die geforderte Zeit halten. Beim Schwellenwert kannst du aufhören oder weitermachen. Tippe ÜBERSPR. wenn du lieber überspringst.",
+  "challengeAttemptDefault": "Heute drücken wir. Bereit?",
+  "challengeAttemptTutorialHoldThroat": "Erste Herausforderung: Du hältst tief zehn Sekunden. Wenn ich go sage, los.",
+  "challengeExtensionDefault": "Du kannst dort bleiben, wenn du willst.",
+  "challengeSuccessDefault": "Gehalten. Gut.",
+  "challengeStopDefault": "Du hast aufgehört. Gut.",
+  "challengeFailDefault": "Du hättest bleiben können, wenn du gehalten hättest.",
+  "challengeTimeoutDefault": "Zeit ist um. Gut gemacht.",
+  "challengeSkipDefault": "Wie du willst.",
+  "challengeBannerHoldThroat": "Halte tief {seconds} Sekunden",
+  "@challengeBannerHoldThroat": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerHoldFull": "Halte ganz tief {seconds} Sekunden",
+  "@challengeBannerHoldFull": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerHoldGeneric": "Halte die Position {seconds} Sekunden",
+  "@challengeBannerHoldGeneric": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerRhythm": "Halte den Rhythmus bei {bpm} BPM",
+  "@challengeBannerRhythm": {
+    "placeholders": { "bpm": { "type": "int" } }
+  },
+  "challengeBannerBiffle": "Nimm die Schläge bei {bpm} BPM",
+  "@challengeBannerBiffle": {
+    "placeholders": { "bpm": { "type": "int" } }
+  },
+  "challengeBannerGeneric": "Gehe an deine Grenze",
+  "challengeBannerThresholdReached": "Schwellenwert erreicht — weiter oder aufhören",
   "careerIncludeHandToggle": "Handstimulation einbeziehen",
   "careerIncludeHandSubtitle": "Deaktiviert auch die Schwanzschläge (Biffle) — beide brauchen die Hand.",
   "careerIncludeHandMilestoneLocked": "Für diese Session gesperrt — der Lern-Meilenstein nutzt die Hand.",

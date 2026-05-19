@@ -508,14 +508,71 @@ class AppLocalizationsFr extends AppLocalizations {
   String get challengePassButton => 'PASSE';
 
   @override
-  String get challengeExtendButton => 'JE TIENS ENCORE';
+  String get challengeExtendButton => 'ENCORE';
 
   @override
-  String get challengeStopButton => 'JE M\'ARRÊTE';
+  String get challengeStopButton => 'STOP';
 
   @override
   String get challengeTutorialBanner =>
-      'Premier défi : tiens la position le temps demandé. Tu pourras arrêter ou prolonger au seuil.';
+      'Premier défi : tu vas tenir une position le temps demandé. Au seuil, tu pourras t\'arrêter ou prolonger. Tape PASSE si tu préfères skipper.';
+
+  @override
+  String get challengeAttemptDefault => 'Aujourd\'hui on pousse. Prête ?';
+
+  @override
+  String get challengeAttemptTutorialHoldThroat =>
+      'Premier défi : tu vas tenir en gorge dix secondes. Quand je dis go, vas-y.';
+
+  @override
+  String get challengeExtensionDefault => 'Tu peux rester là si tu veux.';
+
+  @override
+  String get challengeSuccessDefault => 'Bien tenu.';
+
+  @override
+  String get challengeStopDefault => 'Tu as choisi d\'arrêter. Bien.';
+
+  @override
+  String get challengeFailDefault => 'Tu pouvais rester si tu avais tenu.';
+
+  @override
+  String get challengeTimeoutDefault => 'Temps écoulé. Bien fait.';
+
+  @override
+  String get challengeSkipDefault => 'Comme tu veux.';
+
+  @override
+  String challengeBannerHoldThroat(int seconds) {
+    return 'Tiens gorge $seconds secondes';
+  }
+
+  @override
+  String challengeBannerHoldFull(int seconds) {
+    return 'Tiens à fond $seconds secondes';
+  }
+
+  @override
+  String challengeBannerHoldGeneric(int seconds) {
+    return 'Tiens la position $seconds secondes';
+  }
+
+  @override
+  String challengeBannerRhythm(int bpm) {
+    return 'Tiens le rythme à $bpm BPM';
+  }
+
+  @override
+  String challengeBannerBiffle(int bpm) {
+    return 'Encaisse les coups à $bpm BPM';
+  }
+
+  @override
+  String get challengeBannerGeneric => 'Pousse ta limite';
+
+  @override
+  String get challengeBannerThresholdReached =>
+      'Seuil atteint — continue ou arrête';
 
   @override
   String get careerIncludeHandToggle => 'Inclure la stimulation à la main';
