@@ -114,23 +114,6 @@
       ]
     },
     {
-      "id": "intro_hold_head",
-      "level": 2,
-      "displayLabel": "Tiens-le sur le gland",
-      "unlocks": ["hold_head"],
-      "requires": ["basics"],
-      "branches": ["endurance", "obeissance"],
-      "sequence": [
-        {"time": 0,  "text": "Aujourd'hui tu apprends à tenir. Bouche ouverte, pose le gland sur tes lèvres.", "mode": "rhythm", "from": "tip", "to": "head", "bpm": 75, "duration": 8},
-        {"time": 8,  "text": "Maintenant arrête-toi. Garde le gland là. Trois secondes.", "mode": "hold", "to": "head", "duration": 3},
-        {"time": 11, "text": "Respire. Pas de mouvement.", "mode": "breath", "duration": 5},
-        {"time": 16, "text": "Encore. Cinq secondes cette fois.", "mode": "hold", "to": "head", "duration": 5},
-        {"time": 21, "text": "Tu sens le poids sur ta langue ? Bien. Reprends ton souffle.", "mode": "breath", "duration": 5},
-        {"time": 26, "text": "Dernière. Sept secondes. Bouche immobile.", "mode": "hold", "to": "head", "duration": 7},
-        {"time": 33, "text": "Parfait. Tu sais tenir.", "mode": "breath", "duration": 4}
-      ]
-    },
-    {
       "id": "intro_hold_mid",
       "level": 3,
       "displayLabel": "Hold position médiane",
@@ -366,7 +349,7 @@
       "level": 4,
       "displayLabel": "Aspire — la bouche bosse sans bouger",
       "unlocks": ["suckle_head"],
-      "requires": ["hold_head"],
+      "requires": ["basics"],
       "branches": ["sloppy", "obeissance"],
       "sequence": [
         {"time": 0,  "text": "Aujourd'hui tu apprends à aspirer. Pas de va-et-vient — la bouche reste sur le gland et tu tètes.", "mode": "breath", "duration": 6},
