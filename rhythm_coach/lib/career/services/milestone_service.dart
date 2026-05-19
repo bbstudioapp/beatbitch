@@ -35,6 +35,14 @@ class MilestoneService extends ChangeNotifier {
   /// `branchScore`+`age` comparables sans dominer.
   static const double _lowestBranchWeight = 0.1;
 
+  /// Boost appliqué dans `sortScore` quand une milestone touche la branche
+  /// en tête de la file showcase de [SpecializationService]. Volontairement
+  /// massif : il domine `branchScore` (max ≈ 25), aging (×0.5/session) et
+  /// `lowestBranch` à coup sûr — la séance suivant l'attribution d'un point
+  /// honore ce point en priorité (parmi les candidates *non overdue* : la
+  /// règle overdue est un rattrapage système qui passe avant).
+  static const double _showcaseBoost = 1000.0;
+
   final MilestoneLoader _loader = MilestoneLoader();
 
   List<LevelMilestone> _catalog = const [];
@@ -206,6 +214,7 @@ class MilestoneService extends ChangeNotifier {
     SpecializationAllocation? allocation,
     CapabilityProfile? capabilityProfile,
     AnatomyProfile? anatomy,
+    SpecializationBranch? showcaseBranch,
   }) {
     final all = allPendingFor(
       humiliationScore: humiliationScore,
@@ -214,6 +223,7 @@ class MilestoneService extends ChangeNotifier {
       allocation: allocation,
       capabilityProfile: capabilityProfile,
       anatomy: anatomy,
+      showcaseBranch: showcaseBranch,
     );
     return all.isEmpty ? null : all.first;
   }
@@ -238,12 +248,17 @@ class MilestoneService extends ChangeNotifier {
     SpecializationAllocation? allocation,
     CapabilityProfile? capabilityProfile,
     AnatomyProfile? anatomy,
+    SpecializationBranch? showcaseBranch,
   }) {
     if (count <= 0) return const [];
     final picked = <LevelMilestone>[];
     final simulatedUnlocks = <UnlockKey>{};
     final pickedIds = <String>{};
     for (var i = 0; i < count; i++) {
+      // Le showcase ne s'applique qu'au premier pick : une fois la branche
+      // mise en vitrine, les picks suivants reprennent le tri standard
+      // pour ne pas empiler 2 milestones de la même branche dans la séance.
+      final effectiveShowcase = i == 0 ? showcaseBranch : null;
       final candidates = allPendingFor(
         humiliationScore: humiliationScore,
         obedience: obedience,
@@ -251,6 +266,7 @@ class MilestoneService extends ChangeNotifier {
         allocation: allocation,
         capabilityProfile: capabilityProfile,
         anatomy: anatomy,
+        showcaseBranch: effectiveShowcase,
       );
       LevelMilestone? next;
       for (final m in candidates) {
@@ -340,6 +356,7 @@ class MilestoneService extends ChangeNotifier {
     CapabilityProfile? capabilityProfile,
     AnatomyProfile? anatomy,
     MilestonePlacement placement = MilestonePlacement.body,
+    SpecializationBranch? showcaseBranch,
   }) {
     final cap = humiliationScore + humilTolerance(obedience);
 
@@ -433,9 +450,17 @@ class MilestoneService extends ChangeNotifier {
     double sortScore(LevelMilestone m) {
       if (allocation == null) return 0;
       final age = _candidacyAge[m.id] ?? 0;
-      return branchScore(m).toDouble() +
+      var s = branchScore(m).toDouble() +
           _agingWeight * age -
           _lowestBranchWeight * lowestBranchPoints(m);
+      // Showcase : la séance qui suit l'attribution d'un point doit
+      // « consommer » ce point en mettant la branche associée en vitrine.
+      // Le boost domine `branchScore`/aging/lowestBranch — mais la règle
+      // *overdue* reste prioritaire (cf. tri principal plus bas).
+      if (showcaseBranch != null && m.branches.contains(showcaseBranch)) {
+        s += _showcaseBoost;
+      }
+      return s;
     }
 
     final candidates = _catalog
