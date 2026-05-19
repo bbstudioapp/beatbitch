@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../career/models/challenge.dart';
 import '../career/models/level_milestone.dart';
 import '../career/models/phrase_bank.dart';
 import '../career/models/specialization.dart';
@@ -1050,6 +1051,10 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                     ),
                     SizedBox(height: showBar ? 8 : 12),
                   ],
+                  if (ctrl.isChallengeActive) ...[
+                    _ChallengeButtons(controller: ctrl),
+                    SizedBox(height: showBar ? 8 : 12),
+                  ],
                   _FailButton(controller: ctrl),
                   if (_showSkipSessionButton &&
                       (ctrl.isRunning || ctrl.isPaused)) ...[
@@ -1366,6 +1371,91 @@ class _FailButton extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Boutons du système de défis intra-séance (Phase 1). Le widget choisit
+/// son rendu selon la phase courante du défi :
+/// - `breath` : bouton `PASSE` gris (skip défi, malus obed -3).
+/// - `atSeuil` / `openExtension` : 2 boutons `JE TIENS ENCORE` (vert) et
+///   `JE M'ARRÊTE` (bleu), avec un timeout 8 s côté contrôleur qui finit
+///   automatiquement en succès net.
+/// - Autres phases (`live`, `preExtend`) : pas de bouton (le défi est
+///   activement en cours, l'utilisatrice ne décide rien).
+class _ChallengeButtons extends StatelessWidget {
+  static const Color _passColor = Color(0xFF757575);
+  static const Color _extendColor = Color(0xFF4CAF50);
+  static const Color _stopColor = Color(0xFF1E88E5);
+
+  final SessionController controller;
+  const _ChallengeButtons({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final phase = controller.challengePhase;
+    if (phase == ChallengePhase.breath) {
+      return _bigButton(
+        color: _passColor,
+        label: t.challengePassButton,
+        onTap: controller.triggerChallengePass,
+      );
+    }
+    if (phase == ChallengePhase.atSeuil ||
+        phase == ChallengePhase.openExtension) {
+      return Row(
+        children: [
+          Expanded(
+            child: _bigButton(
+              color: _extendColor,
+              label: t.challengeExtendButton,
+              onTap: controller.triggerChallengeExtend,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _bigButton(
+              color: _stopColor,
+              label: t.challengeStopButton,
+              onTap: controller.triggerChallengeStop,
+            ),
+          ),
+        ],
+      );
+    }
+    return const SizedBox.shrink();
+  }
+
+  Widget _bigButton({
+    required Color color,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      child: Material(
+        color: color,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Center(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 2.5,
+                  color: Colors.white,
+                ),
+              ),
             ),
           ),
         ),

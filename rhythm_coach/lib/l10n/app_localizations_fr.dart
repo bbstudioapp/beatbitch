@@ -498,6 +498,26 @@ class AppLocalizationsFr extends AppLocalizations {
       '6 min, intense tout du long. Pour quand t\'as pas le temps.';
 
   @override
+  String get careerChallengesToggle => 'Défis intra-séance';
+
+  @override
+  String get careerChallengesDescription =>
+      'Un défi opt-in vers 60 % de la séance. Calibre vite, peut faire monter le niveau plus rapidement.';
+
+  @override
+  String get challengePassButton => 'PASSE';
+
+  @override
+  String get challengeExtendButton => 'JE TIENS ENCORE';
+
+  @override
+  String get challengeStopButton => 'JE M\'ARRÊTE';
+
+  @override
+  String get challengeTutorialBanner =>
+      'Premier défi : tiens la position le temps demandé. Tu pourras arrêter ou prolonger au seuil.';
+
+  @override
   String get careerIncludeHandToggle => 'Inclure la stimulation à la main';
 
   @override

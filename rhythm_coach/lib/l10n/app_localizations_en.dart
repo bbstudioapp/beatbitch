@@ -497,6 +497,26 @@ class AppLocalizationsEn extends AppLocalizations {
       '6 min, intense the whole way through. For when you don\'t have time.';
 
   @override
+  String get careerChallengesToggle => 'In-session challenges';
+
+  @override
+  String get careerChallengesDescription =>
+      'An opt-in challenge around 60% of the session. Calibrates fast, can speed up your level progression.';
+
+  @override
+  String get challengePassButton => 'SKIP';
+
+  @override
+  String get challengeExtendButton => 'I CAN HOLD MORE';
+
+  @override
+  String get challengeStopButton => 'I STOP';
+
+  @override
+  String get challengeTutorialBanner =>
+      'First challenge: hold the position for the requested time. You\'ll be able to stop or extend at the threshold.';
+
+  @override
   String get careerIncludeHandToggle => 'Include hand stimulation';
 
   @override

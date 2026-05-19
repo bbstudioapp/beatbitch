@@ -356,6 +356,25 @@ class CoachPhrasePack {
   /// silence — comportement de tous les coachs sauf Lina + Victoria.
   final Map<String, Map<String, List<PhraseEntry>>> progressPhrases;
 
+  /// Phrases du système de défis intra-séance (Phase 1). Pour chaque axe —
+  /// clé = `CapabilityAxis.storageKey` (ex. `"hold.throat.streak"`) — sept
+  /// tiers :
+  ///
+  /// - `attempt` : annonce du défi pendant le breath de countdown.
+  /// - `extension` : « tu peux rester là si tu veux » à `seuil - 3 s`.
+  /// - `success` : succès net (seuil atteint puis `JE M'ARRÊTE` ou timeout).
+  /// - `stop` : variante de `success` quand la joueuse a explicitement
+  ///   appuyé sur `JE M'ARRÊTE` (vs timeout — taquinerie possible).
+  /// - `fail` : tap-out avant le seuil (« tu pouvais rester si tu avais tenu »).
+  /// - `timeout` : timeout 8 s au seuil → succès auto, coach taquine.
+  /// - `skip` : commentaire neutre quand la joueuse appuie `PASSE`
+  ///   pendant le breath de countdown.
+  ///
+  /// Clé brute (String), tolérante : une clé inconnue n'est jamais
+  /// consultée. Vide / absent = fallback sur la PhraseBank globale (qui
+  /// n'a rien non plus → silence côté coach, l'UI affiche un texte localisé).
+  final Map<String, Map<String, List<PhraseEntry>>> challengePhrases;
+
   /// Commentaires aléatoires propres à ce coach. Si non vide, **remplacent**
   /// la liste globale de `random_comments.json` pendant la séance. Vide =
   /// fallback sur la liste globale (comportement historique). Sert à éviter
@@ -388,6 +407,7 @@ class CoachPhrasePack {
     this.progress = const {},
     this.branchPhrases = const {},
     this.progressPhrases = const {},
+    this.challengePhrases = const {},
     this.randomComments = const [],
     this.nicknames = CoachNicknamePool.empty,
     this.coachNicknames = const [],
@@ -405,6 +425,7 @@ class CoachPhrasePack {
       progress.isEmpty &&
       branchPhrases.isEmpty &&
       progressPhrases.isEmpty &&
+      challengePhrases.isEmpty &&
       randomComments.isEmpty &&
       nicknames.isEmpty &&
       coachNicknames.isEmpty &&
@@ -500,6 +521,22 @@ class CoachPhrasePack {
       });
     }
 
+    // challengePhrases : même forme que progressPhrases, tiers
+    // attempt|extension|success|stop|fail|timeout|skip (cf. spec §7).
+    final challengePhrases = <String, Map<String, List<PhraseEntry>>>{};
+    final challengePhrasesNode = root['challengePhrases'];
+    if (challengePhrasesNode is Map<String, dynamic>) {
+      challengePhrasesNode.forEach((axisKey, tiersRaw) {
+        if (axisKey.trim().isEmpty || tiersRaw is! Map<String, dynamic>) return;
+        final tiers = <String, List<PhraseEntry>>{};
+        tiersRaw.forEach((tier, raw) {
+          final list = PhraseEntry.listFromJson(raw);
+          if (list.isNotEmpty) tiers[tier] = list;
+        });
+        if (tiers.isNotEmpty) challengePhrases[axisKey] = tiers;
+      });
+    }
+
     final nicknamesNode = root['nicknames'];
     final nicknames = nicknamesNode is Map<String, dynamic>
         ? CoachNicknamePool.fromJson(nicknamesNode)
@@ -519,6 +556,7 @@ class CoachPhrasePack {
       progress: progress,
       branchPhrases: branchPhrases,
       progressPhrases: progressPhrases,
+      challengePhrases: challengePhrases,
       randomComments: stringList(root['randomComments']),
       nicknames: nicknames,
       coachNicknames: stringList(root['coachNicknames']),
@@ -974,6 +1012,16 @@ class _CoachComposedPhraseBank extends PhraseBank {
       if (picked != null) return picked;
     }
     return fallback.pickProgressPhrase(axisStorageKey, tier, rng);
+  }
+
+  @override
+  String? pickChallengePhrase(String axisStorageKey, String tier, Random rng) {
+    final pool = coachPhrases.challengePhrases[axisStorageKey]?[tier];
+    if (pool != null && pool.isNotEmpty) {
+      final picked = pickPhraseEntry(pool, rng);
+      if (picked != null) return picked;
+    }
+    return fallback.pickChallengePhrase(axisStorageKey, tier, rng);
   }
 
   @override

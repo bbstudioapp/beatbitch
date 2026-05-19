@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../career/models/career_generation_inputs.dart';
+import '../career/models/challenge.dart';
 import '../career/models/level_milestone.dart';
 import '../career/models/phrase_bank.dart';
 import '../career/services/generation/career_session_generator.dart';
@@ -229,6 +230,57 @@ class SessionController extends ChangeNotifier {
   /// passer par `_failActive` (qui couperait tout le flow fail).
   Completer<void>? _punishmentCompleter;
   bool _punishmentAbandoned = false;
+
+  // ─── État du défi intra-séance (Phase 1) ──────────────────────────────
+
+  /// Phase courante du défi. `none` quand aucun défi n'est en cours
+  /// (cas par défaut, hors carrière, ou avant/après la fenêtre défi).
+  ChallengePhase _challengePhase = ChallengePhase.none;
+  ChallengePhase get challengePhase => _challengePhase;
+
+  /// Seconde absolue de début du step défi (matérialisée). Sert au calcul
+  /// `elapsedInChallengeStep = elapsedSeconds - _challengeStepStartedAtSec`
+  /// pour piloter les transitions de phase.
+  int? _challengeStepStartedAtSec;
+
+  /// Seconde absolue d'entrée en phase `atSeuil` — sert au timeout 8 s
+  /// (succès net auto).
+  int? _challengeAtSeuilStartedAtSec;
+  static const int _challengeSeuilTimeoutSeconds = 8;
+
+  /// Seconde absolue à laquelle une prolongation `JE TIENS ENCORE` expire
+  /// (mode openExtension → re-prompt au seuil).
+  int? _challengeOpenExtensionDeadlineSec;
+
+  /// Compteur de `JE TIENS ENCORE` acquis. Au `_finish` : +1 humil/+1 obed
+  /// par extension (cf. spec § 5.2 succès étendu).
+  int _challengeExtensionsCount = 0;
+  int get challengeExtensionsCount => _challengeExtensionsCount;
+
+  /// Outcome du défi — posé par les triggers (skipped/fail/netSuccess/
+  /// extendedSuccess) ou par `_finish` via timeout. Null tant qu'aucun défi
+  /// n'a été terminé.
+  ChallengeOutcome? _challengeOutcome;
+  ChallengeOutcome? get challengeOutcome => _challengeOutcome;
+
+  /// Phrase coach à afficher pendant la fenêtre défi (annonce / extension /
+  /// outcome). Posée par les transitions de phase ; null si le coach n'a
+  /// pas de phrase pour l'axe (l'UI retombe alors sur les libellés
+  /// localisés via `AppLocalizations`).
+  String? _challengeCurrentText;
+  String? get challengeCurrentText => _challengeCurrentText;
+
+  /// Snapshot du défi de la séance courante (clone de `session.challenge`).
+  /// Posé au `start()` ou au `_checkSteps` quand on entre dans le breath.
+  Challenge? _activeChallenge;
+  Challenge? get activeChallenge => _activeChallenge;
+
+  /// `true` quand un step défi est en cours et qu'un appui sur le bouton
+  /// FAIL ne doit PAS déclencher le flow fail standard mais être routé vers
+  /// la machine d'états défi (cf. spec § 4.4 — bouton FAIL repurposé).
+  bool get isChallengeActive =>
+      _challengePhase != ChallengePhase.none &&
+      _challengePhase != ChallengePhase.ended;
 
   // ─── Commentaires aléatoires ───────────────────────────────────────────
 
@@ -797,6 +849,15 @@ class SessionController extends ChangeNotifier {
     _hadFailThisSession = false;
     _currentHoldFullDuration = 0;
     _lastHoldTickAtSecond = -1;
+    // Phase 1 défis — reset complet de la machine d'états.
+    _challengePhase = ChallengePhase.none;
+    _challengeStepStartedAtSec = null;
+    _challengeAtSeuilStartedAtSec = null;
+    _challengeOpenExtensionDeadlineSec = null;
+    _challengeExtensionsCount = 0;
+    _challengeOutcome = null;
+    _challengeCurrentText = null;
+    _activeChallenge = null;
     notifyListeners();
   }
 
@@ -835,6 +896,7 @@ class SessionController extends ChangeNotifier {
     _checkSteps();
     _accrueHoldSecond();
     _checkProgressMarkers();
+    _updateChallengePhase();
     if (elapsedSeconds >= session.durationSeconds) {
       _finish();
       return;
@@ -1016,6 +1078,11 @@ class SessionController extends ChangeNotifier {
         }
       }
 
+      // Phase 1 défis — détection des transitions vers les phases breath/
+      // live au moment où le step correspondant est consommé. Posé avant
+      // l'application du step pour que `_challengeStepStartedAtSec` soit
+      // déjà à jour si `_updateChallengePhase` est appelé au même tick.
+      _handleChallengeStepEntry(step);
       if (!step.isTextOnly) {
         // Avant de changer de mode : si on quittait un hold full, on crédite
         // sa durée pour le badge Iron Lungs (uniquement quand le hold est
@@ -1151,6 +1218,216 @@ class SessionController extends ChangeNotifier {
     await _beep.playFinaleChime(category: session.finalCategory);
   }
 
+  // ─── Défi intra-séance (Phase 1) ───────────────────────────────────────
+  //
+  // Machine d'états pilotée par les transitions de phase suivantes :
+  //   none → breath (entrée dans le step breath de countdown)
+  //   breath → live (entrée dans le step défi)
+  //   live → preExtend (à `seuil - 3 s`)
+  //   live | preExtend → atSeuil (au seuil cible)
+  //   atSeuil → openExtension (JE TIENS ENCORE)
+  //   atSeuil → ended (JE M'ARRÊTE ou timeout 8 s)
+  //   openExtension → atSeuil (prolongation expirée → re-prompt)
+  //   * → ended (FAIL pendant le défi, selon phase)
+  //
+  // Au passage en `ended`, `_challengeOutcome` est figé et le `_finish` de
+  // session applique les bumps capability/humil/obed correspondants.
+
+  /// Détecte le passage à une nouvelle phase de défi sur consommation d'un
+  /// step (breath de countdown ou step défi lui-même).
+  void _handleChallengeStepEntry(SessionStep step) {
+    final ch = _session.challenge;
+    if (ch == null) return;
+    final breathStart = _session.challengeBreathStartTime;
+    final stepStart = _session.challengeStepTime;
+    if (breathStart != null &&
+        step.time == breathStart &&
+        _challengePhase == ChallengePhase.none) {
+      _activeChallenge = ch;
+      _challengePhase = ChallengePhase.breath;
+      _challengeCurrentText = step.text.isNotEmpty ? step.text : null;
+    } else if (stepStart != null &&
+        step.time == stepStart &&
+        _challengePhase == ChallengePhase.breath) {
+      _challengePhase = ChallengePhase.live;
+      _challengeStepStartedAtSec = elapsedSeconds;
+      _challengeCurrentText = null;
+    }
+  }
+
+  /// Tick de mise à jour de la machine d'états défi. Appelé depuis `_onTick`
+  /// après `_checkSteps` (pour que les transitions step→phase soient
+  /// appliquées d'abord).
+  void _updateChallengePhase() {
+    final ch = _activeChallenge;
+    if (ch == null) return;
+    final phase = _challengePhase;
+    if (phase == ChallengePhase.none || phase == ChallengePhase.ended) return;
+    final startedAt = _challengeStepStartedAtSec;
+    if (startedAt == null) return; // encore en phase breath
+    final elapsedInStep = elapsedSeconds - startedAt;
+    final target = ch.targetThreshold;
+    // Phase `atSeuil` : surveille le timeout 8 s (succès net auto).
+    if (phase == ChallengePhase.atSeuil) {
+      final seuilAt = _challengeAtSeuilStartedAtSec;
+      if (seuilAt != null &&
+          elapsedSeconds - seuilAt >= _challengeSeuilTimeoutSeconds) {
+        _completeChallenge(ChallengeOutcome.netSuccess, byTimeout: true);
+      }
+      return;
+    }
+    // Phase `openExtension` : la prolongation expire → re-prompt au seuil.
+    if (phase == ChallengePhase.openExtension) {
+      final deadline = _challengeOpenExtensionDeadlineSec;
+      if (deadline != null && elapsedSeconds >= deadline) {
+        _challengePhase = ChallengePhase.atSeuil;
+        _challengeAtSeuilStartedAtSec = elapsedSeconds;
+        _challengeOpenExtensionDeadlineSec = null;
+      }
+      return;
+    }
+    // Phases `live` / `preExtend` (calibrées sur axes durée).
+    if (ch.kind == ChallengeAxisKind.duration) {
+      if (phase == ChallengePhase.live && elapsedInStep >= target - 3) {
+        _challengePhase = ChallengePhase.preExtend;
+        _challengeCurrentText = _pickChallengePhrase(ch, 'extension');
+        _speakChallengePhraseIfAny();
+      }
+      if (elapsedInStep >= target) {
+        _challengePhase = ChallengePhase.atSeuil;
+        _challengeAtSeuilStartedAtSec = elapsedSeconds;
+      }
+    } else {
+      // Axes BPM / profondeur : pas de seuil temporel sur le step lui-même
+      // (la difficulté est dans le paramètre, pas la durée). On considère
+      // le seuil atteint dès la fin nominale du step.
+      if (elapsedInStep >= ch.nominalDurationSeconds) {
+        _challengePhase = ChallengePhase.atSeuil;
+        _challengeAtSeuilStartedAtSec = elapsedSeconds;
+      }
+    }
+  }
+
+  /// Bouton `PASSE` pendant le breath de countdown — skip le défi entier.
+  /// Outcome `skipped` (malus obed -3, aucun signal capability).
+  void triggerChallengePass() {
+    if (_challengePhase != ChallengePhase.breath) return;
+    _completeChallenge(ChallengeOutcome.skipped);
+    _skipPastChallengeStep();
+  }
+
+  /// Bouton `JE TIENS ENCORE` — bascule en mode ouvert, +1 humil/+1 obed
+  /// par extension, deadline `max(10, comfort × 0.30)` s.
+  void triggerChallengeExtend() {
+    if (_challengePhase != ChallengePhase.atSeuil) return;
+    final ch = _activeChallenge;
+    if (ch == null) return;
+    _challengeExtensionsCount++;
+    _challengePhase = ChallengePhase.openExtension;
+    _challengeAtSeuilStartedAtSec = null;
+    _challengeOpenExtensionDeadlineSec = elapsedSeconds + ch.extensionSeconds;
+    notifyListeners();
+  }
+
+  /// Bouton `JE M'ARRÊTE` — succès net (ou étendu si extensions > 0).
+  void triggerChallengeStop() {
+    if (_challengePhase != ChallengePhase.atSeuil &&
+        _challengePhase != ChallengePhase.openExtension) {
+      return;
+    }
+    final outcome = _challengeExtensionsCount > 0
+        ? ChallengeOutcome.extendedSuccess
+        : ChallengeOutcome.netSuccess;
+    _completeChallenge(outcome);
+  }
+
+  /// Termine le défi et fige l'outcome. Les bumps capability/humil/obed
+  /// sont appliqués au `_finish` de session (cf. `_applyChallengeOutcome`).
+  void _completeChallenge(ChallengeOutcome outcome, {bool byTimeout = false}) {
+    if (_challengePhase == ChallengePhase.ended) return;
+    _challengeOutcome = outcome;
+    _challengePhase = ChallengePhase.ended;
+    final ch = _activeChallenge;
+    if (ch != null) {
+      final tier = switch (outcome) {
+        ChallengeOutcome.fail => 'fail',
+        ChallengeOutcome.netSuccess => byTimeout ? 'timeout' : 'stop',
+        ChallengeOutcome.extendedSuccess => 'success',
+        ChallengeOutcome.skipped => 'skip',
+      };
+      _challengeCurrentText = _pickChallengePhrase(ch, tier);
+      _speakChallengePhraseIfAny();
+    }
+    notifyListeners();
+  }
+
+  /// Avance la timeline pour passer le step défi (cas `PASSE` pendant le
+  /// breath). Cherche le prochain step non text-only après la fenêtre défi
+  /// et y bascule via `_timelineOffset`. Si rien ne suit, on laisse la
+  /// timeline naturelle aller à son terme.
+  void _skipPastChallengeStep() {
+    final stepStart = _session.challengeStepTime;
+    final stepDur = _activeChallenge?.nominalDurationSeconds;
+    if (stepStart == null || stepDur == null) return;
+    final endOfChallenge = stepStart + stepDur;
+    final advance = endOfChallenge - elapsedSeconds;
+    if (advance > 0) {
+      _timelineOffset += Duration(seconds: advance);
+    }
+  }
+
+  String? _pickChallengePhrase(Challenge ch, String tier) {
+    final bank = _phraseBank;
+    if (bank == null) return null;
+    return bank.pickChallengePhrase(ch.axisStorageKey, tier, _random);
+  }
+
+  void _speakChallengePhraseIfAny() {
+    final text = _challengeCurrentText;
+    if (text == null || text.isEmpty) return;
+    if (_tts.isSpeaking) return;
+    _speakScripted(text);
+  }
+
+  /// Applique les bumps liés à l'outcome du défi. Appelé depuis `_finish`
+  /// après les bumps humil/obed standards mais avant `_capabilities.commit`.
+  /// - `netSuccess` : humil/obed +2 (l'incrément capability passe par le
+  ///   tracker qui voit le step défi comme un step normal).
+  /// - `extendedSuccess` : netSuccess + N × (+1 humil, +1 obed).
+  /// - `fail` : pas de malus humil/obed (cf. spec § 5.3). Le soft-cap
+  ///   capability × 0.92 n'est pas distinct du standard pour Phase 1
+  ///   (TODO : extension `CapabilityRegulator`) ; le tracker pose déjà un
+  ///   ceiling via les FAILs séance, qui plafonnera l'axe naturellement.
+  /// - `skipped` : malus obédiance -3, pas de signal capability.
+  ///
+  /// TODO Phase 1.5 : consume la tête de file showcase si la branche du
+  /// défi matche (dépend de la branche `feat/specialization-showcase-queue`).
+  void _applyChallengeOutcome() {
+    final outcome = _challengeOutcome;
+    if (outcome == null) return;
+    final extensions = _challengeExtensionsCount;
+    switch (outcome) {
+      case ChallengeOutcome.netSuccess:
+        _humiliation.onChallengeNetSuccess();
+        _obedience.onChallengeNetSuccess();
+        break;
+      case ChallengeOutcome.extendedSuccess:
+        _humiliation.onChallengeNetSuccess();
+        _obedience.onChallengeNetSuccess();
+        for (var i = 0; i < extensions; i++) {
+          _humiliation.onChallengeExtension();
+          _obedience.onChallengeExtension();
+        }
+        break;
+      case ChallengeOutcome.fail:
+        // Pas de bumps humil/obed (cf. spec § 5.3).
+        break;
+      case ChallengeOutcome.skipped:
+        _obedience.onChallengeSkip();
+        break;
+    }
+  }
+
   Future<void> _finish() async {
     _stopwatch.stop();
     _ticker?.cancel();
@@ -1255,7 +1532,17 @@ class SessionController extends ChangeNotifier {
     await markIfPresent(session.finalMilestoneId, isFinal: true);
     _sessionMilestoneUnlocks = List<LevelMilestone>.unmodifiable(newlyUnlocked);
 
+    // Phase 1 défis — applique les bumps humil/obed liés à l'outcome
+    // (cf. spec § 5.2 / 5.3). Posé après les bonus milestone pour
+    // s'additionner au careerScore avant la persistance ci-dessous.
+    _applyChallengeOutcome();
     if (!_session.noStats) {
+      // Repersiste l'obédiance si elle a bougé via l'outcome défi
+      // (le `setObedienceLevel` ci-dessus a été appelé AVANT
+      // `_applyChallengeOutcome`).
+      if (_challengeOutcome != null) {
+        await _stats.setObedienceLevel(_obedience.score);
+      }
       // Persiste le score career une fois pour toutes : delta de fin +
       // d'éventuels bonus milestone sont déjà incorporés.
       await _stats.setHumiliationLevel(_humiliation.careerScore);
@@ -1536,6 +1823,31 @@ class SessionController extends ChangeNotifier {
   /// cette méthode hors d'un état running.
   Future<void> triggerFail() async {
     if (!canTriggerFail) return;
+
+    // Phase 1 défis — repurposage du bouton FAIL pendant la fenêtre défi
+    // (cf. spec § 4.4) : pendant le breath de countdown = `PASSE` ; avant
+    // le seuil = fail défi (pas de flow punition complet) ; après le seuil
+    // = `JE M'ARRÊTE`. Aucun cas ne tombe dans le flow fail standard.
+    if (isChallengeActive) {
+      switch (_challengePhase) {
+        case ChallengePhase.breath:
+          triggerChallengePass();
+          return;
+        case ChallengePhase.live:
+        case ChallengePhase.preExtend:
+          _capabilityTracker?.onFail();
+          _completeChallenge(ChallengeOutcome.fail);
+          _skipPastChallengeStep();
+          return;
+        case ChallengePhase.atSeuil:
+        case ChallengePhase.openExtension:
+          triggerChallengeStop();
+          return;
+        case ChallengePhase.none:
+        case ChallengePhase.ended:
+          break;
+      }
+    }
 
     // Retry milestone : si on rate dans la fenêtre pédagogique, on tente
     // d'abord de proposer une nouvelle tentative via le callback (qui

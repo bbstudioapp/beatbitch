@@ -11,6 +11,7 @@ import '../../../services/capability_axis.dart';
 import '../../../services/capability_service.dart';
 import '../../models/career_generation_inputs.dart';
 import '../../models/career_level.dart';
+import '../../models/challenge.dart';
 import '../../models/level_milestone.dart';
 import '../../models/phrase_bank.dart';
 import '../../models/specialization.dart';
@@ -148,12 +149,28 @@ class CareerGenerationResult {
   final List<double> staminaProfile;
   final CapabilityAxis? overloadAxis;
 
+  /// Défi inséré dans la séance (Phase 1 défis). `null` si toggle off,
+  /// hors carrière, ou aucun axe candidat. Identique à `session.challenge`
+  /// (exposé ici pour la lisibilité côté caller).
+  final Challenge? challenge;
+
   const CareerGenerationResult({
     required this.session,
     required this.staminaProfile,
     this.overloadAxis,
+    this.challenge,
   });
 }
+
+/// Durée fixe du breath de countdown qui précède un step défi. Borné dans
+/// la fenêtre 12-15 s prévue par la spec (§ 4.3) ; on fixe à 13 s pour
+/// laisser au coach le temps d'énoncer l'annonce sans presser le compte
+/// à rebours.
+const int kChallengeBreathDurationSeconds = 13;
+
+/// Position relative dans le temps planifié à laquelle on cherche à
+/// insérer le breath du défi (cf. spec § 4.3 — « vers 60 % »).
+const double kChallengeInsertionFraction = 0.60;
 
 /// Génère une session procédurale en fonction du niveau choisi et de la
 /// durée demandée. Voir `(plan local)`
@@ -447,6 +464,12 @@ class CareerSessionGenerator {
     /// profondeur, bornes BPM / hold, `noStats`). `CustomOverrides.none`
     /// = comportement carrière standard, aucune surcharge.
     CustomOverrides custom = CustomOverrides.none,
+
+    /// Défi intra-séance à insérer (Phase 1). `ChallengeInputs.none` =
+    /// pas d'insertion (toggle off, hors carrière, ou aucun axe candidat).
+    /// Quand un défi est passé, un step breath de countdown + un step défi
+    /// sont insérés vers 60 % du temps planifié (cf. spec § 4.3).
+    ChallengeInputs challenge = ChallengeInputs.none,
   }) {
     // Invariants `milestones` : on ne peut pas les déplacer dans le
     // constructeur de `MilestonePlan` car `.placement` n'est pas
@@ -626,6 +649,19 @@ class CareerSessionGenerator {
     //
     // `isLowLevel`, `useFinalMilestone`, `finalBudget`, `genUntil` désormais
     // pré-calculés en tête de [generate] (cf. construction de `ctx` plus haut).
+
+    // Phase 1 défis — insertion d'un step breath countdown + step défi vers
+    // 60 % du temps planifié (cf. spec § 4.3). Variables d'état closurées
+    // au-dessus de la boucle main pour pouvoir les passer à `_assembleResult`
+    // une fois sorti. `null` partout quand aucun défi n'est passé (toggle
+    // off, hors carrière, profil sans axe candidat).
+    final challengeData = challenge.challenge;
+    final challengeTriggerTime = challengeData == null
+        ? -1
+        : (genUntil * kChallengeInsertionFraction).round();
+    int? challengeBreathStartTime;
+    int? challengeStepTime;
+    var challengeInserted = false;
     while (ctx.time < genUntil) {
       // Phase 1 — Insertion milestone : on traite les pending dans
       // l'ordre, dès que `time` atteint la target (`>= targetTime`),
@@ -644,6 +680,47 @@ class CareerSessionGenerator {
       // Phase 3 — Ordre de déglutition forcé : beg libre court quand la
       // simulation salive sature.
       if (_tryEmitSwallowOrder(ctx)) continue;
+      // Phase 3.5 — Défi intra-séance (Phase 1 défis) : à `ctx.time >=
+      // challengeTriggerTime`, on insère un step breath de countdown puis
+      // le step défi. Le SessionController détecte ensuite via
+      // `Session.challengeBreathStartTime` / `challengeStepTime` pour
+      // armer la machine d'états live. Skip si l'enveloppe restante (jusqu'à
+      // `genUntil`) ne couvre pas breath + défi + marge pour la phase
+      // finish — on préfère ne pas insérer un défi tronqué.
+      if (challengeData != null &&
+          !challengeInserted &&
+          ctx.time >= challengeTriggerTime) {
+        const breathDur = kChallengeBreathDurationSeconds;
+        final stepDur = challengeData.nominalDurationSeconds;
+        final remaining = genUntil - ctx.time;
+        if (remaining >= breathDur + stepDur) {
+          // Texte du breath : phrase coach `attempt` si dispo, sinon vide
+          // (l'UI affiche le libellé localisé via AppLocalizations).
+          final breathText = bank.pickChallengePhrase(
+                  challengeData.axisStorageKey, 'attempt', _rng) ??
+              '';
+          challengeBreathStartTime = ctx.time;
+          steps.add(SessionStep(
+            time: ctx.time,
+            text: breathText,
+            mode: SessionMode.breath,
+            duration: breathDur,
+          ));
+          ctx.time += breathDur;
+          challengeStepTime = ctx.time;
+          steps.add(SessionStep(
+            time: ctx.time,
+            from: challengeData.from,
+            to: challengeData.to,
+            bpm: challengeData.bpm,
+            duration: stepDur,
+            mode: challengeData.mode,
+          ));
+          ctx.time += stepDur;
+          challengeInserted = true;
+          continue;
+        }
+      }
       // Phase 4 — Main step : tirage de difficulté → mode → cascade de
       // diversification (BPM / amplitude / capacités) → sas breath
       // conditionnel → diversification en sous-segments → fake breath
@@ -716,6 +793,9 @@ class CareerSessionGenerator {
         finalMilestoneId: finalMilestone.id,
         finalMilestoneStartTime: finalMilestoneStartTime,
         finalMilestoneDurationSeconds: finalMilestone.durationSeconds,
+        challenge: challengeInserted ? challengeData : null,
+        challengeBreathStartTime: challengeBreathStartTime,
+        challengeStepTime: challengeStepTime,
       );
     }
 
@@ -796,6 +876,9 @@ class CareerSessionGenerator {
       finalCategory: finalCategory,
       silentFinishStartTime: silentFinishStartTime,
       finalStepStartTime: finalStepStartTime,
+      challenge: challengeInserted ? challengeData : null,
+      challengeBreathStartTime: challengeBreathStartTime,
+      challengeStepTime: challengeStepTime,
     );
   }
 
@@ -1320,6 +1403,9 @@ class CareerSessionGenerator {
     String? finalMilestoneId,
     int? finalMilestoneStartTime,
     int? finalMilestoneDurationSeconds,
+    Challenge? challenge,
+    int? challengeBreathStartTime,
+    int? challengeStepTime,
   }) {
     final finalDuration = ctx.time + 2;
     final trimmedProfile = List<double>.generate(
@@ -1358,9 +1444,13 @@ class CareerSessionGenerator {
         silentFinishStartTime: silentFinishStartTime,
         finalStepTime: finalStepStartTime,
         noStats: ctx.noStats,
+        challenge: challenge,
+        challengeBreathStartTime: challengeBreathStartTime,
+        challengeStepTime: challengeStepTime,
       ),
       staminaProfile: trimmedProfile,
       overloadAxis: _config.overloadAxis,
+      challenge: challenge,
     );
   }
 
