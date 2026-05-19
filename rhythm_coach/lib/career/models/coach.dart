@@ -767,6 +767,47 @@ class Coach {
     );
   }
 
+  /// Boost virtuel par branche listée dans [specialties]. La sémantique est
+  /// « le coach principal t'introduit ses spés sans dominer ce que tu as
+  /// déjà investi » (cf. [effectiveAllocation]). À 2 pts, l'effet est lisible
+  /// dans les biais Phase B (durée +10 %, ampScore +0.10, poids rhythm +0.40)
+  /// sans écraser une joueuse débutante.
+  static const int _specialtyBoost = 2;
+
+  /// Renvoie une allocation effective qui combine la spé persistée de la
+  /// joueuse [player] et un boost coach par branche listée dans
+  /// [specialties]. Sémantique « boost déclinant » :
+  ///
+  ///   `effective(branch) = max(player(branch), _specialtyBoost)`
+  ///       si `branch ∈ specialties`, sinon `player(branch)`
+  ///
+  /// Cas concrets :
+  /// - Joueuse 0 pt sur la branche coach → effective = 2 (le coach amène).
+  /// - Joueuse 5 pts sur la branche coach → effective = 5 (rien à apporter).
+  /// - Branche hors `specialties` → inchangée (le coach ne touche pas).
+  ///
+  /// Le résultat est consommé par le générateur (`Phase B` — pondérations
+  /// de durée, BPM, amplitude, poids de mode). N'affecte ni la coloration
+  /// de phrases (qui reste sur la spé joueuse pure pour ne pas créer de
+  /// branche dominante artificielle) ni le gating de milestones.
+  ///
+  /// `lastRespecMs` est passé tel quel.
+  SpecializationAllocation effectiveAllocation(
+      SpecializationAllocation player) {
+    if (specialties.isEmpty) return player;
+    final boosted = <SpecializationBranch, int>{};
+    for (final b in SpecializationBranch.values) {
+      final pts = player.pointsIn(b);
+      boosted[b] = specialties.contains(b) && pts < _specialtyBoost
+          ? _specialtyBoost
+          : pts;
+    }
+    return SpecializationAllocation(
+      points: boosted,
+      lastRespecMs: player.lastRespecMs,
+    );
+  }
+
   /// Construit une [PhraseBank] propre à ce coach, en composant son pack
   /// avec [fallback] (la banque globale du jeu). Règles :
   ///
