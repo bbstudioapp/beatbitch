@@ -28,22 +28,6 @@ class CoachRequirement {
   /// Cas typique : coach axé biffle.
   final bool requiresHands;
 
-  /// Branches de spécialisation devant avoir au moins 1 point investi.
-  /// Vide = pas de prérequis. Check binaire (présence) : pour exiger un
-  /// nombre de points spécifique, utiliser [requiredBranchPoints].
-  final List<SpecializationBranch> mustHaveUnlockedBranches;
-
-  /// Seuils de points requis par branche. Ex: `{ profondeur: 3 }` =
-  /// "au moins 3 points investis dans profondeur". Permet de débloquer
-  /// un coach uniquement quand le joueur a réellement investi dans une
-  /// spécialité (et pas juste effleuré 1 point).
-  ///
-  /// Sémantique : **toutes** les branches listées doivent atteindre leur
-  /// seuil (AND, pas OR). Si une branche apparaît à la fois ici et dans
-  /// `mustHaveUnlockedBranches`, le seuil le plus strict (= celui d'ici)
-  /// fait foi.
-  final Map<SpecializationBranch, int> requiredBranchPoints;
-
   /// Niveau global minimum du joueur (CareerLevel) pour autoriser ce
   /// coach. Permet d'ajouter des coachs annexes débloqués à un niveau
   /// précis sans toucher au système de palier principal.
@@ -51,8 +35,6 @@ class CoachRequirement {
 
   const CoachRequirement({
     this.requiresHands = false,
-    this.mustHaveUnlockedBranches = const [],
-    this.requiredBranchPoints = const {},
     this.minPlayerLevel = 1,
   });
 
@@ -62,45 +44,14 @@ class CoachRequirement {
   /// ```jsonc
   /// {
   ///   "requiresHands": false,
-  ///   "minPlayerLevel": 1,
-  ///   "mustHaveUnlockedBranches": ["profondeur"],
-  ///   "requiredBranchPoints": { "resilience": 3, "profondeur": 2 }
+  ///   "minPlayerLevel": 1
   /// }
   /// ```
-  /// Toute clé absente garde sa valeur par défaut. Les noms de branches
-  /// inconnus sont ignorés silencieusement.
+  /// Toute clé absente garde sa valeur par défaut.
   factory CoachRequirement.fromJson(Map<String, dynamic> json) {
-    SpecializationBranch? parseBranch(String name) {
-      for (final b in SpecializationBranch.values) {
-        if (b.name == name) return b;
-      }
-      return null;
-    }
-
-    final branchesNode = json['mustHaveUnlockedBranches'];
-    final branches = <SpecializationBranch>[];
-    if (branchesNode is List) {
-      for (final raw in branchesNode) {
-        final b = parseBranch(raw?.toString() ?? '');
-        if (b != null) branches.add(b);
-      }
-    }
-
-    final pointsNode = json['requiredBranchPoints'];
-    final points = <SpecializationBranch, int>{};
-    if (pointsNode is Map<String, dynamic>) {
-      pointsNode.forEach((key, value) {
-        final b = parseBranch(key);
-        final n = (value as num?)?.toInt();
-        if (b != null && n != null && n > 0) points[b] = n;
-      });
-    }
-
     return CoachRequirement(
       requiresHands: json['requiresHands'] == true,
       minPlayerLevel: (json['minPlayerLevel'] as num?)?.toInt() ?? 1,
-      mustHaveUnlockedBranches: branches,
-      requiredBranchPoints: points,
     );
   }
 }

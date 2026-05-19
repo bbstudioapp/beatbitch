@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../../theme/app_theme.dart';
 import '../models/coach.dart';
-import '../models/specialization.dart';
 import '../services/coach_service.dart';
 import '../widgets/coach_portrait.dart';
 
@@ -18,14 +17,12 @@ class CoachPickerScreen extends StatelessWidget {
   final CoachService service;
   final int playerMaxLevel;
   final bool handsEnabled;
-  final SpecializationAllocation specialization;
 
   const CoachPickerScreen({
     super.key,
     required this.service,
     required this.playerMaxLevel,
     required this.handsEnabled,
-    required this.specialization,
   });
 
   Future<void> _handleTap(BuildContext context, Coach coach) async {
@@ -33,7 +30,6 @@ class CoachPickerScreen extends StatelessWidget {
       coach,
       playerMaxLevel: playerMaxLevel,
       handsEnabled: handsEnabled,
-      branchPoints: specialization.points,
     );
 
     final t = AppLocalizations.of(context);
@@ -49,18 +45,6 @@ class CoachPickerScreen extends StatelessWidget {
             context,
             t.coachErrorMinLevel(
                 coach.name, coach.requirements.minPlayerLevel));
-        return;
-      case CoachSelectionStatus.blockedMissingSpecialization:
-        _snack(context, t.coachErrorMissingSpecialization);
-        return;
-      case CoachSelectionStatus.blockedInsufficientBranchPoints:
-        final missing = coach.requirements.requiredBranchPoints.entries
-            .where((e) => (specialization.points[e.key] ?? 0) < e.value)
-            .map((e) =>
-                '${SpecializationBranchMeta.forBranch(e.key).label} ≥ ${e.value}')
-            .join(', ');
-        _snack(
-            context, t.coachErrorInsufficientBranchPoints(coach.name, missing));
         return;
       case CoachSelectionStatus.selectedAdvancing:
         await service.selectCoach(coach);

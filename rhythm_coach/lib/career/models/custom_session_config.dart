@@ -6,9 +6,9 @@ import '../../services/locale_service.dart';
 import 'specialization.dart';
 
 /// Niveau de difficulté global d'une session custom. Pilote le niveau
-/// « virtuel » passé au générateur (donc `maxDifficultyCap`,
-/// `deepProbability`, `boostsCount`, `regenEndMultiplier`) ainsi qu'un
-/// plancher d'intensité (`intensityFloor`) appliqué dès le début de séance.
+/// « virtuel » passé au générateur (donc `maxDifficultyCap`, `boostsCount`,
+/// `regenEndMultiplier`) ainsi qu'un plancher d'intensité (`intensityFloor`)
+/// appliqué dès le début de séance.
 enum CustomDifficulty { facile, normal, difficile, extreme }
 
 /// Dosage de la quantité d'un mode dans la session générée. Mappé sur le
@@ -22,9 +22,9 @@ enum ModeDose { none, rare, normal, frequent }
 /// Sérialisable pour être sauvegardée et rechargée (cf. [CustomConfigService]).
 class CustomSessionConfig {
   /// Niveaux « virtuels » de base par difficulté (paliers carrière). Le
-  /// niveau ne sert qu'à dériver `maxDifficultyCap` / `deepProbability` /
-  /// `boostsCount` / `regenEndMultiplier` — la durée est toujours surchargée
-  /// par [durationSeconds] ou [cycleDurationSeconds].
+  /// niveau ne sert qu'à dériver `maxDifficultyCap` / `boostsCount` /
+  /// `regenEndMultiplier` — la durée est toujours surchargée par
+  /// [durationSeconds] ou [cycleDurationSeconds].
   static const Map<CustomDifficulty, int> _baseLevel = {
     CustomDifficulty.facile: 2,
     CustomDifficulty.normal: 6,

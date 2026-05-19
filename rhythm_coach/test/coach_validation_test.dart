@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:beat_bitch/career/models/coach.dart';
 import 'package:beat_bitch/career/models/coach_catalog.dart';
-import 'package:beat_bitch/career/models/specialization.dart';
 
 void main() {
   group('CoachCatalogValidator', () {
@@ -87,38 +86,6 @@ void main() {
       );
       final issues = CoachCatalogValidator.validate([t1, t2]);
       expect(issues.any((s) => s.contains('strictement supérieur')), isTrue);
-    });
-  });
-
-  group('requiredBranchPoints', () {
-    test('parsing JSON', () {
-      final r = CoachRequirement.fromJson({
-        'requiredBranchPoints': {'profondeur': 3, 'sloppy': 1},
-      });
-      expect(r.requiredBranchPoints[SpecializationBranch.profondeur], 3);
-      expect(r.requiredBranchPoints[SpecializationBranch.sloppy], 1);
-    });
-
-    test('valeurs <=0 ou non-numériques ignorées', () {
-      final r = CoachRequirement.fromJson({
-        'requiredBranchPoints': {
-          'profondeur': 0,
-          'sloppy': -2,
-          'unknown': 5,
-        },
-      });
-      expect(r.requiredBranchPoints, isEmpty);
-    });
-
-    test(
-        'seuil non atteint → blockedInsufficientBranchPoints (à intégrer côté CoachService)',
-        () {
-      // Smoke test : on s'assure juste que la structure est correcte ;
-      // l'évaluation côté CoachService est testée dans coach_service_test.
-      const r = CoachRequirement(
-        requiredBranchPoints: {SpecializationBranch.endurance: 3},
-      );
-      expect(r.requiredBranchPoints[SpecializationBranch.endurance], 3);
     });
   });
 }

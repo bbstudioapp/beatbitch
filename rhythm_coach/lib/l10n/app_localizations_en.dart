@@ -1488,16 +1488,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get coachErrorMissingSpecialization =>
-      'This coach requires at least 1 point in a specialization you haven\'t invested in.';
-
-  @override
-  String coachErrorInsufficientBranchPoints(
-      String coachName, String requirements) {
-    return '$coachName requires: $requirements. Spend your specialization points.';
-  }
-
-  @override
   String get unlockAnnouncementSloppyDroolBasic =>
       'From now on your mouth holds more spit, and your licking makes more. Drool on me, be filthy.';
 
