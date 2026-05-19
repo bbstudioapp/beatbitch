@@ -10,10 +10,6 @@ class CareerLevel {
   /// Plus le niveau monte, plus le dé peut atteindre des valeurs élevées.
   final double maxDifficultyCap;
 
-  /// Multiplicateur de régénération d'endurance au début d'une séance
-  /// (à `t = 0`). Reste autour de 1.0 quel que soit le niveau.
-  final double regenStartMultiplier;
-
   /// Multiplicateur de régénération en fin de séance (à `t = duration`).
   /// Augmente avec le niveau : plus on est avancé, plus la récup s'accélère
   /// vers la fin → moins de temps réel passé en récup, plus d'effort enchaîné.
@@ -31,7 +27,6 @@ class CareerLevel {
   const CareerLevel({
     required this.level,
     required this.maxDifficultyCap,
-    required this.regenStartMultiplier,
     required this.regenEndMultiplier,
     required this.durationSeconds,
     required this.boostsCount,
@@ -47,7 +42,6 @@ class CareerLevel {
     return CareerLevel(
       level: level,
       maxDifficultyCap: cap,
-      regenStartMultiplier: 1.0,
       regenEndMultiplier: regenEnd,
       durationSeconds: _durationForLevel(level),
       boostsCount: _boostsCountForLevel(level),
