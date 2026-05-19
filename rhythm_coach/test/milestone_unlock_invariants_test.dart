@@ -182,8 +182,7 @@ void main() {
           .map((s) => (s[spec.field] as num).toDouble())
           .reduce((a, b) => a > b ? a : b);
       expect(maxValue, greaterThanOrEqualTo(spec.mustReach),
-          reason:
-              'milestone "$mid" débloque "$serialized" qui ouvre un palier '
+          reason: 'milestone "$mid" débloque "$serialized" qui ouvre un palier '
               'jusqu\'à ${spec.mustReach} ${spec.field} ; la séquence ne va '
               'que jusqu\'à $maxValue. Monter la séquence ou descendre le seuil '
               'côté générateur.');

@@ -230,14 +230,15 @@ class PositionPickers {
   }
 
   /// Choix de la position d'un beg selon ampScore. Retourne null pour
-  /// `ampScore < 0.40` → beg libre (sans position). Sinon : mid → throat
-  /// → full. Jamais head ou tip (pas de sens : un beg léger doit être
-  /// libre, ancrer la position de tenue ne commence qu'à mid).
+  /// `ampScore < 0.40` → beg libre (sans position). Sinon : `mid`.
+  ///
+  /// Phase 5 défis (cf. spec § 7.5) : cap strict à `mid`. Parler en gorge
+  /// tenue (throat/full) est irréaliste, ces positions sont supprimées du
+  /// générateur. Les begs s'incarnent donc en deux saveurs : libre (sans
+  /// position) ou ancré à `mid` pour les ampScores élevés.
   Position? pickBegPosition(double ampScore) {
     if (ampScore < 0.40) return null;
-    if (ampScore < 0.65) return Position.mid;
-    if (ampScore < 0.85) return Position.throat;
-    return Position.full;
+    return Position.mid;
   }
 
   /// Tire un couple (from, to) tel que `from.index < to.index` strictement.
