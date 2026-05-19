@@ -123,10 +123,19 @@ class HoldRules extends ModeRules {
     // Convention uniforme hold/beg : la position tenue est dans `to`
     // (matche BeepEngine et le format SessionStep des JSON).
     final to = ctx.gen.pickHoldPosition(ctx.ampScore);
-    final dur = ctx.gen.config.scaleDuration(
-      StaminaModel.lerp(8.0, 30.0, max(ctx.durScore, ctx.bpmScore)),
+    // Hold mid n'a pas de palier `long` séparé (pas d'`UnlockKey.holdMidLong`) :
+    // la cascade `unlockKeyFor` → `tryDegrade` ne peut donc pas borner mid
+    // comme elle borne throat/full > 10 s. On cap explicitement la durée
+    // tirée sur mid à 10 s — c'est le max montré par `intro_hold_mid`,
+    // qui ouvre le palier. Au-delà il faut tenir throat, pas mid.
+    final lerpMax = to == Position.mid ? 10.0 : 30.0;
+    var dur = ctx.gen.config.scaleDuration(
+      StaminaModel.lerp(8.0, lerpMax, max(ctx.durScore, ctx.bpmScore)),
       enduranceFactor: 0.08,
     );
+    // `scaleDuration` peut multiplier jusqu'à ×1.6 (spé Endurance) —
+    // re-borner après pour ne jamais dépasser le plafond mid.
+    if (to == Position.mid && dur > 10) dur = 10;
     return StepDraft(
       mode: SessionMode.hold,
       bpm: null,

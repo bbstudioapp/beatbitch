@@ -2,9 +2,11 @@
   "displayLabel": "First throat hold",
   "stepTexts": {
     "0": "Today you'll hold throat. Warm up.",
-    "10": "Hold throat. Two seconds.",
-    "12": "Breathe well.",
-    "20": "Again, longer. Three seconds.",
-    "23": "Good. Rest."
+    "10": "Hold throat. Three seconds.",
+    "13": "Breathe.",
+    "21": "Again. Six seconds this time.",
+    "27": "Breathe deeply.",
+    "37": "Last one. Ten seconds. You can do it.",
+    "47": "Good. Lick to recover."
   }
 }
