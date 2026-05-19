@@ -1,7 +1,7 @@
 /// Service du système de défis intra-séance (Phase 1).
 ///
 /// Responsabilités :
-/// - Persiste le toggle `challenges.enabled` (défaut false) et le flag
+/// - Persiste le toggle `challenges.enabled` (défaut true) et le flag
 ///   `challenges.tutorial_seen` (posé après le 1ᵉʳ défi terminé).
 /// - Construit un `Challenge` à partir du profil de capacités + axe choisi
 ///   via cascade : (1) tête de la file showcase (TODO — branche
@@ -49,12 +49,15 @@ class ChallengeService {
   static const String keyEnabled = 'challenges.enabled';
   static const String keyTutorialSeen = 'challenges.tutorial_seen';
 
-  /// `true` quand la joueuse a explicitement activé les défis dans
-  /// `CareerScreen`. Défaut `false` (pour ne pas effrayer les nouvelles
-  /// utilisatrices).
+  /// `true` quand la joueuse a activé les défis dans `CareerScreen`.
+  /// Défaut `true` : le tutoriel scripté au 1ᵉʳ défi (hold throat 5 s,
+  /// tooltips et textes coach pédagogiques) absorbe le choc pour une
+  /// joueuse qui découvre le système, et le fail défi est doux
+  /// (soft-cap × 0.92, pas de flow punition). La joueuse peut désactiver
+  /// le toggle dans `CareerScreen` à tout moment.
   Future<bool> isEnabled() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(keyEnabled) ?? false;
+    return prefs.getBool(keyEnabled) ?? true;
   }
 
   Future<void> setEnabled(bool value) async {
