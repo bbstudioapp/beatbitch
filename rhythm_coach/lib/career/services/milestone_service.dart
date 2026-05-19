@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/anatomy_profile.dart';
 import '../../models/session_step.dart';
+import '../../services/capability_axis.dart';
 import '../../services/capability_service.dart';
 import '../../services/locale_service.dart';
 import '../models/level_milestone.dart';
@@ -597,6 +598,77 @@ class MilestoneService extends ChangeNotifier {
       await resetCandidacyAge(id);
       notifyListeners();
     }
+  }
+
+  /// Acquittement silencieux d'une milestone par un défi intra-séance
+  /// (Phase 3 défis, cf. spec § 5.4). Sémantiquement équivalent à
+  /// `markCompleted(id, hadFail: false)` côté persistance, mais le caller
+  /// (`SessionController._finish`) court-circuite l'annonce TTS et le
+  /// bump milestone (déjà compté par l'outcome du défi).
+  ///
+  /// Méthode dédiée pour rendre l'intention claire dans le code appelant
+  /// et permettre d'éventuelles spécificités futures (ex. tag
+  /// « acquise via défi » dans la persistance).
+  Future<void> markCompletedViaChallenge(String id) async {
+    if (_completed.add(id)) {
+      await _persist();
+      await resetRetryCount(id);
+      await resetCandidacyAge(id);
+      notifyListeners();
+    }
+  }
+
+  /// Phase 3 défis — retourne les milestones acquittables silencieusement
+  /// par un défi qui a poussé [axis] à la valeur [reached]. Une milestone
+  /// est acquittable quand :
+  ///
+  /// 1. Pas déjà acquittée.
+  /// 2. Au moins un de ses `requiresCapability` matche l'axe [axis] avec
+  ///    [reached] satisfaisant le seuil (`>= min` ou `<= min` selon
+  ///    `recordKind`).
+  /// 3. Ses autres `requiresCapability` (sur d'autres axes) sont déjà
+  ///    satisfaits par le [profile] courant.
+  /// 4. Ses pré-requis unlock (`requires`) sont satisfaits par
+  ///    [acquiredUnlocks].
+  ///
+  /// La sémantique : « la milestone serait devenue candidate normalement,
+  /// sauf que c'est le défi qui a poussé l'axe au seuil ». Pas de filtre
+  /// par `humilRequired` / `minLevel` / `anatomy` — l'acquittement par
+  /// défi est plus permissif que le filtre normal (la capacité prouvée
+  /// suffit).
+  List<LevelMilestone> milestonesAcquittableByChallenge({
+    required CapabilityAxis axis,
+    required double reached,
+    required CapabilityProfile profile,
+    required Set<UnlockKey> acquiredUnlocks,
+  }) {
+    final out = <LevelMilestone>[];
+    for (final m in _catalog) {
+      if (_completed.contains(m.id)) continue;
+      if (m.requiresCapability.isEmpty) continue;
+      if (!m.requires.every(acquiredUnlocks.contains)) continue;
+      var axisMatches = false;
+      var allOthersOk = true;
+      for (final req in m.requiresCapability) {
+        if (req.axis == axis) {
+          final ok = axis.recordKind == CapabilityRecordKind.minimize
+              ? reached <= req.min
+              : reached >= req.min;
+          if (!ok) {
+            allOthersOk = false;
+            break;
+          }
+          axisMatches = true;
+        } else {
+          if (!req.isSatisfiedBy(profile)) {
+            allOthersOk = false;
+            break;
+          }
+        }
+      }
+      if (axisMatches && allOthersOk) out.add(m);
+    }
+    return out;
   }
 
   /// Cherche dans le catalogue la milestone d'id [id].

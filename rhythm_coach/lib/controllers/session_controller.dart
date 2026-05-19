@@ -1408,6 +1408,53 @@ class SessionController extends ChangeNotifier {
   ///
   /// TODO Phase 1.5 : consume la tête de file showcase si la branche du
   /// défi matche (dépend de la branche `feat/specialization-showcase-queue`).
+  /// Phase 3 défis — scanne le catalogue de milestones pour acquitter
+  /// silencieusement celles dont `requiresCapability` matche l'axe du défi
+  /// à un seuil ≤ valeur atteinte (cf. spec § 5.4).
+  ///
+  /// Calcul de la valeur atteinte :
+  /// - axe durée : `targetThreshold + extensions × extensionSeconds` (borne
+  ///   haute conservatrice — l'utilisatrice peut `JE M'ARRÊTE` avant la
+  ///   fin d'une prolongation, mais on prend la valeur de référence du
+  ///   défi pour rester simple).
+  /// - axe BPM / profondeur : `targetThreshold` (tenu au paramètre demandé).
+  ///
+  /// No-op si :
+  /// - outcome non succès (`fail` / `skipped` / `null`)
+  /// - pas de profil de capacités (hors carrière)
+  Future<void> _acquitMilestonesViaChallenge() async {
+    final ch = _activeChallenge;
+    final outcome = _challengeOutcome;
+    if (ch == null || outcome == null) return;
+    if (outcome != ChallengeOutcome.netSuccess &&
+        outcome != ChallengeOutcome.extendedSuccess) {
+      return;
+    }
+    final profile = _capabilityProfile;
+    if (profile == null) return;
+    final double reached;
+    switch (ch.kind) {
+      case ChallengeAxisKind.duration:
+        reached = (ch.targetThreshold +
+                _challengeExtensionsCount * ch.extensionSeconds)
+            .toDouble();
+        break;
+      case ChallengeAxisKind.bpm:
+      case ChallengeAxisKind.depthCran:
+        reached = ch.targetThreshold.toDouble();
+        break;
+    }
+    final acquittable = milestoneService.milestonesAcquittableByChallenge(
+      axis: ch.axis,
+      reached: reached,
+      profile: profile,
+      acquiredUnlocks: _unlockedKeys,
+    );
+    for (final m in acquittable) {
+      await milestoneService.markCompletedViaChallenge(m.id);
+    }
+  }
+
   void _applyChallengeOutcome() {
     final outcome = _challengeOutcome;
     if (outcome == null) return;
@@ -1550,6 +1597,13 @@ class SessionController extends ChangeNotifier {
     // (cf. spec § 5.2 / 5.3). Posé après les bonus milestone pour
     // s'additionner au careerScore avant la persistance ci-dessous.
     _applyChallengeOutcome();
+
+    // Phase 3 défis — acquittement silencieux des milestones dont
+    // `requiresCapability` matche l'axe du défi avec un seuil ≤ valeur
+    // atteinte (cf. spec § 5.4). Pas d'annonce TTS, pas de bump milestone
+    // (déjà compté par l'outcome). Idempotent : une milestone déjà
+    // acquittée est ignorée.
+    await _acquitMilestonesViaChallenge();
     if (!_session.noStats) {
       // Repersiste l'obédiance si elle a bougé via l'outcome défi
       // (le `setObedienceLevel` ci-dessus a été appelé AVANT
