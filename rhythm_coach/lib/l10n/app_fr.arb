@@ -246,11 +246,11 @@
   "@challengeBannerHoldGeneric": {
     "placeholders": { "seconds": { "type": "int" } }
   },
-  "challengeBannerRhythm": "Tiens le rythme à {bpm} BPM",
+  "challengeBannerRhythm": "Monte le rythme jusqu'à {bpm} BPM",
   "@challengeBannerRhythm": {
     "placeholders": { "bpm": { "type": "int" } }
   },
-  "challengeBannerBiffle": "Encaisse les coups à {bpm} BPM",
+  "challengeBannerBiffle": "Encaisse les coups jusqu'à {bpm} BPM",
   "@challengeBannerBiffle": {
     "placeholders": { "bpm": { "type": "int" } }
   },

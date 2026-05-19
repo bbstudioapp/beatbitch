@@ -116,8 +116,18 @@ class Challenge {
   /// Position de fin pour les modes rythmés.
   final Position? to;
 
-  /// BPM du step défi quand applicable (rhythm, biffle).
+  /// BPM du step défi quand applicable (rhythm, biffle). Pour les défis
+  /// BPM en rampe (axes `rhythm.bpm_ceil.*` / `biffle.bpm_max`), c'est le
+  /// BPM de **départ** — cf. [bpmEnd] pour le BPM d'arrivée.
   final int? bpm;
+
+  /// BPM de **fin de rampe** pour les défis BPM. Le `BeepEngine`
+  /// interpole linéairement entre [bpm] (départ) et [bpmEnd] (arrivée)
+  /// sur la durée du step défi — cf. `SessionStep.bpmEnd`. La rampe
+  /// matérialise le côté progressif du défi : on démarre doux (= comfort
+  /// prouvé) et on monte jusqu'à la cible (× 1.50). `null` = pas de
+  /// rampe (constant, ou axe non-BPM).
+  final int? bpmEnd;
 
   /// `comfort` de l'axe au moment de la calibration. Sert au calcul de la
   /// prolongation `max(10, comfort × 0.30)` et à l'imputation des outcomes.
@@ -153,6 +163,7 @@ class Challenge {
     this.from,
     this.to,
     this.bpm,
+    this.bpmEnd,
     this.comfortAtCalibration,
     this.isTutorial = false,
     this.isExploratory = false,
@@ -211,12 +222,13 @@ class Challenge {
   /// Durée nominale du step défi en secondes — équivaut au seuil cible pour
   /// les axes durée, sinon une fenêtre fixe pour BPM/profondeur (le défi
   /// y est tenu sur une fenêtre d'observation).
+  ///
+  /// BPM : 45 s pour laisser la rampe `bpm → bpmEnd` progresser de manière
+  /// sensible mais pas brutale (~1-2 BPM/s typique). Cf. [bpmEnd].
   int get nominalDurationSeconds {
     return switch (kind) {
       ChallengeAxisKind.duration => targetThreshold,
-      // Sur BPM et profondeur, on fixe une fenêtre d'observation : le défi
-      // est tenu pendant cette fenêtre au paramètre demandé.
-      ChallengeAxisKind.bpm => 30,
+      ChallengeAxisKind.bpm => 45,
       ChallengeAxisKind.depthCran => 20,
     };
   }

@@ -571,12 +571,12 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String challengeBannerRhythm(int bpm) {
-    return 'Halte den Rhythmus bei $bpm BPM';
+    return 'Steigere den Rhythmus bis $bpm BPM';
   }
 
   @override
   String challengeBannerBiffle(int bpm) {
-    return 'Nimm die Schläge bei $bpm BPM';
+    return 'Nimm die Schläge bis $bpm BPM';
   }
 
   @override

@@ -39,6 +39,11 @@ const int kChallengeExtensionFloorSeconds = 10;
 /// Fraction du `comfort` utilisée pour calculer la prolongation (cf. spec).
 const double kChallengeExtensionComfortFraction = 0.30;
 
+/// BPM de départ pour les défis BPM exploratoires (axe vierge, aucun
+/// comfort prouvé). Démarrage doux qui amène progressivement à la cible
+/// via la rampe — la joueuse découvre l'axe sans saut brutal.
+const int kChallengeBpmRampStart = 50;
+
 /// Durée du seuil défi tutoriel sur axe robuste (hold throat 10 s).
 /// Volontairement plus long que 5 s pour laisser le temps à la joueuse
 /// de comprendre la mécanique (annonce coach pendant le breath, seuil
@@ -242,13 +247,18 @@ class ChallengeService {
   /// Construit un défi exploratoire à partir d'un axe vierge. Le seuil
   /// vient de [Challenge.initialEstimateSecondsForAxis] (palier débutante
   /// par type d'axe). Pas de `comfortAtCalibration` (jamais prouvé).
+  ///
+  /// Pour les axes BPM exploratoires : rampe douce depuis `kChallengeBpmRampStart`
+  /// (~50 BPM) jusqu'au seuil estimé — démarrage gentil pour découvrir.
   Challenge _buildExploratoryChallenge({required CapabilityAxis axis}) {
     final kind = _kindOf(axis);
     final threshold = Challenge.initialEstimateSecondsForAxis(axis);
     final mode = _modeOf(axis);
     final from = _fromOf(axis);
     final to = _toOf(axis);
-    final bpm = kind == ChallengeAxisKind.bpm ? threshold : null;
+    final isBpm = kind == ChallengeAxisKind.bpm;
+    final bpm = isBpm ? kChallengeBpmRampStart : null;
+    final bpmEnd = isBpm ? threshold : null;
     return Challenge(
       axis: axis,
       kind: kind,
@@ -257,11 +267,17 @@ class ChallengeService {
       from: from,
       to: to,
       bpm: bpm,
+      bpmEnd: bpmEnd,
       branch: branchOf(axis),
       isExploratory: true,
     );
   }
 
+  /// Pour les axes BPM, le step défi est une **rampe** : on démarre à
+  /// `bpm = round(comfort)` (= ce que la joueuse tient déjà confortablement)
+  /// et on monte jusqu'à `bpmEnd = targetThreshold` (= comfort × 1.50) sur
+  /// la durée du step (45 s). Donne au défi sa qualité progressive : la
+  /// joueuse sent le rythme accélérer petit à petit, pas un saut brutal.
   Challenge _buildChallenge({
     required CapabilityAxis axis,
     required double comfort,
@@ -271,7 +287,9 @@ class ChallengeService {
     final mode = _modeOf(axis);
     final from = _fromOf(axis);
     final to = _toOf(axis);
-    final bpm = kind == ChallengeAxisKind.bpm ? threshold : null;
+    final isBpm = kind == ChallengeAxisKind.bpm;
+    final bpm = isBpm ? comfort.round() : null;
+    final bpmEnd = isBpm ? threshold : null;
     return Challenge(
       axis: axis,
       kind: kind,
@@ -280,6 +298,7 @@ class ChallengeService {
       from: from,
       to: to,
       bpm: bpm,
+      bpmEnd: bpmEnd,
       branch: branchOf(axis),
       comfortAtCalibration: comfort,
     );
@@ -339,19 +358,35 @@ class ChallengeService {
     }
   }
 
-  /// Position de départ pour le step défi (pertinent pour hold/rhythm).
+  /// Position de départ du step défi.
+  ///
+  /// **Convention rythme** : `from < to` strict (cf.
+  /// `feedback_step_amplitude` mémoire — pas de `head→head` ni d'égalité).
+  /// Les axes `rhythm.bpm_ceil.<bande>` mesurent le BPM tenu dans une
+  /// bande de profondeur définie par `to` (cf. `CapabilityClamps.rhythmBpmCeilAxisFor`) :
+  /// le `from` doit donc être *moins profond* que `to`.
+  ///
+  /// **Convention hold** : `from == to` (la position est tenue). Le hold
+  /// utilise `from`, le BeepEngine joue le sample de la position.
   static Position? _fromOf(CapabilityAxis axis) {
     switch (axis) {
       case CapabilityAxis.holdThroatStreak:
       case CapabilityAxis.gorgeApneeStreak:
       case CapabilityAxis.gorgeEngagementStreak:
-      case CapabilityAxis.rhythmBpmCeilThroat:
         return Position.throat;
       case CapabilityAxis.holdFullStreak:
-      case CapabilityAxis.rhythmBpmCeilFull:
         return Position.full;
+      // Rhythm shallow : head→mid (amplitude légère, bande `to ≤ mid`).
       case CapabilityAxis.rhythmBpmCeilShallow:
         return Position.head;
+      // Rhythm throat : head→throat (franchissement gorge à vitesse
+      // calibrée — l'axe mesure le BPM en bande throat).
+      case CapabilityAxis.rhythmBpmCeilThroat:
+        return Position.head;
+      // Rhythm full : mid→full (franchissement profond, le `from` ne
+      // peut pas être head pour rester réaliste à BPM élevé).
+      case CapabilityAxis.rhythmBpmCeilFull:
+        return Position.mid;
       case CapabilityAxis.rhythmMotionStreak:
       case CapabilityAxis.rhythmDepthMax:
       case CapabilityAxis.effortNoBreathStreak:
@@ -362,7 +397,10 @@ class ChallengeService {
     }
   }
 
-  /// Position d'arrivée pour les modes rythmés.
+  /// Position d'arrivée du step défi. Pour les rhythms : `to` est la
+  /// position la plus profonde (le critère d'amplitude). Pour les holds :
+  /// `to == from` (position tenue ; on garde les deux pour cohérence avec
+  /// la convention hold du générateur).
   static Position? _toOf(CapabilityAxis axis) {
     switch (axis) {
       case CapabilityAxis.rhythmBpmCeilShallow:
@@ -417,13 +455,16 @@ class ChallengeService {
   }
 
   /// Construit le `SessionStep` matérialisant le défi (consommé par le
-  /// générateur lors de l'insertion à 60 %).
+  /// générateur lors de l'insertion à 60 %). Propage `bpmEnd` pour les
+  /// défis BPM en rampe (le BeepEngine interpole linéairement entre
+  /// `bpm` et `bpmEnd` sur la durée).
   static SessionStep stepFor(Challenge ch, {required int time}) {
     return SessionStep(
       time: time,
       from: ch.from,
       to: ch.to,
       bpm: ch.bpm,
+      bpmEnd: ch.bpmEnd,
       duration: ch.nominalDurationSeconds,
       mode: ch.mode,
     );

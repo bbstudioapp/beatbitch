@@ -1111,13 +1111,13 @@ abstract class AppLocalizations {
   /// No description provided for @challengeBannerRhythm.
   ///
   /// In fr, this message translates to:
-  /// **'Tiens le rythme à {bpm} BPM'**
+  /// **'Monte le rythme jusqu\'à {bpm} BPM'**
   String challengeBannerRhythm(int bpm);
 
   /// No description provided for @challengeBannerBiffle.
   ///
   /// In fr, this message translates to:
-  /// **'Encaisse les coups à {bpm} BPM'**
+  /// **'Encaisse les coups jusqu\'à {bpm} BPM'**
   String challengeBannerBiffle(int bpm);
 
   /// No description provided for @challengeBannerGeneric.
