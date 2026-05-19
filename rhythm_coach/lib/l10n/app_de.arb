@@ -221,6 +221,11 @@
   "challengeGoButton": "LOS",
   "challengeExtendButton": "ICH HALTE",
   "challengeStopButton": "STOPP",
+  "challengeAbortButton": "STOP",
+  "challengeSeuilAutoStopHint": "{seconds, plural, =1{Auto-Stop in 1 s} other{Auto-Stop in {seconds} s}}",
+  "@challengeSeuilAutoStopHint": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
   "challengeTutorialBanner": "Erste Herausforderung: Du wirst eine Position für die geforderte Zeit halten. Tippe LOS wenn du bereit bist, oder ÜBERSPR. zum Überspringen.",
   "challengeBannerCountdown": "{digit}",
   "@challengeBannerCountdown": {

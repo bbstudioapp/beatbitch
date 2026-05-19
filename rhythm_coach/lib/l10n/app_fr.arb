@@ -221,6 +221,11 @@
   "challengeGoButton": "GO",
   "challengeExtendButton": "JE TIENS",
   "challengeStopButton": "J'ARRÊTE",
+  "challengeAbortButton": "STOP",
+  "challengeSeuilAutoStopHint": "{seconds, plural, =1{Stop auto dans 1 s} other{Stop auto dans {seconds} s}}",
+  "@challengeSeuilAutoStopHint": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
   "challengeTutorialBanner": "Premier défi : tu vas tenir une position le temps demandé. Tape GO quand tu es prête, ou PASSE pour skipper.",
   "challengeBannerCountdown": "{digit}",
   "@challengeBannerCountdown": {

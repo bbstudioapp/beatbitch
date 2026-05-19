@@ -517,6 +517,20 @@ class AppLocalizationsFr extends AppLocalizations {
   String get challengeStopButton => 'J\'ARRÊTE';
 
   @override
+  String get challengeAbortButton => 'STOP';
+
+  @override
+  String challengeSeuilAutoStopHint(int seconds) {
+    String _temp0 = intl.Intl.pluralLogic(
+      seconds,
+      locale: localeName,
+      other: 'Stop auto dans $seconds s',
+      one: 'Stop auto dans 1 s',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get challengeTutorialBanner =>
       'Premier défi : tu vas tenir une position le temps demandé. Tape GO quand tu es prête, ou PASSE pour skipper.';
 

@@ -221,6 +221,11 @@
   "challengeGoButton": "GO",
   "challengeExtendButton": "I HOLD",
   "challengeStopButton": "I STOP",
+  "challengeAbortButton": "STOP",
+  "challengeSeuilAutoStopHint": "{seconds, plural, =1{Auto stop in 1 s} other{Auto stop in {seconds} s}}",
+  "@challengeSeuilAutoStopHint": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
   "challengeTutorialBanner": "First challenge: you'll hold a position for the requested time. Tap GO when ready, or SKIP to skip it.",
   "challengeBannerCountdown": "{digit}",
   "@challengeBannerCountdown": {

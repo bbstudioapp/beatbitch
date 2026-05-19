@@ -1064,8 +1064,8 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                     SizedBox(height: showBar ? 6 : 10),
                     _ChallengeButtons(controller: ctrl),
                     SizedBox(height: showBar ? 8 : 12),
-                  ],
-                  _FailButton(controller: ctrl),
+                  ] else
+                    _FailButton(controller: ctrl),
                   if (_showSkipSessionButton &&
                       (ctrl.isRunning || ctrl.isPaused)) ...[
                     SizedBox(height: showBar ? 8 : 12),
@@ -1402,6 +1402,7 @@ class _ChallengeButtons extends StatelessWidget {
   static const Color _goColor = Color(0xFFFFB300);
   static const Color _extendColor = Color(0xFF4CAF50);
   static const Color _stopColor = Color(0xFF1E88E5);
+  static const Color _abortColor = Color(0xFFEF5350);
 
   final SessionController controller;
   const _ChallengeButtons({required this.controller});
@@ -1434,6 +1435,16 @@ class _ChallengeButtons extends StatelessWidget {
         ],
       );
     }
+    if (phase == ChallengePhase.live || phase == ChallengePhase.preExtend) {
+      // Pendant le step défi : un seul bouton STOP rouge qui remplace le
+      // bouton FAIL classique. Sémantique = fail défi (avant seuil), pas
+      // de flow punition.
+      return _bigButton(
+        color: _abortColor,
+        label: t.challengeAbortButton,
+        onTap: controller.triggerFail,
+      );
+    }
     if (phase == ChallengePhase.atSeuil ||
         phase == ChallengePhase.openExtension) {
       return Row(
@@ -1456,9 +1467,7 @@ class _ChallengeButtons extends StatelessWidget {
         ],
       );
     }
-    // Phases `countdown` / `live` / `preExtend` : pas de bouton (la
-    // décision joueuse est soit déjà prise, soit attendue plus tard au
-    // seuil).
+    // Phase `countdown` uniquement : pas de bouton (gros chiffre 3-2-1).
     return const SizedBox.shrink();
   }
 
@@ -1550,6 +1559,7 @@ class _ChallengeBanner extends StatelessWidget {
             ? t.challengeBannerThresholdReached
             : controller.challengeObjectiveText();
     final showTutorial = ch?.isTutorial ?? false;
+    final seuilCountdown = controller.challengeSeuilCountdownDigit;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1592,6 +1602,27 @@ class _ChallengeBanner extends StatelessWidget {
                 color: AppTheme.textMuted,
                 height: 1.4,
               ),
+            ),
+          ],
+          if (seuilCountdown != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(
+                  Icons.hourglass_bottom,
+                  size: 18,
+                  color: Color(0xFFFFB300),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  t.challengeSeuilAutoStopHint(seuilCountdown),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFFFFB300),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
             ),
           ],
         ],

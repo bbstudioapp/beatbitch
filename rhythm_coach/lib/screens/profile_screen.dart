@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../career/services/career_progress_service.dart';
+import '../career/services/challenge_service.dart';
 import '../career/services/custom_config_service.dart';
 import '../career/services/debug_settings_service.dart';
 import '../career/services/specialization_service.dart';
@@ -54,6 +55,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final CareerProgressService _career = CareerProgressService();
   final SpecializationService _spec = SpecializationService();
   final CustomConfigService _customConfigs = CustomConfigService();
+  final ChallengeService _challenges = ChallengeService();
   late Future<_ProfileBundle> _bundleFuture;
   bool _resetting = false;
 
@@ -111,6 +113,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       coachService.resetAll(),
       milestoneService.resetAll(),
       _customConfigs.resetAll(),
+      _challenges.resetAll(),
     ]);
     if (!mounted) return;
     setState(() {

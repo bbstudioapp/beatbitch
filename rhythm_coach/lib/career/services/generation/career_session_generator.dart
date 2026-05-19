@@ -694,15 +694,15 @@ class CareerSessionGenerator {
         final stepDur = challengeData.nominalDurationSeconds;
         final remaining = genUntil - ctx.time;
         if (remaining >= breathDur + stepDur) {
-          // Texte du breath : phrase coach `attempt` si dispo, sinon vide
-          // (l'UI affiche le libellé localisé via AppLocalizations).
-          final breathText = bank.pickChallengePhrase(
-                  challengeData.axisStorageKey, 'attempt', _rng) ??
-              '';
+          // Step breath de countdown sans texte : la phrase `attempt` est
+          // dite et affichée par le `SessionController._updateChallengePhase`
+          // (banner + TTS) à l'entrée en phase `breath`. Si on injectait
+          // aussi le texte sur le step, le coach le disait deux fois (une
+          // via `_speakScripted(step.text)`, une via le banner) et le user
+          // voyait du texte coach normal + texte du cadre noir en double.
           challengeBreathStartTime = ctx.time;
           steps.add(SessionStep(
             time: ctx.time,
-            text: breathText,
             mode: SessionMode.breath,
             duration: breathDur,
           ));
