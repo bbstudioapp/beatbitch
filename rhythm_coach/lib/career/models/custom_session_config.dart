@@ -74,9 +74,6 @@ class CustomSessionConfig {
   static const int defaultHoldDurationMin = 4;
   static const int defaultHoldDurationMax = 80;
 
-  /// Points max investissables par branche d'axe.
-  static const int maxAxisPoints = 5;
-
   /// Modes « bouche » : au moins l'un d'eux doit rester actif (≥ `rare`),
   /// sinon le générateur n'a plus de candidat à tirer dans la phase de
   /// chauffe. Le garde-fou est appliqué côté éditeur.
@@ -130,10 +127,6 @@ class CustomSessionConfig {
 
   final CustomDifficulty difficulty;
 
-  /// Points d'axes (allocation de spécialisation virtuelle). 0..[maxAxisPoints]
-  /// par branche. N'affecte pas la vraie allocation de carrière.
-  final Map<SpecializationBranch, int> axes;
-
   final bool includeHand;
 
   /// Plafond de profondeur (index dans `Position` : 0 = tip … 4 = full)
@@ -164,7 +157,6 @@ class CustomSessionConfig {
     required this.coachId,
     required this.doses,
     required this.difficulty,
-    required this.axes,
     required this.includeHand,
     required this.maxDepthIndex,
     required this.bpmMin,
@@ -185,7 +177,6 @@ class CustomSessionConfig {
       coachId: null,
       doses: {for (final m in SessionMode.values) m: ModeDose.normal},
       difficulty: CustomDifficulty.normal,
-      axes: {for (final b in SpecializationBranch.values) b: 0},
       includeHand: true,
       maxDepthIndex: 4,
       bpmMin: defaultBpmMin,
@@ -209,7 +200,6 @@ class CustomSessionConfig {
     bool clearCoachId = false,
     Map<SessionMode, ModeDose>? doses,
     CustomDifficulty? difficulty,
-    Map<SpecializationBranch, int>? axes,
     bool? includeHand,
     int? maxDepthIndex,
     int? bpmMin,
@@ -229,7 +219,6 @@ class CustomSessionConfig {
       coachId: clearCoachId ? null : (coachId ?? this.coachId),
       doses: doses ?? this.doses,
       difficulty: difficulty ?? this.difficulty,
-      axes: axes ?? this.axes,
       includeHand: includeHand ?? this.includeHand,
       maxDepthIndex: maxDepthIndex ?? this.maxDepthIndex,
       bpmMin: bpmMin ?? this.bpmMin,
@@ -250,14 +239,11 @@ class CustomSessionConfig {
     };
   }
 
-  /// Allocation de spécialisation « virtuelle » passée à
-  /// `generate(specialization:)`. N'est jamais persistée côté carrière.
-  SpecializationAllocation resolveSpecialization() {
-    return SpecializationAllocation(
-      points: {for (final b in SpecializationBranch.values) b: (axes[b] ?? 0)},
-      lastRespecMs: null,
-    );
-  }
+  /// Allocation de spécialisation passée à `generate(specialization:)`.
+  /// Vide en Custom : la spécialisation est une dimension de progression
+  /// de carrière, pas un levier d'éditeur.
+  SpecializationAllocation resolveSpecialization() =>
+      SpecializationAllocation.empty();
 
   /// Niveau « virtuel » passé à `generate(level:)`. En non-stop progressif,
   /// monte de +2 par cycle (capé à +12).
@@ -314,10 +300,6 @@ class CustomSessionConfig {
           for (final entry in doses.entries)
             entry.key.serialized: entry.value.name,
         },
-        'axes': {
-          for (final entry in axes.entries)
-            if (entry.value > 0) entry.key.name: entry.value,
-        },
       };
 
   factory CustomSessionConfig.fromJson(Map<String, dynamic> json) {
@@ -337,30 +319,11 @@ class CustomSessionConfig {
       );
     }
 
-    SpecializationBranch? parseBranch(String raw) {
-      for (final b in SpecializationBranch.values) {
-        if (b.name == raw) return b;
-      }
-      return null;
-    }
-
     final dosesJson =
         (json['doses'] as Map?)?.cast<String, dynamic>() ?? const {};
     final doses = <SessionMode, ModeDose>{
       for (final m in SessionMode.values) m: parseDose(dosesJson[m.serialized]),
     };
-
-    final axesJson =
-        (json['axes'] as Map?)?.cast<String, dynamic>() ?? const {};
-    final axes = <SpecializationBranch, int>{
-      for (final b in SpecializationBranch.values) b: 0,
-    };
-    for (final entry in axesJson.entries) {
-      final b = parseBranch(entry.key);
-      if (b == null) continue;
-      final v = entry.value;
-      if (v is num) axes[b] = v.toInt().clamp(0, maxAxisPoints);
-    }
 
     final nonStop = json['non_stop'] as bool? ?? false;
     final rawDuration = json['duration_seconds'];
@@ -418,7 +381,6 @@ class CustomSessionConfig {
       coachId: json['coach_id'] as String?,
       doses: doses,
       difficulty: parseDifficulty(json['difficulty']),
-      axes: axes,
       includeHand: json['include_hand'] as bool? ?? true,
       maxDepthIndex: depth,
       bpmMin: bpmLo,
