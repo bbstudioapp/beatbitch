@@ -96,7 +96,9 @@ void main() {
       expect(challenge.targetThreshold, 3);
     });
 
-    test('axes exclus : pickOverloadAxis n\'en retient aucun', () {
+    test(
+        'axes exclus du pickOverloadAxis : fallback exploratoire sur axes vierges (Phase 2)',
+        () {
       final svc = ChallengeService();
       final profile = _profileWithComfort(CapabilityAxis.holdThroatStreak, 10);
       final challenge = svc.buildForSession(
@@ -106,11 +108,14 @@ void main() {
         rng: Random(0),
         isTutorial: false,
       );
-      // Seul axe avec donnée a été exclu → null.
-      expect(challenge, isNull);
+      // Phase 2 : le seul axe avec donnée est exclu, mais d'autres axes
+      // pilotants sont vierges → fallback exploratoire actif.
+      expect(challenge, isNotNull);
+      expect(challenge!.isExploratory, isTrue);
+      expect(challenge.axis, isNot(CapabilityAxis.holdThroatStreak));
     });
 
-    test('profil vide → null (aucun axe candidat)', () {
+    test('profil vide → exploratoire valide (Phase 2)', () {
       final svc = ChallengeService();
       final challenge = svc.buildForSession(
         profile: const CapabilityProfile({}),
@@ -119,7 +124,10 @@ void main() {
         rng: Random(0),
         isTutorial: false,
       );
-      expect(challenge, isNull);
+      // Phase 2 : profil vide → fallback exploratoire (axe vierge tiré au
+      // hasard parmi `CapabilityClamps.overloadableAxes`).
+      expect(challenge, isNotNull);
+      expect(challenge!.isExploratory, isTrue);
     });
   });
 

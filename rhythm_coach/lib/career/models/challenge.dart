@@ -121,6 +121,22 @@ class Challenge {
   /// tooltips et textes coach pédagogiques (flag `challenges.tutorial_seen`).
   final bool isTutorial;
 
+  /// Vrai pour un défi **exploratoire** (Phase 2) — axe vierge sans
+  /// `bestOf` connu, donc impossible de poser un seuil cible × 1.50.
+  /// Conséquences sur la machine d'états (cf. `SessionController`) :
+  /// - Pas de phase `preExtend` (« tu peux rester là si tu veux ») : on
+  ///   passe directement de `live` à `atSeuil` au seuil initial estimé.
+  /// - Le bouton FAIL pendant `live`/`preExtend` est traité comme
+  ///   `JE M'ARRÊTE` (cf. spec § 4.4 — pas de notion d'échec puisque pas
+  ///   de seuil cible).
+  /// - Pas de bumps de base humil/obed +2 sur succès (cf. spec § 5.2) —
+  ///   seules les extensions (+1 par « tient encore ») comptent.
+  ///
+  /// Le `targetThreshold` représente ici le **seuil initial estimé** par
+  /// défaut sur l'axe (cf. [initialEstimateSecondsForAxis]) — sert
+  /// uniquement à déclencher le premier prompt, pas un objectif.
+  final bool isExploratory;
+
   const Challenge({
     required this.axis,
     required this.kind,
@@ -132,14 +148,53 @@ class Challenge {
     this.bpm,
     this.comfortAtCalibration,
     this.isTutorial = false,
+    this.isExploratory = false,
   });
+
+  /// Seuil initial estimé par axe pour un défi exploratoire — sert à
+  /// déclencher le premier prompt « tu as tenu X, pousse encore ou
+  /// arrête » (cf. spec § 3.2).
+  ///
+  /// Axes durée : 5 s pour hold/apnée/gorge engagement (palier débutante),
+  /// 8 s pour biffleStreak, 30 s pour rhythmMotionStreak, 15 s par défaut.
+  /// Axes BPM / profondeur : valeur de référence prudente
+  /// (60 BPM, cran 1 = head).
+  static int initialEstimateSecondsForAxis(CapabilityAxis axis) {
+    switch (axis) {
+      case CapabilityAxis.holdThroatStreak:
+      case CapabilityAxis.holdFullStreak:
+      case CapabilityAxis.gorgeApneeStreak:
+      case CapabilityAxis.gorgeEngagementStreak:
+        return 5;
+      case CapabilityAxis.biffleStreak:
+        return 8;
+      case CapabilityAxis.rhythmMotionStreak:
+        return 30;
+      case CapabilityAxis.effortNoBreathStreak:
+      case CapabilityAxis.noswallowStreak:
+        return 15;
+      case CapabilityAxis.rhythmBpmCeilShallow:
+      case CapabilityAxis.rhythmBpmCeilThroat:
+      case CapabilityAxis.rhythmBpmCeilFull:
+      case CapabilityAxis.gorgeCrossingsBpmThroat:
+      case CapabilityAxis.gorgeCrossingsBpmFull:
+      case CapabilityAxis.biffleBpmMax:
+        return 60; // BPM de référence prudente
+      case CapabilityAxis.rhythmDepthMax:
+        return 1; // cran `head` (prudent)
+      default:
+        return 15;
+    }
+  }
 
   /// Clé d'axe utilisée pour lookup dans `challengePhrases` côté coach
   /// (cf. `Coach.pickChallengePhrase`).
   String get axisStorageKey => axis.storageKey;
 
   /// Durée d'une prolongation « tient encore » en mode ouvert.
-  /// Plancher 10 s, sinon `comfort × 0.30`.
+  /// Plancher 10 s, sinon `comfort × 0.30`. En exploratoire (`comfort`
+  /// inconnu), on fallback sur le plancher 10 s (pas de proportion à
+  /// dériver avant que la joueuse n'ait laissé un `best`).
   int get extensionSeconds {
     final c = comfortAtCalibration ?? 0;
     final v = (c * 0.30).round();
