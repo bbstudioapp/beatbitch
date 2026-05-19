@@ -1030,6 +1030,18 @@ abstract class AppLocalizations {
   /// **'J\'ARRÊTE'**
   String get challengeStopButton;
 
+  /// No description provided for @challengeAbortButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'STOP'**
+  String get challengeAbortButton;
+
+  /// No description provided for @challengeSeuilAutoStopHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'{seconds, plural, =1{Stop auto dans 1 s} other{Stop auto dans {seconds} s}}'**
+  String challengeSeuilAutoStopHint(int seconds);
+
   /// No description provided for @challengeTutorialBanner.
   ///
   /// In fr, this message translates to:

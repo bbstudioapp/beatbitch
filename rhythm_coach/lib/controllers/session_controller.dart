@@ -286,10 +286,27 @@ class SessionController extends ChangeNotifier {
   /// même chiffre dans le même tick (le ticker tourne à 200 ms).
   int _challengeCountdownLastDigitSpoken = -1;
 
-  /// Durée fixe du countdown 3-2-1 en secondes. Dit en TTS pendant les
-  /// 3 dernières secondes du breath (auto-trigger) ou immédiatement
-  /// après l'appui sur le bouton `GO`.
+  /// Durée fixe du countdown 3-2-1 en secondes. Dit en TTS immédiatement
+  /// après l'appui sur le bouton `GO` (plus d'auto-trigger : le défi
+  /// attend une action manuelle — `GO` ou `PASSE` — pendant le breath).
   static const int _challengeCountdownDurationSec = 3;
+
+  /// Chiffre du mini countdown affiché pendant `atSeuil` (compte à
+  /// rebours du timeout 8 s du stop auto). `null` hors phase atSeuil.
+  /// Sert au banner UI pour matérialiser le « tu peux continuer si tu
+  /// veux » en compte à rebours visible avant le stop auto.
+  int? get challengeSeuilCountdownDigit {
+    if (_challengePhase != ChallengePhase.atSeuil) return null;
+    final start = _challengeAtSeuilStartedAtSec;
+    if (start == null) return null;
+    final elapsed = elapsedSeconds - start;
+    final remaining = _challengeSeuilTimeoutSeconds - elapsed;
+    if (remaining < 0) return 0;
+    if (remaining > _challengeSeuilTimeoutSeconds) {
+      return _challengeSeuilTimeoutSeconds;
+    }
+    return remaining;
+  }
 
   /// `true` quand un step défi est en cours et qu'un appui sur le bouton
   /// FAIL ne doit PAS déclencher le flow fail standard mais être routé vers
@@ -920,10 +937,21 @@ class SessionController extends ChangeNotifier {
   }
 
   void _onTick() {
+    // `_updateChallengePhase` AVANT `_checkSteps` : si on franchit la fin
+    // nominale du step défi à ce tick, la phase doit basculer en `atSeuil`
+    // avant que `_checkSteps` ne consomme le step suivant naturel — sinon
+    // on enchaîne sur autre chose (rythme → hold head…) alors que l'UI
+    // attend toujours la décision joueuse au seuil.
+    _updateChallengePhase();
     _checkSteps();
     _accrueHoldSecond();
     _checkProgressMarkers();
-    _updateChallengePhase();
+    // Pendant le breath du défi, on gèle la timeline jusqu'à l'action
+    // joueuse (GO ou PASSE). Le step breath a déjà été appliqué au
+    // BeepEngine (sample breath) ; on attend simplement la décision.
+    if (_challengePhase == ChallengePhase.breath) {
+      _timelineOffset -= _tickInterval;
+    }
     if (elapsedSeconds >= session.durationSeconds) {
       _finish();
       return;
@@ -1363,6 +1391,8 @@ class SessionController extends ChangeNotifier {
     if (breathStart == null || stepStart == null) return;
     final t = elapsedSeconds;
     // Entrée en phase `breath` (annonce coach + boutons PASSE / GO visibles).
+    // À partir de ce moment, la timeline est gelée par `_onTick` jusqu'à
+    // l'action joueuse (GO ou PASSE) — plus d'auto-trigger countdown.
     if (phase == ChallengePhase.none && t >= breathStart && t < stepStart) {
       _activeChallenge = ch;
       _challengePhase = ChallengePhase.breath;
@@ -1370,13 +1400,6 @@ class SessionController extends ChangeNotifier {
           _fallbackChallengeText(ch, 'attempt');
       _speakChallengePhraseIfAny();
       return;
-    }
-    // Auto-trigger du countdown 3-2-1 à `stepStart - 3 s` (= 3 dernières
-    // secondes du breath) si la joueuse n'a pas pressé `GO`. Cf. spec § 4.3.
-    if (phase == ChallengePhase.breath &&
-        t >= stepStart - _challengeCountdownDurationSec) {
-      _enterChallengeCountdown();
-      // Pas de return : on enchaîne sur la logique countdown ci-dessous.
     }
     // Phase `countdown` : dire 3-2-1 en TTS et passer à `live` à 3 s.
     if (_challengePhase == ChallengePhase.countdown) {
@@ -1416,33 +1439,28 @@ class SessionController extends ChangeNotifier {
       }
       return;
     }
-    // Phases `live` / `preExtend` (calibrées sur axes durée).
-    if (ch.kind == ChallengeAxisKind.duration) {
-      // Phase 2 défi exploratoire : pas de phase `preExtend` (l'annonce
-      // « tu peux rester là si tu veux » suppose un seuil cible, ce que
-      // l'exploratoire n'a pas). On passe directement de `live` à
-      // `atSeuil` au seuil initial estimé. Cf. spec § 3.2.
-      if (!ch.isExploratory &&
-          phase == ChallengePhase.live &&
-          elapsedInStep >= target - 3 &&
-          elapsedInStep < target) {
-        _challengePhase = ChallengePhase.preExtend;
-        _challengeCurrentText = _pickChallengePhrase(ch, 'extension') ??
-            _fallbackChallengeText(ch, 'extension');
-        _speakChallengePhraseIfAny();
-      }
-      if (elapsedInStep >= target) {
-        _challengePhase = ChallengePhase.atSeuil;
-        _challengeAtSeuilStartedAtSec = t;
-      }
-    } else {
-      // Axes BPM / profondeur : pas de seuil temporel sur le step lui-même
-      // (la difficulté est dans le paramètre, pas la durée). On considère
-      // le seuil atteint dès la fin nominale du step.
-      if (elapsedInStep >= ch.nominalDurationSeconds) {
-        _challengePhase = ChallengePhase.atSeuil;
-        _challengeAtSeuilStartedAtSec = t;
-      }
+    // Phases `live` / `preExtend`. Pour tous les axes, on calque le seuil
+    // de fin sur la durée nominale du step défi (= `targetThreshold` pour
+    // les axes durée, fenêtre fixe 45 s/20 s pour BPM/profondeur).
+    final stepEnd = ch.kind == ChallengeAxisKind.duration
+        ? target
+        : ch.nominalDurationSeconds;
+    // Annonce coach « tu peux rester si tu veux » 3 s avant la fin
+    // nominale — tous axes (BPM/profondeur inclus). L'exploratoire reste
+    // exclu : il n'a pas de seuil cible, l'annonce d'extension n'a pas
+    // de sens (cf. spec § 3.2).
+    if (!ch.isExploratory &&
+        phase == ChallengePhase.live &&
+        elapsedInStep >= stepEnd - 3 &&
+        elapsedInStep < stepEnd) {
+      _challengePhase = ChallengePhase.preExtend;
+      _challengeCurrentText = _pickChallengePhrase(ch, 'extension') ??
+          _fallbackChallengeText(ch, 'extension');
+      _speakChallengePhraseIfAny();
+    }
+    if (elapsedInStep >= stepEnd) {
+      _challengePhase = ChallengePhase.atSeuil;
+      _challengeAtSeuilStartedAtSec = t;
     }
   }
 
