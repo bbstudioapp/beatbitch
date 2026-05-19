@@ -667,33 +667,56 @@ class MilestoneService extends ChangeNotifier {
     required CapabilityProfile profile,
     required Set<UnlockKey> acquiredUnlocks,
   }) {
-    final out = <LevelMilestone>[];
-    for (final m in _catalog) {
-      if (_completed.contains(m.id)) continue;
-      if (m.requiresCapability.isEmpty) continue;
-      if (!m.requires.every(acquiredUnlocks.contains)) continue;
-      var axisMatches = false;
-      var allOthersOk = true;
-      for (final req in m.requiresCapability) {
-        if (req.axis == axis) {
-          final ok = axis.recordKind == CapabilityRecordKind.minimize
-              ? reached <= req.min
-              : reached >= req.min;
-          if (!ok) {
-            allOthersOk = false;
-            break;
-          }
-          axisMatches = true;
-        } else {
-          if (!req.isSatisfiedBy(profile)) {
-            allOthersOk = false;
-            break;
+    // Cascade transitive : à chaque pass, on cherche les milestones
+    // acquittables avec le set d'unlocks courant. Quand une milestone
+    // est acquittée, ses unlocks s'ajoutent au set, ce qui peut rendre
+    // une autre milestone acquittable (`requires` satisfait par le
+    // nouvel unlock). On itère jusqu'à fixed point.
+    //
+    // Sans cette cascade, débloquer un hold throat sans avoir déjà
+    // hold mid laissait le système dans un état incohérent : la capacité
+    // est prouvée (le défi l'a forcée), mais l'unlock n'arrivait jamais
+    // parce que la milestone intermédiaire n'avait pas été acquittée.
+    // En clair : on aligne les unlocks pédagogiques sur la capacité
+    // prouvée, en cascade.
+    final acquittedIds = <String>{};
+    final liveUnlocks = Set<UnlockKey>.from(acquiredUnlocks);
+    var addedThisPass = true;
+    while (addedThisPass) {
+      addedThisPass = false;
+      for (final m in _catalog) {
+        if (_completed.contains(m.id)) continue;
+        if (acquittedIds.contains(m.id)) continue;
+        if (m.requiresCapability.isEmpty) continue;
+        if (!m.requires.every(liveUnlocks.contains)) continue;
+        var allOk = true;
+        for (final req in m.requiresCapability) {
+          if (req.axis == axis) {
+            final ok = axis.recordKind == CapabilityRecordKind.minimize
+                ? reached <= req.min
+                : reached >= req.min;
+            if (!ok) {
+              allOk = false;
+              break;
+            }
+          } else {
+            if (!req.isSatisfiedBy(profile)) {
+              allOk = false;
+              break;
+            }
           }
         }
+        if (allOk) {
+          acquittedIds.add(m.id);
+          liveUnlocks.addAll(m.unlocks);
+          addedThisPass = true;
+        }
       }
-      if (axisMatches && allOthersOk) out.add(m);
     }
-    return out;
+    return [
+      for (final m in _catalog)
+        if (acquittedIds.contains(m.id)) m,
+    ];
   }
 
   /// Cherche dans le catalogue la milestone d'id [id].

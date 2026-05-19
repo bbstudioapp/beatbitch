@@ -92,7 +92,14 @@ class SessionController extends ChangeNotifier {
   /// carrière (Phase 5). Vide hors carrière → la génération de punition est
   /// inhibée par `_generateCareerPunishmentOrNull` de toute façon, mais on
   /// reste cohérent : pas de set partiel.
-  final Set<UnlockKey> _unlockedKeys;
+  ///
+  /// Mutable (non `final`) : se met à jour quand un défi acquitte
+  /// silencieusement des milestones intra-séance (cf.
+  /// `_finalizeChallengeAcquittals`). La régénération des steps à venir
+  /// n'est pas faite en V1 (hors scope), mais au moins les filtres
+  /// runtime (`random_comments.pickFor`, punition carrière) voient le
+  /// nouvel unlock immédiatement après le défi.
+  Set<UnlockKey> _unlockedKeys;
 
   /// Mirroir du toggle `hand` propagé au générateur principal — repassé au
   /// générateur de punition carrière (Phase 5) pour exclure les compositions
@@ -291,6 +298,13 @@ class SessionController extends ChangeNotifier {
   /// attend une action manuelle — `GO` ou `PASSE` — pendant le breath).
   static const int _challengeCountdownDurationSec = 3;
 
+  /// Temps réel écoulé depuis le start de la session, en secondes (fraction
+  /// préservée). Lit `_stopwatch.elapsed` brut sans `_timelineOffset` — ne
+  /// suit donc PAS le freeze imposé pendant les défis. Sert exclusivement à
+  /// piloter la machine d'états défi (durée du countdown, du step, du
+  /// timeout atSeuil) indépendamment du gel du timer session.
+  double get _realSec => _stopwatch.elapsedMilliseconds / 1000.0;
+
   /// Chiffre du mini countdown affiché pendant `atSeuil` (compte à
   /// rebours du timeout 8 s du stop auto). `null` hors phase atSeuil.
   /// Sert au banner UI pour matérialiser le « tu peux continuer si tu
@@ -299,7 +313,7 @@ class SessionController extends ChangeNotifier {
     if (_challengePhase != ChallengePhase.atSeuil) return null;
     final start = _challengeAtSeuilStartedAtSec;
     if (start == null) return null;
-    final elapsed = elapsedSeconds - start;
+    final elapsed = _realSec.toInt() - start;
     final remaining = _challengeSeuilTimeoutSeconds - elapsed;
     if (remaining < 0) return 0;
     if (remaining > _challengeSeuilTimeoutSeconds) {
@@ -448,7 +462,7 @@ class SessionController extends ChangeNotifier {
         _careerLevel = careerLevel,
         _capabilityOverloadAxis = capabilityOverloadAxis,
         _capabilityProfile = capabilityProfile,
-        _unlockedKeys = unlockedKeys,
+        _unlockedKeys = Set<UnlockKey>.from(unlockedKeys),
         _includeHand = includeHand,
         _isQuickie = isQuickie,
         _coachTag = coachTag {
@@ -555,7 +569,14 @@ class SessionController extends ChangeNotifier {
   }
 
   void _handleBeat(BeatEvent e) {
-    if (!_session.noStats) {
+    // Pendant un défi : ne pas accumuler les stats lifetime (throatfucks,
+    // biffles, mode utilisé). Le défi est une événement exceptionnel
+    // (surcharge calibrée × 1.50), pas une pratique standard — un défi
+    // rhythm head→throat à 120 BPM sur 45 s consomme 90 beats et gonfle
+    // artificiellement le compteur throatfucks. L'imputation capability
+    // se fait séparément par le `CapabilityTracker` qui voit le step
+    // défi comme tout autre step.
+    if (!_session.noStats && !isChallengeActive) {
       _stats.recordBeat(mode: e.mode, to: e.to);
       _stats.markModeUsed(e.mode);
     }
@@ -946,10 +967,16 @@ class SessionController extends ChangeNotifier {
     _checkSteps();
     _accrueHoldSecond();
     _checkProgressMarkers();
-    // Pendant le breath du défi, on gèle la timeline jusqu'à l'action
-    // joueuse (GO ou PASSE). Le step breath a déjà été appliqué au
-    // BeepEngine (sample breath) ; on attend simplement la décision.
-    if (_challengePhase == ChallengePhase.breath) {
+    // Freeze la timeline session pendant TOUTE la durée du défi (breath
+    // d'attente joueuse + countdown + step défi + atSeuil + extensions).
+    // Le défi est hors du décompte de session : si la joueuse attend ou
+    // prolonge longtemps, la durée totale de la séance ne baisse pas. Les
+    // transitions internes du défi (live → preExtend → atSeuil → timeout)
+    // sont mesurées sur `_realSec` (= `_stopwatch.elapsed` brut, jamais
+    // freezé) pour rester indépendantes de ce gel. Pas pendant le breath
+    // post-défi (`_inPostChallengeBreath`) : la session reprend son cours
+    // sur ces 10 s de respiration.
+    if (isChallengeActive) {
       _timelineOffset -= _tickInterval;
     }
     if (elapsedSeconds >= session.durationSeconds) {
@@ -1248,10 +1275,17 @@ class SessionController extends ChangeNotifier {
   /// [_lastSpokenResolvedText] : ainsi l'UI peut afficher exactement ce
   /// qui a été prononcé (le resolver re-tirerait un surnom différent si
   /// on l'appelait depuis le widget).
-  void _speakScripted(String text) {
+  ///
+  /// [trackForDisplay] : `false` pour les énoncés courts/techniques qui
+  /// ne doivent pas rester affichés dans le panneau d'instruction (ex.
+  /// chiffres du countdown défi « 3 », « 2 », « 1 » — sinon « 1 » reste
+  /// scotché à l'écran pendant tout le step défi).
+  void _speakScripted(String text, {bool trackForDisplay = true}) {
     _lastScriptedSpeakAt = DateTime.now();
     final resolved = _tts.resolveText(text);
-    _lastSpokenResolvedText = resolved;
+    if (trackForDisplay) {
+      _lastSpokenResolvedText = resolved;
+    }
     if (_tts.isSpeaking) {
       _tts.stop().then((_) => _tts.speak(resolved));
     } else {
@@ -1401,16 +1435,22 @@ class SessionController extends ChangeNotifier {
       _speakChallengePhraseIfAny();
       return;
     }
+    // À partir d'ici, on mesure les durées internes sur `_realSec`
+    // (`_stopwatch.elapsed` brut). La timeline session est freezée pendant
+    // le défi (`_onTick`) ; utiliser `elapsedSeconds` ferait stagner toutes
+    // les transitions et la phase live ne basculerait jamais.
+    final r = _realSec.toInt();
     // Phase `countdown` : dire 3-2-1 en TTS et passer à `live` à 3 s.
     if (_challengePhase == ChallengePhase.countdown) {
       final countdownStart = _challengeCountdownStartedAtSec;
       if (countdownStart != null) {
-        final elapsedInCountdown = t - countdownStart;
+        final elapsedInCountdown = r - countdownStart;
         _maybeSpeakCountdownDigit(elapsedInCountdown);
         if (elapsedInCountdown >= _challengeCountdownDurationSec) {
           _challengePhase = ChallengePhase.live;
-          _challengeStepStartedAtSec = t;
+          _challengeStepStartedAtSec = r;
           _challengeCurrentText = null;
+          _applyChallengeStepNow(stepStart);
         }
       }
       return;
@@ -1419,14 +1459,14 @@ class SessionController extends ChangeNotifier {
     // preExtend, atSeuil, ou openExtension). Calcul du temps écoulé
     // dans le step défi pour piloter les transitions vers le seuil.
     if (_challengeStepStartedAtSec == null) return;
-    final elapsedInStep = t - _challengeStepStartedAtSec!;
+    final elapsedInStep = r - _challengeStepStartedAtSec!;
     final target = ch.targetThreshold;
     // Phase `openExtension` : la prolongation expire → re-prompt au seuil.
     if (phase == ChallengePhase.openExtension) {
       final deadline = _challengeOpenExtensionDeadlineSec;
-      if (deadline != null && t >= deadline) {
+      if (deadline != null && r >= deadline) {
         _challengePhase = ChallengePhase.atSeuil;
-        _challengeAtSeuilStartedAtSec = t;
+        _challengeAtSeuilStartedAtSec = r;
         _challengeOpenExtensionDeadlineSec = null;
       }
       return;
@@ -1434,7 +1474,7 @@ class SessionController extends ChangeNotifier {
     // Phase `atSeuil` : surveille le timeout 8 s (succès net auto).
     if (phase == ChallengePhase.atSeuil) {
       final seuilAt = _challengeAtSeuilStartedAtSec;
-      if (seuilAt != null && t - seuilAt >= _challengeSeuilTimeoutSeconds) {
+      if (seuilAt != null && r - seuilAt >= _challengeSeuilTimeoutSeconds) {
         _completeChallenge(ChallengeOutcome.netSuccess, byTimeout: true);
       }
       return;
@@ -1474,21 +1514,18 @@ class SessionController extends ChangeNotifier {
   }
 
   /// Bouton `GO` pendant le breath du défi — démarre le countdown 3-2-1
-  /// immédiatement, sans attendre la fin du breath. La joueuse contrôle
-  /// son rythme : dès qu'elle est prête, elle tape `GO` et 3 s plus tard
-  /// le step défi démarre.
+  /// immédiatement. La joueuse contrôle son rythme : dès qu'elle est prête,
+  /// elle tape `GO` et 3 s plus tard le step défi démarre. La timeline
+  /// session est freezée pendant tout le défi : le countdown est mesuré
+  /// sur `_realSec` (cf. `_updateChallengePhase`).
   void triggerChallengeGo() {
     if (_challengePhase != ChallengePhase.breath) return;
     final stepStart = _session.challengeStepTime;
     if (stepStart == null) return;
-    // Avance la timeline pour amener `elapsedSeconds` à `stepStart - 3 s`
-    // (= début du countdown). Le step défi sera consommé naturellement
-    // par `_checkSteps` 3 s plus tard.
-    final targetT = stepStart - _challengeCountdownDurationSec;
-    final advance = targetT - elapsedSeconds;
-    if (advance > 0) {
-      _timelineOffset += Duration(seconds: advance);
-    }
+    // Le step défi est encore dans `session.steps` à `time = stepStart`,
+    // mais `_checkSteps` est freezé sur la timeline gelée — on l'applique
+    // donc manuellement à l'entrée `live` (cf. `_updateChallengePhase`)
+    // et on avance `_nextStepIndex` past lui.
     _enterChallengeCountdown();
     notifyListeners();
   }
@@ -1499,19 +1536,20 @@ class SessionController extends ChangeNotifier {
   void _enterChallengeCountdown() {
     if (_challengePhase != ChallengePhase.breath) return;
     _challengePhase = ChallengePhase.countdown;
-    _challengeCountdownStartedAtSec = elapsedSeconds;
+    _challengeCountdownStartedAtSec = _realSec.toInt();
     _challengeCountdownLastDigitSpoken = -1;
     _challengeCurrentText = null;
   }
 
   /// Chiffre courant du countdown (3, 2, 1) ou `null` si on n'est pas en
   /// phase countdown. Exposé pour le banner UI qui affiche le chiffre
-  /// en grand.
+  /// en grand. Lit `_realSec` (wallclock brut) pour rester insensible
+  /// au freeze de la timeline session.
   int? get challengeCountdownDigit {
     if (_challengePhase != ChallengePhase.countdown) return null;
     final start = _challengeCountdownStartedAtSec;
     if (start == null) return null;
-    final elapsedInCountdown = elapsedSeconds - start;
+    final elapsedInCountdown = _realSec.toInt() - start;
     final digit = _challengeCountdownDurationSec - elapsedInCountdown;
     if (digit < 1 || digit > _challengeCountdownDurationSec) return null;
     return digit;
@@ -1526,7 +1564,7 @@ class SessionController extends ChangeNotifier {
     if (_challengeCountdownLastDigitSpoken == digit) return;
     _challengeCountdownLastDigitSpoken = digit;
     if (_tts.isSpeaking) return;
-    _speakScripted(digit.toString());
+    _speakScripted(digit.toString(), trackForDisplay: false);
   }
 
   /// Bouton `JE TIENS ENCORE` — bascule en mode ouvert, +1 humil/+1 obed
@@ -1538,7 +1576,7 @@ class SessionController extends ChangeNotifier {
     _challengeExtensionsCount++;
     _challengePhase = ChallengePhase.openExtension;
     _challengeAtSeuilStartedAtSec = null;
-    _challengeOpenExtensionDeadlineSec = elapsedSeconds + ch.extensionSeconds;
+    _challengeOpenExtensionDeadlineSec = _realSec.toInt() + ch.extensionSeconds;
     notifyListeners();
   }
 
@@ -1579,6 +1617,32 @@ class SessionController extends ChangeNotifier {
     }
     _startPostChallengeBreath();
     notifyListeners();
+    // Acquittement silencieux des milestones + consume showcase
+    // **immédiatement après le défi**, pas au `_finish`. Sinon les
+    // unlocks débloqués par le défi ne s'appliquent qu'à la séance
+    // suivante (et la joueuse pense que son succès n'a rien changé).
+    // Fire-and-forget : la persistance shared_preferences n'a pas besoin
+    // de bloquer le retour de session vers la timeline.
+    unawaited(_finalizeChallengeAcquittals());
+  }
+
+  /// Étape asynchrone post-défi : acquitte les milestones dont la capacité
+  /// est satisfaite (cascade transitive — cf. spec § 5.4), consomme la
+  /// tête de la file showcase si la branche du défi matche, et met à jour
+  /// le set d'unlocks runtime du contrôleur pour que les filtres restants
+  /// de la session (random comments, génération de punition carrière) en
+  /// tiennent compte. Pas idempotente sur l'outcome bumps humil/obed —
+  /// ceux-ci restent posés en fin de `_finish` via `_applyChallengeOutcome`.
+  Future<void> _finalizeChallengeAcquittals() async {
+    final beforeUnlocks = Set<UnlockKey>.from(_unlockedKeys);
+    await _acquitMilestonesViaChallenge();
+    await _consumeShowcaseIfMatched();
+    final updated = milestoneService.acquiredUnlockKeys();
+    if (updated.length != beforeUnlocks.length ||
+        !updated.containsAll(beforeUnlocks)) {
+      _unlockedKeys = Set<UnlockKey>.from(updated);
+      notifyListeners();
+    }
   }
 
   /// Durée du breath de récup post-défi (toutes voies). Donne au coach
@@ -1611,6 +1675,40 @@ class SessionController extends ChangeNotifier {
     }
   }
 
+  /// Applique manuellement le step défi (à l'entrée `live`) au BeepEngine.
+  /// Le step défi est dans `session.steps` à `time = challengeStepTime`,
+  /// mais la timeline session est freezée pendant le défi, donc
+  /// `_checkSteps` ne le consommerait jamais naturellement. On le pose
+  /// nous-mêmes (BeepEngine bascule en rythme/hold/biffle) puis on
+  /// avance `_nextStepIndex` past lui pour qu'à la reprise de session
+  /// (post-breath fini), `_checkSteps` consomme directement le step
+  /// suivant naturel — sinon le step défi se rejouerait après le breath.
+  void _applyChallengeStepNow(int stepStartTime) {
+    final steps = _session.steps;
+    for (var i = _nextStepIndex; i < steps.length; i++) {
+      final s = steps[i];
+      if (s.time != stepStartTime) continue;
+      if (s.isTextOnly) continue;
+      _beep.applyStep(s, _session.defaultMode);
+      _configApplied = true;
+      _lastConfigStep = s;
+      if (!_session.noStats) {
+        _stats.markModeUsed(s.mode ?? _session.defaultMode);
+      }
+      _capabilityTracker?.onStepApplied(
+        mode: s.mode ?? _session.defaultMode,
+        from: s.from,
+        to: s.to,
+        bpm: s.bpm,
+        duration: s.duration,
+      );
+      _armHoldVerifierIfHoldStep(s);
+      _syncAmbienceToCurrentMode();
+      _nextStepIndex = i + 1;
+      return;
+    }
+  }
+
   /// Avance la timeline pour passer le step défi (cas `PASSE` pendant le
   /// breath). Cherche le prochain step non text-only après la fenêtre défi
   /// et y bascule via `_timelineOffset`. Si rien ne suit, on laisse la
@@ -1623,6 +1721,18 @@ class SessionController extends ChangeNotifier {
     final advance = endOfChallenge - elapsedSeconds;
     if (advance > 0) {
       _timelineOffset += Duration(seconds: advance);
+    }
+    // Avance aussi `_nextStepIndex` past le step défi non-text-only. Sinon
+    // un PASSE (ou un fail avant l'entrée `live`) laisserait le step défi
+    // toujours candidate, et `_checkSteps` le ferait rejouer son audio
+    // après le post-breath.
+    final steps = _session.steps;
+    for (var i = _nextStepIndex; i < steps.length; i++) {
+      final s = steps[i];
+      if (s.time != stepStart) continue;
+      if (s.isTextOnly) continue;
+      _nextStepIndex = i + 1;
+      return;
     }
   }
 
@@ -1858,19 +1968,18 @@ class SessionController extends ChangeNotifier {
     // s'additionner au careerScore avant la persistance ci-dessous.
     _applyChallengeOutcome();
 
-    // Phase 3 défis — acquittement silencieux des milestones dont
-    // `requiresCapability` matche l'axe du défi avec un seuil ≤ valeur
-    // atteinte (cf. spec § 5.4). Pas d'annonce TTS, pas de bump milestone
-    // (déjà compté par l'outcome). Idempotent : une milestone déjà
-    // acquittée est ignorée.
-    await _acquitMilestonesViaChallenge();
-
-    // Phase finale défis — consume la tête de la file showcase si la
-    // branche du défi de la séance matche. Toutes les voies de fin
-    // honorent la dette (cf. spec § 5.1) : fail, succès net, succès
-    // étendu, skipped, timeout. La joueuse a essayé sur la branche
-    // fraîchement boostée — la dette est honorée peu importe l'outcome.
-    await _consumeShowcaseIfMatched();
+    // L'acquittement silencieux des milestones via défi (`§ 5.4`) et le
+    // consume showcase (`§ 5.1`) sont désormais faits **dès la fin du défi**
+    // dans `_completeChallenge → _finalizeChallengeAcquittals`, pour que
+    // les unlocks débloqués pendant la séance soient visibles avant la
+    // fin de session (et pour la séance suivante). Idempotent : la
+    // séance peut se terminer avant que le défi ne s'achève (cas rare —
+    // session courte + défi sur fin de fenêtre), auquel cas
+    // `_finalizeChallengeAcquittals` n'a pas eu lieu et on rattrape ici.
+    if (_challengePhase != ChallengePhase.ended && _challengeOutcome != null) {
+      await _acquitMilestonesViaChallenge();
+      await _consumeShowcaseIfMatched();
+    }
     if (!_session.noStats) {
       // Repersiste l'obédiance si elle a bougé via l'outcome défi
       // (le `setObedienceLevel` ci-dessus a été appelé AVANT
