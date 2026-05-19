@@ -84,8 +84,8 @@ void main() {
 
     test('lastRespecMs propagé', () {
       final coach = makeCoach(specialties: const [branchA]);
-      final player = SpecializationAllocation(
-        points: const {},
+      const player = SpecializationAllocation(
+        points: {},
         lastRespecMs: 1234567890,
       );
       final eff = coach.effectiveAllocation(player);
