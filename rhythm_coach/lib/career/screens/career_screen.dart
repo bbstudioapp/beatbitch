@@ -324,6 +324,10 @@ class _CareerScreenState extends State<CareerScreen> {
         excludeAxes: const {},
         rng: Random(),
         isTutorial: !_challengeTutorialSeen,
+        // Cascade showcase (spec § 5.1) : si la file showcase a une tête
+        // non-encore-consommée par une milestone insérée, le défi tente
+        // de l'honorer en priorité (axe pilotant de la branche).
+        showcaseBranch: showcaseBranch,
       );
     }
     final result = CareerSessionGenerator().generate(
@@ -399,6 +403,7 @@ class _CareerScreenState extends State<CareerScreen> {
           canSave: true,
           coachAdvancesTier: coachAdvances,
           specialization: bundle.specialization,
+          specializationService: _specService,
           miniPunishmentRate: activeCoach.miniPunishmentRate,
           coachTag: activeCoach.slug,
           onRequestUpgrade: (ctrl) => _handleUpgrade(ctrl, bundle, clamped),
