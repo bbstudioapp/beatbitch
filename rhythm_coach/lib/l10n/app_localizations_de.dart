@@ -504,17 +504,87 @@ class AppLocalizationsDe extends AppLocalizations {
       'Eine optionale Herausforderung etwa bei 60 % der Sitzung. Kalibriert schnell, kann das Level-Up beschleunigen.';
 
   @override
-  String get challengePassButton => 'ÜBERSPRINGEN';
+  String get challengePassButton => 'ÜBERSPR.';
 
   @override
-  String get challengeExtendButton => 'ICH HALTE NOCH';
+  String get challengeGoButton => 'LOS';
 
   @override
-  String get challengeStopButton => 'ICH HÖRE AUF';
+  String get challengeExtendButton => 'ICH HALTE';
+
+  @override
+  String get challengeStopButton => 'STOPP';
 
   @override
   String get challengeTutorialBanner =>
-      'Erste Herausforderung: Halte die Position für die geforderte Zeit. Beim Schwellenwert kannst du aufhören oder verlängern.';
+      'Erste Herausforderung: Du wirst eine Position für die geforderte Zeit halten. Tippe LOS wenn du bereit bist, oder ÜBERSPR. zum Überspringen.';
+
+  @override
+  String challengeBannerCountdown(int digit) {
+    return '$digit';
+  }
+
+  @override
+  String get challengeAttemptDefault =>
+      'Herausforderung: Wir gehen an deine Grenze. Tippe LOS wenn du bereit bist, ich zähle drei zwei eins vor dem Start.';
+
+  @override
+  String get challengeAttemptTutorialHoldThroat =>
+      'Erste Herausforderung: Du hältst tief zehn Sekunden. Tippe LOS wenn du bereit bist, ich zähle drei zwei eins vor dem Start. Beim Schwellenwert erscheinen zwei Tasten zum länger Halten oder Aufhören.';
+
+  @override
+  String get challengeExtensionDefault =>
+      'Du kannst länger bleiben, wenn du willst. Die Tasten erscheinen.';
+
+  @override
+  String get challengeSuccessDefault =>
+      'Du hast bis zum Ende gehalten. Braves Mädchen.';
+
+  @override
+  String get challengeStopDefault => 'Du hast aufgehört. Gut.';
+
+  @override
+  String get challengeFailDefault =>
+      'Du hast vor dem Schwellenwert nachgegeben. Kein Problem, beim nächsten Mal schaffst du es.';
+
+  @override
+  String get challengeTimeoutDefault => 'Zeit um — du hast gehalten. Gut.';
+
+  @override
+  String get challengeSkipDefault =>
+      'Wie du willst, wir heben es fürs nächste Mal auf.';
+
+  @override
+  String challengeBannerHoldThroat(int seconds) {
+    return 'Halte tief $seconds Sekunden';
+  }
+
+  @override
+  String challengeBannerHoldFull(int seconds) {
+    return 'Halte ganz tief $seconds Sekunden';
+  }
+
+  @override
+  String challengeBannerHoldGeneric(int seconds) {
+    return 'Halte die Position $seconds Sekunden';
+  }
+
+  @override
+  String challengeBannerRhythm(int bpm) {
+    return 'Halte den Rhythmus bei $bpm BPM';
+  }
+
+  @override
+  String challengeBannerBiffle(int bpm) {
+    return 'Nimm die Schläge bei $bpm BPM';
+  }
+
+  @override
+  String get challengeBannerGeneric => 'Gehe an deine Grenze';
+
+  @override
+  String get challengeBannerThresholdReached =>
+      'Schwellenwert erreicht — weiter oder aufhören';
 
   @override
   String get careerIncludeHandToggle => 'Handstimulation einbeziehen';

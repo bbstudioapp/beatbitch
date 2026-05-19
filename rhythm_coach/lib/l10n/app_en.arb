@@ -218,9 +218,44 @@
   "careerChallengesToggle": "In-session challenges",
   "careerChallengesDescription": "An opt-in challenge around 60% of the session. Calibrates fast, can speed up your level progression.",
   "challengePassButton": "SKIP",
-  "challengeExtendButton": "I CAN HOLD MORE",
+  "challengeGoButton": "GO",
+  "challengeExtendButton": "I HOLD",
   "challengeStopButton": "I STOP",
-  "challengeTutorialBanner": "First challenge: hold the position for the requested time. You'll be able to stop or extend at the threshold.",
+  "challengeTutorialBanner": "First challenge: you'll hold a position for the requested time. Tap GO when ready, or SKIP to skip it.",
+  "challengeBannerCountdown": "{digit}",
+  "@challengeBannerCountdown": {
+    "placeholders": { "digit": { "type": "int" } }
+  },
+  "challengeAttemptDefault": "Challenge: we're pushing your limit. Tap GO when ready, I'll count three two one before we start.",
+  "challengeAttemptTutorialHoldThroat": "First challenge: you'll hold deep for ten seconds. Tap GO when ready, I'll count three two one before we start. At the threshold, two buttons will appear to hold longer or stop.",
+  "challengeExtensionDefault": "You can stay longer if you want. Buttons will appear.",
+  "challengeSuccessDefault": "You held it all the way. Good girl.",
+  "challengeStopDefault": "You chose to stop. Good.",
+  "challengeFailDefault": "You broke before the threshold. No worries, you'll get it next time.",
+  "challengeTimeoutDefault": "Time's up — you held it. Good.",
+  "challengeSkipDefault": "As you wish, we'll keep it for next time.",
+  "challengeBannerHoldThroat": "Hold deep {seconds} seconds",
+  "@challengeBannerHoldThroat": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerHoldFull": "Hold all the way {seconds} seconds",
+  "@challengeBannerHoldFull": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerHoldGeneric": "Hold the position {seconds} seconds",
+  "@challengeBannerHoldGeneric": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerRhythm": "Keep up the rhythm at {bpm} BPM",
+  "@challengeBannerRhythm": {
+    "placeholders": { "bpm": { "type": "int" } }
+  },
+  "challengeBannerBiffle": "Take the slaps at {bpm} BPM",
+  "@challengeBannerBiffle": {
+    "placeholders": { "bpm": { "type": "int" } }
+  },
+  "challengeBannerGeneric": "Push your limit",
+  "challengeBannerThresholdReached": "Threshold reached — keep going or stop",
   "careerIncludeHandToggle": "Include hand stimulation",
   "careerIncludeHandSubtitle": "Also disables cock slaps (biffle) — both need the hand.",
   "careerIncludeHandMilestoneLocked": "Locked for this session — the learning milestone uses the hand.",

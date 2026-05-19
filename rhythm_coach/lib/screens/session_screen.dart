@@ -1060,6 +1060,8 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                     SizedBox(height: showBar ? 8 : 12),
                   ],
                   if (ctrl.isChallengeActive) ...[
+                    _ChallengeBanner(controller: ctrl),
+                    SizedBox(height: showBar ? 6 : 10),
                     _ChallengeButtons(controller: ctrl),
                     SizedBox(height: showBar ? 8 : 12),
                   ],
@@ -1397,6 +1399,7 @@ class _FailButton extends StatelessWidget {
 ///   activement en cours, l'utilisatrice ne décide rien).
 class _ChallengeButtons extends StatelessWidget {
   static const Color _passColor = Color(0xFF757575);
+  static const Color _goColor = Color(0xFFFFB300);
   static const Color _extendColor = Color(0xFF4CAF50);
   static const Color _stopColor = Color(0xFF1E88E5);
 
@@ -1408,10 +1411,27 @@ class _ChallengeButtons extends StatelessWidget {
     final t = AppLocalizations.of(context);
     final phase = controller.challengePhase;
     if (phase == ChallengePhase.breath) {
-      return _bigButton(
-        color: _passColor,
-        label: t.challengePassButton,
-        onTap: controller.triggerChallengePass,
+      // Pendant le breath : PASSE (gris) à gauche, GO (ambre) à droite —
+      // la joueuse contrôle quand démarrer.
+      return Row(
+        children: [
+          Expanded(
+            child: _bigButton(
+              color: _passColor,
+              label: t.challengePassButton,
+              onTap: controller.triggerChallengePass,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 2,
+            child: _bigButton(
+              color: _goColor,
+              label: t.challengeGoButton,
+              onTap: controller.triggerChallengeGo,
+            ),
+          ),
+        ],
       );
     }
     if (phase == ChallengePhase.atSeuil ||
@@ -1436,6 +1456,9 @@ class _ChallengeButtons extends StatelessWidget {
         ],
       );
     }
+    // Phases `countdown` / `live` / `preExtend` : pas de bouton (la
+    // décision joueuse est soit déjà prise, soit attendue plus tard au
+    // seuil).
     return const SizedBox.shrink();
   }
 
@@ -1453,20 +1476,125 @@ class _ChallengeButtons extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            padding: const EdgeInsets.symmetric(vertical: 18),
             child: Center(
               child: Text(
                 label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  fontSize: 14,
+                  fontSize: 16,
                   fontWeight: FontWeight.w800,
-                  letterSpacing: 2.5,
+                  letterSpacing: 2,
                   color: Colors.white,
                 ),
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Banner d'instructions affiché au-dessus des boutons pendant la fenêtre
+/// défi (Phase 1 défis fix UX). Trois rôles :
+/// 1. Banner tutoriel persistent (`challengeTutorialBanner`) tant que le
+///    challenge porte `isTutorial=true` — la joueuse comprend ce qui se
+///    passe la première fois.
+/// 2. Annonce coach courante (`controller.challengeCurrentText`) — la
+///    phrase dite en TTS est aussi affichée pour les utilisatrices qui
+///    ratent le son ou jouent en silencieux.
+/// 3. Objectif chiffré (`controller.challengeObjectiveText()`) — rappel
+///    statique pendant les phases `live` / `preExtend` (« tiens gorge
+///    10 secondes »), bascule sur « seuil atteint » au moment `atSeuil`.
+class _ChallengeBanner extends StatelessWidget {
+  static const Color _bg = Color(0xFF1F1F26);
+  static const Color _border = Color(0xFFFFB300);
+
+  final SessionController controller;
+  const _ChallengeBanner({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final phase = controller.challengePhase;
+    final ch = controller.activeChallenge;
+    final text = controller.challengeCurrentText;
+    // Phase countdown : gros chiffre central, pas d'autre texte.
+    if (phase == ChallengePhase.countdown) {
+      final digit = controller.challengeCountdownDigit;
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        decoration: BoxDecoration(
+          color: _bg,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _border, width: 2),
+        ),
+        child: Center(
+          child: Text(
+            digit?.toString() ?? '',
+            style: const TextStyle(
+              fontSize: 72,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFFFFB300),
+              height: 1.0,
+            ),
+          ),
+        ),
+      );
+    }
+    final objective =
+        phase == ChallengePhase.atSeuil || phase == ChallengePhase.openExtension
+            ? t.challengeBannerThresholdReached
+            : controller.challengeObjectiveText();
+    final showTutorial = ch?.isTutorial ?? false;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: _bg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _border.withValues(alpha: 0.4), width: 1.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (showTutorial) ...[
+            Text(
+              t.challengeTutorialBanner,
+              style: const TextStyle(
+                fontSize: 12,
+                color: Color(0xFFFFB300),
+                fontWeight: FontWeight.w600,
+                height: 1.35,
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+          if (objective != null && objective.isNotEmpty)
+            Text(
+              objective,
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppTheme.textPrimary,
+                fontWeight: FontWeight.w700,
+                height: 1.3,
+              ),
+            ),
+          if (text != null && text.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              text,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppTheme.textMuted,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

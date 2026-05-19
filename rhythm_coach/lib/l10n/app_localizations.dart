@@ -1012,23 +1012,125 @@ abstract class AppLocalizations {
   /// **'PASSE'**
   String get challengePassButton;
 
+  /// No description provided for @challengeGoButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'GO'**
+  String get challengeGoButton;
+
   /// No description provided for @challengeExtendButton.
   ///
   /// In fr, this message translates to:
-  /// **'JE TIENS ENCORE'**
+  /// **'JE TIENS'**
   String get challengeExtendButton;
 
   /// No description provided for @challengeStopButton.
   ///
   /// In fr, this message translates to:
-  /// **'JE M\'ARRÊTE'**
+  /// **'J\'ARRÊTE'**
   String get challengeStopButton;
 
   /// No description provided for @challengeTutorialBanner.
   ///
   /// In fr, this message translates to:
-  /// **'Premier défi : tiens la position le temps demandé. Tu pourras arrêter ou prolonger au seuil.'**
+  /// **'Premier défi : tu vas tenir une position le temps demandé. Tape GO quand tu es prête, ou PASSE pour skipper.'**
   String get challengeTutorialBanner;
+
+  /// No description provided for @challengeBannerCountdown.
+  ///
+  /// In fr, this message translates to:
+  /// **'{digit}'**
+  String challengeBannerCountdown(int digit);
+
+  /// No description provided for @challengeAttemptDefault.
+  ///
+  /// In fr, this message translates to:
+  /// **'Défi : on va pousser ta limite. Tape GO quand tu es prête, je compterai trois deux un avant de démarrer.'**
+  String get challengeAttemptDefault;
+
+  /// No description provided for @challengeAttemptTutorialHoldThroat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Premier défi : tu vas tenir en gorge dix secondes. Tape GO quand tu es prête, je compterai trois deux un avant de démarrer. Au seuil, deux boutons apparaîtront pour tenir plus longtemps ou arrêter.'**
+  String get challengeAttemptTutorialHoldThroat;
+
+  /// No description provided for @challengeExtensionDefault.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu peux rester encore si tu veux. Les boutons vont apparaître.'**
+  String get challengeExtensionDefault;
+
+  /// No description provided for @challengeSuccessDefault.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu as tenu jusqu\'au bout. Bonne fille.'**
+  String get challengeSuccessDefault;
+
+  /// No description provided for @challengeStopDefault.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu as choisi d\'arrêter. Bien.'**
+  String get challengeStopDefault;
+
+  /// No description provided for @challengeFailDefault.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu as craqué avant le seuil. Pas grave, tu y arriveras la prochaine.'**
+  String get challengeFailDefault;
+
+  /// No description provided for @challengeTimeoutDefault.
+  ///
+  /// In fr, this message translates to:
+  /// **'Temps écoulé, tu as tenu. Bien.'**
+  String get challengeTimeoutDefault;
+
+  /// No description provided for @challengeSkipDefault.
+  ///
+  /// In fr, this message translates to:
+  /// **'Comme tu veux, on garde pour la prochaine.'**
+  String get challengeSkipDefault;
+
+  /// No description provided for @challengeBannerHoldThroat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tiens gorge {seconds} secondes'**
+  String challengeBannerHoldThroat(int seconds);
+
+  /// No description provided for @challengeBannerHoldFull.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tiens à fond {seconds} secondes'**
+  String challengeBannerHoldFull(int seconds);
+
+  /// No description provided for @challengeBannerHoldGeneric.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tiens la position {seconds} secondes'**
+  String challengeBannerHoldGeneric(int seconds);
+
+  /// No description provided for @challengeBannerRhythm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tiens le rythme à {bpm} BPM'**
+  String challengeBannerRhythm(int bpm);
+
+  /// No description provided for @challengeBannerBiffle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Encaisse les coups à {bpm} BPM'**
+  String challengeBannerBiffle(int bpm);
+
+  /// No description provided for @challengeBannerGeneric.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pousse ta limite'**
+  String get challengeBannerGeneric;
+
+  /// No description provided for @challengeBannerThresholdReached.
+  ///
+  /// In fr, this message translates to:
+  /// **'Seuil atteint — continue ou arrête'**
+  String get challengeBannerThresholdReached;
 
   /// No description provided for @careerIncludeHandToggle.
   ///

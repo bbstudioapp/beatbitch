@@ -507,14 +507,83 @@ class AppLocalizationsEn extends AppLocalizations {
   String get challengePassButton => 'SKIP';
 
   @override
-  String get challengeExtendButton => 'I CAN HOLD MORE';
+  String get challengeGoButton => 'GO';
+
+  @override
+  String get challengeExtendButton => 'I HOLD';
 
   @override
   String get challengeStopButton => 'I STOP';
 
   @override
   String get challengeTutorialBanner =>
-      'First challenge: hold the position for the requested time. You\'ll be able to stop or extend at the threshold.';
+      'First challenge: you\'ll hold a position for the requested time. Tap GO when ready, or SKIP to skip it.';
+
+  @override
+  String challengeBannerCountdown(int digit) {
+    return '$digit';
+  }
+
+  @override
+  String get challengeAttemptDefault =>
+      'Challenge: we\'re pushing your limit. Tap GO when ready, I\'ll count three two one before we start.';
+
+  @override
+  String get challengeAttemptTutorialHoldThroat =>
+      'First challenge: you\'ll hold deep for ten seconds. Tap GO when ready, I\'ll count three two one before we start. At the threshold, two buttons will appear to hold longer or stop.';
+
+  @override
+  String get challengeExtensionDefault =>
+      'You can stay longer if you want. Buttons will appear.';
+
+  @override
+  String get challengeSuccessDefault => 'You held it all the way. Good girl.';
+
+  @override
+  String get challengeStopDefault => 'You chose to stop. Good.';
+
+  @override
+  String get challengeFailDefault =>
+      'You broke before the threshold. No worries, you\'ll get it next time.';
+
+  @override
+  String get challengeTimeoutDefault => 'Time\'s up — you held it. Good.';
+
+  @override
+  String get challengeSkipDefault =>
+      'As you wish, we\'ll keep it for next time.';
+
+  @override
+  String challengeBannerHoldThroat(int seconds) {
+    return 'Hold deep $seconds seconds';
+  }
+
+  @override
+  String challengeBannerHoldFull(int seconds) {
+    return 'Hold all the way $seconds seconds';
+  }
+
+  @override
+  String challengeBannerHoldGeneric(int seconds) {
+    return 'Hold the position $seconds seconds';
+  }
+
+  @override
+  String challengeBannerRhythm(int bpm) {
+    return 'Keep up the rhythm at $bpm BPM';
+  }
+
+  @override
+  String challengeBannerBiffle(int bpm) {
+    return 'Take the slaps at $bpm BPM';
+  }
+
+  @override
+  String get challengeBannerGeneric => 'Push your limit';
+
+  @override
+  String get challengeBannerThresholdReached =>
+      'Threshold reached — keep going or stop';
 
   @override
   String get careerIncludeHandToggle => 'Include hand stimulation';

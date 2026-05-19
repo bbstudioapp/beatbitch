@@ -39,8 +39,11 @@ const int kChallengeExtensionFloorSeconds = 10;
 /// Fraction du `comfort` utilisée pour calculer la prolongation (cf. spec).
 const double kChallengeExtensionComfortFraction = 0.30;
 
-/// Durée du seuil défi tutoriel sur axe robuste (hold throat 5 s).
-const int kChallengeTutorialDurationSeconds = 5;
+/// Durée du seuil défi tutoriel sur axe robuste (hold throat 10 s).
+/// Volontairement plus long que 5 s pour laisser le temps à la joueuse
+/// de comprendre la mécanique (annonce coach pendant le breath, seuil
+/// approchant à `seuil - 3 s`, boutons au seuil).
+const int kChallengeTutorialDurationSeconds = 10;
 
 /// Service stateless de persistance du toggle/tutoriel + factory de défis.
 /// Toutes les opérations de persistance lisent/écrivent `SharedPreferences`

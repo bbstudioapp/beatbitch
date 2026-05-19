@@ -217,10 +217,45 @@
   "careerQuickieDescription": "6 Min., durchgehend intensiv. Für wenn du keine Zeit hast.",
   "careerChallengesToggle": "Herausforderungen in der Sitzung",
   "careerChallengesDescription": "Eine optionale Herausforderung etwa bei 60 % der Sitzung. Kalibriert schnell, kann das Level-Up beschleunigen.",
-  "challengePassButton": "ÜBERSPRINGEN",
-  "challengeExtendButton": "ICH HALTE NOCH",
-  "challengeStopButton": "ICH HÖRE AUF",
-  "challengeTutorialBanner": "Erste Herausforderung: Halte die Position für die geforderte Zeit. Beim Schwellenwert kannst du aufhören oder verlängern.",
+  "challengePassButton": "ÜBERSPR.",
+  "challengeGoButton": "LOS",
+  "challengeExtendButton": "ICH HALTE",
+  "challengeStopButton": "STOPP",
+  "challengeTutorialBanner": "Erste Herausforderung: Du wirst eine Position für die geforderte Zeit halten. Tippe LOS wenn du bereit bist, oder ÜBERSPR. zum Überspringen.",
+  "challengeBannerCountdown": "{digit}",
+  "@challengeBannerCountdown": {
+    "placeholders": { "digit": { "type": "int" } }
+  },
+  "challengeAttemptDefault": "Herausforderung: Wir gehen an deine Grenze. Tippe LOS wenn du bereit bist, ich zähle drei zwei eins vor dem Start.",
+  "challengeAttemptTutorialHoldThroat": "Erste Herausforderung: Du hältst tief zehn Sekunden. Tippe LOS wenn du bereit bist, ich zähle drei zwei eins vor dem Start. Beim Schwellenwert erscheinen zwei Tasten zum länger Halten oder Aufhören.",
+  "challengeExtensionDefault": "Du kannst länger bleiben, wenn du willst. Die Tasten erscheinen.",
+  "challengeSuccessDefault": "Du hast bis zum Ende gehalten. Braves Mädchen.",
+  "challengeStopDefault": "Du hast aufgehört. Gut.",
+  "challengeFailDefault": "Du hast vor dem Schwellenwert nachgegeben. Kein Problem, beim nächsten Mal schaffst du es.",
+  "challengeTimeoutDefault": "Zeit um — du hast gehalten. Gut.",
+  "challengeSkipDefault": "Wie du willst, wir heben es fürs nächste Mal auf.",
+  "challengeBannerHoldThroat": "Halte tief {seconds} Sekunden",
+  "@challengeBannerHoldThroat": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerHoldFull": "Halte ganz tief {seconds} Sekunden",
+  "@challengeBannerHoldFull": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerHoldGeneric": "Halte die Position {seconds} Sekunden",
+  "@challengeBannerHoldGeneric": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerRhythm": "Halte den Rhythmus bei {bpm} BPM",
+  "@challengeBannerRhythm": {
+    "placeholders": { "bpm": { "type": "int" } }
+  },
+  "challengeBannerBiffle": "Nimm die Schläge bei {bpm} BPM",
+  "@challengeBannerBiffle": {
+    "placeholders": { "bpm": { "type": "int" } }
+  },
+  "challengeBannerGeneric": "Gehe an deine Grenze",
+  "challengeBannerThresholdReached": "Schwellenwert erreicht — weiter oder aufhören",
   "careerIncludeHandToggle": "Handstimulation einbeziehen",
   "careerIncludeHandSubtitle": "Deaktiviert auch die Schwanzschläge (Biffle) — beide brauchen die Hand.",
   "careerIncludeHandMilestoneLocked": "Für diese Session gesperrt — der Lern-Meilenstein nutzt die Hand.",
