@@ -20,10 +20,12 @@ import '../../theme/app_theme.dart';
 import '../../l10n/enum_labels.dart';
 import '../../main.dart' show coachService, milestoneService;
 import '../models/career_generation_inputs.dart';
+import '../models/challenge.dart';
 import '../models/coach.dart';
 import '../models/level_milestone.dart';
 import '../services/career_encore_gate.dart';
 import '../services/career_progress_service.dart';
+import '../services/challenge_service.dart';
 import '../services/generation/career_session_generator.dart';
 import '../services/phrase_bank_loader.dart';
 import '../services/specialization_service.dart';
@@ -60,10 +62,13 @@ class _CareerScreenState extends State<CareerScreen> {
   final CareerProgressService _progress = CareerProgressService();
   final StatsService _stats = StatsService();
   final SpecializationService _specService = SpecializationService();
+  final ChallengeService _challengeService = ChallengeService();
 
   int? _selectedLevel;
   bool? _includeHandOverride;
   bool _quickie = false;
+  bool _challengesEnabled = false;
+  bool _challengeTutorialSeen = false;
 
   /// Niveau global minimum à partir duquel l'utilisatrice peut désactiver
   /// le mode hand. En dessous, le toggle est forcé à ON pour garder le
@@ -81,6 +86,15 @@ class _CareerScreenState extends State<CareerScreen> {
   void initState() {
     super.initState();
     _bundleFuture = _loadBundle();
+    // Phase 1 défis — hydrate le toggle et le flag tutoriel depuis
+    // SharedPreferences. setState gardé par `mounted` pour ne pas casser si
+    // l'utilisatrice quitte l'écran avant la fin de la lecture.
+    _challengeService.isEnabled().then((v) {
+      if (mounted) setState(() => _challengesEnabled = v);
+    });
+    _challengeService.tutorialSeen().then((v) {
+      if (mounted) setState(() => _challengeTutorialSeen = v);
+    });
   }
 
   Future<_CareerBundle> _loadBundle() async {
@@ -96,6 +110,8 @@ class _CareerScreenState extends State<CareerScreen> {
       _stats.getHumiliationLevel(),
       _stats.getObedienceLevel(),
       CapabilityService().snapshotProfile(),
+      _challengeService.isEnabled(),
+      _challengeService.tutorialSeen(),
     ]);
     final maxLevel = results[3] as int;
     // Synchronise le palier de coach avec le niveau global avant que
@@ -113,6 +129,8 @@ class _CareerScreenState extends State<CareerScreen> {
       humiliationScore: results[8] as double,
       obedienceScore: results[9] as double,
       capabilityProfile: results[10] as CapabilityProfile,
+      challengesEnabled: results[11] as bool,
+      challengeTutorialSeen: results[12] as bool,
     );
   }
 
@@ -274,6 +292,22 @@ class _CareerScreenState extends State<CareerScreen> {
       humiliationScore: humiliationScore,
       obedienceScore: obedienceScore,
     );
+    // Phase 1 défis — construit le défi à insérer si toggle activé. Hors
+    // quickie (pas de pédagogie) et hors mode intense post-Supplier. Les
+    // axes déjà couverts par milestones de la séance sont exclus pour
+    // éviter l'empilement (spec § 5.5).
+    Challenge? challenge;
+    if (_challengesEnabled && !quickie) {
+      // TODO : mapper milestones → axes à exclure pour l'empilement.
+      // Phase 1 minimale : on n'exclut rien pour l'instant.
+      challenge = _challengeService.buildForSession(
+        profile: bundle.capabilityProfile,
+        ceilings: const {},
+        excludeAxes: const {},
+        rng: Random(),
+        isTutorial: !_challengeTutorialSeen,
+      );
+    }
     final result = CareerSessionGenerator().generate(
       level: clamped,
       bank: coachBank,
@@ -298,6 +332,7 @@ class _CareerScreenState extends State<CareerScreen> {
       // `sessionCeilings` ici — la séance démarre, aucun fail n'a encore
       // figé de plafond.
       capability: CapabilityInputs(profile: bundle.capabilityProfile),
+      challenge: ChallengeInputs(challenge: challenge),
     );
 
     final introText = coachBank.pickIntro(Random());
@@ -377,6 +412,14 @@ class _CareerScreenState extends State<CareerScreen> {
     // milestone a été acquittée, son unlock est déjà persisté dans
     // `_completed` via `markCompleted` ; sinon, on retire l'illusion.
     milestoneService.setSessionUnlocks(const {});
+
+    // Phase 1 défis — pose le flag tutorial_seen après le 1ᵉʳ défi joué
+    // (peu importe l'outcome : succès, fail, ou skip — la joueuse a vu
+    // les boutons et le flow, c'est l'objet de la pédagogie tutoriel).
+    if (challenge != null && challenge.isTutorial) {
+      await _challengeService.markTutorialSeen();
+      if (mounted) setState(() => _challengeTutorialSeen = true);
+    }
 
     // De retour de la séance, recharger pour refléter un éventuel
     // nouveau max débloqué.
@@ -1003,6 +1046,32 @@ class _CareerScreenState extends State<CareerScreen> {
                   value: _quickie,
                   onChanged: (v) => setState(() => _quickie = v),
                 ),
+              // Switch « Défis intra-séance » (Phase 1). Visible dès la
+              // première séance — l'utilisatrice doit pouvoir l'activer si
+              // elle veut accélérer sa progression. Le tutoriel scripté
+              // garantit la pédagogie au 1ᵉʳ défi.
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  t.careerChallengesToggle,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                subtitle: Text(
+                  t.careerChallengesDescription,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppTheme.textMuted,
+                  ),
+                ),
+                value: _challengesEnabled,
+                onChanged: (v) async {
+                  setState(() => _challengesEnabled = v);
+                  await _challengeService.setEnabled(v);
+                },
+              ),
               // Switch « stimulation à la main » : caché tant que le niveau
               // de déblocage n'est pas atteint. Une fois le niveau atteint,
               // le switch est interactif ; si une milestone pending impose
@@ -1338,6 +1407,14 @@ class _CareerBundle {
   /// (mais non null) pour une joueuse neuve → aucun gating capacité.
   final CapabilityProfile capabilityProfile;
 
+  /// Toggle Phase 1 défis (`challenges.enabled`). Quand `true`, un défi
+  /// intra-séance est généré et inséré vers 60 % de la durée.
+  final bool challengesEnabled;
+
+  /// Flag posé après le 1ᵉʳ défi terminé. Quand `false`, le défi suivant
+  /// est forcé en tutoriel scripté (hold throat 5 s, axe robuste).
+  final bool challengeTutorialSeen;
+
   const _CareerBundle({
     required this.bank,
     required this.punishments,
@@ -1350,5 +1427,7 @@ class _CareerBundle {
     required this.humiliationScore,
     required this.obedienceScore,
     required this.capabilityProfile,
+    required this.challengesEnabled,
+    required this.challengeTutorialSeen,
   });
 }

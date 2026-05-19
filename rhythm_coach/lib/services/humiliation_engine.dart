@@ -379,6 +379,16 @@ class HumiliationEngine {
   void onSalivaOverflow() => _bumpSession(bumpSalivaOverflow);
   void onSalivaSpit() => _bumpSession(bumpSalivaSpit);
 
+  /// Défi terminé en succès net (seuil atteint puis `JE M'ARRÊTE` ou
+  /// timeout). +2 sur `careerScore` (cf. spec § 5.2). Le défi étant un
+  /// palier mesurable, le bump est permanent.
+  static const double bumpChallengeNetSuccess = 2.0;
+  void onChallengeNetSuccess() => _careerScore += bumpChallengeNetSuccess;
+
+  /// Chaque `JE TIENS ENCORE` gagné en mode ouvert : +1 humil career.
+  static const double bumpChallengeExtension = 1.0;
+  void onChallengeExtension() => _careerScore += bumpChallengeExtension;
+
   /// Fail manuel. Le [multiplier] est typiquement 2.0 quand on craque
   /// dans la dernière minute (cf. [SessionController.triggerFail]).
   ///

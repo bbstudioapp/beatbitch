@@ -68,6 +68,20 @@ class ObedienceEngine {
   void onSessionCleanFinish() => _bump(bumpSessionClean);
   void onCapabilityRecord() => _bump(bumpCapabilityRecord);
 
+  /// Défi terminé en succès net (seuil atteint). +2 sur le score persisté
+  /// (cf. spec § 5.2).
+  static const double bumpChallengeNetSuccess = 2.0;
+  void onChallengeNetSuccess() => _bump(bumpChallengeNetSuccess);
+
+  /// `JE TIENS ENCORE` gagné en mode ouvert : +1 sur le score persisté.
+  static const double bumpChallengeExtension = 1.0;
+  void onChallengeExtension() => _bump(bumpChallengeExtension);
+
+  /// `PASSE` pressé pendant le breath de countdown : -3 (mini-acte de
+  /// désobéissance, cf. spec § 4.5).
+  static const double malusChallengeSkip = 3.0;
+  void onChallengeSkip() => _bump(-malusChallengeSkip);
+
   /// Fail manuel. Le [multiplier] est typiquement 2.0 quand on craque
   /// dans la dernière minute (cf. [SessionController.triggerFail]).
   ///

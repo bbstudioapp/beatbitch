@@ -994,6 +994,42 @@ abstract class AppLocalizations {
   /// **'6 min, intense tout du long. Pour quand t\'as pas le temps.'**
   String get careerQuickieDescription;
 
+  /// No description provided for @careerChallengesToggle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Défis intra-séance'**
+  String get careerChallengesToggle;
+
+  /// No description provided for @careerChallengesDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un défi opt-in vers 60 % de la séance. Calibre vite, peut faire monter le niveau plus rapidement.'**
+  String get careerChallengesDescription;
+
+  /// No description provided for @challengePassButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'PASSE'**
+  String get challengePassButton;
+
+  /// No description provided for @challengeExtendButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'JE TIENS ENCORE'**
+  String get challengeExtendButton;
+
+  /// No description provided for @challengeStopButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'JE M\'ARRÊTE'**
+  String get challengeStopButton;
+
+  /// No description provided for @challengeTutorialBanner.
+  ///
+  /// In fr, this message translates to:
+  /// **'Premier défi : tiens la position le temps demandé. Tu pourras arrêter ou prolonger au seuil.'**
+  String get challengeTutorialBanner;
+
   /// No description provided for @careerIncludeHandToggle.
   ///
   /// In fr, this message translates to:

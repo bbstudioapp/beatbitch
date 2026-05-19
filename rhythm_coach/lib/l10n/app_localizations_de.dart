@@ -497,6 +497,26 @@ class AppLocalizationsDe extends AppLocalizations {
       '6 Min., durchgehend intensiv. Für wenn du keine Zeit hast.';
 
   @override
+  String get careerChallengesToggle => 'Herausforderungen in der Sitzung';
+
+  @override
+  String get careerChallengesDescription =>
+      'Eine optionale Herausforderung etwa bei 60 % der Sitzung. Kalibriert schnell, kann das Level-Up beschleunigen.';
+
+  @override
+  String get challengePassButton => 'ÜBERSPRINGEN';
+
+  @override
+  String get challengeExtendButton => 'ICH HALTE NOCH';
+
+  @override
+  String get challengeStopButton => 'ICH HÖRE AUF';
+
+  @override
+  String get challengeTutorialBanner =>
+      'Erste Herausforderung: Halte die Position für die geforderte Zeit. Beim Schwellenwert kannst du aufhören oder verlängern.';
+
+  @override
   String get careerIncludeHandToggle => 'Handstimulation einbeziehen';
 
   @override

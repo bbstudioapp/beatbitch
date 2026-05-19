@@ -1,3 +1,4 @@
+import '../career/models/challenge.dart';
 import 'final_category.dart';
 import 'session_step.dart';
 
@@ -139,6 +140,23 @@ class Session {
   /// laisser aucune trace dans le profil. Default false.
   final bool noStats;
 
+  /// Défi intra-séance attaché à cette session (Phase 1). Renseigné par
+  /// `CareerSessionGenerator.generate(...)` quand un défi a été inséré ;
+  /// `null` partout ailleurs (toggle off, hors carrière, JSON scriptés).
+  /// Transient : non sérialisé en JSON (un défi est généré dynamiquement,
+  /// pas écrit dans un fichier source).
+  final Challenge? challenge;
+
+  /// Temps absolu (s) du début du breath de countdown qui précède le step
+  /// défi. Le `SessionController` s'en sert pour entrer en phase `breath`
+  /// (affichage bouton `PASSE`). `null` si pas de défi.
+  final int? challengeBreathStartTime;
+
+  /// Temps absolu (s) du step défi lui-même. Le `SessionController` s'en
+  /// sert pour entrer en phase `live` puis armer l'annonce d'extension à
+  /// `targetThreshold - 3 s` et les boutons au seuil. `null` si pas de défi.
+  final int? challengeStepTime;
+
   const Session({
     required this.id,
     required this.name,
@@ -161,6 +179,9 @@ class Session {
     this.silentFinishStartTime,
     this.finalStepTime,
     this.noStats = false,
+    this.challenge,
+    this.challengeBreathStartTime,
+    this.challengeStepTime,
   });
 
   Duration get duration => Duration(seconds: durationSeconds);
