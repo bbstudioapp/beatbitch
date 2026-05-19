@@ -185,20 +185,6 @@
         "Une gorge comme la tienne, ça se défonce. Pas de quartier."
       ]
     },
-    "resilience": {
-      "soft": [
-        "Tu encaisses sans broncher {name}. C'est ton seul mérite.",
-        "Tu sais souffrir {name}. Heureusement pour toi."
-      ],
-      "medium": [
-        "Tu prends tout ce que je donne {name}. Bien.",
-        "Tu ne casses pas {name}. Continue à encaisser."
-      ],
-      "hard": [
-        "Indestructible {name}. Prouve-le encore.",
-        "Tu encaisses ce qui briserait n'importe qui {name}. Reste comme ça."
-      ]
-    },
     "obeissance": {
       "soft": [
         "Tu fais ce que je dis {name}. Évidemment.",

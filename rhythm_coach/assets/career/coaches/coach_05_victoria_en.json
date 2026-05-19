@@ -231,20 +231,6 @@
         "Take more. A real whore doesn't stop.",
         "You'll endure because I've decided so."
       ]
-    },
-    "resilience": {
-      "soft": [
-        "You take it without complaining {name}. That's what's expected of a thing like you.",
-        "You know how to suffer in silence {name}. Good."
-      ],
-      "medium": [
-        "You take everything I give you {name}. Without flinching.",
-        "You don't crack {name}. Keep taking it."
-      ],
-      "hard": [
-        "You take what would make others falter {name}. Stay like that.",
-        "Indestructible when I decide so {name}. Prove it."
-      ]
     }
   },
   "progressPhrases": {
