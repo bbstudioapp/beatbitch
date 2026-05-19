@@ -310,43 +310,6 @@
       ]
     },
     {
-      "id": "intro_beg_throat",
-      "level": 14,
-      "displayLabel": "Supplique gorge",
-      "unlocks": ["beg_throat"],
-      "requires": ["beg_libre", "throat_pulse"],
-      "requiresCapability": [
-        {"axis": "hold.throat.streak", "min": 4}
-      ],
-      "branches": ["obeissance", "profondeur"],
-      "sequence": [
-        {"time": 0,  "text": "Ouvre la bouche bien grande, tire la langue. Je veux voir ta gorge ouverte pour moi.", "mode": "beg", "duration": 10},
-        {"time": 10, "text": "Demande-moi de te l'enfoncer plus.", "mode": "beg", "to": "mid", "duration": 8},
-        {"time": 18, "text": "Tu veux que je reste comme ça ? Réponds-moi.", "mode": "beg", "to": "throat", "duration": 10},
-        {"time": 28, "text": "Répète ?", "mode": "beg", "duration": 6},
-        {"time": 34, "text": "Accordée. Est-ce que tu aimes ?", "mode": "beg", "to": "throat", "duration": 8},
-        {"time": 42, "text": "Respire, mais garde ta gorge ouverte et ta langue dehors.", "mode": "beg", "duration": 8},
-        {"time": 50, "text": "Supplie-moi de rester là.", "mode": "beg", "to": "throat", "duration": 10},
-        {"time": 60, "text": "Bonne petite.", "mode": "breath", "duration": 5}
-      ]
-    },
-    {
-      "id": "intro_beg_full",
-      "level": 16,
-      "displayLabel": "Supplique à fond",
-      "unlocks": ["beg_full"],
-      "requires": ["beg_throat", "full_pulse"],
-      "requiresCapability": [
-        {"axis": "hold.full.streak", "min": 5}
-      ],
-      "branches": ["obeissance", "profondeur"],
-      "sequence": [
-        {"time": 0,  "text": "Tu m'implores à fond.", "mode": "rhythm", "from": "mid", "to": "full", "bpm": 80, "duration": 8},
-        {"time": 8,  "text": "Tenue à fond pendant la supplique.", "mode": "beg", "to": "full", "duration": 30},
-        {"time": 38, "text": "Bien. Lèche pour finir.", "mode": "lick", "from": "head", "to": "head", "bpm": 70, "duration": 12}
-      ]
-    },
-    {
       "id": "intro_balls_lick",
       "level": 9,
       "displayLabel": "Lèche-moi les couilles",

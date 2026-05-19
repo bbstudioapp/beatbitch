@@ -42,8 +42,13 @@ enum UnlockKey {
   // Modes spéciaux
   freestyle,
   begLibre,
-  begThroat,
-  begFull,
+  // begThroat renommé en begHeadMid (Phase 5 défis) : les begs avec
+  // position tenue sont désormais cappés à `mid` côté pickBegPosition,
+  // parce que parler en gorge tenue est irréaliste. begFull retiré
+  // pour la même raison. Les joueuses existantes ont un mapping legacy
+  // (cf. `UnlockKey.fromString`) qui résout `beg_throat` vers
+  // `begHeadMid` pour ne pas perdre l'unlock acquis.
+  begHeadMid,
   // Sloppy — chacune gate un sous-pool de commentaires coach (cf.
   // `assets/random_comments.json` : filtre `requires_unlock` + contexte /
   // barre de salive `min_saliva`). Trois ont en plus un effet runtime :
@@ -114,8 +119,7 @@ enum UnlockKey {
         UnlockKey.biffleFast => 'biffle_fast',
         UnlockKey.freestyle => 'freestyle',
         UnlockKey.begLibre => 'beg_libre',
-        UnlockKey.begThroat => 'beg_throat',
-        UnlockKey.begFull => 'beg_full',
+        UnlockKey.begHeadMid => 'beg_head_mid',
         UnlockKey.sloppyDroolBasic => 'sloppy_drool_basic',
         UnlockKey.sloppyBiffleSlow => 'sloppy_biffle_slow',
         UnlockKey.sloppyLoudSuck => 'sloppy_loud_suck',
@@ -141,6 +145,11 @@ enum UnlockKey {
 
   static UnlockKey? fromString(String? raw) {
     if (raw == null) return null;
+    // Mapping legacy Phase 5 défis : les joueuses existantes ont peut-être
+    // `beg_throat` (et plus rarement `beg_full`) acquittés via l'ancien
+    // catalogue. On les résout vers `begHeadMid` pour préserver l'unlock
+    // sans introduire de nouvelle clé dédiée.
+    if (raw == 'beg_throat' || raw == 'beg_full') return UnlockKey.begHeadMid;
     for (final k in UnlockKey.values) {
       if (k.serialized == raw) return k;
     }

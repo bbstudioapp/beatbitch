@@ -83,13 +83,18 @@ class BegRules extends ModeRules {
     }
     // Convention : hold/beg portent leur position dans `to`.
     if (draft.to == null) return UnlockKey.begLibre;
-    if (draft.to == Position.full) return UnlockKey.begFull;
-    // Toute supplique avec position tenue (head/mid/throat) reste gated
-    // par begThroat (palier niveau 14). Avant ça, seule la supplique
-    // libre (to=null) doit apparaître. Évite que le générateur produise
-    // des beg head/mid après l'unlock de begLibre alors qu'aucune
-    // milestone ne les a explicitement introduits.
-    return UnlockKey.begThroat;
+    // Phase 5 défis : begs avec position throat/full retirés (parler en
+    // gorge tenue irréaliste — user feedback 2026-05-19). On retourne un
+    // unlock impossible à acquérir (`UnlockKey.begBalls` non lié à la
+    // zone ; seule l'unlock anatomy peut le débloquer) pour que ces
+    // drafts soient strictement filtrés par `_isUnlocked`.
+    if (draft.to == Position.throat || draft.to == Position.full) {
+      return UnlockKey.begBalls;
+    }
+    // Beg avec position head/mid : gated par begHeadMid (anciennement
+    // begThroat). Avant cet unlock, seule la supplique libre (to=null)
+    // doit apparaître.
+    return UnlockKey.begHeadMid;
   }
 
   @override
