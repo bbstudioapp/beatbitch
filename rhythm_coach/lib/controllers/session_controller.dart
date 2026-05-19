@@ -1425,16 +1425,20 @@ class SessionController extends ChangeNotifier {
   /// liste pending vers `sessionBadgeUnlocks`, lance les annonces TTS, et
   /// notifie l'UI. À appeler depuis le bouton MERCI de l'écran de fin.
   /// La phrase TTS est localisée via [_appLocalizations] (poussé depuis
-  /// l'UI par [setAppLocalizations]) ; null retombe sur le libellé FR.
+  /// l'UI par [setAppLocalizations]) ; si la locale n'a pas encore été
+  /// poussée (cas anormal — l'UI le fait au start de la séance), on
+  /// révèle les badges côté UI mais on n'annonce pas TTS.
   Future<void> revealBadgeUnlocks() async {
     if (_pendingBadgeUnlocks.isEmpty) return;
     final unlocks = _pendingBadgeUnlocks;
     _pendingBadgeUnlocks = const [];
     _sessionBadgeUnlocks = unlocks;
     notifyListeners();
+    final l10n = _appLocalizations;
+    if (l10n == null) return;
     for (final u in unlocks) {
       if (_released) break;
-      await _tts.speak(u.announcement(_appLocalizations));
+      await _tts.speak(u.announcement(l10n));
     }
   }
 
