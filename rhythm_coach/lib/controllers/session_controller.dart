@@ -1288,7 +1288,13 @@ class SessionController extends ChangeNotifier {
     }
     // Phases `live` / `preExtend` (calibrées sur axes durée).
     if (ch.kind == ChallengeAxisKind.duration) {
-      if (phase == ChallengePhase.live && elapsedInStep >= target - 3) {
+      // Phase 2 défi exploratoire : pas de phase `preExtend` (l'annonce
+      // « tu peux rester là si tu veux » suppose un seuil cible, ce que
+      // l'exploratoire n'a pas). On passe directement de `live` à
+      // `atSeuil` au seuil initial estimé. Cf. spec § 3.2.
+      if (!ch.isExploratory &&
+          phase == ChallengePhase.live &&
+          elapsedInStep >= target - 3) {
         _challengePhase = ChallengePhase.preExtend;
         _challengeCurrentText = _pickChallengePhrase(ch, 'extension');
         _speakChallengePhraseIfAny();
@@ -1406,14 +1412,22 @@ class SessionController extends ChangeNotifier {
     final outcome = _challengeOutcome;
     if (outcome == null) return;
     final extensions = _challengeExtensionsCount;
+    // Phase 2 défi exploratoire : pas de bump de base humil/obed +2
+    // (pas de seuil cible atteint, donc pas de palier mesuré).
+    // Cf. spec § 5.2 — seules les extensions comptent.
+    final isExploratory = _activeChallenge?.isExploratory ?? false;
     switch (outcome) {
       case ChallengeOutcome.netSuccess:
-        _humiliation.onChallengeNetSuccess();
-        _obedience.onChallengeNetSuccess();
+        if (!isExploratory) {
+          _humiliation.onChallengeNetSuccess();
+          _obedience.onChallengeNetSuccess();
+        }
         break;
       case ChallengeOutcome.extendedSuccess:
-        _humiliation.onChallengeNetSuccess();
-        _obedience.onChallengeNetSuccess();
+        if (!isExploratory) {
+          _humiliation.onChallengeNetSuccess();
+          _obedience.onChallengeNetSuccess();
+        }
         for (var i = 0; i < extensions; i++) {
           _humiliation.onChallengeExtension();
           _obedience.onChallengeExtension();
@@ -1829,12 +1843,20 @@ class SessionController extends ChangeNotifier {
     // le seuil = fail défi (pas de flow punition complet) ; après le seuil
     // = `JE M'ARRÊTE`. Aucun cas ne tombe dans le flow fail standard.
     if (isChallengeActive) {
+      // Phase 2 défi exploratoire : pas de notion d'échec (spec § 4.4),
+      // tap-out avant le seuil initial estimé = `JE M'ARRÊTE`. Le best
+      // capturé est la durée tenue (= elapsed dans le step, < seuil).
+      final isExploratory = _activeChallenge?.isExploratory ?? false;
       switch (_challengePhase) {
         case ChallengePhase.breath:
           triggerChallengePass();
           return;
         case ChallengePhase.live:
         case ChallengePhase.preExtend:
+          if (isExploratory) {
+            _completeChallenge(ChallengeOutcome.netSuccess);
+            return;
+          }
           _capabilityTracker?.onFail();
           _completeChallenge(ChallengeOutcome.fail);
           _skipPastChallengeStep();

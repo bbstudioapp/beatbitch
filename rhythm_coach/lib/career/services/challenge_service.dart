@@ -104,10 +104,45 @@ class ChallengeService {
       excludeAxes: excludeAxes,
       rng: rng,
     );
-    if (axis == null) return null;
-    final comfort = profile?.comfortOf(axis);
-    if (comfort == null) return null;
-    return _buildChallenge(axis: axis, comfort: comfort);
+    if (axis != null) {
+      final comfort = profile?.comfortOf(axis);
+      if (comfort != null) {
+        return _buildChallenge(axis: axis, comfort: comfort);
+      }
+    }
+    // Phase 2 — fallback exploratoire : aucun axe candidat avec un
+    // `comfort` prouvé (profil neuf ou toutes les ressources figées),
+    // mais on peut peut-être amorcer un axe vierge. Cf. spec § 3.2.
+    final exploratoryAxis = _pickExploratoryAxis(
+      profile: profile,
+      excludeAxes: excludeAxes,
+      rng: rng,
+    );
+    if (exploratoryAxis == null) return null;
+    return _buildExploratoryChallenge(axis: exploratoryAxis);
+  }
+
+  /// Phase 2 — sélection d'un axe exploratoire (sans `best` connu). Pioche
+  /// parmi les axes pilotants `CapabilityClamps.overloadableAxes` qui :
+  /// 1. N'ont pas de donnée (`bestOf(axis) == null`)
+  /// 2. Ne sont pas dans `excludeAxes` (milestones déjà couvertes)
+  ///
+  /// La sélection est uniforme dans l'ensemble candidat — pas de
+  /// hiérarchie : le générateur aurait sinon besoin de connaître le
+  /// niveau de la joueuse pour pondérer, ce qui est hors scope V1.
+  CapabilityAxis? _pickExploratoryAxis({
+    required CapabilityProfile? profile,
+    required Set<CapabilityAxis> excludeAxes,
+    required Random rng,
+  }) {
+    final candidates = <CapabilityAxis>[
+      for (final a in CapabilityClamps.overloadableAxes)
+        if (!excludeAxes.contains(a) &&
+            (profile == null || profile.bestOf(a) == null))
+          a,
+    ];
+    if (candidates.isEmpty) return null;
+    return candidates[rng.nextInt(candidates.length)];
   }
 
   /// Cascade d'axe (Phase 1 — sans showcase) :
@@ -151,6 +186,29 @@ class ChallengeService {
       branch: SpecializationBranch.endurance,
       comfortAtCalibration: 5.0,
       isTutorial: true,
+    );
+  }
+
+  /// Construit un défi exploratoire à partir d'un axe vierge. Le seuil
+  /// vient de [Challenge.initialEstimateSecondsForAxis] (palier débutante
+  /// par type d'axe). Pas de `comfortAtCalibration` (jamais prouvé).
+  Challenge _buildExploratoryChallenge({required CapabilityAxis axis}) {
+    final kind = _kindOf(axis);
+    final threshold = Challenge.initialEstimateSecondsForAxis(axis);
+    final mode = _modeOf(axis);
+    final from = _fromOf(axis);
+    final to = _toOf(axis);
+    final bpm = kind == ChallengeAxisKind.bpm ? threshold : null;
+    return Challenge(
+      axis: axis,
+      kind: kind,
+      targetThreshold: threshold,
+      mode: mode,
+      from: from,
+      to: to,
+      bpm: bpm,
+      branch: branchOf(axis),
+      isExploratory: true,
     );
   }
 
