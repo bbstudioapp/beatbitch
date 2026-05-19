@@ -215,6 +215,11 @@ class _CareerScreenState extends State<CareerScreen> {
     final cfg = CareerLevel.forLevel(clamped);
     final wantDualBody = !quickie && cfg.durationSeconds >= 18 * 60;
     final anatomy = widget.userProfile.anatomy;
+    // Tête de la file showcase : la prochaine séance honore le dernier
+    // point spé dépensé (cf. `SpecializationService.invest`). Lue ici
+    // pour être passée au tri des candidates et à l'incrémentation
+    // d'aging. Quickie ne consomme rien (pas de pédagogie).
+    final showcaseBranch = quickie ? null : await _specService.peekShowcase();
     final insertedBodies = quickie
         ? const <LevelMilestone>[]
         : milestoneService.pendingForList(
@@ -225,6 +230,7 @@ class _CareerScreenState extends State<CareerScreen> {
             allocation: bundle.specialization,
             capabilityProfile: bundle.capabilityProfile,
             anatomy: anatomy,
+            showcaseBranch: showcaseBranch,
           );
     final finalCandidates = quickie
         ? const <LevelMilestone>[]
@@ -245,6 +251,10 @@ class _CareerScreenState extends State<CareerScreen> {
     // a sa propre logique d'exclusion mutuelle) et on retire les ids
     // effectivement insérés. Pas de comptage en quickie.
     if (!quickie) {
+      // L'aging ne consomme pas le boost showcase — l'objectif est de
+      // comparer les candidates dans leur tri naturel (sinon une session
+      // sans milestone disponible pour la branche showcase ne ferait
+      // vieillir personne d'autre comme attendu).
       final bodyAll = milestoneService.allPendingFor(
         humiliationScore: humiliationScore,
         obedience: obedienceScore,
@@ -261,6 +271,14 @@ class _CareerScreenState extends State<CareerScreen> {
       if (notChosen.isNotEmpty) {
         await milestoneService.incrementCandidacyAge(notChosen);
       }
+    }
+    // Consomme la tête de la file showcase si une milestone effectivement
+    // insérée touche la branche en tête. Si rien ne matche (toutes les
+    // milestones de la branche sont acquises ou bloquées par capability /
+    // anatomy / humil), on garde la dette pour la prochaine séance.
+    if (showcaseBranch != null &&
+        insertedBodies.any((m) => m.branches.contains(showcaseBranch))) {
+      await _specService.consumeShowcase(showcaseBranch);
     }
     // Force includeHand=true si une milestone pending l'exige (séquence
     // scriptée comportant du hand/biffle). Sinon respecte la préférence
@@ -306,6 +324,10 @@ class _CareerScreenState extends State<CareerScreen> {
         excludeAxes: const {},
         rng: Random(),
         isTutorial: !_challengeTutorialSeen,
+        // Cascade showcase (spec § 5.1) : si la file showcase a une tête
+        // non-encore-consommée par une milestone insérée, le défi tente
+        // de l'honorer en priorité (axe pilotant de la branche).
+        showcaseBranch: showcaseBranch,
       );
     }
     final result = CareerSessionGenerator().generate(
@@ -381,6 +403,7 @@ class _CareerScreenState extends State<CareerScreen> {
           canSave: true,
           coachAdvancesTier: coachAdvances,
           specialization: bundle.specialization,
+          specializationService: _specService,
           miniPunishmentRate: activeCoach.miniPunishmentRate,
           coachTag: activeCoach.slug,
           onRequestUpgrade: (ctrl) => _handleUpgrade(ctrl, bundle, clamped),

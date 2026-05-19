@@ -94,9 +94,28 @@ class ChallengeService {
     required Set<CapabilityAxis> excludeAxes,
     required Random rng,
     required bool isTutorial,
+    SpecializationBranch? showcaseBranch,
   }) {
     if (isTutorial) {
       return _buildTutorialChallenge();
+    }
+    // Cascade showcase (spec § 5.1, étape 1) : si une branche est en
+    // tête de file `SpecializationService.peekShowcase()`, on essaye de
+    // honorer le point spé fraîchement dépensé en piochant un axe
+    // pilotant de cette branche AVANT le tirage standard. Skip si
+    // aucun axe candidat de la branche n'a un `comfort` prouvé
+    // (l'exploratoire ne peut pas matérialiser un seuil cible — on
+    // retombe alors sur le pickOverloadAxis standard puis l'exploratoire).
+    if (showcaseBranch != null) {
+      final axis = _pickAxisOfBranch(
+        branch: showcaseBranch,
+        profile: profile,
+        excludeAxes: excludeAxes,
+      );
+      if (axis != null) {
+        final comfort = profile!.comfortOf(axis)!;
+        return _buildChallenge(axis: axis, comfort: comfort);
+      }
     }
     final axis = _pickAxis(
       profile: profile,
@@ -122,6 +141,34 @@ class ChallengeService {
     return _buildExploratoryChallenge(axis: exploratoryAxis);
   }
 
+  /// Phase finale défis — sélectionne le plus ancien axe pilotant de la
+  /// [branch] (`lastSeenSession` min) avec un `comfort` prouvé. Sert à
+  /// honorer un point spé fraîchement dépensé en proposant un défi sur
+  /// cette branche. Exclut les axes [excludeAxes] (milestones déjà
+  /// insérées) pour éviter l'empilement. Retourne `null` si aucun axe
+  /// candidat n'est éligible — le caller retombe alors sur le
+  /// pickOverloadAxis standard.
+  CapabilityAxis? _pickAxisOfBranch({
+    required SpecializationBranch branch,
+    required CapabilityProfile? profile,
+    required Set<CapabilityAxis> excludeAxes,
+  }) {
+    if (profile == null) return null;
+    final candidates = <CapabilityAxis>[
+      for (final a in CapabilityClamps.overloadableAxes)
+        if (branchOf(a) == branch &&
+            !excludeAxes.contains(a) &&
+            profile.comfortOf(a) != null)
+          a,
+    ];
+    if (candidates.isEmpty) return null;
+    candidates.sort((a, b) => profile
+        .stateOf(a)
+        .lastSeenSession
+        .compareTo(profile.stateOf(b).lastSeenSession));
+    return candidates.first;
+  }
+
   /// Phase 2 — sélection d'un axe exploratoire (sans `best` connu). Pioche
   /// parmi les axes pilotants `CapabilityClamps.overloadableAxes` qui :
   /// 1. N'ont pas de donnée (`bestOf(axis) == null`)
@@ -145,10 +192,10 @@ class ChallengeService {
     return candidates[rng.nextInt(candidates.length)];
   }
 
-  /// Cascade d'axe (Phase 1 — sans showcase) :
-  /// 1. **TODO** : `SpecializationService.peekShowcase()` (branche
-  ///    `feat/specialization-showcase-queue`, pas mergée). Une fois mergée,
-  ///    insérer ici la résolution branche → plus vieil axe pilotant.
+  /// Cascade d'axe (Phase 1 — étape 2 et au-delà ; l'étape 1 showcase est
+  /// résolue plus haut dans `buildForSession`) :
+  /// 1. (déjà tenté en amont) `SpecializationService.peekShowcase()` → axe
+  ///    pilotant de la branche.
   /// 2. Fallback : `CapabilityClamps.pickOverloadAxis` (standard Phase 3
   ///    capability profile).
   /// Les axes [excludeAxes] (déjà couverts par milestones) sont retirés du

@@ -9,6 +9,7 @@ import '../career/models/challenge.dart';
 import '../career/models/level_milestone.dart';
 import '../career/models/phrase_bank.dart';
 import '../career/services/generation/career_session_generator.dart';
+import '../career/services/specialization_service.dart';
 import '../l10n/app_localizations.dart';
 import '../main.dart' show milestoneService;
 import '../models/punishment.dart';
@@ -319,6 +320,12 @@ class SessionController extends ChangeNotifier {
   /// (sessions hors carrière).
   final SpecializationAllocation? _specialization;
 
+  /// Service spécialisation — pour consommer la tête de la file showcase
+  /// au `_finish` quand le défi de la séance a effectivement matché la
+  /// branche fraîchement boostée (cf. spec § 5.1 cascade). Null hors
+  /// carrière (le SessionController fonctionne sans consume).
+  final SpecializationService? _specializationService;
+
   /// Probabilité par minute qu'une mini-punition inopinée se déclenche en
   /// cours de séance. Dérivée de la personnalité du coach (cf.
   /// `Coach.miniPunishmentRate`) ; 0 = jamais (sessions hors carrière /
@@ -379,6 +386,7 @@ class SessionController extends ChangeNotifier {
     List<double>? staminaProfile,
     HoldVerifier? holdVerifier,
     SpecializationAllocation? specialization,
+    SpecializationService? specializationService,
     double miniPunishmentRate = 0.0,
     double seedHumiliationSession = 0.0,
     int careerLevel = 0,
@@ -402,6 +410,7 @@ class SessionController extends ChangeNotifier {
         _staminaProfile = staminaProfile,
         _holdVerifier = holdVerifier,
         _specialization = specialization,
+        _specializationService = specializationService,
         _miniPunishmentRate = miniPunishmentRate,
         _seedHumiliationSession = seedHumiliationSession,
         _careerLevel = careerLevel,
@@ -1455,6 +1464,22 @@ class SessionController extends ChangeNotifier {
     }
   }
 
+  /// Phase finale défis — consume la tête de la file showcase si la
+  /// branche du défi de la séance matche. No-op hors carrière (pas de
+  /// service) ou si le défi n'a pas tourné (`_activeChallenge == null`
+  /// ou `_challengeOutcome == null`).
+  Future<void> _consumeShowcaseIfMatched() async {
+    final svc = _specializationService;
+    if (svc == null) return;
+    final ch = _activeChallenge;
+    if (ch == null || _challengeOutcome == null) return;
+    final branch = ch.branch;
+    if (branch == null) return;
+    final head = await svc.peekShowcase();
+    if (head != branch) return;
+    await svc.consumeShowcase(branch);
+  }
+
   void _applyChallengeOutcome() {
     final outcome = _challengeOutcome;
     if (outcome == null) return;
@@ -1604,6 +1629,13 @@ class SessionController extends ChangeNotifier {
     // (déjà compté par l'outcome). Idempotent : une milestone déjà
     // acquittée est ignorée.
     await _acquitMilestonesViaChallenge();
+
+    // Phase finale défis — consume la tête de la file showcase si la
+    // branche du défi de la séance matche. Toutes les voies de fin
+    // honorent la dette (cf. spec § 5.1) : fail, succès net, succès
+    // étendu, skipped, timeout. La joueuse a essayé sur la branche
+    // fraîchement boostée — la dette est honorée peu importe l'outcome.
+    await _consumeShowcaseIfMatched();
     if (!_session.noStats) {
       // Repersiste l'obédiance si elle a bougé via l'outcome défi
       // (le `setObedienceLevel` ci-dessus a été appelé AVANT
