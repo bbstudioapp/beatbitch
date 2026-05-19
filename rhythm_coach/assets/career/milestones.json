@@ -198,25 +198,6 @@
       ]
     },
     {
-      "id": "intro_rhythm_sustained",
-      "level": 3,
-      "displayLabel": "Rythme soutenu — tiens la cadence",
-      "unlocks": ["rhythm_head_mid_sustained"],
-      "requires": [
-        "basics"
-      ],
-      "requiresCapability": [
-        {"axis": "rhythm.motion_streak", "min": 20}
-      ],
-      "branches": ["rythmeBiffle"],
-      "sequence": [
-        {"time": 0,  "text": "Aujourd'hui tu vas apprendre à tenir une cadence longue. Échauffe doucement.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 80, "duration": 12},
-        {"time": 12, "text": "Petit souffle, prépare-toi. Ce qui vient est long.", "mode": "breath", "duration": 6},
-        {"time": 18, "text": "Maintenant tu vas pomper sans t'arrêter, plus d'une minute. Pas de pauses. Tiens la cadence jusqu'au bout.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 90, "duration": 70},
-        {"time": 88, "text": "Tu as tenu, sans casser. Reprends ton souffle.", "mode": "breath", "duration": 12}
-      ]
-    },
-    {
       "id": "intro_hold_throat_short",
       "level": 6,
       "displayLabel": "Première gorge tenue",
@@ -271,44 +252,6 @@
       ]
     },
     {
-      "id": "intro_hold_throat_long",
-      "level": 8,
-      "displayLabel": "Gorge tenue longue",
-      "unlocks": ["throat_hold_long"],
-      "requires": ["throat_hold_short"],
-      "requiresCapability": [
-        {"axis": "hold.throat.streak", "min": 2}
-      ],
-      "branches": ["endurance", "profondeur"],
-      "sequence": [
-        {"time": 0,  "text": "Plus longtemps aujourd'hui.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 110, "duration": 12},
-        {"time": 12, "text": "Tiens-la dix secondes pour commencer.", "mode": "hold", "to": "throat", "duration": 10},
-        {"time": 22, "text": "Respire bien.", "mode": "breath", "duration": 10},
-        {"time": 32, "text": "Maintenant quinze. Tu vas plus loin que jamais.", "mode": "hold", "to": "throat", "duration": 15},
-        {"time": 47, "text": "Très bien. Lèche pour récupérer.", "mode": "lick", "from": "head", "to": "mid", "bpm": 80, "duration": 12}
-      ]
-    },
-    {
-      "id": "intro_biffle_fast",
-      "level": 9,
-      "displayLabel": "Biffles rapides",
-      "unlocks": ["biffle_fast"],
-      "requires": ["biffle_basic"],
-      "requiresCapability": [
-        {"axis": "biffle.streak", "min": 10}
-      ],
-      "branches": [
-        "rythmeBiffle"
-      ],
-      "requiresHands": true,
-      "sequence": [
-        {"time": 0,  "text": "Échauffement avant le tempo rapide.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 110, "duration": 10},
-        {"time": 10, "text": "Coups rapides. Tiens bon.", "mode": "biffle", "bpm": 140, "duration": 15},
-        {"time": 25, "text": "Respire.", "mode": "breath", "duration": 10},
-        {"time": 35, "text": "Lèche pour finir.", "mode": "lick", "from": "head", "to": "mid", "bpm": 80, "duration": 10}
-      ]
-    },
-    {
       "id": "intro_throat_pulse",
       "level": 10,
       "displayLabel": "Gorge en mouvement",
@@ -334,7 +277,7 @@
       "level": 11,
       "displayLabel": "Premier hold à fond",
       "unlocks": ["full_hold_short"],
-      "requires": ["throat_hold_long"],
+      "requires": ["throat_hold_short"],
       "requiresCapability": [
         {"axis": "hold.throat.streak", "min": 5}
       ],
@@ -367,24 +310,6 @@
       ]
     },
     {
-      "id": "intro_hold_full_long",
-      "level": 13,
-      "displayLabel": "Hold à fond long",
-      "unlocks": ["full_hold_long"],
-      "requires": ["full_pulse"],
-      "requiresCapability": [
-        {"axis": "hold.full.streak", "min": 3}
-      ],
-      "branches": ["endurance", "profondeur"],
-      "sequence": [
-        {"time": 0,  "text": "Plus profond plus longtemps.", "mode": "rhythm", "from": "mid", "to": "full", "bpm": 90, "duration": 12},
-        {"time": 12, "text": "Dix secondes nez dans le ventre.", "mode": "hold", "to": "full", "duration": 10},
-        {"time": 22, "text": "Respire bien.", "mode": "breath", "duration": 12},
-        {"time": 34, "text": "Maintenant quinze. Tu vas plus loin que jamais.", "mode": "hold", "to": "full", "duration": 15},
-        {"time": 49, "text": "Bien fait. Lèche pour récupérer.", "mode": "lick", "from": "head", "to": "mid", "bpm": 80, "duration": 12}
-      ]
-    },
-    {
       "id": "intro_beg_throat",
       "level": 14,
       "displayLabel": "Supplique gorge",
@@ -403,25 +328,6 @@
         {"time": 42, "text": "Respire, mais garde ta gorge ouverte et ta langue dehors.", "mode": "beg", "duration": 8},
         {"time": 50, "text": "Supplie-moi de rester là.", "mode": "beg", "to": "throat", "duration": 10},
         {"time": 60, "text": "Bonne petite.", "mode": "breath", "duration": 5}
-      ]
-    },
-    {
-      "id": "intro_rhythm_extreme",
-      "level": 15,
-      "displayLabel": "Tempo extrême",
-      "unlocks": ["rhythm_extreme"],
-      "requires": ["throat_pulse"],
-      "requiresCapability": [
-        {"axis": "rhythm.bpm_ceil.throat", "min": 110}
-      ],
-      "branches": [
-        "rythmeBiffle"
-      ],
-      "sequence": [
-        {"time": 0,  "text": "Aujourd'hui c'est rapide.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 130, "duration": 10},
-        {"time": 10, "text": "Plus vite encore.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 165, "duration": 30},
-        {"time": 40, "text": "Respire.", "mode": "breath", "duration": 10},
-        {"time": 50, "text": "Lèche.", "mode": "lick", "from": "head", "to": "mid", "bpm": 80, "duration": 10}
       ]
     },
     {
