@@ -2,9 +2,11 @@
   "displayLabel": "First deep hold",
   "stepTexts": {
     "0": "Today you take it all.",
-    "10": "Hold full. Two seconds.",
-    "12": "Breathe deeply.",
-    "22": "Again. Three seconds.",
-    "25": "Very good. Rest."
+    "10": "Hold full. Three seconds.",
+    "13": "Breathe deeply.",
+    "23": "Again. Six seconds.",
+    "29": "Breathe all the way.",
+    "41": "Last one. Ten seconds, nose to the belly.",
+    "51": "Very good. Rest."
   }
 }

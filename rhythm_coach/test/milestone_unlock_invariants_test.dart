@@ -95,6 +95,120 @@ void main() {
     }
   });
 
+  // Unlocks « scalaires » : ils débloquent un palier de durée ou de BPM.
+  // Garde-fou : la séquence de la milestone qui les accorde doit faire
+  // *atteindre* (ou *dépasser*) le seuil que l'unlock ouvre. Sinon le
+  // déblocage représente quelque chose que la joueuse n'a jamais éprouvé
+  // — c'est l'audit qui motive l'ajout de ce test.
+  //
+  // Convention :
+  // - `mustReach` : l'unlock ouvre un palier qui *va jusqu'à* `value`
+  //   (la séquence doit contenir un step ≥ value pour le montrer).
+  // - `mustExceed` : l'unlock ouvre un palier *au-delà* de `value`
+  //   (la séquence doit contenir un step > value pour valider le saut).
+  //
+  // Le `field` discrimine la grandeur : `duration` ou `bpm`. Le `match`
+  // filtre les steps pertinents (mode + position le cas échéant).
+  final scalarUnlocks = <String, _ScalarUnlockSpec>{
+    'throat_hold_short': const _ScalarUnlockSpec(
+      mode: 'hold',
+      position: 'throat',
+      field: 'duration',
+      mustReach: 10,
+    ),
+    'throat_hold_long': const _ScalarUnlockSpec(
+      mode: 'hold',
+      position: 'throat',
+      field: 'duration',
+      mustExceed: 10,
+    ),
+    'full_hold_short': const _ScalarUnlockSpec(
+      mode: 'hold',
+      position: 'full',
+      field: 'duration',
+      mustReach: 10,
+    ),
+    'full_hold_long': const _ScalarUnlockSpec(
+      mode: 'hold',
+      position: 'full',
+      field: 'duration',
+      mustExceed: 10,
+    ),
+    'hold_mid_short': const _ScalarUnlockSpec(
+      mode: 'hold',
+      position: 'mid',
+      field: 'duration',
+      mustReach: 10,
+    ),
+    'biffle_basic': const _ScalarUnlockSpec(
+      mode: 'biffle',
+      field: 'bpm',
+      mustReach: 100,
+    ),
+    'biffle_fast': const _ScalarUnlockSpec(
+      mode: 'biffle',
+      field: 'bpm',
+      mustExceed: 100,
+    ),
+    'rhythm_extreme': const _ScalarUnlockSpec(
+      mode: 'rhythm',
+      field: 'bpm',
+      mustReach: 160,
+    ),
+    'rhythm_head_mid_sustained': const _ScalarUnlockSpec(
+      mode: 'rhythm',
+      field: 'duration',
+      mustExceed: 60,
+    ),
+  };
+
+  test(
+      'chaque unlock scalaire atteint son seuil dans la milestone qui le débloque',
+      () {
+    for (final entry in scalarUnlocks.entries) {
+      final serialized = entry.key;
+      final spec = entry.value;
+      final granterIds = granters[serialized];
+      expect(granterIds, isNotNull,
+          reason: 'unlock "$serialized" n\'est accordé par aucune milestone');
+      expect(granterIds!, hasLength(1),
+          reason: 'unlock scalaire "$serialized" accordé par '
+              '${granterIds.length} milestones — un seul producteur attendu');
+      final mid = granterIds.single;
+      final milestone = milestones.firstWhere((m) => m['id'] == mid);
+      final steps =
+          (milestone['sequence'] as List).cast<Map<String, dynamic>>();
+      final matching = steps.where((s) {
+        if (s['mode'] != spec.mode) return false;
+        if (spec.position != null && s['to'] != spec.position) return false;
+        return s[spec.field] is num;
+      });
+      expect(matching, isNotEmpty,
+          reason: 'milestone "$mid" : aucun step ne matche '
+              '(mode=${spec.mode}${spec.position != null ? ', to=${spec.position}' : ''}, '
+              'field=${spec.field}) — vérifier la séquence');
+      final maxValue = matching
+          .map((s) => (s[spec.field] as num).toDouble())
+          .reduce((a, b) => a > b ? a : b);
+      if (spec.mustReach != null) {
+        expect(maxValue, greaterThanOrEqualTo(spec.mustReach!),
+            reason:
+                'milestone "$mid" débloque "$serialized" qui ouvre un palier '
+                'jusqu\'à ${spec.mustReach} ${spec.field} ; la séquence ne va '
+                'que jusqu\'à $maxValue. Monter la séquence ou descendre le seuil '
+                'côté générateur.');
+      }
+      if (spec.mustExceed != null) {
+        expect(maxValue, greaterThan(spec.mustExceed!.toDouble()),
+            reason:
+                'milestone "$mid" débloque "$serialized" qui ouvre un palier '
+                'au-delà de ${spec.mustExceed} ${spec.field} ; la séquence ne va '
+                'que jusqu\'à $maxValue. La milestone doit dépasser le seuil '
+                'qu\'elle débloque, sinon l\'unlock ne représente rien.');
+      }
+    }
+  });
+
   test('chaque unlock accordé est consommé quelque part', () {
     // Source Dart à scanner pour les références `UnlockKey.<name>`. On
     // exclut le debug screen (qui itère `UnlockKey.values`) et l'enum
@@ -132,5 +246,25 @@ void main() {
               '(requires_unlock dans random_comments.json), ni prérequis '
               "d'une autre milestone");
     }
+  });
+}
+
+/// Spec d'un unlock scalaire à auditer dans le test ci-dessus. `mode`
+/// (et `position` optionnelle) filtrent les steps pertinents ; `field`
+/// désigne la grandeur lue (`duration` ou `bpm`). Exactement un de
+/// [mustReach] / [mustExceed] doit être fourni.
+class _ScalarUnlockSpec {
+  final String mode;
+  final String? position;
+  final String field;
+  final num? mustReach;
+  final num? mustExceed;
+
+  const _ScalarUnlockSpec({
+    required this.mode,
+    this.position,
+    required this.field,
+    this.mustReach,
+    this.mustExceed,
   });
 }

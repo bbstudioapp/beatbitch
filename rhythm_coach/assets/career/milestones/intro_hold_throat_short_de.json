@@ -2,9 +2,11 @@
   "displayLabel": "Erster Kehlen-Hold",
   "stepTexts": {
     "0": "Heute hältst du in der Kehle. Wärm dich auf.",
-    "10": "Halt in der Kehle. Zwei Sekunden.",
-    "12": "Atme schön.",
-    "20": "Nochmal, länger. Drei Sekunden.",
-    "23": "Gut. Ruh dich aus."
+    "10": "Halt in der Kehle. Drei Sekunden.",
+    "13": "Atme.",
+    "21": "Nochmal. Sechs Sekunden diesmal.",
+    "27": "Atme tief.",
+    "37": "Der letzte. Zehn Sekunden. Du schaffst das.",
+    "47": "Gut. Leck dich zur Erholung."
   }
 }

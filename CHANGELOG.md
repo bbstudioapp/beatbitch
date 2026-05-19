@@ -4,6 +4,10 @@
 
 ## [Non publié]
 
+### Corrigé
+- **Milestones « palier scalaire » recalibrées** — pour chaque unlock qui ouvre une durée ou un BPM (`throat_hold_short/long`, `full_hold_short/long`, `hold_mid_short`, `biffle_basic`), la séquence de la milestone qui l'accorde fait désormais effectivement atteindre (ou dépasser) le seuil que l'unlock débloque. Avant : `intro_hold_throat_long` allait à 8 s alors que l'unlock « long » est censé ouvrir > 10 s — la joueuse débloquait quelque chose qu'elle n'avait jamais éprouvé. Garde-fou structurel ajouté (`test/milestone_unlock_invariants_test.dart`) qui casse le build si un unlock scalaire ne matche plus son seuil.
+- **Hold mid borné à 10 s tant que throat n'est pas débloqué** — `intro_hold_mid` n'a pas de palier `long` séparé, et la cascade `tryDegrade` ne pouvait pas borner mid comme elle borne throat/full > 10 s. Le générateur tirait jusqu'à 30 s en hold mid avec juste `hold_mid_short` acquis, alors que la milestone ne montre que jusqu'à 10 s. Cap explicite dans `HoldRules.build` : au-delà il faut tenir throat, pas mid.
+
 ## [0.4.1] — 2026-05-17
 
 Correctif ciblé d'un blocage de progression carrière apparu après l'update v0.4.0.

@@ -2,9 +2,11 @@
   "displayLabel": "Erster Tief-Hold",
   "stepTexts": {
     "0": "Heute nimmst du alles.",
-    "10": "Halt ganz. Zwei Sekunden.",
-    "12": "Atme tief.",
-    "22": "Nochmal. Drei Sekunden.",
-    "25": "Sehr gut. Ruh dich aus."
+    "10": "Halt ganz. Drei Sekunden.",
+    "13": "Atme tief.",
+    "23": "Nochmal. Sechs Sekunden.",
+    "29": "Atme ganz tief.",
+    "41": "Der letzte. Zehn Sekunden, Nase am Bauch.",
+    "51": "Sehr gut. Ruh dich aus."
   }
 }

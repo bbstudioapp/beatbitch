@@ -2,9 +2,9 @@
   "displayLabel": "Langer Kehlen-Hold",
   "stepTexts": {
     "0": "Länger heute.",
-    "12": "Halt ihn sechs Sekunden.",
-    "18": "Atme.",
-    "26": "Jetzt acht Sekunden.",
-    "34": "Sehr gut. Leck dich zur Erholung."
+    "12": "Halt ihn zehn Sekunden zum Anfang.",
+    "22": "Atme schön.",
+    "32": "Jetzt fünfzehn. Weiter als je zuvor.",
+    "47": "Sehr gut. Leck dich zur Erholung."
   }
 }

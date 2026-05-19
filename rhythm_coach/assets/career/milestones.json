@@ -141,12 +141,12 @@
       "branches": ["endurance", "profondeur"],
       "sequence": [
         {"time": 0,  "text": "Plus profond aujourd'hui. Tu vas aller toucher l'entrée de la gorge avec le bout de ma queue. Prends-la loin dans la bouche.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 90, "duration": 12},
-        {"time": 12, "text": "Tiens-le là. Deux secondes.", "mode": "hold", "to": "mid", "duration": 3},
+        {"time": 12, "text": "Tiens-le là. Trois secondes.", "mode": "hold", "to": "mid", "duration": 3},
         {"time": 15, "text": "Respire. Garde-la profonde.", "mode": "breath", "duration": 6},
-        {"time": 21, "text": "Encore. Trois secondes cette fois.", "mode": "hold", "to": "mid", "duration": 4},
-        {"time": 25, "text": "Bien. Tu le fais tellement bien qu'on en fait une de plus.", "mode": "breath", "duration": 5},
-        {"time": 30, "text": "Dernière. Trois secondes.", "mode": "hold", "to": "mid", "duration": 4},
-        {"time": 34, "text": "Bien fait. Lèche.", "mode": "lick", "from": "head", "to": "head", "bpm": 80, "duration": 10}
+        {"time": 21, "text": "Encore. Six secondes cette fois.", "mode": "hold", "to": "mid", "duration": 6},
+        {"time": 27, "text": "Bien. Respire.", "mode": "breath", "duration": 8},
+        {"time": 35, "text": "Dernière. Dix secondes. Garde-la immobile.", "mode": "hold", "to": "mid", "duration": 10},
+        {"time": 45, "text": "Bien fait. Lèche.", "mode": "lick", "from": "head", "to": "head", "bpm": 80, "duration": 10}
       ]
     },
     {
@@ -161,8 +161,9 @@
       "branches": ["rythmeBiffle"],
       "sequence": [
         {"time": 0,  "text": "Ouvre la bouche. Tu vas recevoir.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 90, "duration": 8},
-        {"time": 8,  "text": "Coups de queue. Reçois-les.", "mode": "biffle", "bpm": 45, "duration": 12},
-        {"time": 20, "text": "Bien. Lèche pour finir.", "mode": "lick", "from": "head", "to": "head", "bpm": 70, "duration": 8}
+        {"time": 8,  "text": "Coups de queue, lents. Reçois-les.", "mode": "biffle", "bpm": 50, "duration": 10},
+        {"time": 18, "text": "Plus vite maintenant.", "mode": "biffle", "bpm": 100, "duration": 10},
+        {"time": 28, "text": "Bien. Lèche pour finir.", "mode": "lick", "from": "head", "to": "head", "bpm": 70, "duration": 8}
       ]
     },
     {
@@ -227,10 +228,12 @@
       "branches": ["endurance", "profondeur"],
       "sequence": [
         {"time": 0,  "text": "Aujourd'hui tu vas tenir gorge. Échauffe.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 100, "duration": 10},
-        {"time": 10, "text": "Tiens gorge. Deux secondes.", "mode": "hold", "to": "throat", "duration": 2},
-        {"time": 12, "text": "Respire bien.", "mode": "breath", "duration": 8},
-        {"time": 20, "text": "Encore, plus longtemps. Trois secondes.", "mode": "hold", "to": "throat", "duration": 3},
-        {"time": 23, "text": "Bien. Repose-toi.", "mode": "lick", "from": "head", "to": "mid", "bpm": 80, "duration": 10}
+        {"time": 10, "text": "Tiens gorge. Trois secondes.", "mode": "hold", "to": "throat", "duration": 3},
+        {"time": 13, "text": "Respire.", "mode": "breath", "duration": 8},
+        {"time": 21, "text": "Encore. Six secondes cette fois.", "mode": "hold", "to": "throat", "duration": 6},
+        {"time": 27, "text": "Respire profondément.", "mode": "breath", "duration": 10},
+        {"time": 37, "text": "Dernière. Dix secondes. Tu peux le faire.", "mode": "hold", "to": "throat", "duration": 10},
+        {"time": 47, "text": "Bien. Lèche pour récupérer.", "mode": "lick", "from": "head", "to": "mid", "bpm": 80, "duration": 10}
       ]
     },
     {
@@ -279,10 +282,10 @@
       "branches": ["endurance", "profondeur"],
       "sequence": [
         {"time": 0,  "text": "Plus longtemps aujourd'hui.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 110, "duration": 12},
-        {"time": 12, "text": "Tiens-la six secondes.", "mode": "hold", "to": "throat", "duration": 6},
-        {"time": 18, "text": "Respire.", "mode": "breath", "duration": 8},
-        {"time": 26, "text": "Maintenant huit secondes.", "mode": "hold", "to": "throat", "duration": 8},
-        {"time": 34, "text": "Très bien. Lèche pour récupérer.", "mode": "lick", "from": "head", "to": "mid", "bpm": 80, "duration": 12}
+        {"time": 12, "text": "Tiens-la dix secondes pour commencer.", "mode": "hold", "to": "throat", "duration": 10},
+        {"time": 22, "text": "Respire bien.", "mode": "breath", "duration": 10},
+        {"time": 32, "text": "Maintenant quinze. Tu vas plus loin que jamais.", "mode": "hold", "to": "throat", "duration": 15},
+        {"time": 47, "text": "Très bien. Lèche pour récupérer.", "mode": "lick", "from": "head", "to": "mid", "bpm": 80, "duration": 12}
       ]
     },
     {
@@ -338,10 +341,12 @@
       "branches": ["endurance", "profondeur"],
       "sequence": [
         {"time": 0,  "text": "Aujourd'hui tu vas tout prendre.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 100, "duration": 10},
-        {"time": 10, "text": "Tiens à fond. Deux secondes.", "mode": "hold", "to": "full", "duration": 2},
-        {"time": 12, "text": "Respire profondément.", "mode": "breath", "duration": 10},
-        {"time": 22, "text": "Encore. Trois secondes.", "mode": "hold", "to": "full", "duration": 3},
-        {"time": 25, "text": "Très bien. Repose-toi.", "mode": "lick", "from": "head", "to": "head", "bpm": 70, "duration": 12}
+        {"time": 10, "text": "Tiens à fond. Trois secondes.", "mode": "hold", "to": "full", "duration": 3},
+        {"time": 13, "text": "Respire profondément.", "mode": "breath", "duration": 10},
+        {"time": 23, "text": "Encore. Six secondes.", "mode": "hold", "to": "full", "duration": 6},
+        {"time": 29, "text": "Respire à fond.", "mode": "breath", "duration": 12},
+        {"time": 41, "text": "Dernière. Dix secondes nez dans le ventre.", "mode": "hold", "to": "full", "duration": 10},
+        {"time": 51, "text": "Très bien. Repose-toi.", "mode": "lick", "from": "head", "to": "head", "bpm": 70, "duration": 12}
       ]
     },
     {
@@ -373,10 +378,10 @@
       "branches": ["endurance", "profondeur"],
       "sequence": [
         {"time": 0,  "text": "Plus profond plus longtemps.", "mode": "rhythm", "from": "mid", "to": "full", "bpm": 90, "duration": 12},
-        {"time": 12, "text": "Tiens six secondes.", "mode": "hold", "to": "full", "duration": 6},
-        {"time": 18, "text": "Respire bien.", "mode": "breath", "duration": 10},
-        {"time": 28, "text": "Maintenant dix secondes.", "mode": "hold", "to": "full", "duration": 10},
-        {"time": 38, "text": "Bien fait. Lèche pour récupérer.", "mode": "lick", "from": "head", "to": "mid", "bpm": 80, "duration": 12}
+        {"time": 12, "text": "Dix secondes nez dans le ventre.", "mode": "hold", "to": "full", "duration": 10},
+        {"time": 22, "text": "Respire bien.", "mode": "breath", "duration": 12},
+        {"time": 34, "text": "Maintenant quinze. Tu vas plus loin que jamais.", "mode": "hold", "to": "full", "duration": 15},
+        {"time": 49, "text": "Bien fait. Lèche pour récupérer.", "mode": "lick", "from": "head", "to": "mid", "bpm": 80, "duration": 12}
       ]
     },
     {
