@@ -507,39 +507,51 @@ class AppLocalizationsEn extends AppLocalizations {
   String get challengePassButton => 'SKIP';
 
   @override
-  String get challengeExtendButton => 'MORE';
+  String get challengeGoButton => 'GO';
 
   @override
-  String get challengeStopButton => 'STOP';
+  String get challengeExtendButton => 'I HOLD';
+
+  @override
+  String get challengeStopButton => 'I STOP';
 
   @override
   String get challengeTutorialBanner =>
-      'First challenge: you\'ll hold a position for the requested time. At the threshold, you can stop or extend. Tap SKIP if you\'d rather skip it.';
+      'First challenge: you\'ll hold a position for the requested time. Tap GO when ready, or SKIP to skip it.';
 
   @override
-  String get challengeAttemptDefault => 'Today we push. Ready?';
+  String challengeBannerCountdown(int digit) {
+    return '$digit';
+  }
+
+  @override
+  String get challengeAttemptDefault =>
+      'Challenge: we\'re pushing your limit. Tap GO when ready, I\'ll count three two one before we start.';
 
   @override
   String get challengeAttemptTutorialHoldThroat =>
-      'First challenge: you\'ll hold deep ten seconds. When I say go, go.';
+      'First challenge: you\'ll hold deep for ten seconds. Tap GO when ready, I\'ll count three two one before we start. At the threshold, two buttons will appear to hold longer or stop.';
 
   @override
-  String get challengeExtensionDefault => 'You can stay there if you want.';
+  String get challengeExtensionDefault =>
+      'You can stay longer if you want. Buttons will appear.';
 
   @override
-  String get challengeSuccessDefault => 'Held it. Good.';
+  String get challengeSuccessDefault => 'You held it all the way. Good girl.';
 
   @override
   String get challengeStopDefault => 'You chose to stop. Good.';
 
   @override
-  String get challengeFailDefault => 'You could have stayed if you\'d held it.';
+  String get challengeFailDefault =>
+      'You broke before the threshold. No worries, you\'ll get it next time.';
 
   @override
-  String get challengeTimeoutDefault => 'Time\'s up. Well done.';
+  String get challengeTimeoutDefault => 'Time\'s up — you held it. Good.';
 
   @override
-  String get challengeSkipDefault => 'As you wish.';
+  String get challengeSkipDefault =>
+      'As you wish, we\'ll keep it for next time.';
 
   @override
   String challengeBannerHoldThroat(int seconds) {

@@ -276,6 +276,21 @@ class SessionController extends ChangeNotifier {
   Challenge? _activeChallenge;
   Challenge? get activeChallenge => _activeChallenge;
 
+  /// Seconde absolue à laquelle la phase `countdown` (3-2-1) démarre.
+  /// `null` tant qu'on n'y est pas. Sert au calcul du chiffre courant
+  /// (3 → 2 → 1) côté UI et au déclenchement TTS dans `_updateChallengePhase`.
+  int? _challengeCountdownStartedAtSec;
+  int? get challengeCountdownStartedAtSec => _challengeCountdownStartedAtSec;
+
+  /// Dernier chiffre du countdown énoncé en TTS. Évite de dire 2× le
+  /// même chiffre dans le même tick (le ticker tourne à 200 ms).
+  int _challengeCountdownLastDigitSpoken = -1;
+
+  /// Durée fixe du countdown 3-2-1 en secondes. Dit en TTS pendant les
+  /// 3 dernières secondes du breath (auto-trigger) ou immédiatement
+  /// après l'appui sur le bouton `GO`.
+  static const int _challengeCountdownDurationSec = 3;
+
   /// `true` quand un step défi est en cours et qu'un appui sur le bouton
   /// FAIL ne doit PAS déclencher le flow fail standard mais être routé vers
   /// la machine d'états défi (cf. spec § 4.4 — bouton FAIL repurposé).
@@ -867,6 +882,8 @@ class SessionController extends ChangeNotifier {
     _challengeOutcome = null;
     _challengeCurrentText = null;
     _activeChallenge = null;
+    _challengeCountdownStartedAtSec = null;
+    _challengeCountdownLastDigitSpoken = -1;
     _postChallengeBreathUntilSec = null;
     notifyListeners();
   }
@@ -1345,7 +1362,7 @@ class SessionController extends ChangeNotifier {
     final stepStart = _session.challengeStepTime;
     if (breathStart == null || stepStart == null) return;
     final t = elapsedSeconds;
-    // Entrée en phase `breath` (annonce coach + bouton PASSE visible).
+    // Entrée en phase `breath` (annonce coach + boutons PASSE / GO visibles).
     if (phase == ChallengePhase.none && t >= breathStart && t < stepStart) {
       _activeChallenge = ch;
       _challengePhase = ChallengePhase.breath;
@@ -1354,11 +1371,25 @@ class SessionController extends ChangeNotifier {
       _speakChallengePhraseIfAny();
       return;
     }
-    // Entrée en phase `live` au moment précis où le step défi commence.
-    if (phase == ChallengePhase.breath && t >= stepStart) {
-      _challengePhase = ChallengePhase.live;
-      _challengeStepStartedAtSec = stepStart;
-      _challengeCurrentText = null;
+    // Auto-trigger du countdown 3-2-1 à `stepStart - 3 s` (= 3 dernières
+    // secondes du breath) si la joueuse n'a pas pressé `GO`. Cf. spec § 4.3.
+    if (phase == ChallengePhase.breath &&
+        t >= stepStart - _challengeCountdownDurationSec) {
+      _enterChallengeCountdown();
+      // Pas de return : on enchaîne sur la logique countdown ci-dessous.
+    }
+    // Phase `countdown` : dire 3-2-1 en TTS et passer à `live` à 3 s.
+    if (_challengePhase == ChallengePhase.countdown) {
+      final countdownStart = _challengeCountdownStartedAtSec;
+      if (countdownStart != null) {
+        final elapsedInCountdown = t - countdownStart;
+        _maybeSpeakCountdownDigit(elapsedInCountdown);
+        if (elapsedInCountdown >= _challengeCountdownDurationSec) {
+          _challengePhase = ChallengePhase.live;
+          _challengeStepStartedAtSec = t;
+          _challengeCurrentText = null;
+        }
+      }
       return;
     }
     // À partir d'ici, on est forcément après le step défi (phase live,
@@ -1415,13 +1446,69 @@ class SessionController extends ChangeNotifier {
     }
   }
 
-  /// Bouton `PASSE` pendant le breath de countdown — skip le défi entier.
+  /// Bouton `PASSE` pendant le breath du défi — skip le défi entier.
   /// Outcome `skipped` (malus obed -3, aucun signal capability). Le skip
   /// du step défi est fait par `_completeChallenge` via
   /// `_startPostChallengeBreath` (qui appelle aussi `_skipPastChallengeStep`).
   void triggerChallengePass() {
     if (_challengePhase != ChallengePhase.breath) return;
     _completeChallenge(ChallengeOutcome.skipped);
+  }
+
+  /// Bouton `GO` pendant le breath du défi — démarre le countdown 3-2-1
+  /// immédiatement, sans attendre la fin du breath. La joueuse contrôle
+  /// son rythme : dès qu'elle est prête, elle tape `GO` et 3 s plus tard
+  /// le step défi démarre.
+  void triggerChallengeGo() {
+    if (_challengePhase != ChallengePhase.breath) return;
+    final stepStart = _session.challengeStepTime;
+    if (stepStart == null) return;
+    // Avance la timeline pour amener `elapsedSeconds` à `stepStart - 3 s`
+    // (= début du countdown). Le step défi sera consommé naturellement
+    // par `_checkSteps` 3 s plus tard.
+    final targetT = stepStart - _challengeCountdownDurationSec;
+    final advance = targetT - elapsedSeconds;
+    if (advance > 0) {
+      _timelineOffset += Duration(seconds: advance);
+    }
+    _enterChallengeCountdown();
+    notifyListeners();
+  }
+
+  /// Bascule en phase `countdown` (3-2-1 TTS + UI). Le chiffre TTS est
+  /// énoncé par `_updateChallengePhase` à chaque seconde via
+  /// `_maybeSpeakCountdownDigit`.
+  void _enterChallengeCountdown() {
+    if (_challengePhase != ChallengePhase.breath) return;
+    _challengePhase = ChallengePhase.countdown;
+    _challengeCountdownStartedAtSec = elapsedSeconds;
+    _challengeCountdownLastDigitSpoken = -1;
+    _challengeCurrentText = null;
+  }
+
+  /// Chiffre courant du countdown (3, 2, 1) ou `null` si on n'est pas en
+  /// phase countdown. Exposé pour le banner UI qui affiche le chiffre
+  /// en grand.
+  int? get challengeCountdownDigit {
+    if (_challengePhase != ChallengePhase.countdown) return null;
+    final start = _challengeCountdownStartedAtSec;
+    if (start == null) return null;
+    final elapsedInCountdown = elapsedSeconds - start;
+    final digit = _challengeCountdownDurationSec - elapsedInCountdown;
+    if (digit < 1 || digit > _challengeCountdownDurationSec) return null;
+    return digit;
+  }
+
+  /// Énonce le chiffre courant du countdown en TTS si on ne l'a pas
+  /// déjà fait pour cette seconde. Skip si le TTS est déjà occupé (le
+  /// coach finit peut-être encore sa phrase d'annonce du défi).
+  void _maybeSpeakCountdownDigit(int elapsedInCountdown) {
+    final digit = _challengeCountdownDurationSec - elapsedInCountdown;
+    if (digit < 1 || digit > _challengeCountdownDurationSec) return;
+    if (_challengeCountdownLastDigitSpoken == digit) return;
+    _challengeCountdownLastDigitSpoken = digit;
+    if (_tts.isSpeaking) return;
+    _speakScripted(digit.toString());
   }
 
   /// Bouton `JE TIENS ENCORE` — bascule en mode ouvert, +1 humil/+1 obed
@@ -2065,7 +2152,10 @@ class SessionController extends ChangeNotifier {
       final isExploratory = _activeChallenge?.isExploratory ?? false;
       switch (_challengePhase) {
         case ChallengePhase.breath:
-          triggerChallengePass();
+        case ChallengePhase.countdown:
+          // Bouton FAIL pendant breath ou countdown = équivalent PASSE
+          // (la joueuse n'a pas encore commencé le défi).
+          _completeChallenge(ChallengeOutcome.skipped);
           return;
         case ChallengePhase.live:
         case ChallengePhase.preExtend:

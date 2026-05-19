@@ -1399,6 +1399,7 @@ class _FailButton extends StatelessWidget {
 ///   activement en cours, l'utilisatrice ne décide rien).
 class _ChallengeButtons extends StatelessWidget {
   static const Color _passColor = Color(0xFF757575);
+  static const Color _goColor = Color(0xFFFFB300);
   static const Color _extendColor = Color(0xFF4CAF50);
   static const Color _stopColor = Color(0xFF1E88E5);
 
@@ -1410,10 +1411,27 @@ class _ChallengeButtons extends StatelessWidget {
     final t = AppLocalizations.of(context);
     final phase = controller.challengePhase;
     if (phase == ChallengePhase.breath) {
-      return _bigButton(
-        color: _passColor,
-        label: t.challengePassButton,
-        onTap: controller.triggerChallengePass,
+      // Pendant le breath : PASSE (gris) à gauche, GO (ambre) à droite —
+      // la joueuse contrôle quand démarrer.
+      return Row(
+        children: [
+          Expanded(
+            child: _bigButton(
+              color: _passColor,
+              label: t.challengePassButton,
+              onTap: controller.triggerChallengePass,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 2,
+            child: _bigButton(
+              color: _goColor,
+              label: t.challengeGoButton,
+              onTap: controller.triggerChallengeGo,
+            ),
+          ),
+        ],
       );
     }
     if (phase == ChallengePhase.atSeuil ||
@@ -1438,6 +1456,9 @@ class _ChallengeButtons extends StatelessWidget {
         ],
       );
     }
+    // Phases `countdown` / `live` / `preExtend` : pas de bouton (la
+    // décision joueuse est soit déjà prise, soit attendue plus tard au
+    // seuil).
     return const SizedBox.shrink();
   }
 
@@ -1500,6 +1521,30 @@ class _ChallengeBanner extends StatelessWidget {
     final phase = controller.challengePhase;
     final ch = controller.activeChallenge;
     final text = controller.challengeCurrentText;
+    // Phase countdown : gros chiffre central, pas d'autre texte.
+    if (phase == ChallengePhase.countdown) {
+      final digit = controller.challengeCountdownDigit;
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        decoration: BoxDecoration(
+          color: _bg,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _border, width: 2),
+        ),
+        child: Center(
+          child: Text(
+            digit?.toString() ?? '',
+            style: const TextStyle(
+              fontSize: 72,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFFFFB300),
+              height: 1.0,
+            ),
+          ),
+        ),
+      );
+    }
     final objective =
         phase == ChallengePhase.atSeuil || phase == ChallengePhase.openExtension
             ? t.challengeBannerThresholdReached

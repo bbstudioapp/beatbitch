@@ -53,8 +53,15 @@ enum ChallengePhase {
   /// Pas de défi actif (état par défaut).
   none,
 
-  /// Breath de countdown 12-15 s — bouton `PASSE` visible.
+  /// Breath du défi (~13 s) — annonce coach + boutons `PASSE` et `GO`
+  /// visibles. La joueuse peut appuyer `GO` pour démarrer le défi tout
+  /// de suite (le countdown 3-2-1 s'enclenche), ou laisser le breath se
+  /// dérouler — le countdown se lance automatiquement à `breath - 3 s`.
   breath,
+
+  /// Compte à rebours 3-2-1 (TTS + gros chiffre dans le banner). Pas de
+  /// bouton. Dure 3 s. À la fin, transition automatique vers `live`.
+  countdown,
 
   /// Défi en cours, avant `seuil - 3 s`. Aucun bouton défi visible.
   live,

@@ -1012,46 +1012,58 @@ abstract class AppLocalizations {
   /// **'PASSE'**
   String get challengePassButton;
 
+  /// No description provided for @challengeGoButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'GO'**
+  String get challengeGoButton;
+
   /// No description provided for @challengeExtendButton.
   ///
   /// In fr, this message translates to:
-  /// **'ENCORE'**
+  /// **'JE TIENS'**
   String get challengeExtendButton;
 
   /// No description provided for @challengeStopButton.
   ///
   /// In fr, this message translates to:
-  /// **'STOP'**
+  /// **'J\'ARRÊTE'**
   String get challengeStopButton;
 
   /// No description provided for @challengeTutorialBanner.
   ///
   /// In fr, this message translates to:
-  /// **'Premier défi : tu vas tenir une position le temps demandé. Au seuil, tu pourras t\'arrêter ou prolonger. Tape PASSE si tu préfères skipper.'**
+  /// **'Premier défi : tu vas tenir une position le temps demandé. Tape GO quand tu es prête, ou PASSE pour skipper.'**
   String get challengeTutorialBanner;
+
+  /// No description provided for @challengeBannerCountdown.
+  ///
+  /// In fr, this message translates to:
+  /// **'{digit}'**
+  String challengeBannerCountdown(int digit);
 
   /// No description provided for @challengeAttemptDefault.
   ///
   /// In fr, this message translates to:
-  /// **'Aujourd\'hui on pousse. Prête ?'**
+  /// **'Défi : on va pousser ta limite. Tape GO quand tu es prête, je compterai trois deux un avant de démarrer.'**
   String get challengeAttemptDefault;
 
   /// No description provided for @challengeAttemptTutorialHoldThroat.
   ///
   /// In fr, this message translates to:
-  /// **'Premier défi : tu vas tenir en gorge dix secondes. Quand je dis go, vas-y.'**
+  /// **'Premier défi : tu vas tenir en gorge dix secondes. Tape GO quand tu es prête, je compterai trois deux un avant de démarrer. Au seuil, deux boutons apparaîtront pour tenir plus longtemps ou arrêter.'**
   String get challengeAttemptTutorialHoldThroat;
 
   /// No description provided for @challengeExtensionDefault.
   ///
   /// In fr, this message translates to:
-  /// **'Tu peux rester là si tu veux.'**
+  /// **'Tu peux rester encore si tu veux. Les boutons vont apparaître.'**
   String get challengeExtensionDefault;
 
   /// No description provided for @challengeSuccessDefault.
   ///
   /// In fr, this message translates to:
-  /// **'Bien tenu.'**
+  /// **'Tu as tenu jusqu\'au bout. Bonne fille.'**
   String get challengeSuccessDefault;
 
   /// No description provided for @challengeStopDefault.
@@ -1063,19 +1075,19 @@ abstract class AppLocalizations {
   /// No description provided for @challengeFailDefault.
   ///
   /// In fr, this message translates to:
-  /// **'Tu pouvais rester si tu avais tenu.'**
+  /// **'Tu as craqué avant le seuil. Pas grave, tu y arriveras la prochaine.'**
   String get challengeFailDefault;
 
   /// No description provided for @challengeTimeoutDefault.
   ///
   /// In fr, this message translates to:
-  /// **'Temps écoulé. Bien fait.'**
+  /// **'Temps écoulé, tu as tenu. Bien.'**
   String get challengeTimeoutDefault;
 
   /// No description provided for @challengeSkipDefault.
   ///
   /// In fr, this message translates to:
-  /// **'Comme tu veux.'**
+  /// **'Comme tu veux, on garde pour la prochaine.'**
   String get challengeSkipDefault;
 
   /// No description provided for @challengeBannerHoldThroat.
