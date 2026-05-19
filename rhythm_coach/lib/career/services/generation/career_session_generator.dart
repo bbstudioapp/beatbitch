@@ -713,6 +713,7 @@ class CareerSessionGenerator {
             from: challengeData.from,
             to: challengeData.to,
             bpm: challengeData.bpm,
+            bpmEnd: challengeData.bpmEnd,
             duration: stepDur,
             mode: challengeData.mode,
           ));

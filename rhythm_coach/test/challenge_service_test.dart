@@ -60,7 +60,7 @@ void main() {
       expect(challenge.comfortAtCalibration, 10.0);
     });
 
-    test('axe BPM : seuil = comfort × 1.50 en BPM', () {
+    test('axe BPM : rampe comfort → comfort × 1.50 (bpm/bpmEnd)', () {
       final svc = ChallengeService();
       final profile =
           _profileWithComfort(CapabilityAxis.rhythmBpmCeilThroat, 100);
@@ -75,8 +75,12 @@ void main() {
       expect(challenge!.axis, CapabilityAxis.rhythmBpmCeilThroat);
       expect(challenge.kind, ChallengeAxisKind.bpm);
       expect(challenge.targetThreshold, 150);
-      expect(challenge.bpm, 150);
+      // Rampe : démarre au comfort, monte au seuil cible.
+      expect(challenge.bpm, 100);
+      expect(challenge.bpmEnd, 150);
       expect(challenge.mode, SessionMode.rhythm);
+      // Convention rhythm : from < to (amplitude obligatoire).
+      expect(challenge.from, Position.head);
       expect(challenge.to, Position.throat);
     });
 
