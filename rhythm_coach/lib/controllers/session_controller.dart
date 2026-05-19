@@ -867,6 +867,7 @@ class SessionController extends ChangeNotifier {
     _challengeOutcome = null;
     _challengeCurrentText = null;
     _activeChallenge = null;
+    _postChallengeBreathUntilSec = null;
     notifyListeners();
   }
 
@@ -1037,6 +1038,19 @@ class SessionController extends ChangeNotifier {
   }
 
   void _checkSteps() {
+    // Phase 1 défis — quand la joueuse est en train de décider au seuil
+    // (`atSeuil`) ou de prolonger (`openExtension`), on ne consomme pas
+    // les steps suivants : la séance "se met en pause" sur le step défi
+    // qui continue à jouer son loop. Sinon la session normale reprenait
+    // par-dessus les boutons d'extension (bug observé en sessions de test).
+    if (_challengePhase == ChallengePhase.atSeuil ||
+        _challengePhase == ChallengePhase.openExtension) {
+      return;
+    }
+    // Pareil pendant le breath de récup post-défi : le BeepEngine joue
+    // un breath, le coach fait son rapport, la joueuse souffle. Le step
+    // suivant attend.
+    if (_inPostChallengeBreath) return;
     final s = elapsedSeconds;
     var modeChanged = false;
     while (_nextStepIndex < session.steps.length &&
@@ -1087,11 +1101,11 @@ class SessionController extends ChangeNotifier {
         }
       }
 
-      // Phase 1 défis — détection des transitions vers les phases breath/
-      // live au moment où le step correspondant est consommé. Posé avant
-      // l'application du step pour que `_challengeStepStartedAtSec` soit
-      // déjà à jour si `_updateChallengePhase` est appelé au même tick.
-      _handleChallengeStepEntry(step);
+      // Phase 1 défis — la machine d'états est désormais drivée par
+      // `_updateChallengePhase` (appelée dans `_onTick`) sur la base
+      // d'`elapsedSeconds` vs `session.challengeBreathStartTime` /
+      // `challengeStepTime`. Plus de transition basée sur la consommation
+      // de step (fragile au timing TTS / différé `_timelineOffset`).
       if (!step.isTextOnly) {
         // Avant de changer de mode : si on quittait un hold full, on crédite
         // sa durée pour le badge Iron Lungs (uniquement quand le hold est
@@ -1242,36 +1256,15 @@ class SessionController extends ChangeNotifier {
   // Au passage en `ended`, `_challengeOutcome` est figé et le `_finish` de
   // session applique les bumps capability/humil/obed correspondants.
 
-  /// Détecte le passage à une nouvelle phase de défi sur consommation d'un
-  /// step (breath de countdown ou step défi lui-même).
-  void _handleChallengeStepEntry(SessionStep step) {
-    final ch = _session.challenge;
-    if (ch == null) return;
-    final breathStart = _session.challengeBreathStartTime;
-    final stepStart = _session.challengeStepTime;
-    if (breathStart != null &&
-        step.time == breathStart &&
-        _challengePhase == ChallengePhase.none) {
-      _activeChallenge = ch;
-      _challengePhase = ChallengePhase.breath;
-      // Texte de l'annonce coach : phrase scriptée du step si présente,
-      // sinon phrase coach `challengePhrases[axis].attempt`, sinon
-      // libellé de fallback localisé (le coach n'a peut-être pas de
-      // pool dédié — on assure une annonce minimale). Le speak est fait
-      // ici pour que la joueuse entende l'instruction pendant le
-      // countdown breath.
-      _challengeCurrentText = step.text.isNotEmpty
-          ? step.text
-          : (_pickChallengePhrase(ch, 'attempt') ??
-              _fallbackChallengeText(ch, 'attempt'));
-      _speakChallengePhraseIfAny();
-    } else if (stepStart != null &&
-        step.time == stepStart &&
-        _challengePhase == ChallengePhase.breath) {
-      _challengePhase = ChallengePhase.live;
-      _challengeStepStartedAtSec = elapsedSeconds;
-      _challengeCurrentText = null;
-    }
+  /// Seconde absolue (`elapsedSeconds`) jusqu'à laquelle le breath de
+  /// récupération post-défi est actif. `null` = pas de breath en cours.
+  /// Pendant cette fenêtre, `_checkSteps` ne consomme aucun step suivant —
+  /// la séance "marque une pause" pour laisser le coach faire son rapport
+  /// et la joueuse souffler.
+  int? _postChallengeBreathUntilSec;
+  bool get _inPostChallengeBreath {
+    final until = _postChallengeBreathUntilSec;
+    return until != null && elapsedSeconds < until;
   }
 
   /// Libellé de fallback localisé pour un tier donné, quand le coach
@@ -1337,34 +1330,58 @@ class SessionController extends ChangeNotifier {
     }
   }
 
-  /// Tick de mise à jour de la machine d'états défi. Appelé depuis `_onTick`
-  /// après `_checkSteps` (pour que les transitions step→phase soient
-  /// appliquées d'abord).
+  /// Tick de mise à jour de la machine d'états défi. Drivée par
+  /// `elapsedSeconds` vs `session.challengeBreathStartTime` /
+  /// `challengeStepTime` : ne dépend plus de la consommation des steps
+  /// (qui peut être différée par le TTS ou interrompue par un fail), ce
+  /// qui rendait la transition `breath → live` peu fiable. Appelée dans
+  /// `_onTick` à chaque tick (200 ms).
   void _updateChallengePhase() {
-    final ch = _activeChallenge;
+    final ch = _session.challenge;
     if (ch == null) return;
     final phase = _challengePhase;
-    if (phase == ChallengePhase.none || phase == ChallengePhase.ended) return;
-    final startedAt = _challengeStepStartedAtSec;
-    if (startedAt == null) return; // encore en phase breath
-    final elapsedInStep = elapsedSeconds - startedAt;
-    final target = ch.targetThreshold;
-    // Phase `atSeuil` : surveille le timeout 8 s (succès net auto).
-    if (phase == ChallengePhase.atSeuil) {
-      final seuilAt = _challengeAtSeuilStartedAtSec;
-      if (seuilAt != null &&
-          elapsedSeconds - seuilAt >= _challengeSeuilTimeoutSeconds) {
-        _completeChallenge(ChallengeOutcome.netSuccess, byTimeout: true);
-      }
+    if (phase == ChallengePhase.ended) return;
+    final breathStart = _session.challengeBreathStartTime;
+    final stepStart = _session.challengeStepTime;
+    if (breathStart == null || stepStart == null) return;
+    final t = elapsedSeconds;
+    // Entrée en phase `breath` (annonce coach + bouton PASSE visible).
+    if (phase == ChallengePhase.none && t >= breathStart && t < stepStart) {
+      _activeChallenge = ch;
+      _challengePhase = ChallengePhase.breath;
+      _challengeCurrentText = _pickChallengePhrase(ch, 'attempt') ??
+          _fallbackChallengeText(ch, 'attempt');
+      _speakChallengePhraseIfAny();
       return;
     }
+    // Entrée en phase `live` au moment précis où le step défi commence.
+    if (phase == ChallengePhase.breath && t >= stepStart) {
+      _challengePhase = ChallengePhase.live;
+      _challengeStepStartedAtSec = stepStart;
+      _challengeCurrentText = null;
+      return;
+    }
+    // À partir d'ici, on est forcément après le step défi (phase live,
+    // preExtend, atSeuil, ou openExtension). Calcul du temps écoulé
+    // dans le step défi pour piloter les transitions vers le seuil.
+    if (_challengeStepStartedAtSec == null) return;
+    final elapsedInStep = t - _challengeStepStartedAtSec!;
+    final target = ch.targetThreshold;
     // Phase `openExtension` : la prolongation expire → re-prompt au seuil.
     if (phase == ChallengePhase.openExtension) {
       final deadline = _challengeOpenExtensionDeadlineSec;
-      if (deadline != null && elapsedSeconds >= deadline) {
+      if (deadline != null && t >= deadline) {
         _challengePhase = ChallengePhase.atSeuil;
-        _challengeAtSeuilStartedAtSec = elapsedSeconds;
+        _challengeAtSeuilStartedAtSec = t;
         _challengeOpenExtensionDeadlineSec = null;
+      }
+      return;
+    }
+    // Phase `atSeuil` : surveille le timeout 8 s (succès net auto).
+    if (phase == ChallengePhase.atSeuil) {
+      final seuilAt = _challengeAtSeuilStartedAtSec;
+      if (seuilAt != null && t - seuilAt >= _challengeSeuilTimeoutSeconds) {
+        _completeChallenge(ChallengeOutcome.netSuccess, byTimeout: true);
       }
       return;
     }
@@ -1376,7 +1393,8 @@ class SessionController extends ChangeNotifier {
       // `atSeuil` au seuil initial estimé. Cf. spec § 3.2.
       if (!ch.isExploratory &&
           phase == ChallengePhase.live &&
-          elapsedInStep >= target - 3) {
+          elapsedInStep >= target - 3 &&
+          elapsedInStep < target) {
         _challengePhase = ChallengePhase.preExtend;
         _challengeCurrentText = _pickChallengePhrase(ch, 'extension') ??
             _fallbackChallengeText(ch, 'extension');
@@ -1384,7 +1402,7 @@ class SessionController extends ChangeNotifier {
       }
       if (elapsedInStep >= target) {
         _challengePhase = ChallengePhase.atSeuil;
-        _challengeAtSeuilStartedAtSec = elapsedSeconds;
+        _challengeAtSeuilStartedAtSec = t;
       }
     } else {
       // Axes BPM / profondeur : pas de seuil temporel sur le step lui-même
@@ -1392,17 +1410,18 @@ class SessionController extends ChangeNotifier {
       // le seuil atteint dès la fin nominale du step.
       if (elapsedInStep >= ch.nominalDurationSeconds) {
         _challengePhase = ChallengePhase.atSeuil;
-        _challengeAtSeuilStartedAtSec = elapsedSeconds;
+        _challengeAtSeuilStartedAtSec = t;
       }
     }
   }
 
   /// Bouton `PASSE` pendant le breath de countdown — skip le défi entier.
-  /// Outcome `skipped` (malus obed -3, aucun signal capability).
+  /// Outcome `skipped` (malus obed -3, aucun signal capability). Le skip
+  /// du step défi est fait par `_completeChallenge` via
+  /// `_startPostChallengeBreath` (qui appelle aussi `_skipPastChallengeStep`).
   void triggerChallengePass() {
     if (_challengePhase != ChallengePhase.breath) return;
     _completeChallenge(ChallengeOutcome.skipped);
-    _skipPastChallengeStep();
   }
 
   /// Bouton `JE TIENS ENCORE` — bascule en mode ouvert, +1 humil/+1 obed
@@ -1432,6 +1451,11 @@ class SessionController extends ChangeNotifier {
 
   /// Termine le défi et fige l'outcome. Les bumps capability/humil/obed
   /// sont appliqués au `_finish` de session (cf. `_applyChallengeOutcome`).
+  /// Enchaîne sur un breath de récup de 10 s : le step défi est skippé
+  /// dans la timeline, le BeepEngine joue un breath, le coach fait son
+  /// rapport (`stop`/`fail`/`timeout`/`success`/`skip`). Pendant ce
+  /// breath, `_checkSteps` ne consomme pas le step suivant — la séance
+  /// "marque une pause" et la joueuse souffle.
   void _completeChallenge(ChallengeOutcome outcome, {bool byTimeout = false}) {
     if (_challengePhase == ChallengePhase.ended) return;
     _challengeOutcome = outcome;
@@ -1448,7 +1472,38 @@ class SessionController extends ChangeNotifier {
           _pickChallengePhrase(ch, tier) ?? _fallbackChallengeText(ch, tier);
       _speakChallengePhraseIfAny();
     }
+    _startPostChallengeBreath();
     notifyListeners();
+  }
+
+  /// Durée du breath de récup post-défi (toutes voies). Donne au coach
+  /// le temps de faire son rapport et à la joueuse de souffler avant
+  /// que la séance ne reprenne.
+  static const int _postChallengeBreathSeconds = 10;
+
+  /// Lance le breath de récup : skip le step défi dans la timeline,
+  /// applique un step breath sur le BeepEngine, et pose le flag
+  /// `_postChallengeBreathUntilSec` qui bloque `_checkSteps` pendant
+  /// la durée. À l'expiration, le step suivant naturel reprend.
+  void _startPostChallengeBreath() {
+    _skipPastChallengeStep();
+    _postChallengeBreathUntilSec = elapsedSeconds + _postChallengeBreathSeconds;
+    // Applique le breath sur le BeepEngine — coupe le loop du défi
+    // (hold/rhythm/biffle) en faveur du sample breath. Pas de
+    // reconfiguration de mode "officielle" (`_lastConfigStep` reste
+    // celui du step défi, restauré naturellement quand le step suivant
+    // sera consommé après expiration du breath).
+    if (!_released) {
+      _beep.applyStep(
+        const SessionStep(
+          time: 0,
+          mode: SessionMode.breath,
+          duration: _postChallengeBreathSeconds,
+        ),
+        session.defaultMode,
+      );
+      _syncAmbienceToCurrentMode();
+    }
   }
 
   /// Avance la timeline pour passer le step défi (cas `PASSE` pendant le
@@ -2020,7 +2075,6 @@ class SessionController extends ChangeNotifier {
           }
           _capabilityTracker?.onFail();
           _completeChallenge(ChallengeOutcome.fail);
-          _skipPastChallengeStep();
           return;
         case ChallengePhase.atSeuil:
         case ChallengePhase.openExtension:
