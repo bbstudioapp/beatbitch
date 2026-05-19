@@ -15,6 +15,15 @@ class SpecializationService {
   static const String _kLastRespec = 'specialization.last_respec_ms';
   static const String _kRespecCount = 'specialization.respec_count';
 
+  /// File d'attente FIFO de branches à « mettre en vitrine » dans les
+  /// séances suivantes. Chaque appel à [invest] empile la branche
+  /// concernée ; la prochaine séance qui peut honorer la tête de file
+  /// (= une milestone candidate touche cette branche) la consomme. But :
+  /// rendre immédiatement visible l'effet d'un point dépensé, sinon les
+  /// 5 pts spé d'une joueuse expérimentée passent inaperçus face à
+  /// l'aging des autres branches. Stockée en CSV de `branch.name`.
+  static const String _kPendingShowcase = 'specialization.pending_showcase';
+
   /// Cooldown en heures entre deux respecs.
   static const int respecCooldownHours = 72;
 
@@ -48,7 +57,11 @@ class SpecializationService {
 
   /// Investit un point dans [branch]. Vérifie qu'il reste des points
   /// disponibles compte tenu du niveau global. Retourne true si l'invest
-  /// a été fait, false sinon.
+  /// a été fait, false sinon. Empile aussi [branch] dans la file
+  /// [pendingShowcase] : la prochaine séance qui peut honorer ce point
+  /// (= au moins une milestone candidate touche cette branche) sera
+  /// biaisée pour la mettre en vitrine. Voir [peekShowcase] /
+  /// [consumeShowcase].
   Future<bool> invest(SpecializationBranch branch, int globalLevel) async {
     final alloc = await load();
     final cap = totalPointsForLevel(globalLevel);
@@ -56,7 +69,65 @@ class SpecializationService {
     final prefs = await SharedPreferences.getInstance();
     final newValue = alloc.pointsIn(branch) + 1;
     await prefs.setInt('$_kPointsPrefix${branch.name}', newValue);
+    final queue = await pendingShowcase();
+    queue.add(branch);
+    await _writeShowcase(prefs, queue);
     return true;
+  }
+
+  /// File d'attente FIFO des branches à mettre en vitrine (lecture).
+  /// Vide quand aucun point n'attend d'être honoré.
+  Future<List<SpecializationBranch>> pendingShowcase() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_kPendingShowcase) ?? '';
+    if (raw.isEmpty) return <SpecializationBranch>[];
+    return raw
+        .split(',')
+        .map(_branchFromName)
+        .whereType<SpecializationBranch>()
+        .toList();
+  }
+
+  /// Tête de file ou `null` si la file est vide. Lecture seule —
+  /// utiliser [consumeShowcase] pour la retirer après l'avoir honorée.
+  Future<SpecializationBranch?> peekShowcase() async {
+    final queue = await pendingShowcase();
+    return queue.isEmpty ? null : queue.first;
+  }
+
+  /// Retire la première occurrence de [branch] dans la file. Appelé
+  /// par le call site (career_screen) une fois qu'il a constaté qu'une
+  /// milestone effectivement insérée touche cette branche. Si [branch]
+  /// n'est pas dans la file, no-op (la dette a déjà été consommée ou
+  /// la séance n'a pas pu l'honorer).
+  Future<void> consumeShowcase(SpecializationBranch branch) async {
+    final queue = await pendingShowcase();
+    final idx = queue.indexOf(branch);
+    if (idx < 0) return;
+    queue.removeAt(idx);
+    final prefs = await SharedPreferences.getInstance();
+    await _writeShowcase(prefs, queue);
+  }
+
+  static SpecializationBranch? _branchFromName(String name) {
+    for (final b in SpecializationBranch.values) {
+      if (b.name == name) return b;
+    }
+    return null; // tolérance : silencieux si une branche disparaît
+  }
+
+  static Future<void> _writeShowcase(
+    SharedPreferences prefs,
+    List<SpecializationBranch> queue,
+  ) async {
+    if (queue.isEmpty) {
+      await prefs.remove(_kPendingShowcase);
+    } else {
+      await prefs.setString(
+        _kPendingShowcase,
+        queue.map((b) => b.name).join(','),
+      );
+    }
   }
 
   /// Combien de points disponibles à dépenser au niveau global donné.
@@ -103,6 +174,8 @@ class SpecializationService {
       _kRespecCount,
       (prefs.getInt(_kRespecCount) ?? 0) + 1,
     );
+    // Respec rebat les cartes — la file showcase est obsolète.
+    await prefs.remove(_kPendingShowcase);
     return SpecializationAllocation(
       points: {for (final b in SpecializationBranch.values) b: 0},
       lastRespecMs: now,
@@ -125,5 +198,6 @@ class SpecializationService {
     }
     await prefs.remove(_kLastRespec);
     await prefs.remove(_kRespecCount);
+    await prefs.remove(_kPendingShowcase);
   }
 }

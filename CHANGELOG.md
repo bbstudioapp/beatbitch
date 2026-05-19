@@ -4,6 +4,9 @@
 
 ## [Non publié]
 
+### Ajouté
+- **Showcase d'un point spé fraîchement attribué** — chaque appel à `SpecializationService.invest` empile la branche dans une file FIFO persistée. Au démarrage de la séance suivante, `career_screen._start` peek la tête et la passe à `MilestoneService.pendingForList(showcaseBranch:)`, qui boost massivement (`+1000`) toute milestone candidate touchant cette branche dans son `sortScore`. Si une milestone effectivement insérée matche la branche, la tête est consommée ; sinon la dette reste pour la prochaine séance. Objectif : rendre immédiatement visible l'effet d'un point dépensé — finis les 5 pts d'une joueuse expérimentée qui s'évaporent dans le bruit de l'aging. La règle *overdue* reste prioritaire (rattrapage système avant nice-to-have UX), et `respec()` / `resetAll()` vident la file. Sert aussi de levier d'orientation pour le système de défis (cf. cascade `ChallengeService`).
+
 ### Corrigé
 - **Milestones « palier scalaire » recalibrées** — pour chaque unlock qui ouvre une durée ou un BPM (`throat_hold_short/long`, `full_hold_short/long`, `hold_mid_short`, `biffle_basic`), la séquence de la milestone qui l'accorde fait désormais effectivement atteindre (ou dépasser) le seuil que l'unlock débloque. Avant : `intro_hold_throat_long` allait à 8 s alors que l'unlock « long » est censé ouvrir > 10 s — la joueuse débloquait quelque chose qu'elle n'avait jamais éprouvé. Garde-fou structurel ajouté (`test/milestone_unlock_invariants_test.dart`) qui casse le build si un unlock scalaire ne matche plus son seuil.
 - **Hold mid borné à 10 s tant que throat n'est pas débloqué** — `intro_hold_mid` n'a pas de palier `long` séparé, et la cascade `tryDegrade` ne pouvait pas borner mid comme elle borne throat/full > 10 s. Le générateur tirait jusqu'à 30 s en hold mid avec juste `hold_mid_short` acquis, alors que la milestone ne montre que jusqu'à 10 s. Cap explicite dans `HoldRules.build` : au-delà il faut tenir throat, pas mid.
