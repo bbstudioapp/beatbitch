@@ -10,12 +10,12 @@ import '../../../models/session_step.dart';
 import '../../../services/capability_axis.dart';
 import '../../../services/capability_service.dart';
 import '../../models/career_generation_inputs.dart';
-import '../../models/career_level.dart';
 import '../../models/challenge.dart';
 import '../../models/level_milestone.dart';
 import '../../models/phrase_bank.dart';
 import '../../models/specialization.dart';
 import '../../models/unlock_key.dart';
+import '../career_difficulty_resolver.dart';
 
 // Re-exports : les rules (libraries autonomes dans `rules/`) importent
 // uniquement `career_session_generator.dart`. Pour leur épargner une
@@ -489,7 +489,7 @@ class CareerSessionGenerator {
       milestones.bodies.length <= 2,
       'milestones.bodies : au plus 2 milestones body par séance pour l\'instant',
     );
-    final cfg = CareerLevel.forLevel(level);
+    final cfg = CareerDifficultyResolver.resolve(level);
     final overload = _pickOverload(
       profile: capability.profile,
       ceilings: capability.sessionCeilings,
