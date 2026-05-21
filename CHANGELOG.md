@@ -4,6 +4,16 @@
 
 ## [Non publié]
 
+## [0.4.2] — 2026-05-21
+
+Nouvel export diagnostic du profil pour faciliter le support à distance.
+
+### Ajouté
+- **Export diagnostic du profil** — bouton « Exporter mes données » dans l'écran Profil qui produit un JSON contenant l'état complet de progression (milestones acquittées, capacités, scores humil/obed, niveau, badges, retries). Permet de joindre cet export à un bug report pour diagnostiquer un blocage de progression sans avoir à reproduire le contexte du joueur. Inclut un checksum SHA-256 d'intégrité, et un script CLI `tools/verify_export.dart` pour valider un export reçu.
+
+### Corrigé
+- **Sauvegarde de l'export sur desktop Linux / Windows / macOS** — `file_saver.saveAs` n'est pas implémenté hors Android (jette `UnimplementedError` sur Linux). Le bouton « Exporter mes données » passe désormais par `file_selector.getSaveLocation` + `XFile.saveTo` pour les save dialogs desktop, ce qui ouvre une vraie fenêtre native de sélection de destination.
+
 ## [0.4.1] — 2026-05-17
 
 Correctif ciblé d'un blocage de progression carrière apparu après l'update v0.4.0.
@@ -129,7 +139,8 @@ Grosse mise à jour du mode carrière : nouvelle enveloppe de difficulté, nouve
 ## [0.1.0] — 2026-05-08
 - Premier release public : coach vocal rythmique hors-ligne pour Android, adult gate 18+, onboarding, mode carrière + scénarios, badges, profil/réputation.
 
-[Non publié]: https://github.com/bbstudioapp/beatbitch/compare/v0.4.1...develop
+[Non publié]: https://github.com/bbstudioapp/beatbitch/compare/v0.4.2...develop
+[0.4.2]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.4.2
 [0.4.1]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.4.1
 [0.4.0]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.4.0
 [0.3.0]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.3.0
