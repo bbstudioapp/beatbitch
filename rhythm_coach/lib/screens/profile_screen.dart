@@ -159,6 +159,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 title: title,
                 level: level,
                 score: bundle.reputation.score,
+                tier: bundle.reputation.tier,
               ),
               const SizedBox(height: 24),
               _SectionLabel(t.soundsIdentitySection),
@@ -446,11 +447,13 @@ class _ReputationCard extends StatelessWidget {
   final String title;
   final int level;
   final int score;
+  final ReputationTier tier;
 
   const _ReputationCard({
     required this.title,
     required this.level,
     required this.score,
+    required this.tier,
   });
 
   @override
@@ -499,6 +502,16 @@ class _ReputationCard extends StatelessWidget {
               fontWeight: FontWeight.w800,
               color: AppTheme.textPrimary,
               letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            tier.localizedLabel(context),
+            style: TextStyle(
+              fontSize: 14,
+              fontStyle: FontStyle.italic,
+              color: AppTheme.accent.withValues(alpha: 0.85),
+              letterSpacing: 0.3,
             ),
           ),
           const SizedBox(height: 18),

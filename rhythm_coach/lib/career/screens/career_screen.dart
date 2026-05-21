@@ -1170,6 +1170,15 @@ class _CareerScreenState extends State<CareerScreen> {
                 title: localizedCareerLevelTitle(context, cfg.level),
                 durationLabel: durationLabel,
               ),
+              const SizedBox(height: 12),
+              // Phase 19.11 — barre de temps cumulé segmentée par tier
+              // coach. Remplace progressivement la valorisation par level
+              // au profit de l'investissement (= temps + sessions).
+              _InvestmentBar(
+                totalSeconds: bundle.totalSeconds,
+                sessionsCompleted: bundle.completedSessions,
+                coaches: coachService.coaches,
+              ),
               const SizedBox(height: 24),
               // Switch « Défis intra-séance » (Phase 1). Visible dès la
               // première séance — l'utilisatrice doit pouvoir l'activer si
@@ -1507,6 +1516,183 @@ class _LevelTitleCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Barre de temps cumulé segmentée par tiers coach (Phase 19.11). Affiche :
+/// - le temps total joué (« 10 h 23 min »)
+/// - les sessions complétées (« 23 séances »)
+/// - une barre horizontale avec marqueurs pour chaque seuil tier coach
+///   (Lina à 0, Hélène à 1 h, Jade à 3 h, etc.) et un curseur sur la
+///   position actuelle
+/// - une ligne de teaser sur le prochain coach à débloquer
+///   (« Prochain coach : Morgan (1 h 47 min) ») ou un message si tous
+///   sont débloqués
+class _InvestmentBar extends StatelessWidget {
+  final int totalSeconds;
+  final int sessionsCompleted;
+  final List<Coach> coaches;
+
+  const _InvestmentBar({
+    required this.totalSeconds,
+    required this.sessionsCompleted,
+    required this.coaches,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+
+    // Principal coachs triés par seuil, ie. les jalons de la barre.
+    final principals = [...coaches.where((c) => c.isPrincipal)]..sort((a, b) =>
+        a.requirements.minPlayerSeconds
+            .compareTo(b.requirements.minPlayerSeconds));
+
+    // Coach max — fixe le bord droit de la barre. Si la joueuse dépasse,
+    // on garde le bord à 110 % du dernier seuil pour ne pas surcharger
+    // visuellement quand totalSeconds est très au-dessus.
+    final lastSeuil =
+        principals.isEmpty ? 1 : principals.last.requirements.minPlayerSeconds;
+    final barMaxSeconds = (lastSeuil * 1.1).round();
+    final clampedSeconds = totalSeconds.clamp(0, barMaxSeconds);
+    final progress = barMaxSeconds == 0 ? 0.0 : clampedSeconds / barMaxSeconds;
+
+    // Prochain coach non encore débloqué = premier dont le seuil est
+    // strictement supérieur à totalSeconds.
+    Coach? nextCoach;
+    for (final c in principals) {
+      if (c.requirements.minPlayerSeconds > totalSeconds) {
+        nextCoach = c;
+        break;
+      }
+    }
+
+    final timeLabel = formatDurationCompact(context, totalSeconds);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppTheme.accent.withValues(alpha: 0.25),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.schedule, color: AppTheme.accent, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                timeLabel,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimary,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '· ${t.careerInvestmentSessions(sessionsCompleted)}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppTheme.textMuted,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final w = constraints.maxWidth;
+              return SizedBox(
+                height: 24,
+                child: Stack(
+                  alignment: Alignment.centerLeft,
+                  children: [
+                    // Track de fond
+                    Container(
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: AppTheme.textMuted.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                    // Progression
+                    FractionallySizedBox(
+                      widthFactor: progress.clamp(0.0, 1.0),
+                      child: Container(
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: AppTheme.accent,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                    ),
+                    // Marqueurs tiers (jalons)
+                    for (final c in principals)
+                      _TierMarker(
+                        leftPx: barMaxSeconds == 0
+                            ? 0
+                            : (w *
+                                    c.requirements.minPlayerSeconds /
+                                    barMaxSeconds)
+                                .clamp(0.0, w),
+                        unlocked:
+                            c.requirements.minPlayerSeconds <= totalSeconds,
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 10),
+          Text(
+            nextCoach == null
+                ? t.careerInvestmentAllUnlocked
+                : t.careerInvestmentNextCoach(
+                    nextCoach.name,
+                    formatDurationCompact(
+                      context,
+                      nextCoach.requirements.minPlayerSeconds - totalSeconds,
+                    ),
+                  ),
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppTheme.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TierMarker extends StatelessWidget {
+  final double leftPx;
+  final bool unlocked;
+
+  const _TierMarker({required this.leftPx, required this.unlocked});
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: leftPx - 4, // centre la pastille sur le seuil
+      child: Container(
+        width: 8,
+        height: 12,
+        decoration: BoxDecoration(
+          color: unlocked
+              ? AppTheme.accent
+              : AppTheme.textMuted.withValues(alpha: 0.4),
+          borderRadius: BorderRadius.circular(2),
+        ),
       ),
     );
   }

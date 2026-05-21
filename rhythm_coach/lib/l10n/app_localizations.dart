@@ -550,6 +550,72 @@ abstract class AppLocalizations {
   /// **'pts de réputation'**
   String get profileReputationUnit;
 
+  /// No description provided for @reputationTierBonneEleve.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bonne élève'**
+  String get reputationTierBonneEleve;
+
+  /// No description provided for @reputationTierPetiteSuceuse.
+  ///
+  /// In fr, this message translates to:
+  /// **'Petite suceuse'**
+  String get reputationTierPetiteSuceuse;
+
+  /// No description provided for @reputationTierSuceuseConfirmee.
+  ///
+  /// In fr, this message translates to:
+  /// **'Suceuse confirmée'**
+  String get reputationTierSuceuseConfirmee;
+
+  /// No description provided for @reputationTierPuteReconnue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pute reconnue'**
+  String get reputationTierPuteReconnue;
+
+  /// No description provided for @reputationTierPuteConsacree.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pute consacrée'**
+  String get reputationTierPuteConsacree;
+
+  /// No description provided for @reputationTierReineDesSuceuses.
+  ///
+  /// In fr, this message translates to:
+  /// **'Reine des suceuses'**
+  String get reputationTierReineDesSuceuses;
+
+  /// No description provided for @reputationTierReineDesPutes.
+  ///
+  /// In fr, this message translates to:
+  /// **'Reine des putes'**
+  String get reputationTierReineDesPutes;
+
+  /// No description provided for @careerInvestmentBarTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Temps cumulé'**
+  String get careerInvestmentBarTitle;
+
+  /// No description provided for @careerInvestmentSessions.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count} séances'**
+  String careerInvestmentSessions(int count);
+
+  /// No description provided for @careerInvestmentNextCoach.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prochain coach : {name} ({remaining})'**
+  String careerInvestmentNextCoach(String name, String remaining);
+
+  /// No description provided for @careerInvestmentAllUnlocked.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tous les coachs débloqués.'**
+  String get careerInvestmentAllUnlocked;
+
   /// No description provided for @profileStatSessionsCompleted.
   ///
   /// In fr, this message translates to:

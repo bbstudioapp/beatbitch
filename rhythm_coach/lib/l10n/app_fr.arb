@@ -119,6 +119,26 @@
     }
   },
   "profileReputationUnit": "pts de réputation",
+  "reputationTierBonneEleve": "Bonne élève",
+  "reputationTierPetiteSuceuse": "Petite suceuse",
+  "reputationTierSuceuseConfirmee": "Suceuse confirmée",
+  "reputationTierPuteReconnue": "Pute reconnue",
+  "reputationTierPuteConsacree": "Pute consacrée",
+  "reputationTierReineDesSuceuses": "Reine des suceuses",
+  "reputationTierReineDesPutes": "Reine des putes",
+  "careerInvestmentBarTitle": "Temps cumulé",
+  "careerInvestmentSessions": "{count} séances",
+  "@careerInvestmentSessions": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "careerInvestmentNextCoach": "Prochain coach : {name} ({remaining})",
+  "@careerInvestmentNextCoach": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "remaining": { "type": "String" }
+    }
+  },
+  "careerInvestmentAllUnlocked": "Tous les coachs débloqués.",
   "profileStatSessionsCompleted": "Sessions terminées",
   "profileStatNoFailStreak": "Streak sans fail",
   "profileStatDailyStreak": "Streak quotidien",

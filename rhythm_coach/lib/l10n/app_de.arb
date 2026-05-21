@@ -119,6 +119,26 @@
     }
   },
   "profileReputationUnit": "Reputationspunkte",
+  "reputationTierBonneEleve": "Brave Schülerin",
+  "reputationTierPetiteSuceuse": "Kleine Saugerin",
+  "reputationTierSuceuseConfirmee": "Erfahrene Saugerin",
+  "reputationTierPuteReconnue": "Bekannte Hure",
+  "reputationTierPuteConsacree": "Anerkannte Hure",
+  "reputationTierReineDesSuceuses": "Königin der Saugerinnen",
+  "reputationTierReineDesPutes": "Königin der Huren",
+  "careerInvestmentBarTitle": "Gesamtzeit",
+  "careerInvestmentSessions": "{count} Sitzungen",
+  "@careerInvestmentSessions": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "careerInvestmentNextCoach": "Nächste Coach: {name} ({remaining})",
+  "@careerInvestmentNextCoach": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "remaining": { "type": "String" }
+    }
+  },
+  "careerInvestmentAllUnlocked": "Alle Coachs freigeschaltet.",
   "profileStatSessionsCompleted": "Abgeschlossene Sessions",
   "profileStatNoFailStreak": "Serie ohne Fail",
   "profileStatDailyStreak": "Tägliche Serie",
