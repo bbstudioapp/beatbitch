@@ -423,6 +423,12 @@ class _CareerScreenState extends State<CareerScreen> {
             bundle,
             clamped,
           ),
+          onPostChallengeRegen: (ctrl) => _handlePostChallengeRegen(
+            ctrl,
+            bundle,
+            clamped,
+            includeHand,
+          ),
           anatomy: anatomy,
         ),
       ),
@@ -765,6 +771,74 @@ class _CareerScreenState extends State<CareerScreen> {
     return true;
   }
 
+  /// Régénération post-défi : un défi vient d'acquitter au moins une
+  /// milestone, le set d'unlocks s'est élargi (la mise à jour runtime de
+  /// `_unlockedKeys` est déjà faite par le contrôleur dans
+  /// `_finalizeChallengeAcquittals`). On régénère le reste de la séance
+  /// pour que le générateur consomme la compétence fraîchement débloquée
+  /// — sans regen, la timeline restante reste celle composée au start
+  /// avec l'ancien set, et le succès du défi ne « débloque » rien de
+  /// visible avant la séance suivante.
+  ///
+  /// Transition silencieuse : pas de beg insistant ni de phrase, le breath
+  /// de 10s post-défi sert lui-même de pont. Skip si :
+  /// - aucun profil de capacités (sessions hors carrière — ne devrait pas
+  ///   arriver, mais robustesse) ;
+  /// - moins de 30 s restantes après la fin du breath (pas assez de matière
+  ///   pour reposer une suite cohérente).
+  Future<void> _handlePostChallengeRegen(
+    SessionController ctrl,
+    _CareerBundle bundle,
+    int level,
+    bool includeHand,
+  ) async {
+    final t = AppLocalizations.of(context);
+    final breathEnd = ctrl.postChallengeBreathUntilSec ?? ctrl.elapsedSeconds;
+    final remaining = ctrl.session.durationSeconds - breathEnd;
+    if (remaining < 30) return;
+
+    final activeCoach = _resolveCoach(bundle);
+    final coachBank = activeCoach.toPhraseBank(
+        fallback: bundle.bank, specialization: bundle.specialization);
+    final humiliationCareer = await _stats.getHumiliationLevel();
+    // Live (post-défi) : la chauffe accumulée pendant le défi est sur le
+    // sessionScore du contrôleur ; l'obédiance a pu monter via les bumps
+    // d'outcome (`_applyChallengeOutcome` ne tourne qu'à `_finish`, donc
+    // ici on a la valeur d'avant les bumps — acceptable, la chauffe
+    // sessionScore reste la source principale de difficulté intra-séance).
+    final humiliationSession = ctrl.humiliation.sessionScore;
+    final obedienceScore = ctrl.obedience.score;
+    // Nouveau set d'unlocks (élargi par `_finalizeChallengeAcquittals`).
+    final newUnlocks = milestoneService.acquiredUnlockKeys();
+
+    final newGen = CareerSessionGenerator().generate(
+      durationSeconds: remaining,
+      level: level,
+      bank: coachBank,
+      includeHand: includeHand,
+      specialization: activeCoach.effectiveAllocation(bundle.specialization),
+      humiliationCareer: humiliationCareer,
+      humiliationSession: humiliationSession,
+      obedience: obedienceScore,
+      unlockedKeys: newUnlocks,
+      coachModeWeights: activeCoach.modeWeights,
+      sessionName: t.careerSessionName(level),
+      sessionNameQuickie: t.careerSessionNameQuickie(level),
+      anatomy: widget.userProfile.anatomy,
+      capability: CapabilityInputs(
+        profile: bundle.capabilityProfile,
+        sessionCeilings: ctrl.capabilitySessionCeilings,
+      ),
+      // Pas de `milestones` ni de `challenge` : les milestones de la séance
+      // ont déjà été insérées et le défi vient de tourner — on régénère le
+      // reste comme une suite « normale » qui consomme librement les
+      // nouveaux unlocks (le défi peut acquitter en cascade plusieurs
+      // milestones d'un coup, cf. § 5.4 spec).
+    );
+
+    await ctrl.requestPostChallengeRegen(upcomingSession: newGen.session);
+  }
+
   /// Action « J'en veux encore » depuis l'écran finished. Régénère une
   /// session au même niveau et même durée, avec un finish plus dense :
   /// `encoreChainIndex * 2` boosts en plus, BPM cap relevé, final allongé.
@@ -906,6 +980,12 @@ class _CareerScreenState extends State<CareerScreen> {
                     includeHand: includeHand,
                     quickie: quickie,
                   ),
+          onPostChallengeRegen: (ctrl) => _handlePostChallengeRegen(
+            ctrl,
+            bundle,
+            level,
+            includeHand,
+          ),
           anatomy: widget.userProfile.anatomy,
         ),
       ),

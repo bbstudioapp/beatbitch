@@ -95,10 +95,11 @@ class SessionController extends ChangeNotifier {
   ///
   /// Mutable (non `final`) : se met à jour quand un défi acquitte
   /// silencieusement des milestones intra-séance (cf.
-  /// `_finalizeChallengeAcquittals`). La régénération des steps à venir
-  /// n'est pas faite en V1 (hors scope), mais au moins les filtres
-  /// runtime (`random_comments.pickFor`, punition carrière) voient le
-  /// nouvel unlock immédiatement après le défi.
+  /// `_finalizeChallengeAcquittals`). Les filtres runtime
+  /// (`random_comments.pickFor`, punition carrière) voient le nouvel
+  /// unlock immédiatement après le défi. La régénération des steps à
+  /// venir, elle, est portée par le caller via `onPostChallengeRegen`
+  /// (déclenché seulement quand le set s'élargit réellement).
   Set<UnlockKey> _unlockedKeys;
 
   /// Mirroir du toggle `hand` propagé au générateur principal — repassé au
@@ -359,6 +360,15 @@ class SessionController extends ChangeNotifier {
   /// `true` si le retry a été pris en charge (le contrôleur saute alors
   /// le flow fail standard). Set depuis `SessionScreen`.
   Future<bool> Function(SessionController controller)? onMilestoneRetry;
+
+  /// Callback déclenché par `_finalizeChallengeAcquittals` lorsqu'un défi
+  /// vient d'élargir le set d'unlocks acquittés (au moins une milestone
+  /// acquittée silencieusement via `markCompletedViaChallenge`). Le caller
+  /// est attendu pour régénérer le reste de la séance avec les nouveaux
+  /// unlocks et appeler `requestPostChallengeRegen` — sinon la timeline
+  /// continue avec le contenu généré au start (qui ne sait rien des
+  /// nouveaux unlocks). No-op si non set (sessions hors carrière, tests).
+  Future<void> Function(SessionController controller)? onPostChallengeRegen;
 
   /// Allocation de spécialisation courante. Consommée par la génération de
   /// punition carrière contextuelle (`_generateCareerPunishmentOrNull` →
@@ -1346,6 +1356,11 @@ class SessionController extends ChangeNotifier {
     return until != null && elapsedSeconds < until;
   }
 
+  /// Seconde absolue à laquelle le breath post-défi expire. `null` hors
+  /// fenêtre. Consommée par le caller de `requestPostChallengeRegen` pour
+  /// dimensionner la durée de la suite régénérée.
+  int? get postChallengeBreathUntilSec => _postChallengeBreathUntilSec;
+
   /// Libellé de fallback localisé pour un tier donné, quand le coach
   /// n'a pas de `challengePhrases` rédigée pour cet axe. Évite que la
   /// joueuse se retrouve sans annonce / sans feedback visuel pendant
@@ -1638,11 +1653,22 @@ class SessionController extends ChangeNotifier {
     await _acquitMilestonesViaChallenge();
     await _consumeShowcaseIfMatched();
     final updated = milestoneService.acquiredUnlockKeys();
-    if (updated.length != beforeUnlocks.length ||
-        !updated.containsAll(beforeUnlocks)) {
-      _unlockedKeys = Set<UnlockKey>.from(updated);
-      notifyListeners();
-    }
+    final expanded = updated.length != beforeUnlocks.length ||
+        !updated.containsAll(beforeUnlocks);
+    if (!expanded) return;
+    _unlockedKeys = Set<UnlockKey>.from(updated);
+    notifyListeners();
+    // Le set d'unlocks vient de s'élargir : prévenir le caller pour qu'il
+    // régénère la suite de la séance avec les nouveaux unlocks. La timeline
+    // existante a été composée au start avec l'ancien set — sans regen, la
+    // suite ne consomme pas la compétence fraîchement débloquée. Si le
+    // caller ne câble pas le callback (sessions hors carrière, tests), on
+    // se contente de la mise à jour runtime ci-dessus (filtres random
+    // comments / punition carrière).
+    final cb = onPostChallengeRegen;
+    if (cb == null) return;
+    if (_state != SessionState.running) return;
+    await cb(this);
   }
 
   /// Durée du breath de récup post-défi (toutes voies). Donne au coach
@@ -2256,6 +2282,96 @@ class SessionController extends ChangeNotifier {
     // Force le déclenchement immédiat du beg (time = start ≤ elapsedSeconds).
     _checkSteps();
     notifyListeners();
+  }
+
+  // ─── Régénération post-défi (Phase 1 défis bis) ───────────────────────
+
+  /// Remplace la suite de la séance par les [upcomingSession.steps] rebased
+  /// à la fin du breath post-défi (`_postChallengeBreathUntilSec`). Appelée
+  /// par le caller depuis `onPostChallengeRegen` quand un défi vient
+  /// d'élargir le set d'unlocks — le générateur produit une suite qui
+  /// **consomme** la compétence fraîchement débloquée. Pas de phrase de
+  /// transition : le breath de 10s du défi sert lui-même de transition.
+  ///
+  /// Différences avec [requestUpgrade] :
+  /// - pas de beg insistant en tête ;
+  /// - pas d'appel à `_checkSteps()` immédiat (le breath est encore en
+  ///   cours, on n'a rien à consommer maintenant — la nouvelle timeline
+  ///   prend la main quand le breath expire) ;
+  /// - pas de `_tts.stop()` (la phrase de fin de défi vient juste d'être
+  ///   speakée, on la laisse aller au bout).
+  ///
+  /// `upcomingSession.steps[*].time` doivent être croissants depuis 0 ;
+  /// la méthode les rebase elle-même sur `breathEnd`.
+  Future<void> requestPostChallengeRegen({
+    required Session upcomingSession,
+  }) async {
+    if (_state != SessionState.running) return;
+    final breathEnd = _postChallengeBreathUntilSec ?? elapsedSeconds;
+    _session = buildPostChallengeRegenSession(
+      previous: _session,
+      upcoming: upcomingSession,
+      breathEnd: breathEnd,
+    );
+
+    _nextStepIndex = 0;
+    _lastConfigStep = null;
+    // Reset du flag chime : la régen apporte son propre step final + apothéose.
+    _finalChimePlayed = false;
+    _finaleChimeStarted = false;
+
+    notifyListeners();
+  }
+
+  /// Helper pur : assemble la nouvelle [Session] qui remplace la suite après
+  /// un défi qui a élargi les unlocks. Rebase les steps de [upcoming] sur
+  /// [breathEnd] et propage les métadonnées de fin (finalStepTime,
+  /// silentFinishStartTime, finalCategory) en les décalant aussi.
+  ///
+  /// Conserve [previous.challenge] (et ses timestamps) pour rester cohérent
+  /// avec `_updateChallengePhase` qui se met en `phase == ended` à ce stade
+  /// — le challenge ne sera pas re-déclenché.
+  @visibleForTesting
+  static Session buildPostChallengeRegenSession({
+    required Session previous,
+    required Session upcoming,
+    required int breathEnd,
+  }) {
+    final newSteps = <SessionStep>[
+      for (final s in upcoming.steps)
+        SessionStep(
+          time: s.time + breathEnd,
+          text: s.text,
+          mode: s.mode,
+          from: s.from,
+          to: s.to,
+          bpm: s.bpm,
+          bpmEnd: s.bpmEnd,
+          duration: s.duration,
+          chainAction: s.chainAction,
+          swallowMode: s.swallowMode,
+          background: s.background,
+        ),
+    ];
+    final upFinalStepTime = upcoming.finalStepTime;
+    final upSilentFinish = upcoming.silentFinishStartTime;
+    return Session(
+      id: '${previous.id}:postchallenge',
+      name: previous.name,
+      description: previous.description,
+      durationSeconds: breathEnd + upcoming.durationSeconds,
+      defaultMode: previous.defaultMode,
+      steps: newSteps,
+      finalStepTime:
+          upFinalStepTime != null ? upFinalStepTime + breathEnd : null,
+      silentFinishStartTime:
+          upSilentFinish != null ? upSilentFinish + breathEnd : null,
+      finalCategory: upcoming.finalCategory,
+      noStats: previous.noStats,
+      challenge: previous.challenge,
+      challengeStepTime: previous.challengeStepTime,
+      challengeBreathStartTime: previous.challengeBreathStartTime,
+    );
   }
 
   // ─── Flow FAIL ─────────────────────────────────────────────────────────
