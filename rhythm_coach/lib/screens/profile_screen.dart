@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../career/services/career_difficulty_resolver.dart';
 import '../career/services/career_progress_service.dart';
 import '../career/services/challenge_service.dart';
 import '../career/services/custom_config_service.dart';
@@ -149,11 +150,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             );
           }
           final bundle = snapshot.data!;
-          // Phase 19.12 : `maxLevel` retiré du `ReputationSnapshot`. On
-          // dérive un synthLevel depuis le compteur sessions pour
-          // conserver l'affichage du titre level historique.
-          final sessions = bundle.reputation.stats.sessionsCompleted;
-          final level = (1 + sessions ~/ 2).clamp(1, 30);
+          // SynthLevel dérivé des sessions (cf. Phase 19) — conserve
+          // l'affichage du titre level historique.
+          final level = CareerDifficultyResolver.synthLevelFor(
+              bundle.reputation.stats.sessionsCompleted);
           final title = localizedCareerLevelTitle(context, level);
 
           return ListView(

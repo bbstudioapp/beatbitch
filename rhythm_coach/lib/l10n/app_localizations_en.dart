@@ -1670,8 +1670,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String coachErrorMinPlayerSeconds(String coachName, int hours) {
-    return '$coachName unlocks at $hours h of total play time.';
+  String coachErrorMinPlayerSeconds(String coachName, String duration) {
+    return '$coachName unlocks at $duration of total play time.';
   }
 
   @override

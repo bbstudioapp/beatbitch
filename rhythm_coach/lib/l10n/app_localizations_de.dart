@@ -1676,8 +1676,8 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String coachErrorMinPlayerSeconds(String coachName, int hours) {
-    return '$coachName wird bei $hours h gespielter Gesamtzeit freigeschaltet.';
+  String coachErrorMinPlayerSeconds(String coachName, String duration) {
+    return '$coachName wird bei $duration gespielter Gesamtzeit freigeschaltet.';
   }
 
   @override

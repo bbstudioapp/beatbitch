@@ -44,7 +44,7 @@ class CareerDifficultyResolver {
     required SessionLengthChoice lengthChoice,
   }) {
     return CareerLevel(
-      level: _synthLevelFor(sessionsCompleted),
+      level: synthLevelFor(sessionsCompleted),
       maxDifficultyCap: _maxDifficultyCapFor(sessionsCompleted),
       regenEndMultiplier: _regenEndMultiplierFor(sessionsCompleted),
       durationSeconds: lengthChoice.durationSeconds,
@@ -53,20 +53,25 @@ class CareerDifficultyResolver {
   }
 
   /// SynthLevel = proxy entier pour les call sites qui consomment encore
-  /// un `level` (BpmPacing, gates de phrase, etc.). 1 → 30, monte par
-  /// tranches de 2 sessions.
-  static int _synthLevelFor(int sessionsCompleted) {
-    final n = sessionsCompleted < 0 ? 0 : sessionsCompleted;
+  /// un `level` (BpmPacing, gates de phrase, titres de séance,
+  /// `localizedCareerLevelTitle`, etc.). 1 → 30, monte par tranches de
+  /// 2 sessions. Public car consommé hors du resolver (`surprise_router`,
+  /// `profile_screen`, `career_scenario_debug_screen`).
+  static int synthLevelFor(int sessionsCompleted) {
+    final n = _clampSessions(sessionsCompleted);
     return min(1 + n ~/ 2, 30);
   }
 
+  static int _clampSessions(int sessionsCompleted) =>
+      sessionsCompleted < 0 ? 0 : sessionsCompleted;
+
   static double _maxDifficultyCapFor(int sessionsCompleted) {
-    final n = sessionsCompleted < 0 ? 0 : sessionsCompleted;
+    final n = _clampSessions(sessionsCompleted);
     return min(0.25 + 0.025 * n, 1.0);
   }
 
   static double _regenEndMultiplierFor(int sessionsCompleted) {
-    final n = sessionsCompleted < 0 ? 0 : sessionsCompleted;
+    final n = _clampSessions(sessionsCompleted);
     return min(1.35 + 0.075 * n, 3.0);
   }
 
@@ -74,7 +79,7 @@ class CareerDifficultyResolver {
     int sessionsCompleted,
     SessionLengthChoice lengthChoice,
   ) {
-    final n = sessionsCompleted < 0 ? 0 : sessionsCompleted;
+    final n = _clampSessions(sessionsCompleted);
     int base;
     if (n <= 6) {
       base = 2;

@@ -108,13 +108,13 @@ class _CareerScreenState extends State<CareerScreen> {
     // a été livrée après que la joueuse l'ait joué — sans rattrapage,
     // ses unlocks restent figés à leur état pré-cascade et les sessions
     // suivantes proposent des actions plus shallow que ce qu'elle sait
-    // tenir). Idempotent : un appel sans changement à acquitter est un
-    // no-op silencieux.
-    await milestoneService.reconcileFromCapability(capabilityProfile);
-    // Synchronise le palier de coach avec le temps cumulé (Phase 19.10)
-    // avant que l'écran ne lise `currentTier` / `selectedCoach` pour son
-    // rendu.
-    await coachService.syncFromTotalSeconds(totalSeconds);
+    // tenir). Idempotent. En parallèle : sync du palier coach avec le
+    // temps cumulé — les deux opérations sont indépendantes
+    // (MilestoneService vs CoachService).
+    await Future.wait([
+      milestoneService.reconcileFromCapability(capabilityProfile),
+      coachService.syncFromTotalSeconds(totalSeconds),
+    ]);
     final completedSessions = results[3] as int;
     return _CareerBundle(
       bank: results[0] as PhraseBank,
@@ -130,13 +130,7 @@ class _CareerScreenState extends State<CareerScreen> {
       challengeTutorialSeen: results[10] as bool,
       lastLengthChoice: results[11] as SessionLengthChoice,
       totalSeconds: totalSeconds,
-      // SynthLevel = proxy entier dérivé des sessions (Phase 19.6+).
-      // Sert au titre de niveau affiché et aux call sites internes qui
-      // consomment encore un `level` (milestone filter, sessionName).
-      synthLevel: CareerDifficultyResolver.resolveForCareer(
-        sessionsCompleted: completedSessions,
-        lengthChoice: SessionLengthChoice.courte,
-      ).level,
+      synthLevel: CareerDifficultyResolver.synthLevelFor(completedSessions),
     );
   }
 
@@ -1323,34 +1317,6 @@ class _DurationPicker extends StatelessWidget {
     required this.onChanged,
   });
 
-  String _labelFor(BuildContext context, SessionLengthChoice c) {
-    final t = AppLocalizations.of(context);
-    switch (c) {
-      case SessionLengthChoice.bachee:
-        return t.sessionLengthBacheeLabel;
-      case SessionLengthChoice.courte:
-        return t.sessionLengthCourteLabel;
-      case SessionLengthChoice.moyenne:
-        return t.sessionLengthMoyenneLabel;
-      case SessionLengthChoice.longue:
-        return t.sessionLengthLongueLabel;
-    }
-  }
-
-  String _durationFor(BuildContext context, SessionLengthChoice c) {
-    final t = AppLocalizations.of(context);
-    switch (c) {
-      case SessionLengthChoice.bachee:
-        return t.sessionLengthBacheeDuration;
-      case SessionLengthChoice.courte:
-        return t.sessionLengthCourteDuration;
-      case SessionLengthChoice.moyenne:
-        return t.sessionLengthMoyenneDuration;
-      case SessionLengthChoice.longue:
-        return t.sessionLengthLongueDuration;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
@@ -1362,8 +1328,8 @@ class _DurationPicker extends StatelessWidget {
             for (final c in SessionLengthChoice.values) ...[
               Expanded(
                 child: _DurationChoiceCard(
-                  label: _labelFor(context, c),
-                  duration: _durationFor(context, c),
+                  label: c.localizedLabel(context),
+                  duration: c.localizedDuration(context),
                   selected: c == value,
                   locked: c == SessionLengthChoice.bachee && !isBacheeUnlocked,
                   onTap: () => onChanged(c),

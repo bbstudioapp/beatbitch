@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../career/models/coach.dart';
+import '../career/services/career_difficulty_resolver.dart';
 import '../career/services/career_encore_gate.dart';
 import '../career/services/career_progress_service.dart';
 import '../career/services/generation/career_session_generator.dart';
@@ -59,17 +60,28 @@ class SurpriseRouter {
     final stats = StatsService();
     final specService = SpecializationService();
 
-    final bank = await PhraseBankLoader().load();
-    final punishments = await PunishmentLoader().load();
-    final comments = await RandomCommentsLoader().load();
-    final sessions = await progress.getCompletedSessions();
-    final persistedIncludeHand = await progress.getIncludeHand();
-    final specialization = await specService.load();
-    final humiliationCareer = await stats.getHumiliationLevel();
-    final obedienceScore = await stats.getObedienceLevel();
-    final totalSeconds = await stats.getTotalSeconds();
-    final durationSeconds =
-        await SurpriseAlertService.instance.pickRandomDurationSeconds();
+    final results = await Future.wait([
+      PhraseBankLoader().load(),
+      PunishmentLoader().load(),
+      RandomCommentsLoader().load(),
+      progress.getCompletedSessions(),
+      progress.getIncludeHand(),
+      specService.load(),
+      stats.getHumiliationLevel(),
+      stats.getObedienceLevel(),
+      stats.getTotalSeconds(),
+      SurpriseAlertService.instance.pickRandomDurationSeconds(),
+    ]);
+    final bank = results[0] as PhraseBank;
+    final punishments = results[1] as PunishmentBundle;
+    final comments = results[2] as RandomCommentsBundle;
+    final sessions = results[3] as int;
+    final persistedIncludeHand = results[4] as bool;
+    final specialization = results[5] as SpecializationAllocation;
+    final humiliationCareer = results[6] as double;
+    final obedienceScore = results[7] as double;
+    final totalSeconds = results[8] as int;
+    final durationSeconds = results[9] as int;
 
     if (!context.mounted) return;
 
@@ -81,7 +93,7 @@ class SurpriseRouter {
     // SynthLevel proxy pour le générateur (Custom path : pas de
     // `lengthChoice` ni `sessionsCompleted` passé, on retombe sur
     // `resolve(level)` legacy).
-    final synthLevel = (1 + sessions ~/ 2).clamp(1, 30);
+    final synthLevel = CareerDifficultyResolver.synthLevelFor(sessions);
 
     final bundle = _SurpriseBundle(
       bank: bank,

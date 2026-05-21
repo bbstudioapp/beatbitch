@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../l10n/format_helpers.dart';
 import '../../theme/app_theme.dart';
 import '../models/coach.dart';
 import '../services/coach_service.dart';
@@ -45,7 +46,10 @@ class CoachPickerScreen extends StatelessWidget {
           context,
           t.coachErrorMinPlayerSeconds(
             coach.name,
-            (coach.requirements.minPlayerSeconds / 3600).round(),
+            formatDurationCompact(
+              context,
+              coach.requirements.minPlayerSeconds,
+            ),
           ),
         );
         return;

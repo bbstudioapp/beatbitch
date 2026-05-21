@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../career/models/custom_session_config.dart';
+import '../career/models/session_length_choice.dart';
 import '../career/models/specialization.dart';
 import '../models/badge.dart';
 import '../models/session.dart';
@@ -105,6 +106,28 @@ extension ReputationTierL10n on ReputationTier {
       ReputationTier.puteConsacree => t.reputationTierPuteConsacree,
       ReputationTier.reineDesSuceuses => t.reputationTierReineDesSuceuses,
       ReputationTier.reineDesPutes => t.reputationTierReineDesPutes,
+    };
+  }
+}
+
+extension SessionLengthChoiceL10n on SessionLengthChoice {
+  String localizedLabel(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return switch (this) {
+      SessionLengthChoice.bachee => t.sessionLengthBacheeLabel,
+      SessionLengthChoice.courte => t.sessionLengthCourteLabel,
+      SessionLengthChoice.moyenne => t.sessionLengthMoyenneLabel,
+      SessionLengthChoice.longue => t.sessionLengthLongueLabel,
+    };
+  }
+
+  String localizedDuration(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return switch (this) {
+      SessionLengthChoice.bachee => t.sessionLengthBacheeDuration,
+      SessionLengthChoice.courte => t.sessionLengthCourteDuration,
+      SessionLengthChoice.moyenne => t.sessionLengthMoyenneDuration,
+      SessionLengthChoice.longue => t.sessionLengthLongueDuration,
     };
   }
 }
