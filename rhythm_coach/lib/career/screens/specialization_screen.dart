@@ -4,6 +4,7 @@ import '../../l10n/app_localizations.dart';
 import '../../l10n/enum_labels.dart';
 import '../../theme/app_theme.dart';
 import '../models/specialization.dart';
+import '../models/specialization_meta.dart';
 import '../services/career_progress_service.dart';
 import '../services/specialization_service.dart';
 
