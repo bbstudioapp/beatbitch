@@ -279,6 +279,14 @@ class SessionController extends ChangeNotifier {
   String? _challengeCurrentText;
   String? get challengeCurrentText => _challengeCurrentText;
 
+  /// Miroir de la dernière `_challengeCurrentText` qui a effectivement été
+  /// envoyée au TTS via `_speakChallengePhraseIfAny`. Permet de re-tenter
+  /// la prononciation au tick suivant si le TTS était occupé (random
+  /// comment en cours, phrase scriptée précédente non terminée) au moment
+  /// de la transition de phase défi — sans risquer de prononcer deux fois
+  /// la même phrase.
+  String? _challengeSpokenText;
+
   /// Snapshot du défi de la séance courante (clone de `session.challenge`).
   /// Posé au `start()` ou au `_checkSteps` quand on entre dans le breath.
   Challenge? _activeChallenge;
@@ -929,6 +937,7 @@ class SessionController extends ChangeNotifier {
     _challengeExtensionsCount = 0;
     _challengeOutcome = null;
     _challengeCurrentText = null;
+    _challengeSpokenText = null;
     _activeChallenge = null;
     _challengeCountdownStartedAtSec = null;
     _challengeCountdownLastDigitSpoken = -1;
@@ -1465,6 +1474,7 @@ class SessionController extends ChangeNotifier {
           _challengePhase = ChallengePhase.live;
           _challengeStepStartedAtSec = r;
           _challengeCurrentText = null;
+          _challengeSpokenText = null;
           _applyChallengeStepNow(stepStart);
         }
       }
@@ -1515,7 +1525,25 @@ class SessionController extends ChangeNotifier {
     }
     if (elapsedInStep >= stepEnd) {
       _challengePhase = ChallengePhase.atSeuil;
-      _challengeAtSeuilStartedAtSec = t;
+      // Wallclock (`r`) et non `t` : la timeline session est freezée pendant
+      // tout le défi (cf. `_onTick` qui décrémente `_timelineOffset`), donc
+      // `t` accuse l'écart accumulé depuis le breath du défi. Mesurer le
+      // timeout 8 s du seuil (`r - seuilAt`) contre `t` fait déclencher le
+      // timeout immédiatement à la bascule — les boutons « Je tiens » /
+      // « J'arrête » apparaissent et disparaissent en un tick avant que la
+      // joueuse n'ait le temps de cliquer.
+      _challengeAtSeuilStartedAtSec = r;
+    }
+
+    // Retry passif de la phrase défi en attente : si la transition
+    // `none → breath` (ou `live → preExtend`) a posé `_challengeCurrentText`
+    // mais que le TTS était occupé (random comment, phrase scriptée d'un
+    // step précédent), `_speakChallengePhraseIfAny` a skip et la phrase
+    // n'est jamais prononcée. À chaque tick, si une phrase défi non-encore
+    // dite est en attente et que le TTS s'est libéré, on la dit maintenant.
+    if (_challengeCurrentText != null &&
+        _challengeCurrentText != _challengeSpokenText) {
+      _speakChallengePhraseIfAny();
     }
   }
 
@@ -1554,6 +1582,7 @@ class SessionController extends ChangeNotifier {
     _challengeCountdownStartedAtSec = _realSec.toInt();
     _challengeCountdownLastDigitSpoken = -1;
     _challengeCurrentText = null;
+    _challengeSpokenText = null;
   }
 
   /// Chiffre courant du countdown (3, 2, 1) ou `null` si on n'est pas en
@@ -1771,7 +1800,9 @@ class SessionController extends ChangeNotifier {
   void _speakChallengePhraseIfAny() {
     final text = _challengeCurrentText;
     if (text == null || text.isEmpty) return;
+    if (text == _challengeSpokenText) return;
     if (_tts.isSpeaking) return;
+    _challengeSpokenText = text;
     _speakScripted(text);
   }
 
