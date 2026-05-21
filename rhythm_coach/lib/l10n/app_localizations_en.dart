@@ -544,7 +544,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get challengeAttemptTutorialHoldThroat =>
-      'First challenge: you\'ll hold deep for ten seconds. Tap GO when ready, I\'ll count three two one before we start. At the threshold, two buttons will appear to hold longer or stop.';
+      'First challenge: you\'ll hold deep for five seconds. Tap GO when ready, I\'ll count three two one before we start. At the threshold, two buttons will appear to hold longer or stop.';
 
   @override
   String get challengeExtensionDefault =>

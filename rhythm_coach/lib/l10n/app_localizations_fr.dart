@@ -545,7 +545,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get challengeAttemptTutorialHoldThroat =>
-      'Premier défi : tu vas tenir en gorge dix secondes. Tape GO quand tu es prête, je compterai trois deux un avant de démarrer. Au seuil, deux boutons apparaîtront pour tenir plus longtemps ou arrêter.';
+      'Premier défi : tu vas tenir en gorge cinq secondes. Tape GO quand tu es prête, je compterai trois deux un avant de démarrer. Au seuil, deux boutons apparaîtront pour tenir plus longtemps ou arrêter.';
 
   @override
   String get challengeExtensionDefault =>

@@ -544,7 +544,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get challengeAttemptTutorialHoldThroat =>
-      'Erste Herausforderung: Du hältst tief zehn Sekunden. Tippe LOS wenn du bereit bist, ich zähle drei zwei eins vor dem Start. Beim Schwellenwert erscheinen zwei Tasten zum länger Halten oder Aufhören.';
+      'Erste Herausforderung: Du hältst tief fünf Sekunden. Tippe LOS wenn du bereit bist, ich zähle drei zwei eins vor dem Start. Beim Schwellenwert erscheinen zwei Tasten zum länger Halten oder Aufhören.';
 
   @override
   String get challengeExtensionDefault =>

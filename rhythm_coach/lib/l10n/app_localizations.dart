@@ -1063,7 +1063,7 @@ abstract class AppLocalizations {
   /// No description provided for @challengeAttemptTutorialHoldThroat.
   ///
   /// In fr, this message translates to:
-  /// **'Premier défi : tu vas tenir en gorge dix secondes. Tape GO quand tu es prête, je compterai trois deux un avant de démarrer. Au seuil, deux boutons apparaîtront pour tenir plus longtemps ou arrêter.'**
+  /// **'Premier défi : tu vas tenir en gorge cinq secondes. Tape GO quand tu es prête, je compterai trois deux un avant de démarrer. Au seuil, deux boutons apparaîtront pour tenir plus longtemps ou arrêter.'**
   String get challengeAttemptTutorialHoldThroat;
 
   /// No description provided for @challengeExtensionDefault.
