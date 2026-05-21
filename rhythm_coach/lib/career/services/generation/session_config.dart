@@ -19,6 +19,7 @@ import '../../../models/session.dart';
 import '../../../services/capability_axis.dart';
 import '../../../services/capability_service.dart';
 import '../../../services/humiliation_engine.dart';
+import '../../models/session_length_choice.dart';
 import '../../models/specialization.dart';
 
 /// Snapshot immuable des inputs d'une séance, posé en début de
@@ -50,12 +51,19 @@ class SessionConfig {
     required this.capCeilings,
     required this.overloadAxis,
     required this.overloadFactor,
+    this.lengthChoice,
   });
 
   // Bornes globales
   final int level;
   final bool includeHand;
   final int maxDepthIndex;
+
+  /// Palier de durée choisi par la joueuse (Phase 19.3+). `null` en Custom
+  /// (pas de notion de palier) et hors carrière. Consulté par les gates
+  /// métier qui dépendent du format de séance (mini-vague disponible
+  /// uniquement sur moyenne/longue, etc.).
+  final SessionLengthChoice? lengthChoice;
 
   // Profil joueuse
   final SpecializationAllocation spec;

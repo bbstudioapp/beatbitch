@@ -3,6 +3,7 @@ import 'dart:math';
 import '../../models/session_step.dart';
 import '../../services/capability_axis.dart';
 import '../../services/capability_service.dart';
+import '../models/session_length_choice.dart';
 
 /// Gates et seuils level-based de la génération de séance.
 ///
@@ -27,7 +28,25 @@ class CareerLevelGates {
   /// Vrai au-dessus du seuil d'éligibilité aux mini-vagues mid-session
   /// (cf. `_shouldEmitMiniWave`). En dessous, la diagonale d'intensité
   /// reste monotone du début au finish.
-  static bool isMiniWaveEligible(int level) => level >= 5;
+  ///
+  /// Phase 19.9 : la mini-vague est désormais gated par le palier de
+  /// durée — autorisée uniquement sur `moyenne` et `longue` (les
+  /// séances avec assez de marge pour insérer la vague + sa pause longue
+  /// post-vague). Le synthLevel (= sessions/2 + 1) reste consulté pour
+  /// la pédagogie : pas de mini-vague avant 8 sessions (synthLevel < 5),
+  /// la dramaturgie monotone reste la norme pour la débutante.
+  ///
+  /// Quand `lengthChoice` est null (Custom, debug), seul le synthLevel
+  /// est consulté — comportement legacy de Phase 19.2.
+  static bool isMiniWaveEligible({
+    required int level,
+    SessionLengthChoice? lengthChoice,
+  }) {
+    if (level < 5) return false;
+    if (lengthChoice == null) return true;
+    return lengthChoice == SessionLengthChoice.moyenne ||
+        lengthChoice == SessionLengthChoice.longue;
+  }
 
   /// Vrai quand la palette finale peut basculer sur la coloration spé
   /// (sloppy / obéissance) — au-delà, la dramaturgie tient.

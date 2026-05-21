@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:beat_bitch/career/models/session_length_choice.dart';
 import 'package:beat_bitch/career/services/career_level_gates.dart';
 import 'package:beat_bitch/models/session_step.dart';
 
@@ -39,10 +40,52 @@ void main() {
       });
     });
 
-    test('isMiniWaveEligible : seuil à level 5', () {
-      expect(CareerLevelGates.isMiniWaveEligible(4), isFalse);
-      expect(CareerLevelGates.isMiniWaveEligible(5), isTrue);
-      expect(CareerLevelGates.isMiniWaveEligible(20), isTrue);
+    group('isMiniWaveEligible (Phase 19.9 — gated par palier)', () {
+      test('legacy : sans lengthChoice, seuil synthLevel ≥ 5', () {
+        expect(
+          CareerLevelGates.isMiniWaveEligible(level: 4),
+          isFalse,
+        );
+        expect(
+          CareerLevelGates.isMiniWaveEligible(level: 5),
+          isTrue,
+        );
+        expect(
+          CareerLevelGates.isMiniWaveEligible(level: 20),
+          isTrue,
+        );
+      });
+
+      test('bachee/courte : refusé même à level haut', () {
+        for (final lc in [
+          SessionLengthChoice.bachee,
+          SessionLengthChoice.courte,
+        ]) {
+          expect(
+            CareerLevelGates.isMiniWaveEligible(level: 20, lengthChoice: lc),
+            isFalse,
+            reason: '${lc.name} ne doit jamais avoir de mini-vague',
+          );
+        }
+      });
+
+      test('moyenne/longue : autorisé si synthLevel ≥ 5', () {
+        for (final lc in [
+          SessionLengthChoice.moyenne,
+          SessionLengthChoice.longue,
+        ]) {
+          expect(
+            CareerLevelGates.isMiniWaveEligible(level: 5, lengthChoice: lc),
+            isTrue,
+            reason: '${lc.name} à level 5 doit autoriser la mini-vague',
+          );
+          expect(
+            CareerLevelGates.isMiniWaveEligible(level: 4, lengthChoice: lc),
+            isFalse,
+            reason: '${lc.name} à level 4 reste sous le seuil pédagogique',
+          );
+        }
+      });
     });
 
     test('canColorFinalBySpec : seuil à level 7', () {
