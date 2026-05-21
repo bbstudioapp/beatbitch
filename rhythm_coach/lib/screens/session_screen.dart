@@ -405,45 +405,12 @@ class _SessionScreenState extends State<SessionScreen>
   }
 
   Future<void> _recordCareerCompletion() async {
-    final progress = CareerProgressService();
-    final currentMax = await progress.getMaxLevel();
-    final level = widget.careerLevel ?? 0;
-    final atMaxLevel = level >= currentMax;
-    // Level-up gaté par milestone : on n'autorise un palier qu'après
-    // l'acquittement d'une milestone candidate au niveau courant (ou si
-    // aucune ne l'était — catalogue épuisé, pas de piège). On consulte
-    // pendingFor avec les scores post-finish (≈ ceux que la séance suivante
-    // verra au start) pour rester cohérent avec ce que `pendingFor` choisirait
-    // la prochaine fois. Tous les filtres consommés par `pendingFor` au start
-    // (career_screen) doivent être passés ici aussi — sinon une milestone
-    // exclue au start (ex. balls quand `hasBalls=false`) redevient candidate
-    // au end et bloque le level-up indéfiniment. Skip si le caller a déjà
-    // bloqué le palier (quickie / fail / niveau insuffisant / coach hors
-    // palier).
-    final cleanSession = !_controller.hadFailThisSession;
-    bool hasPendingAtCurrentLevel = false;
-    if (atMaxLevel &&
-        cleanSession &&
-        !widget.isQuickie &&
-        widget.coachAdvancesTier) {
-      final pending = milestoneService.pendingFor(
-        humiliationScore: _controller.humiliation.careerScore,
-        obedience: _controller.obedience.score,
-        playerLevel: currentMax,
-        allocation: widget.specialization,
-        capabilityProfile: widget.capabilityProfile,
-        anatomy: widget.anatomy,
-      );
-      hasPendingAtCurrentLevel = pending != null;
-    }
-    final gateOk = progress.canLevelUp(
-      cleanSession: cleanSession,
-      isQuickie: widget.isQuickie,
-      milestoneAcquittedThisSession: _controller.milestoneAcquittedThisSession,
-      hasPendingAtCurrentLevel: hasPendingAtCurrentLevel,
-    );
-    final levelUp = atMaxLevel && widget.coachAdvancesTier && gateOk;
-    await progress.recordSessionCompleted(levelUp: levelUp);
+    // Phase 19.12 : plus de logique level-up — on incrémente seulement
+    // le compteur de sessions complétées. La progression de la joueuse
+    // est désormais portée par le temps cumulé (unlock coachs), le
+    // profil de capacités (difficulté) et les milestones acquittées
+    // (contenu pédagogique).
+    await CareerProgressService().recordSessionCompleted();
   }
 
   @override
@@ -2305,8 +2272,8 @@ class _FinishedPanelState extends State<_FinishedPanel> {
   }
 
   Future<void> _refreshSpecPoints() async {
-    final maxLevel = await CareerProgressService().getMaxLevel();
-    final available = await SpecializationService().availablePoints(maxLevel);
+    final sessions = await CareerProgressService().getCompletedSessions();
+    final available = await SpecializationService().availablePoints(sessions);
     if (!mounted) return;
     setState(() => _availableSpecPoints = available);
   }

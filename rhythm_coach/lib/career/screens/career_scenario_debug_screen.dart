@@ -85,7 +85,9 @@ class _CareerScenarioDebugScreenState extends State<CareerScenarioDebugScreen> {
     final spec = await SpecializationService().load();
     final humil = await stats.getHumiliationLevel();
     final obed = await stats.getObedienceLevel();
-    final maxLevel = await progress.getMaxLevel();
+    // Phase 19.12 : pas de maxLevel persisté — on dérive le level
+    // initial du compteur de sessions (1 + sessions/2, clampé).
+    final sessions = await progress.getCompletedSessions();
     final includeHand = await progress.getIncludeHand();
     if (!mounted) return;
     setState(() {
@@ -94,7 +96,7 @@ class _CareerScenarioDebugScreenState extends State<CareerScenarioDebugScreen> {
       _spec = spec;
       _humil = humil;
       _obed = obed;
-      _level = maxLevel.clamp(1, 20);
+      _level = (1 + sessions ~/ 2).clamp(1, 20);
       _includeHand = includeHand;
       _unlocks = milestoneService.acquiredUnlockKeys();
       _ready = true;

@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:beat_bitch/career/models/level_milestone.dart';
 import 'package:beat_bitch/career/models/capability_requirement.dart';
 import 'package:beat_bitch/career/models/unlock_key.dart';
@@ -112,28 +110,9 @@ void main() {
       );
     });
 
-    test(
-        'session_screen._recordCareerCompletion DOIT passer anatomy à '
-        'pendingFor (garde-fou contre régression silencieuse)', () {
-      // Garde-fou statique : le call site `pendingFor` dans
-      // `_recordCareerCompletion` doit propager `widget.anatomy`. Oublier
-      // ce paramètre est invisible côté typage (anatomy est optionnel)
-      // mais fatal côté gameplay (cf. test précédent). Ce test pince le
-      // bloc exact pour fail si le fix disparaît.
-      final src = File('lib/screens/session_screen.dart').readAsStringSync();
-      final block = RegExp(
-        r'_recordCareerCompletion[\s\S]+?milestoneService\.pendingFor\([\s\S]+?\);',
-      ).firstMatch(src);
-      expect(block, isNotNull,
-          reason: '_recordCareerCompletion doit appeler pendingFor');
-      expect(
-        block!.group(0),
-        contains('anatomy:'),
-        reason: 'Le call pendingFor au end-of-session DOIT recevoir anatomy '
-            'pour rester cohérent avec le filtre du start (career_screen). '
-            "Sinon : milestone exclue au start (ex. balls) redevient candidate "
-            'au end → level-up bloqué indéfiniment (bug post-update v0.4.0).',
-      );
-    });
+    // Phase 19.12 — le garde-fou statique sur `_recordCareerCompletion`
+    // est retiré : la fonction ne fait plus que `recordSessionCompleted()`,
+    // il n'y a plus de call `pendingFor` à pincer côté end-of-session
+    // (la notion de level-up disparaît avec le retrait de `maxLevel`).
   });
 }
