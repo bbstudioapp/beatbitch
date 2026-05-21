@@ -232,7 +232,7 @@
     "placeholders": { "digit": { "type": "int" } }
   },
   "challengeAttemptDefault": "Défi : on va pousser ta limite. Tape GO quand tu es prête, je compterai trois deux un avant de démarrer.",
-  "challengeAttemptTutorialHoldThroat": "Premier défi : tu vas tenir en gorge dix secondes. Tape GO quand tu es prête, je compterai trois deux un avant de démarrer. Au seuil, deux boutons apparaîtront pour tenir plus longtemps ou arrêter.",
+  "challengeAttemptTutorialHoldThroat": "Premier défi : tu vas tenir en gorge cinq secondes. Tape GO quand tu es prête, je compterai trois deux un avant de démarrer. Au seuil, deux boutons apparaîtront pour tenir plus longtemps ou arrêter.",
   "challengeExtensionDefault": "Tu peux rester encore si tu veux. Les boutons vont apparaître.",
   "challengeSuccessDefault": "Tu as tenu jusqu'au bout. Bonne fille.",
   "challengeStopDefault": "Tu as choisi d'arrêter. Bien.",

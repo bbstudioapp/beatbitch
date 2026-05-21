@@ -232,7 +232,7 @@
     "placeholders": { "digit": { "type": "int" } }
   },
   "challengeAttemptDefault": "Challenge: we're pushing your limit. Tap GO when ready, I'll count three two one before we start.",
-  "challengeAttemptTutorialHoldThroat": "First challenge: you'll hold deep for ten seconds. Tap GO when ready, I'll count three two one before we start. At the threshold, two buttons will appear to hold longer or stop.",
+  "challengeAttemptTutorialHoldThroat": "First challenge: you'll hold deep for five seconds. Tap GO when ready, I'll count three two one before we start. At the threshold, two buttons will appear to hold longer or stop.",
   "challengeExtensionDefault": "You can stay longer if you want. Buttons will appear.",
   "challengeSuccessDefault": "You held it all the way. Good girl.",
   "challengeStopDefault": "You chose to stop. Good.",
