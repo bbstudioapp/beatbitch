@@ -459,6 +459,13 @@ class CareerSessionGenerator {
     required PhraseBank bank,
     int? durationSeconds,
     SessionLengthChoice? lengthChoice,
+
+    /// Sessions complétées par la joueuse — pilote (Phase 19.6) les
+    /// paramètres `maxDifficultyCap` / `regenEndMultiplier` /
+    /// `boostsCount`. Quand renseigné ET que `lengthChoice` est aussi
+    /// fourni, le resolver bascule sur `resolveForCareer` ; sinon
+    /// l'ancien mapping `level → cfg` reste utilisé (Custom + debug).
+    int? sessionsCompleted,
     bool includeHand = true,
     int encoreChainIndex = 0,
     String? openingPhrase,
@@ -519,7 +526,15 @@ class CareerSessionGenerator {
       milestones.bodies.length <= 2,
       'milestones.bodies : au plus 2 milestones body par séance pour l\'instant',
     );
-    final cfg = CareerDifficultyResolver.resolve(level);
+    // Phase 19.6 : si on a sessionsCompleted + lengthChoice (= cas
+    // carrière), on dérive la config depuis ces signaux. Sinon (Custom,
+    // debug, surprise router) on reste sur l'ancien mapping `level`.
+    final cfg = (sessionsCompleted != null && lengthChoice != null)
+        ? CareerDifficultyResolver.resolveForCareer(
+            sessionsCompleted: sessionsCompleted,
+            lengthChoice: lengthChoice,
+          )
+        : CareerDifficultyResolver.resolve(level);
     final overload = _pickOverload(
       profile: capability.profile,
       ceilings: capability.sessionCeilings,
