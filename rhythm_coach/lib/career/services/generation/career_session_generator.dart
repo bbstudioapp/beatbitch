@@ -560,6 +560,7 @@ class CareerSessionGenerator {
       capCeilings: capability.sessionCeilings,
       overloadAxis: overload.axis,
       overloadFactor: overload.factor,
+      lengthChoice: lengthChoice,
     );
     _initScratchpad(unlockedKeys: unlockedKeys, clearPatternBuffer: true);
     // Mode "Session bâclée" : 6 min par défaut, intense tout du long. Floor
@@ -1349,7 +1350,12 @@ class CareerSessionGenerator {
   bool _shouldEmitMiniWave(
       int time, int effectiveDuration, double stamina, int genUntil) {
     if (effectiveDuration < 720) return false;
-    if (!CareerLevelGates.isMiniWaveEligible(_config.level)) return false;
+    if (!CareerLevelGates.isMiniWaveEligible(
+      level: _config.level,
+      lengthChoice: _config.lengthChoice,
+    )) {
+      return false;
+    }
     if (time < _state.nextMiniWaveAt) return false;
     if (genUntil - time < 90) return false;
     if (stamina < 35) return false;
