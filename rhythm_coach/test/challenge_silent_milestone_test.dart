@@ -198,6 +198,146 @@ void main() {
     });
   });
 
+  group('milestonesAcquittableByChallenge — cascade transitive holds', () {
+    test(
+      'défi hold throat 5 s acquitte hold mid (sans requiresCapability)',
+      () {
+        // Reproduit le cas signalé : un défi tuto hold throat 5 s doit
+        // acquitter immédiatement les milestones d'unlock hold précédentes
+        // (intro_hold_mid → hold_mid_short, finals tip/head/mid) — sinon
+        // la joueuse les voit réapparaître en session 2 alors que la
+        // capacité a été prouvée.
+        final svc = MilestoneService();
+        final holdMid = _milestone(
+          id: 'intro_hold_mid',
+          requiresCapability: const [],
+          unlocks: [UnlockKey.holdMidShort],
+        );
+        final finalTip = _milestone(
+          id: 'intro_final_hold_tip',
+          requiresCapability: const [],
+          unlocks: [UnlockKey.finalHoldTip],
+        );
+        svc.seedForTest(catalog: [holdMid, finalTip]);
+        final out = svc.milestonesAcquittableByChallenge(
+          axis: CapabilityAxis.holdThroatStreak,
+          reached: 5.0,
+          profile: const CapabilityProfile({}),
+          acquiredUnlocks: const {},
+        );
+        expect(
+          out.map((m) => m.id),
+          containsAll(['intro_hold_mid', 'intro_final_hold_tip']),
+        );
+      },
+    );
+
+    test('seuil 2 s sur hold throat → transitivité non déclenchée', () {
+      // En dessous du plancher de 3 s, un défi exploratoire qui n'a
+      // tenu que 1-2 s ne doit pas faire passer toute la chaîne.
+      final svc = MilestoneService();
+      final holdMid = _milestone(
+        id: 'intro_hold_mid',
+        requiresCapability: const [],
+        unlocks: [UnlockKey.holdMidShort],
+      );
+      svc.seedForTest(catalog: [holdMid]);
+      final out = svc.milestonesAcquittableByChallenge(
+        axis: CapabilityAxis.holdThroatStreak,
+        reached: 2.0,
+        profile: const CapabilityProfile({}),
+        acquiredUnlocks: const {},
+      );
+      expect(out, isEmpty);
+    });
+
+    test(
+      'transitivité respecte requires (pas d\'unlock orphelin)',
+      () {
+        // Une milestone hold mid qui exige `basics` au préalable ne
+        // doit pas être acquittée si `basics` n'a pas été acquis —
+        // la transitivité n'est pas un contournement du gating métier.
+        final svc = MilestoneService();
+        final holdMid = _milestone(
+          id: 'intro_hold_mid',
+          requiresCapability: const [],
+          unlocks: [UnlockKey.holdMidShort],
+          requires: [UnlockKey.basics],
+        );
+        svc.seedForTest(catalog: [holdMid]);
+        final out = svc.milestonesAcquittableByChallenge(
+          axis: CapabilityAxis.holdThroatStreak,
+          reached: 5.0,
+          profile: const CapabilityProfile({}),
+          acquiredUnlocks: const {},
+        );
+        expect(out, isEmpty);
+        // Avec basics acquis : la transitivité passe.
+        final out2 = svc.milestonesAcquittableByChallenge(
+          axis: CapabilityAxis.holdThroatStreak,
+          reached: 5.0,
+          profile: const CapabilityProfile({}),
+          acquiredUnlocks: {UnlockKey.basics},
+        );
+        expect(out2.map((m) => m.id), ['intro_hold_mid']);
+      },
+    );
+
+    test(
+      'défi hold full → cascade transitive sur throat + finals throat',
+      () {
+        final svc = MilestoneService();
+        final throatShort = _milestone(
+          id: 'intro_hold_throat_short',
+          requiresCapability: const [],
+          unlocks: [UnlockKey.throatHoldShort],
+        );
+        final finalThroat = _milestone(
+          id: 'intro_final_hold_throat',
+          requiresCapability: const [],
+          unlocks: [UnlockKey.finalHoldThroat],
+        );
+        svc.seedForTest(catalog: [throatShort, finalThroat]);
+        final out = svc.milestonesAcquittableByChallenge(
+          axis: CapabilityAxis.holdFullStreak,
+          reached: 4.0,
+          profile: const CapabilityProfile({}),
+          acquiredUnlocks: const {},
+        );
+        expect(
+          out.map((m) => m.id),
+          containsAll(['intro_hold_throat_short', 'intro_final_hold_throat']),
+        );
+      },
+    );
+
+    test(
+      'transitivité respecte les autres requiresCapability',
+      () {
+        // Une milestone qui exige aussi `rhythm.depth_max ≥ 2` ne doit
+        // pas être acquittée par un défi hold throat 5 s si le profil
+        // n'a pas la profondeur prouvée par ailleurs.
+        final svc = MilestoneService();
+        final m = _milestone(
+          id: 'intro_hold_throat_short',
+          requiresCapability: [
+            const CapabilityRequirement(
+                axis: CapabilityAxis.rhythmDepthMax, min: 2.0),
+          ],
+          unlocks: [UnlockKey.throatHoldShort],
+        );
+        svc.seedForTest(catalog: [m]);
+        final out = svc.milestonesAcquittableByChallenge(
+          axis: CapabilityAxis.holdFullStreak,
+          reached: 5.0,
+          profile: const CapabilityProfile({}),
+          acquiredUnlocks: const {},
+        );
+        expect(out, isEmpty);
+      },
+    );
+  });
+
   group('markCompletedViaChallenge', () {
     test('persiste comme acquittée, idempotent', () async {
       final svc = MilestoneService();

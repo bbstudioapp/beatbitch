@@ -44,11 +44,13 @@ const double kChallengeExtensionComfortFraction = 0.30;
 /// via la rampe — la joueuse découvre l'axe sans saut brutal.
 const int kChallengeBpmRampStart = 50;
 
-/// Durée du seuil défi tutoriel sur axe robuste (hold throat 10 s).
-/// Volontairement plus long que 5 s pour laisser le temps à la joueuse
-/// de comprendre la mécanique (annonce coach pendant le breath, seuil
-/// approchant à `seuil - 3 s`, boutons au seuil).
-const int kChallengeTutorialDurationSeconds = 10;
+/// Durée du seuil défi tutoriel sur axe robuste (hold throat 5 s).
+/// L'idée du premier défi : « est-ce que tu es capable de le faire ? ».
+/// 5 s suffisent à prouver la capacité sans présumer du niveau de la
+/// joueuse — le coach a le temps d'annoncer puis le seuil arrive vite,
+/// et l'auto-bump d'humiliation à `HumiliationScale.requiredFor(hold,
+/// throat, 5)` débloque toute la chaîne hold précédente.
+const int kChallengeTutorialDurationSeconds = 5;
 
 /// Service stateless de persistance du toggle/tutoriel + factory de défis.
 /// Toutes les opérations de persistance lisent/écrivent `SharedPreferences`
