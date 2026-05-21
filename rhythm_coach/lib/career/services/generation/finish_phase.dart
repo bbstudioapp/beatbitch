@@ -15,6 +15,7 @@ import '../../../models/final_category.dart';
 import '../../../models/session.dart';
 import '../../../models/session_step.dart';
 import '../../models/phrase_bank.dart';
+import '../career_level_gates.dart';
 import 'final_picker.dart';
 import 'generation_context.dart';
 import 'mode_rules.dart';
@@ -138,8 +139,10 @@ class FinishPhase {
   ({bool useHandBurst, SessionMode burstMode}) pickBurstMode() {
     final handForbidden = config.isModeForbidden(_burstNeutralMode);
     final rhythmForbidden = config.isModeForbidden(_burstHumiliatingMode);
-    final preferHandBase =
-        config.humiliationCareer < 5 && config.level <= 3 ? 0.70 : 0.25;
+    final preferHandBase = CareerLevelGates.burstHandPreference(
+      level: config.level,
+      humiliationCareer: config.humiliationCareer,
+    );
     if (handForbidden && rhythmForbidden) {
       // chemin "rhythm-like" : BPM cap/floor rhythm
       return (useHandBurst: false, burstMode: _burstFallbackMode);
@@ -249,9 +252,10 @@ class FinishPhase {
     // [clampToCapability]). Le mode encore ajoute +8 BPM par cran de
     // chaîne pour intensifier le sprint sans changer le nombre de
     // boosts.
-    final levelBpmBoost =
-        ((config.level - 1) * 4 + max(0, ctx.encoreChainIndex) * 8)
-            .clamp(0, 70);
+    final levelBpmBoost = CareerLevelGates.finishBpmBoostBpm(
+      level: config.level,
+      encoreChainIndex: ctx.encoreChainIndex,
+    );
     final bpmCap = useHandBurst
         ? (110 + levelBpmBoost).clamp(110, 300)
         : (130 + levelBpmBoost).clamp(130, 300);

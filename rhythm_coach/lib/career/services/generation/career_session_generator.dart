@@ -16,6 +16,7 @@ import '../../models/phrase_bank.dart';
 import '../../models/specialization.dart';
 import '../../models/unlock_key.dart';
 import '../career_difficulty_resolver.dart';
+import '../career_level_gates.dart';
 
 // Re-exports : les rules (libraries autonomes dans `rules/`) importent
 // uniquement `career_session_generator.dart`. Pour leur épargner une
@@ -497,7 +498,8 @@ class CareerSessionGenerator {
     _config = SessionConfig(
       level: level,
       includeHand: includeHand,
-      maxDepthIndex: custom.maxDepthIndex ?? Position.full.index,
+      maxDepthIndex:
+          custom.maxDepthIndex ?? CareerLevelGates.defaultMaxDepthIndex(),
       spec: specialization ?? SpecializationAllocation.empty(),
       anatomy: anatomy,
       coachModeWeights: coachModeWeights,
@@ -533,7 +535,11 @@ class CareerSessionGenerator {
     // pouvoir construire [GenerationContext] en une seule fois après les locaux
     // dérivés. Aucune dépendance sur l'opening step / la boucle main —
     // tout vient de `level`, `quickie`, `intense`, `milestones.finalMilestone`.
-    final isLowLevel = level <= 2 && !quickie && !intense;
+    final isLowLevel = CareerLevelGates.isLowLevelIntro(
+      level: level,
+      quickie: quickie,
+      intense: intense,
+    );
     final finalMilestone = milestones.finalMilestone;
     final useFinalMilestone = finalMilestone != null;
     final finalBudget = useFinalMilestone
@@ -1283,7 +1289,7 @@ class CareerSessionGenerator {
   bool _shouldEmitMiniWave(
       int time, int effectiveDuration, double stamina, int genUntil) {
     if (effectiveDuration < 720) return false;
-    if (_config.level < 5) return false;
+    if (!CareerLevelGates.isMiniWaveEligible(_config.level)) return false;
     if (time < _state.nextMiniWaveAt) return false;
     if (genUntil - time < 90) return false;
     if (stamina < 35) return false;
@@ -1529,7 +1535,7 @@ class CareerSessionGenerator {
       includeHand: includeHand,
       // `generatePunishment` n'expose pas la borne de profondeur — défaut
       // neutre (full ouvert) cohérent avec l'ancien comportement.
-      maxDepthIndex: Position.values.length - 1,
+      maxDepthIndex: CareerLevelGates.defaultMaxDepthIndex(),
       spec: specialization ?? SpecializationAllocation.empty(),
       anatomy: anatomy,
       coachModeWeights: coachModeWeights,
