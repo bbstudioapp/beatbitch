@@ -6,6 +6,7 @@ import '../models/badge.dart';
 import '../models/session.dart';
 import '../models/session_step.dart';
 import '../services/capability_axis.dart';
+import '../services/reputation_service.dart';
 import 'app_localizations.dart';
 import 'format_helpers.dart';
 
@@ -89,6 +90,21 @@ extension BadgeFamilyL10n on BadgeFamily {
       BadgeFamily.gobeuse => t.badgeUnitGobeuse,
       BadgeFamily.nettoyeuse => t.badgeUnitNettoyeuse,
       BadgeFamily.suppliante => t.badgeUnitSuppliante,
+    };
+  }
+}
+
+extension ReputationTierL10n on ReputationTier {
+  String localizedLabel(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return switch (this) {
+      ReputationTier.bonneEleve => t.reputationTierBonneEleve,
+      ReputationTier.petiteSuceuse => t.reputationTierPetiteSuceuse,
+      ReputationTier.suceuseConfirmee => t.reputationTierSuceuseConfirmee,
+      ReputationTier.puteReconnue => t.reputationTierPuteReconnue,
+      ReputationTier.puteConsacree => t.reputationTierPuteConsacree,
+      ReputationTier.reineDesSuceuses => t.reputationTierReineDesSuceuses,
+      ReputationTier.reineDesPutes => t.reputationTierReineDesPutes,
     };
   }
 }

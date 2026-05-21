@@ -256,6 +256,43 @@ class AppLocalizationsFr extends AppLocalizations {
   String get profileReputationUnit => 'pts de réputation';
 
   @override
+  String get reputationTierBonneEleve => 'Bonne élève';
+
+  @override
+  String get reputationTierPetiteSuceuse => 'Petite suceuse';
+
+  @override
+  String get reputationTierSuceuseConfirmee => 'Suceuse confirmée';
+
+  @override
+  String get reputationTierPuteReconnue => 'Pute reconnue';
+
+  @override
+  String get reputationTierPuteConsacree => 'Pute consacrée';
+
+  @override
+  String get reputationTierReineDesSuceuses => 'Reine des suceuses';
+
+  @override
+  String get reputationTierReineDesPutes => 'Reine des putes';
+
+  @override
+  String get careerInvestmentBarTitle => 'Temps cumulé';
+
+  @override
+  String careerInvestmentSessions(int count) {
+    return '$count séances';
+  }
+
+  @override
+  String careerInvestmentNextCoach(String name, String remaining) {
+    return 'Prochain coach : $name ($remaining)';
+  }
+
+  @override
+  String get careerInvestmentAllUnlocked => 'Tous les coachs débloqués.';
+
+  @override
   String get profileStatSessionsCompleted => 'Sessions terminées';
 
   @override

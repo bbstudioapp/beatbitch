@@ -119,6 +119,26 @@
     }
   },
   "profileReputationUnit": "reputation pts",
+  "reputationTierBonneEleve": "Good student",
+  "reputationTierPetiteSuceuse": "Little sucker",
+  "reputationTierSuceuseConfirmee": "Seasoned sucker",
+  "reputationTierPuteReconnue": "Known whore",
+  "reputationTierPuteConsacree": "Accomplished whore",
+  "reputationTierReineDesSuceuses": "Queen of suckers",
+  "reputationTierReineDesPutes": "Queen of whores",
+  "careerInvestmentBarTitle": "Total time",
+  "careerInvestmentSessions": "{count} sessions",
+  "@careerInvestmentSessions": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "careerInvestmentNextCoach": "Next coach: {name} ({remaining})",
+  "@careerInvestmentNextCoach": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "remaining": { "type": "String" }
+    }
+  },
+  "careerInvestmentAllUnlocked": "All coaches unlocked.",
   "profileStatSessionsCompleted": "Sessions completed",
   "profileStatNoFailStreak": "No-fail streak",
   "profileStatDailyStreak": "Daily streak",
