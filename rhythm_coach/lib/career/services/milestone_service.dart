@@ -643,6 +643,46 @@ class MilestoneService extends ChangeNotifier {
     }
   }
 
+  /// Rattrapage à froid : acquitte les milestones que le [profile] de
+  /// capacités prouve **déjà**, indépendamment d'un défi récent. Réutilise
+  /// `milestonesAcquittableByChallenge` sur chaque axe du profil qui a une
+  /// donnée — y compris les axes transitifs des holds (cf.
+  /// `_impliedHoldUnlocksByAxis`).
+  ///
+  /// Sert quand un défi a été joué **avant** que la cascade transitive ne
+  /// soit livrée : les unlocks pédagogiques ne s'étaient pas alignés sur
+  /// la capacité prouvée, et les sessions suivantes proposent toujours
+  /// des actions plus shallow que ce que la joueuse sait faire (cap
+  /// `milestoneHoldCeilingIdx` figé à `head` malgré un hold throat tenu).
+  /// À appeler au start de chaque session carrière pour normaliser.
+  ///
+  /// Retourne le nombre de milestones acquittées (utile pour le caller
+  /// qui peut vouloir loguer / régénérer le bundle d'unlocks).
+  Future<int> reconcileFromCapability(CapabilityProfile profile) async {
+    if (!_loaded) return 0;
+    final touchedAxes = <CapabilityAxis>{};
+    for (final axis in CapabilityAxis.values) {
+      if (profile.bestOf(axis) != null) touchedAxes.add(axis);
+    }
+    var acquittedTotal = 0;
+    for (final axis in touchedAxes) {
+      final reached = profile.bestOf(axis);
+      if (reached == null) continue;
+      final acquittables = milestonesAcquittableByChallenge(
+        axis: axis,
+        reached: reached,
+        profile: profile,
+        acquiredUnlocks: acquiredUnlockKeys(),
+      );
+      for (final m in acquittables) {
+        if (_completed.contains(m.id)) continue;
+        await markCompletedViaChallenge(m.id);
+        acquittedTotal++;
+      }
+    }
+    return acquittedTotal;
+  }
+
   /// Phase 3 défis — retourne les milestones acquittables silencieusement
   /// par un défi qui a poussé [axis] à la valeur [reached]. Une milestone
   /// est acquittable quand :

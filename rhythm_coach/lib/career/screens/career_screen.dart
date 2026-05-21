@@ -114,6 +114,15 @@ class _CareerScreenState extends State<CareerScreen> {
       _challengeService.tutorialSeen(),
     ]);
     final maxLevel = results[3] as int;
+    final capabilityProfile = results[10] as CapabilityProfile;
+    // Rattrapage à froid : acquitte les milestones que le profil de
+    // capacités prouve déjà (cas typique : la cascade transitive du défi
+    // a été livrée après que la joueuse l'ait joué — sans rattrapage,
+    // ses unlocks restent figés à leur état pré-cascade et les sessions
+    // suivantes proposent des actions plus shallow que ce qu'elle sait
+    // tenir). Idempotent : un appel sans changement à acquitter est un
+    // no-op silencieux.
+    await milestoneService.reconcileFromCapability(capabilityProfile);
     // Synchronise le palier de coach avec le niveau global avant que
     // l'écran ne lise `currentTier` / `selectedCoach` pour son rendu.
     await coachService.syncFromCareerLevel(maxLevel);
@@ -128,7 +137,7 @@ class _CareerScreenState extends State<CareerScreen> {
       specialization: results[7] as SpecializationAllocation,
       humiliationScore: results[8] as double,
       obedienceScore: results[9] as double,
-      capabilityProfile: results[10] as CapabilityProfile,
+      capabilityProfile: capabilityProfile,
       challengesEnabled: results[11] as bool,
       challengeTutorialSeen: results[12] as bool,
     );

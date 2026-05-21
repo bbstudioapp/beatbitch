@@ -338,6 +338,81 @@ void main() {
     );
   });
 
+  group('reconcileFromCapability — rattrapage à froid', () {
+    test(
+      'profil prouve hold throat 5 s → acquitte les holds shallow rétroactivement',
+      () async {
+        // Cas reproductible : la cascade transitive est livrée APRÈS que
+        // la joueuse ait joué son défi tuto. Son `CapabilityProfile`
+        // porte la preuve (`hold.throat.streak.best = 5.0`) mais aucune
+        // milestone n'a été acquittée. Le rattrapage au start de session
+        // doit acquitter `intro_hold_mid`, `intro_final_hold_tip`, etc.
+        final svc = MilestoneService();
+        final holdMid = _milestone(
+          id: 'intro_hold_mid',
+          requiresCapability: const [],
+          unlocks: [UnlockKey.holdMidShort],
+        );
+        final finalTip = _milestone(
+          id: 'intro_final_hold_tip',
+          requiresCapability: const [],
+          unlocks: [UnlockKey.finalHoldTip],
+        );
+        svc.seedForTest(catalog: [holdMid, finalTip]);
+        // Profil sans aucun unlock encore acquitté.
+        expect(svc.acquiredUnlockKeys(), isEmpty);
+        final profile = CapabilityProfile({
+          CapabilityAxis.holdThroatStreak: const CapabilityAxisState(
+            best: 5.0,
+            comfort: 5.0,
+            successRate: 1.0,
+            lastSeenSession: 1,
+          ),
+        });
+        final acquitted = await svc.reconcileFromCapability(profile);
+        expect(acquitted, 2);
+        expect(
+          svc.acquiredUnlockKeys(),
+          containsAll([UnlockKey.holdMidShort, UnlockKey.finalHoldTip]),
+        );
+      },
+    );
+
+    test('profil vide → no-op (zéro acquittement)', () async {
+      final svc = MilestoneService();
+      final m = _milestone(
+        id: 'intro_hold_mid',
+        requiresCapability: const [],
+        unlocks: [UnlockKey.holdMidShort],
+      );
+      svc.seedForTest(catalog: [m]);
+      final acquitted =
+          await svc.reconcileFromCapability(const CapabilityProfile({}));
+      expect(acquitted, 0);
+      expect(svc.acquiredUnlockKeys(), isEmpty);
+    });
+
+    test('idempotent : second appel ne refait rien', () async {
+      final svc = MilestoneService();
+      final m = _milestone(
+        id: 'intro_hold_mid',
+        requiresCapability: const [],
+        unlocks: [UnlockKey.holdMidShort],
+      );
+      svc.seedForTest(catalog: [m]);
+      final profile = CapabilityProfile({
+        CapabilityAxis.holdThroatStreak: const CapabilityAxisState(
+          best: 5.0,
+          comfort: 5.0,
+          successRate: 1.0,
+          lastSeenSession: 1,
+        ),
+      });
+      expect(await svc.reconcileFromCapability(profile), 1);
+      expect(await svc.reconcileFromCapability(profile), 0);
+    });
+  });
+
   group('markCompletedViaChallenge', () {
     test('persiste comme acquittée, idempotent', () async {
       final svc = MilestoneService();
