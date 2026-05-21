@@ -761,11 +761,11 @@
   "@coachErrorRequiresHands": {
     "placeholders": { "coachName": { "type": "String" } }
   },
-  "coachErrorMinLevel": "{coachName} requires level {minLevel} minimum.",
-  "@coachErrorMinLevel": {
+  "coachErrorMinPlayerSeconds": "{coachName} unlocks at {hours} h of total play time.",
+  "@coachErrorMinPlayerSeconds": {
     "placeholders": {
       "coachName": { "type": "String" },
-      "minLevel": { "type": "int" }
+      "hours": { "type": "int" }
     }
   },
   "unlockAnnouncementSloppyDroolBasic": "From now on your mouth holds more spit, and your licking makes more. Drool on me, be filthy.",

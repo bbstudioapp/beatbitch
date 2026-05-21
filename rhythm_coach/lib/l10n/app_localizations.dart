@@ -2938,11 +2938,11 @@ abstract class AppLocalizations {
   /// **'{coachName} a besoin que tu actives la main dans les options.'**
   String coachErrorRequiresHands(String coachName);
 
-  /// No description provided for @coachErrorMinLevel.
+  /// No description provided for @coachErrorMinPlayerSeconds.
   ///
   /// In fr, this message translates to:
-  /// **'{coachName} demande le niveau {minLevel} minimum.'**
-  String coachErrorMinLevel(String coachName, int minLevel);
+  /// **'{coachName} se débloque à {hours} h de jeu cumulé.'**
+  String coachErrorMinPlayerSeconds(String coachName, int hours);
 
   /// Annonce TTS post-finale_chime quand la milestone qui débloque sloppy_drool_basic est acquittée.
   ///

@@ -15,20 +15,20 @@ import '../widgets/coach_portrait.dart';
 /// de confirmation expliquant que la session ne fera pas progresser le palier.
 class CoachPickerScreen extends StatelessWidget {
   final CoachService service;
-  final int playerMaxLevel;
+  final int playerTotalSeconds;
   final bool handsEnabled;
 
   const CoachPickerScreen({
     super.key,
     required this.service,
-    required this.playerMaxLevel,
+    required this.playerTotalSeconds,
     required this.handsEnabled,
   });
 
   Future<void> _handleTap(BuildContext context, Coach coach) async {
     final status = service.evaluate(
       coach,
-      playerMaxLevel: playerMaxLevel,
+      playerTotalSeconds: playerTotalSeconds,
       handsEnabled: handsEnabled,
     );
 
@@ -40,11 +40,14 @@ class CoachPickerScreen extends StatelessWidget {
       case CoachSelectionStatus.blockedRequiresHands:
         _snack(context, t.coachErrorRequiresHands(coach.name));
         return;
-      case CoachSelectionStatus.blockedMinLevel:
+      case CoachSelectionStatus.blockedMinPlayerSeconds:
         _snack(
-            context,
-            t.coachErrorMinLevel(
-                coach.name, coach.requirements.minPlayerLevel));
+          context,
+          t.coachErrorMinPlayerSeconds(
+            coach.name,
+            (coach.requirements.minPlayerSeconds / 3600).round(),
+          ),
+        );
         return;
       case CoachSelectionStatus.selectedAdvancing:
         await service.selectCoach(coach);

@@ -67,12 +67,13 @@ class SurpriseRouter {
     final specialization = await specService.load();
     final humiliationCareer = await stats.getHumiliationLevel();
     final obedienceScore = await stats.getObedienceLevel();
+    final totalSeconds = await stats.getTotalSeconds();
     final durationSeconds =
         await SurpriseAlertService.instance.pickRandomDurationSeconds();
 
     if (!context.mounted) return;
 
-    await coachService.syncFromCareerLevel(maxLevel);
+    await coachService.syncFromTotalSeconds(totalSeconds);
 
     // Sous le seuil hand (< niveau 4), on force `includeHand` à true pour
     // garder un finish abordable (cohérent avec `_includeHandUnlockLevel`
