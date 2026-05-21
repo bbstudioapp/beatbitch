@@ -22,18 +22,19 @@ enum CoachSelectionStatus {
   /// est désactivé.
   blockedRequiresHands,
 
-  /// Le niveau global du joueur est en-dessous du `minPlayerLevel` requis
-  /// par le coach.
-  blockedMinLevel,
+  /// Le temps cumulé du joueur est en-dessous du `minPlayerSeconds` requis
+  /// par le coach (Phase 19.10).
+  blockedMinPlayerSeconds,
 }
 
 /// Source de vérité pour : palier courant, coach sélectionné, set des
 /// coachs débloqués. Persiste dans `SharedPreferences`.
 ///
-/// Le palier courant n'est PAS recalculé en boucle depuis le `maxLevel` :
-/// `syncFromCareerLevel(maxLevel)` doit être appelé après chaque mise à
-/// jour du niveau global. Ça évite que le service dépende directement de
-/// `CareerProgressService` (boucle d'imports + couplage temporel).
+/// Le palier courant n'est PAS recalculé en boucle depuis `totalSeconds` :
+/// `syncFromTotalSeconds(totalSeconds)` doit être appelé après chaque
+/// mise à jour du compteur d'investissement (typiquement au start de
+/// chaque session). Ça évite que le service dépende directement de
+/// `StatsService` (boucle d'imports + couplage temporel).
 class CoachService extends ChangeNotifier {
   static const String _kCurrentTier = 'coach.current_tier';
   static const String _kSelectedId = 'coach.selected_id';
@@ -55,7 +56,7 @@ class CoachService extends ChangeNotifier {
   /// sinon les ids persistés dans `selectedCoachId` / `_unlockedIds`
   /// pourraient être désynchronisés.
   ///
-  /// Valide la cohérence du catalogue final (tiers complets, minPlayerLevel
+  /// Valide la cohérence du catalogue final (tiers complets, minPlayerSeconds
   /// strictement croissants). En debug : `assert` qui pète pour attraper les
   /// erreurs côté dev. En release : log warning et continue.
   void attachPhrases(List<Coach> coaches) {
@@ -144,32 +145,33 @@ class CoachService extends ChangeNotifier {
     if (p != null) _unlockedIds.add(p.id);
   }
 
-  /// Calcule le tier maximal atteint pour un `maxLevel` donné en se basant
-  /// sur les `requirements.minPlayerLevel` des Principals chargés. Source
-  /// de vérité unique : pas de mapping niveau→tier hardcodé ailleurs.
-  int _maxReachableTier(int maxLevel) {
+  /// Calcule le tier maximal atteint pour un `totalSeconds` donné en se
+  /// basant sur les `requirements.minPlayerSeconds` des Principals
+  /// chargés. Source de vérité unique : pas de mapping
+  /// temps→tier hardcodé ailleurs.
+  int _maxReachableTier(int totalSeconds) {
     var best = 0;
     for (final c in _coaches) {
       if (!c.isPrincipal) continue;
-      if (c.requirements.minPlayerLevel <= maxLevel && c.tier > best) {
+      if (c.requirements.minPlayerSeconds <= totalSeconds && c.tier > best) {
         best = c.tier;
       }
     }
-    // Au pire (catalogue vide ou minPlayerLevel > maxLevel partout), on
-    // reste au tier 1 par convention — le Principal du tier 1 doit toujours
-    // être atteignable au démarrage (validé par CoachCatalogValidator).
+    // Au pire (catalogue vide ou minPlayerSeconds > totalSeconds partout),
+    // on reste au tier 1 — le Principal du tier 1 doit toujours être
+    // atteignable au démarrage (validé par CoachCatalogValidator).
     return best == 0 ? 1 : best;
   }
 
-  /// À appeler après un level-up (ou au bootstrap après chargement du
-  /// niveau max) avec le `maxLevel` global du joueur. Met à jour le
-  /// palier courant si le seuil du palier suivant est atteint, et
-  /// débloque automatiquement le Principal du nouveau palier.
+  /// À appeler après le start de chaque session (ou au bootstrap après
+  /// chargement du temps cumulé) avec le `totalSeconds` global du joueur.
+  /// Met à jour le palier courant si le seuil du palier suivant est
+  /// atteint, et débloque automatiquement le Principal du nouveau palier.
   ///
   /// Renvoie la liste des coachs nouvellement débloqués lors de cet appel
   /// (utile pour afficher un toast / lire une annonce TTS).
-  Future<List<Coach>> syncFromCareerLevel(int maxLevel) async {
-    final reachedTier = _maxReachableTier(maxLevel);
+  Future<List<Coach>> syncFromTotalSeconds(int totalSeconds) async {
+    final reachedTier = _maxReachableTier(totalSeconds);
     if (reachedTier <= _currentTier) return const [];
 
     final newlyUnlocked = <Coach>[];
@@ -192,15 +194,15 @@ class CoachService extends ChangeNotifier {
   /// non-Principal.
   CoachSelectionStatus evaluate(
     Coach c, {
-    required int playerMaxLevel,
+    required int playerTotalSeconds,
     required bool handsEnabled,
   }) {
     if (!isUnlocked(c)) return CoachSelectionStatus.lockedTier;
     if (c.requirements.requiresHands && !handsEnabled) {
       return CoachSelectionStatus.blockedRequiresHands;
     }
-    if (playerMaxLevel < c.requirements.minPlayerLevel) {
-      return CoachSelectionStatus.blockedMinLevel;
+    if (playerTotalSeconds < c.requirements.minPlayerSeconds) {
+      return CoachSelectionStatus.blockedMinPlayerSeconds;
     }
     return advancesTier(c)
         ? CoachSelectionStatus.selectedAdvancing

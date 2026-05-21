@@ -1633,8 +1633,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String coachErrorMinLevel(String coachName, int minLevel) {
-    return '$coachName requires level $minLevel minimum.';
+  String coachErrorMinPlayerSeconds(String coachName, int hours) {
+    return '$coachName unlocks at $hours h of total play time.';
   }
 
   @override

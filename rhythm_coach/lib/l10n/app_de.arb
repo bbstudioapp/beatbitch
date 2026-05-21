@@ -761,11 +761,11 @@
   "@coachErrorRequiresHands": {
     "placeholders": { "coachName": { "type": "String" } }
   },
-  "coachErrorMinLevel": "{coachName} erfordert mindestens Stufe {minLevel}.",
-  "@coachErrorMinLevel": {
+  "coachErrorMinPlayerSeconds": "{coachName} wird bei {hours} h gespielter Gesamtzeit freigeschaltet.",
+  "@coachErrorMinPlayerSeconds": {
     "placeholders": {
       "coachName": { "type": "String" },
-      "minLevel": { "type": "int" }
+      "hours": { "type": "int" }
     }
   },
   "unlockAnnouncementSloppyDroolBasic": "Ab jetzt hält dein Mund mehr Spucke, und dein Lecken erzeugt mehr davon. Sabber auf mich, sei dreckig.",

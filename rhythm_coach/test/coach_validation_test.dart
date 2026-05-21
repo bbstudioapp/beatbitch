@@ -71,7 +71,7 @@ void main() {
         specialties: [],
         tier: 1,
         isPrincipal: true,
-        requirements: CoachRequirement(minPlayerLevel: 10),
+        requirements: CoachRequirement(minPlayerSeconds: 10),
       );
       const t2 = Coach(
         id: 'b',
@@ -82,7 +82,7 @@ void main() {
         specialties: [],
         tier: 2,
         isPrincipal: true,
-        requirements: CoachRequirement(minPlayerLevel: 5), // < 10 KO
+        requirements: CoachRequirement(minPlayerSeconds: 5), // < 10 KO
       );
       final issues = CoachCatalogValidator.validate([t1, t2]);
       expect(issues.any((s) => s.contains('strictement supérieur')), isTrue);

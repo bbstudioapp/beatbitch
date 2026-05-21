@@ -113,9 +113,11 @@ class _CareerScreenState extends State<CareerScreen> {
       _challengeService.isEnabled(),
       _challengeService.tutorialSeen(),
       _progress.getLastLengthChoice(),
+      _stats.getTotalSeconds(),
     ]);
     final maxLevel = results[3] as int;
     final capabilityProfile = results[10] as CapabilityProfile;
+    final totalSeconds = results[14] as int;
     // Rattrapage à froid : acquitte les milestones que le profil de
     // capacités prouve déjà (cas typique : la cascade transitive du défi
     // a été livrée après que la joueuse l'ait joué — sans rattrapage,
@@ -124,9 +126,10 @@ class _CareerScreenState extends State<CareerScreen> {
     // tenir). Idempotent : un appel sans changement à acquitter est un
     // no-op silencieux.
     await milestoneService.reconcileFromCapability(capabilityProfile);
-    // Synchronise le palier de coach avec le niveau global avant que
-    // l'écran ne lise `currentTier` / `selectedCoach` pour son rendu.
-    await coachService.syncFromCareerLevel(maxLevel);
+    // Synchronise le palier de coach avec le temps cumulé (Phase 19.10)
+    // avant que l'écran ne lise `currentTier` / `selectedCoach` pour son
+    // rendu.
+    await coachService.syncFromTotalSeconds(totalSeconds);
     return _CareerBundle(
       bank: results[0] as PhraseBank,
       punishments: results[1] as PunishmentBundle,
@@ -142,6 +145,7 @@ class _CareerScreenState extends State<CareerScreen> {
       challengesEnabled: results[11] as bool,
       challengeTutorialSeen: results[12] as bool,
       lastLengthChoice: results[13] as SessionLengthChoice,
+      totalSeconds: totalSeconds,
     );
   }
 
@@ -158,7 +162,7 @@ class _CareerScreenState extends State<CareerScreen> {
       MaterialPageRoute(
         builder: (_) => CoachPickerScreen(
           service: coachService,
-          playerMaxLevel: bundle.maxLevel,
+          playerTotalSeconds: bundle.totalSeconds,
           handsEnabled: _includeHandOverride ?? bundle.includeHand,
         ),
       ),
@@ -1615,6 +1619,10 @@ class _CareerBundle {
   /// rien n'est encore persisté.
   final SessionLengthChoice lastLengthChoice;
 
+  /// Temps total cumulé (en secondes) persisté dans le `StatsService`.
+  /// Sert au déblocage des coachs par investissement (Phase 19.10).
+  final int totalSeconds;
+
   const _CareerBundle({
     required this.bank,
     required this.punishments,
@@ -1630,5 +1638,6 @@ class _CareerBundle {
     required this.challengesEnabled,
     required this.challengeTutorialSeen,
     required this.lastLengthChoice,
+    required this.totalSeconds,
   });
 }

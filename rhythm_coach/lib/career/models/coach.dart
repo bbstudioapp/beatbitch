@@ -28,14 +28,16 @@ class CoachRequirement {
   /// Cas typique : coach axé biffle.
   final bool requiresHands;
 
-  /// Niveau global minimum du joueur (CareerLevel) pour autoriser ce
-  /// coach. Permet d'ajouter des coachs annexes débloqués à un niveau
-  /// précis sans toucher au système de palier principal.
-  final int minPlayerLevel;
+  /// Temps total cumulé (en secondes) que la joueuse doit avoir investi
+  /// pour débloquer ce coach (Phase 19.10 — remplace l'ancien
+  /// `minPlayerLevel`). Le déblocage par investissement remplace le
+  /// déblocage par niveau de carrière qui disparaît avec Phase 19.
+  /// Defaut 0 : coach disponible dès le démarrage.
+  final int minPlayerSeconds;
 
   const CoachRequirement({
     this.requiresHands = false,
-    this.minPlayerLevel = 1,
+    this.minPlayerSeconds = 0,
   });
 
   static const CoachRequirement none = CoachRequirement();
@@ -44,14 +46,17 @@ class CoachRequirement {
   /// ```jsonc
   /// {
   ///   "requiresHands": false,
-  ///   "minPlayerLevel": 1
+  ///   "minPlayerSeconds": 0
   /// }
   /// ```
-  /// Toute clé absente garde sa valeur par défaut.
+  /// Toute clé absente garde sa valeur par défaut. Une clé legacy
+  /// `minPlayerLevel` est silencieusement ignorée (les `Coach`s sont
+  /// matérialisés via `CoachCatalog.defaults` qui pose les nouveaux
+  /// seuils ; les overrides JSON ne touchent pas les requirements).
   factory CoachRequirement.fromJson(Map<String, dynamic> json) {
     return CoachRequirement(
       requiresHands: json['requiresHands'] == true,
-      minPlayerLevel: (json['minPlayerLevel'] as num?)?.toInt() ?? 1,
+      minPlayerSeconds: (json['minPlayerSeconds'] as num?)?.toInt() ?? 0,
     );
   }
 }

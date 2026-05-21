@@ -46,7 +46,8 @@ class CoachCatalog {
       ],
       tier: 2,
       isPrincipal: true,
-      requirements: CoachRequirement(minPlayerLevel: 7),
+      // Phase 19.10 : 1h cumulée — ~2-3 séances.
+      requirements: CoachRequirement(minPlayerSeconds: 3600),
       portraitAsset: '$_portraitDir/coach_02_helene.png',
     ),
     Coach(
@@ -63,7 +64,9 @@ class CoachCatalog {
       ],
       tier: 3,
       isPrincipal: true,
-      requirements: CoachRequirement(requiresHands: true, minPlayerLevel: 13),
+      // Phase 19.10 : 3h cumulées. `requiresHands` conservé.
+      requirements:
+          CoachRequirement(requiresHands: true, minPlayerSeconds: 10800),
       portraitAsset: '$_portraitDir/coach_03_jade.png',
     ),
     Coach(
@@ -79,7 +82,8 @@ class CoachCatalog {
       ],
       tier: 4,
       isPrincipal: true,
-      requirements: CoachRequirement(minPlayerLevel: 19),
+      // Phase 19.10 : 7h cumulées.
+      requirements: CoachRequirement(minPlayerSeconds: 25200),
       portraitAsset: '$_portraitDir/coach_04_morgan.png',
     ),
     Coach(
@@ -95,7 +99,8 @@ class CoachCatalog {
       ],
       tier: 5,
       isPrincipal: true,
-      requirements: CoachRequirement(minPlayerLevel: 25),
+      // Phase 19.10 : 15h cumulées.
+      requirements: CoachRequirement(minPlayerSeconds: 54000),
       portraitAsset: '$_portraitDir/coach_05_victoria.png',
     ),
     Coach(
@@ -108,7 +113,8 @@ class CoachCatalog {
       specialties: SpecializationBranch.values,
       tier: 6,
       isPrincipal: true,
-      requirements: CoachRequirement(minPlayerLevel: 31),
+      // Phase 19.10 : 25h cumulées — palier terminal.
+      requirements: CoachRequirement(minPlayerSeconds: 90000),
       portraitAsset: '$_portraitDir/coach_06_nyx.png',
     ),
   ];
@@ -121,7 +127,7 @@ class CoachCatalog {
 /// 1. Pour chaque palier observé (de 1 à max), il existe **exactement un
 ///    Principal**. Pas de trou (palier 2 absent), pas de doublon (deux
 ///    Principals pour le palier 3).
-/// 2. Les `requirements.minPlayerLevel` des Principals sont **strictement
+/// 2. Les `requirements.minPlayerSeconds` des Principals sont **strictement
 ///    croissants** dans l'ordre des paliers (le Principal du palier N+1
 ///    se débloque plus tard que celui du palier N).
 ///
@@ -155,17 +161,17 @@ class CoachCatalogValidator {
       }
     }
 
-    // 2. Vérifie la croissance stricte des minPlayerLevel sur les Principals
-    //    des tiers consécutifs présents.
+    // 2. Vérifie la croissance stricte des minPlayerSeconds sur les
+    //    Principals des tiers consécutifs présents.
     int? previousMin;
     int? previousTier;
     for (var t = 1; t <= maxTier; t++) {
       final list = principalsByTier[t];
       if (list == null || list.length != 1) continue; // déjà flaggé
-      final min = list.first.requirements.minPlayerLevel;
+      final min = list.first.requirements.minPlayerSeconds;
       if (previousMin != null && min <= previousMin) {
         issues.add(
-          'Palier $t (${list.first.id}) : minPlayerLevel=$min ≤ '
+          'Palier $t (${list.first.id}) : minPlayerSeconds=$min ≤ '
           'palier $previousTier=$previousMin — doit être strictement supérieur.',
         );
       }
