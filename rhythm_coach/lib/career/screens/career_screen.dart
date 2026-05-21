@@ -23,6 +23,7 @@ import '../models/career_generation_inputs.dart';
 import '../models/challenge.dart';
 import '../models/coach.dart';
 import '../models/level_milestone.dart';
+import '../services/career_difficulty_resolver.dart';
 import '../services/career_encore_gate.dart';
 import '../services/career_progress_service.dart';
 import '../services/challenge_service.dart';
@@ -217,11 +218,11 @@ class _CareerScreenState extends State<CareerScreen> {
     // séance — l'utilisatrice apprend une compétence en milieu de séance,
     // puis une autre en apothéose.
     //
-    // Sur les séances longues (≥ 18 min, level 8+ par CareerLevel.forLevel),
+    // Sur les séances longues (≥ 18 min, level 8+ par CareerDifficultyResolver),
     // on insère DEUX body milestones (vers 30 % et 65 % de la durée) pour
     // accélérer le rythme d'apprentissage. Le pool retombe à 1 si la 2ᵉ
     // candidate dépend pédagogiquement de la 1ʳᵉ (ou si pool insuffisant).
-    final cfg = CareerLevel.forLevel(clamped);
+    final cfg = CareerDifficultyResolver.resolve(clamped);
     final wantDualBody = !quickie && cfg.durationSeconds >= 18 * 60;
     final anatomy = widget.userProfile.anatomy;
     // Tête de la file showcase : la prochaine séance honore le dernier
@@ -1060,7 +1061,7 @@ class _CareerScreenState extends State<CareerScreen> {
           final bundle = snapshot.data!;
           final level = (_selectedLevel ?? bundle.lastChosenLevel)
               .clamp(1, bundle.maxLevel);
-          final cfg = CareerLevel.forLevel(level);
+          final cfg = CareerDifficultyResolver.resolve(level);
           final durationLabel = _quickie
               ? t.careerQuickieSubtitle
               : formatDurationCompact(context, cfg.durationSeconds);

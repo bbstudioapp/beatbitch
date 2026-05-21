@@ -1680,8 +1680,8 @@ class SessionController extends ChangeNotifier {
       // session 2/3 alors qu'elle a tenu gorge.
       if (outcome == ChallengeOutcome.netSuccess ||
           outcome == ChallengeOutcome.extendedSuccess) {
-        final reachedDuration =
-            ch.targetThreshold + _challengeExtensionsCount * ch.extensionSeconds;
+        final reachedDuration = ch.targetThreshold +
+            _challengeExtensionsCount * ch.extensionSeconds;
         final double reached;
         switch (ch.kind) {
           case ChallengeAxisKind.duration:

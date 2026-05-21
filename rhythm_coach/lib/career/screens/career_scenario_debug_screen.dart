@@ -9,6 +9,7 @@ import '../../services/stats_service.dart';
 import '../../theme/app_theme.dart';
 import '../models/career_generation_inputs.dart';
 import '../models/level_milestone.dart';
+import '../services/career_difficulty_resolver.dart';
 import '../services/career_progress_service.dart';
 import '../services/generation/career_session_generator.dart';
 import '../services/milestone_loader.dart';
@@ -559,7 +560,7 @@ class _CareerScenarioDebugScreenState extends State<CareerScenarioDebugScreen> {
     final res = _result;
     if (res == null) return const SizedBox.shrink();
     final session = res.session;
-    final cfg = CareerLevel.forLevel(_level);
+    final cfg = CareerDifficultyResolver.resolve(_level);
     final modes = <SessionMode>{
       for (final s in session.steps)
         if (s.mode != null) s.mode!,
