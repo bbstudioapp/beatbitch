@@ -13,6 +13,7 @@ import '../../models/career_generation_inputs.dart';
 import '../../models/challenge.dart';
 import '../../models/level_milestone.dart';
 import '../../models/phrase_bank.dart';
+import '../../models/session_length_choice.dart';
 import '../../models/specialization.dart';
 import '../../models/unlock_key.dart';
 import '../career_difficulty_resolver.dart';
@@ -29,6 +30,7 @@ export '../../../models/session_step.dart' show Position, SessionStep;
 export '../../../services/capability_axis.dart' show CapabilityAxis;
 export '../../models/career_level.dart' show CareerLevel;
 export '../../models/phrase_bank.dart' show PhraseBank;
+export '../../models/session_length_choice.dart' show SessionLengthChoice;
 export '../../models/specialization.dart'
     show SpecializationAllocation, SpecializationBranch;
 export '../../models/unlock_key.dart' show UnlockKey;
@@ -430,6 +432,7 @@ class CareerSessionGenerator {
     required int level,
     required PhraseBank bank,
     int? durationSeconds,
+    SessionLengthChoice? lengthChoice,
     bool includeHand = true,
     int encoreChainIndex = 0,
     String? openingPhrase,
@@ -522,8 +525,14 @@ class CareerSessionGenerator {
     // Mode "intense" : régénération post-Supplier. On garde la durée
     // demandée mais on supprime le soft intro et on applique un plancher
     // de difficulté solide pour que la suite ressente vraiment le level up.
-    final effectiveDuration =
-        durationSeconds ?? (quickie ? 6 * 60 : cfg.durationSeconds);
+    // Résolution de la durée effective, par priorité décroissante :
+    // 1. `durationSeconds` explicite (debug, scénario surprise, Custom)
+    // 2. `lengthChoice` (Phase 19.3 : nouveau sélecteur UX, encore optionnel)
+    // 3. `quickie` (alias `bachee` historique, fallback à 6 min)
+    // 4. Dérivé du niveau (`cfg.durationSeconds`, retiré en Phase 19.6)
+    final effectiveDuration = durationSeconds ??
+        lengthChoice?.durationSeconds ??
+        (quickie ? 6 * 60 : cfg.durationSeconds);
     final intensityFloor =
         custom.intensityFloor ?? (quickie ? 0.65 : (intense ? 0.55 : 0.0));
     // Nombre de boosts en phase finish : table par niveau + bonus encore
