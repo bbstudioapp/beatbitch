@@ -52,7 +52,7 @@ void main() {
       level: 3,
       bank: _bank(),
       unlockedKeys: UnlockKey.values.toSet(),
-      challenge: const ChallengeInputs(challenge: _challengeHoldThroat),
+      challenge: const ChallengeInputs(challenges: [_challengeHoldThroat]),
     );
     expect(result.challenge, _challengeHoldThroat);
     expect(result.session.challenge, _challengeHoldThroat);
@@ -82,7 +82,7 @@ void main() {
       level: 3,
       bank: _bank(),
       unlockedKeys: UnlockKey.values.toSet(),
-      challenge: const ChallengeInputs(challenge: _challengeHoldThroat),
+      challenge: const ChallengeInputs(challenges: [_challengeHoldThroat]),
     );
     final breathStart = result.session.challengeBreathStartTime!;
     final total = result.session.durationSeconds;

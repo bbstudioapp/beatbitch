@@ -209,8 +209,8 @@ class _CareerScreenState extends State<CareerScreen> {
     // picker (absorbe l'ancien toggle Quickie). Reste gatée par le
     // seuil de déblocage pour ne pas pousser une débutante à
     // intensityFloor=0.65.
-    final quickie = lengthChoice == SessionLengthChoice.bachee &&
-        bundle.maxLevel >= _quickieUnlockLevel;
+    final isBachee = lengthChoice == SessionLengthChoice.bachee;
+    final quickie = isBachee && bundle.maxLevel >= _quickieUnlockLevel;
     final humiliationScore = await _stats.getHumiliationLevel();
     final obedienceScore = await _stats.getObedienceLevel();
     // Insère la milestone d'apprentissage en attente pour ce niveau (si
@@ -223,22 +223,21 @@ class _CareerScreenState extends State<CareerScreen> {
     // séance — l'utilisatrice apprend une compétence en milieu de séance,
     // puis une autre en apothéose.
     //
-    // Sur les séances longues (≥ 18 min, level 8+ par CareerDifficultyResolver),
-    // on insère DEUX body milestones (vers 30 % et 65 % de la durée) pour
-    // accélérer le rythme d'apprentissage. Le pool retombe à 1 si la 2ᵉ
-    // candidate dépend pédagogiquement de la 1ʳᵉ (ou si pool insuffisant).
-    final cfg = CareerDifficultyResolver.resolve(clamped);
-    final wantDualBody = !quickie && cfg.durationSeconds >= 18 * 60;
+    // Phase 19.5 : le nombre cible de body milestones vient du palier de
+    // durée (cf. `SessionLengthChoice.maxBodyMilestones`). Bâclée = 0 body
+    // (pas de pédagogie sur 6 min), courte = 1, moyenne/longue = 2. La
+    // disponibilité réelle dépend du catalogue pending.
+    final bodyCount = lengthChoice.maxBodyMilestones;
     final anatomy = widget.userProfile.anatomy;
     // Tête de la file showcase : la prochaine séance honore le dernier
     // point spé dépensé (cf. `SpecializationService.invest`). Lue ici
     // pour être passée au tri des candidates et à l'incrémentation
-    // d'aging. Quickie ne consomme rien (pas de pédagogie).
-    final showcaseBranch = quickie ? null : await _specService.peekShowcase();
-    final insertedBodies = quickie
+    // d'aging. Bâclée ne consomme rien (pas de pédagogie).
+    final showcaseBranch = isBachee ? null : await _specService.peekShowcase();
+    final insertedBodies = bodyCount == 0
         ? const <LevelMilestone>[]
         : milestoneService.pendingForList(
-            count: wantDualBody ? 2 : 1,
+            count: bodyCount,
             humiliationScore: humiliationScore,
             obedience: obedienceScore,
             playerLevel: bundle.maxLevel,
@@ -247,7 +246,7 @@ class _CareerScreenState extends State<CareerScreen> {
             anatomy: anatomy,
             showcaseBranch: showcaseBranch,
           );
-    final finalCandidates = quickie
+    final finalCandidates = isBachee
         ? const <LevelMilestone>[]
         : milestoneService.allPendingFor(
             humiliationScore: humiliationScore,
@@ -264,8 +263,8 @@ class _CareerScreenState extends State<CareerScreen> {
     // composite, cf. `MilestoneService.allPendingFor`. Pour les bodies, on
     // ré-évalue `allPendingFor` (avant les picks de `pendingForList`, qui
     // a sa propre logique d'exclusion mutuelle) et on retire les ids
-    // effectivement insérés. Pas de comptage en quickie.
-    if (!quickie) {
+    // effectivement insérés. Pas de comptage en bâclée.
+    if (!isBachee) {
       // L'aging ne consomme pas le boost showcase — l'objectif est de
       // comparer les candidates dans leur tri naturel (sinon une session
       // sans milestone disponible pour la branche showcase ne ferait
@@ -325,12 +324,14 @@ class _CareerScreenState extends State<CareerScreen> {
       humiliationScore: humiliationScore,
       obedienceScore: obedienceScore,
     );
-    // Phase 1 défis — construit le défi à insérer si toggle activé. Hors
-    // quickie (pas de pédagogie) et hors mode intense post-Supplier. Les
-    // axes déjà couverts par milestones de la séance sont exclus pour
-    // éviter l'empilement (spec § 5.5).
+    // Phase 1 défis — construit le défi à insérer si toggle activé et
+    // que le palier en demande (`targetChallenges > 0`). Les axes déjà
+    // couverts par milestones de la séance sont exclus pour éviter
+    // l'empilement (spec § 5.5). Phase 19.5 : le défi est désormais
+    // autorisé en bâclée (le palier exige 1 event, et un body milestone
+    // serait pédagogiquement incompatible avec l'intensityFloor 0.65).
     Challenge? challenge;
-    if (_challengesEnabled && !quickie) {
+    if (_challengesEnabled && lengthChoice.targetChallenges > 0) {
       // TODO : mapper milestones → axes à exclure pour l'empilement.
       // Phase 1 minimale : on n'exclut rien pour l'instant.
       challenge = _challengeService.buildForSession(
@@ -370,7 +371,7 @@ class _CareerScreenState extends State<CareerScreen> {
       // `sessionCeilings` ici — la séance démarre, aucun fail n'a encore
       // figé de plafond.
       capability: CapabilityInputs(profile: bundle.capabilityProfile),
-      challenge: ChallengeInputs(challenge: challenge),
+      challenge: ChallengeInputs.single(challenge),
     );
 
     final introText = coachBank.pickIntro(Random());
