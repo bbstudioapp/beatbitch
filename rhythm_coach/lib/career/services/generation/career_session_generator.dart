@@ -542,8 +542,12 @@ class CareerSessionGenerator {
     _config = SessionConfig(
       level: level,
       includeHand: includeHand,
-      maxDepthIndex:
-          custom.maxDepthIndex ?? CareerLevelGates.defaultMaxDepthIndex(),
+      // Phase 19.7 : profondeur max dérivée du profil
+      // (`rhythm.depth_max.comfort` arrondi, plancher `head`). Custom
+      // garde son override explicite. Profil absent (test, surprise) →
+      // fallback full ouvert via `defaultMaxDepthIndex`.
+      maxDepthIndex: custom.maxDepthIndex ??
+          CareerLevelGates.maxDepthIndexForProfile(capability.profile),
       spec: specialization ?? SpecializationAllocation.empty(),
       anatomy: anatomy,
       coachModeWeights: coachModeWeights,
@@ -1589,9 +1593,11 @@ class CareerSessionGenerator {
     _config = SessionConfig(
       level: level,
       includeHand: includeHand,
-      // `generatePunishment` n'expose pas la borne de profondeur — défaut
-      // neutre (full ouvert) cohérent avec l'ancien comportement.
-      maxDepthIndex: CareerLevelGates.defaultMaxDepthIndex(),
+      // `generatePunishment` : profondeur dérivée du profil (Phase 19.7)
+      // — la punition doit honorer la zone de confort prouvée comme la
+      // séance principale. Profil absent → full ouvert (rétrocompat).
+      maxDepthIndex:
+          CareerLevelGates.maxDepthIndexForProfile(capability.profile),
       spec: specialization ?? SpecializationAllocation.empty(),
       anatomy: anatomy,
       coachModeWeights: coachModeWeights,

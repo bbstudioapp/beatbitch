@@ -1,6 +1,8 @@
 import 'dart:math';
 
 import '../../models/session_step.dart';
+import '../../services/capability_axis.dart';
+import '../../services/capability_service.dart';
 
 /// Gates et seuils level-based de la génération de séance.
 ///
@@ -53,8 +55,32 @@ class CareerLevelGates {
       ((level - 1) * 4 + max(0, encoreChainIndex) * 8).clamp(0, 70);
 
   /// Plafond de profondeur (index dans `Position.values`) par défaut pour
-  /// une `SessionConfig`. Aujourd'hui constant (full ouvert) — sera
-  /// rebranché en Phase 19.7 sur `rhythm.depth_max.comfort` du
-  /// `CapabilityProfile`.
+  /// une `SessionConfig` quand aucun profil de capacités n'est fourni
+  /// (Custom mode, debug, surprise router). Full ouvert — la difficulté
+  /// effective est gated en aval par `_clampToCapability` quand un
+  /// profil est dispo.
   static int defaultMaxDepthIndex() => Position.full.index;
+
+  /// Plafond de profondeur dérivé du `CapabilityProfile` (Phase 19.7).
+  /// Lit `rhythm.depth_max.comfort` (en cran, double), l'arrondit et le
+  /// borne dans `[head, full]`.
+  ///
+  /// Plancher à `head` (= idx 1) : `tip` n'est jamais une borne haute
+  /// utile (une joueuse sans profil démarre déjà avec des actions
+  /// `tip`/`head` débloquées par les milestones d'intro). Plafond à
+  /// `full` (= idx 4) : on n'autorise pas `balls` via ce mécanisme —
+  /// l'anatomie balls a son propre gating.
+  ///
+  /// Quand le profil ne porte pas encore de donnée pour cet axe
+  /// (joueuse neuve, axe jamais sollicité), on retombe sur
+  /// [defaultMaxDepthIndex] (= full ouvert) — `_clampToCapability` côté
+  /// générateur évite que le tirage déborde, le profil se remplira sur
+  /// les premières séances.
+  static int maxDepthIndexForProfile(CapabilityProfile? profile) {
+    if (profile == null) return defaultMaxDepthIndex();
+    final comfort = profile.comfortOf(CapabilityAxis.rhythmDepthMax);
+    if (comfort == null) return defaultMaxDepthIndex();
+    final rounded = comfort.round();
+    return rounded.clamp(Position.head.index, Position.full.index);
+  }
 }
