@@ -277,16 +277,32 @@ class Challenge {
   }
 }
 
-/// Inputs liés au défi à passer à `CareerSessionGenerator.generate(...)`.
+/// Inputs liés aux défis à passer à `CareerSessionGenerator.generate(...)`.
 /// `ChallengeInputs.none` = aucun défi inséré (comportement carrière
 /// standard).
+///
+/// Une séance peut désormais (Phase 19.5) porter plusieurs défis
+/// intercalés — typiquement 1 pour les paliers courts, 2 pour la
+/// longue. Le générateur les insère séquentiellement à des trigger
+/// times distribués entre les milestones.
 class ChallengeInputs {
-  /// Défi à insérer dans la séance (null = aucun).
-  final Challenge? challenge;
+  /// Liste ordonnée des défis à insérer (ordre = ordre d'insertion
+  /// temporelle). Vide = aucun défi.
+  final List<Challenge> challenges;
 
-  const ChallengeInputs({this.challenge});
+  const ChallengeInputs({this.challenges = const []});
+
+  /// Sucre syntaxique pour un défi unique (cas le plus fréquent) —
+  /// préserve la lisibilité des call sites historiques.
+  factory ChallengeInputs.single(Challenge? challenge) => challenge == null
+      ? ChallengeInputs.none
+      : ChallengeInputs(challenges: [challenge]);
 
   static const ChallengeInputs none = ChallengeInputs();
 
-  bool get hasChallenge => challenge != null;
+  bool get hasChallenge => challenges.isNotEmpty;
+
+  /// Compatibilité : le premier défi de la liste (ou null si vide).
+  /// Utilisé par les call sites qui n'ont besoin que du défi principal.
+  Challenge? get challenge => challenges.isEmpty ? null : challenges.first;
 }

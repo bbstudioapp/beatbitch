@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:beat_bitch/career/models/challenge.dart';
 import 'package:beat_bitch/career/models/phrase_bank.dart';
 import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
 
@@ -39,6 +40,77 @@ void main() {
             reason: 'palier $i (${SessionLengthChoice.values[i]}) doit '
                 'être strictement plus long que ${SessionLengthChoice.values[i - 1]}');
       }
+    });
+  });
+
+  group('SessionLengthChoice — events count (Phase 19.5)', () {
+    test('maxBodyMilestones par palier (1/2/3/4 events, max 2 body)', () {
+      expect(SessionLengthChoice.bachee.maxBodyMilestones, 0);
+      expect(SessionLengthChoice.courte.maxBodyMilestones, 1);
+      expect(SessionLengthChoice.moyenne.maxBodyMilestones, 2);
+      expect(SessionLengthChoice.longue.maxBodyMilestones, 2);
+    });
+
+    test('targetChallenges par palier', () {
+      expect(SessionLengthChoice.bachee.targetChallenges, 1);
+      expect(SessionLengthChoice.courte.targetChallenges, 1);
+      expect(SessionLengthChoice.moyenne.targetChallenges, 1);
+      expect(SessionLengthChoice.longue.targetChallenges, 2);
+    });
+
+    test('total events (body + challenges) suit la cible 1/2/3/4', () {
+      const expected = {
+        SessionLengthChoice.bachee: 1,
+        SessionLengthChoice.courte: 2,
+        SessionLengthChoice.moyenne: 3,
+        SessionLengthChoice.longue: 4,
+      };
+      for (final c in SessionLengthChoice.values) {
+        final total = c.maxBodyMilestones + c.targetChallenges;
+        expect(total, expected[c], reason: '${c.name} : total events');
+      }
+    });
+  });
+
+  group('ChallengeInputs — multi-défi API (Phase 19.5)', () {
+    const fakeChallenge = Challenge(
+      axis: CapabilityAxis.holdThroatStreak,
+      kind: ChallengeAxisKind.duration,
+      mode: SessionMode.hold,
+      to: Position.throat,
+      targetThreshold: 5,
+    );
+
+    test('none = liste vide, pas de défi', () {
+      const inputs = ChallengeInputs.none;
+      expect(inputs.hasChallenge, isFalse);
+      expect(inputs.challenge, isNull);
+      expect(inputs.challenges, isEmpty);
+    });
+
+    test('single(null) === none', () {
+      expect(ChallengeInputs.single(null).hasChallenge, isFalse);
+      expect(ChallengeInputs.single(null).challenges, isEmpty);
+    });
+
+    test('single(c) place c en tête de liste', () {
+      final inputs = ChallengeInputs.single(fakeChallenge);
+      expect(inputs.hasChallenge, isTrue);
+      expect(inputs.challenge, fakeChallenge);
+      expect(inputs.challenges, [fakeChallenge]);
+    });
+
+    test('liste multi-défi : challenge getter retourne le premier', () {
+      const second = Challenge(
+        axis: CapabilityAxis.biffleStreak,
+        kind: ChallengeAxisKind.duration,
+        mode: SessionMode.biffle,
+        bpm: 60,
+        targetThreshold: 5,
+      );
+      const inputs = ChallengeInputs(challenges: [fakeChallenge, second]);
+      expect(inputs.challenges.length, 2);
+      expect(inputs.challenge, fakeChallenge);
     });
   });
 
