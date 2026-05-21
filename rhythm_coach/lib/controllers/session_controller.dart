@@ -1669,6 +1669,33 @@ class SessionController extends ChangeNotifier {
       _challengeCurrentText =
           _pickChallengePhrase(ch, tier) ?? _fallbackChallengeText(ch, tier);
       _speakChallengePhraseIfAny();
+      // Crédite directement le tracker capability de la valeur prouvée
+      // par le défi. Indispensable parce que la timeline est freezée
+      // pendant le défi (`_timelineOffset` décrémenté à chaque tick),
+      // donc `_accrueHoldSecond` skipe systématiquement et le streak
+      // (`_holdThroat` etc.) ne s'incrémente jamais. Sans ce crédit
+      // explicite, `holdThroatStreak.best` reste null après le défi
+      // tuto, `reconcileFromCapability` n'a rien à acquitter en
+      // cascade et la joueuse continue de se taper des hold head en
+      // session 2/3 alors qu'elle a tenu gorge.
+      if (outcome == ChallengeOutcome.netSuccess ||
+          outcome == ChallengeOutcome.extendedSuccess) {
+        final reachedDuration =
+            ch.targetThreshold + _challengeExtensionsCount * ch.extensionSeconds;
+        final double reached;
+        switch (ch.kind) {
+          case ChallengeAxisKind.duration:
+            reached = reachedDuration.toDouble();
+            break;
+          case ChallengeAxisKind.bpm:
+            reached = (ch.bpmEnd ?? ch.bpm ?? ch.targetThreshold).toDouble();
+            break;
+          case ChallengeAxisKind.depthCran:
+            reached = ch.targetThreshold.toDouble();
+            break;
+        }
+        _capabilityTracker?.recordChallengeReached(ch.axis, reached);
+      }
     }
     _startPostChallengeBreath();
     notifyListeners();

@@ -346,6 +346,27 @@ class CapabilityTracker {
     _recordReached(axis, value);
   }
 
+  /// Crédite le tracker d'une valeur prouvée par un défi réussi sans
+  /// dépendre du flux `onTickSecond`. Indispensable parce que la timeline
+  /// session est freezée pendant tout le défi (`_timelineOffset` décrémenté
+  /// à chaque tick) : `SessionController._accrueHoldSecond` skipe alors
+  /// systématiquement (`now == _lastHoldTickAtSecond`), donc `onTickSecond`
+  /// n'est jamais appelé pendant le défi et les streaks (`_holdThroat`,
+  /// `_holdFull`…) ne s'incrémentent jamais. Le défi devient invisible
+  /// pour le profil de capacités.
+  ///
+  /// `axis.recordKind` pilote la sémantique : `maximize` (durée /
+  /// franchissements / profondeur), `minimize` (planchers BPM / dose mini
+  /// breath), `accumulate` (lifetime). Appelé depuis
+  /// `SessionController._completeChallenge` à la fin d'un défi en succès,
+  /// avec la valeur effectivement tenue (`targetThreshold + extensions ×
+  /// extensionSeconds` pour les axes durée, `targetThreshold` sinon).
+  void recordChallengeReached(CapabilityAxis axis, double value) {
+    if (value <= 0) return;
+    final minimize = axis.recordKind == CapabilityRecordKind.minimize;
+    _recordReached(axis, value, minimize: minimize);
+  }
+
   void _recordReached(CapabilityAxis axis, double value,
       {bool minimize = false}) {
     final current = _reached[axis];
