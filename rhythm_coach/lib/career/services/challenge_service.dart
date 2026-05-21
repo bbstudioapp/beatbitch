@@ -7,7 +7,8 @@
 ///   via cascade : (1) tête de la file showcase (TODO — branche
 ///   `feat/specialization-showcase-queue` pas mergée), (2) fallback
 ///   `CapabilityClamps.pickOverloadAxis` standard, étendu à un coefficient
-///   `× 1.50` (vs `× 1.03-1.15` du ratchet normal).
+///   `× 1.30` (vs `× 1.03-1.15` du ratchet normal). Cf.
+///   `kChallengeOverloadFactor` plus bas pour le choix du facteur.
 /// - Mappe l'axe choisi vers un step défi concret (mode + position + BPM
 ///   + durée nominale).
 ///
@@ -16,6 +17,7 @@ library;
 
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/session.dart';
@@ -30,7 +32,12 @@ import 'generation/capability_clamps.dart';
 /// (durée et BPM). Volontairement plus haut que le ratchet standard
 /// (`CapabilityRegulator.surchargeFactor` plafonne à 1.15) : le défi
 /// **expose** la surcharge et la pousse à un palier mesurable.
-const double kChallengeOverloadFactor = 1.50;
+///
+/// `1.30` (et non `1.50`) : un facteur trop dur produit des sauts irréalistes
+/// sur les axes franchissant gorge (`head→throat` × 1.5 BPM = injouable au
+/// 1ᵉʳ non-tuto) et rend la cascade de défis successifs impossible à 2-3
+/// itérations. À 1.30 le défi reste exigeant sans crasher la progression.
+const double kChallengeOverloadFactor = 1.30;
 
 /// Plancher de durée pour la prolongation « tient encore » du mode ouvert,
 /// en secondes (cf. spec § 3.1).
@@ -280,15 +287,17 @@ class ChallengeService {
 
   /// Pour les axes BPM, le step défi est une **rampe** : on démarre à
   /// `bpm = round(comfort)` (= ce que la joueuse tient déjà confortablement)
-  /// et on monte jusqu'à `bpmEnd = targetThreshold` (= comfort × 1.50) sur
-  /// la durée du step (45 s). Donne au défi sa qualité progressive : la
-  /// joueuse sent le rythme accélérer petit à petit, pas un saut brutal.
+  /// et on va jusqu'à `bpmEnd = targetThreshold` (= comfort × facteur sur
+  /// `maximize`, comfort / facteur sur `minimize`) sur la durée du step.
+  /// La durée est désormais **par axe** (cf. `Challenge._nominalBpmOrDepthDurationFor`)
+  /// — typiquement 7-25 s selon la zone. Donne au défi sa qualité
+  /// progressive : la joueuse sent le rythme dériver, pas un saut brutal.
   Challenge _buildChallenge({
     required CapabilityAxis axis,
     required double comfort,
   }) {
     final kind = _kindOf(axis);
-    final threshold = _thresholdFor(kind, comfort);
+    final threshold = thresholdFor(kind, comfort, axis);
     final mode = _modeOf(axis);
     final from = _fromOf(axis);
     final to = _toOf(axis);
@@ -325,17 +334,46 @@ class ChallengeService {
     }
   }
 
-  /// Calibrage du seuil cible selon [kind]. `comfort × 1.50` pour durée et
-  /// BPM ; `comfort + 1` cran pour profondeur (round(× 1.5) = +1 cran).
-  static int _thresholdFor(ChallengeAxisKind kind, double comfort) {
+  /// Calibrage du seuil cible selon [kind] et le sens de l'axe.
+  ///
+  /// - Axe `maximize` (la plupart) : `comfort × kChallengeOverloadFactor`
+  ///   pour durée et BPM ; `comfort + 1` cran pour profondeur.
+  /// - Axe `minimize` (planchers BPM, dose mini breath) : surcharge =
+  ///   atteindre une valeur **plus basse** → on divise par le facteur (BPM)
+  ///   et on retire un cran (profondeur — théorique : aucun axe minimize
+  ///   depthCran n'existe à ce jour). Plancher BPM à 18 (
+  ///   `CapabilityRegulator.kBpmFloorPractical`) pour rester dans la zone
+  ///   exploitable du `BeepEngine` / `CameraMotionDetector` [24..300].
+  ///
+  /// **Note** : en pratique, aucun axe `minimize` n'est aujourd'hui dans
+  /// `CapabilityClamps.overloadableAxes` (les floors BPM / `breathMinDose`
+  /// sont exclus côté générateur — rien ne les consomme). La branche
+  /// minimize reste défensive : si un axe minimize est ajouté plus tard,
+  /// le seuil ira dans le bon sens. Exposé via `@visibleForTesting` car
+  /// inaccessible par `buildForSession` sans modifier `overloadableAxes`.
+  @visibleForTesting
+  static int thresholdFor(
+    ChallengeAxisKind kind,
+    double comfort,
+    CapabilityAxis axis,
+  ) {
+    final isMinimize = axis.recordKind == CapabilityRecordKind.minimize;
     switch (kind) {
       case ChallengeAxisKind.duration:
-        return (comfort * kChallengeOverloadFactor).round();
+        final raw = isMinimize
+            ? comfort / kChallengeOverloadFactor
+            : comfort * kChallengeOverloadFactor;
+        return raw.round();
       case ChallengeAxisKind.bpm:
-        return (comfort * kChallengeOverloadFactor).round();
+        final raw = isMinimize
+            ? comfort / kChallengeOverloadFactor
+            : comfort * kChallengeOverloadFactor;
+        final rounded = raw.round();
+        return isMinimize ? (rounded < 18 ? 18 : rounded) : rounded;
       case ChallengeAxisKind.depthCran:
-        // +1 cran (cf. spec § 3.1, profondeur = cran discret).
-        return (comfort.round() + 1).clamp(0, Position.values.length - 1);
+        // ±1 cran (cf. spec § 3.1, profondeur = cran discret).
+        final delta = isMinimize ? -1 : 1;
+        return (comfort.round() + delta).clamp(0, Position.values.length - 1);
     }
   }
 

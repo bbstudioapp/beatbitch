@@ -220,17 +220,60 @@ class Challenge {
   }
 
   /// Durée nominale du step défi en secondes — équivaut au seuil cible pour
-  /// les axes durée, sinon une fenêtre fixe pour BPM/profondeur (le défi
-  /// y est tenu sur une fenêtre d'observation).
+  /// les axes durée, sinon **par axe** pour BPM/profondeur. Le défi y est
+  /// tenu sur une fenêtre d'observation calibrée selon l'effort physiologique
+  /// réel : un défi `head→throat 60 BPM` (franchissement gorge) ne mobilise
+  /// pas le même effort qu'un `head→mid 60 BPM` (peu profond), donc même
+  /// fenêtre = mauvais design.
   ///
-  /// BPM : 45 s pour laisser la rampe `bpm → bpmEnd` progresser de manière
-  /// sensible mais pas brutale (~1-2 BPM/s typique). Cf. [bpmEnd].
+  /// Le défi reste **prouvable** : passé le seuil, la voie « JE TIENS ENCORE »
+  /// laisse la joueuse continuer librement — pas besoin de fenêtre longue
+  /// pour matérialiser l'exploit.
   int get nominalDurationSeconds {
-    return switch (kind) {
-      ChallengeAxisKind.duration => targetThreshold,
-      ChallengeAxisKind.bpm => 45,
-      ChallengeAxisKind.depthCran => 20,
-    };
+    if (kind == ChallengeAxisKind.duration) return targetThreshold;
+    return _nominalBpmOrDepthDurationFor(axis);
+  }
+
+  /// Table de durée nominale par axe pour les défis BPM/profondeur. Les axes
+  /// durée n'y figurent pas (leur durée = `targetThreshold`).
+  ///
+  /// Logique des valeurs :
+  /// - Bandes peu profondes / pas de pénétration : 20-25 s — la fatigue y
+  ///   est progressive, un seuil trop court banaliserait le défi.
+  /// - Bandes franchissant gorge / profondes : 7-12 s — le franchissement
+  ///   est rapidement fatiguant ; au-dessus on bascule sur l'endurance que
+  ///   `extendedSuccess` rémunère mieux.
+  /// - Floors BPM (minimize) : équivalent à leur ceil, le défi y est de
+  ///   tenir le rythme lent à profondeur donnée.
+  /// - `rhythmDepthMax` (depthCran) : 12 s — fenêtre d'observation du cran
+  ///   le plus profond tenu.
+  /// - Fallback (axe BPM pilotant non listé, p. ex. nouvel axe ajouté) :
+  ///   30 s. Volontairement long pour ne pas brutaliser un axe non calibré.
+  static int _nominalBpmOrDepthDurationFor(CapabilityAxis axis) {
+    switch (axis) {
+      case CapabilityAxis.rhythmBpmCeilShallow:
+        return 25;
+      case CapabilityAxis.rhythmBpmCeilThroat:
+        return 8;
+      case CapabilityAxis.rhythmBpmCeilFull:
+        return 7;
+      case CapabilityAxis.gorgeCrossingsBpmThroat:
+        return 8;
+      case CapabilityAxis.gorgeCrossingsBpmFull:
+        return 7;
+      case CapabilityAxis.biffleBpmMax:
+        return 20;
+      case CapabilityAxis.rhythmBpmFloorShallow:
+        return 20;
+      case CapabilityAxis.rhythmBpmFloorThroat:
+        return 12;
+      case CapabilityAxis.rhythmBpmFloorFull:
+        return 8;
+      case CapabilityAxis.rhythmDepthMax:
+        return 12;
+      default:
+        return 30;
+    }
   }
 }
 

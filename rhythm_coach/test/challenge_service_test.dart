@@ -44,7 +44,7 @@ void main() {
       expect(challenge.branch, SpecializationBranch.endurance);
     });
 
-    test('non-tutoriel : pickOverloadAxis utilisé, seuil = comfort × 1.50', () {
+    test('non-tutoriel : pickOverloadAxis utilisé, seuil = comfort × 1.30', () {
       final svc = ChallengeService();
       final profile = _profileWithComfort(CapabilityAxis.holdThroatStreak, 10);
       final challenge = svc.buildForSession(
@@ -56,11 +56,12 @@ void main() {
       );
       expect(challenge, isNotNull);
       expect(challenge!.axis, CapabilityAxis.holdThroatStreak);
-      expect(challenge.targetThreshold, 15);
+      // 10 × 1.30 = 13.
+      expect(challenge.targetThreshold, 13);
       expect(challenge.comfortAtCalibration, 10.0);
     });
 
-    test('axe BPM : rampe comfort → comfort × 1.50 (bpm/bpmEnd)', () {
+    test('axe BPM : rampe comfort → comfort × 1.30 (bpm/bpmEnd)', () {
       final svc = ChallengeService();
       final profile =
           _profileWithComfort(CapabilityAxis.rhythmBpmCeilThroat, 100);
@@ -74,10 +75,11 @@ void main() {
       expect(challenge, isNotNull);
       expect(challenge!.axis, CapabilityAxis.rhythmBpmCeilThroat);
       expect(challenge.kind, ChallengeAxisKind.bpm);
-      expect(challenge.targetThreshold, 150);
+      // 100 × 1.30 = 130.
+      expect(challenge.targetThreshold, 130);
       // Rampe : démarre au comfort, monte au seuil cible.
       expect(challenge.bpm, 100);
-      expect(challenge.bpmEnd, 150);
+      expect(challenge.bpmEnd, 130);
       expect(challenge.mode, SessionMode.rhythm);
       // Convention rhythm : from < to (amplitude obligatoire).
       expect(challenge.from, Position.head);
@@ -151,6 +153,145 @@ void main() {
       expect(ChallengeService.branchOf(CapabilityAxis.handStreak), isNull);
       expect(ChallengeService.branchOf(CapabilityAxis.lickStreak), isNull);
       expect(ChallengeService.branchOf(CapabilityAxis.breathMinDose), isNull);
+    });
+  });
+
+  group('ChallengeService.thresholdFor', () {
+    test('maximize duration : comfort × 1.30', () {
+      expect(
+        ChallengeService.thresholdFor(
+          ChallengeAxisKind.duration,
+          10,
+          CapabilityAxis.holdThroatStreak,
+        ),
+        13,
+      );
+    });
+
+    test('maximize bpm : comfort × 1.30', () {
+      expect(
+        ChallengeService.thresholdFor(
+          ChallengeAxisKind.bpm,
+          100,
+          CapabilityAxis.rhythmBpmCeilThroat,
+        ),
+        130,
+      );
+    });
+
+    test('minimize bpm : comfort / 1.30 (rampe descendante)', () {
+      // 60 / 1.30 ≈ 46.
+      expect(
+        ChallengeService.thresholdFor(
+          ChallengeAxisKind.bpm,
+          60,
+          CapabilityAxis.rhythmBpmFloorThroat,
+        ),
+        46,
+      );
+    });
+
+    test('minimize bpm : plancher à 18 si la division descend plus bas', () {
+      // 20 / 1.30 ≈ 15 → planché à 18.
+      expect(
+        ChallengeService.thresholdFor(
+          ChallengeAxisKind.bpm,
+          20,
+          CapabilityAxis.rhythmBpmFloorShallow,
+        ),
+        18,
+      );
+    });
+
+    test('maximize depthCran : +1 cran', () {
+      expect(
+        ChallengeService.thresholdFor(
+          ChallengeAxisKind.depthCran,
+          2, // mid
+          CapabilityAxis.rhythmDepthMax,
+        ),
+        3, // throat
+      );
+    });
+
+    test('depthCran : clamp au dernier cran disponible', () {
+      // comfort = dernier cran → +1 sortirait de la plage, clampé.
+      final lastCran = Position.values.length - 1;
+      expect(
+        ChallengeService.thresholdFor(
+          ChallengeAxisKind.depthCran,
+          lastCran.toDouble(),
+          CapabilityAxis.rhythmDepthMax,
+        ),
+        lastCran,
+      );
+    });
+  });
+
+  group('Challenge.nominalDurationSeconds', () {
+    // Construit un Challenge minimal pour tester le getter selon (kind, axis).
+    Challenge mk(CapabilityAxis axis, ChallengeAxisKind kind,
+        {int threshold = 1}) {
+      return Challenge(
+        axis: axis,
+        kind: kind,
+        targetThreshold: threshold,
+        mode: SessionMode.rhythm,
+      );
+    }
+
+    test('axes durée : durée = targetThreshold', () {
+      expect(
+        mk(CapabilityAxis.holdThroatStreak, ChallengeAxisKind.duration,
+                threshold: 15)
+            .nominalDurationSeconds,
+        15,
+      );
+      expect(
+        mk(CapabilityAxis.biffleStreak, ChallengeAxisKind.duration,
+                threshold: 22)
+            .nominalDurationSeconds,
+        22,
+      );
+    });
+
+    test('axes BPM : durée par axe — table de calibration', () {
+      final cases = <CapabilityAxis, int>{
+        CapabilityAxis.rhythmBpmCeilShallow: 25,
+        CapabilityAxis.rhythmBpmCeilThroat: 8,
+        CapabilityAxis.rhythmBpmCeilFull: 7,
+        CapabilityAxis.gorgeCrossingsBpmThroat: 8,
+        CapabilityAxis.gorgeCrossingsBpmFull: 7,
+        CapabilityAxis.biffleBpmMax: 20,
+        CapabilityAxis.rhythmBpmFloorShallow: 20,
+        CapabilityAxis.rhythmBpmFloorThroat: 12,
+        CapabilityAxis.rhythmBpmFloorFull: 8,
+      };
+      for (final entry in cases.entries) {
+        expect(
+          mk(entry.key, ChallengeAxisKind.bpm).nominalDurationSeconds,
+          entry.value,
+          reason: '${entry.key} doit durer ${entry.value} s',
+        );
+      }
+    });
+
+    test('axe profondeur : rhythmDepthMax = 12 s', () {
+      expect(
+        mk(CapabilityAxis.rhythmDepthMax, ChallengeAxisKind.depthCran)
+            .nominalDurationSeconds,
+        12,
+      );
+    });
+
+    test('axe BPM non listé : fallback 30 s', () {
+      // breathMinDose est BPM-like (minimize) mais non câblé dans _modeOf —
+      // sert ici de proxy d'un axe pilotant pas encore couvert par la table.
+      expect(
+        mk(CapabilityAxis.breathMinDose, ChallengeAxisKind.bpm)
+            .nominalDurationSeconds,
+        30,
+      );
     });
   });
 
