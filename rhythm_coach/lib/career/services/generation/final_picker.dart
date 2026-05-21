@@ -31,6 +31,7 @@ import '../../../models/session.dart';
 import '../../../models/session_step.dart';
 import '../../models/specialization.dart';
 import '../../models/unlock_key.dart';
+import '../career_level_gates.dart';
 import 'capability_clamps.dart';
 import 'humiliation_gates.dart';
 import 'mode_rules.dart';
@@ -129,7 +130,10 @@ class FinalPicker {
     // et includeHand comme dans la palette pré-refacto). Sans ça,
     // l'itération du registry (rhythm→lick→hold→biffle→…→hand→…)
     // rebattrait le rng et ferait diverger les sessions reproductibles.
-    final handBaselineBpm = config.level < 4 ? (40 + rng.nextInt(21)) : null;
+    final handBaselineBpm =
+        CareerLevelGates.usesShortHandFinalBaseline(config.level)
+            ? (40 + rng.nextInt(21))
+            : null;
     final biffleBpm = config.includeHand ? (40 + rng.nextInt(21)) : null;
 
     final ctx = FinalCtx(
@@ -269,7 +273,7 @@ class FinalPicker {
     // chance — assez pour que la couleur de la spé soit perceptible
     // post-orgasme, mais 40 % de tirage standard pour conserver de la
     // variété (sinon chaque session avance signe la même fin).
-    if (config.level >= 7 && humilCap >= 30) {
+    if (CareerLevelGates.canColorFinalBySpec(config.level) && humilCap >= 30) {
       final sloppyPts = _pts(SpecializationBranch.sloppy);
       final obPts = _pts(SpecializationBranch.obeissance);
       // Tirage prioritaire si les deux branches sont présentes : on
