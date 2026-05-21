@@ -183,6 +183,32 @@ class CareerSessionGenerator {
 
   static const int _finisherBudgetSeconds = 12;
 
+  /// Calcule les `triggerTime` d'insertion des défis dans la fenêtre de
+  /// génération. Distribution :
+  /// - 0 défi → liste vide
+  /// - 1 défi → `kChallengeInsertionFraction` (legacy, ~60 % de `genUntil`)
+  /// - N ≥ 2 défis → répartis sur [0.20, 0.80] équidistants (ex. N=2 →
+  ///   [0.35, 0.70] ; N=4 → [0.20, 0.40, 0.60, 0.80])
+  ///
+  /// Le générateur saute silencieusement un défi si l'enveloppe restante
+  /// ne couvre pas breath + step à `triggerTime[i]` (cf. boucle
+  /// d'insertion dans `generate`).
+  static List<int> _computeChallengeTriggerTimes({
+    required int count,
+    required int genUntil,
+  }) {
+    if (count == 0) return const [];
+    if (count == 1) {
+      return [(genUntil * kChallengeInsertionFraction).round()];
+    }
+    const double start = 0.20;
+    const double end = 0.80;
+    return List<int>.generate(count, (i) {
+      final frac = start + (end - start) * i / (count - 1);
+      return (genUntil * frac).round();
+    });
+  }
+
   /// Budget réservé en fin de session pour la phase d'accélération qui
   /// précède le hold final (bas niveaux uniquement). Permet d'enchaîner
   /// proprement effort → finisher sans dépasser la durée demandée.
@@ -665,18 +691,20 @@ class CareerSessionGenerator {
     // `isLowLevel`, `useFinalMilestone`, `finalBudget`, `genUntil` désormais
     // pré-calculés en tête de [generate] (cf. construction de `ctx` plus haut).
 
-    // Phase 1 défis — insertion d'un step breath countdown + step défi vers
-    // 60 % du temps planifié (cf. spec § 4.3). Variables d'état closurées
-    // au-dessus de la boucle main pour pouvoir les passer à `_assembleResult`
-    // une fois sorti. `null` partout quand aucun défi n'est passé (toggle
-    // off, hors carrière, profil sans axe candidat).
-    final challengeData = challenge.challenge;
-    final challengeTriggerTime = challengeData == null
-        ? -1
-        : (genUntil * kChallengeInsertionFraction).round();
-    int? challengeBreathStartTime;
-    int? challengeStepTime;
-    var challengeInserted = false;
+    // Défis intra-séance (Phase 1 + 19.5.b multi-défi) — insertion d'un
+    // step breath countdown + step défi par défi, à des trigger times
+    // distribués sur la fenêtre de génération (cf. spec § 4.3). 1 défi =
+    // ~60 % du temps planifié (legacy) ; 2+ défis = répartis. Skip si
+    // l'enveloppe restante ne couvre pas breath + défi + marge pour la
+    // phase finish (on préfère ne pas insérer un défi tronqué).
+    final challengeQueue = List<Challenge>.from(challenge.challenges);
+    final challengeTriggerTimes = _computeChallengeTriggerTimes(
+      count: challengeQueue.length,
+      genUntil: genUntil,
+    );
+    final challengeBreathStartTimes = <int>[];
+    final challengeStepTimes = <int>[];
+    var nextChallengeIndex = 0;
     while (ctx.time < genUntil) {
       // Phase 1 — Insertion milestone : on traite les pending dans
       // l'ordre, dès que `time` atteint la target (`>= targetTime`),
@@ -695,18 +723,19 @@ class CareerSessionGenerator {
       // Phase 3 — Ordre de déglutition forcé : beg libre court quand la
       // simulation salive sature.
       if (_tryEmitSwallowOrder(ctx)) continue;
-      // Phase 3.5 — Défi intra-séance (Phase 1 défis) : à `ctx.time >=
-      // challengeTriggerTime`, on insère un step breath de countdown puis
-      // le step défi. Le SessionController détecte ensuite via
-      // `Session.challengeBreathStartTime` / `challengeStepTime` pour
-      // armer la machine d'états live. Skip si l'enveloppe restante (jusqu'à
-      // `genUntil`) ne couvre pas breath + défi + marge pour la phase
-      // finish — on préfère ne pas insérer un défi tronqué.
-      if (challengeData != null &&
-          !challengeInserted &&
-          ctx.time >= challengeTriggerTime) {
+      // Phase 3.5 — Défi(s) intra-séance (Phase 1 + 19.5.b multi-défi) :
+      // pour chaque défi à insérer, on attend `ctx.time >= triggerTime[i]`,
+      // puis on émet un step breath de countdown suivi du step défi. Le
+      // SessionController détecte ensuite via `Session.challenges` /
+      // `challengeBreathStartTimes` / `challengeStepTimes` pour armer la
+      // machine d'états live. Skip un défi si l'enveloppe restante ne
+      // couvre pas breath + défi + marge pour la phase finish (= défi
+      // perdu silencieusement, on préfère pas de défi à un défi tronqué).
+      if (nextChallengeIndex < challengeQueue.length &&
+          ctx.time >= challengeTriggerTimes[nextChallengeIndex]) {
+        final nextChallenge = challengeQueue[nextChallengeIndex];
         const breathDur = kChallengeBreathDurationSeconds;
-        final stepDur = challengeData.nominalDurationSeconds;
+        final stepDur = nextChallenge.nominalDurationSeconds;
         final remaining = genUntil - ctx.time;
         if (remaining >= breathDur + stepDur) {
           // Step breath de countdown sans texte : la phrase `attempt` est
@@ -715,27 +744,30 @@ class CareerSessionGenerator {
           // aussi le texte sur le step, le coach le disait deux fois (une
           // via `_speakScripted(step.text)`, une via le banner) et le user
           // voyait du texte coach normal + texte du cadre noir en double.
-          challengeBreathStartTime = ctx.time;
+          challengeBreathStartTimes.add(ctx.time);
           steps.add(SessionStep(
             time: ctx.time,
             mode: SessionMode.breath,
             duration: breathDur,
           ));
           ctx.time += breathDur;
-          challengeStepTime = ctx.time;
+          challengeStepTimes.add(ctx.time);
           steps.add(SessionStep(
             time: ctx.time,
-            from: challengeData.from,
-            to: challengeData.to,
-            bpm: challengeData.bpm,
-            bpmEnd: challengeData.bpmEnd,
+            from: nextChallenge.from,
+            to: nextChallenge.to,
+            bpm: nextChallenge.bpm,
+            bpmEnd: nextChallenge.bpmEnd,
             duration: stepDur,
-            mode: challengeData.mode,
+            mode: nextChallenge.mode,
           ));
           ctx.time += stepDur;
-          challengeInserted = true;
+          nextChallengeIndex++;
           continue;
         }
+        // Pas la place pour ce défi → on saute son trigger time (sinon
+        // le test resterait vrai à chaque itération et bloquerait la boucle).
+        nextChallengeIndex++;
       }
       // Phase 4 — Main step : tirage de difficulté → mode → cascade de
       // diversification (BPM / amplitude / capacités) → sas breath
@@ -809,9 +841,9 @@ class CareerSessionGenerator {
         finalMilestoneId: finalMilestone.id,
         finalMilestoneStartTime: finalMilestoneStartTime,
         finalMilestoneDurationSeconds: finalMilestone.durationSeconds,
-        challenge: challengeInserted ? challengeData : null,
-        challengeBreathStartTime: challengeBreathStartTime,
-        challengeStepTime: challengeStepTime,
+        challenges: challengeQueue.sublist(0, nextChallengeIndex),
+        challengeBreathStartTimes: challengeBreathStartTimes,
+        challengeStepTimes: challengeStepTimes,
       );
     }
 
@@ -892,9 +924,9 @@ class CareerSessionGenerator {
       finalCategory: finalCategory,
       silentFinishStartTime: silentFinishStartTime,
       finalStepStartTime: finalStepStartTime,
-      challenge: challengeInserted ? challengeData : null,
-      challengeBreathStartTime: challengeBreathStartTime,
-      challengeStepTime: challengeStepTime,
+      challenges: challengeQueue.sublist(0, nextChallengeIndex),
+      challengeBreathStartTimes: challengeBreathStartTimes,
+      challengeStepTimes: challengeStepTimes,
     );
   }
 
@@ -1419,9 +1451,9 @@ class CareerSessionGenerator {
     String? finalMilestoneId,
     int? finalMilestoneStartTime,
     int? finalMilestoneDurationSeconds,
-    Challenge? challenge,
-    int? challengeBreathStartTime,
-    int? challengeStepTime,
+    List<Challenge> challenges = const [],
+    List<int> challengeBreathStartTimes = const [],
+    List<int> challengeStepTimes = const [],
   }) {
     final finalDuration = ctx.time + 2;
     final trimmedProfile = List<double>.generate(
@@ -1460,13 +1492,13 @@ class CareerSessionGenerator {
         silentFinishStartTime: silentFinishStartTime,
         finalStepTime: finalStepStartTime,
         noStats: ctx.noStats,
-        challenge: challenge,
-        challengeBreathStartTime: challengeBreathStartTime,
-        challengeStepTime: challengeStepTime,
+        challenges: challenges,
+        challengeBreathStartTimes: challengeBreathStartTimes,
+        challengeStepTimes: challengeStepTimes,
       ),
       staminaProfile: trimmedProfile,
       overloadAxis: _config.overloadAxis,
-      challenge: challenge,
+      challenge: challenges.isEmpty ? null : challenges.first,
     );
   }
 

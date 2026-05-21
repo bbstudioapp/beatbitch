@@ -43,32 +43,127 @@ void main() {
     });
   });
 
-  group('SessionLengthChoice — events count (Phase 19.5)', () {
-    test('maxBodyMilestones par palier (1/2/3/4 events, max 2 body)', () {
+  group('SessionLengthChoice — events count (Phase 19.5 + 19.5.b)', () {
+    test('maxBodyMilestones par palier (max 2 body)', () {
       expect(SessionLengthChoice.bachee.maxBodyMilestones, 0);
       expect(SessionLengthChoice.courte.maxBodyMilestones, 1);
       expect(SessionLengthChoice.moyenne.maxBodyMilestones, 2);
       expect(SessionLengthChoice.longue.maxBodyMilestones, 2);
     });
 
-    test('targetChallenges par palier', () {
-      expect(SessionLengthChoice.bachee.targetChallenges, 1);
-      expect(SessionLengthChoice.courte.targetChallenges, 1);
-      expect(SessionLengthChoice.moyenne.targetChallenges, 1);
-      expect(SessionLengthChoice.longue.targetChallenges, 2);
+    test('totalEvents par palier (cible 1/2/3/4)', () {
+      expect(SessionLengthChoice.bachee.totalEvents, 1);
+      expect(SessionLengthChoice.courte.totalEvents, 2);
+      expect(SessionLengthChoice.moyenne.totalEvents, 3);
+      expect(SessionLengthChoice.longue.totalEvents, 4);
     });
 
-    test('total events (body + challenges) suit la cible 1/2/3/4', () {
-      const expected = {
-        SessionLengthChoice.bachee: 1,
-        SessionLengthChoice.courte: 2,
-        SessionLengthChoice.moyenne: 3,
-        SessionLengthChoice.longue: 4,
-      };
-      for (final c in SessionLengthChoice.values) {
-        final total = c.maxBodyMilestones + c.targetChallenges;
-        expect(total, expected[c], reason: '${c.name} : total events');
-      }
+    test('targetChallengesFor : compensation quand le catalogue manque', () {
+      // Catalogue plein (= toutes les milestones cibles disponibles) :
+      // nbDéfis = totalEvents - maxBody.
+      expect(
+          SessionLengthChoice.bachee.targetChallengesFor(
+              SessionLengthChoice.bachee.maxBodyMilestones),
+          1);
+      expect(
+          SessionLengthChoice.courte.targetChallengesFor(
+              SessionLengthChoice.courte.maxBodyMilestones),
+          1);
+      expect(
+          SessionLengthChoice.moyenne.targetChallengesFor(
+              SessionLengthChoice.moyenne.maxBodyMilestones),
+          1);
+      expect(
+          SessionLengthChoice.longue.targetChallengesFor(
+              SessionLengthChoice.longue.maxBodyMilestones),
+          2);
+
+      // Catalogue épuisé (0 body inséré) : les défis comblent jusqu'à
+      // totalEvents.
+      expect(SessionLengthChoice.bachee.targetChallengesFor(0), 1);
+      expect(SessionLengthChoice.courte.targetChallengesFor(0), 2);
+      expect(SessionLengthChoice.moyenne.targetChallengesFor(0), 3);
+      expect(SessionLengthChoice.longue.targetChallengesFor(0), 4);
+
+      // Demi-rempli (1 body inséré en longue) : 3 défis.
+      expect(SessionLengthChoice.longue.targetChallengesFor(1), 3);
+    });
+
+    test('targetChallengesFor : plancher à 0 (jamais négatif)', () {
+      // Plus de body insérés que prévu (cas dégénéré) : 0 défi.
+      expect(SessionLengthChoice.bachee.targetChallengesFor(5), 0);
+    });
+  });
+
+  group('CareerSessionGenerator — multi-défi (Phase 19.5.b)', () {
+    const ch1 = Challenge(
+      axis: CapabilityAxis.holdThroatStreak,
+      kind: ChallengeAxisKind.duration,
+      mode: SessionMode.hold,
+      to: Position.throat,
+      targetThreshold: 5,
+    );
+    const ch2 = Challenge(
+      axis: CapabilityAxis.biffleStreak,
+      kind: ChallengeAxisKind.duration,
+      mode: SessionMode.biffle,
+      bpm: 60,
+      targetThreshold: 5,
+    );
+    const ch3 = Challenge(
+      axis: CapabilityAxis.gorgeApneeStreak,
+      kind: ChallengeAxisKind.duration,
+      mode: SessionMode.hold,
+      to: Position.full,
+      targetThreshold: 5,
+    );
+    const ch4 = Challenge(
+      axis: CapabilityAxis.holdFullStreak,
+      kind: ChallengeAxisKind.duration,
+      mode: SessionMode.hold,
+      to: Position.full,
+      targetThreshold: 5,
+    );
+
+    test('longue + 4 défis (catalogue milestone épuisé) : 4 défis insérés', () {
+      final r = CareerSessionGenerator(seed: 1).generate(
+        level: 5,
+        bank: _bank(),
+        lengthChoice: SessionLengthChoice.longue,
+        challenge: const ChallengeInputs(challenges: [ch1, ch2, ch3, ch4]),
+      );
+      expect(r.session.challenges.length, 4,
+          reason:
+              'tous les défis doivent être insérés dans la longue (~45 min)');
+      expect(r.session.challengeBreathStartTimes.length, 4);
+      expect(r.session.challengeStepTimes.length, 4);
+    });
+
+    test('défis distribués dans la fenêtre [0.20, 0.80] de genUntil', () {
+      final r = CareerSessionGenerator(seed: 1).generate(
+        level: 5,
+        bank: _bank(),
+        lengthChoice: SessionLengthChoice.longue,
+        challenge: const ChallengeInputs(challenges: [ch1, ch2]),
+      );
+      expect(r.session.challenges.length, 2);
+      // Les 2 défis sont ordonnés temporellement et distincts.
+      final times = r.session.challengeBreathStartTimes;
+      expect(times[0], lessThan(times[1]));
+      expect(times[1] - times[0], greaterThan(60),
+          reason: 'les défis doivent être espacés pour ne pas se chevaucher');
+    });
+
+    test('1 défi seulement : ratio ~60% (legacy)', () {
+      final r = CareerSessionGenerator(seed: 1).generate(
+        level: 5,
+        bank: _bank(),
+        lengthChoice: SessionLengthChoice.courte,
+        challenge: const ChallengeInputs(challenges: [ch1]),
+      );
+      expect(r.session.challenges.length, 1);
+      // Compat retour : le getter scalaire `challenge` retourne le premier.
+      expect(r.session.challenge, ch1);
     });
   });
 
