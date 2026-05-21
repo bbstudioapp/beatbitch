@@ -1,30 +1,33 @@
 /// Palier de durée d'une séance carrière. Sélecteur UX qui pilote la
-/// durée + le nombre cible d'events insérés (body milestones + défis
-/// intercalés). Cf. roadmap Phase 19.
+/// durée + le nombre total d'events à insérer (body milestones + défis
+/// intercalés, compensables : si une milestone manque, un défi prend le
+/// relais). Cf. roadmap Phase 19.
 ///
-/// | Palier  | Durée   | Body max | Défis cible | Total events |
-/// |---------|---------|----------|-------------|--------------|
-/// | bachee  | ~6 min  | 0        | 1           | 1            |
-/// | courte  | ~12 min | 1        | 1           | 2            |
-/// | moyenne | ~25 min | 2        | 1           | 3            |
-/// | longue  | ~45 min | 2        | 2           | 4            |
+/// | Palier  | Durée   | Body max | Total events |
+/// |---------|---------|----------|--------------|
+/// | bachee  | ~6 min  | 0        | 1            |
+/// | courte  | ~12 min | 1        | 2            |
+/// | moyenne | ~25 min | 2        | 3            |
+/// | longue  | ~45 min | 2        | 4            |
 ///
-/// Le total est un cible : si le catalogue de milestones est épuisé ou
-/// que les défis sont désactivés, le compte effectif descend.
+/// Le nombre effectif de défis est calculé après avoir su combien de
+/// body milestones sont effectivement insérables (catalogue pending) :
+/// `nbChallenges = totalEvents - bodyInserted`. Quand le catalogue est
+/// épuisé, les défis comblent (jusqu'à 4 défis en longue).
 ///
 /// La bâclée garde son nom et reste portée par le flag `quickie` pour
 /// l'intensityFloor (0.65) ; la durée 6 min est l'alignement de ce
 /// palier sur le mécanisme existant.
 enum SessionLengthChoice {
-  bachee(durationSeconds: 360, maxBodyMilestones: 0, targetChallenges: 1),
-  courte(durationSeconds: 720, maxBodyMilestones: 1, targetChallenges: 1),
-  moyenne(durationSeconds: 1500, maxBodyMilestones: 2, targetChallenges: 1),
-  longue(durationSeconds: 2700, maxBodyMilestones: 2, targetChallenges: 2);
+  bachee(durationSeconds: 360, maxBodyMilestones: 0, totalEvents: 1),
+  courte(durationSeconds: 720, maxBodyMilestones: 1, totalEvents: 2),
+  moyenne(durationSeconds: 1500, maxBodyMilestones: 2, totalEvents: 3),
+  longue(durationSeconds: 2700, maxBodyMilestones: 2, totalEvents: 4);
 
   const SessionLengthChoice({
     required this.durationSeconds,
     required this.maxBodyMilestones,
-    required this.targetChallenges,
+    required this.totalEvents,
   });
 
   /// Durée nominale du palier en secondes. Passée telle quelle au
@@ -38,9 +41,15 @@ enum SessionLengthChoice {
   /// moyenne/longue.
   final int maxBodyMilestones;
 
-  /// Nombre cible de défis intra-séance à intercaler pour ce palier
-  /// (sous réserve que le toggle soit activé et qu'il reste des axes
-  /// candidats). Total visé d'« events » par séance : `maxBodyMilestones
-  /// + targetChallenges` = 1/2/3/4 selon palier.
-  final int targetChallenges;
+  /// Nombre total cible d'« events » par séance (1/2/3/4 selon palier).
+  /// Le nombre de défis effectivement insérés = `totalEvents - body
+  /// insérés` (compensation : un défi remplace une milestone absente).
+  final int totalEvents;
+
+  /// Calcule le nombre de défis à insérer en fonction du nombre de body
+  /// milestones effectivement disponibles. Plancher à 0.
+  int targetChallengesFor(int insertedBodies) {
+    final n = totalEvents - insertedBodies;
+    return n < 0 ? 0 : n;
+  }
 }

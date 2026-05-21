@@ -266,11 +266,33 @@ class SessionController extends ChangeNotifier {
   int _challengeExtensionsCount = 0;
   int get challengeExtensionsCount => _challengeExtensionsCount;
 
-  /// Outcome du défi — posé par les triggers (skipped/fail/netSuccess/
-  /// extendedSuccess) ou par `_finish` via timeout. Null tant qu'aucun défi
-  /// n'a été terminé.
+  /// Outcome du défi courant (= dernier défi armé) — posé par les triggers
+  /// (skipped/fail/netSuccess/extendedSuccess) ou par `_finish` via
+  /// timeout. Null entre 2 défis ou quand aucun défi n'a encore été armé.
+  /// Pour la multi-défi (Phase 19.5.b), l'historique complet est dans
+  /// [_completedChallenges] — `_challengeOutcome` reflète seulement le
+  /// défi en cours / qui vient de se terminer.
   ChallengeOutcome? _challengeOutcome;
   ChallengeOutcome? get challengeOutcome => _challengeOutcome;
+
+  /// Index du défi actif dans `_session.challenges` (-1 = aucun défi en
+  /// cours). Sert à savoir lequel des N défis est armé et à le marquer
+  /// comme « traité » à la fin du breath post-défi pour que le suivant
+  /// puisse être armé à son trigger time.
+  int _activeChallengeIndex = -1;
+
+  /// Set d'index de défis déjà acquittés (`_completeChallenge` appelé pour
+  /// eux). Sert à éviter de re-armer un défi qui a déjà été traité, dans
+  /// le cas où la session reboucle sur le même `breathStartTime` après un
+  /// rebase de timeline. Persiste sur toute la session.
+  final Set<int> _completedChallengeIndices = <int>{};
+
+  /// Historique des défis complétés (outcome + extensions) pour appliquer
+  /// les bumps humil/obed multi-défi au `_finish`. Push à chaque
+  /// `_completeChallenge`. Une entrée par défi armé qui a abouti
+  /// (succès/fail/skip/timeout).
+  final List<_CompletedChallengeRecord> _completedChallenges =
+      <_CompletedChallengeRecord>[];
 
   /// Phrase coach à afficher pendant la fenêtre défi (annonce / extension /
   /// outcome). Posée par les transitions de phase ; null si le coach n'a
@@ -1451,25 +1473,54 @@ class SessionController extends ChangeNotifier {
   /// qui rendait la transition `breath → live` peu fiable. Appelée dans
   /// `_onTick` à chaque tick (200 ms).
   void _updateChallengePhase() {
-    final ch = _session.challenge;
-    if (ch == null) return;
+    if (_session.challenges.isEmpty) return;
     final phase = _challengePhase;
-    if (phase == ChallengePhase.ended) return;
-    final breathStart = _session.challengeBreathStartTime;
-    final stepStart = _session.challengeStepTime;
-    if (breathStart == null || stepStart == null) return;
+    // Phase 19.5.b — Reset post-breath du défi précédent : quand le breath
+    // post-défi est fini, on rebascule en `none` pour permettre l'armement
+    // du défi suivant (s'il en reste un dans `_session.challenges`).
+    if (phase == ChallengePhase.ended && !_inPostChallengeBreath) {
+      _activeChallenge = null;
+      _activeChallengeIndex = -1;
+      _challengeOutcome = null;
+      _challengeExtensionsCount = 0;
+      _challengeStepStartedAtSec = null;
+      _challengeAtSeuilStartedAtSec = null;
+      _challengeOpenExtensionDeadlineSec = null;
+      _challengeCountdownStartedAtSec = null;
+      _challengeCountdownLastDigitSpoken = -1;
+      _challengeCurrentText = null;
+      _challengeSpokenText = null;
+      _challengePhase = ChallengePhase.none;
+    }
     final t = elapsedSeconds;
     // Entrée en phase `breath` (annonce coach + boutons PASSE / GO visibles).
     // À partir de ce moment, la timeline est gelée par `_onTick` jusqu'à
     // l'action joueuse (GO ou PASSE) — plus d'auto-trigger countdown.
-    if (phase == ChallengePhase.none && t >= breathStart && t < stepStart) {
-      _activeChallenge = ch;
-      _challengePhase = ChallengePhase.breath;
-      _challengeCurrentText = _pickChallengePhrase(ch, 'attempt') ??
-          _fallbackChallengeText(ch, 'attempt');
-      _speakChallengePhraseIfAny();
+    if (_challengePhase == ChallengePhase.none) {
+      // Cherche le prochain défi à armer : index `i` non encore acquitté
+      // dont le breath time est atteint mais le step pas encore démarré.
+      for (var i = 0; i < _session.challenges.length; i++) {
+        if (_completedChallengeIndices.contains(i)) continue;
+        final breathStart = _session.challengeBreathStartTimes[i];
+        final stepStart = _session.challengeStepTimes[i];
+        if (t < breathStart || t >= stepStart) continue;
+        final ch = _session.challenges[i];
+        _activeChallengeIndex = i;
+        _activeChallenge = ch;
+        _challengePhase = ChallengePhase.breath;
+        _challengeCurrentText = _pickChallengePhrase(ch, 'attempt') ??
+            _fallbackChallengeText(ch, 'attempt');
+        _speakChallengePhraseIfAny();
+        return;
+      }
       return;
     }
+    final ch = _activeChallenge;
+    if (ch == null) return;
+    final stepStart = _activeChallengeIndex >= 0
+        ? _session.challengeStepTimes[_activeChallengeIndex]
+        : null;
+    if (stepStart == null) return;
     // À partir d'ici, on mesure les durées internes sur `_realSec`
     // (`_stopwatch.elapsed` brut). La timeline session est freezée pendant
     // le défi (`_onTick`) ; utiliser `elapsedSeconds` ferait stagner toutes
@@ -1574,12 +1625,12 @@ class SessionController extends ChangeNotifier {
   /// sur `_realSec` (cf. `_updateChallengePhase`).
   void triggerChallengeGo() {
     if (_challengePhase != ChallengePhase.breath) return;
-    final stepStart = _session.challengeStepTime;
-    if (stepStart == null) return;
-    // Le step défi est encore dans `session.steps` à `time = stepStart`,
-    // mais `_checkSteps` est freezé sur la timeline gelée — on l'applique
-    // donc manuellement à l'entrée `live` (cf. `_updateChallengePhase`)
-    // et on avance `_nextStepIndex` past lui.
+    if (_activeChallengeIndex < 0) return;
+    // Le step défi est encore dans `session.steps` à
+    // `time = challengeStepTimes[_activeChallengeIndex]`, mais `_checkSteps`
+    // est freezé sur la timeline gelée — on l'applique donc manuellement
+    // à l'entrée `live` (cf. `_updateChallengePhase`) et on avance
+    // `_nextStepIndex` past lui.
     _enterChallengeCountdown();
     notifyListeners();
   }
@@ -1659,6 +1710,20 @@ class SessionController extends ChangeNotifier {
     _challengeOutcome = outcome;
     _challengePhase = ChallengePhase.ended;
     final ch = _activeChallenge;
+    // Marque ce défi comme acquitté pour qu'il ne soit pas re-armé après
+    // le reset post-breath (cf. `_updateChallengePhase`). Push aussi
+    // dans l'historique pour permettre l'application des bumps multi-défi
+    // au `_finish`.
+    if (_activeChallengeIndex >= 0) {
+      _completedChallengeIndices.add(_activeChallengeIndex);
+    }
+    if (ch != null) {
+      _completedChallenges.add(_CompletedChallengeRecord(
+        challenge: ch,
+        outcome: outcome,
+        extensionsCount: _challengeExtensionsCount,
+      ));
+    }
     if (ch != null) {
       final tier = switch (outcome) {
         ChallengeOutcome.fail => 'fail',
@@ -1826,10 +1891,15 @@ class SessionController extends ChangeNotifier {
   /// — la fenêtre reste vide dans la timeline mais aucun temps n'a été
   /// consommé puisque le freeze s'arrête dès `phase == ended`).
   void _excisChallengeFromSession() {
-    final breathStart = _session.challengeBreathStartTime;
-    final stepStart = _session.challengeStepTime;
+    if (_activeChallengeIndex < 0) return;
+    if (_activeChallengeIndex >= _session.challengeBreathStartTimes.length) {
+      return;
+    }
+    final breathStart =
+        _session.challengeBreathStartTimes[_activeChallengeIndex];
+    final stepStart = _session.challengeStepTimes[_activeChallengeIndex];
     final stepDur = _activeChallenge?.nominalDurationSeconds;
-    if (breathStart == null || stepStart == null || stepDur == null) return;
+    if (stepDur == null) return;
     final shift = (stepStart - breathStart) + stepDur;
     if (shift <= 0) return;
     final endOfChallenge = stepStart + stepDur;
@@ -1887,9 +1957,20 @@ class SessionController extends ChangeNotifier {
       silentFinishStartTime: shiftLate(_session.silentFinishStartTime),
       finalStepTime: shiftLate(_session.finalStepTime),
       noStats: _session.noStats,
-      challenge: _session.challenge,
-      challengeBreathStartTime: null,
-      challengeStepTime: null,
+      // L'excise du défi en cours retire ses 2 steps (breath + défi) de
+      // la timeline et shifte tout ce qui est après. On préserve la liste
+      // complète des défis, mais on shifte les trigger times des défis
+      // suivants (ceux après `endOfChallenge`) pour qu'ils restent
+      // synchronisés avec la nouvelle timeline.
+      // `_completedChallengeIndices` côté controller garantit que les
+      // défis déjà acquittés (le défi excisé inclus) ne se ré-arment pas.
+      challenges: _session.challenges,
+      challengeBreathStartTimes: [
+        for (final t in _session.challengeBreathStartTimes) shiftLate(t)!,
+      ],
+      challengeStepTimes: [
+        for (final t in _session.challengeStepTimes) shiftLate(t)!,
+      ],
     );
 
     // Recalcule `_nextStepIndex` : pointe vers le premier step à venir
@@ -1994,38 +2075,55 @@ class SessionController extends ChangeNotifier {
   }
 
   void _applyChallengeOutcome() {
-    final outcome = _challengeOutcome;
-    if (outcome == null) return;
-    final extensions = _challengeExtensionsCount;
-    // Phase 2 défi exploratoire : pas de bump de base humil/obed +2
-    // (pas de seuil cible atteint, donc pas de palier mesuré).
-    // Cf. spec § 5.2 — seules les extensions comptent.
-    final isExploratory = _activeChallenge?.isExploratory ?? false;
-    switch (outcome) {
-      case ChallengeOutcome.netSuccess:
-        if (!isExploratory) {
-          _humiliation.onChallengeNetSuccess();
-          _obedience.onChallengeNetSuccess();
-          _raiseHumiliationFloorFromChallenge();
-        }
-        break;
-      case ChallengeOutcome.extendedSuccess:
-        if (!isExploratory) {
-          _humiliation.onChallengeNetSuccess();
-          _obedience.onChallengeNetSuccess();
-        }
-        for (var i = 0; i < extensions; i++) {
-          _humiliation.onChallengeExtension();
-          _obedience.onChallengeExtension();
-        }
-        _raiseHumiliationFloorFromChallenge();
-        break;
-      case ChallengeOutcome.fail:
-        // Pas de bumps humil/obed (cf. spec § 5.3).
-        break;
-      case ChallengeOutcome.skipped:
-        _obedience.onChallengeSkip();
-        break;
+    // Phase 19.5.b — itère sur tous les défis complétés cette séance pour
+    // appliquer les bumps humil/obed multi-défi. Si aucun défi n'a tourné,
+    // l'historique est vide → no-op. Le défi en cours non encore acquitté
+    // est aussi traité (rare : la séance peut atteindre `_finish` pendant
+    // qu'un défi est en `ended` mais pas encore enregistré).
+    if (_challengeOutcome != null &&
+        _activeChallengeIndex >= 0 &&
+        !_completedChallengeIndices.contains(_activeChallengeIndex)) {
+      final ch = _activeChallenge;
+      if (ch != null) {
+        _completedChallenges.add(_CompletedChallengeRecord(
+          challenge: ch,
+          outcome: _challengeOutcome!,
+          extensionsCount: _challengeExtensionsCount,
+        ));
+        _completedChallengeIndices.add(_activeChallengeIndex);
+      }
+    }
+    for (final record in _completedChallenges) {
+      // Phase 2 défi exploratoire : pas de bump de base humil/obed +2
+      // (pas de seuil cible atteint, donc pas de palier mesuré).
+      // Cf. spec § 5.2 — seules les extensions comptent.
+      final isExploratory = record.challenge.isExploratory;
+      switch (record.outcome) {
+        case ChallengeOutcome.netSuccess:
+          if (!isExploratory) {
+            _humiliation.onChallengeNetSuccess();
+            _obedience.onChallengeNetSuccess();
+            _raiseHumiliationFloorFromRecord(record);
+          }
+          break;
+        case ChallengeOutcome.extendedSuccess:
+          if (!isExploratory) {
+            _humiliation.onChallengeNetSuccess();
+            _obedience.onChallengeNetSuccess();
+          }
+          for (var i = 0; i < record.extensionsCount; i++) {
+            _humiliation.onChallengeExtension();
+            _obedience.onChallengeExtension();
+          }
+          _raiseHumiliationFloorFromRecord(record);
+          break;
+        case ChallengeOutcome.fail:
+          // Pas de bumps humil/obed (cf. spec § 5.3).
+          break;
+        case ChallengeOutcome.skipped:
+          _obedience.onChallengeSkip();
+          break;
+      }
     }
   }
 
@@ -2041,15 +2139,14 @@ class SessionController extends ChangeNotifier {
   /// cible + N × extensionSeconds par extension acquise). Pour les axes
   /// BPM en rampe, on prend `bpmEnd` (vitesse finale atteinte). Pour les
   /// axes profondeur, c'est `ch.to` qui porte déjà l'info.
-  void _raiseHumiliationFloorFromChallenge() {
-    final ch = _activeChallenge;
-    if (ch == null) return;
+  void _raiseHumiliationFloorFromRecord(_CompletedChallengeRecord record) {
+    final ch = record.challenge;
     final int durationReached;
     final int? bpmReached;
     switch (ch.kind) {
       case ChallengeAxisKind.duration:
-        durationReached = ch.targetThreshold +
-            _challengeExtensionsCount * ch.extensionSeconds;
+        durationReached =
+            ch.targetThreshold + record.extensionsCount * ch.extensionSeconds;
         bpmReached = ch.bpm;
         break;
       case ChallengeAxisKind.bpm:
@@ -2560,9 +2657,9 @@ class SessionController extends ChangeNotifier {
           upSilentFinish != null ? upSilentFinish + breathEnd : null,
       finalCategory: upcoming.finalCategory,
       noStats: previous.noStats,
-      challenge: previous.challenge,
-      challengeStepTime: previous.challengeStepTime,
-      challengeBreathStartTime: previous.challengeBreathStartTime,
+      challenges: previous.challenges,
+      challengeStepTimes: previous.challengeStepTimes,
+      challengeBreathStartTimes: previous.challengeBreathStartTimes,
     );
   }
 
@@ -3199,4 +3296,19 @@ class SessionController extends ChangeNotifier {
     }
     super.dispose();
   }
+}
+
+/// Snapshot d'un défi complété — sert à appliquer les bumps humil/obed
+/// au `_finish` quand plusieurs défis ont tourné dans la même séance
+/// (Phase 19.5.b multi-défi).
+class _CompletedChallengeRecord {
+  final Challenge challenge;
+  final ChallengeOutcome outcome;
+  final int extensionsCount;
+
+  const _CompletedChallengeRecord({
+    required this.challenge,
+    required this.outcome,
+    required this.extensionsCount,
+  });
 }

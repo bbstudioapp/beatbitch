@@ -140,22 +140,34 @@ class Session {
   /// laisser aucune trace dans le profil. Default false.
   final bool noStats;
 
-  /// Défi intra-séance attaché à cette session (Phase 1). Renseigné par
-  /// `CareerSessionGenerator.generate(...)` quand un défi a été inséré ;
-  /// `null` partout ailleurs (toggle off, hors carrière, JSON scriptés).
-  /// Transient : non sérialisé en JSON (un défi est généré dynamiquement,
-  /// pas écrit dans un fichier source).
-  final Challenge? challenge;
+  /// Défis intra-séance attachés à cette session (Phase 1 + 19.5.b
+  /// multi-défi). Liste ordonnée par ordre d'insertion temporelle ; vide
+  /// = aucun défi (toggle off, hors carrière, JSON scriptés). Transient :
+  /// non sérialisé en JSON (les défis sont générés dynamiquement, pas
+  /// écrits dans un fichier source).
+  final List<Challenge> challenges;
 
-  /// Temps absolu (s) du début du breath de countdown qui précède le step
-  /// défi. Le `SessionController` s'en sert pour entrer en phase `breath`
-  /// (affichage bouton `PASSE`). `null` si pas de défi.
-  final int? challengeBreathStartTime;
+  /// Temps absolu (s) du breath de countdown qui précède chaque step
+  /// défi (parallèle à [challenges] — `challengeBreathStartTimes[i]`
+  /// correspond à `challenges[i]`). Vide si aucun défi.
+  final List<int> challengeBreathStartTimes;
 
-  /// Temps absolu (s) du step défi lui-même. Le `SessionController` s'en
-  /// sert pour entrer en phase `live` puis armer l'annonce d'extension à
-  /// `targetThreshold - 3 s` et les boutons au seuil. `null` si pas de défi.
-  final int? challengeStepTime;
+  /// Temps absolu (s) de chaque step défi lui-même (parallèle à
+  /// [challenges]). Vide si aucun défi.
+  final List<int> challengeStepTimes;
+
+  /// Compat : premier défi de la liste (ou null si vide). Conserve la
+  /// rétrocompat des call sites qui lisaient `session.challenge`.
+  Challenge? get challenge => challenges.isEmpty ? null : challenges.first;
+
+  /// Compat : temps du breath du premier défi (ou null).
+  int? get challengeBreathStartTime => challengeBreathStartTimes.isEmpty
+      ? null
+      : challengeBreathStartTimes.first;
+
+  /// Compat : temps du step du premier défi (ou null).
+  int? get challengeStepTime =>
+      challengeStepTimes.isEmpty ? null : challengeStepTimes.first;
 
   const Session({
     required this.id,
@@ -179,9 +191,9 @@ class Session {
     this.silentFinishStartTime,
     this.finalStepTime,
     this.noStats = false,
-    this.challenge,
-    this.challengeBreathStartTime,
-    this.challengeStepTime,
+    this.challenges = const [],
+    this.challengeBreathStartTimes = const [],
+    this.challengeStepTimes = const [],
   });
 
   Duration get duration => Duration(seconds: durationSeconds);

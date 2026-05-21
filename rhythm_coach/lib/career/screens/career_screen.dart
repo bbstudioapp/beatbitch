@@ -324,27 +324,41 @@ class _CareerScreenState extends State<CareerScreen> {
       humiliationScore: humiliationScore,
       obedienceScore: obedienceScore,
     );
-    // Phase 1 défis — construit le défi à insérer si toggle activé et
-    // que le palier en demande (`targetChallenges > 0`). Les axes déjà
-    // couverts par milestones de la séance sont exclus pour éviter
-    // l'empilement (spec § 5.5). Phase 19.5 : le défi est désormais
-    // autorisé en bâclée (le palier exige 1 event, et un body milestone
-    // serait pédagogiquement incompatible avec l'intensityFloor 0.65).
-    Challenge? challenge;
-    if (_challengesEnabled && lengthChoice.targetChallenges > 0) {
-      // TODO : mapper milestones → axes à exclure pour l'empilement.
-      // Phase 1 minimale : on n'exclut rien pour l'instant.
-      challenge = _challengeService.buildForSession(
-        profile: bundle.capabilityProfile,
-        ceilings: const {},
-        excludeAxes: const {},
-        rng: Random(),
-        isTutorial: !_challengeTutorialSeen,
-        // Cascade showcase (spec § 5.1) : si la file showcase a une tête
-        // non-encore-consommée par une milestone insérée, le défi tente
-        // de l'honorer en priorité (axe pilotant de la branche).
-        showcaseBranch: showcaseBranch,
-      );
+    // Phase 19.5.b — construit N défis pour compléter le total
+    // d'events visé par le palier. Quand le catalogue de milestones est
+    // épuisé (insertedBodies < maxBody), les défis comblent : longue avec
+    // 0 milestone = 4 défis ; moyenne avec 1 milestone = 2 défis. Les
+    // axes déjà couverts (milestones + défis précédents) sont exclus pour
+    // éviter l'empilement (spec § 5.5).
+    final challenges = <Challenge>[];
+    if (_challengesEnabled) {
+      final targetCount =
+          lengthChoice.targetChallengesFor(insertedBodies.length);
+      final excludedAxes = <CapabilityAxis>{};
+      // Premier défi seulement : le tutoriel est forcé sur l'axe hold
+      // throat (cf. _buildTutorialChallenge), on ne le répète pas pour
+      // les défis suivants.
+      var isFirst = true;
+      for (var i = 0; i < targetCount; i++) {
+        final next = _challengeService.buildForSession(
+          profile: bundle.capabilityProfile,
+          ceilings: const {},
+          excludeAxes: excludedAxes,
+          rng: Random(),
+          // Tuto = seulement pour le tout premier défi de la joueuse,
+          // sur la séance qui contient le premier défi.
+          isTutorial: isFirst && !_challengeTutorialSeen,
+          // Cascade showcase (spec § 5.1) : si la file showcase a une
+          // tête non-encore-consommée par une milestone insérée, le défi
+          // tente de l'honorer en priorité (axe pilotant de la branche).
+          // Appliqué seulement au premier défi pour ne pas saturer.
+          showcaseBranch: isFirst ? showcaseBranch : null,
+        );
+        if (next == null) break;
+        challenges.add(next);
+        excludedAxes.add(next.axis);
+        isFirst = false;
+      }
     }
     final result = CareerSessionGenerator().generate(
       level: clamped,
@@ -371,7 +385,7 @@ class _CareerScreenState extends State<CareerScreen> {
       // `sessionCeilings` ici — la séance démarre, aucun fail n'a encore
       // figé de plafond.
       capability: CapabilityInputs(profile: bundle.capabilityProfile),
-      challenge: ChallengeInputs.single(challenge),
+      challenge: ChallengeInputs(challenges: challenges),
     );
 
     final introText = coachBank.pickIntro(Random());
@@ -462,7 +476,8 @@ class _CareerScreenState extends State<CareerScreen> {
     // Phase 1 défis — pose le flag tutorial_seen après le 1ᵉʳ défi joué
     // (peu importe l'outcome : succès, fail, ou skip — la joueuse a vu
     // les boutons et le flow, c'est l'objet de la pédagogie tutoriel).
-    if (challenge != null && challenge.isTutorial) {
+    // En multi-défi, seul le 1ᵉʳ peut être tutoriel (cf. boucle ci-dessus).
+    if (challenges.isNotEmpty && challenges.first.isTutorial) {
       await _challengeService.markTutorialSeen();
       if (mounted) setState(() => _challengeTutorialSeen = true);
     }

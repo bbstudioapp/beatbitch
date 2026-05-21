@@ -173,9 +173,12 @@ void main() {
         steps: const [],
         finalStepTime: finalStepTime,
         silentFinishStartTime: silentFinishStartTime,
-        challenge: challenge,
-        challengeStepTime: challengeStepTime,
-        challengeBreathStartTime: challengeBreathStartTime,
+        challenges: challenge == null ? const [] : [challenge],
+        challengeStepTimes:
+            challengeStepTime == null ? const [] : [challengeStepTime],
+        challengeBreathStartTimes: challengeBreathStartTime == null
+            ? const []
+            : [challengeBreathStartTime],
         noStats: false,
       );
     }
