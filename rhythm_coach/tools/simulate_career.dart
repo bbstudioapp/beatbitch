@@ -280,6 +280,24 @@ class SimProfile {
   /// valeurs sont des cibles que la joueuse *atteint* sur une session clean.
   final AxisTargetsFn axisTargets;
 
+  /// Capacité **initiale** de la joueuse à tenir un défi : 0 = débutante,
+  /// 1 = experte. Évolue au fil des sessions via [skillGrowthPerSession]
+  /// (courbe d'apprentissage). Pondère `P(fail)` et `expectedExtensions`
+  /// par rapport à la difficulté du défi (`_challengeDifficulty`).
+  /// Cf. `_resolveChallengeOutcome` et `currentSkillAt`.
+  final double skillLevel;
+
+  /// Croissance du skill par session — modélise la progression de la
+  /// joueuse au fil de la pratique. Linéaire, plafonné à 1.0. Volontairement
+  /// plus élevé chez les débutantes (apprentissage rapide les premières
+  /// sessions) et nul chez les expertes (plateau atteint).
+  final double skillGrowthPerSession;
+
+  /// Probabilité d'appuyer `PASSE` pendant le breath d'annonce. Indépendant
+  /// de la difficulté — c'est un état d'esprit, pas une réaction au défi.
+  /// Typiquement faible (~10 %) chez les débutantes apeurées, ~0 ailleurs.
+  final double challengeSkipProba;
+
   const SimProfile({
     required this.name,
     required this.description,
@@ -291,9 +309,21 @@ class SimProfile {
     required this.miniPunRate,
     required this.sessions,
     required this.axisTargets,
+    required this.skillLevel,
+    this.skillGrowthPerSession = 0.0,
+    this.challengeSkipProba = 0.0,
   });
 
   int branchPts(SpecBranch b) => allocation[b] ?? 0;
+
+  /// Skill effectif à la session [sessionIndex] (1-indexée). Le skill monte
+  /// de [skillGrowthPerSession] par session écoulée, plafonné à 1.0.
+  double currentSkillAt(int sessionIndex) {
+    final raw = skillLevel + skillGrowthPerSession * (sessionIndex - 1);
+    if (raw < 0) return 0;
+    if (raw > 1) return 1;
+    return raw;
+  }
 }
 
 // ─── État simulateur par profil ──────────────────────────────────────────
@@ -318,6 +348,24 @@ class SimState {
   Map<String, int> candidacyAge = <String, int>{};
   // ordre d'acquisition des unlocks (clé → n° session)
   List<({UnlockKey key, int session, String milestone})> unlockHistory = [];
+
+  // ─── Défis ─────────────────────────────────────────────────────────────
+  /// `true` une fois que le défi tutoriel a été joué (équivalent du flag
+  /// `challenges.tutorial_seen` côté prod).
+  bool tutorialSeen = false;
+
+  /// Compteur par outcome — alimente le récap.
+  Map<SimChallengeOutcome, int> challengeCounts = {
+    for (final o in SimChallengeOutcome.values) o: 0,
+  };
+
+  /// Axes records poussés par un défi (vs alimentés par une milestone ou
+  /// par le profil). Pour chaque axe : la plus grande `reachedValue` vue.
+  Map<CapabilityAxis, double> challengePushedBest = <CapabilityAxis, double>{};
+
+  /// Nombre d'unlocks gagnés via `markCompletedViaChallenge` (incluant
+  /// les cascades transitives holds).
+  int challengeUnlocksGained = 0;
 }
 
 // ─── Enregistrement timeline ──────────────────────────────────────────────
@@ -334,6 +382,8 @@ class TimelineRow {
   final String outcome; // clean / fail / abandon / encore / quickie
   final List<CapabilityAxis> axesTouched;
   final bool levelUp;
+  final String?
+      challengeSummary; // ex. `hold.throat × net ×2`, `tut`, null si pas de défi
 
   TimelineRow({
     required this.session,
@@ -347,6 +397,7 @@ class TimelineRow {
     required this.outcome,
     required this.axesTouched,
     required this.levelUp,
+    this.challengeSummary,
   });
 }
 
@@ -577,7 +628,560 @@ Map<CapabilityAxis, double> _axesFromMilestoneSequence(SimMilestone m) {
   return out;
 }
 
-// ─── Catalogue des 6 profils ──────────────────────────────────────────────
+// ─── Défis intra-séance ───────────────────────────────────────────────────
+//
+// Réplique simplifiée de `ChallengeService.buildForSession` + résolution
+// d'outcome pondérée par la difficulté du défi (au lieu d'un % fixe).
+// Les valeurs (facteur 1.30, table durée par axe, plancher BPM minimize 18)
+// sont alignées sur le fix `fix/challenges-calibration-by-axis`.
+
+const double _kChallengeOverloadFactor = 1.30;
+const int _kChallengeBpmFloor = 18;
+const int _kChallengeTutorialDurationSeconds = 5;
+
+/// Axes éligibles à la surcharge — réplique de `CapabilityClamps.overloadableAxes`.
+const Set<CapabilityAxis> _overloadableSimAxes = {
+  CapabilityAxis.gorgeApneeStreak,
+  CapabilityAxis.gorgeEngagementStreak,
+  CapabilityAxis.gorgeCrossingsBpmThroat,
+  CapabilityAxis.gorgeCrossingsBpmFull,
+  CapabilityAxis.rhythmBpmCeilShallow,
+  CapabilityAxis.rhythmBpmCeilThroat,
+  CapabilityAxis.rhythmBpmCeilFull,
+  CapabilityAxis.rhythmDepthMax,
+  CapabilityAxis.rhythmMotionStreak,
+  CapabilityAxis.holdThroatStreak,
+  CapabilityAxis.holdFullStreak,
+  CapabilityAxis.noswallowStreak,
+  CapabilityAxis.biffleStreak,
+  CapabilityAxis.biffleBpmMax,
+};
+
+/// Réplique de `MilestoneService._impliedHoldUnlocksByAxis` — cascade
+/// transitive : tenir gorge X s prouve qu'on tient les positions plus
+/// shallow X s.
+const Map<CapabilityAxis, Set<UnlockKey>> _impliedHoldUnlocksByAxis = {
+  CapabilityAxis.holdThroatStreak: {
+    UnlockKey.holdHead,
+    UnlockKey.holdMidShort,
+    UnlockKey.finalHoldTip,
+    UnlockKey.finalHoldHead,
+    UnlockKey.finalHoldMid,
+  },
+  CapabilityAxis.holdFullStreak: {
+    UnlockKey.holdHead,
+    UnlockKey.holdMidShort,
+    UnlockKey.throatHoldShort,
+    UnlockKey.finalHoldTip,
+    UnlockKey.finalHoldHead,
+    UnlockKey.finalHoldMid,
+    UnlockKey.finalHoldThroat,
+  },
+};
+
+/// Seuil minimum (en secondes) au-dessus duquel un défi sur un axe hold
+/// déclenche la cascade transitive. Aligné sur la prod.
+const double _transitiveHoldMinReached = 3.0;
+
+/// Plafond pratique d'un axe poussé via défi — borne le compounding
+/// `comfort × 1.30` qui sinon explose en 10-15 sessions (le simulateur ne
+/// modélise pas la régulation `comfort` ↔ `successRate`, donc le best
+/// ratchete à chaque défi). Aligné sur les `absoluteMax` des `axisTargets`
+/// des profils existants pour rester comparable.
+double _axisChallengeCap(CapabilityAxis axis) {
+  switch (axis) {
+    case CapabilityAxis.rhythmBpmCeilShallow:
+    case CapabilityAxis.rhythmBpmCeilThroat:
+      return 180.0;
+    case CapabilityAxis.rhythmBpmCeilFull:
+      return 165.0;
+    case CapabilityAxis.gorgeCrossingsBpmThroat:
+      return 165.0;
+    case CapabilityAxis.gorgeCrossingsBpmFull:
+      return 140.0;
+    case CapabilityAxis.biffleBpmMax:
+      return 160.0;
+    case CapabilityAxis.holdThroatStreak:
+      return 40.0;
+    case CapabilityAxis.holdFullStreak:
+      return 25.0;
+    case CapabilityAxis.gorgeApneeStreak:
+      return 35.0;
+    case CapabilityAxis.gorgeEngagementStreak:
+      return 60.0;
+    case CapabilityAxis.rhythmMotionStreak:
+      return 70.0;
+    case CapabilityAxis.effortNoBreathStreak:
+      return 90.0;
+    case CapabilityAxis.noswallowStreak:
+      return 60.0;
+    case CapabilityAxis.biffleStreak:
+      return 30.0;
+    case CapabilityAxis.rhythmDepthMax:
+      return (Position.values.length - 1).toDouble();
+    default:
+      return double.infinity;
+  }
+}
+
+enum SimChallengeKind { duration, bpm, depthCran }
+
+enum SimChallengeOutcome {
+  tutorial,
+  skipped,
+  fail,
+  netSuccess,
+  extendedSuccess
+}
+
+class SimChallenge {
+  final CapabilityAxis axis;
+  final SimChallengeKind kind;
+  final SessionMode mode;
+  final Position? from;
+  final Position? to;
+  final int threshold;
+  final int durationSeconds;
+  final double difficulty;
+  final SimChallengeOutcome outcome;
+  final int extensions;
+  final bool isTutorial;
+  final bool isExploratory;
+
+  SimChallenge({
+    required this.axis,
+    required this.kind,
+    required this.mode,
+    required this.from,
+    required this.to,
+    required this.threshold,
+    required this.durationSeconds,
+    required this.difficulty,
+    required this.outcome,
+    required this.extensions,
+    required this.isTutorial,
+    required this.isExploratory,
+  });
+
+  /// Valeur réellement atteinte (récompense d'extensions incluses). Pour les
+  /// axes durée : `threshold + N × extensionSeconds`. Sinon : `threshold`.
+  double get reachedValue {
+    if (kind != SimChallengeKind.duration) return threshold.toDouble();
+    return (threshold + extensions * _extensionSecondsForComfort(threshold))
+        .toDouble();
+  }
+
+  /// Approximation de la prolongation « JE TIENS ENCORE » — plancher 10 s,
+  /// sinon `comfort × 0.30`. Le `comfort` n'étant pas tracé dans le sim, on
+  /// dérive du threshold (= comfort × 1.30 → comfort ≈ threshold/1.30).
+  static int _extensionSecondsForComfort(int threshold) {
+    final comfort = threshold / _kChallengeOverloadFactor;
+    final v = (comfort * 0.30).round();
+    return v < 10 ? 10 : v;
+  }
+}
+
+/// Sélection de l'axe défi pour la session — réplique simplifiée de
+/// `CapabilityClamps.pickOverloadAxis` : axe pilotant avec donnée (best
+/// connu), le plus ancien `lastSeen`, excluant ceux des milestones insérées
+/// cette session. Si profil neuf → axe vierge tiré au hasard (exploratoire).
+({CapabilityAxis? axis, bool isExploratory}) _pickChallengeAxis({
+  required SimState state,
+  required Set<CapabilityAxis> exclude,
+  required Random rng,
+}) {
+  final withData = <CapabilityAxis>[];
+  final virgin = <CapabilityAxis>[];
+  for (final a in _overloadableSimAxes) {
+    if (exclude.contains(a)) continue;
+    if (state.caps.containsKey(a)) {
+      withData.add(a);
+    } else {
+      virgin.add(a);
+    }
+  }
+  if (withData.isNotEmpty) {
+    withData.sort(
+        (a, b) => state.caps[a]!.lastSeen.compareTo(state.caps[b]!.lastSeen));
+    return (axis: withData.first, isExploratory: false);
+  }
+  if (virgin.isNotEmpty) {
+    return (axis: virgin[rng.nextInt(virgin.length)], isExploratory: true);
+  }
+  return (axis: null, isExploratory: false);
+}
+
+SimChallengeKind _challengeKindOf(CapabilityAxis axis) {
+  switch (axis.unit) {
+    case CapabilityUnit.seconds:
+      return SimChallengeKind.duration;
+    case CapabilityUnit.bpm:
+      return SimChallengeKind.bpm;
+    case CapabilityUnit.depthCran:
+      return SimChallengeKind.depthCran;
+    case CapabilityUnit.count:
+      return SimChallengeKind.duration;
+  }
+}
+
+SessionMode _challengeModeOf(CapabilityAxis axis) {
+  switch (axis) {
+    case CapabilityAxis.holdThroatStreak:
+    case CapabilityAxis.holdFullStreak:
+    case CapabilityAxis.gorgeApneeStreak:
+    case CapabilityAxis.gorgeEngagementStreak:
+      return SessionMode.hold;
+    case CapabilityAxis.biffleStreak:
+    case CapabilityAxis.biffleBpmMax:
+      return SessionMode.biffle;
+    default:
+      return SessionMode.rhythm;
+  }
+}
+
+({Position? from, Position? to}) _challengeFromToOf(CapabilityAxis axis) {
+  switch (axis) {
+    case CapabilityAxis.holdThroatStreak:
+    case CapabilityAxis.gorgeApneeStreak:
+    case CapabilityAxis.gorgeEngagementStreak:
+      return (from: Position.throat, to: Position.throat);
+    case CapabilityAxis.holdFullStreak:
+      return (from: Position.full, to: Position.full);
+    case CapabilityAxis.rhythmBpmCeilShallow:
+      return (from: Position.head, to: Position.mid);
+    case CapabilityAxis.rhythmBpmCeilThroat:
+    case CapabilityAxis.gorgeCrossingsBpmThroat:
+    case CapabilityAxis.rhythmMotionStreak:
+      return (from: Position.head, to: Position.throat);
+    case CapabilityAxis.rhythmBpmCeilFull:
+    case CapabilityAxis.gorgeCrossingsBpmFull:
+      return (from: Position.mid, to: Position.full);
+    case CapabilityAxis.rhythmDepthMax:
+    case CapabilityAxis.noswallowStreak:
+      return (from: Position.head, to: Position.throat);
+    default:
+      return (from: null, to: null);
+  }
+}
+
+int _challengeDurationFor(
+    CapabilityAxis axis, int threshold, SimChallengeKind kind) {
+  if (kind == SimChallengeKind.duration) return threshold;
+  switch (axis) {
+    case CapabilityAxis.rhythmBpmCeilShallow:
+      return 25;
+    case CapabilityAxis.rhythmBpmCeilThroat:
+      return 8;
+    case CapabilityAxis.rhythmBpmCeilFull:
+      return 7;
+    case CapabilityAxis.gorgeCrossingsBpmThroat:
+      return 8;
+    case CapabilityAxis.gorgeCrossingsBpmFull:
+      return 7;
+    case CapabilityAxis.biffleBpmMax:
+      return 20;
+    case CapabilityAxis.rhythmDepthMax:
+      return 12;
+    default:
+      return 30;
+  }
+}
+
+/// Calcule le seuil cible (parité avec `ChallengeService.thresholdFor`).
+int _challengeThreshold(
+    CapabilityAxis axis, double comfort, SimChallengeKind kind) {
+  final isMinimize = axis.recordKind == CapabilityRecordKind.minimize;
+  switch (kind) {
+    case SimChallengeKind.duration:
+    case SimChallengeKind.bpm:
+      final raw = isMinimize
+          ? comfort / _kChallengeOverloadFactor
+          : comfort * _kChallengeOverloadFactor;
+      final rounded = raw.round();
+      if (kind == SimChallengeKind.bpm && isMinimize) {
+        return rounded < _kChallengeBpmFloor ? _kChallengeBpmFloor : rounded;
+      }
+      return rounded;
+    case SimChallengeKind.depthCran:
+      final delta = isMinimize ? -1 : 1;
+      return (comfort.round() + delta).clamp(0, Position.values.length - 1);
+  }
+}
+
+/// Difficulté du défi dans [0.20, 0.95]. Pondère le mode/axe (catégorie
+/// physiologique) + la profondeur ciblée. Cf. spec révisée par le user.
+double _challengeDifficulty(CapabilityAxis axis, Position? from, Position? to) {
+  final wAxis = switch (axis) {
+    CapabilityAxis.holdFullStreak ||
+    CapabilityAxis.rhythmDepthMax ||
+    CapabilityAxis.effortNoBreathStreak =>
+      0.90,
+    CapabilityAxis.rhythmBpmCeilFull ||
+    CapabilityAxis.gorgeCrossingsBpmFull ||
+    CapabilityAxis.holdThroatStreak ||
+    CapabilityAxis.gorgeApneeStreak =>
+      0.75,
+    CapabilityAxis.rhythmBpmCeilThroat ||
+    CapabilityAxis.gorgeCrossingsBpmThroat ||
+    CapabilityAxis.rhythmMotionStreak ||
+    CapabilityAxis.gorgeEngagementStreak ||
+    CapabilityAxis.noswallowStreak =>
+      0.60,
+    CapabilityAxis.rhythmBpmCeilShallow || CapabilityAxis.biffleBpmMax => 0.45,
+    _ => 0.30,
+  };
+  final fromIdx = from?.index ?? 0;
+  final toIdx = to?.index ?? 0;
+  final depthFactor = max(fromIdx, toIdx) / (Position.values.length - 1);
+  return (wAxis + 0.20 * depthFactor).clamp(0.20, 0.95);
+}
+
+/// Tire l'outcome du défi : skip indépendant (rare hors débutante), fail
+/// croissant avec `difficulty - skill`, extensions croissantes avec
+/// `skill - difficulty`. Tutoriel : forcé à `tutorial` (= 0 extension,
+/// implicite net pour les effets).
+({SimChallengeOutcome outcome, int extensions}) _resolveChallengeOutcome({
+  required double difficulty,
+  required double skillLevel,
+  required bool isTutorial,
+  required double skipProba,
+  required Random rng,
+}) {
+  if (isTutorial) {
+    return (outcome: SimChallengeOutcome.tutorial, extensions: 0);
+  }
+  if (rng.nextDouble() < skipProba) {
+    return (outcome: SimChallengeOutcome.skipped, extensions: 0);
+  }
+  final failP = ((difficulty - skillLevel) * 1.6 + 0.05).clamp(0.02, 0.95);
+  if (rng.nextDouble() < failP) {
+    return (outcome: SimChallengeOutcome.fail, extensions: 0);
+  }
+  final expectedExt = ((skillLevel - difficulty) * 8).clamp(0.0, 5.0);
+  // Bruit gaussien léger (Box-Muller approché par moyenne uniformes).
+  final noise = (rng.nextDouble() + rng.nextDouble() - 1.0) * 0.7;
+  final n = (expectedExt + noise).round().clamp(0, 5);
+  if (n == 0) {
+    return (outcome: SimChallengeOutcome.netSuccess, extensions: 0);
+  }
+  return (outcome: SimChallengeOutcome.extendedSuccess, extensions: n);
+}
+
+/// Construit un défi complet (axe + calibration + outcome) pour la session.
+/// `firstChallengeSeen` = `false` pour la 1ʳᵉ séance → tutoriel scripté.
+SimChallenge? _generateChallenge({
+  required SimState state,
+  required SimProfile profile,
+  required Set<CapabilityAxis> excludeAxes,
+  required bool firstChallengeSeen,
+  required Random rng,
+}) {
+  if (!firstChallengeSeen) {
+    // Tutoriel hold throat 5 s.
+    return SimChallenge(
+      axis: CapabilityAxis.holdThroatStreak,
+      kind: SimChallengeKind.duration,
+      mode: SessionMode.hold,
+      from: Position.throat,
+      to: Position.throat,
+      threshold: _kChallengeTutorialDurationSeconds,
+      durationSeconds: _kChallengeTutorialDurationSeconds,
+      difficulty: 0.30,
+      outcome: SimChallengeOutcome.tutorial,
+      extensions: 0,
+      isTutorial: true,
+      isExploratory: false,
+    );
+  }
+  final pick = _pickChallengeAxis(state: state, exclude: excludeAxes, rng: rng);
+  final axis = pick.axis;
+  if (axis == null) return null;
+  final kind = _challengeKindOf(axis);
+  final mode = _challengeModeOf(axis);
+  final positions = _challengeFromToOf(axis);
+  final int threshold;
+  if (pick.isExploratory) {
+    // Seuils exploratoires conservatifs (parité approximative avec
+    // `Challenge.initialEstimateSecondsForAxis`).
+    threshold = switch (axis) {
+      CapabilityAxis.holdThroatStreak ||
+      CapabilityAxis.holdFullStreak ||
+      CapabilityAxis.gorgeApneeStreak ||
+      CapabilityAxis.gorgeEngagementStreak =>
+        5,
+      CapabilityAxis.biffleStreak => 8,
+      CapabilityAxis.rhythmMotionStreak => 30,
+      CapabilityAxis.effortNoBreathStreak ||
+      CapabilityAxis.noswallowStreak =>
+        15,
+      CapabilityAxis.rhythmBpmCeilShallow ||
+      CapabilityAxis.rhythmBpmCeilThroat ||
+      CapabilityAxis.rhythmBpmCeilFull ||
+      CapabilityAxis.gorgeCrossingsBpmThroat ||
+      CapabilityAxis.gorgeCrossingsBpmFull ||
+      CapabilityAxis.biffleBpmMax =>
+        60,
+      CapabilityAxis.rhythmDepthMax => 1,
+      _ => 15,
+    };
+  } else {
+    final comfort = state.caps[axis]!.best;
+    threshold = _challengeThreshold(axis, comfort, kind);
+  }
+  final duration = _challengeDurationFor(axis, threshold, kind);
+  final difficulty = _challengeDifficulty(axis, positions.from, positions.to);
+  // En exploratoire, la difficulté apparente est réduite (seuil initial bas,
+  // pas de surcharge × 1.30). Plancher 0.20.
+  final adjustedDiff =
+      pick.isExploratory ? (difficulty - 0.15).clamp(0.20, 0.95) : difficulty;
+  final outcomeRes = _resolveChallengeOutcome(
+    difficulty: adjustedDiff,
+    skillLevel: profile.currentSkillAt(state.sessionIndex),
+    isTutorial: false,
+    skipProba: profile.challengeSkipProba,
+    rng: rng,
+  );
+  return SimChallenge(
+    axis: axis,
+    kind: kind,
+    mode: mode,
+    from: positions.from,
+    to: positions.to,
+    threshold: threshold,
+    durationSeconds: duration,
+    difficulty: adjustedDiff,
+    outcome: outcomeRes.outcome,
+    extensions: outcomeRes.extensions,
+    isTutorial: false,
+    isExploratory: pick.isExploratory,
+  );
+}
+
+/// Acquittement implicite milestone via défi — parité avec
+/// `MilestoneService.milestonesAcquittableByChallenge`. Inclut la cascade
+/// transitive holds (`hold.throat ⇒ holdHead/holdMidShort/finalHold*`).
+/// Retourne les unlocks gagnés (déjà ajoutés à `state.unlocked`).
+List<UnlockKey> _acquitMilestonesViaChallenge({
+  required SimChallenge challenge,
+  required List<SimMilestone> catalog,
+  required SimState state,
+  required SimProfile profile,
+}) {
+  if (challenge.outcome == SimChallengeOutcome.fail ||
+      challenge.outcome == SimChallengeOutcome.skipped) {
+    return const [];
+  }
+  final reached = challenge.reachedValue;
+  final axis = challenge.axis;
+  final minimize = axis.recordKind == CapabilityRecordKind.minimize;
+  final liveUnlocks = Set<UnlockKey>.from(state.unlocked);
+  final gained = <UnlockKey>[];
+
+  bool capOk(SimCapReq req) {
+    if (req.axis == axis) {
+      return minimize ? reached <= req.min : reached >= req.min;
+    }
+    final st = state.caps[req.axis];
+    if (st == null) return false;
+    final reqMinimize = req.axis.recordKind == CapabilityRecordKind.minimize;
+    return reqMinimize ? st.best <= req.min : st.best >= req.min;
+  }
+
+  // Passe 1 — milestones avec requiresCapability matchant l'axe + autres caps OK.
+  var added = true;
+  while (added) {
+    added = false;
+    for (final m in catalog) {
+      if (state.completedMilestones.contains(m.id)) continue;
+      if (m.requiresCapability.isEmpty) continue;
+      if (!m.requires.every(liveUnlocks.contains)) continue;
+      if (!m.requiresCapability.every(capOk)) continue;
+      state.completedMilestones.add(m.id);
+      state.candidacyAge.remove(m.id);
+      for (final u in m.unlocks) {
+        if (state.unlocked.add(u)) {
+          gained.add(u);
+          liveUnlocks.add(u);
+          state.unlockHistory.add((
+            key: u,
+            session: state.sessionIndex,
+            milestone: '${m.id} (challenge)',
+          ));
+        }
+      }
+      added = true;
+    }
+  }
+
+  // Passe 2 — cascade transitive holds (seuil ≥ 3 s).
+  final implied = _impliedHoldUnlocksByAxis[axis];
+  if (implied != null && reached >= _transitiveHoldMinReached) {
+    added = true;
+    while (added) {
+      added = false;
+      for (final m in catalog) {
+        if (state.completedMilestones.contains(m.id)) continue;
+        if (m.unlocks.isEmpty) continue;
+        if (!m.unlocks.any(implied.contains)) continue;
+        if (!m.requires.every(liveUnlocks.contains)) continue;
+        // Autres caps (sur d'autres axes que celui du défi) doivent rester satisfaits.
+        var otherCapsOk = true;
+        for (final req in m.requiresCapability) {
+          if (req.axis == axis) continue;
+          final st = state.caps[req.axis];
+          final reqMin = req.axis.recordKind == CapabilityRecordKind.minimize;
+          if (st == null || (reqMin ? st.best > req.min : st.best < req.min)) {
+            otherCapsOk = false;
+            break;
+          }
+        }
+        if (!otherCapsOk) continue;
+        state.completedMilestones.add(m.id);
+        state.candidacyAge.remove(m.id);
+        for (final u in m.unlocks) {
+          if (state.unlocked.add(u)) {
+            gained.add(u);
+            liveUnlocks.add(u);
+            state.unlockHistory.add((
+              key: u,
+              session: state.sessionIndex,
+              milestone: '${m.id} (challenge:transitive)',
+            ));
+          }
+        }
+        added = true;
+      }
+    }
+  }
+  return gained;
+}
+
+/// Résumé compact d'un défi pour la timeline. Ex. `hold.throat × net ×2`.
+String _formatChallengeSummary(SimChallenge ch) {
+  final axisLabel = ch.axis.storageKey;
+  final outcomeLabel = switch (ch.outcome) {
+    SimChallengeOutcome.tutorial => 'tut',
+    SimChallengeOutcome.skipped => 'skip',
+    SimChallengeOutcome.fail => 'fail',
+    SimChallengeOutcome.netSuccess => 'net',
+    SimChallengeOutcome.extendedSuccess => 'ext×${ch.extensions}',
+  };
+  final exploratoryMark = ch.isExploratory ? '?' : '';
+  return '$axisLabel$exploratoryMark × $outcomeLabel';
+}
+
+// ─── Catalogue des profils ────────────────────────────────────────────────
+//
+// 4 tiers (skillLevel croissant) + 2 spé pathologiques (`fail_prone`,
+// `quickie_spammer`) qui restent utiles pour les détecteurs LEVEL-STUCK,
+// FEATURE-MISSED et la spirale de fail.
+//
+// Les tiers ont des allocations différentes pour explorer plusieurs spé
+// au fil des sessions (une débutante n'a aucun point ; une experte a 9 pts
+// alloués typiques d'une fin de carrière niveau 18+). Le pacing humil/obed
+// reste calibré par `milestoneCleanProba` / `failProba` / `encoreProba`
+// comme avant, mais le `skillLevel` pilote en plus le rapport au défi
+// (cf. `_resolveChallengeOutcome`).
 
 /// Bornage d'un push d'axe — évite que des cibles trop ambitieuses laissent
 /// croire qu'une débutante tient 80 s de gorge dès la 1ʳᵉ séance.
@@ -588,107 +1192,58 @@ double _clampGrowth(double v, double absoluteMax) {
 
 List<SimProfile> _builtinProfiles() {
   return [
+    // ── Tier 1 : débutante ──────────────────────────────────────────────
     SimProfile(
-      name: 'purist_endurance',
-      description: 'Durée et tenues : holds throat/full longs, motion streak '
-          'régulier. Zéro fail volontaire. Aucune bâclée. 5 pts endurance.',
-      allocation: {
-        SpecBranch.endurance: 5,
-      },
-      failProba: 0.02,
-      encoreProba: 0.40,
+      name: 'debutante',
+      description:
+          'Découvre la mécanique. 0 pt de spé. Fail ambiant 20 %, milestones '
+          'ratées 1 fois sur 3, peut passer un défi (PASSE pendant le breath). '
+          'Cibles axes basses — la joueuse tient à peine ce qu\'elle peut.',
+      allocation: const {},
+      failProba: 0.20,
+      encoreProba: 0.05,
       quickieProba: 0.0,
-      milestoneCleanProba: 0.96,
-      miniPunRate: 0.10,
+      milestoneCleanProba: 0.65,
+      miniPunRate: 0.08,
       sessions: 30,
+      skillLevel: 0.20,
+      // Apprentissage rapide les premières sessions — atteint ~0.74 après
+      // 30 séances (= niveau du tier moyen-avancé).
+      skillGrowthPerSession: 0.018,
+      challengeSkipProba: 0.10,
       axisTargets: (level, p) => {
-        CapabilityAxis.holdThroatStreak: _clampGrowth(
-            1.5 + 0.6 * level + 0.4 * p.branchPts(SpecBranch.endurance), 35),
-        CapabilityAxis.holdFullStreak: _clampGrowth(
-            0.5 + 0.35 * level + 0.3 * p.branchPts(SpecBranch.endurance), 22),
-        CapabilityAxis.gorgeApneeStreak: _clampGrowth(2 + 0.4 * level, 28),
-        CapabilityAxis.gorgeEngagementStreak: _clampGrowth(5 + 1.0 * level, 60),
-        CapabilityAxis.rhythmMotionStreak: _clampGrowth(15 + 2.0 * level, 70),
-        CapabilityAxis.effortNoBreathStreak: _clampGrowth(20 + 3.0 * level, 90),
+        CapabilityAxis.holdThroatStreak: _clampGrowth(0.3 + 0.18 * level, 8),
+        CapabilityAxis.holdFullStreak: _clampGrowth(0.1 + 0.10 * level, 5),
+        CapabilityAxis.rhythmMotionStreak: _clampGrowth(5 + 0.7 * level, 22),
         CapabilityAxis.rhythmDepthMax:
-            _clampGrowth(min(2.0 + level / 6.0, 4), 4),
+            _clampGrowth(min(1.2 + level / 10.0, 3), 3),
+        CapabilityAxis.gorgeApneeStreak: _clampGrowth(0.3 + 0.15 * level, 6),
+        CapabilityAxis.gorgeEngagementStreak: _clampGrowth(2 + 0.6 * level, 25),
       },
     ),
+    // ── Tier 2 : moyen ──────────────────────────────────────────────────
     SimProfile(
-      name: 'profondeur_brutale',
-      description: 'Va chercher loin et vite. Pousse rhythm depth + apnée + '
-          'BPM throat. Quelques fails sur les pushes (10 %). 4 pts profondeur '
-          '+ 1 pt rythmeBiffle.',
-      allocation: {
-        SpecBranch.profondeur: 4,
-        SpecBranch.rythmeBiffle: 1,
-      },
-      failProba: 0.10,
-      encoreProba: 0.25,
-      quickieProba: 0.05,
-      milestoneCleanProba: 0.85,
-      miniPunRate: 0.18,
-      sessions: 30,
-      axisTargets: (level, p) => {
-        CapabilityAxis.rhythmDepthMax:
-            _clampGrowth(min(2.5 + level / 5.0, 4), 4),
-        CapabilityAxis.gorgeApneeStreak: _clampGrowth(
-            2 + 0.6 * level + 0.4 * p.branchPts(SpecBranch.profondeur), 35),
-        CapabilityAxis.gorgeCrossingsBpmThroat: _clampGrowth(
-            80 + 4 * level + 1.5 * p.branchPts(SpecBranch.profondeur), 165),
-        CapabilityAxis.gorgeCrossingsBpmFull:
-            _clampGrowth(70 + 3.0 * level, 140),
-        CapabilityAxis.gorgeCrossingsLifetime: 5.0 + level.toDouble(),
-        CapabilityAxis.rhythmBpmCeilThroat: _clampGrowth(90.0 + 5 * level, 180),
-        CapabilityAxis.rhythmBpmCeilFull: _clampGrowth(80.0 + 4 * level, 160),
-        CapabilityAxis.holdThroatStreak: _clampGrowth(1 + 0.4 * level, 22),
-        CapabilityAxis.holdFullStreak: _clampGrowth(0.5 + 0.3 * level, 18),
-        CapabilityAxis.rhythmMotionStreak: _clampGrowth(12 + 1.5 * level, 55),
-      },
-    ),
-    SimProfile(
-      name: 'sloppy_obeissante',
-      description: 'Beg + lick humide + noswallow. Peu de fail. 3 pts sloppy '
-          '+ 2 pts obéissance.',
-      allocation: {
-        SpecBranch.sloppy: 3,
-        SpecBranch.obeissance: 2,
-      },
-      failProba: 0.04,
-      encoreProba: 0.50,
-      quickieProba: 0.0,
-      milestoneCleanProba: 0.92,
-      miniPunRate: 0.14,
-      sessions: 30,
-      axisTargets: (level, p) => {
-        CapabilityAxis.noswallowStreak: _clampGrowth(
-            3 + 1.0 * level + 0.5 * p.branchPts(SpecBranch.sloppy), 60),
-        CapabilityAxis.lickStreak: _clampGrowth(
-            15 + 2.5 * level + 1.0 * p.branchPts(SpecBranch.sloppy), 70),
-        CapabilityAxis.lickDepthMax: _clampGrowth(min(1.5 + level / 6.0, 4), 4),
-        CapabilityAxis.rhythmMotionStreak: _clampGrowth(10 + 1.5 * level, 50),
-        CapabilityAxis.rhythmDepthMax:
-            _clampGrowth(min(1.5 + level / 8.0, 3), 3),
-        CapabilityAxis.holdThroatStreak: _clampGrowth(0.5 + 0.25 * level, 12),
-      },
-    ),
-    SimProfile(
-      name: 'hybride_prudente',
-      description: 'Allocation 1-1-1-1-1, valeurs modérées partout. Très peu '
-          'de fail. Profil "tortue qui finit la course".',
-      allocation: {
+      name: 'moyen',
+      description:
+          'Joueuse confirmée hybride. 1-1-1-1-1 (5 pts répartis, dispo à L10). '
+          'Fail occasionnel (8 %), milestones clean 90 %. Skill moyen sur les '
+          'défis — fail sur les axes durs, ext sur les axes simples.',
+      allocation: const {
         SpecBranch.endurance: 1,
         SpecBranch.profondeur: 1,
         SpecBranch.rythmeBiffle: 1,
         SpecBranch.obeissance: 1,
         SpecBranch.sloppy: 1,
       },
-      failProba: 0.03,
-      encoreProba: 0.20,
+      failProba: 0.08,
+      encoreProba: 0.30,
       quickieProba: 0.05,
-      milestoneCleanProba: 0.94,
-      miniPunRate: 0.10,
+      milestoneCleanProba: 0.90,
+      miniPunRate: 0.12,
       sessions: 30,
+      skillLevel: 0.50,
+      // Progression modérée — atteint ~0.71 après 30 séances.
+      skillGrowthPerSession: 0.007,
       axisTargets: (level, p) => {
         CapabilityAxis.holdThroatStreak: _clampGrowth(1 + 0.35 * level, 18),
         CapabilityAxis.holdFullStreak: _clampGrowth(0.3 + 0.22 * level, 12),
@@ -699,6 +1254,83 @@ List<SimProfile> _builtinProfiles() {
         CapabilityAxis.rhythmBpmCeilThroat: _clampGrowth(80.0 + 3 * level, 135),
         CapabilityAxis.noswallowStreak: _clampGrowth(2 + 0.5 * level, 20),
         CapabilityAxis.lickStreak: _clampGrowth(10 + 1.0 * level, 35),
+      },
+    ),
+    // ── Tier 3 : avancé ─────────────────────────────────────────────────
+    SimProfile(
+      name: 'avance',
+      description:
+          'Carrière mi-haute. 3 endurance + 2 obéissance (5 pts, dispo à L10) — '
+          'spé soumise endurante typique. Fail rare (4 %), milestones 94 %, '
+          'encore fréquent. Tient les défis durs, ext sur la plupart.',
+      allocation: const {
+        SpecBranch.endurance: 3,
+        SpecBranch.obeissance: 2,
+      },
+      failProba: 0.04,
+      encoreProba: 0.45,
+      quickieProba: 0.0,
+      milestoneCleanProba: 0.94,
+      miniPunRate: 0.14,
+      sessions: 30,
+      skillLevel: 0.75,
+      // Plateau atteint plus tôt — atteint ~0.87 après 30 séances.
+      skillGrowthPerSession: 0.004,
+      axisTargets: (level, p) => {
+        CapabilityAxis.holdThroatStreak: _clampGrowth(
+            2 + 0.7 * level + 0.4 * p.branchPts(SpecBranch.endurance), 35),
+        CapabilityAxis.holdFullStreak: _clampGrowth(
+            0.5 + 0.4 * level + 0.3 * p.branchPts(SpecBranch.endurance), 22),
+        CapabilityAxis.gorgeApneeStreak: _clampGrowth(2 + 0.5 * level, 28),
+        CapabilityAxis.gorgeEngagementStreak: _clampGrowth(6 + 1.2 * level, 60),
+        CapabilityAxis.rhythmMotionStreak: _clampGrowth(15 + 2.0 * level, 65),
+        CapabilityAxis.effortNoBreathStreak: _clampGrowth(18 + 2.5 * level, 80),
+        CapabilityAxis.rhythmDepthMax:
+            _clampGrowth(min(2.0 + level / 6.0, 4), 4),
+        CapabilityAxis.rhythmBpmCeilThroat: _clampGrowth(95.0 + 4 * level, 165),
+      },
+    ),
+    // ── Tier 4 : experte ────────────────────────────────────────────────
+    SimProfile(
+      name: 'experte',
+      description:
+          'Fin de carrière. 4 profondeur + 3 endurance + 2 rythme (9 pts, dispo '
+          'à L18+). Quasi jamais de fail (1 %), milestones 98 %, encore par '
+          'défaut. Pousse les axes durs et tient les défis avec extensions ×3-5.',
+      allocation: const {
+        SpecBranch.profondeur: 4,
+        SpecBranch.endurance: 3,
+        SpecBranch.rythmeBiffle: 2,
+      },
+      failProba: 0.01,
+      encoreProba: 0.60,
+      quickieProba: 0.0,
+      milestoneCleanProba: 0.98,
+      miniPunRate: 0.18,
+      sessions: 30,
+      skillLevel: 0.95,
+      // Plateau atteint (skillGrowth=0) — pas de progression skill, la
+      // joueuse est déjà au sommet de sa marge.
+      axisTargets: (level, p) => {
+        CapabilityAxis.rhythmDepthMax:
+            _clampGrowth(min(3.0 + level / 4.0, 4), 4),
+        CapabilityAxis.gorgeApneeStreak: _clampGrowth(
+            3 + 0.8 * level + 0.4 * p.branchPts(SpecBranch.profondeur), 35),
+        CapabilityAxis.gorgeCrossingsBpmThroat: _clampGrowth(
+            85 + 5 * level + 1.5 * p.branchPts(SpecBranch.profondeur), 165),
+        CapabilityAxis.gorgeCrossingsBpmFull:
+            _clampGrowth(75 + 4.0 * level, 140),
+        CapabilityAxis.holdThroatStreak: _clampGrowth(
+            2 + 0.8 * level + 0.4 * p.branchPts(SpecBranch.endurance), 40),
+        CapabilityAxis.holdFullStreak: _clampGrowth(
+            1 + 0.5 * level + 0.3 * p.branchPts(SpecBranch.endurance), 25),
+        CapabilityAxis.rhythmMotionStreak: _clampGrowth(20 + 2.5 * level, 70),
+        CapabilityAxis.effortNoBreathStreak: _clampGrowth(25 + 3.0 * level, 90),
+        CapabilityAxis.rhythmBpmCeilThroat:
+            _clampGrowth(100.0 + 5 * level, 180),
+        CapabilityAxis.rhythmBpmCeilFull: _clampGrowth(85.0 + 4 * level, 165),
+        CapabilityAxis.biffleStreak: _clampGrowth(5 + 0.6 * level, 25),
+        CapabilityAxis.biffleBpmMax: _clampGrowth(95 + 3.5 * level, 160),
       },
     ),
     SimProfile(
@@ -716,6 +1348,10 @@ List<SimProfile> _builtinProfiles() {
       milestoneCleanProba: 0.55,
       miniPunRate: 0.10,
       sessions: 30,
+      skillLevel: 0.35,
+      // Progression freinée par les fails fréquents (atteint ~0.59 à s30).
+      skillGrowthPerSession: 0.008,
+      challengeSkipProba: 0.05,
       axisTargets: (level, p) => {
         CapabilityAxis.holdThroatStreak: _clampGrowth(0.5 + 0.2 * level, 9),
         CapabilityAxis.holdFullStreak: _clampGrowth(0.2 + 0.15 * level, 6),
@@ -740,6 +1376,10 @@ List<SimProfile> _builtinProfiles() {
       milestoneCleanProba: 0.80,
       miniPunRate: 0.14,
       sessions: 30,
+      skillLevel: 0.60,
+      // Pas de défi en quickie de toute façon (cf. _runProfile : if !isQuickie).
+      // Skill quasi-figé (cas marginal des sessions non-quickie, ~10 %).
+      skillGrowthPerSession: 0.001,
       axisTargets: (level, p) => {
         CapabilityAxis.rhythmMotionStreak: _clampGrowth(8 + 1.2 * level, 35),
         CapabilityAxis.rhythmDepthMax:
@@ -1048,6 +1688,94 @@ SimResult _runSim({
       }
     }
 
+    // ─── Défi intra-séance ───────────────────────────────────────────────
+    // Hors quickie, on insère un défi sur un axe non couvert par les
+    // milestones de la séance. Effets appliqués AVANT le calcul level-up
+    // pour que les milestones acquittées via défi (markCompletedViaChallenge
+    // + cascade transitive holds) comptent.
+    SimChallenge? simChallenge;
+    if (!isQuickie) {
+      final excludeAxes = <CapabilityAxis>{};
+      if (bodyM != null) {
+        excludeAxes.addAll(_axesFromMilestoneSequence(bodyM).keys);
+      }
+      if (bodyM2 != null) {
+        excludeAxes.addAll(_axesFromMilestoneSequence(bodyM2).keys);
+      }
+      if (finalM != null) {
+        excludeAxes.addAll(_axesFromMilestoneSequence(finalM).keys);
+      }
+      simChallenge = _generateChallenge(
+        state: state,
+        profile: profile,
+        excludeAxes: excludeAxes,
+        firstChallengeSeen: state.tutorialSeen,
+        rng: rng,
+      );
+      if (simChallenge != null) {
+        state.challengeCounts[simChallenge.outcome] =
+            (state.challengeCounts[simChallenge.outcome] ?? 0) + 1;
+        if (simChallenge.isTutorial) state.tutorialSeen = true;
+
+        final outc = simChallenge.outcome;
+        if (outc == SimChallengeOutcome.netSuccess ||
+            outc == SimChallengeOutcome.extendedSuccess ||
+            outc == SimChallengeOutcome.tutorial) {
+          // Bumps humil career (+2 base, +1/extension) + obed (+2 base, +1/extension).
+          // Cf. spec § 5.2. Tuto = bump mineur uniquement (pas de +2 base).
+          final ext = simChallenge.extensions;
+          if (simChallenge.isTutorial) {
+            state.humilCareer += 1.0;
+            state.obed += 1.0;
+          } else {
+            state.humilCareer +=
+                HumiliationEngine.bumpChallengeNetSuccess + ext * 1.0;
+            state.obed += 2.0 + ext * 1.0;
+          }
+
+          // raiseCareerFloor : pose le careerScore au palier humil de l'action
+          // prouvée — cf. HumiliationEngine.raiseCareerFloor.
+          final floor = HumiliationScale.requiredFor(
+            mode: simChallenge.mode,
+            from: simChallenge.from,
+            to: simChallenge.to,
+            bpm: simChallenge.kind == SimChallengeKind.bpm
+                ? simChallenge.threshold
+                : null,
+            duration: simChallenge.kind == SimChallengeKind.duration
+                ? simChallenge.reachedValue.round()
+                : null,
+          );
+          if (floor > state.humilCareer) state.humilCareer = floor;
+
+          // Push best de l'axe défi via recordChallengeReached. Plafonné
+          // par `_axisChallengeCap` pour éviter le compounding 1.30^N que
+          // la régulation comfort/successRate (non simulée) borne en prod.
+          final cap = _axisChallengeCap(simChallenge.axis);
+          final reached =
+              simChallenge.reachedValue > cap ? cap : simChallenge.reachedValue;
+          _pushBest(state, simChallenge.axis, reached, state.sessionIndex);
+          touched.add(simChallenge.axis);
+          state.challengePushedBest[simChallenge.axis] =
+              max(state.challengePushedBest[simChallenge.axis] ?? 0.0, reached);
+
+          // Acquittement implicite milestone via défi.
+          final acquitted = _acquitMilestonesViaChallenge(
+            challenge: simChallenge,
+            catalog: catalog,
+            state: state,
+            profile: profile,
+          );
+          state.challengeUnlocksGained += acquitted.length;
+          gained.addAll(acquitted);
+        } else if (outc == SimChallengeOutcome.skipped) {
+          // PASSE pressé : -3 obed.
+          state.obed = max(0, state.obed - 3);
+        }
+        // fail : soft-cap × 0.92 sur comfort (non simulé), pas de malus.
+      }
+    }
+
     // Level-up gaté par milestone (parité avec
     // `CareerProgressService.canLevelUp`) : il faut soit avoir acquitté
     // une milestone candidate au niveau courant cette séance, soit qu'il
@@ -1103,6 +1831,8 @@ SimResult _runSim({
       outcome: outcome,
       axesTouched: touched.toList(),
       levelUp: leveledUp,
+      challengeSummary:
+          simChallenge != null ? _formatChallengeSummary(simChallenge) : null,
     ));
   }
 
@@ -1359,8 +2089,8 @@ String _renderMarkdown(SimResult r) {
   b.writeln('## Timeline (${r.timeline.length} sessions)');
   b.writeln();
   b.writeln(
-      '| # | lvl | humil | obed | milestone (body / final) | outcome | unlocks | axes touchés |');
-  b.writeln('|---:|---:|---:|---:|---|---|---|---|');
+      '| # | lvl | humil | obed | milestone (body / final) | challenge | outcome | unlocks | axes touchés |');
+  b.writeln('|---:|---:|---:|---:|---|---|---|---|---|');
   for (final t in r.timeline) {
     final body = t.milestoneBody2Inserted != null
         ? '${t.milestoneBodyInserted ?? '—'} + ${t.milestoneBody2Inserted}'
@@ -1375,7 +2105,7 @@ String _renderMarkdown(SimResult r) {
         : (axes.length > 4 ? '${axes.take(4).join(", ")}…' : axes.join(', '));
     b.writeln('| ${t.session} | ${t.level}${t.levelUp ? "↑" : ""} | '
         '${t.humilCareer.toStringAsFixed(1)} | ${t.obed.toStringAsFixed(1)} | '
-        '$body / $fin | ${t.outcome} | $unlocks | $axesStr |');
+        '$body / $fin | ${t.challengeSummary ?? '—'} | ${t.outcome} | $unlocks | $axesStr |');
   }
   b.writeln();
 
@@ -1402,6 +2132,43 @@ String _renderMarkdown(SimResult r) {
     }
   }
   b.writeln();
+
+  // ─── Défis ─────────────────────────────────────────────────────────────
+  final cc = r.finalState.challengeCounts;
+  final totalCh = cc.values.fold<int>(0, (a, b) => a + b);
+  if (totalCh > 0) {
+    b.writeln('## Défis intra-séance');
+    b.writeln();
+    String pct(int n) =>
+        totalCh == 0 ? '—' : '(${(100 * n / totalCh).toStringAsFixed(0)} %)';
+    final skillStart = r.profile.skillLevel;
+    final skillEnd = r.profile.currentSkillAt(r.timeline.length);
+    final skillStr = skillStart == skillEnd
+        ? skillStart.toStringAsFixed(2)
+        : '${skillStart.toStringAsFixed(2)} → ${skillEnd.toStringAsFixed(2)}';
+    b.writeln(
+        '- Total : $totalCh défi(s) joué(s) sur ${r.timeline.length} sessions '
+        '(skill=$skillStr)');
+    b.writeln('- Distribution : '
+        'tut=${cc[SimChallengeOutcome.tutorial]} ${pct(cc[SimChallengeOutcome.tutorial] ?? 0)}, '
+        'net=${cc[SimChallengeOutcome.netSuccess]} ${pct(cc[SimChallengeOutcome.netSuccess] ?? 0)}, '
+        'ext=${cc[SimChallengeOutcome.extendedSuccess]} ${pct(cc[SimChallengeOutcome.extendedSuccess] ?? 0)}, '
+        'fail=${cc[SimChallengeOutcome.fail]} ${pct(cc[SimChallengeOutcome.fail] ?? 0)}, '
+        'skip=${cc[SimChallengeOutcome.skipped]} ${pct(cc[SimChallengeOutcome.skipped] ?? 0)}');
+    if (r.finalState.challengePushedBest.isNotEmpty) {
+      final entries = r.finalState.challengePushedBest.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+      b.writeln('- Axes records poussés via défi :');
+      for (final e in entries) {
+        b.writeln('  - ${e.key.storageKey} → ${e.value.toStringAsFixed(1)}');
+      }
+    }
+    if (r.finalState.challengeUnlocksGained > 0) {
+      b.writeln('- Unlocks gagnés via défi (cascade incluse) : '
+          '${r.finalState.challengeUnlocksGained}');
+    }
+    b.writeln();
+  }
 
   // Lag à l'acquisition — métrique « overdue ». Pour chaque unlock
   // acquis : delta entre la session d'acquisition et la 1ʳᵉ session où
@@ -1488,8 +2255,13 @@ String _renderMarkdown(SimResult r) {
 String _renderTsv(SimResult r) {
   final b = StringBuffer();
   b.writeln('# profile\t${r.profile.name}');
+  b.writeln('# skill_init\t${r.profile.skillLevel.toStringAsFixed(2)}');
   b.writeln(
-      'session\tlevel\thumil\tobed\tbody\tbody2\tfinal\toutcome\tunlocks\taxes');
+      '# skill_growth\t${r.profile.skillGrowthPerSession.toStringAsFixed(4)}');
+  b.writeln(
+      '# skill_final\t${r.profile.currentSkillAt(r.timeline.length).toStringAsFixed(2)}');
+  b.writeln(
+      'session\tlevel\thumil\tobed\tbody\tbody2\tfinal\tchallenge\toutcome\tunlocks\taxes');
   for (final t in r.timeline) {
     b.writeln([
       t.session,
@@ -1499,6 +2271,7 @@ String _renderTsv(SimResult r) {
       t.milestoneBodyInserted ?? '',
       t.milestoneBody2Inserted ?? '',
       t.milestoneFinalInserted ?? '',
+      t.challengeSummary ?? '',
       t.outcome,
       t.unlocksGained.map((u) => u.serialized).join(','),
       t.axesTouched.map((a) => a.storageKey).join(','),
@@ -1877,6 +2650,9 @@ void main(List<String> argv) {
             miniPunRate: p.miniPunRate,
             sessions: args.sessionsOverride!,
             axisTargets: p.axisTargets,
+            skillLevel: p.skillLevel,
+            skillGrowthPerSession: p.skillGrowthPerSession,
+            challengeSkipProba: p.challengeSkipProba,
           )
         : p;
     final r = _runSim(profile: pSessions, catalog: catalog, seed: args.seed);
