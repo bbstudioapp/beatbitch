@@ -647,8 +647,9 @@ class SessionController extends ChangeNotifier {
   List<LevelMilestone> get sessionMilestoneUnlocks => _sessionMilestoneUnlocks;
 
   /// True si au moins une milestone vient d'être acquittée pendant cette
-  /// séance (consulté après [_finish] par le caller pour décider du
-  /// level-up via `CareerProgressService.canLevelUp`).
+  /// séance. Consulté pour la cosmétique post-séance (badges, annonces)
+  /// — Phase 19.12 a retiré l'utilisation pour le level-up qui n'existe
+  /// plus.
   bool get milestoneAcquittedThisSession => _sessionMilestoneUnlocks.isNotEmpty;
 
   /// True si la séance avait au moins une milestone candidate planifiée
@@ -2231,14 +2232,12 @@ class SessionController extends ChangeNotifier {
       await _stats.setObedienceLevel(_obedience.score);
     }
 
-    // Acquittement milestone AVANT le bascule en `finished` : sans ça,
-    // `_recordCareerCompletion` côté SessionScreen (déclenché par le
-    // notifyListeners de l'isFinished) appelle `recordSessionCompleted`
-    // sur un `canLevelUp` qui retourne false (la milestone du niveau
-    // courant est encore pending) → le niveau ne s'incrémente jamais.
-    // Le bonus humiliation +2 d'unlock est appliqué ici, mais l'annonce
-    // TTS est déplacée APRÈS le bascule (sinon notifyListeners attend la
-    // fin de l'announce).
+    // Acquittement milestone AVANT le bascule en `finished` : pose les
+    // bonus immédiatement et alimente `_pendingBadgeUnlocks` avant que
+    // `_FinishedPanel` ne capture son état initial. Le bonus humiliation
+    // +2 d'unlock est appliqué ici, mais l'annonce TTS est déplacée
+    // APRÈS le bascule (sinon notifyListeners attend la fin de
+    // l'announce).
     String? milestoneAnnouncement;
     // Body milestone (insertion en milieu de séance) et final milestone
     // (placement `finalApotheose`, en remplacement de la phase finish)

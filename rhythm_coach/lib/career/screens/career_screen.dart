@@ -1308,10 +1308,9 @@ class _SectionLabel extends StatelessWidget {
 
 /// Picker de durée de séance — 4 paliers (bâclée/courte/moyenne/longue).
 ///
-/// Remplace `_LevelPicker` (Phase 19.4). La bâclée reste gatée par le
-/// seuil de déblocage (cf. `_quickieUnlockLevel`) : présente dans le
-/// picker mais non sélectionnable tant que la joueuse n'a pas atteint
-/// le palier.
+/// Remplace `_LevelPicker` (Phase 19.4). Depuis Phase 19.12 tous les
+/// paliers sont toujours sélectionnables — `isBacheeUnlocked` reste
+/// par cohérence d'API mais le caller passe `true` constamment.
 class _DurationPicker extends StatelessWidget {
   final SessionLengthChoice value;
   final bool isBacheeUnlocked;

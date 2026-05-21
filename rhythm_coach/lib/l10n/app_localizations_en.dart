@@ -516,14 +516,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get careerLevelSection => 'Level';
-
-  @override
-  String careerMaxLevel(int level) {
-    return 'max $level';
-  }
-
-  @override
   String get careerDurationSection => 'Duration';
 
   @override
@@ -721,10 +713,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get careerLevelLockedHint =>
-      'Level 1 (finish a session to unlock the next one)';
-
-  @override
   String careerSessionName(int level) {
     return 'Career level $level';
   }
@@ -844,11 +832,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get specPointsAvailableLabel => 'available points';
-
-  @override
-  String specLevelLabel(int level) {
-    return 'Level $level';
-  }
 
   @override
   String specSpentLabel(int spent, int cap) {

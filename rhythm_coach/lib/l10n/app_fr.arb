@@ -225,13 +225,6 @@
       "error": { "type": "String" }
     }
   },
-  "careerLevelSection": "Niveau",
-  "careerMaxLevel": "max {level}",
-  "@careerMaxLevel": {
-    "placeholders": {
-      "level": { "type": "int" }
-    }
-  },
   "careerDurationSection": "Durée",
   "careerQuickieToggle": "Session bâclée",
   "careerQuickieSubtitle": "6 min — intense",
@@ -313,8 +306,6 @@
       "count": { "type": "int" }
     }
   },
-  "careerLevelLockedHint": "Niveau 1 (termine une séance pour débloquer le suivant)",
-
   "careerSessionName": "Carrière niveau {level}",
   "@careerSessionName": {
     "placeholders": {
@@ -383,10 +374,6 @@
   "specRespecConfirmAction": "Respec",
   "specIntro": "Investis tes points pour signaler au moteur ce que tu aimes. Plus tu investis dans une branche, plus le générateur te proposera ce style — sans déséquilibrer tes stats.",
   "specPointsAvailableLabel": "points disponibles",
-  "specLevelLabel": "Niveau {level}",
-  "@specLevelLabel": {
-    "placeholders": { "level": { "type": "int" } }
-  },
   "specSpentLabel": "{spent} / {cap} dépensés",
   "@specSpentLabel": {
     "placeholders": {

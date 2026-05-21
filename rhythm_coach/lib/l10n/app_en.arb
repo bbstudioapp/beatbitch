@@ -225,13 +225,6 @@
       "error": { "type": "String" }
     }
   },
-  "careerLevelSection": "Level",
-  "careerMaxLevel": "max {level}",
-  "@careerMaxLevel": {
-    "placeholders": {
-      "level": { "type": "int" }
-    }
-  },
   "careerDurationSection": "Duration",
   "careerQuickieToggle": "Quickie",
   "careerQuickieSubtitle": "6 min — intense",
@@ -313,8 +306,6 @@
       "count": { "type": "int" }
     }
   },
-  "careerLevelLockedHint": "Level 1 (finish a session to unlock the next one)",
-
   "careerSessionName": "Career level {level}",
   "@careerSessionName": {
     "placeholders": {
@@ -383,10 +374,6 @@
   "specRespecConfirmAction": "Respec",
   "specIntro": "Spend your points to tell the engine what you like. The more you invest in a branch, the more the generator leans into that style — without unbalancing your stats.",
   "specPointsAvailableLabel": "available points",
-  "specLevelLabel": "Level {level}",
-  "@specLevelLabel": {
-    "placeholders": { "level": { "type": "int" } }
-  },
   "specSpentLabel": "{spent} / {cap} spent",
   "@specSpentLabel": {
     "placeholders": {
