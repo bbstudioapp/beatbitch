@@ -941,7 +941,7 @@ class SessionController extends ChangeNotifier {
     _activeChallenge = null;
     _challengeCountdownStartedAtSec = null;
     _challengeCountdownLastDigitSpoken = -1;
-    _postChallengeBreathUntilSec = null;
+    _postChallengeBreathRealEndSec = null;
     notifyListeners();
   }
 
@@ -987,15 +987,17 @@ class SessionController extends ChangeNotifier {
     _accrueHoldSecond();
     _checkProgressMarkers();
     // Freeze la timeline session pendant TOUTE la durée du défi (breath
-    // d'attente joueuse + countdown + step défi + atSeuil + extensions).
-    // Le défi est hors du décompte de session : si la joueuse attend ou
-    // prolonge longtemps, la durée totale de la séance ne baisse pas. Les
-    // transitions internes du défi (live → preExtend → atSeuil → timeout)
-    // sont mesurées sur `_realSec` (= `_stopwatch.elapsed` brut, jamais
-    // freezé) pour rester indépendantes de ce gel. Pas pendant le breath
-    // post-défi (`_inPostChallengeBreath`) : la session reprend son cours
-    // sur ces 10 s de respiration.
-    if (isChallengeActive) {
+    // d'attente joueuse + countdown + step défi + atSeuil + extensions +
+    // breath post-défi). Le défi est intégralement hors du décompte de
+    // session — c'est un bonus skippable qui ne consomme jamais de temps
+    // de séance, peu importe combien la joueuse attend / prolonge.
+    //
+    // Les transitions internes (live → preExtend → atSeuil → timeout, fin
+    // du breath post-défi) sont mesurées sur `_realSec` (= `_stopwatch.elapsed`
+    // brut, jamais freezé) pour rester indépendantes de ce gel — sans
+    // cela, `_inPostChallengeBreath` ne se terminerait jamais (son seuil
+    // ne serait jamais franchi par un `elapsedSeconds` gelé).
+    if (isChallengeActive || _inPostChallengeBreath) {
       _timelineOffset -= _tickInterval;
     }
     if (elapsedSeconds >= session.durationSeconds) {
@@ -1355,20 +1357,29 @@ class SessionController extends ChangeNotifier {
   // session applique les bumps capability/humil/obed correspondants.
 
   /// Seconde absolue (`elapsedSeconds`) jusqu'à laquelle le breath de
-  /// récupération post-défi est actif. `null` = pas de breath en cours.
-  /// Pendant cette fenêtre, `_checkSteps` ne consomme aucun step suivant —
-  /// la séance "marque une pause" pour laisser le coach faire son rapport
-  /// et la joueuse souffler.
-  int? _postChallengeBreathUntilSec;
+  /// Instant **wallclock** (`_realSec.toInt()`-style) à partir duquel le
+  /// breath de récup post-défi expire. `null` = pas de breath en cours.
+  /// Pendant cette fenêtre, `_checkSteps` ne consomme aucun step suivant
+  /// ET la timeline session est freezée (cf. `_onTick`) — le défi entier
+  /// (breath d'annonce + step + post-défi breath) est gratuit du point de
+  /// vue du timer de séance. La sémantique wallclock est nécessaire pour
+  /// que le freeze fonctionne : si on indexait sur `elapsedSeconds`,
+  /// celui-ci ne dépasserait jamais le seuil tant qu'on freeze et le
+  /// breath ne se terminerait pas.
+  int? _postChallengeBreathRealEndSec;
   bool get _inPostChallengeBreath {
-    final until = _postChallengeBreathUntilSec;
-    return until != null && elapsedSeconds < until;
+    final until = _postChallengeBreathRealEndSec;
+    return until != null && _realSec.toInt() < until;
   }
 
-  /// Seconde absolue à laquelle le breath post-défi expire. `null` hors
-  /// fenêtre. Consommée par le caller de `requestPostChallengeRegen` pour
-  /// dimensionner la durée de la suite régénérée.
-  int? get postChallengeBreathUntilSec => _postChallengeBreathUntilSec;
+  /// Instant `elapsedSeconds` auquel la séance reprend après le défi —
+  /// utilisé par `requestPostChallengeRegen` pour rebaser une suite
+  /// régénérée. Vu que la session a déjà été rebasée en interne par
+  /// `_excisChallengeFromSession` (le défi est excisé de la timeline),
+  /// c'est simplement `elapsedSeconds` (= la position où on était avant
+  /// le défi). `null` hors fenêtre post-défi.
+  int? get postChallengeBreathUntilSec =>
+      _inPostChallengeBreath ? elapsedSeconds : null;
 
   /// Libellé de fallback localisé pour un tier donné, quand le coach
   /// n'a pas de `challengePhrases` rédigée pour cet axe. Évite que la
@@ -1705,13 +1716,15 @@ class SessionController extends ChangeNotifier {
   /// que la séance ne reprenne.
   static const int _postChallengeBreathSeconds = 10;
 
-  /// Lance le breath de récup : skip le step défi dans la timeline,
-  /// applique un step breath sur le BeepEngine, et pose le flag
-  /// `_postChallengeBreathUntilSec` qui bloque `_checkSteps` pendant
-  /// la durée. À l'expiration, le step suivant naturel reprend.
+  /// Lance le breath de récup : excise la fenêtre défi de la timeline
+  /// session (le défi n'a jamais consommé de temps de séance), applique
+  /// un step breath sur le BeepEngine, et arme la fin du breath en
+  /// wallclock. La timeline reste freezée pendant tout le breath
+  /// (cf. `_onTick`), donc le breath lui-même ne consomme rien non plus.
   void _startPostChallengeBreath() {
-    _skipPastChallengeStep();
-    _postChallengeBreathUntilSec = elapsedSeconds + _postChallengeBreathSeconds;
+    _excisChallengeFromSession();
+    _postChallengeBreathRealEndSec =
+        _realSec.toInt() + _postChallengeBreathSeconds;
     // Applique le breath sur le BeepEngine — coupe le loop du défi
     // (hold/rhythm/biffle) en faveur du sample breath. Pas de
     // reconfiguration de mode "officielle" (`_lastConfigStep` reste
@@ -1764,30 +1777,101 @@ class SessionController extends ChangeNotifier {
     }
   }
 
-  /// Avance la timeline pour passer le step défi (cas `PASSE` pendant le
-  /// breath). Cherche le prochain step non text-only après la fenêtre défi
-  /// et y bascule via `_timelineOffset`. Si rien ne suit, on laisse la
-  /// timeline naturelle aller à son terme.
-  void _skipPastChallengeStep() {
+  /// Excise la fenêtre défi (breath d'annonce + step défi) de la timeline
+  /// session, en décalant tous les steps suivants ainsi que les
+  /// timestamps de fin (`durationSeconds`, `finalStepTime`,
+  /// `silentFinishStartTime`, milestones) de `-shift`. À l'issue,
+  /// l'`elapsedSeconds` courant (= `challengeBreathStartTime`, gelé
+  /// pendant le défi) coïncide exactement avec la position du step qui
+  /// suivait le défi dans l'ancienne timeline : la séance reprend
+  /// **immédiatement** là où elle en était avant le défi, sans saut
+  /// visible du timer.
+  ///
+  /// `shift = (challengeStepTime - challengeBreathStartTime) +
+  /// nominalDurationSeconds` (≈ 23 s pour le tuto : 13 s de breath
+  /// d'annonce + 10 s de step). Les steps qui tombaient dans la fenêtre
+  /// défi sont droppés (ils ont déjà été joués manuellement : le breath
+  /// par `_checkSteps` à l'entrée en phase `breath`, le step défi par
+  /// `_applyChallengeStepNow` à l'entrée `live`).
+  ///
+  /// No-op silencieux si `challengeBreathStartTime` ou `challengeStepTime`
+  /// est `null` (cas `PASSE` immédiat où le défi n'a pas été matérialisé
+  /// — la fenêtre reste vide dans la timeline mais aucun temps n'a été
+  /// consommé puisque le freeze s'arrête dès `phase == ended`).
+  void _excisChallengeFromSession() {
+    final breathStart = _session.challengeBreathStartTime;
     final stepStart = _session.challengeStepTime;
     final stepDur = _activeChallenge?.nominalDurationSeconds;
-    if (stepStart == null || stepDur == null) return;
+    if (breathStart == null || stepStart == null || stepDur == null) return;
+    final shift = (stepStart - breathStart) + stepDur;
+    if (shift <= 0) return;
     final endOfChallenge = stepStart + stepDur;
-    final advance = endOfChallenge - elapsedSeconds;
-    if (advance > 0) {
-      _timelineOffset += Duration(seconds: advance);
+
+    int? shiftLate(int? t) {
+      if (t == null) return null;
+      if (t < endOfChallenge) return t;
+      return t - shift;
     }
-    // Avance aussi `_nextStepIndex` past le step défi non-text-only. Sinon
-    // un PASSE (ou un fail avant l'entrée `live`) laisserait le step défi
-    // toujours candidate, et `_checkSteps` le ferait rejouer son audio
-    // après le post-breath.
-    final steps = _session.steps;
-    for (var i = _nextStepIndex; i < steps.length; i++) {
-      final s = steps[i];
-      if (s.time != stepStart) continue;
-      if (s.isTextOnly) continue;
+
+    final newSteps = <SessionStep>[];
+    for (final s in _session.steps) {
+      if (s.time >= breathStart && s.time < endOfChallenge) {
+        // Step de la fenêtre défi : déjà joué manuellement, on le drop.
+        continue;
+      }
+      if (s.time < breathStart) {
+        newSteps.add(s);
+        continue;
+      }
+      newSteps.add(SessionStep(
+        time: s.time - shift,
+        text: s.text,
+        mode: s.mode,
+        from: s.from,
+        to: s.to,
+        bpm: s.bpm,
+        bpmEnd: s.bpmEnd,
+        duration: s.duration,
+        chainAction: s.chainAction,
+        swallowMode: s.swallowMode,
+        background: s.background,
+      ));
+    }
+
+    _session = Session(
+      id: _session.id,
+      name: _session.name,
+      description: _session.description,
+      durationSeconds: _session.durationSeconds - shift,
+      defaultMode: _session.defaultMode,
+      steps: newSteps,
+      intro: _session.intro,
+      lang: _session.lang,
+      milestoneId: _session.milestoneId,
+      milestoneStartTime: shiftLate(_session.milestoneStartTime),
+      milestoneDurationSeconds: _session.milestoneDurationSeconds,
+      secondMilestoneId: _session.secondMilestoneId,
+      secondMilestoneStartTime: shiftLate(_session.secondMilestoneStartTime),
+      secondMilestoneDurationSeconds: _session.secondMilestoneDurationSeconds,
+      finalMilestoneId: _session.finalMilestoneId,
+      finalMilestoneStartTime: shiftLate(_session.finalMilestoneStartTime),
+      finalMilestoneDurationSeconds: _session.finalMilestoneDurationSeconds,
+      finalCategory: _session.finalCategory,
+      silentFinishStartTime: shiftLate(_session.silentFinishStartTime),
+      finalStepTime: shiftLate(_session.finalStepTime),
+      noStats: _session.noStats,
+      challenge: _session.challenge,
+      challengeBreathStartTime: null,
+      challengeStepTime: null,
+    );
+
+    // Recalcule `_nextStepIndex` : pointe vers le premier step à venir
+    // (= `step.time > elapsedSeconds`). Le step défi ayant été excisé,
+    // l'index original ne référence plus la bonne position.
+    _nextStepIndex = 0;
+    for (var i = 0; i < newSteps.length; i++) {
+      if (newSteps[i].time > elapsedSeconds) break;
       _nextStepIndex = i + 1;
-      return;
     }
   }
 
@@ -1895,6 +1979,7 @@ class SessionController extends ChangeNotifier {
         if (!isExploratory) {
           _humiliation.onChallengeNetSuccess();
           _obedience.onChallengeNetSuccess();
+          _raiseHumiliationFloorFromChallenge();
         }
         break;
       case ChallengeOutcome.extendedSuccess:
@@ -1906,6 +1991,7 @@ class SessionController extends ChangeNotifier {
           _humiliation.onChallengeExtension();
           _obedience.onChallengeExtension();
         }
+        _raiseHumiliationFloorFromChallenge();
         break;
       case ChallengeOutcome.fail:
         // Pas de bumps humil/obed (cf. spec § 5.3).
@@ -1914,6 +2000,48 @@ class SessionController extends ChangeNotifier {
         _obedience.onChallengeSkip();
         break;
     }
+  }
+
+  /// Élève le `careerScore` d'humiliation au plancher de l'action tenue
+  /// pendant le défi (`HumiliationScale.requiredFor(...)` du step défi
+  /// matérialisé). Sémantique : « tu viens de prouver que tu peux faire
+  /// X — ton humiliation doit refléter le palier qu'exigeait X ». Sans
+  /// ça, une joueuse qui réussit un défi hold throat 10 s peut rester
+  /// sous le seuil de `intro_hold_mid` / `intro_final_hold_tip`
+  /// plusieurs séances de suite, alors que la capacité a été prouvée.
+  ///
+  /// Pour les axes durée, on prend la durée effectivement tenue (seuil
+  /// cible + N × extensionSeconds par extension acquise). Pour les axes
+  /// BPM en rampe, on prend `bpmEnd` (vitesse finale atteinte). Pour les
+  /// axes profondeur, c'est `ch.to` qui porte déjà l'info.
+  void _raiseHumiliationFloorFromChallenge() {
+    final ch = _activeChallenge;
+    if (ch == null) return;
+    final int durationReached;
+    final int? bpmReached;
+    switch (ch.kind) {
+      case ChallengeAxisKind.duration:
+        durationReached = ch.targetThreshold +
+            _challengeExtensionsCount * ch.extensionSeconds;
+        bpmReached = ch.bpm;
+        break;
+      case ChallengeAxisKind.bpm:
+        durationReached = ch.nominalDurationSeconds;
+        bpmReached = ch.bpmEnd ?? ch.bpm;
+        break;
+      case ChallengeAxisKind.depthCran:
+        durationReached = ch.nominalDurationSeconds;
+        bpmReached = ch.bpm;
+        break;
+    }
+    final floor = HumiliationScale.requiredFor(
+      mode: ch.mode,
+      from: ch.from,
+      to: ch.to,
+      bpm: bpmReached,
+      duration: durationReached,
+    );
+    _humiliation.raiseCareerFloor(floor);
   }
 
   Future<void> _finish() async {
@@ -2318,7 +2446,8 @@ class SessionController extends ChangeNotifier {
   // ─── Régénération post-défi (Phase 1 défis bis) ───────────────────────
 
   /// Remplace la suite de la séance par les [upcomingSession.steps] rebased
-  /// à la fin du breath post-défi (`_postChallengeBreathUntilSec`). Appelée
+  /// à `elapsedSeconds` (= position d'avant le défi, vu que le défi a été
+  /// excisé de la timeline par `_excisChallengeFromSession`). Appelée
   /// par le caller depuis `onPostChallengeRegen` quand un défi vient
   /// d'élargir le set d'unlocks — le générateur produit une suite qui
   /// **consomme** la compétence fraîchement débloquée. Pas de phrase de
@@ -2338,7 +2467,12 @@ class SessionController extends ChangeNotifier {
     required Session upcomingSession,
   }) async {
     if (_state != SessionState.running) return;
-    final breathEnd = _postChallengeBreathUntilSec ?? elapsedSeconds;
+    // Avec l'excision du défi par `_excisChallengeFromSession`, la
+    // séance est déjà alignée sur `elapsedSeconds` (= position d'avant
+    // le défi) — la nouvelle suite est rebasée sur cet instant et sera
+    // consommée dès la fin du breath post-défi (qui est freezé, donc
+    // ne décale pas elapsedSeconds).
+    final breathEnd = elapsedSeconds;
     _session = buildPostChallengeRegenSession(
       previous: _session,
       upcoming: upcomingSession,
