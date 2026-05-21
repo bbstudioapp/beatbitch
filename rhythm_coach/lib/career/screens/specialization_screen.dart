@@ -37,13 +37,13 @@ class _SpecializationScreenState extends State<SpecializationScreen> {
   Future<_SpecBundle> _loadBundle() async {
     final results = await Future.wait([
       _spec.load(),
-      _progress.getMaxLevel(),
+      _progress.getCompletedSessions(),
       _spec.canRespec(),
       _spec.respecCooldownRemainingHours(),
     ]);
     return _SpecBundle(
       allocation: results[0] as SpecializationAllocation,
-      maxLevel: results[1] as int,
+      sessionsCompleted: results[1] as int,
       canRespec: results[2] as bool,
       respecCooldownHours: results[3] as int,
     );
@@ -55,8 +55,8 @@ class _SpecializationScreenState extends State<SpecializationScreen> {
     });
   }
 
-  Future<void> _invest(SpecializationBranch branch, int maxLevel) async {
-    final ok = await _spec.invest(branch, maxLevel);
+  Future<void> _invest(SpecializationBranch branch, int sessions) async {
+    final ok = await _spec.invest(branch, sessions);
     if (!ok) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -95,8 +95,10 @@ class _SpecializationScreenState extends State<SpecializationScreen> {
     );
     if (confirmed != true) return;
 
+    // Phase 19.12 : la pénalité `decrementMaxLevel` (-1 niveau global)
+    // disparaît avec le retrait du système de niveaux. Le cooldown
+    // 72 h reste l'unique frein contre les respec spam.
     await _spec.respec();
-    await _progress.decrementMaxLevel();
     _reload();
   }
 
@@ -124,8 +126,8 @@ class _SpecializationScreenState extends State<SpecializationScreen> {
             );
           }
           final bundle = snapshot.data!;
-          final cap =
-              SpecializationService.totalPointsForLevel(bundle.maxLevel);
+          final cap = SpecializationService.totalPointsForSessions(
+              bundle.sessionsCompleted);
           final available = cap - bundle.allocation.totalSpent;
 
           return ListView(
@@ -135,7 +137,7 @@ class _SpecializationScreenState extends State<SpecializationScreen> {
                 available: available,
                 cap: cap,
                 spent: bundle.allocation.totalSpent,
-                maxLevel: bundle.maxLevel,
+                sessionsCompleted: bundle.sessionsCompleted,
               ),
               const SizedBox(height: 16),
               Text(
@@ -154,7 +156,8 @@ class _SpecializationScreenState extends State<SpecializationScreen> {
                     meta: meta,
                     points: bundle.allocation.pointsIn(meta.branch),
                     canInvest: available > 0,
-                    onInvest: () => _invest(meta.branch, bundle.maxLevel),
+                    onInvest: () =>
+                        _invest(meta.branch, bundle.sessionsCompleted),
                   ),
                 ),
               const SizedBox(height: 12),
@@ -175,13 +178,13 @@ class _Header extends StatelessWidget {
   final int available;
   final int cap;
   final int spent;
-  final int maxLevel;
+  final int sessionsCompleted;
 
   const _Header({
     required this.available,
     required this.cap,
     required this.spent,
-    required this.maxLevel,
+    required this.sessionsCompleted,
   });
 
   @override
@@ -222,7 +225,7 @@ class _Header extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                t.specLevelLabel(maxLevel),
+                t.careerInvestmentSessions(sessionsCompleted),
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
@@ -389,13 +392,13 @@ class _RespecButton extends StatelessWidget {
 
 class _SpecBundle {
   final SpecializationAllocation allocation;
-  final int maxLevel;
+  final int sessionsCompleted;
   final bool canRespec;
   final int respecCooldownHours;
 
   const _SpecBundle({
     required this.allocation,
-    required this.maxLevel,
+    required this.sessionsCompleted,
     required this.canRespec,
     required this.respecCooldownHours,
   });

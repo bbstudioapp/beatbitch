@@ -24,7 +24,7 @@ class _SurpriseBundle {
   final PunishmentBundle punishments;
   final RandomCommentsBundle comments;
   final SpecializationAllocation specialization;
-  final int maxLevel;
+  final int synthLevel;
   final bool includeHand;
 
   _SurpriseBundle({
@@ -32,7 +32,7 @@ class _SurpriseBundle {
     required this.punishments,
     required this.comments,
     required this.specialization,
-    required this.maxLevel,
+    required this.synthLevel,
     required this.includeHand,
   });
 }
@@ -62,7 +62,7 @@ class SurpriseRouter {
     final bank = await PhraseBankLoader().load();
     final punishments = await PunishmentLoader().load();
     final comments = await RandomCommentsLoader().load();
-    final maxLevel = (await progress.getMaxLevel()).clamp(1, 99);
+    final sessions = await progress.getCompletedSessions();
     final persistedIncludeHand = await progress.getIncludeHand();
     final specialization = await specService.load();
     final humiliationCareer = await stats.getHumiliationLevel();
@@ -75,17 +75,20 @@ class SurpriseRouter {
 
     await coachService.syncFromTotalSeconds(totalSeconds);
 
-    // Sous le seuil hand (< niveau 4), on force `includeHand` à true pour
-    // garder un finish abordable (cohérent avec `_includeHandUnlockLevel`
-    // côté CareerScreen).
-    final includeHand = maxLevel < 4 ? true : persistedIncludeHand;
+    // Phase 19.12 : plus de gate hand par niveau — respecte le choix
+    // persisté de la joueuse.
+    final includeHand = persistedIncludeHand;
+    // SynthLevel proxy pour le générateur (Custom path : pas de
+    // `lengthChoice` ni `sessionsCompleted` passé, on retombe sur
+    // `resolve(level)` legacy).
+    final synthLevel = (1 + sessions ~/ 2).clamp(1, 30);
 
     final bundle = _SurpriseBundle(
       bank: bank,
       punishments: punishments,
       comments: comments,
       specialization: specialization,
-      maxLevel: maxLevel,
+      synthLevel: synthLevel,
       includeHand: includeHand,
     );
 
@@ -124,7 +127,7 @@ class SurpriseRouter {
 
     final result = CareerSessionGenerator().generate(
       durationSeconds: durationSeconds,
-      level: bundle.maxLevel,
+      level: bundle.synthLevel,
       bank: coachBank,
       includeHand: bundle.includeHand,
       // quickie=true : intensityFloor 0.65, intro raccourcie, pas de
@@ -140,7 +143,7 @@ class SurpriseRouter {
     );
 
     final canEncore = CareerEncoreGate.canEncore(
-      level: bundle.maxLevel,
+      level: bundle.synthLevel,
       humiliationScore: humiliationCareer,
       obedienceScore: obedienceScore,
       milestoneService: milestoneService,
@@ -161,7 +164,7 @@ class SurpriseRouter {
         randomComments: activeCoach.composeRandomComments(bundle.comments),
         isCareer: true,
         isQuickie: true,
-        careerLevel: bundle.maxLevel,
+        careerLevel: bundle.synthLevel,
         staminaProfile: result.staminaProfile,
         phraseBank: coachBank,
         autoStart: true,

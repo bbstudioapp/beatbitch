@@ -46,7 +46,6 @@ void main() {
     test('snapshot expose le tier (intégration)', () {
       const snap = ReputationSnapshot(
         score: 1000,
-        maxLevel: 5,
         stats: StatsSnapshot(
           totalSeconds: 7200,
           throatfucks: 0,

@@ -63,10 +63,10 @@ void main() {
 
     test('invest empile la branche en fin de file', () async {
       final svc = SpecializationService();
-      // Niveau 10 → 5 points dispo (10 ~/ 2). Trois invest successifs.
-      await svc.invest(SpecializationBranch.profondeur, 10);
-      await svc.invest(SpecializationBranch.endurance, 10);
-      await svc.invest(SpecializationBranch.profondeur, 10);
+      // 20 sessions → 5 points dispo (20 ~/ 4). Trois invest successifs.
+      await svc.invest(SpecializationBranch.profondeur, 20);
+      await svc.invest(SpecializationBranch.endurance, 20);
+      await svc.invest(SpecializationBranch.profondeur, 20);
       expect(await svc.pendingShowcase(), [
         SpecializationBranch.profondeur,
         SpecializationBranch.endurance,
@@ -76,8 +76,8 @@ void main() {
 
     test('peekShowcase retourne la tête sans la retirer', () async {
       final svc = SpecializationService();
-      await svc.invest(SpecializationBranch.profondeur, 10);
-      await svc.invest(SpecializationBranch.endurance, 10);
+      await svc.invest(SpecializationBranch.profondeur, 20);
+      await svc.invest(SpecializationBranch.endurance, 20);
       expect(await svc.peekShowcase(), SpecializationBranch.profondeur);
       // Pas de retrait : 2e peek renvoie la même tête.
       expect(await svc.peekShowcase(), SpecializationBranch.profondeur);
@@ -92,9 +92,9 @@ void main() {
     test('consumeShowcase retire la première occurrence de la branche',
         () async {
       final svc = SpecializationService();
-      await svc.invest(SpecializationBranch.profondeur, 10);
-      await svc.invest(SpecializationBranch.endurance, 10);
-      await svc.invest(SpecializationBranch.profondeur, 10);
+      await svc.invest(SpecializationBranch.profondeur, 20);
+      await svc.invest(SpecializationBranch.endurance, 20);
+      await svc.invest(SpecializationBranch.profondeur, 20);
       await svc.consumeShowcase(SpecializationBranch.profondeur);
       expect(await svc.pendingShowcase(), [
         SpecializationBranch.endurance,
@@ -104,22 +104,22 @@ void main() {
 
     test('consumeShowcase d\'une branche absente = no-op', () async {
       final svc = SpecializationService();
-      await svc.invest(SpecializationBranch.profondeur, 10);
+      await svc.invest(SpecializationBranch.profondeur, 20);
       await svc.consumeShowcase(SpecializationBranch.sloppy);
       expect(await svc.pendingShowcase(), [SpecializationBranch.profondeur]);
     });
 
     test('respec vide la file', () async {
       final svc = SpecializationService();
-      await svc.invest(SpecializationBranch.profondeur, 10);
-      await svc.invest(SpecializationBranch.endurance, 10);
+      await svc.invest(SpecializationBranch.profondeur, 20);
+      await svc.invest(SpecializationBranch.endurance, 20);
       await svc.respec();
       expect(await svc.pendingShowcase(), isEmpty);
     });
 
     test('resetAll vide la file', () async {
       final svc = SpecializationService();
-      await svc.invest(SpecializationBranch.profondeur, 10);
+      await svc.invest(SpecializationBranch.profondeur, 20);
       await svc.resetAll();
       expect(await svc.pendingShowcase(), isEmpty);
     });

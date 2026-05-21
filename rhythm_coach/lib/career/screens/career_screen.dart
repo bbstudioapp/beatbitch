@@ -70,18 +70,6 @@ class _CareerScreenState extends State<CareerScreen> {
   bool _challengesEnabled = false;
   bool _challengeTutorialSeen = false;
 
-  /// Niveau global minimum à partir duquel l'utilisatrice peut désactiver
-  /// le mode hand. En dessous, le toggle est forcé à ON pour garder le
-  /// finish abordable (le hand head 50 BPM est la seule baseline req 0).
-  static const int _includeHandUnlockLevel = 4;
-
-  /// Niveau global minimum à partir duquel le mode « Session bâclée » est
-  /// disponible. En dessous, le toggle est désactivé — bâcler avant de
-  /// connaître les bases ne fait pas sens pédagogiquement, et l'intensity
-  /// floor 0.65 du quickie pousse la débutante au-delà de ce qu'elle est
-  /// prête à encaisser.
-  static const int _quickieUnlockLevel = 8;
-
   @override
   void initState() {
     super.initState();
@@ -102,8 +90,6 @@ class _CareerScreenState extends State<CareerScreen> {
       PhraseBankLoader().load(),
       PunishmentLoader().load(),
       RandomCommentsLoader().load(),
-      _progress.getMaxLevel(),
-      _progress.getLastChosenLevel(),
       _progress.getCompletedSessions(),
       _progress.getIncludeHand(),
       _specService.load(),
@@ -115,9 +101,8 @@ class _CareerScreenState extends State<CareerScreen> {
       _progress.getLastLengthChoice(),
       _stats.getTotalSeconds(),
     ]);
-    final maxLevel = results[3] as int;
-    final capabilityProfile = results[10] as CapabilityProfile;
-    final totalSeconds = results[14] as int;
+    final capabilityProfile = results[8] as CapabilityProfile;
+    final totalSeconds = results[12] as int;
     // Rattrapage à froid : acquitte les milestones que le profil de
     // capacités prouve déjà (cas typique : la cascade transitive du défi
     // a été livrée après que la joueuse l'ait joué — sans rattrapage,
@@ -130,22 +115,28 @@ class _CareerScreenState extends State<CareerScreen> {
     // avant que l'écran ne lise `currentTier` / `selectedCoach` pour son
     // rendu.
     await coachService.syncFromTotalSeconds(totalSeconds);
+    final completedSessions = results[3] as int;
     return _CareerBundle(
       bank: results[0] as PhraseBank,
       punishments: results[1] as PunishmentBundle,
       comments: results[2] as RandomCommentsBundle,
-      maxLevel: maxLevel,
-      lastChosenLevel: results[4] as int,
-      completedSessions: results[5] as int,
-      includeHand: results[6] as bool,
-      specialization: results[7] as SpecializationAllocation,
-      humiliationScore: results[8] as double,
-      obedienceScore: results[9] as double,
+      completedSessions: completedSessions,
+      includeHand: results[4] as bool,
+      specialization: results[5] as SpecializationAllocation,
+      humiliationScore: results[6] as double,
+      obedienceScore: results[7] as double,
       capabilityProfile: capabilityProfile,
-      challengesEnabled: results[11] as bool,
-      challengeTutorialSeen: results[12] as bool,
-      lastLengthChoice: results[13] as SessionLengthChoice,
+      challengesEnabled: results[9] as bool,
+      challengeTutorialSeen: results[10] as bool,
+      lastLengthChoice: results[11] as SessionLengthChoice,
       totalSeconds: totalSeconds,
+      // SynthLevel = proxy entier dérivé des sessions (Phase 19.6+).
+      // Sert au titre de niveau affiché et aux call sites internes qui
+      // consomment encore un `level` (milestone filter, sessionName).
+      synthLevel: CareerDifficultyResolver.resolveForCareer(
+        sessionsCompleted: completedSessions,
+        lengthChoice: SessionLengthChoice.courte,
+      ).level,
     );
   }
 
@@ -172,21 +163,19 @@ class _CareerScreenState extends State<CareerScreen> {
 
   Future<void> _start(_CareerBundle bundle) async {
     final t = AppLocalizations.of(context);
-    // Phase 19.4 : le niveau qui pilote la difficulté est désormais figé
-    // à `maxLevel` (plus de slider). La durée vient du picker dédié.
-    final clamped = bundle.maxLevel;
+    // Phase 19.12 : `level` passé au générateur = synthLevel dérivé des
+    // sessions (sert au titre de session + fallback Custom — le
+    // générateur recalcule la config via `resolveForCareer` à partir
+    // de `sessionsCompleted` + `lengthChoice`).
+    final clamped = bundle.synthLevel;
     final lengthChoice = _selectedLengthChoice ?? bundle.lastLengthChoice;
     await _progress.setLastLengthChoice(lengthChoice);
 
-    // Override forcé à true si on est sous le seuil de déblocage : même si
-    // une persistance antérieure (avant le verrou) avait stocké false, on
-    // ne laisse pas démarrer une session sans hand à bas niveau. La règle
-    // `requiresHands` côté milestone (cf. plus bas) peut aussi forcer le
-    // toggle quand un milestone scripté en a besoin (intro_basics,
-    // intro_biffle…).
-    final baseIncludeHand = bundle.maxLevel < _includeHandUnlockLevel
-        ? true
-        : (_includeHandOverride ?? bundle.includeHand);
+    // Phase 19.12 : la règle `requiresHands` des milestones reste, mais
+    // plus de gate par niveau — le toggle hand respecte simplement le
+    // choix utilisatrice (préférence persistée) sauf override forcé en
+    // aval par une milestone scriptée qui en a besoin.
+    final baseIncludeHand = _includeHandOverride ?? bundle.includeHand;
 
     final activeCoach = _resolveCoach(bundle);
     // À partir du tier 2 (Hélène), on ne démarre pas tant que l'utilisatrice
@@ -209,12 +198,11 @@ class _CareerScreenState extends State<CareerScreen> {
     _installCoachNameResolver(activeCoach);
     await _applyCoachVoicePreset(activeCoach);
 
-    // Phase 19.4 : la bâclée est portée par le palier « bachee » du
-    // picker (absorbe l'ancien toggle Quickie). Reste gatée par le
-    // seuil de déblocage pour ne pas pousser une débutante à
-    // intensityFloor=0.65.
+    // Phase 19.12 : la bâclée est toujours accessible — plus de gate
+    // par niveau. Le palier « bachee » du picker active automatiquement
+    // `quickie:true` côté générateur (intensityFloor 0.65 + 6 min).
     final isBachee = lengthChoice == SessionLengthChoice.bachee;
-    final quickie = isBachee && bundle.maxLevel >= _quickieUnlockLevel;
+    final quickie = isBachee;
     final humiliationScore = await _stats.getHumiliationLevel();
     final obedienceScore = await _stats.getObedienceLevel();
     // Insère la milestone d'apprentissage en attente pour ce niveau (si
@@ -244,7 +232,7 @@ class _CareerScreenState extends State<CareerScreen> {
             count: bodyCount,
             humiliationScore: humiliationScore,
             obedience: obedienceScore,
-            playerLevel: bundle.maxLevel,
+            playerLevel: bundle.synthLevel,
             allocation: bundle.specialization,
             capabilityProfile: bundle.capabilityProfile,
             anatomy: anatomy,
@@ -255,7 +243,7 @@ class _CareerScreenState extends State<CareerScreen> {
         : milestoneService.allPendingFor(
             humiliationScore: humiliationScore,
             obedience: obedienceScore,
-            playerLevel: bundle.maxLevel,
+            playerLevel: bundle.synthLevel,
             allocation: bundle.specialization,
             capabilityProfile: bundle.capabilityProfile,
             anatomy: anatomy,
@@ -276,7 +264,7 @@ class _CareerScreenState extends State<CareerScreen> {
       final bodyAll = milestoneService.allPendingFor(
         humiliationScore: humiliationScore,
         obedience: obedienceScore,
-        playerLevel: bundle.maxLevel,
+        playerLevel: bundle.synthLevel,
         allocation: bundle.specialization,
         capabilityProfile: bundle.capabilityProfile,
         anatomy: anatomy,
@@ -1088,24 +1076,23 @@ class _CareerScreenState extends State<CareerScreen> {
             );
           }
           final bundle = snapshot.data!;
-          // Phase 19.6 : la difficulté dérive de `sessionsCompleted` +
-          // `lengthChoice`. Le synthLevel du resolver sert au titre
-          // affiché. `bundle.maxLevel` reste utilisé pour les gates UI
-          // (déblocage bâclée, déblocage hand) — sera retiré en 19.12.
+          // Phase 19.12 : difficulté + titre dérivent exclusivement de
+          // `sessionsCompleted` + `lengthChoice` via le resolver. Plus
+          // de gate par niveau pour la bâclée — toujours disponible.
           final lengthChoice = _selectedLengthChoice ?? bundle.lastLengthChoice;
           final cfg = CareerDifficultyResolver.resolveForCareer(
             sessionsCompleted: bundle.completedSessions,
             lengthChoice: lengthChoice,
           );
-          final isBacheeUnlocked = bundle.maxLevel >= _quickieUnlockLevel;
           final durationLabel =
               formatDurationCompact(context, lengthChoice.durationSeconds);
           final activeCoach = _resolveCoach(bundle);
           final principal = coachService.currentTierPrincipal;
           final isFreeTraining = !coachService.advancesTier(activeCoach);
-          final freeSpecPoints =
-              SpecializationService.totalPointsForLevel(bundle.maxLevel) -
-                  bundle.specialization.totalSpent;
+          final freeSpecPoints = SpecializationService.totalPointsForSessions(
+                bundle.completedSessions,
+              ) -
+              bundle.specialization.totalSpent;
           final hasPendingSpecPoints = freeSpecPoints > 0;
 
           return ListView(
@@ -1157,12 +1144,14 @@ class _CareerScreenState extends State<CareerScreen> {
                 ),
               _SectionLabel(
                 title: t.careerDurationSection,
-                trailing: t.careerMaxLevel(bundle.maxLevel),
               ),
               const SizedBox(height: 8),
               _DurationPicker(
                 value: lengthChoice,
-                isBacheeUnlocked: isBacheeUnlocked,
+                // Phase 19.12 : bâclée toujours déblocable (plus de
+                // gate par niveau — le palier reste un signal UX, pas
+                // un verrou pédagogique).
+                isBacheeUnlocked: true,
                 onChanged: (v) => setState(() => _selectedLengthChoice = v),
               ),
               const SizedBox(height: 8),
@@ -1206,20 +1195,16 @@ class _CareerScreenState extends State<CareerScreen> {
                   await _challengeService.setEnabled(v);
                 },
               ),
-              // Switch « stimulation à la main » : caché tant que le niveau
-              // de déblocage n'est pas atteint. Une fois le niveau atteint,
-              // le switch est interactif ; si une milestone pending impose
-              // les mains, on garde le toggle interactif aussi (le joueur
-              // peut sortir du contexte pédagogique en désactivant — un
-              // message dédié l'avertit de cette sortie de contexte).
+              // Switch « stimulation à la main » (Phase 19.12 : plus de
+              // gate par niveau, toujours visible). Si une milestone
+              // pending impose les mains, on garde le toggle interactif
+              // (la joueuse peut sortir du contexte pédagogique en
+              // désactivant — un message dédié l'avertit).
               () {
-                final levelLocksHand =
-                    bundle.maxLevel < _includeHandUnlockLevel;
-                if (levelLocksHand) return const SizedBox.shrink();
                 final pendingMilestone = milestoneService.pendingFor(
                   humiliationScore: bundle.humiliationScore,
                   obedience: bundle.obedienceScore,
-                  playerLevel: bundle.maxLevel,
+                  playerLevel: bundle.synthLevel,
                   allocation: bundle.specialization,
                   capabilityProfile: bundle.capabilityProfile,
                 );
@@ -1772,11 +1757,16 @@ class _CareerBundle {
   final PhraseBank bank;
   final PunishmentBundle punishments;
   final RandomCommentsBundle comments;
-  final int maxLevel;
-  final int lastChosenLevel;
   final int completedSessions;
   final bool includeHand;
   final SpecializationAllocation specialization;
+
+  /// Niveau synthétique (Phase 19.12) dérivé de `completedSessions` via
+  /// `CareerDifficultyResolver.resolveForCareer`. Remplace le `maxLevel`
+  /// retiré : sert au titre level affiché et aux call sites internes
+  /// qui consomment encore un `level` int (filtre milestone `minLevel`,
+  /// nom de session…).
+  final int synthLevel;
 
   /// Humiliation lifetime persistée (`StatsService.getHumiliationLevel`).
   /// Sert au filtre de candidature des milestones (`pendingFor`) au build
@@ -1813,8 +1803,6 @@ class _CareerBundle {
     required this.bank,
     required this.punishments,
     required this.comments,
-    required this.maxLevel,
-    required this.lastChosenLevel,
     required this.completedSessions,
     required this.includeHand,
     required this.specialization,
@@ -1825,5 +1813,6 @@ class _CareerBundle {
     required this.challengeTutorialSeen,
     required this.lastLengthChoice,
     required this.totalSeconds,
+    required this.synthLevel,
   });
 }

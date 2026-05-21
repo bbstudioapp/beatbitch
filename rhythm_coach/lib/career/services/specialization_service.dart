@@ -4,12 +4,13 @@ import '../models/specialization.dart';
 
 /// Persistance des points de spécialisation + règles de gain et respec.
 ///
-/// **Gain** : 1 point tous les 2 niveaux (niv 2 → 1 pt, niv 4 → 2 pts,
-/// etc.). Aux niveaux impairs, pas de nouveau point. Niveau 1 = 0 point.
+/// **Gain** (Phase 19.12) : 1 point tous les 4 sessions complétées
+/// (4 sessions → 1 pt, 8 sessions → 2 pts, etc.). En dessous de 4
+/// sessions, 0 point.
 ///
-/// **Respec** : remet tous les compteurs à 0, applique une pénalité
-/// (-1 niveau global), pose un cooldown empêchant un nouveau respec
-/// avant 3 jours.
+/// **Respec** : remet tous les compteurs à 0, pose un cooldown
+/// empêchant un nouveau respec avant 3 jours. Plus de pénalité de
+/// niveau global (concept retiré en Phase 19.12).
 class SpecializationService {
   static const String _kPointsPrefix = 'specialization.points.';
   static const String _kLastRespec = 'specialization.last_respec_ms';
@@ -27,10 +28,15 @@ class SpecializationService {
   /// Cooldown en heures entre deux respecs.
   static const int respecCooldownHours = 72;
 
-  /// Nombre total de points de spé acquis à un niveau global donné.
-  static int totalPointsForLevel(int level) {
-    if (level < 2) return 0;
-    return level ~/ 2;
+  /// Nombre total de points de spé acquis pour un compteur de sessions
+  /// donné (Phase 19.12). 1 point tous les 4 sessions complétées.
+  ///
+  /// Équivalent à l'ancien `totalPointsForLevel(level) = level ~/ 2`
+  /// quand `level ≈ 1 + sessions/2` (cf. `CareerDifficultyResolver`) :
+  /// 1 point tous les 2 levels ⇔ 1 point tous les 4 sessions.
+  static int totalPointsForSessions(int sessions) {
+    if (sessions < 4) return 0;
+    return sessions ~/ 4;
   }
 
   /// Clé legacy : points investis dans l'ancienne branche `resilience`
@@ -62,9 +68,10 @@ class SpecializationService {
   /// (= au moins une milestone candidate touche cette branche) sera
   /// biaisée pour la mettre en vitrine. Voir [peekShowcase] /
   /// [consumeShowcase].
-  Future<bool> invest(SpecializationBranch branch, int globalLevel) async {
+  Future<bool> invest(
+      SpecializationBranch branch, int sessionsCompleted) async {
     final alloc = await load();
-    final cap = totalPointsForLevel(globalLevel);
+    final cap = totalPointsForSessions(sessionsCompleted);
     if (alloc.totalSpent >= cap) return false;
     final prefs = await SharedPreferences.getInstance();
     final newValue = alloc.pointsIn(branch) + 1;
@@ -130,10 +137,11 @@ class SpecializationService {
     }
   }
 
-  /// Combien de points disponibles à dépenser au niveau global donné.
-  Future<int> availablePoints(int globalLevel) async {
+  /// Combien de points disponibles à dépenser pour un compteur de
+  /// sessions donné (Phase 19.12).
+  Future<int> availablePoints(int sessionsCompleted) async {
     final alloc = await load();
-    final cap = totalPointsForLevel(globalLevel);
+    final cap = totalPointsForSessions(sessionsCompleted);
     return (cap - alloc.totalSpent).clamp(0, cap);
   }
 

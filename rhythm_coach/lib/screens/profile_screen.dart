@@ -149,7 +149,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             );
           }
           final bundle = snapshot.data!;
-          final level = bundle.reputation.maxLevel;
+          // Phase 19.12 : `maxLevel` retiré du `ReputationSnapshot`. On
+          // dérive un synthLevel depuis le compteur sessions pour
+          // conserver l'affichage du titre level historique.
+          final sessions = bundle.reputation.stats.sessionsCompleted;
+          final level = (1 + sessions ~/ 2).clamp(1, 30);
           final title = localizedCareerLevelTitle(context, level);
 
           return ListView(
