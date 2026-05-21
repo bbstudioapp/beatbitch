@@ -1152,7 +1152,18 @@ String _formatChallengeSummary(SimChallenge ch) {
   return '$axisLabel$exploratoryMark × $outcomeLabel';
 }
 
-// ─── Catalogue des 6 profils ──────────────────────────────────────────────
+// ─── Catalogue des profils ────────────────────────────────────────────────
+//
+// 4 tiers (skillLevel croissant) + 2 spé pathologiques (`fail_prone`,
+// `quickie_spammer`) qui restent utiles pour les détecteurs LEVEL-STUCK,
+// FEATURE-MISSED et la spirale de fail.
+//
+// Les tiers ont des allocations différentes pour explorer plusieurs spé
+// au fil des sessions (une débutante n'a aucun point ; une experte a 9 pts
+// alloués typiques d'une fin de carrière niveau 18+). Le pacing humil/obed
+// reste calibré par `milestoneCleanProba` / `failProba` / `encoreProba`
+// comme avant, mais le `skillLevel` pilote en plus le rapport au défi
+// (cf. `_resolveChallengeOutcome`).
 
 /// Bornage d'un push d'axe — évite que des cibles trop ambitieuses laissent
 /// croire qu'une débutante tient 80 s de gorge dès la 1ʳᵉ séance.
@@ -1163,111 +1174,53 @@ double _clampGrowth(double v, double absoluteMax) {
 
 List<SimProfile> _builtinProfiles() {
   return [
+    // ── Tier 1 : débutante ──────────────────────────────────────────────
     SimProfile(
-      name: 'purist_endurance',
-      description: 'Durée et tenues : holds throat/full longs, motion streak '
-          'régulier. Zéro fail volontaire. Aucune bâclée. 5 pts endurance.',
-      allocation: {
-        SpecBranch.endurance: 5,
-      },
-      failProba: 0.02,
-      encoreProba: 0.40,
+      name: 'debutante',
+      description:
+          'Découvre la mécanique. 0 pt de spé. Fail ambiant 20 %, milestones '
+          'ratées 1 fois sur 3, peut passer un défi (PASSE pendant le breath). '
+          'Cibles axes basses — la joueuse tient à peine ce qu\'elle peut.',
+      allocation: const {},
+      failProba: 0.20,
+      encoreProba: 0.05,
       quickieProba: 0.0,
-      milestoneCleanProba: 0.96,
-      miniPunRate: 0.10,
+      milestoneCleanProba: 0.65,
+      miniPunRate: 0.08,
       sessions: 30,
-      skillLevel: 0.85,
+      skillLevel: 0.20,
+      challengeSkipProba: 0.10,
       axisTargets: (level, p) => {
-        CapabilityAxis.holdThroatStreak: _clampGrowth(
-            1.5 + 0.6 * level + 0.4 * p.branchPts(SpecBranch.endurance), 35),
-        CapabilityAxis.holdFullStreak: _clampGrowth(
-            0.5 + 0.35 * level + 0.3 * p.branchPts(SpecBranch.endurance), 22),
-        CapabilityAxis.gorgeApneeStreak: _clampGrowth(2 + 0.4 * level, 28),
-        CapabilityAxis.gorgeEngagementStreak: _clampGrowth(5 + 1.0 * level, 60),
-        CapabilityAxis.rhythmMotionStreak: _clampGrowth(15 + 2.0 * level, 70),
-        CapabilityAxis.effortNoBreathStreak: _clampGrowth(20 + 3.0 * level, 90),
+        CapabilityAxis.holdThroatStreak: _clampGrowth(0.3 + 0.18 * level, 8),
+        CapabilityAxis.holdFullStreak: _clampGrowth(0.1 + 0.10 * level, 5),
+        CapabilityAxis.rhythmMotionStreak: _clampGrowth(5 + 0.7 * level, 22),
         CapabilityAxis.rhythmDepthMax:
-            _clampGrowth(min(2.0 + level / 6.0, 4), 4),
+            _clampGrowth(min(1.2 + level / 10.0, 3), 3),
+        CapabilityAxis.gorgeApneeStreak: _clampGrowth(0.3 + 0.15 * level, 6),
+        CapabilityAxis.gorgeEngagementStreak: _clampGrowth(2 + 0.6 * level, 25),
       },
     ),
+    // ── Tier 2 : moyen ──────────────────────────────────────────────────
     SimProfile(
-      name: 'profondeur_brutale',
-      description: 'Va chercher loin et vite. Pousse rhythm depth + apnée + '
-          'BPM throat. Quelques fails sur les pushes (10 %). 4 pts profondeur '
-          '+ 1 pt rythmeBiffle.',
-      allocation: {
-        SpecBranch.profondeur: 4,
-        SpecBranch.rythmeBiffle: 1,
-      },
-      failProba: 0.10,
-      encoreProba: 0.25,
-      quickieProba: 0.05,
-      milestoneCleanProba: 0.85,
-      miniPunRate: 0.18,
-      sessions: 30,
-      skillLevel: 0.70,
-      axisTargets: (level, p) => {
-        CapabilityAxis.rhythmDepthMax:
-            _clampGrowth(min(2.5 + level / 5.0, 4), 4),
-        CapabilityAxis.gorgeApneeStreak: _clampGrowth(
-            2 + 0.6 * level + 0.4 * p.branchPts(SpecBranch.profondeur), 35),
-        CapabilityAxis.gorgeCrossingsBpmThroat: _clampGrowth(
-            80 + 4 * level + 1.5 * p.branchPts(SpecBranch.profondeur), 165),
-        CapabilityAxis.gorgeCrossingsBpmFull:
-            _clampGrowth(70 + 3.0 * level, 140),
-        CapabilityAxis.gorgeCrossingsLifetime: 5.0 + level.toDouble(),
-        CapabilityAxis.rhythmBpmCeilThroat: _clampGrowth(90.0 + 5 * level, 180),
-        CapabilityAxis.rhythmBpmCeilFull: _clampGrowth(80.0 + 4 * level, 160),
-        CapabilityAxis.holdThroatStreak: _clampGrowth(1 + 0.4 * level, 22),
-        CapabilityAxis.holdFullStreak: _clampGrowth(0.5 + 0.3 * level, 18),
-        CapabilityAxis.rhythmMotionStreak: _clampGrowth(12 + 1.5 * level, 55),
-      },
-    ),
-    SimProfile(
-      name: 'sloppy_obeissante',
-      description: 'Beg + lick humide + noswallow. Peu de fail. 3 pts sloppy '
-          '+ 2 pts obéissance.',
-      allocation: {
-        SpecBranch.sloppy: 3,
-        SpecBranch.obeissance: 2,
-      },
-      failProba: 0.04,
-      encoreProba: 0.50,
-      quickieProba: 0.0,
-      milestoneCleanProba: 0.92,
-      miniPunRate: 0.14,
-      sessions: 30,
-      skillLevel: 0.75,
-      axisTargets: (level, p) => {
-        CapabilityAxis.noswallowStreak: _clampGrowth(
-            3 + 1.0 * level + 0.5 * p.branchPts(SpecBranch.sloppy), 60),
-        CapabilityAxis.lickStreak: _clampGrowth(
-            15 + 2.5 * level + 1.0 * p.branchPts(SpecBranch.sloppy), 70),
-        CapabilityAxis.lickDepthMax: _clampGrowth(min(1.5 + level / 6.0, 4), 4),
-        CapabilityAxis.rhythmMotionStreak: _clampGrowth(10 + 1.5 * level, 50),
-        CapabilityAxis.rhythmDepthMax:
-            _clampGrowth(min(1.5 + level / 8.0, 3), 3),
-        CapabilityAxis.holdThroatStreak: _clampGrowth(0.5 + 0.25 * level, 12),
-      },
-    ),
-    SimProfile(
-      name: 'hybride_prudente',
-      description: 'Allocation 1-1-1-1-1, valeurs modérées partout. Très peu '
-          'de fail. Profil "tortue qui finit la course".',
-      allocation: {
+      name: 'moyen',
+      description:
+          'Joueuse confirmée hybride. 1-1-1-1-1 (5 pts répartis, dispo à L10). '
+          'Fail occasionnel (8 %), milestones clean 90 %. Skill moyen sur les '
+          'défis — fail sur les axes durs, ext sur les axes simples.',
+      allocation: const {
         SpecBranch.endurance: 1,
         SpecBranch.profondeur: 1,
         SpecBranch.rythmeBiffle: 1,
         SpecBranch.obeissance: 1,
         SpecBranch.sloppy: 1,
       },
-      failProba: 0.03,
-      encoreProba: 0.20,
+      failProba: 0.08,
+      encoreProba: 0.30,
       quickieProba: 0.05,
-      milestoneCleanProba: 0.94,
-      miniPunRate: 0.10,
+      milestoneCleanProba: 0.90,
+      miniPunRate: 0.12,
       sessions: 30,
-      skillLevel: 0.65,
+      skillLevel: 0.50,
       axisTargets: (level, p) => {
         CapabilityAxis.holdThroatStreak: _clampGrowth(1 + 0.35 * level, 18),
         CapabilityAxis.holdFullStreak: _clampGrowth(0.3 + 0.22 * level, 12),
@@ -1278,6 +1231,79 @@ List<SimProfile> _builtinProfiles() {
         CapabilityAxis.rhythmBpmCeilThroat: _clampGrowth(80.0 + 3 * level, 135),
         CapabilityAxis.noswallowStreak: _clampGrowth(2 + 0.5 * level, 20),
         CapabilityAxis.lickStreak: _clampGrowth(10 + 1.0 * level, 35),
+      },
+    ),
+    // ── Tier 3 : avancé ─────────────────────────────────────────────────
+    SimProfile(
+      name: 'avance',
+      description:
+          'Carrière mi-haute. 3 endurance + 2 obéissance (5 pts, dispo à L10) — '
+          'spé soumise endurante typique. Fail rare (4 %), milestones 94 %, '
+          'encore fréquent. Tient les défis durs, ext sur la plupart.',
+      allocation: const {
+        SpecBranch.endurance: 3,
+        SpecBranch.obeissance: 2,
+      },
+      failProba: 0.04,
+      encoreProba: 0.45,
+      quickieProba: 0.0,
+      milestoneCleanProba: 0.94,
+      miniPunRate: 0.14,
+      sessions: 30,
+      skillLevel: 0.75,
+      axisTargets: (level, p) => {
+        CapabilityAxis.holdThroatStreak: _clampGrowth(
+            2 + 0.7 * level + 0.4 * p.branchPts(SpecBranch.endurance), 35),
+        CapabilityAxis.holdFullStreak: _clampGrowth(
+            0.5 + 0.4 * level + 0.3 * p.branchPts(SpecBranch.endurance), 22),
+        CapabilityAxis.gorgeApneeStreak: _clampGrowth(2 + 0.5 * level, 28),
+        CapabilityAxis.gorgeEngagementStreak: _clampGrowth(6 + 1.2 * level, 60),
+        CapabilityAxis.rhythmMotionStreak: _clampGrowth(15 + 2.0 * level, 65),
+        CapabilityAxis.effortNoBreathStreak: _clampGrowth(18 + 2.5 * level, 80),
+        CapabilityAxis.rhythmDepthMax:
+            _clampGrowth(min(2.0 + level / 6.0, 4), 4),
+        CapabilityAxis.rhythmBpmCeilThroat: _clampGrowth(95.0 + 4 * level, 165),
+      },
+    ),
+    // ── Tier 4 : experte ────────────────────────────────────────────────
+    SimProfile(
+      name: 'experte',
+      description:
+          'Fin de carrière. 4 profondeur + 3 endurance + 2 rythme (9 pts, dispo '
+          'à L18+). Quasi jamais de fail (1 %), milestones 98 %, encore par '
+          'défaut. Pousse les axes durs et tient les défis avec extensions ×3-5.',
+      allocation: const {
+        SpecBranch.profondeur: 4,
+        SpecBranch.endurance: 3,
+        SpecBranch.rythmeBiffle: 2,
+      },
+      failProba: 0.01,
+      encoreProba: 0.60,
+      quickieProba: 0.0,
+      milestoneCleanProba: 0.98,
+      miniPunRate: 0.18,
+      sessions: 30,
+      skillLevel: 0.95,
+      axisTargets: (level, p) => {
+        CapabilityAxis.rhythmDepthMax:
+            _clampGrowth(min(3.0 + level / 4.0, 4), 4),
+        CapabilityAxis.gorgeApneeStreak: _clampGrowth(
+            3 + 0.8 * level + 0.4 * p.branchPts(SpecBranch.profondeur), 35),
+        CapabilityAxis.gorgeCrossingsBpmThroat: _clampGrowth(
+            85 + 5 * level + 1.5 * p.branchPts(SpecBranch.profondeur), 165),
+        CapabilityAxis.gorgeCrossingsBpmFull:
+            _clampGrowth(75 + 4.0 * level, 140),
+        CapabilityAxis.holdThroatStreak: _clampGrowth(
+            2 + 0.8 * level + 0.4 * p.branchPts(SpecBranch.endurance), 40),
+        CapabilityAxis.holdFullStreak: _clampGrowth(
+            1 + 0.5 * level + 0.3 * p.branchPts(SpecBranch.endurance), 25),
+        CapabilityAxis.rhythmMotionStreak: _clampGrowth(20 + 2.5 * level, 70),
+        CapabilityAxis.effortNoBreathStreak: _clampGrowth(25 + 3.0 * level, 90),
+        CapabilityAxis.rhythmBpmCeilThroat:
+            _clampGrowth(100.0 + 5 * level, 180),
+        CapabilityAxis.rhythmBpmCeilFull: _clampGrowth(85.0 + 4 * level, 165),
+        CapabilityAxis.biffleStreak: _clampGrowth(5 + 0.6 * level, 25),
+        CapabilityAxis.biffleBpmMax: _clampGrowth(95 + 3.5 * level, 160),
       },
     ),
     SimProfile(
