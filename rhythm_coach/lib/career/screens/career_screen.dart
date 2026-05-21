@@ -364,6 +364,9 @@ class _CareerScreenState extends State<CareerScreen> {
       level: clamped,
       bank: coachBank,
       lengthChoice: lengthChoice,
+      // Phase 19.6 : déclenche resolveForCareer côté générateur (cap /
+      // regen / boosts dérivés des sessions au lieu du level).
+      sessionsCompleted: bundle.completedSessions,
       includeHand: includeHand,
       quickie: quickie,
       specialization: activeCoach.effectiveAllocation(bundle.specialization),
@@ -1081,12 +1084,15 @@ class _CareerScreenState extends State<CareerScreen> {
             );
           }
           final bundle = snapshot.data!;
-          // Phase 19.4 : difficulté pilotée par `bundle.maxLevel` (figé,
-          // plus de slider de niveau). Le choix joueuse vit dans le
-          // picker durée.
-          final level = bundle.maxLevel;
-          final cfg = CareerDifficultyResolver.resolve(level);
+          // Phase 19.6 : la difficulté dérive de `sessionsCompleted` +
+          // `lengthChoice`. Le synthLevel du resolver sert au titre
+          // affiché. `bundle.maxLevel` reste utilisé pour les gates UI
+          // (déblocage bâclée, déblocage hand) — sera retiré en 19.12.
           final lengthChoice = _selectedLengthChoice ?? bundle.lastLengthChoice;
+          final cfg = CareerDifficultyResolver.resolveForCareer(
+            sessionsCompleted: bundle.completedSessions,
+            lengthChoice: lengthChoice,
+          );
           final isBacheeUnlocked = bundle.maxLevel >= _quickieUnlockLevel;
           final durationLabel =
               formatDurationCompact(context, lengthChoice.durationSeconds);
