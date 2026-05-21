@@ -280,10 +280,18 @@ class SimProfile {
   /// valeurs sont des cibles que la joueuse *atteint* sur une session clean.
   final AxisTargetsFn axisTargets;
 
-  /// Capacité de la joueuse à tenir un défi : 0 = débutante, 1 = experte.
-  /// Pondère `P(fail)` et `expectedExtensions` par rapport à la difficulté
-  /// du défi (`_challengeDifficulty`). Cf. `_resolveChallengeOutcome`.
+  /// Capacité **initiale** de la joueuse à tenir un défi : 0 = débutante,
+  /// 1 = experte. Évolue au fil des sessions via [skillGrowthPerSession]
+  /// (courbe d'apprentissage). Pondère `P(fail)` et `expectedExtensions`
+  /// par rapport à la difficulté du défi (`_challengeDifficulty`).
+  /// Cf. `_resolveChallengeOutcome` et `currentSkillAt`.
   final double skillLevel;
+
+  /// Croissance du skill par session — modélise la progression de la
+  /// joueuse au fil de la pratique. Linéaire, plafonné à 1.0. Volontairement
+  /// plus élevé chez les débutantes (apprentissage rapide les premières
+  /// sessions) et nul chez les expertes (plateau atteint).
+  final double skillGrowthPerSession;
 
   /// Probabilité d'appuyer `PASSE` pendant le breath d'annonce. Indépendant
   /// de la difficulté — c'est un état d'esprit, pas une réaction au défi.
@@ -302,10 +310,20 @@ class SimProfile {
     required this.sessions,
     required this.axisTargets,
     required this.skillLevel,
+    this.skillGrowthPerSession = 0.0,
     this.challengeSkipProba = 0.0,
   });
 
   int branchPts(SpecBranch b) => allocation[b] ?? 0;
+
+  /// Skill effectif à la session [sessionIndex] (1-indexée). Le skill monte
+  /// de [skillGrowthPerSession] par session écoulée, plafonné à 1.0.
+  double currentSkillAt(int sessionIndex) {
+    final raw = skillLevel + skillGrowthPerSession * (sessionIndex - 1);
+    if (raw < 0) return 0;
+    if (raw > 1) return 1;
+    return raw;
+  }
 }
 
 // ─── État simulateur par profil ──────────────────────────────────────────
@@ -1018,7 +1036,7 @@ SimChallenge? _generateChallenge({
       pick.isExploratory ? (difficulty - 0.15).clamp(0.20, 0.95) : difficulty;
   final outcomeRes = _resolveChallengeOutcome(
     difficulty: adjustedDiff,
-    skillLevel: profile.skillLevel,
+    skillLevel: profile.currentSkillAt(state.sessionIndex),
     isTutorial: false,
     skipProba: profile.challengeSkipProba,
     rng: rng,
@@ -1189,6 +1207,9 @@ List<SimProfile> _builtinProfiles() {
       miniPunRate: 0.08,
       sessions: 30,
       skillLevel: 0.20,
+      // Apprentissage rapide les premières sessions — atteint ~0.74 après
+      // 30 séances (= niveau du tier moyen-avancé).
+      skillGrowthPerSession: 0.018,
       challengeSkipProba: 0.10,
       axisTargets: (level, p) => {
         CapabilityAxis.holdThroatStreak: _clampGrowth(0.3 + 0.18 * level, 8),
@@ -1221,6 +1242,8 @@ List<SimProfile> _builtinProfiles() {
       miniPunRate: 0.12,
       sessions: 30,
       skillLevel: 0.50,
+      // Progression modérée — atteint ~0.71 après 30 séances.
+      skillGrowthPerSession: 0.007,
       axisTargets: (level, p) => {
         CapabilityAxis.holdThroatStreak: _clampGrowth(1 + 0.35 * level, 18),
         CapabilityAxis.holdFullStreak: _clampGrowth(0.3 + 0.22 * level, 12),
@@ -1251,6 +1274,8 @@ List<SimProfile> _builtinProfiles() {
       miniPunRate: 0.14,
       sessions: 30,
       skillLevel: 0.75,
+      // Plateau atteint plus tôt — atteint ~0.87 après 30 séances.
+      skillGrowthPerSession: 0.004,
       axisTargets: (level, p) => {
         CapabilityAxis.holdThroatStreak: _clampGrowth(
             2 + 0.7 * level + 0.4 * p.branchPts(SpecBranch.endurance), 35),
@@ -1284,6 +1309,8 @@ List<SimProfile> _builtinProfiles() {
       miniPunRate: 0.18,
       sessions: 30,
       skillLevel: 0.95,
+      // Plateau atteint (skillGrowth=0) — pas de progression skill, la
+      // joueuse est déjà au sommet de sa marge.
       axisTargets: (level, p) => {
         CapabilityAxis.rhythmDepthMax:
             _clampGrowth(min(3.0 + level / 4.0, 4), 4),
@@ -1322,6 +1349,8 @@ List<SimProfile> _builtinProfiles() {
       miniPunRate: 0.10,
       sessions: 30,
       skillLevel: 0.35,
+      // Progression freinée par les fails fréquents (atteint ~0.59 à s30).
+      skillGrowthPerSession: 0.008,
       challengeSkipProba: 0.05,
       axisTargets: (level, p) => {
         CapabilityAxis.holdThroatStreak: _clampGrowth(0.5 + 0.2 * level, 9),
@@ -1348,6 +1377,9 @@ List<SimProfile> _builtinProfiles() {
       miniPunRate: 0.14,
       sessions: 30,
       skillLevel: 0.60,
+      // Pas de défi en quickie de toute façon (cf. _runProfile : if !isQuickie).
+      // Skill quasi-figé (cas marginal des sessions non-quickie, ~10 %).
+      skillGrowthPerSession: 0.001,
       axisTargets: (level, p) => {
         CapabilityAxis.rhythmMotionStreak: _clampGrowth(8 + 1.2 * level, 35),
         CapabilityAxis.rhythmDepthMax:
@@ -2109,9 +2141,14 @@ String _renderMarkdown(SimResult r) {
     b.writeln();
     String pct(int n) =>
         totalCh == 0 ? '—' : '(${(100 * n / totalCh).toStringAsFixed(0)} %)';
+    final skillStart = r.profile.skillLevel;
+    final skillEnd = r.profile.currentSkillAt(r.timeline.length);
+    final skillStr = skillStart == skillEnd
+        ? skillStart.toStringAsFixed(2)
+        : '${skillStart.toStringAsFixed(2)} → ${skillEnd.toStringAsFixed(2)}';
     b.writeln(
         '- Total : $totalCh défi(s) joué(s) sur ${r.timeline.length} sessions '
-        '(skill=${r.profile.skillLevel.toStringAsFixed(2)})');
+        '(skill=$skillStr)');
     b.writeln('- Distribution : '
         'tut=${cc[SimChallengeOutcome.tutorial]} ${pct(cc[SimChallengeOutcome.tutorial] ?? 0)}, '
         'net=${cc[SimChallengeOutcome.netSuccess]} ${pct(cc[SimChallengeOutcome.netSuccess] ?? 0)}, '
@@ -2218,7 +2255,11 @@ String _renderMarkdown(SimResult r) {
 String _renderTsv(SimResult r) {
   final b = StringBuffer();
   b.writeln('# profile\t${r.profile.name}');
-  b.writeln('# skill\t${r.profile.skillLevel.toStringAsFixed(2)}');
+  b.writeln('# skill_init\t${r.profile.skillLevel.toStringAsFixed(2)}');
+  b.writeln(
+      '# skill_growth\t${r.profile.skillGrowthPerSession.toStringAsFixed(4)}');
+  b.writeln(
+      '# skill_final\t${r.profile.currentSkillAt(r.timeline.length).toStringAsFixed(2)}');
   b.writeln(
       'session\tlevel\thumil\tobed\tbody\tbody2\tfinal\tchallenge\toutcome\tunlocks\taxes');
   for (final t in r.timeline) {
@@ -2610,6 +2651,7 @@ void main(List<String> argv) {
             sessions: args.sessionsOverride!,
             axisTargets: p.axisTargets,
             skillLevel: p.skillLevel,
+            skillGrowthPerSession: p.skillGrowthPerSession,
             challengeSkipProba: p.challengeSkipProba,
           )
         : p;

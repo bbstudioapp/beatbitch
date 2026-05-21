@@ -36,28 +36,32 @@ de milestones avec cascade transitive holds).
 
 ## Profils embarqués
 
-**4 tiers** (skillLevel croissant — pilote `P(fail défi)` et le nombre
+**4 tiers** (skill croissant — pilote `P(fail défi)` et le nombre
 d'extensions) :
 
-| nom | skill | allocation | description |
-|---|---:|---|---|
-| `debutante` | 0.20 | 0 pt | Découvre la mécanique. Fail ambiant 20 %, milestones 65 %, peut PASSE pendant le breath (10 %). |
-| `moyen` | 0.50 | 1-1-1-1-1 (L10) | Hybride confirmé. Fail 8 %, milestones 90 %, encore 30 %. |
-| `avance` | 0.75 | 3 end + 2 obé (L10) | Spé soumise endurante. Fail 4 %, milestones 94 %, encore 45 %. |
-| `experte` | 0.95 | 4 prof + 3 end + 2 rythme (L18+) | Fin de carrière. Fail 1 %, milestones 98 %, encore 60 %. |
+| nom | skill init | growth/sess. | skill à s30 | allocation | description |
+|---|---:|---:|---:|---|---|
+| `debutante` | 0.20 | +0.018 | ~0.72 | 0 pt | Découvre la mécanique. Fail ambiant 20 %, milestones 65 %, peut PASSE pendant le breath (10 %). Apprend vite. |
+| `moyen` | 0.50 | +0.007 | ~0.70 | 1-1-1-1-1 (L10) | Hybride confirmé. Fail 8 %, milestones 90 %, encore 30 %. |
+| `avance` | 0.75 | +0.004 | ~0.87 | 3 end + 2 obé (L10) | Spé soumise endurante. Fail 4 %, milestones 94 %, encore 45 %. |
+| `experte` | 0.95 | 0 | 0.95 | 4 prof + 3 end + 2 rythme (L18+) | Fin de carrière, plateau. Fail 1 %, milestones 98 %, encore 60 %. |
 
 **2 spé pathologiques** (cas extrêmes pour les détecteurs de
 régression) :
 
-| nom | skill | description |
-|---|---:|---|
-| `fail_prone` | 0.35 | Fail ambiant 25 %, milestones échouées 1/3, abandons fréquents. |
-| `quickie_spammer` | 0.60 | Sessions bâclées 90 %. Pas de level-up. Pas de défi (parité prod : `!quickie`). |
+| nom | skill init | growth/sess. | description |
+|---|---:|---:|---|
+| `fail_prone` | 0.35 | +0.008 | Fail ambiant 25 %, milestones échouées 1/3, abandons fréquents. |
+| `quickie_spammer` | 0.60 | +0.001 | Sessions bâclées 90 %. Pas de level-up. Pas de défi (parité prod : `!quickie`). |
 
 Chaque profil porte :
 - une allocation par branche de spécialisation,
 - des probas (fail ambiant, encore, quickie, milestone clean, skip défi),
-- un `skillLevel ∈ [0,1]` qui pilote la résolution du défi,
+- un `skillLevel ∈ [0,1]` initial **+ un `skillGrowthPerSession`** qui
+  modélise la courbe d'apprentissage : une débutante n'est pas figée à
+  0.20 — elle apprend à tenir les défis au fil de la pratique. Une
+  experte qui a déjà tout vu reste sur son plateau. Cf.
+  `SimProfile.currentSkillAt`.
 - une carte « axes capacité poussés par session » (cibles fonction du
   niveau + de l'allocation).
 
@@ -239,8 +243,10 @@ Pour les valeurs exactes d'humil par milestone, garder
 - L'humiliation `session` est approximée à l'agrégat ; pas de modèle
   step-par-step du tick rate.
 - La **difficulté du défi** dépend de (axe, profondeur) mais
-  **pas de la valeur absolue du seuil**. Un hold throat 1 s sur
-  débutante a la même `difficulty` qu'un hold throat 30 s sur experte.
-  Conséquence : la débutante échoue souvent sur des défis dont le seuil
-  absolu est trivial. À raffiner si nécessaire (intégrer `threshold`
-  dans `_challengeDifficulty`).
+  **pas de la valeur absolue du seuil**. Un hold throat 1 s a la même
+  `difficulty` qu'un hold throat 30 s. La compensation actuelle passe
+  par la **progression du skill** (`skillGrowthPerSession`) : une
+  débutante qui démarre à 0.20 atteint ~0.72 à 30 séances, donc
+  l'écart difficulty-skill se réduit avec la pratique. Si on veut un
+  signal plus fin (échouer moins sur 1 s gorge, échouer plus sur 30 s
+  gorge), il faudra intégrer `threshold` dans `_challengeDifficulty`.
