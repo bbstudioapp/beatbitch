@@ -488,6 +488,9 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get careerDurationSection => 'Durée';
+
+  @override
   String get careerQuickieToggle => 'Session bâclée';
 
   @override
@@ -496,6 +499,49 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get careerQuickieDescription =>
       '6 min, intense tout du long. Pour quand t\'as pas le temps.';
+
+  @override
+  String get sessionLengthBacheeLabel => 'Bâclée';
+
+  @override
+  String get sessionLengthBacheeDuration => '~6 min';
+
+  @override
+  String get sessionLengthBacheeDescription => 'Express, intense tout du long.';
+
+  @override
+  String get sessionLengthCourteLabel => 'Courte';
+
+  @override
+  String get sessionLengthCourteDuration => '~12 min';
+
+  @override
+  String get sessionLengthCourteDescription =>
+      'Format compact, un défi possible.';
+
+  @override
+  String get sessionLengthMoyenneLabel => 'Moyenne';
+
+  @override
+  String get sessionLengthMoyenneDuration => '~25 min';
+
+  @override
+  String get sessionLengthMoyenneDescription =>
+      'Deux milestones max, du contenu varié.';
+
+  @override
+  String get sessionLengthLongueLabel => 'Longue';
+
+  @override
+  String get sessionLengthLongueDuration => '~45 min';
+
+  @override
+  String get sessionLengthLongueDescription =>
+      'Séance pleine, plusieurs défis intercalés.';
+
+  @override
+  String get sessionLengthBacheeLockedHint =>
+      'Bâclée disponible plus tard (intense dès le départ).';
 
   @override
   String get careerChallengesToggle => 'Défis intra-séance';
