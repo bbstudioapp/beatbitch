@@ -65,9 +65,8 @@ class _CareerScreenState extends State<CareerScreen> {
   final SpecializationService _specService = SpecializationService();
   final ChallengeService _challengeService = ChallengeService();
 
-  int? _selectedLevel;
+  SessionLengthChoice? _selectedLengthChoice;
   bool? _includeHandOverride;
-  bool _quickie = false;
   bool _challengesEnabled = false;
   bool _challengeTutorialSeen = false;
 
@@ -113,6 +112,7 @@ class _CareerScreenState extends State<CareerScreen> {
       CapabilityService().snapshotProfile(),
       _challengeService.isEnabled(),
       _challengeService.tutorialSeen(),
+      _progress.getLastLengthChoice(),
     ]);
     final maxLevel = results[3] as int;
     final capabilityProfile = results[10] as CapabilityProfile;
@@ -141,6 +141,7 @@ class _CareerScreenState extends State<CareerScreen> {
       capabilityProfile: capabilityProfile,
       challengesEnabled: results[11] as bool,
       challengeTutorialSeen: results[12] as bool,
+      lastLengthChoice: results[13] as SessionLengthChoice,
     );
   }
 
@@ -167,9 +168,11 @@ class _CareerScreenState extends State<CareerScreen> {
 
   Future<void> _start(_CareerBundle bundle) async {
     final t = AppLocalizations.of(context);
-    final level = _selectedLevel ?? bundle.lastChosenLevel;
-    final clamped = level.clamp(1, bundle.maxLevel);
-    await _progress.setLastChosenLevel(clamped);
+    // Phase 19.4 : le niveau qui pilote la difficulté est désormais figé
+    // à `maxLevel` (plus de slider). La durée vient du picker dédié.
+    final clamped = bundle.maxLevel;
+    final lengthChoice = _selectedLengthChoice ?? bundle.lastLengthChoice;
+    await _progress.setLastLengthChoice(lengthChoice);
 
     // Override forcé à true si on est sous le seuil de déblocage : même si
     // une persistance antérieure (avant le verrou) avait stocké false, on
@@ -202,10 +205,12 @@ class _CareerScreenState extends State<CareerScreen> {
     _installCoachNameResolver(activeCoach);
     await _applyCoachVoicePreset(activeCoach);
 
-    // Force quickie=false sous le seuil de déblocage — sécurité au cas où
-    // une persistance antérieure (avant le verrou) ou un toggle en RAM ne
-    // soit pas réinitialisé par le widget.
-    final quickie = bundle.maxLevel < _quickieUnlockLevel ? false : _quickie;
+    // Phase 19.4 : la bâclée est portée par le palier « bachee » du
+    // picker (absorbe l'ancien toggle Quickie). Reste gatée par le
+    // seuil de déblocage pour ne pas pousser une débutante à
+    // intensityFloor=0.65.
+    final quickie = lengthChoice == SessionLengthChoice.bachee &&
+        bundle.maxLevel >= _quickieUnlockLevel;
     final humiliationScore = await _stats.getHumiliationLevel();
     final obedienceScore = await _stats.getObedienceLevel();
     // Insère la milestone d'apprentissage en attente pour ce niveau (si
@@ -343,6 +348,7 @@ class _CareerScreenState extends State<CareerScreen> {
     final result = CareerSessionGenerator().generate(
       level: clamped,
       bank: coachBank,
+      lengthChoice: lengthChoice,
       includeHand: includeHand,
       quickie: quickie,
       specialization: activeCoach.effectiveAllocation(bundle.specialization),
@@ -464,7 +470,7 @@ class _CareerScreenState extends State<CareerScreen> {
     // nouveau max débloqué.
     setState(() {
       _bundleFuture = _loadBundle();
-      _selectedLevel = null;
+      _selectedLengthChoice = null;
     });
   }
 
@@ -1012,7 +1018,7 @@ class _CareerScreenState extends State<CareerScreen> {
     if (!mounted) return;
     setState(() {
       _bundleFuture = _loadBundle();
-      _selectedLevel = null;
+      _selectedLengthChoice = null;
     });
   }
 
@@ -1059,12 +1065,15 @@ class _CareerScreenState extends State<CareerScreen> {
             );
           }
           final bundle = snapshot.data!;
-          final level = (_selectedLevel ?? bundle.lastChosenLevel)
-              .clamp(1, bundle.maxLevel);
+          // Phase 19.4 : difficulté pilotée par `bundle.maxLevel` (figé,
+          // plus de slider de niveau). Le choix joueuse vit dans le
+          // picker durée.
+          final level = bundle.maxLevel;
           final cfg = CareerDifficultyResolver.resolve(level);
-          final durationLabel = _quickie
-              ? t.careerQuickieSubtitle
-              : formatDurationCompact(context, cfg.durationSeconds);
+          final lengthChoice = _selectedLengthChoice ?? bundle.lastLengthChoice;
+          final isBacheeUnlocked = bundle.maxLevel >= _quickieUnlockLevel;
+          final durationLabel =
+              formatDurationCompact(context, lengthChoice.durationSeconds);
           final activeCoach = _resolveCoach(bundle);
           final principal = coachService.currentTierPrincipal;
           final isFreeTraining = !coachService.advancesTier(activeCoach);
@@ -1121,14 +1130,14 @@ class _CareerScreenState extends State<CareerScreen> {
                   ),
                 ),
               _SectionLabel(
-                title: t.careerLevelSection,
+                title: t.careerDurationSection,
                 trailing: t.careerMaxLevel(bundle.maxLevel),
               ),
               const SizedBox(height: 8),
-              _LevelPicker(
-                value: level,
-                max: bundle.maxLevel,
-                onChanged: (v) => setState(() => _selectedLevel = v),
+              _DurationPicker(
+                value: lengthChoice,
+                isBacheeUnlocked: isBacheeUnlocked,
+                onChanged: (v) => setState(() => _selectedLengthChoice = v),
               ),
               const SizedBox(height: 8),
               _LevelTitleCard(
@@ -1136,29 +1145,6 @@ class _CareerScreenState extends State<CareerScreen> {
                 durationLabel: durationLabel,
               ),
               const SizedBox(height: 24),
-              // Switch « Session bâclée » : caché tant que le niveau de
-              // déblocage n'est pas atteint (au lieu d'un toggle grisé,
-              // l'option n'apparaît tout simplement pas).
-              if (bundle.maxLevel >= _quickieUnlockLevel)
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    t.careerQuickieToggle,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                  subtitle: Text(
-                    t.careerQuickieDescription,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppTheme.textMuted,
-                    ),
-                  ),
-                  value: _quickie,
-                  onChanged: (v) => setState(() => _quickie = v),
-                ),
               // Switch « Défis intra-séance » (Phase 1). Visible dès la
               // première séance — l'utilisatrice doit pouvoir l'activer si
               // elle veut accélérer sa progression. Le tutoriel scripté
@@ -1300,71 +1286,146 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-class _LevelPicker extends StatelessWidget {
-  final int value;
-  final int max;
-  final ValueChanged<int> onChanged;
+/// Picker de durée de séance — 4 paliers (bâclée/courte/moyenne/longue).
+///
+/// Remplace `_LevelPicker` (Phase 19.4). La bâclée reste gatée par le
+/// seuil de déblocage (cf. `_quickieUnlockLevel`) : présente dans le
+/// picker mais non sélectionnable tant que la joueuse n'a pas atteint
+/// le palier.
+class _DurationPicker extends StatelessWidget {
+  final SessionLengthChoice value;
+  final bool isBacheeUnlocked;
+  final ValueChanged<SessionLengthChoice> onChanged;
 
-  const _LevelPicker({
+  const _DurationPicker({
     required this.value,
-    required this.max,
+    required this.isBacheeUnlocked,
     required this.onChanged,
+  });
+
+  String _labelFor(BuildContext context, SessionLengthChoice c) {
+    final t = AppLocalizations.of(context);
+    switch (c) {
+      case SessionLengthChoice.bachee:
+        return t.sessionLengthBacheeLabel;
+      case SessionLengthChoice.courte:
+        return t.sessionLengthCourteLabel;
+      case SessionLengthChoice.moyenne:
+        return t.sessionLengthMoyenneLabel;
+      case SessionLengthChoice.longue:
+        return t.sessionLengthLongueLabel;
+    }
+  }
+
+  String _durationFor(BuildContext context, SessionLengthChoice c) {
+    final t = AppLocalizations.of(context);
+    switch (c) {
+      case SessionLengthChoice.bachee:
+        return t.sessionLengthBacheeDuration;
+      case SessionLengthChoice.courte:
+        return t.sessionLengthCourteDuration;
+      case SessionLengthChoice.moyenne:
+        return t.sessionLengthMoyenneDuration;
+      case SessionLengthChoice.longue:
+        return t.sessionLengthLongueDuration;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            for (final c in SessionLengthChoice.values) ...[
+              Expanded(
+                child: _DurationChoiceCard(
+                  label: _labelFor(context, c),
+                  duration: _durationFor(context, c),
+                  selected: c == value,
+                  locked: c == SessionLengthChoice.bachee && !isBacheeUnlocked,
+                  onTap: () => onChanged(c),
+                ),
+              ),
+              if (c != SessionLengthChoice.values.last)
+                const SizedBox(width: 8),
+            ],
+          ],
+        ),
+        if (value == SessionLengthChoice.bachee && !isBacheeUnlocked) ...[
+          const SizedBox(height: 8),
+          Text(
+            t.sessionLengthBacheeLockedHint,
+            style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _DurationChoiceCard extends StatelessWidget {
+  final String label;
+  final String duration;
+  final bool selected;
+  final bool locked;
+  final VoidCallback onTap;
+
+  const _DurationChoiceCard({
+    required this.label,
+    required this.duration,
+    required this.selected,
+    required this.locked,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (max <= 1) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    const accent = AppTheme.accent;
+    final bg = selected ? accent.withValues(alpha: 0.18) : AppTheme.surface;
+    final borderColor = selected
+        ? accent
+        : (locked ? AppTheme.textMuted : accent.withValues(alpha: 0.25));
+    final labelColor = locked ? AppTheme.textMuted : AppTheme.textPrimary;
+    final durationColor = locked ? AppTheme.textMuted : AppTheme.textSecondary;
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: locked ? null : onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
-          color: AppTheme.surface,
+          color: bg,
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: borderColor, width: selected ? 1.6 : 1),
         ),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.lock_open, color: AppTheme.accent, size: 18),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                AppLocalizations.of(context).careerLevelLockedHint,
-                style: const TextStyle(
-                    fontSize: 13, color: AppTheme.textSecondary),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: labelColor,
               ),
             ),
+            const SizedBox(height: 4),
+            Text(
+              duration,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 11, color: durationColor),
+            ),
+            if (locked) ...[
+              const SizedBox(height: 4),
+              const Icon(Icons.lock_outline,
+                  size: 14, color: AppTheme.textMuted),
+            ],
           ],
         ),
-      );
-    }
-    return Row(
-      children: [
-        Text(
-          value.toString(),
-          style: const TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.w700,
-            color: AppTheme.accent,
-            fontFeatures: [FontFeature.tabularFigures()],
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          '/ $max',
-          style: const TextStyle(
-            fontSize: 14,
-            color: AppTheme.textMuted,
-          ),
-        ),
-        Expanded(
-          child: Slider(
-            value: value.toDouble(),
-            min: 1,
-            max: max.toDouble(),
-            divisions: max - 1,
-            label: value.toString(),
-            onChanged: (v) => onChanged(v.round()),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -1528,6 +1589,10 @@ class _CareerBundle {
   /// est forcé en tutoriel scripté (hold throat 5 s, axe robuste).
   final bool challengeTutorialSeen;
 
+  /// Dernier palier de durée choisi (Phase 19.4). Défaut `courte` quand
+  /// rien n'est encore persisté.
+  final SessionLengthChoice lastLengthChoice;
+
   const _CareerBundle({
     required this.bank,
     required this.punishments,
@@ -1542,5 +1607,6 @@ class _CareerBundle {
     required this.capabilityProfile,
     required this.challengesEnabled,
     required this.challengeTutorialSeen,
+    required this.lastLengthChoice,
   });
 }

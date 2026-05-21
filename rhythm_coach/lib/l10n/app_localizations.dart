@@ -976,6 +976,12 @@ abstract class AppLocalizations {
   /// **'max {level}'**
   String careerMaxLevel(int level);
 
+  /// No description provided for @careerDurationSection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Durée'**
+  String get careerDurationSection;
+
   /// No description provided for @careerQuickieToggle.
   ///
   /// In fr, this message translates to:
@@ -993,6 +999,84 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'6 min, intense tout du long. Pour quand t\'as pas le temps.'**
   String get careerQuickieDescription;
+
+  /// No description provided for @sessionLengthBacheeLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bâclée'**
+  String get sessionLengthBacheeLabel;
+
+  /// No description provided for @sessionLengthBacheeDuration.
+  ///
+  /// In fr, this message translates to:
+  /// **'~6 min'**
+  String get sessionLengthBacheeDuration;
+
+  /// No description provided for @sessionLengthBacheeDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Express, intense tout du long.'**
+  String get sessionLengthBacheeDescription;
+
+  /// No description provided for @sessionLengthCourteLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Courte'**
+  String get sessionLengthCourteLabel;
+
+  /// No description provided for @sessionLengthCourteDuration.
+  ///
+  /// In fr, this message translates to:
+  /// **'~12 min'**
+  String get sessionLengthCourteDuration;
+
+  /// No description provided for @sessionLengthCourteDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Format compact, un défi possible.'**
+  String get sessionLengthCourteDescription;
+
+  /// No description provided for @sessionLengthMoyenneLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Moyenne'**
+  String get sessionLengthMoyenneLabel;
+
+  /// No description provided for @sessionLengthMoyenneDuration.
+  ///
+  /// In fr, this message translates to:
+  /// **'~25 min'**
+  String get sessionLengthMoyenneDuration;
+
+  /// No description provided for @sessionLengthMoyenneDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Deux milestones max, du contenu varié.'**
+  String get sessionLengthMoyenneDescription;
+
+  /// No description provided for @sessionLengthLongueLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Longue'**
+  String get sessionLengthLongueLabel;
+
+  /// No description provided for @sessionLengthLongueDuration.
+  ///
+  /// In fr, this message translates to:
+  /// **'~45 min'**
+  String get sessionLengthLongueDuration;
+
+  /// No description provided for @sessionLengthLongueDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Séance pleine, plusieurs défis intercalés.'**
+  String get sessionLengthLongueDescription;
+
+  /// No description provided for @sessionLengthBacheeLockedHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bâclée disponible plus tard (intense dès le départ).'**
+  String get sessionLengthBacheeLockedHint;
 
   /// No description provided for @careerChallengesToggle.
   ///

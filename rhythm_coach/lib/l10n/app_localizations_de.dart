@@ -487,6 +487,9 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get careerDurationSection => 'Dauer';
+
+  @override
   String get careerQuickieToggle => 'Quickie';
 
   @override
@@ -495,6 +498,49 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get careerQuickieDescription =>
       '6 Min., durchgehend intensiv. Für wenn du keine Zeit hast.';
+
+  @override
+  String get sessionLengthBacheeLabel => 'Quickie';
+
+  @override
+  String get sessionLengthBacheeDuration => '~6 Min.';
+
+  @override
+  String get sessionLengthBacheeDescription => 'Express, durchgehend intensiv.';
+
+  @override
+  String get sessionLengthCourteLabel => 'Kurz';
+
+  @override
+  String get sessionLengthCourteDuration => '~12 Min.';
+
+  @override
+  String get sessionLengthCourteDescription =>
+      'Kompaktes Format, eine Herausforderung möglich.';
+
+  @override
+  String get sessionLengthMoyenneLabel => 'Mittel';
+
+  @override
+  String get sessionLengthMoyenneDuration => '~25 Min.';
+
+  @override
+  String get sessionLengthMoyenneDescription =>
+      'Bis zu zwei Meilensteine, abwechslungsreich.';
+
+  @override
+  String get sessionLengthLongueLabel => 'Lang';
+
+  @override
+  String get sessionLengthLongueDuration => '~45 Min.';
+
+  @override
+  String get sessionLengthLongueDescription =>
+      'Volle Sitzung, mehrere eingeschobene Herausforderungen.';
+
+  @override
+  String get sessionLengthBacheeLockedHint =>
+      'Quickie wird später freigeschaltet (von Anfang an intensiv).';
 
   @override
   String get careerChallengesToggle => 'Herausforderungen in der Sitzung';

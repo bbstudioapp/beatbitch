@@ -1,5 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/session_length_choice.dart';
+
 /// Persiste l'état de progression du mode Carrière entre lancements de l'app.
 ///
 /// La progression de niveau est **gatée par les milestones** depuis la passe
@@ -15,6 +17,7 @@ class CareerProgressService {
   static const String _kLastLevel = 'career.last_level';
   static const String _kCompleted = 'career.completed_sessions';
   static const String _kIncludeHand = 'career.include_hand';
+  static const String _kLastLengthChoice = 'career.last_length_choice';
 
   CareerProgressService();
 
@@ -96,6 +99,25 @@ class CareerProgressService {
     await prefs.setBool(_kIncludeHand, value);
   }
 
+  /// Dernier palier de durée choisi via le picker UI (Phase 19.4). Stocké
+  /// par le nom de l'enum pour rester lisible et résilient à un
+  /// renommage. Défaut = `courte` (palier le plus représentatif pour une
+  /// première séance).
+  Future<SessionLengthChoice> getLastLengthChoice() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_kLastLengthChoice);
+    if (raw == null) return SessionLengthChoice.courte;
+    for (final c in SessionLengthChoice.values) {
+      if (c.name == raw) return c;
+    }
+    return SessionLengthChoice.courte;
+  }
+
+  Future<void> setLastLengthChoice(SessionLengthChoice choice) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kLastLengthChoice, choice.name);
+  }
+
   /// Bump le niveau max sans toucher au compteur de sessions complétées.
   /// Utilisé par l'action « Supplier » pour débloquer un palier supérieur
   /// en cours de séance. Retourne le nouveau max.
@@ -129,5 +151,6 @@ class CareerProgressService {
     await prefs.remove(_kMaxLevel);
     await prefs.remove(_kLastLevel);
     await prefs.remove(_kCompleted);
+    await prefs.remove(_kLastLengthChoice);
   }
 }
