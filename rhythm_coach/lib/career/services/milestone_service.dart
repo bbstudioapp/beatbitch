@@ -713,11 +713,82 @@ class MilestoneService extends ChangeNotifier {
         }
       }
     }
+    // Passe transitive — holds. Un défi qui prouve qu'on tient une
+    // position profonde (gorge, fond) prouve implicitement qu'on tient
+    // les positions plus shallow à la même durée. On acquitte donc
+    // aussi les milestones dont l'unlock principal est dans
+    // `_impliedHoldUnlocksByAxis[axis]`, sans exiger qu'elles aient
+    // de `requiresCapability` explicite — ces milestones précèdent
+    // pédagogiquement le défi dans l'arbre d'apprentissage mais sont
+    // mécaniquement plus faciles que ce qui vient d'être tenu.
+    //
+    // Seuil minimum de 3 s : un défi exploratoire qui culmine à 1-2 s
+    // ne déclenche pas la transitivité (la preuve est insuffisante).
+    // Le tuto à 5 s passe, comme tout défi standard sur ces axes.
+    final implied = _impliedHoldUnlocksByAxis[axis];
+    if (implied != null && reached >= _transitiveHoldMinReached) {
+      var addedThisPass = true;
+      while (addedThisPass) {
+        addedThisPass = false;
+        for (final m in _catalog) {
+          if (_completed.contains(m.id)) continue;
+          if (acquittedIds.contains(m.id)) continue;
+          if (m.unlocks.isEmpty) continue;
+          if (!m.unlocks.any(implied.contains)) continue;
+          if (!m.requires.every(liveUnlocks.contains)) continue;
+          // Les `requiresCapability` éventuels (sur d'autres axes) doivent
+          // rester satisfaits — sinon on contournerait un gating métier
+          // explicite (ex. `rhythm.depth_max ≥ 2` pour `intro_hold_throat_short`).
+          var otherCapsOk = true;
+          for (final req in m.requiresCapability) {
+            if (req.axis == axis) continue;
+            if (!req.isSatisfiedBy(profile)) {
+              otherCapsOk = false;
+              break;
+            }
+          }
+          if (!otherCapsOk) continue;
+          acquittedIds.add(m.id);
+          liveUnlocks.addAll(m.unlocks);
+          addedThisPass = true;
+        }
+      }
+    }
     return [
       for (final m in _catalog)
         if (acquittedIds.contains(m.id)) m,
     ];
   }
+
+  /// Seuil minimum (en secondes) au-dessus duquel un défi sur un axe
+  /// `hold.*.streak` déclenche la transitivité vers les unlocks plus
+  /// shallow. Évite qu'un défi exploratoire d'une seconde fasse passer
+  /// d'un coup la chaîne entière des holds.
+  static const double _transitiveHoldMinReached = 3.0;
+
+  /// Unlocks implicitement prouvés quand un défi pousse un axe de hold
+  /// profond. Tenir gorge X s prouve qu'on tient les positions plus
+  /// shallow X s (la résistance physiologique est strictement décroissante
+  /// avec la profondeur). Pas de mapping symétrique « shallow → profond »
+  /// : tenir mid 5 s ne prouve PAS qu'on tient gorge 5 s.
+  static const Map<CapabilityAxis, Set<UnlockKey>> _impliedHoldUnlocksByAxis = {
+    CapabilityAxis.holdThroatStreak: {
+      UnlockKey.holdHead,
+      UnlockKey.holdMidShort,
+      UnlockKey.finalHoldTip,
+      UnlockKey.finalHoldHead,
+      UnlockKey.finalHoldMid,
+    },
+    CapabilityAxis.holdFullStreak: {
+      UnlockKey.holdHead,
+      UnlockKey.holdMidShort,
+      UnlockKey.throatHoldShort,
+      UnlockKey.finalHoldTip,
+      UnlockKey.finalHoldHead,
+      UnlockKey.finalHoldMid,
+      UnlockKey.finalHoldThroat,
+    },
+  };
 
   /// Cherche dans le catalogue la milestone d'id [id].
   LevelMilestone? findById(String id) {
