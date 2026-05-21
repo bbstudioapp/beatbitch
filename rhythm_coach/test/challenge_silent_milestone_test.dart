@@ -361,8 +361,8 @@ void main() {
         svc.seedForTest(catalog: [holdMid, finalTip]);
         // Profil sans aucun unlock encore acquitté.
         expect(svc.acquiredUnlockKeys(), isEmpty);
-        final profile = CapabilityProfile({
-          CapabilityAxis.holdThroatStreak: const CapabilityAxisState(
+        const profile = CapabilityProfile({
+          CapabilityAxis.holdThroatStreak: CapabilityAxisState(
             best: 5.0,
             comfort: 5.0,
             successRate: 1.0,
@@ -400,8 +400,8 @@ void main() {
         unlocks: [UnlockKey.holdMidShort],
       );
       svc.seedForTest(catalog: [m]);
-      final profile = CapabilityProfile({
-        CapabilityAxis.holdThroatStreak: const CapabilityAxisState(
+      const profile = CapabilityProfile({
+        CapabilityAxis.holdThroatStreak: CapabilityAxisState(
           best: 5.0,
           comfort: 5.0,
           successRate: 1.0,
