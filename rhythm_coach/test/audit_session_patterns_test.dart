@@ -15,10 +15,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:beat_bitch/career/models/career_generation_inputs.dart';
-import 'package:beat_bitch/career/models/level_milestone.dart';
 import 'package:beat_bitch/career/models/phrase_bank.dart';
-import 'package:beat_bitch/career/models/specialization.dart';
 import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
 
 List<PhraseEntry> _p(List<String> texts) =>
@@ -126,14 +123,14 @@ final _unlocksHigh = <UnlockKey>{
 };
 
 final _scenarios = <_Scenario>[
-  _Scenario(
+  const _Scenario(
     name: 'A · débutante level 3, 8 min',
     level: 3,
     durationSeconds: 480,
     unlocks: _unlocksLow,
     humilCareer: 5,
   ),
-  _Scenario(
+  const _Scenario(
     name: 'B · intermédiaire level 6, 12 min',
     level: 6,
     durationSeconds: 720,
@@ -493,7 +490,7 @@ void main() {
           '**Total : $totalFlags flag(s) sur ${_scenarios.length} scénarios.**');
     }
 
-    final outPath = '/tmp/audit_session_patterns.md';
+    const outPath = '/tmp/audit_session_patterns.md';
     File(outPath).writeAsStringSync(buf.toString());
     // ignore: avoid_print
     print('Rapport audit écrit dans $outPath');
