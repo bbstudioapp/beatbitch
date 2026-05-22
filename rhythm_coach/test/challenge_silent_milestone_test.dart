@@ -125,7 +125,7 @@ void main() {
           const CapabilityRequirement(
               axis: CapabilityAxis.holdThroatStreak, min: 10.0),
         ],
-        requires: [UnlockKey.throatHoldShort],
+        requires: [UnlockKey.throatHold],
       );
       svc.seedForTest(catalog: [m]);
       final out = svc.milestonesAcquittableByChallenge(
@@ -211,7 +211,7 @@ void main() {
         final holdMid = _milestone(
           id: 'intro_hold_mid',
           requiresCapability: const [],
-          unlocks: [UnlockKey.holdMidShort],
+          unlocks: [UnlockKey.holdMid],
         );
         final finalTip = _milestone(
           id: 'intro_final_hold_tip',
@@ -239,7 +239,7 @@ void main() {
       final holdMid = _milestone(
         id: 'intro_hold_mid',
         requiresCapability: const [],
-        unlocks: [UnlockKey.holdMidShort],
+        unlocks: [UnlockKey.holdMid],
       );
       svc.seedForTest(catalog: [holdMid]);
       final out = svc.milestonesAcquittableByChallenge(
@@ -261,7 +261,7 @@ void main() {
         final holdMid = _milestone(
           id: 'intro_hold_mid',
           requiresCapability: const [],
-          unlocks: [UnlockKey.holdMidShort],
+          unlocks: [UnlockKey.holdMid],
           requires: [UnlockKey.basics],
         );
         svc.seedForTest(catalog: [holdMid]);
@@ -290,7 +290,7 @@ void main() {
         final throatShort = _milestone(
           id: 'intro_hold_throat_short',
           requiresCapability: const [],
-          unlocks: [UnlockKey.throatHoldShort],
+          unlocks: [UnlockKey.throatHold],
         );
         final finalThroat = _milestone(
           id: 'intro_final_hold_throat',
@@ -324,7 +324,7 @@ void main() {
             const CapabilityRequirement(
                 axis: CapabilityAxis.rhythmDepthMax, min: 2.0),
           ],
-          unlocks: [UnlockKey.throatHoldShort],
+          unlocks: [UnlockKey.throatHold],
         );
         svc.seedForTest(catalog: [m]);
         final out = svc.milestonesAcquittableByChallenge(
@@ -351,7 +351,7 @@ void main() {
         final holdMid = _milestone(
           id: 'intro_hold_mid',
           requiresCapability: const [],
-          unlocks: [UnlockKey.holdMidShort],
+          unlocks: [UnlockKey.holdMid],
         );
         final finalTip = _milestone(
           id: 'intro_final_hold_tip',
@@ -373,7 +373,7 @@ void main() {
         expect(acquitted, 2);
         expect(
           svc.acquiredUnlockKeys(),
-          containsAll([UnlockKey.holdMidShort, UnlockKey.finalHoldTip]),
+          containsAll([UnlockKey.holdMid, UnlockKey.finalHoldTip]),
         );
       },
     );
@@ -383,7 +383,7 @@ void main() {
       final m = _milestone(
         id: 'intro_hold_mid',
         requiresCapability: const [],
-        unlocks: [UnlockKey.holdMidShort],
+        unlocks: [UnlockKey.holdMid],
       );
       svc.seedForTest(catalog: [m]);
       final acquitted =
@@ -397,7 +397,7 @@ void main() {
       final m = _milestone(
         id: 'intro_hold_mid',
         requiresCapability: const [],
-        unlocks: [UnlockKey.holdMidShort],
+        unlocks: [UnlockKey.holdMid],
       );
       svc.seedForTest(catalog: [m]);
       const profile = CapabilityProfile({

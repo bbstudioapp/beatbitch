@@ -84,7 +84,7 @@ void main() {
                 axis: CapabilityAxis.holdThroatStreak, min: 8.0),
           ],
           requires: [UnlockKey.holdHead],
-          unlocks: [UnlockKey.holdMidShort],
+          unlocks: [UnlockKey.holdMid],
         );
         final throat = _milestone(
           id: 'm_throat',
@@ -92,8 +92,8 @@ void main() {
             const CapabilityRequirement(
                 axis: CapabilityAxis.holdThroatStreak, min: 12.0),
           ],
-          requires: [UnlockKey.holdMidShort],
-          unlocks: [UnlockKey.throatHoldShort],
+          requires: [UnlockKey.holdMid],
+          unlocks: [UnlockKey.throatHold],
         );
         svc.seedForTest(catalog: [head, mid, throat]);
 
@@ -123,8 +123,8 @@ void main() {
           svc.acquiredUnlockKeys(),
           containsAll([
             UnlockKey.holdHead,
-            UnlockKey.holdMidShort,
-            UnlockKey.throatHoldShort,
+            UnlockKey.holdMid,
+            UnlockKey.throatHold,
           ]),
         );
       },
@@ -138,7 +138,7 @@ void main() {
           const CapabilityRequirement(
               axis: CapabilityAxis.holdThroatStreak, min: 20.0),
         ],
-        unlocks: [UnlockKey.throatHoldShort],
+        unlocks: [UnlockKey.throatHold],
       );
       svc.seedForTest(catalog: [m]);
       final before = Set<UnlockKey>.from(svc.acquiredUnlockKeys());

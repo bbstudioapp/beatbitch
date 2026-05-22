@@ -26,19 +26,22 @@ enum UnlockKey {
   // — au même titre que `basics` — consommée par `intro_suckle_head` qui
   // exige d'avoir prouvé la tenue de bouche avant d'apprendre l'aspiration.
   holdHead,
-  holdMidShort,
-  throatHoldShort,
-  throatHoldLong,
-  fullHoldShort,
-  fullHoldLong,
+  // Holds : un unlock par profondeur, binaire (« autorise l'action »).
+  // La durée tenable est bornée par `CapabilityProfile.hold.<pos>.streak`,
+  // pas par l'unlock. Les anciens paliers `*Long` ont disparu (refonte
+  // capability-only) — les joueuses qui les avaient acquis ont déjà la
+  // durée prouvée dans leurs capacités, donc aucune régression.
+  holdMid,
+  throatHold,
+  fullHold,
   // Pulses (rythmes profonds)
   throatPulse,
   fullPulse,
-  // Tempo
-  rhythmExtreme,
-  rhythmHeadMidSustained,
+  // Tempo — un unlock pour autoriser les biffles (le BPM est borné par
+  // `biffle.bpm_max` côté capacités). Anciens `biffleFast`, `rhythmExtreme`,
+  // `rhythmHeadMidSustained` retirés : le cap rythme est piloté par
+  // `motion_streak.comfort`, le BPM par `rhythm.bpm_ceil.*`.
   biffleBasic,
-  biffleFast,
   // Modes spéciaux
   freestyle,
   begLibre,
@@ -106,17 +109,12 @@ enum UnlockKey {
         UnlockKey.rhythmMidBasic => 'rhythm_mid_basic',
         UnlockKey.lickFull => 'lick_full',
         UnlockKey.holdHead => 'hold_head',
-        UnlockKey.holdMidShort => 'hold_mid_short',
-        UnlockKey.throatHoldShort => 'throat_hold_short',
-        UnlockKey.throatHoldLong => 'throat_hold_long',
-        UnlockKey.fullHoldShort => 'full_hold_short',
-        UnlockKey.fullHoldLong => 'full_hold_long',
+        UnlockKey.holdMid => 'hold_mid',
+        UnlockKey.throatHold => 'throat_hold',
+        UnlockKey.fullHold => 'full_hold',
         UnlockKey.throatPulse => 'throat_pulse',
         UnlockKey.fullPulse => 'full_pulse',
-        UnlockKey.rhythmExtreme => 'rhythm_extreme',
-        UnlockKey.rhythmHeadMidSustained => 'rhythm_head_mid_sustained',
         UnlockKey.biffleBasic => 'biffle_basic',
-        UnlockKey.biffleFast => 'biffle_fast',
         UnlockKey.freestyle => 'freestyle',
         UnlockKey.begLibre => 'beg_libre',
         UnlockKey.begHeadMid => 'beg_head_mid',
@@ -150,6 +148,28 @@ enum UnlockKey {
     // catalogue. On les résout vers `begHeadMid` pour préserver l'unlock
     // sans introduire de nouvelle clé dédiée.
     if (raw == 'beg_throat' || raw == 'beg_full') return UnlockKey.begHeadMid;
+    // Mapping legacy 0.5.0 refonte unlocks capability-only :
+    // - `*_short` perd son suffixe (l'unlock devient binaire, la durée
+    //   est bornée par les capacités, pas l'unlock).
+    // - `*_long` / `biffle_fast` / `rhythm_extreme` / `rhythm_head_mid_sustained`
+    //   sont retirés ; les joueuses qui les avaient acquis ont déjà la
+    //   durée/BPM prouvée dans leur `CapabilityProfile`, donc remap silencieux
+    //   vers la version « base » (`throat_hold_long` → `throat_hold`, etc.).
+    switch (raw) {
+      case 'hold_mid_short':
+        return UnlockKey.holdMid;
+      case 'throat_hold_short':
+      case 'throat_hold_long':
+        return UnlockKey.throatHold;
+      case 'full_hold_short':
+      case 'full_hold_long':
+        return UnlockKey.fullHold;
+      case 'biffle_fast':
+        return UnlockKey.biffleBasic;
+      case 'rhythm_extreme':
+      case 'rhythm_head_mid_sustained':
+        return null; // plus d'unlock — cap rythme piloté par capabilities
+    }
     for (final k in UnlockKey.values) {
       if (k.serialized == raw) return k;
     }

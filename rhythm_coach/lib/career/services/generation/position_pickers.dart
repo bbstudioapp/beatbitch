@@ -142,8 +142,8 @@ class PositionPickers {
   ];
 
   /// Profondeur max débloquée pour un hold, basée sur les milestones :
-  /// fullHoldShort > throatHoldShort > holdMidShort > head (socle de
-  /// base). Capée aussi par [maxDepthIndex] (cohérence niveau).
+  /// fullHold > throatHold > holdMid > head (socle de base).
+  /// Capée aussi par [maxDepthIndex] (cohérence niveau).
   ///
   /// Sémantique design : « le seul hold qui a du sens est le plus profond
   /// que tu sais tenir ». Aller moins profond perd le côté narratif —
@@ -154,11 +154,11 @@ class PositionPickers {
   /// plancher est `head`.
   int milestoneHoldCeilingIdx() {
     final int milestoneCap;
-    if (unlockedKeys.contains(UnlockKey.fullHoldShort)) {
+    if (unlockedKeys.contains(UnlockKey.fullHold)) {
       milestoneCap = Position.full.index;
-    } else if (unlockedKeys.contains(UnlockKey.throatHoldShort)) {
+    } else if (unlockedKeys.contains(UnlockKey.throatHold)) {
       milestoneCap = Position.throat.index;
-    } else if (unlockedKeys.contains(UnlockKey.holdMidShort)) {
+    } else if (unlockedKeys.contains(UnlockKey.holdMid)) {
       milestoneCap = Position.mid.index;
     } else if (unlockedKeys.isEmpty) {
       // Hérité (mode démo / scénario non-carrière) : on retombe sur le cap

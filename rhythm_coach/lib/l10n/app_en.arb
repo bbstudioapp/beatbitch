@@ -800,11 +800,6 @@
     "description": "Post-finale_chime TTS announcement when the milestone unlocking sloppy_drool_deep is acknowledged."
   },
 
-  "unlockAnnouncementRhythmHeadMidSustained": "You can hold the pace longer than a minute now, no break. I'll be asking for it.",
-  "@unlockAnnouncementRhythmHeadMidSustained": {
-    "description": "Post-finale_chime TTS announcement when the milestone unlocking rhythm_head_mid_sustained is acknowledged."
-  },
-
   "modeSelectionSurpriseTooltip": "Surprise reminders",
   "@modeSelectionSurpriseTooltip": {
     "description": "Tooltip of the notification icon in the ModeSelectionScreen AppBar."

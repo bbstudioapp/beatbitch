@@ -800,11 +800,6 @@
     "description": "TTS-Ansage nach dem finale_chime, wenn der Meilenstein, der sloppy_drool_deep freischaltet, bestätigt wird."
   },
 
-  "unlockAnnouncementRhythmHeadMidSustained": "Du kannst das Tempo jetzt länger als eine Minute halten, ohne Pause. Ich werde danach verlangen.",
-  "@unlockAnnouncementRhythmHeadMidSustained": {
-    "description": "TTS-Ansage nach dem finale_chime, wenn der Meilenstein, der rhythm_head_mid_sustained freischaltet, bestätigt wird."
-  },
-
   "modeSelectionSurpriseTooltip": "Überraschungs-Erinnerungen",
   "@modeSelectionSurpriseTooltip": {
     "description": "Tooltip des Benachrichtigungssymbols in der AppBar des ModeSelectionScreen."

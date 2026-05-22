@@ -251,7 +251,7 @@ class FinalVariant {
   final double req;
 
   /// Clé d'unlock dédiée final (distincte de l'unlock du composant — un
-  /// hold mid en final exige `finalHoldMid`, pas `holdMidShort` qui
+  /// hold mid en final exige `finalHoldMid`, pas `holdMid` qui
   /// couvre l'usage en corps de séance). `null` = libre par défaut (cas
   /// hand baseline : fallback universel).
   final UnlockKey? gate;

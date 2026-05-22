@@ -47,8 +47,9 @@ class BiffleRules extends ModeRules {
   }
 
   @override
-  UnlockKey? unlockKeyFor(StepDraft draft) =>
-      (draft.bpm ?? 0) > 100 ? UnlockKey.biffleFast : UnlockKey.biffleBasic;
+  // Unlock binaire : `biffleBasic` autorise le biffle. Le BPM est borné
+  // côté capacités (`biffle.bpm_max`) dans `clampToCapability`.
+  UnlockKey? unlockKeyFor(StepDraft draft) => UnlockKey.biffleBasic;
 
   @override
   StepDraft clampToCapability(StepDraft draft, CapabilityClampSurface c) {

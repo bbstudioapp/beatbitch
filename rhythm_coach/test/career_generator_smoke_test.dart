@@ -168,7 +168,7 @@ void main() {
         ),
       ],
       durationSeconds: 10,
-      unlocks: [UnlockKey.holdMidShort],
+      unlocks: [UnlockKey.holdMid],
     );
     const finalM = LevelMilestone(
       id: 'final_test',
@@ -314,7 +314,7 @@ void main() {
       UnlockKey.basics,
       UnlockKey.rhythmMidBasic,
       UnlockKey.lickFull,
-      UnlockKey.holdMidShort,
+      UnlockKey.holdMid,
       UnlockKey.biffleBasic,
       UnlockKey.begLibre,
     };
