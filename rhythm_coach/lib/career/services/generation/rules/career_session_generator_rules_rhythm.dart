@@ -77,7 +77,8 @@ class RhythmRules extends ModeRules {
     if (draft.to == Position.throat) return UnlockKey.throatPulse;
     if (draft.to == Position.mid) return UnlockKey.rhythmMidBasic;
     // Rythme superficiel (tip→head) = socle de base, pas de clé.
-    if ((draft.bpm ?? 0) >= 160) return UnlockKey.rhythmExtreme;
+    // Plus de gate BPM-extrême : le BPM est borné côté capacités
+    // (`rhythm.bpm_ceil.<bande>`).
     return null;
   }
 
@@ -266,16 +267,15 @@ class RhythmRules extends ModeRules {
   @override
   StepDraft buildRecovery(RecoveryCtx ctx) {
     // La baseline (tip→head) reste ouverte tant que la joueuse n'a pas
-    // appris la gorge — gate sur `throatHoldShort` plutôt que
-    // `holdMidShort` : les premiers paliers ont besoin de variété
-    // (tip→head, tip→mid, head→mid se mélangent), ce serait trop pauvre
-    // de tout aligner sur head→mid dès le niveau 4. Dès que la gorge est
-    // débloquée, le rhythm de recovery passe à head→mid — la baseline
-    // doit refléter le niveau. BPM bas — le coût stamina reste modéré
-    // pour ne pas creuser la dette d'endurance qu'on cherche justement
-    // à combler ailleurs.
-    final hasThroat =
-        ctx.gen.state.unlockedKeys.contains(UnlockKey.throatHoldShort);
+    // appris la gorge — gate sur `throatHold` plutôt que `holdMid` :
+    // les premiers paliers ont besoin de variété (tip→head, tip→mid,
+    // head→mid se mélangent), ce serait trop pauvre de tout aligner sur
+    // head→mid dès le niveau 4. Dès que la gorge est débloquée, le
+    // rhythm de recovery passe à head→mid — la baseline doit refléter
+    // le niveau. BPM bas — le coût stamina reste modéré pour ne pas
+    // creuser la dette d'endurance qu'on cherche justement à combler
+    // ailleurs.
+    final hasThroat = ctx.gen.state.unlockedKeys.contains(UnlockKey.throatHold);
     return StepDraft(
       mode: SessionMode.rhythm,
       bpm: ctx.bpm,

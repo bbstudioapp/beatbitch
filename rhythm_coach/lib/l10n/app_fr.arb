@@ -800,11 +800,6 @@
     "description": "Annonce TTS post-finale_chime quand la milestone qui débloque sloppy_drool_deep est acquittée."
   },
 
-  "unlockAnnouncementRhythmHeadMidSustained": "Tu peux tenir la cadence plus d'une minute maintenant, sans pause. Je te le demanderai.",
-  "@unlockAnnouncementRhythmHeadMidSustained": {
-    "description": "Annonce TTS post-finale_chime quand la milestone qui débloque rhythm_head_mid_sustained est acquittée."
-  },
-
   "modeSelectionSurpriseTooltip": "Rappels surprise",
   "@modeSelectionSurpriseTooltip": {
     "description": "Tooltip de l'icône de notification dans l'AppBar du ModeSelectionScreen."

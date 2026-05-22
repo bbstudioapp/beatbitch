@@ -1678,10 +1678,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'When you go deep, your mouth overflows even more. Enjoy it.';
 
   @override
-  String get unlockAnnouncementRhythmHeadMidSustained =>
-      'You can hold the pace longer than a minute now, no break. I\'ll be asking for it.';
-
-  @override
   String get modeSelectionSurpriseTooltip => 'Surprise reminders';
 
   @override

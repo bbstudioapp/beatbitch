@@ -1685,10 +1685,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Quand tu vas profond, ta bouche déborde encore plus. Profite.';
 
   @override
-  String get unlockAnnouncementRhythmHeadMidSustained =>
-      'Tu peux tenir la cadence plus d\'une minute maintenant, sans pause. Je te le demanderai.';
-
-  @override
   String get modeSelectionSurpriseTooltip => 'Rappels surprise';
 
   @override

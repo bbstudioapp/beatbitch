@@ -18,8 +18,8 @@
 // `gen: CareerSessionGenerator` : la facade et les sous-systèmes
 // auxquels accédait le tracker (`gen._config`, `gen._capClamps`,
 // `gen._state`) sont projetés en deux scalaires (`motionStreakComfort`,
-// `motionStreakOverloadFactor`) et une référence sur `SessionRuntimeState`
-// (pour lire `unlockedKeys` muté en cours de séance).
+// `motionStreakOverloadFactor`). Plus de dépendance sur `SessionRuntimeState`
+// depuis la refonte 0.5.0 (l'unlock qui levait le cap a été retiré).
 //
 // Le cap effectif (`effectiveCapSeconds`) a deux régimes :
 //   * Profil capacités renseigné (carrière) → `motion_streak.comfort` de
@@ -27,14 +27,13 @@
 //     séance), planché à `_capFloorSeconds` pour qu'une donnée
 //     anormalement courte ne hache pas tout le rythme.
 //   * Sinon (Custom, scénarios, profil neuf) → comportement historique :
-//     `_capSeconds` (60 s), levé à virtuellement illimité par l'unlock
-//     `rhythmHeadMidSustained` (milestone `intro_rhythm_sustained`).
+//     `_capSeconds` (60 s). L'ancien unlock `rhythmHeadMidSustained` qui
+//     levait ce cap a été retiré (refonte capability-only 0.5.0) : le
+//     comfort `motion_streak` est désormais l'unique levier de cap rythme.
 
 import 'dart:math';
 
 import '../../../models/session.dart';
-import '../../models/unlock_key.dart';
-import 'session_runtime_state.dart';
 
 /// Tracker de la chaîne `rhythm` consécutive. Détient le compteur de
 /// secondes cumulées, expose la marge restante et le cap effectif au
@@ -47,14 +46,11 @@ import 'session_runtime_state.dart';
 /// par le générateur) sont passés au constructeur.
 class RhythmChainTracker {
   RhythmChainTracker({
-    required SessionRuntimeState state,
     required double? motionStreakComfort,
     required double motionStreakOverloadFactor,
-  })  : _state = state,
-        _motionStreakComfort = motionStreakComfort,
+  })  : _motionStreakComfort = motionStreakComfort,
         _motionStreakOverloadFactor = motionStreakOverloadFactor;
 
-  final SessionRuntimeState _state;
   final double? _motionStreakComfort;
   final double _motionStreakOverloadFactor;
 
@@ -64,9 +60,9 @@ class RhythmChainTracker {
   int _consecutiveSeconds = 0;
 
   /// Plafond (en secondes) de la chaîne `rhythm` consécutive en régime
-  /// **historique** (profil capacités absent). Tant que
-  /// `rhythmHeadMidSustained` n'est pas acquis, le générateur force une
-  /// rupture au-delà ; la milestone `intro_rhythm_sustained` lève ce mur.
+  /// **historique** (profil capacités absent). Le générateur force une
+  /// rupture au-delà ; en carrière le cap effectif est plutôt piloté par
+  /// `motion_streak.comfort` (cf. [effectiveCapSeconds]).
   static const int _capSeconds = 60;
 
   /// Borne basse du cap de chaîne rythme dérivé du profil — qu'une
@@ -90,9 +86,7 @@ class RhythmChainTracker {
       final v = (c * _motionStreakOverloadFactor).round();
       return v < _capFloorSeconds ? _capFloorSeconds : v;
     }
-    return _state.unlockedKeys.contains(UnlockKey.rhythmHeadMidSustained)
-        ? 1 << 20 // de fait illimité
-        : _capSeconds;
+    return _capSeconds;
   }
 
   /// Vrai si on peut encore ajouter un step `rhythm` à la chaîne sans

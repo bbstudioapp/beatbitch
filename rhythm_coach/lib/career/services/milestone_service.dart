@@ -24,6 +24,19 @@ class MilestoneService extends ChangeNotifier {
   static const String _kCompletions = 'career.milestones_completed';
   static const String _kRetries = 'career.milestone_retries';
   static const String _kCandidacySeen = 'career.milestone_candidacy_seen';
+  static const String _kMigrated050 = 'career.milestones_migrated_0_5_0';
+
+  /// Renommages de milestone-id appliqués à la migration 0.5.0 (refonte
+  /// unlocks capability-only) : les milestones « palier scalaire short »
+  /// perdent leur suffixe (l'unlock devient binaire, la durée est bornée
+  /// par les capacités, pas par l'unlock). Pour ne pas casser le profil
+  /// des joueuses existantes qui ont déjà acquittement la milestone sous
+  /// l'ancien id, on réécrit les entrées `_completed` au premier load
+  /// post-update.
+  static const Map<String, String> _milestoneRenamesV050 = {
+    'intro_hold_throat_short': 'intro_hold_throat',
+    'intro_hold_full_short': 'intro_hold_full',
+  };
 
   /// Poids du vieillissement dans `sortScore` (cf. [allPendingFor]). Chaque
   /// session où la milestone est candidate sans être choisie ajoute cette
@@ -109,7 +122,55 @@ class MilestoneService extends ChangeNotifier {
       }
     }
     await _loadOverrides();
+    await _migrateToV050IfNeeded(prefs);
     _loaded = true;
+  }
+
+  /// Migration one-time appliquée au premier load post-0.5.0 :
+  /// - réécrit les ids `intro_hold_*_short` vers la version sans suffixe
+  ///   dans `_completed` et `_retries` (les unlocks scalaires `*_long` /
+  ///   `biffleFast` / `rhythmExtreme` / `rhythmHeadMidSustained` ont
+  ///   disparu — l'éventuel acquittement reste mappé via la nouvelle
+  ///   clé, voir `UnlockKey.fromString`) ;
+  /// - pose le flag `_kMigrated050` pour ne plus la relancer.
+  /// Idempotent — si une joueuse n'a aucune de ces entrées, la migration
+  /// pose juste le flag et ne touche à rien.
+  Future<void> _migrateToV050IfNeeded(SharedPreferences prefs) async {
+    if (prefs.getBool(_kMigrated050) == true) return;
+
+    var dirty = false;
+    final remappedCompleted = <String>{};
+    for (final id in _completed) {
+      final renamed = _milestoneRenamesV050[id];
+      if (renamed != null) {
+        remappedCompleted.add(renamed);
+        dirty = true;
+      } else {
+        remappedCompleted.add(id);
+      }
+    }
+    if (dirty) {
+      _completed = remappedCompleted;
+      await prefs.setString(_kCompletions, json.encode(_completed.toList()));
+    }
+
+    final remappedRetries = <String, int>{};
+    var retriesDirty = false;
+    for (final entry in _retries.entries) {
+      final renamed = _milestoneRenamesV050[entry.key];
+      if (renamed != null) {
+        remappedRetries[renamed] = entry.value;
+        retriesDirty = true;
+      } else {
+        remappedRetries[entry.key] = entry.value;
+      }
+    }
+    if (retriesDirty) {
+      _retries = remappedRetries;
+      await prefs.setString(_kRetries, json.encode(_retries));
+    }
+
+    await prefs.setBool(_kMigrated050, true);
   }
 
   /// Langue native du catalogue `milestones.json` : ses textes y sont
@@ -814,15 +875,15 @@ class MilestoneService extends ChangeNotifier {
   static const Map<CapabilityAxis, Set<UnlockKey>> _impliedHoldUnlocksByAxis = {
     CapabilityAxis.holdThroatStreak: {
       UnlockKey.holdHead,
-      UnlockKey.holdMidShort,
+      UnlockKey.holdMid,
       UnlockKey.finalHoldTip,
       UnlockKey.finalHoldHead,
       UnlockKey.finalHoldMid,
     },
     CapabilityAxis.holdFullStreak: {
       UnlockKey.holdHead,
-      UnlockKey.holdMidShort,
-      UnlockKey.throatHoldShort,
+      UnlockKey.holdMid,
+      UnlockKey.throatHold,
       UnlockKey.finalHoldTip,
       UnlockKey.finalHoldHead,
       UnlockKey.finalHoldMid,

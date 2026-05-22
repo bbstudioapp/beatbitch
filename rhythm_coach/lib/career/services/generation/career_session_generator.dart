@@ -392,7 +392,6 @@ class CareerSessionGenerator {
     // facteur de surcharge `motion_streak`. Plus de `reset()` explicite
     // — la composition rend l'invariant mécanique.
     _rhythmChain = RhythmChainTracker(
-      state: _state,
       motionStreakComfort:
           _config.capProfile?.comfortOf(CapabilityAxis.rhythmMotionStreak),
       motionStreakOverloadFactor:

@@ -95,57 +95,17 @@ void main() {
     }
   });
 
-  // Unlocks « scalaires » : ils débloquent un palier de durée ou de BPM.
-  // Garde-fou : la séquence de la milestone qui les accorde doit faire
-  // *atteindre* (ou *dépasser*) le seuil que l'unlock ouvre. Sinon le
-  // déblocage représente quelque chose que la joueuse n'a jamais éprouvé
-  // — c'est l'audit qui motive l'ajout de ce test.
-  //
-  // Convention : `mustReach` exige que la séquence aille **jusqu'à**
-  // `value` (la séquence doit contenir un step ≥ value pour le montrer).
-  // Le `field` discrimine la grandeur : `duration` ou `bpm`. Le `match`
-  // filtre les steps pertinents (mode + position le cas échéant).
-  //
-  // Migration Phase 4 défis : `throat_hold_long`, `full_hold_long`,
-  // `biffle_fast`, `rhythm_extreme`, `rhythm_head_mid_sustained` ne sont
-  // plus accordés par milestone — ils tombent via défi (cf. spec § 6).
-  // Pour les joueuses existantes les unlocks acquis restent en place ;
-  // pour les nouvelles, le défi seul peut les acquitter. Exclus de cet
-  // invariant. La variante `mustExceed` historique est retirée — tous les
-  // unlocks scalaires « palier de dépassement » ont été migrés.
-  final scalarUnlocks = <String, _ScalarUnlockSpec>{
-    'throat_hold_short': const _ScalarUnlockSpec(
-      mode: 'hold',
-      position: 'throat',
-      field: 'duration',
-      mustReach: 10,
-    ),
-    'full_hold_short': const _ScalarUnlockSpec(
-      mode: 'hold',
-      position: 'full',
-      field: 'duration',
-      mustReach: 10,
-    ),
-    'hold_mid_short': const _ScalarUnlockSpec(
-      mode: 'hold',
-      position: 'mid',
-      field: 'duration',
-      mustReach: 10,
-    ),
-    'biffle_basic': const _ScalarUnlockSpec(
-      mode: 'biffle',
-      field: 'bpm',
-      mustReach: 100,
-    ),
-  };
-
-  /// Unlocks scalaires migrés vers le défi (Phase 4 défis). Ne sont plus
-  /// accordés par milestone, donc absents de `granters`. On vérifie ici
-  /// qu'ils n'apparaissent **pas** dans les `unlocks` d'aucune milestone
-  /// (garde-fou contre une réintroduction accidentelle), et qu'ils
-  /// restent consommés quelque part dans le code (sinon ils sont à
-  /// retirer de l'enum aussi).
-  const unlocksMigratedToChallenge = <String>{
+  // Refonte 0.5.0 (capability-only) : les unlocks sont binaires
+  // (« autorise l'action »). La durée/BPM tenable est entièrement
+  // bornée par le `CapabilityProfile`, jamais par un palier d'unlock.
+  // Les anciens unlocks scalaires (`throat_hold_long`, `full_hold_long`,
+  // `biffle_fast`, `rhythm_extreme`, `rhythm_head_mid_sustained`) ont
+  // disparu de l'enum ; leurs équivalents `*_short` ont perdu leur
+  // suffixe (`hold_mid`, `throat_hold`, `full_hold`). Seul invariant
+  // restant : la séquence de la milestone qui débloque une action doit
+  // contenir au moins un step de l'action en question, pour qu'on
+  // démontre **ce qu'on déverrouille**. Pas de seuil de durée/BPM.
+  const unlocksRemovedV050 = <String>{
     'throat_hold_long',
     'full_hold_long',
     'biffle_fast',
@@ -153,47 +113,12 @@ void main() {
     'rhythm_head_mid_sustained',
   };
 
-  test(
-      'chaque unlock scalaire atteint son seuil dans la milestone qui le débloque',
-      () {
-    for (final entry in scalarUnlocks.entries) {
-      final serialized = entry.key;
-      final spec = entry.value;
-      final granterIds = granters[serialized];
-      expect(granterIds, isNotNull,
-          reason: 'unlock "$serialized" n\'est accordé par aucune milestone');
-      expect(granterIds!, hasLength(1),
-          reason: 'unlock scalaire "$serialized" accordé par '
-              '${granterIds.length} milestones — un seul producteur attendu');
-      final mid = granterIds.single;
-      final milestone = milestones.firstWhere((m) => m['id'] == mid);
-      final steps =
-          (milestone['sequence'] as List).cast<Map<String, dynamic>>();
-      final matching = steps.where((s) {
-        if (s['mode'] != spec.mode) return false;
-        if (spec.position != null && s['to'] != spec.position) return false;
-        return s[spec.field] is num;
-      });
-      expect(matching, isNotEmpty,
-          reason: 'milestone "$mid" : aucun step ne matche '
-              '(mode=${spec.mode}${spec.position != null ? ', to=${spec.position}' : ''}, '
-              'field=${spec.field}) — vérifier la séquence');
-      final maxValue = matching
-          .map((s) => (s[spec.field] as num).toDouble())
-          .reduce((a, b) => a > b ? a : b);
-      expect(maxValue, greaterThanOrEqualTo(spec.mustReach),
-          reason: 'milestone "$mid" débloque "$serialized" qui ouvre un palier '
-              'jusqu\'à ${spec.mustReach} ${spec.field} ; la séquence ne va '
-              'que jusqu\'à $maxValue. Monter la séquence ou descendre le seuil '
-              'côté générateur.');
-    }
-  });
-
-  test('unlocks migrés vers défi ne sont plus accordés par milestone', () {
-    for (final u in unlocksMigratedToChallenge) {
+  test('unlocks retirés (0.5.0) ne sont plus accordés par milestone', () {
+    for (final u in unlocksRemovedV050) {
       expect(granters.containsKey(u), isFalse,
-          reason: 'unlock "$u" est marqué comme migré vers défi mais une '
-              'milestone le produit encore (${granters[u]}) — Phase 4 défis');
+          reason: 'unlock "$u" a été retiré dans la refonte 0.5.0 '
+              '(capability-only) mais une milestone le produit encore '
+              '(${granters[u]}) — à supprimer du JSON');
     }
   });
 
@@ -234,23 +159,5 @@ void main() {
               '(requires_unlock dans random_comments.json), ni prérequis '
               "d'une autre milestone");
     }
-  });
-}
-
-/// Spec d'un unlock scalaire à auditer dans le test ci-dessus. `mode`
-/// (et `position` optionnelle) filtrent les steps pertinents ; `field`
-/// désigne la grandeur lue (`duration` ou `bpm`) ; `mustReach` est le
-/// seuil minimum que la séquence doit atteindre pour valider l'unlock.
-class _ScalarUnlockSpec {
-  final String mode;
-  final String? position;
-  final String field;
-  final num mustReach;
-
-  const _ScalarUnlockSpec({
-    required this.mode,
-    this.position,
-    required this.field,
-    required this.mustReach,
   });
 }
