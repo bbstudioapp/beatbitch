@@ -15,6 +15,9 @@ void main() {
         'tier': 4,
         'isPrincipal': true,
         'requirements': {
+          // Legacy 0.5.0 : `requiresHands` toujours accepté dans le JSON
+          // mais ignoré silencieusement (le hand est désormais piloté par
+          // la milestone planifiée, pas par le coach).
           'requiresHands': true,
           'minPlayerSeconds': 12,
         },
@@ -25,7 +28,6 @@ void main() {
           [SpecializationBranch.endurance, SpecializationBranch.sloppy]);
       expect(m.tier, 4);
       expect(m.isPrincipal, isTrue);
-      expect(m.requirements!.requiresHands, isTrue);
       expect(m.requirements!.minPlayerSeconds, 12);
     });
 

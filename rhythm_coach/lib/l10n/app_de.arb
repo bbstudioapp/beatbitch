@@ -710,7 +710,6 @@
   "coachBadgePalierAcquis": "STUFE FREIGESCHALTET",
   "coachBadgeFreeTraining": "FREIES TRAINING",
   "coachBadgeLocked": "GESPERRT",
-  "coachRequiresHands": "Hände erforderlich",
   "coachSummaryPrincipal": "{title} · Haupt-Stufe {tier}",
   "@coachSummaryPrincipal": {
     "placeholders": {
@@ -763,10 +762,6 @@
   "coachErrorLockedTier": "Dieser Coach ist noch gesperrt — erreiche Stufe {tier}, um ihn freizuschalten.",
   "@coachErrorLockedTier": {
     "placeholders": { "tier": { "type": "int" } }
-  },
-  "coachErrorRequiresHands": "{coachName} braucht, dass du die Hand in den Optionen aktivierst.",
-  "@coachErrorRequiresHands": {
-    "placeholders": { "coachName": { "type": "String" } }
   },
   "coachErrorMinPlayerSeconds": "{coachName} wird bei {duration} gespielter Gesamtzeit freigeschaltet.",
   "@coachErrorMinPlayerSeconds": {

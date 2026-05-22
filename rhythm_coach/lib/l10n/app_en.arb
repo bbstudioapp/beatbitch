@@ -710,7 +710,6 @@
   "coachBadgePalierAcquis": "TIER UNLOCKED",
   "coachBadgeFreeTraining": "FREE TRAINING",
   "coachBadgeLocked": "LOCKED",
-  "coachRequiresHands": "Hands required",
   "coachSummaryPrincipal": "{title} · Primary tier {tier}",
   "@coachSummaryPrincipal": {
     "placeholders": {
@@ -763,10 +762,6 @@
   "coachErrorLockedTier": "This coach is still locked — reach tier {tier} to unlock her.",
   "@coachErrorLockedTier": {
     "placeholders": { "tier": { "type": "int" } }
-  },
-  "coachErrorRequiresHands": "{coachName} needs you to enable the hand in the options.",
-  "@coachErrorRequiresHands": {
-    "placeholders": { "coachName": { "type": "String" } }
   },
   "coachErrorMinPlayerSeconds": "{coachName} unlocks at {duration} of total play time.",
   "@coachErrorMinPlayerSeconds": {
