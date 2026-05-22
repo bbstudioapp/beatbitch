@@ -116,53 +116,18 @@ extension CareerHooksOrchestrator on SessionController {
     if (_state != SessionState.running) return;
 
     final start = elapsedSeconds;
-    final begDuration = insistentBeg.duration ?? 12;
-    final offset = start + begDuration;
 
-    final newSteps = <SessionStep>[
-      SessionStep(
-        time: start,
-        text: insistentBeg.text,
-        mode: insistentBeg.mode,
-        from: insistentBeg.from,
-        to: insistentBeg.to,
-        bpm: insistentBeg.bpm,
-        duration: begDuration,
-      ),
-      ...upcomingSession.steps.map(
-        (s) => SessionStep(
-          time: s.time + offset,
-          text: s.text,
-          mode: s.mode,
-          from: s.from,
-          to: s.to,
-          bpm: s.bpm,
-          duration: s.duration,
-        ),
-      ),
-    ];
-
-    // Décale les timestamps de fin (finalStep / silentFinish) du regen pour
-    // qu'ils tombent sur les bons steps du nouveau `_session`. Sans ça, le
-    // contrôleur ne reconnaît pas le step final → le `finale_chime` est
-    // joué via le fallback de `_finish` ET la phrase finale est rejouée
-    // (« voilà je jouis » + chime APRÈS la phrase d'action déjà speakée du
-    // step final). Doublait l'apothéose à chaque Supplier.
-    final upFinalStepTime = upcomingSession.finalStepTime;
-    final upSilentFinish = upcomingSession.silentFinishStartTime;
-
-    _session = Session(
-      id: '${_session.id}:upgraded',
-      name: _session.name,
-      description: _session.description,
-      durationSeconds: offset + upcomingSession.durationSeconds,
-      defaultMode: _session.defaultMode,
-      steps: newSteps,
-      finalStepTime: upFinalStepTime != null ? upFinalStepTime + offset : null,
-      silentFinishStartTime:
-          upSilentFinish != null ? upSilentFinish + offset : null,
-      finalCategory: upcomingSession.finalCategory,
-      noStats: _session.noStats,
+    // Délégué à `buildUpgradedSession` (helper statique pur, testable) :
+    // propage les body milestones de l'ancienne session dont la fenêtre
+    // est déjà terminée (sinon Supplier les coupe et `_finish` ne doit pas
+    // les acquitter), ajoute celles de `upcomingSession` décalées de
+    // `start + begDuration` (cas retry milestone), prend le final
+    // milestone de `upcomingSession` (Supplier remplace le final).
+    _session = SessionController.buildUpgradedSession(
+      previous: _session,
+      upcoming: upcomingSession,
+      insistentBeg: insistentBeg,
+      start: start,
     );
 
     // Coupe le TTS en cours pour ne pas garder une phrase orpheline
