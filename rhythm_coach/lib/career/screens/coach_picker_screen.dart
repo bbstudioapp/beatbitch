@@ -38,9 +38,6 @@ class CoachPickerScreen extends StatelessWidget {
       case CoachSelectionStatus.lockedTier:
         _snack(context, t.coachErrorLockedTier(coach.tier));
         return;
-      case CoachSelectionStatus.blockedRequiresHands:
-        _snack(context, t.coachErrorRequiresHands(coach.name));
-        return;
       case CoachSelectionStatus.blockedMinPlayerSeconds:
         _snack(
           context,
@@ -298,21 +295,6 @@ class _CoachCard extends StatelessWidget {
                           height: 1.35,
                         ),
                       ),
-                      if (coach.requirements.requiresHands) ...[
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            const Icon(Icons.pan_tool_alt,
-                                size: 14, color: AppTheme.textMuted),
-                            const SizedBox(width: 6),
-                            Text(
-                              t.coachRequiresHands,
-                              style: const TextStyle(
-                                  fontSize: 11, color: AppTheme.textMuted),
-                            ),
-                          ],
-                        ),
-                      ],
                     ],
                   ),
                 ),

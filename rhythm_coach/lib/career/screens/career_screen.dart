@@ -19,6 +19,7 @@ import '../../services/user_profile_service.dart';
 import '../../theme/app_theme.dart';
 import '../../l10n/enum_labels.dart';
 import '../../main.dart' show coachService, milestoneService;
+import '../services/coach_service.dart' show CoachSelectionStatus;
 import '../models/career_generation_inputs.dart';
 import '../models/challenge.dart';
 import '../models/coach.dart';
@@ -1110,8 +1111,21 @@ class _CareerScreenState extends State<CareerScreen> {
                   onSwitchToPrincipal: principal == null
                       ? null
                       : () async {
-                          await coachService.selectCoach(principal);
-                          if (mounted) setState(() {});
+                          // Passe par `evaluate` pour respecter
+                          // `lockedTier` et `minPlayerSeconds` (refonte
+                          // 0.5.0 : `requiresHands` n'est plus sur le
+                          // coach, donc plus jamais bloqué côté hand).
+                          final status = coachService.evaluate(
+                            principal,
+                            playerTotalSeconds: await _stats.getTotalSeconds(),
+                          );
+                          if (status ==
+                                  CoachSelectionStatus.selectedAdvancing ||
+                              status ==
+                                  CoachSelectionStatus.selectedFreeTraining) {
+                            await coachService.selectCoach(principal);
+                            if (mounted) setState(() {});
+                          }
                         },
                 ),
               ],

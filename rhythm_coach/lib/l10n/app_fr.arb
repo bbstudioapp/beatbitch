@@ -710,7 +710,6 @@
   "coachBadgePalierAcquis": "PALIER ACQUIS",
   "coachBadgeFreeTraining": "ENTRAÎNEMENT LIBRE",
   "coachBadgeLocked": "VERROUILLÉ",
-  "coachRequiresHands": "Mains obligatoires",
   "coachSummaryPrincipal": "{title} · Principal palier {tier}",
   "@coachSummaryPrincipal": {
     "placeholders": {
@@ -763,10 +762,6 @@
   "coachErrorLockedTier": "Ce coach est encore verrouillé — atteins le palier {tier} pour le débloquer.",
   "@coachErrorLockedTier": {
     "placeholders": { "tier": { "type": "int" } }
-  },
-  "coachErrorRequiresHands": "{coachName} a besoin que tu actives la main dans les options.",
-  "@coachErrorRequiresHands": {
-    "placeholders": { "coachName": { "type": "String" } }
   },
   "coachErrorMinPlayerSeconds": "{coachName} se débloque à {duration} de jeu cumulé.",
   "@coachErrorMinPlayerSeconds": {

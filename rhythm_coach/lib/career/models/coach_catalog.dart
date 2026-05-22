@@ -64,9 +64,10 @@ class CoachCatalog {
       ],
       tier: 3,
       isPrincipal: true,
-      // Phase 19.10 : 3h cumulées. `requiresHands` conservé.
-      requirements:
-          CoachRequirement(requiresHands: true, minPlayerSeconds: 10800),
+      // Phase 19.10 : 3h cumulées. (Refonte 0.5.0 : `requiresHands` retiré
+      // du coach — le hand obligatoire est désormais piloté par la milestone
+      // planifiée, pas par le coach choisi.)
+      requirements: CoachRequirement(minPlayerSeconds: 10800),
       portraitAsset: '$_portraitDir/coach_03_jade.png',
     ),
     Coach(

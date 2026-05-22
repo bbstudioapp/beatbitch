@@ -1583,9 +1583,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get coachBadgeLocked => 'VERROUILLÉ';
 
   @override
-  String get coachRequiresHands => 'Mains obligatoires';
-
-  @override
   String coachSummaryPrincipal(String title, int tier) {
     return '$title · Principal palier $tier';
   }
@@ -1652,11 +1649,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String coachErrorLockedTier(int tier) {
     return 'Ce coach est encore verrouillé — atteins le palier $tier pour le débloquer.';
-  }
-
-  @override
-  String coachErrorRequiresHands(String coachName) {
-    return '$coachName a besoin que tu actives la main dans les options.';
   }
 
   @override
