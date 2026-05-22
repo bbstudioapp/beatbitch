@@ -12,7 +12,6 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:beat_bitch/career/models/career_generation_inputs.dart';
 import 'package:beat_bitch/career/models/custom_session_config.dart';
-import 'package:beat_bitch/career/models/level_milestone.dart';
 import 'package:beat_bitch/career/models/phrase_bank.dart';
 import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
 
@@ -127,7 +126,7 @@ List<_Flag> _validate(_Scenario sc, List<SessionStep> steps) {
         .map((s) => s.to!.index)
         .fold<int>(0, (a, b) => a > b ? a : b);
     if (maxDepth < Position.throat.index) {
-      flags.add(_Flag(
+      flags.add(const _Flag(
         'EXTREME-SHALLOW',
         'difficulté `extreme` mais aucun step n\'atteint throat ou plus',
       ));
@@ -297,7 +296,7 @@ void main() {
           '${entry.value.map((f) => f.label).join(', ')}');
     }
 
-    final outPath = '/tmp/audit_custom_sessions.md';
+    const outPath = '/tmp/audit_custom_sessions.md';
     File(outPath).writeAsStringSync(buf.toString());
     // ignore: avoid_print
     print('Rapport audit écrit dans $outPath');

@@ -17,7 +17,6 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:beat_bitch/models/session.dart';
-import 'package:beat_bitch/models/session_step.dart';
 
 class _Flag {
   final String label;
@@ -221,7 +220,7 @@ void main() {
     buf.writeln();
     final clean = allFlags.entries.where((e) => e.value.isEmpty).length;
     final dirty = allFlags.entries.where((e) => e.value.isNotEmpty).length;
-    buf.writeln('- ✓ ${clean}/${files.length} presets sans anomalie');
+    buf.writeln('- ✓ $clean/${files.length} presets sans anomalie');
     if (dirty > 0) {
       buf.writeln('- ⚠ $dirty preset(s) avec anomalies :');
       for (final entry in allFlags.entries) {
@@ -237,7 +236,7 @@ void main() {
       }
     }
 
-    final outPath = '/tmp/audit_presets.md';
+    const outPath = '/tmp/audit_presets.md';
     File(outPath).writeAsStringSync(buf.toString());
     // ignore: avoid_print
     print('Rapport audit écrit dans $outPath');
