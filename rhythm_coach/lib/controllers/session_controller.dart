@@ -1599,6 +1599,117 @@ class SessionController extends ChangeNotifier {
     return null;
   }
 
+  /// Helper pur : assemble la nouvelle [Session] qui remplace la suite
+  /// après un Supplier (bouton « SUPPLIER » du mode Carrière) ou un retry
+  /// milestone. Préfixe un beg insistant à [start], rebase les steps de
+  /// [upcoming] sur `start + insistentBeg.duration`, et fusionne les
+  /// milestones :
+  ///
+  /// - **Body milestones de [previous]** : conservées UNIQUEMENT si leur
+  ///   fenêtre `[start, start+dur]` se termine avant [start] (Supplier
+  ///   ne les a pas coupées → seront acquittées à `_finish`). Sinon
+  ///   abandonnées — sinon le `markIfPresent` de `_finish` acquitterait
+  ///   une milestone que l'utilisatrice n'a pas jouée.
+  /// - **Body milestones de [upcoming]** : ajoutées avec décalage `offset`
+  ///   (cas typique du retry milestone qui replante la milestone ratée).
+  /// - **Final milestone** : prise de [upcoming] uniquement (Supplier
+  ///   remplace le final, comme `finalStepTime` / `silentFinishStartTime`).
+  ///
+  /// Si la fusion produit plus de 2 body milestones (cas extrême : 2
+  /// anciennes passées + 2 nouvelles), on conserve les 2 premières
+  /// chronologiquement.
+  @visibleForTesting
+  static Session buildUpgradedSession({
+    required Session previous,
+    required Session upcoming,
+    required SessionStep insistentBeg,
+    required int start,
+  }) {
+    final begDuration = insistentBeg.duration ?? 12;
+    final offset = start + begDuration;
+
+    final newSteps = <SessionStep>[
+      SessionStep(
+        time: start,
+        text: insistentBeg.text,
+        mode: insistentBeg.mode,
+        from: insistentBeg.from,
+        to: insistentBeg.to,
+        bpm: insistentBeg.bpm,
+        duration: begDuration,
+      ),
+      for (final s in upcoming.steps)
+        SessionStep(
+          time: s.time + offset,
+          text: s.text,
+          mode: s.mode,
+          from: s.from,
+          to: s.to,
+          bpm: s.bpm,
+          bpmEnd: s.bpmEnd,
+          duration: s.duration,
+          chainAction: s.chainAction,
+          swallowMode: s.swallowMode,
+          background: s.background,
+        ),
+    ];
+
+    final bodies = <({String id, int start, int? duration})>[];
+    void addPrevIfWindowEnded(int? mStart, int? mDur, String? id) {
+      if (id == null || mStart == null || mDur == null) return;
+      if ((mStart + mDur) <= start) {
+        bodies.add((id: id, start: mStart, duration: mDur));
+      }
+    }
+
+    addPrevIfWindowEnded(previous.milestoneStartTime,
+        previous.milestoneDurationSeconds, previous.milestoneId);
+    addPrevIfWindowEnded(previous.secondMilestoneStartTime,
+        previous.secondMilestoneDurationSeconds, previous.secondMilestoneId);
+
+    void addUpcoming(int? mStart, int? mDur, String? id) {
+      if (id == null || mStart == null) return;
+      bodies.add((id: id, start: mStart + offset, duration: mDur));
+    }
+
+    addUpcoming(upcoming.milestoneStartTime, upcoming.milestoneDurationSeconds,
+        upcoming.milestoneId);
+    addUpcoming(upcoming.secondMilestoneStartTime,
+        upcoming.secondMilestoneDurationSeconds, upcoming.secondMilestoneId);
+
+    bodies.sort((a, b) => a.start.compareTo(b.start));
+    final mid1 = bodies.isNotEmpty ? bodies[0] : null;
+    final mid2 = bodies.length >= 2 ? bodies[1] : null;
+
+    final upFinalStepTime = upcoming.finalStepTime;
+    final upSilentFinish = upcoming.silentFinishStartTime;
+    final upFinalMsStart = upcoming.finalMilestoneStartTime;
+
+    return Session(
+      id: '${previous.id}:upgraded',
+      name: previous.name,
+      description: previous.description,
+      durationSeconds: offset + upcoming.durationSeconds,
+      defaultMode: previous.defaultMode,
+      steps: newSteps,
+      milestoneId: mid1?.id,
+      milestoneStartTime: mid1?.start,
+      milestoneDurationSeconds: mid1?.duration,
+      secondMilestoneId: mid2?.id,
+      secondMilestoneStartTime: mid2?.start,
+      secondMilestoneDurationSeconds: mid2?.duration,
+      finalMilestoneId: upcoming.finalMilestoneId,
+      finalMilestoneStartTime:
+          upFinalMsStart != null ? upFinalMsStart + offset : null,
+      finalMilestoneDurationSeconds: upcoming.finalMilestoneDurationSeconds,
+      finalStepTime: upFinalStepTime != null ? upFinalStepTime + offset : null,
+      silentFinishStartTime:
+          upSilentFinish != null ? upSilentFinish + offset : null,
+      finalCategory: upcoming.finalCategory,
+      noStats: previous.noStats,
+    );
+  }
+
   /// Helper pur : assemble la nouvelle [Session] qui remplace la suite après
   /// un défi qui a élargi les unlocks. Rebase les steps de [upcoming] sur
   /// [breathEnd] et propage les métadonnées de fin (finalStepTime,
