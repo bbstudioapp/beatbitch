@@ -72,16 +72,13 @@ class HoldRules extends ModeRules {
     }
     // Convention : hold/beg portent leur position dans `to`. Les holds
     // tip/head sont du socle de base (pas de clé) ; mid+ sont gatés.
+    // Un unlock par profondeur, binaire — la durée est bornée par les
+    // capacités (`hold.<pos>.streak`), pas par l'unlock.
     final to = draft.to;
     if (to == null || to == Position.tip || to == Position.head) return null;
-    if (to == Position.mid) return UnlockKey.holdMidShort;
-    final dur = draft.duration ?? 0;
-    if (to == Position.throat) {
-      return dur > 10 ? UnlockKey.throatHoldLong : UnlockKey.throatHoldShort;
-    }
-    if (to == Position.full) {
-      return dur > 10 ? UnlockKey.fullHoldLong : UnlockKey.fullHoldShort;
-    }
+    if (to == Position.mid) return UnlockKey.holdMid;
+    if (to == Position.throat) return UnlockKey.throatHold;
+    if (to == Position.full) return UnlockKey.fullHold;
     return null;
   }
 

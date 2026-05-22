@@ -229,7 +229,7 @@ class StepBuilders {
   /// en pratique. La séquence brute est déléguée au mode qui porte
   /// le rôle `miniWaveCore` (cf. B.PR5).
   List<StepDraft> buildMiniWave(double humilCap) {
-    final hasThroat = state.unlockedKeys.contains(UnlockKey.throatHoldShort) ||
+    final hasThroat = state.unlockedKeys.contains(UnlockKey.throatHold) ||
         config.maxDepthIndex >= Position.throat.index;
     final raw = rules[_miniWaveCoreMode]!
             .buildMiniWaveSegment(MiniWaveCtx(hasThroat: hasThroat)) ??

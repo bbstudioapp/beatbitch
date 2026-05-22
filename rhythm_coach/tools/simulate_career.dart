@@ -663,15 +663,15 @@ const Set<CapabilityAxis> _overloadableSimAxes = {
 const Map<CapabilityAxis, Set<UnlockKey>> _impliedHoldUnlocksByAxis = {
   CapabilityAxis.holdThroatStreak: {
     UnlockKey.holdHead,
-    UnlockKey.holdMidShort,
+    UnlockKey.holdMid,
     UnlockKey.finalHoldTip,
     UnlockKey.finalHoldHead,
     UnlockKey.finalHoldMid,
   },
   CapabilityAxis.holdFullStreak: {
     UnlockKey.holdHead,
-    UnlockKey.holdMidShort,
-    UnlockKey.throatHoldShort,
+    UnlockKey.holdMid,
+    UnlockKey.throatHold,
     UnlockKey.finalHoldTip,
     UnlockKey.finalHoldHead,
     UnlockKey.finalHoldMid,
@@ -1059,7 +1059,7 @@ SimChallenge? _generateChallenge({
 
 /// Acquittement implicite milestone via défi — parité avec
 /// `MilestoneService.milestonesAcquittableByChallenge`. Inclut la cascade
-/// transitive holds (`hold.throat ⇒ holdHead/holdMidShort/finalHold*`).
+/// transitive holds (`hold.throat ⇒ holdHead/holdMid/finalHold*`).
 /// Retourne les unlocks gagnés (déjà ajoutés à `state.unlocked`).
 List<UnlockKey> _acquitMilestonesViaChallenge({
   required SimChallenge challenge,

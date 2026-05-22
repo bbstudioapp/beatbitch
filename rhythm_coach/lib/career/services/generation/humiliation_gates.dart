@@ -130,7 +130,7 @@ class HumiliationGates {
   /// Distinct de [isUnlocked] parce qu'un final est gaté par sa propre
   /// clé `finalXxx` dédiée — pas par la clé du composant. Ex : un final
   /// `hold mid` est gaté par `finalHoldMid` (sa milestone d'introduction
-  /// dédiée), pas par `holdMidShort` qui couvre l'usage en corps de séance.
+  /// dédiée), pas par `holdMid` qui couvre l'usage en corps de séance.
   static bool finalUnlocked(UnlockKey? key, Set<UnlockKey> unlockedKeys) =>
       key == null || unlockedKeys.isEmpty || unlockedKeys.contains(key);
 

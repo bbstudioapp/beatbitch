@@ -3016,12 +3016,6 @@ abstract class AppLocalizations {
   /// **'Quand tu vas profond, ta bouche déborde encore plus. Profite.'**
   String get unlockAnnouncementSloppyDroolDeep;
 
-  /// Annonce TTS post-finale_chime quand la milestone qui débloque rhythm_head_mid_sustained est acquittée.
-  ///
-  /// In fr, this message translates to:
-  /// **'Tu peux tenir la cadence plus d\'une minute maintenant, sans pause. Je te le demanderai.'**
-  String get unlockAnnouncementRhythmHeadMidSustained;
-
   /// Tooltip de l'icône de notification dans l'AppBar du ModeSelectionScreen.
   ///
   /// In fr, this message translates to:
