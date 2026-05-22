@@ -361,7 +361,7 @@ class SurpriseAlertService {
     for (final a in alerts) {
       if (a.status != _AlertStatus.pending) continue;
       try {
-        await plugin.cancel(a.id);
+        await plugin.cancel(id: a.id);
       } catch (_) {
         // Si le plugin n'est pas encore initialisé (race au cold start),
         // on persiste juste la transition de statut.
@@ -555,7 +555,7 @@ class SurpriseAlertService {
     final plugin = SurpriseNotificationsBootstrap.plugin;
     for (var i = 0; i <= _idMaxOffset; i++) {
       try {
-        await plugin.cancel(_idBase + i);
+        await plugin.cancel(id: _idBase + i);
       } catch (_) {}
     }
   }

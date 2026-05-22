@@ -50,7 +50,7 @@ class SurpriseNotificationsBootstrap {
     const initSettings = InitializationSettings(android: androidInit);
 
     await _plugin.initialize(
-      initSettings,
+      settings: initSettings,
       onDidReceiveNotificationResponse: onTap,
     );
 
@@ -114,16 +114,12 @@ class SurpriseNotificationsBootstrap {
     const details = NotificationDetails(android: androidDetails);
 
     await _plugin.zonedSchedule(
-      id,
-      title,
-      body,
-      scheduledAt,
-      details,
+      id: id,
+      title: title,
+      body: body,
+      scheduledDate: scheduledAt,
+      notificationDetails: details,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      // uiLocalNotificationDateInterpretation est requis par la signature
-      // mais sans effet sur Android.
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
       payload: payload,
     );
   }
