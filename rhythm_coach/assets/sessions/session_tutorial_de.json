@@ -45,7 +45,7 @@
                   "mode": "hold", "to": "full", "duration": 10},
 
     {"time": 210, "text": "Viertes Signal — atmen. Ein einzelner, sanfter Sound. Das ist dein Signal zum Ausatmen, dich setzen lassen, erholen.",
-                  "mode": "breath"},
+                  "mode": "breath", "duration": 10},
 
     {"time": 222, "text": "Immer nach einer Anstrengung, das Atmen. Lass es nicht aus."},
 

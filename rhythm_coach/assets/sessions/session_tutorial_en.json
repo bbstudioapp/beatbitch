@@ -45,7 +45,7 @@
                   "mode": "hold", "to": "full", "duration": 10},
 
     {"time": 210, "text": "Fourth cue — breathe. A single, soft sound. That's your signal to exhale, settle, recover.",
-                  "mode": "breath"},
+                  "mode": "breath", "duration": 10},
 
     {"time": 222, "text": "Always after an effort, the breath. Don't skip it."},
 

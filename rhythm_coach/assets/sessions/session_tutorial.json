@@ -45,7 +45,7 @@
                   "mode": "hold", "to": "full", "duration": 10},
 
     {"time": 210, "text": "Quatrième consigne — respirer. Un son unique, doux. C'est ton signal pour souffler, te poser, récupérer.",
-                  "mode": "breath"},
+                  "mode": "breath", "duration": 10},
 
     {"time": 222, "text": "Toujours après un effort, la respiration. Ne la zappe pas."},
 
