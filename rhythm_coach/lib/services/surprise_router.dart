@@ -41,7 +41,7 @@ class _SurpriseBundle {
 /// Lance une session courte « surprise » sur tap d'une notification.
 /// Replique condensée du flow `_CareerScreenState._start` : charge les
 /// persistances carrière, génère via `CareerSessionGenerator(quickie: true,
-/// durationSeconds: <random 60-240>)`, push `SessionScreen` avec
+/// durationSeconds: random 60-240)`, push `SessionScreen` avec
 /// démarrage auto.
 ///
 /// La session est traitée comme une « bâclée » côté stats (alimente le

@@ -16,9 +16,9 @@ import 'package:beat_bitch/services/humiliation_engine.dart';
 /// quickie-spammer). Pour chaque profil sort une timeline, un récap, et un
 /// rapport de cohérence des paliers.
 ///
-/// Usage : `dart run tools/simulate_career.dart [--profile <name>] [--sessions
-/// <N>] [--seed <n>] [--format markdown|tsv] [--out <path>]` depuis
-/// `rhythm_coach/`. Sans `--profile`, tourne sur tous les profils embarqués.
+/// Usage : `dart run tools/simulate_career.dart [--profile NAME] [--sessions N]
+/// [--seed N] [--format markdown|tsv] [--out PATH]` depuis `rhythm_coach/`.
+/// Sans `--profile`, tourne sur tous les profils embarqués.
 ///
 /// Le simulateur **ne touche pas au code de prod**. Il :
 ///   - lit `assets/career/milestones.json` directement (dart:io) ;
