@@ -33,6 +33,7 @@ import '../services/tts_service.dart';
 
 part 'session_controller_challenge.dart';
 part 'session_controller_fail_flow.dart';
+part 'session_controller_career_hooks.dart';
 
 enum SessionState { idle, running, paused, finished, failing }
 
@@ -353,8 +354,9 @@ class SessionController extends ChangeNotifier {
   }
 
   /// Wrapper privé sur `notifyListeners()` accessible depuis les extensions
-  /// `ChallengeOrchestrator` (`session_controller_challenge.dart`) et
-  /// `FailFlowOrchestrator` (`session_controller_fail_flow.dart`).
+  /// `ChallengeOrchestrator` (`session_controller_challenge.dart`),
+  /// `FailFlowOrchestrator` (`session_controller_fail_flow.dart`) et
+  /// `CareerHooksOrchestrator` (`session_controller_career_hooks.dart`).
   /// L'annotation `@protected` de `ChangeNotifier.notifyListeners` ne
   /// permet l'appel que depuis l'intérieur d'une sous-classe, pas depuis
   /// une extension — d'où ce passe-plat.
@@ -612,6 +614,13 @@ class SessionController extends ChangeNotifier {
   /// l'écran de fin pour afficher les nouveaux paliers.
   List<BadgeUnlock> _sessionBadgeUnlocks = const [];
   List<BadgeUnlock> get sessionBadgeUnlocks => _sessionBadgeUnlocks;
+
+  /// Liste des paliers nouvellement franchis, calculée par `_finish` mais
+  /// gardée en attente jusqu'à `revealBadgeUnlocks()` (cf. extension
+  /// `CareerHooksOrchestrator`). On préserve la même API publique
+  /// (`sessionBadgeUnlocks`) une fois la révélation faite, pour que l'UI
+  /// continue de pouvoir consommer la liste.
+  List<BadgeUnlock> _pendingBadgeUnlocks = const [];
 
   /// Milestones acquittées **dans cette séance** (= viennent d'être
   /// `markCompleted` sans fail, n'étaient pas déjà acquittées avant).
@@ -1588,209 +1597,6 @@ class SessionController extends ChangeNotifier {
       if (s.time > finalT) return s;
     }
     return null;
-  }
-
-  /// Phrase `tapout` du coach (Phase 4) si le « je peux pas » est imputable à
-  /// un axe poussé au-delà de sa zone de confort (§6), avec une chance ∝ niveau.
-  /// Suppose `CapabilityTracker.onFail()` déjà appelé (les `sessionCeilings`
-  /// sont à jour). `null` = pas de phrase dédiée → l'appelant retombe sur le
-  /// tirage de fail standard.
-  String? _tapoutPhraseOrNull() {
-    final tracker = _capabilityTracker;
-    final profile = _capabilityProfile;
-    final bank = _phraseBank;
-    if (tracker == null || profile == null || bank == null) return null;
-    final axis =
-        CapabilityRegulator.attributeTapOut(tracker.sessionCeilings, profile);
-    if (axis == null) return null;
-    if (_random.nextDouble() >=
-        CapabilityRegulator.progressPhraseChanceForLevel(_careerLevel)) {
-      return null;
-    }
-    final phrase = bank.pickProgressPhrase(axis.storageKey, 'tapout', _random);
-    return (phrase != null && phrase.isNotEmpty) ? phrase : null;
-  }
-
-  /// Détecte si la séance vient de battre le `best` de l'axe poussé cette
-  /// séance (`_capabilityOverloadAxis`, axe pilotant `maximize`) en comparant
-  /// `reached` au snapshot pré-séance. Renvoie l'axe en cas de record propre,
-  /// `null` sinon — pas d'axe surchargé, pas d'amélioration, ou séance avec un
-  /// « je peux pas » (on ne célèbre pas un record juste après un tap-out, §9 ;
-  /// le `best` reste enregistré par `CapabilityService.commit` quoi qu'il arrive).
-  CapabilityAxis? _detectCapabilityRecord(SessionCapabilityReport? report) {
-    if (report == null || _hadFailThisSession) return null;
-    final axis = _capabilityOverloadAxis;
-    final profile = _capabilityProfile;
-    if (axis == null || profile == null) return null;
-    if (!axis.pilotant || axis.recordKind != CapabilityRecordKind.maximize) {
-      return null;
-    }
-    final reached = report.reached[axis];
-    if (reached == null) return null;
-    final before = profile.bestOf(axis);
-    return (before == null || reached > before) ? axis : null;
-  }
-
-  /// Liste des paliers nouvellement franchis, calculée par `_finish` mais
-  /// gardée en attente jusqu'à `revealBadgeUnlocks()`. On préserve la
-  /// même API publique (`sessionBadgeUnlocks`) une fois la révélation
-  /// faite, pour que l'UI continue de pouvoir consommer la liste.
-  List<BadgeUnlock> _pendingBadgeUnlocks = const [];
-
-  /// True si des badges ont été détectés à la complétion mais pas encore
-  /// révélés (l'utilisateur n'a pas tapé MERCI). Permet à l'UI d'afficher
-  /// le bouton MERCI avant la grille de badges.
-  bool get hasPendingBadges => _pendingBadgeUnlocks.isNotEmpty;
-
-  /// Révèle les paliers de badges atteints pendant la séance : déplace la
-  /// liste pending vers `sessionBadgeUnlocks`, lance les annonces TTS, et
-  /// notifie l'UI. À appeler depuis le bouton MERCI de l'écran de fin.
-  /// La phrase TTS est localisée via [_appLocalizations] (poussé depuis
-  /// l'UI par [setAppLocalizations]) ; si la locale n'a pas encore été
-  /// poussée (cas anormal — l'UI le fait au start de la séance), on
-  /// révèle les badges côté UI mais on n'annonce pas TTS.
-  Future<void> revealBadgeUnlocks() async {
-    if (_pendingBadgeUnlocks.isEmpty) return;
-    final unlocks = _pendingBadgeUnlocks;
-    _pendingBadgeUnlocks = const [];
-    _sessionBadgeUnlocks = unlocks;
-    notifyListeners();
-    final l10n = _appLocalizations;
-    if (l10n == null) return;
-    for (final u in unlocks) {
-      if (_released) break;
-      await _tts.speak(u.announcement(l10n));
-    }
-  }
-
-  // ─── Action « Supplier » (mode Carrière) ───────────────────────────────
-
-  /// Coupe la timeline restante et la remplace par : un beg insistant
-  /// immédiat (à `elapsedSeconds`), suivi des [upcomingSteps] rebased
-  /// pour démarrer juste après le beg. Utilisé par le bouton « SUPPLIER »
-  /// du mode Carrière, qui régénère une suite à un niveau supérieur
-  /// pendant que l'utilisateur supplie.
-  ///
-  /// Les `upcomingSteps` doivent avoir leur `time` exprimé relativement
-  /// à zéro (le générateur produit toujours un `time` croissant à partir
-  /// de 0) — la méthode rebase elle-même.
-  Future<void> requestUpgrade({
-    required SessionStep insistentBeg,
-    required Session upcomingSession,
-  }) async {
-    if (_state != SessionState.running) return;
-
-    final start = elapsedSeconds;
-    final begDuration = insistentBeg.duration ?? 12;
-    final offset = start + begDuration;
-
-    final newSteps = <SessionStep>[
-      SessionStep(
-        time: start,
-        text: insistentBeg.text,
-        mode: insistentBeg.mode,
-        from: insistentBeg.from,
-        to: insistentBeg.to,
-        bpm: insistentBeg.bpm,
-        duration: begDuration,
-      ),
-      ...upcomingSession.steps.map(
-        (s) => SessionStep(
-          time: s.time + offset,
-          text: s.text,
-          mode: s.mode,
-          from: s.from,
-          to: s.to,
-          bpm: s.bpm,
-          duration: s.duration,
-        ),
-      ),
-    ];
-
-    // Décale les timestamps de fin (finalStep / silentFinish) du regen pour
-    // qu'ils tombent sur les bons steps du nouveau `_session`. Sans ça, le
-    // contrôleur ne reconnaît pas le step final → le `finale_chime` est
-    // joué via le fallback de `_finish` ET la phrase finale est rejouée
-    // (« voilà je jouis » + chime APRÈS la phrase d'action déjà speakée du
-    // step final). Doublait l'apothéose à chaque Supplier.
-    final upFinalStepTime = upcomingSession.finalStepTime;
-    final upSilentFinish = upcomingSession.silentFinishStartTime;
-
-    _session = Session(
-      id: '${_session.id}:upgraded',
-      name: _session.name,
-      description: _session.description,
-      durationSeconds: offset + upcomingSession.durationSeconds,
-      defaultMode: _session.defaultMode,
-      steps: newSteps,
-      finalStepTime: upFinalStepTime != null ? upFinalStepTime + offset : null,
-      silentFinishStartTime:
-          upSilentFinish != null ? upSilentFinish + offset : null,
-      finalCategory: upcomingSession.finalCategory,
-      noStats: _session.noStats,
-    );
-
-    // Coupe le TTS en cours pour ne pas garder une phrase orpheline
-    // de l'ancien step. Le beg insistant va parler tout de suite.
-    await _tts.stop();
-
-    _nextStepIndex = 0;
-    _lastConfigStep = null;
-    // Reset du flag chime : la régen apporte son propre step final +
-    // apothéose. Si l'ancienne session avait déjà tiré son chime (cas
-    // rare où Supplier est cliqué pile entre final et fin), on doit
-    // pouvoir rejouer le chime de la nouvelle.
-    _finalChimePlayed = false;
-    _finaleChimeStarted = false;
-
-    // Force le déclenchement immédiat du beg (time = start ≤ elapsedSeconds).
-    _checkSteps();
-    notifyListeners();
-  }
-
-  // ─── Régénération post-défi (Phase 1 défis bis) ───────────────────────
-
-  /// Remplace la suite de la séance par les [upcomingSession.steps] rebased
-  /// à `elapsedSeconds` (= position d'avant le défi, vu que le défi a été
-  /// excisé de la timeline par `_excisChallengeFromSession`). Appelée
-  /// par le caller depuis `onPostChallengeRegen` quand un défi vient
-  /// d'élargir le set d'unlocks — le générateur produit une suite qui
-  /// **consomme** la compétence fraîchement débloquée. Pas de phrase de
-  /// transition : le breath de 10s du défi sert lui-même de transition.
-  ///
-  /// Différences avec [requestUpgrade] :
-  /// - pas de beg insistant en tête ;
-  /// - pas d'appel à `_checkSteps()` immédiat (le breath est encore en
-  ///   cours, on n'a rien à consommer maintenant — la nouvelle timeline
-  ///   prend la main quand le breath expire) ;
-  /// - pas de `_tts.stop()` (la phrase de fin de défi vient juste d'être
-  ///   speakée, on la laisse aller au bout).
-  ///
-  /// `upcomingSession.steps[*].time` doivent être croissants depuis 0 ;
-  /// la méthode les rebase elle-même sur `breathEnd`.
-  Future<void> requestPostChallengeRegen({
-    required Session upcomingSession,
-  }) async {
-    if (_state != SessionState.running) return;
-    // Avec l'excision du défi par `_excisChallengeFromSession`, la
-    // séance est déjà alignée sur `elapsedSeconds` (= position d'avant
-    // le défi) — la nouvelle suite est rebasée sur cet instant et sera
-    // consommée dès la fin du breath post-défi (qui est freezé, donc
-    // ne décale pas elapsedSeconds).
-    final breathEnd = elapsedSeconds;
-    _session = buildPostChallengeRegenSession(
-      previous: _session,
-      upcoming: upcomingSession,
-      breathEnd: breathEnd,
-    );
-
-    _nextStepIndex = 0;
-    _lastConfigStep = null;
-    // Reset du flag chime : la régen apporte son propre step final + apothéose.
-    _finalChimePlayed = false;
-    _finaleChimeStarted = false;
-
-    notifyListeners();
   }
 
   /// Helper pur : assemble la nouvelle [Session] qui remplace la suite après
