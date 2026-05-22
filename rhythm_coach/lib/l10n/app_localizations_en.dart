@@ -1576,9 +1576,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachBadgeLocked => 'LOCKED';
 
   @override
-  String get coachRequiresHands => 'Hands required';
-
-  @override
   String coachSummaryPrincipal(String title, int tier) {
     return '$title · Primary tier $tier';
   }
@@ -1645,11 +1642,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String coachErrorLockedTier(int tier) {
     return 'This coach is still locked — reach tier $tier to unlock her.';
-  }
-
-  @override
-  String coachErrorRequiresHands(String coachName) {
-    return '$coachName needs you to enable the hand in the options.';
   }
 
   @override

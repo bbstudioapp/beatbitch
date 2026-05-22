@@ -18,10 +18,6 @@ enum CoachSelectionStatus {
   /// Coach pas encore débloqué (palier supérieur au palier courant).
   lockedTier,
 
-  /// Le coach a une contrainte de mains et le toggle « inclure la main »
-  /// est désactivé.
-  blockedRequiresHands,
-
   /// Le temps cumulé du joueur est en-dessous du `minPlayerSeconds` requis
   /// par le coach (Phase 19.10).
   blockedMinPlayerSeconds,
@@ -192,15 +188,16 @@ class CoachService extends ChangeNotifier {
   /// ce soit le Principal — c'est l'appelant qui décide d'avertir
   /// l'utilisateur avant de confirmer la sélection d'un coach
   /// non-Principal.
+  /// Refonte 0.5.0 : `handsEnabled` n'est plus consulté ici — le hand
+  /// n'est plus une contrainte du coach, juste de la milestone planifiée
+  /// (`LevelMilestone.requiresHands`). Le paramètre est conservé pour
+  /// rétrocompat des call sites mais ignoré.
   CoachSelectionStatus evaluate(
     Coach c, {
     required int playerTotalSeconds,
-    required bool handsEnabled,
+    bool handsEnabled = true,
   }) {
     if (!isUnlocked(c)) return CoachSelectionStatus.lockedTier;
-    if (c.requirements.requiresHands && !handsEnabled) {
-      return CoachSelectionStatus.blockedRequiresHands;
-    }
     if (playerTotalSeconds < c.requirements.minPlayerSeconds) {
       return CoachSelectionStatus.blockedMinPlayerSeconds;
     }

@@ -22,12 +22,15 @@ enum CoachArchetype {
 
 /// Contraintes optionnelles pour autoriser la sélection d'un coach.
 /// Évaluées par `CoachService.evaluate` à chaque demande.
+///
+/// Refonte 0.5.0 : l'ancien flag `requiresHands` a été retiré du coach.
+/// L'obligation de la stimulation main est désormais portée uniquement
+/// par la milestone planifiée (`LevelMilestone.requiresHands` — cf.
+/// `assets/career/milestones.json` et `career_screen._start`). Si une
+/// milestone insérée dans la prochaine session implique biffle/hand, le
+/// toggle `includeHand` est forcé à true côté `CareerScreen`, peu
+/// importe le coach choisi.
 class CoachRequirement {
-  /// Si true, le coach n'est sélectionnable que si le toggle « inclure la
-  /// stimulation main » est actif côté `CareerProgressService`.
-  /// Cas typique : coach axé biffle.
-  final bool requiresHands;
-
   /// Temps total cumulé (en secondes) que la joueuse doit avoir investi
   /// pour débloquer ce coach (Phase 19.10 — remplace l'ancien
   /// `minPlayerLevel`). Le déblocage par investissement remplace le
@@ -36,7 +39,6 @@ class CoachRequirement {
   final int minPlayerSeconds;
 
   const CoachRequirement({
-    this.requiresHands = false,
     this.minPlayerSeconds = 0,
   });
 
@@ -45,17 +47,16 @@ class CoachRequirement {
   /// Désérialise un objet JSON :
   /// ```jsonc
   /// {
-  ///   "requiresHands": false,
   ///   "minPlayerSeconds": 0
   /// }
   /// ```
-  /// Toute clé absente garde sa valeur par défaut. Une clé legacy
-  /// `minPlayerLevel` est silencieusement ignorée (les `Coach`s sont
-  /// matérialisés via `CoachCatalog.defaults` qui pose les nouveaux
-  /// seuils ; les overrides JSON ne touchent pas les requirements).
+  /// Toute clé absente garde sa valeur par défaut. Les clés legacy
+  /// `minPlayerLevel` (Phase 19) et `requiresHands` (0.5.0) sont
+  /// silencieusement ignorées — les `Coach`s sont matérialisés via
+  /// `CoachCatalog.defaults` qui pose les nouveaux seuils ; les
+  /// overrides JSON ne touchent pas les requirements.
   factory CoachRequirement.fromJson(Map<String, dynamic> json) {
     return CoachRequirement(
-      requiresHands: json['requiresHands'] == true,
       minPlayerSeconds: (json['minPlayerSeconds'] as num?)?.toInt() ?? 0,
     );
   }
@@ -178,7 +179,7 @@ class CoachMeta {
   ///   "specialties": ["endurance", "profondeur"],
   ///   "tier": 1,
   ///   "isPrincipal": true,
-  ///   "requirements": { "requiresHands": false, "minPlayerLevel": 1 },
+  ///   "requirements": { "minPlayerSeconds": 0 },
   ///   "portrait": "assets/career/coaches/portraits/coach_01_lina.png"
   /// }
   /// ```

@@ -1582,9 +1582,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get coachBadgeLocked => 'GESPERRT';
 
   @override
-  String get coachRequiresHands => 'Hände erforderlich';
-
-  @override
   String coachSummaryPrincipal(String title, int tier) {
     return '$title · Haupt-Stufe $tier';
   }
@@ -1651,11 +1648,6 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String coachErrorLockedTier(int tier) {
     return 'Dieser Coach ist noch gesperrt — erreiche Stufe $tier, um ihn freizuschalten.';
-  }
-
-  @override
-  String coachErrorRequiresHands(String coachName) {
-    return '$coachName braucht, dass du die Hand in den Optionen aktivierst.';
   }
 
   @override

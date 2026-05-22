@@ -2872,12 +2872,6 @@ abstract class AppLocalizations {
   /// **'VERROUILLÉ'**
   String get coachBadgeLocked;
 
-  /// No description provided for @coachRequiresHands.
-  ///
-  /// In fr, this message translates to:
-  /// **'Mains obligatoires'**
-  String get coachRequiresHands;
-
   /// No description provided for @coachSummaryPrincipal.
   ///
   /// In fr, this message translates to:
@@ -2973,12 +2967,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Ce coach est encore verrouillé — atteins le palier {tier} pour le débloquer.'**
   String coachErrorLockedTier(int tier);
-
-  /// No description provided for @coachErrorRequiresHands.
-  ///
-  /// In fr, this message translates to:
-  /// **'{coachName} a besoin que tu actives la main dans les options.'**
-  String coachErrorRequiresHands(String coachName);
 
   /// No description provided for @coachErrorMinPlayerSeconds.
   ///

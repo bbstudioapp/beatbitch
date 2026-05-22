@@ -121,17 +121,29 @@ void main() {
       expect(status, CoachSelectionStatus.lockedTier);
     });
 
-    test('coach requiresHands sans mains → blockedRequiresHands', () async {
+    test(
+        'refonte 0.5.0 : handsEnabled ignoré côté evaluate (hand piloté '
+        'par la milestone, pas le coach)', () async {
       final s = CoachService();
       await s.load();
-      await s.syncFromTotalSeconds(25200); // tier 4 (≥ tier 3 Jade)
-      final jade = s.coaches.firstWhere((c) => c.requirements.requiresHands);
+      await s.syncFromTotalSeconds(25200); // tier 4 — Jade débloquée
+      final jade = s.coaches.firstWhere((c) => c.id == 'coach_03_jade');
+      // handsEnabled=false ne doit PLUS bloquer la sélection :
+      // l'ancien `blockedRequiresHands` n'existe plus.
       final status = s.evaluate(
         jade,
         playerTotalSeconds: 25200,
         handsEnabled: false,
       );
-      expect(status, CoachSelectionStatus.blockedRequiresHands);
+      expect(
+        status,
+        anyOf(
+          CoachSelectionStatus.selectedAdvancing,
+          CoachSelectionStatus.selectedFreeTraining,
+        ),
+        reason: 'hands désactivé ne doit plus bloquer un coach — le hand '
+            'obligatoire est désormais piloté par la milestone',
+      );
     });
 
     test(
