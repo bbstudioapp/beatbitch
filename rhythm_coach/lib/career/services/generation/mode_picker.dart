@@ -82,7 +82,68 @@ class ModePicker {
   ///   APRÈS le pick, donc on ne biaise pas le tirage du mode)
   /// - candidat = breath/freestyle (sont tirés par d'autres voies, jamais
   ///   par [pickWeighted], mais on reste neutre par sécurité)
+  /// Détecte si émettre [candidate] prolongerait un cycle déjà répété
+  /// dans `recent`. Couvre :
+  /// - cycle de longueur 2 : `[..., A, B, A, B]` + candidate `A` →
+  ///   le cycle `(A, B)` se serait répété 2× puis amorce une 3e fois.
+  /// - cycle de longueur 3 : `[..., A, B, C, A, B, C]` + candidate `A` →
+  ///   le cycle `(A, B, C)` se serait répété 2× puis amorce une 3e fois.
+  ///
+  /// On exclut le cas dégénéré `A == B` (déjà capté par
+  /// [filterRepeated] / `REPEAT-STREAK` pour les modes non-flow, et
+  /// volontairement toléré pour les modes flow type rhythm/lick/hand).
+  static bool _extendsRepeatedCycle(
+      SessionMode candidate, List<SessionMode> recent) {
+    final n = recent.length;
+    if (n >= 4) {
+      final a = recent[n - 4];
+      final b = recent[n - 3];
+      final a2 = recent[n - 2];
+      final b2 = recent[n - 1];
+      if (a == candidate && a == a2 && b == b2 && a != b) {
+        return true;
+      }
+    }
+    if (n >= 6) {
+      final a = recent[n - 6];
+      final b = recent[n - 5];
+      final c = recent[n - 4];
+      final a2 = recent[n - 3];
+      final b2 = recent[n - 2];
+      final c2 = recent[n - 1];
+      if (a == candidate &&
+          a == a2 &&
+          b == b2 &&
+          c == c2 &&
+          (a != b || b != c)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   static double continuityMultiplier(
+    SessionMode candidate,
+    ModeContinuityState state, {
+    required Map<SessionMode, ModeRules> rules,
+  }) {
+    // Malus anti-cycle (×0.2) appliqué EN PLUS du multiplicateur de
+    // type ci-dessous : si émettre `candidate` prolongerait un cycle
+    // de 2 ou 3 modes déjà répété, on freine sans bloquer (il reste un
+    // poids non nul, c'est juste moins probable). Le ×0.2 est assez fort
+    // pour casser un cycle même quand la continuité bouche pousse ×3.0
+    // (résultat net 0.6) sans interdire complètement le candidat (un mode
+    // hold rare ne disparaît pas s'il n'y a pas d'alternative crédible).
+    final cycleMul =
+        _extendsRepeatedCycle(candidate, state.recentModes) ? 0.2 : 1.0;
+    return _typeMultiplier(candidate, state, rules: rules) * cycleMul;
+  }
+
+  /// Multiplicateur historique basé uniquement sur le **type** du
+  /// candidat vs le dernier type (bouche/langue/libreMain/transit) et
+  /// les compteurs `stepsInLastType` / `stepsOutsideBouche`. Extrait
+  /// pour permettre la composition avec le malus anti-cycle.
+  static double _typeMultiplier(
     SessionMode candidate,
     ModeContinuityState state, {
     required Map<SessionMode, ModeRules> rules,

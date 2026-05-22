@@ -33,10 +33,21 @@ class ModeContinuityState {
   /// (breath / beg / biffle / hold / freestyle).
   final SessionMode? lastMode;
 
+  /// Buffer roulant des N derniers modes émis (max 6). Sert à la
+  /// détection anti-cycle dans `ModePicker.continuityMultiplier` :
+  /// si le candidat « extend » un cycle de 2 ou 3 modes déjà répété
+  /// (ex: rhythm/hold/rhythm/hold ou breath/hold/rhythm/breath/hold/rhythm),
+  /// son poids est pénalisé pour casser la structure mécanique.
+  /// Tous les modes émis y entrent, y compris `breath` (transparent
+  /// côté continuité de type mais visible dans les cycles signalés
+  /// par l'audit).
+  final List<SessionMode> recentModes;
+
   const ModeContinuityState({
     required this.lastType,
     required this.stepsInLastType,
     required this.stepsOutsideBouche,
     required this.lastMode,
+    this.recentModes = const [],
   });
 }
