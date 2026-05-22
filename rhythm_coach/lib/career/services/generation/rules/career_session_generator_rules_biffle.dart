@@ -127,12 +127,24 @@ class BiffleRules extends ModeRules {
 
   @override
   StepDraft buildRecovery(RecoveryCtx ctx) {
-    final (from, to) = ctx.gen.sampleFromTo(0.3);
+    // Biffle = coups de queue sur le visage, pas de notion de position
+    // (cohérent avec `build()` ci-dessus et avec la doc dans CLAUDE.md).
+    // Historiquement la méthode appelait `sampleFromTo(0.3)` et renseignait
+    // `from` / `to`, ce qui produisait des steps mal formés genre
+    // `biffle head→throat` dans les logs et l'audit (cf. anomalie
+    // ressortie par `test/audit_session_patterns_test.dart`).
+    //
+    // On conserve l'appel à `sampleFromTo(0.3)` pour son **effet de
+    // bord** (consommation RNG), afin de ne pas décaler la séquence
+    // déterministe par seed et casser les tests qui en dépendent (notam.
+    // `custom_mode_boost_dose_test.dart::doses neutres`). Les valeurs
+    // tirées sont ignorées — `from` / `to` du draft restent `null`.
+    ctx.gen.sampleFromTo(0.3);
     return StepDraft(
       mode: SessionMode.biffle,
       bpm: ctx.bpm,
-      from: from,
-      to: to,
+      from: null,
+      to: null,
       duration: ctx.duration,
     );
   }
