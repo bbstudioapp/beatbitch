@@ -225,13 +225,6 @@
       "error": { "type": "String" }
     }
   },
-  "careerLevelSection": "Stufe",
-  "careerMaxLevel": "max. {level}",
-  "@careerMaxLevel": {
-    "placeholders": {
-      "level": { "type": "int" }
-    }
-  },
   "careerDurationSection": "Dauer",
   "careerQuickieToggle": "Quickie",
   "careerQuickieSubtitle": "6 Min. — intensiv",
@@ -313,8 +306,6 @@
       "count": { "type": "int" }
     }
   },
-  "careerLevelLockedHint": "Stufe 1 (beende eine Session, um die nächste freizuschalten)",
-
   "careerSessionName": "Karriere Stufe {level}",
   "@careerSessionName": {
     "placeholders": {
@@ -383,10 +374,6 @@
   "specRespecConfirmAction": "Respec",
   "specIntro": "Vergib deine Punkte, um der Engine zu sagen, was du magst. Je mehr du in einen Zweig investierst, desto stärker geht der Generator in diesen Stil — ohne deine Stats aus dem Gleichgewicht zu bringen.",
   "specPointsAvailableLabel": "verfügbare Punkte",
-  "specLevelLabel": "Stufe {level}",
-  "@specLevelLabel": {
-    "placeholders": { "level": { "type": "int" } }
-  },
   "specSpentLabel": "{spent} / {cap} vergeben",
   "@specSpentLabel": {
     "placeholders": {

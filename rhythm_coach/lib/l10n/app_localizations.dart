@@ -1030,18 +1030,6 @@ abstract class AppLocalizations {
   /// **'Erreur de chargement :\n{error}'**
   String careerLoadError(String error);
 
-  /// No description provided for @careerLevelSection.
-  ///
-  /// In fr, this message translates to:
-  /// **'Niveau'**
-  String get careerLevelSection;
-
-  /// No description provided for @careerMaxLevel.
-  ///
-  /// In fr, this message translates to:
-  /// **'max {level}'**
-  String careerMaxLevel(int level);
-
   /// No description provided for @careerDurationSection.
   ///
   /// In fr, this message translates to:
@@ -1342,12 +1330,6 @@ abstract class AppLocalizations {
   /// **'Sessions complétées : {count}'**
   String careerCompletedSessions(int count);
 
-  /// No description provided for @careerLevelLockedHint.
-  ///
-  /// In fr, this message translates to:
-  /// **'Niveau 1 (termine une séance pour débloquer le suivant)'**
-  String get careerLevelLockedHint;
-
   /// No description provided for @careerSessionName.
   ///
   /// In fr, this message translates to:
@@ -1545,12 +1527,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'points disponibles'**
   String get specPointsAvailableLabel;
-
-  /// No description provided for @specLevelLabel.
-  ///
-  /// In fr, this message translates to:
-  /// **'Niveau {level}'**
-  String specLevelLabel(int level);
 
   /// No description provided for @specSpentLabel.
   ///
