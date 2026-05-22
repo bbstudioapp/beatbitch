@@ -273,7 +273,7 @@ Future<_DeliverOutcome> _deliver({
     await FileSaver.instance.saveFile(
       name: filename.replaceAll('.json', ''),
       bytes: bytes,
-      ext: 'json',
+      fileExtension: 'json',
       mimeType: MimeType.json,
     );
     return _DeliverOutcome.saved;
