@@ -241,44 +241,42 @@ List<_PatternFlag> _analyze(List<SessionStep> steps, _Scenario sc) {
     }
   }
 
-  // 3b. Holds tous à la même profondeur (mono-depth)
-  final holdDepths = <Position, int>{};
-  for (final s in config) {
-    if (s.mode != SessionMode.hold) continue;
-    final t = s.to;
-    if (t == null) continue;
-    holdDepths[t] = (holdDepths[t] ?? 0) + 1;
-  }
-  final holdTotal = holdDepths.values.fold(0, (a, b) => a + b);
-  if (holdTotal >= 5 && holdDepths.length == 1) {
-    final pos = holdDepths.keys.first;
-    flags.add(_PatternFlag(
-      'HOLD-MONODEPTH',
-      '$holdTotal holds tous à `${pos.name}` (pas de variété) — '
-          'engendre la boucle breath/hold/rhythm quand cumulé avec un '
-          'rhythm de recovery monotone',
-    ));
-  }
+  // 3b. (Note : pas de détection « holds tous à la même profondeur » — si
+  //      seul `throat` est débloqué, c'est cohérent que tous les holds y
+  //      tombent. La variété sera mécaniquement présente quand `fullHold`
+  //      sera débloqué.)
 
-  // 4. Boucle « breath / hold throat / rhythm tip→head »
-  var loopCount = 0;
-  for (var i = 0; i + 2 < config.length; i++) {
-    final a = config[i];
-    final b = config[i + 1];
-    final c = config[i + 2];
-    final isBreath = (a.mode ?? SessionMode.rhythm) == SessionMode.breath;
-    final isHoldThroat = b.mode == SessionMode.hold && b.to == Position.throat;
-    final isRhythmShallow = c.mode == SessionMode.rhythm &&
-        (c.from == Position.tip || c.from == Position.head) &&
-        (c.to == Position.head || c.to == Position.mid);
-    if (isBreath && isHoldThroat && isRhythmShallow) loopCount++;
-  }
-  if (loopCount >= 2) {
-    flags.add(_PatternFlag(
-      'LOOP-BTR',
-      'pattern breath / hold throat / rhythm tip→head consécutif × $loopCount '
-          '(signalé par l\'utilisatrice)',
-    ));
+  // 4. Cycle de modes répétitif — détecte tout cycle de 2 ou 3 modes
+  //    consécutifs qui se répète (ex: breath/hold/rhythm/breath/hold/rhythm).
+  //    Plus général que la « boucle breath/hold throat/rhythm tip→head »
+  //    initialement signalée — c'est la *structure* qui pose problème
+  //    (« on n'est pas forcé de faire systématiquement breath/hold/rythm »),
+  //    pas le détail des positions.
+  for (final cycleLen in const [2, 3]) {
+    final occurrences = <String, int>{};
+    for (var i = 0; i + 2 * cycleLen - 1 < config.length; i++) {
+      final sig = [
+        for (var k = 0; k < cycleLen; k++)
+          (config[i + k].mode ?? SessionMode.rhythm).name,
+      ].join('/');
+      final next = [
+        for (var k = 0; k < cycleLen; k++)
+          (config[i + cycleLen + k].mode ?? SessionMode.rhythm).name,
+      ].join('/');
+      if (sig != next) continue;
+      // Ignorer les cycles d'un seul mode — captés par MODE-DOM / REPEAT-STREAK
+      if (sig.split('/').toSet().length < 2) continue;
+      occurrences[sig] = (occurrences[sig] ?? 0) + 1;
+    }
+    for (final entry in occurrences.entries) {
+      if (entry.value >= 3) {
+        flags.add(_PatternFlag(
+          'CYCLE-REPEAT',
+          'cycle `${entry.key}` répété ${entry.value} fois dans la séance '
+              '(structure mécanique manquant de variation)',
+        ));
+      }
+    }
   }
 
   // 5. Mode sur-représenté (>50%)
