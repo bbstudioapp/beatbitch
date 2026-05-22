@@ -107,6 +107,13 @@ class SessionRuntimeState {
   /// — ce compteur-là tient sur tout l'écart bouche → bouche.
   int stepsOutsideBouche = 0;
 
+  /// Buffer roulant des N derniers modes émis (max [_recentModesMax]).
+  /// Alimenté par [recordRecentMode], consommé via [continuitySnapshot]
+  /// par le picker pour détecter les cycles structurels (cf.
+  /// `ModePicker.continuityMultiplier`).
+  final List<SessionMode> _recentModes = <SessionMode>[];
+  static const int _recentModesMax = 6;
+
   // ─── Anti-répétition (BPM / amplitude / texte) ───────────────────────────
 
   /// Dernière phrase TTS poussée, pour éviter de répéter la même phrase
@@ -178,6 +185,17 @@ class SessionRuntimeState {
     }
   }
 
+  /// Ajoute [mode] au buffer roulant `_recentModes` (taille max 6).
+  /// Inclut explicitement les transit (breath / freestyle) — un cycle
+  /// `breath/hold/rhythm` répété est précisément ce qu'on veut détecter
+  /// côté picker.
+  void recordRecentMode(SessionMode mode) {
+    _recentModes.add(mode);
+    if (_recentModes.length > _recentModesMax) {
+      _recentModes.removeAt(0);
+    }
+  }
+
   /// Capture l'état mutable de continuité (lasts + compteurs) pour le
   /// passer au picker statique [`_ModePicker.pickWeighted`]. Reconstruit
   /// à chaque pick — 4 lectures de fields, cheap.
@@ -186,6 +204,7 @@ class SessionRuntimeState {
         stepsInLastType: stepsInLastType,
         stepsOutsideBouche: stepsOutsideBouche,
         lastMode: lastMode,
+        recentModes: List<SessionMode>.unmodifiable(_recentModes),
       );
 
   /// Met à jour l'état « dernier *action* step émis » à partir du draft

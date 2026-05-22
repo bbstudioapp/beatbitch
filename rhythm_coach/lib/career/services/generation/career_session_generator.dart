@@ -1538,6 +1538,7 @@ class CareerSessionGenerator {
     _rhythmChain.onStepPushed(mode, duration);
     final rule = _rules[mode]!;
     _state.recordContinuity(rule.classify(to));
+    _state.recordRecentMode(mode);
     if (rule.isRhythmic) {
       _patternBuffer.record(mode, from: from, to: to, bpm: bpm);
     }
