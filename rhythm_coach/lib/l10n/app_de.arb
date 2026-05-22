@@ -768,11 +768,11 @@
   "@coachErrorRequiresHands": {
     "placeholders": { "coachName": { "type": "String" } }
   },
-  "coachErrorMinPlayerSeconds": "{coachName} wird bei {hours} h gespielter Gesamtzeit freigeschaltet.",
+  "coachErrorMinPlayerSeconds": "{coachName} wird bei {duration} gespielter Gesamtzeit freigeschaltet.",
   "@coachErrorMinPlayerSeconds": {
     "placeholders": {
       "coachName": { "type": "String" },
-      "hours": { "type": "int" }
+      "duration": { "type": "String" }
     }
   },
   "unlockAnnouncementSloppyDroolBasic": "Ab jetzt hält dein Mund mehr Spucke, und dein Lecken erzeugt mehr davon. Sabber auf mich, sei dreckig.",

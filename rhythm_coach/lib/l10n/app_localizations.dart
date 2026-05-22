@@ -2983,8 +2983,8 @@ abstract class AppLocalizations {
   /// No description provided for @coachErrorMinPlayerSeconds.
   ///
   /// In fr, this message translates to:
-  /// **'{coachName} se débloque à {hours} h de jeu cumulé.'**
-  String coachErrorMinPlayerSeconds(String coachName, int hours);
+  /// **'{coachName} se débloque à {duration} de jeu cumulé.'**
+  String coachErrorMinPlayerSeconds(String coachName, String duration);
 
   /// Annonce TTS post-finale_chime quand la milestone qui débloque sloppy_drool_basic est acquittée.
   ///

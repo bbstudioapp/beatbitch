@@ -85,8 +85,8 @@ class _CareerScenarioDebugScreenState extends State<CareerScenarioDebugScreen> {
     final spec = await SpecializationService().load();
     final humil = await stats.getHumiliationLevel();
     final obed = await stats.getObedienceLevel();
-    // Phase 19.12 : pas de maxLevel persisté — on dérive le level
-    // initial du compteur de sessions (1 + sessions/2, clampé).
+    // SynthLevel dérivé des sessions pour initialiser le slider debug
+    // (capped à 20 ici pour rester dans la plage utilisable de l'écran).
     final sessions = await progress.getCompletedSessions();
     final includeHand = await progress.getIncludeHand();
     if (!mounted) return;
@@ -96,7 +96,7 @@ class _CareerScenarioDebugScreenState extends State<CareerScenarioDebugScreen> {
       _spec = spec;
       _humil = humil;
       _obed = obed;
-      _level = (1 + sessions ~/ 2).clamp(1, 20);
+      _level = CareerDifficultyResolver.synthLevelFor(sessions).clamp(1, 20);
       _includeHand = includeHand;
       _unlocks = milestoneService.acquiredUnlockKeys();
       _ready = true;

@@ -768,11 +768,11 @@
   "@coachErrorRequiresHands": {
     "placeholders": { "coachName": { "type": "String" } }
   },
-  "coachErrorMinPlayerSeconds": "{coachName} unlocks at {hours} h of total play time.",
+  "coachErrorMinPlayerSeconds": "{coachName} unlocks at {duration} of total play time.",
   "@coachErrorMinPlayerSeconds": {
     "placeholders": {
       "coachName": { "type": "String" },
-      "hours": { "type": "int" }
+      "duration": { "type": "String" }
     }
   },
   "unlockAnnouncementSloppyDroolBasic": "From now on your mouth holds more spit, and your licking makes more. Drool on me, be filthy.",

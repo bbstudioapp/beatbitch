@@ -1660,8 +1660,8 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String coachErrorMinPlayerSeconds(String coachName, int hours) {
-    return '$coachName se débloque à $hours h de jeu cumulé.';
+  String coachErrorMinPlayerSeconds(String coachName, String duration) {
+    return '$coachName se débloque à $duration de jeu cumulé.';
   }
 
   @override
