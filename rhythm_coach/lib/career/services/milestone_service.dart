@@ -837,18 +837,32 @@ class MilestoneService extends ChangeNotifier {
           if (m.unlocks.isEmpty) continue;
           if (!m.unlocks.any(implied.contains)) continue;
           if (!m.requires.every(liveUnlocks.contains)) continue;
-          // Les `requiresCapability` éventuels (sur d'autres axes) doivent
-          // rester satisfaits — sinon on contournerait un gating métier
-          // explicite (ex. `rhythm.depth_max ≥ 2` pour `intro_hold_throat_short`).
-          var otherCapsOk = true;
+          // Les `requiresCapability` éventuels doivent rester satisfaits —
+          // sinon on contournerait un gating métier explicite
+          // (ex. `rhythm.depth_max ≥ 2` pour `intro_hold_throat_short`).
+          // Pour l'axe poussé, on confronte `reached` au seuil ; pour les
+          // autres axes, on lit le profil. Pas de short-circuit `continue`
+          // sur l'axe poussé : un défi qui n'atteint pas le seuil d'une
+          // milestone sur son propre axe ne doit pas l'acquitter via
+          // transitivité.
+          var capsOk = true;
           for (final req in m.requiresCapability) {
-            if (req.axis == axis) continue;
-            if (!req.isSatisfiedBy(profile)) {
-              otherCapsOk = false;
-              break;
+            if (req.axis == axis) {
+              final ok = axis.recordKind == CapabilityRecordKind.minimize
+                  ? reached <= req.min
+                  : reached >= req.min;
+              if (!ok) {
+                capsOk = false;
+                break;
+              }
+            } else {
+              if (!req.isSatisfiedBy(profile)) {
+                capsOk = false;
+                break;
+              }
             }
           }
-          if (!otherCapsOk) continue;
+          if (!capsOk) continue;
           acquittedIds.add(m.id);
           liveUnlocks.addAll(m.unlocks);
           addedThisPass = true;
@@ -868,14 +882,20 @@ class MilestoneService extends ChangeNotifier {
   static const double _transitiveHoldMinReached = 3.0;
 
   /// Unlocks implicitement prouvés quand un défi pousse un axe de hold
-  /// profond. Tenir gorge X s prouve qu'on tient les positions plus
-  /// shallow X s (la résistance physiologique est strictement décroissante
-  /// avec la profondeur). Pas de mapping symétrique « shallow → profond »
-  /// : tenir mid 5 s ne prouve PAS qu'on tient gorge 5 s.
+  /// profond. Tenir gorge X s prouve qu'on tient gorge X s **et** les
+  /// positions plus shallow X s (la résistance physiologique est
+  /// strictement décroissante avec la profondeur). Pas de mapping
+  /// symétrique « shallow → profond » : tenir mid 5 s ne prouve PAS qu'on
+  /// tient gorge 5 s.
+  ///
+  /// L'unlock principal (`throatHold` / `fullHold`) est inclus pour que la
+  /// milestone correspondante soit acquittée par son propre défi — sinon
+  /// tenir gorge ne débloquerait jamais le palier hold gorge.
   static const Map<CapabilityAxis, Set<UnlockKey>> _impliedHoldUnlocksByAxis = {
     CapabilityAxis.holdThroatStreak: {
       UnlockKey.holdHead,
       UnlockKey.holdMid,
+      UnlockKey.throatHold,
       UnlockKey.finalHoldTip,
       UnlockKey.finalHoldHead,
       UnlockKey.finalHoldMid,
@@ -884,6 +904,7 @@ class MilestoneService extends ChangeNotifier {
       UnlockKey.holdHead,
       UnlockKey.holdMid,
       UnlockKey.throatHold,
+      UnlockKey.fullHold,
       UnlockKey.finalHoldTip,
       UnlockKey.finalHoldHead,
       UnlockKey.finalHoldMid,
