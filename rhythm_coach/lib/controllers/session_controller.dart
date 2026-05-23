@@ -1843,6 +1843,22 @@ class SessionController extends ChangeNotifier {
       return;
     }
 
+    // Pas de random pendant tout un défi (breath d'annonce + countdown +
+    // step défi + atSeuil + extensions + breath post-défi). Pendant cette
+    // fenêtre, la dramaturgie est entièrement pilotée par les phrases
+    // `challengePhrases` du coach (annonce, extension, outcome) — un random
+    // viendrait écraser l'annonce d'explication (mode QUEUE_FLUSH du TTS),
+    // bug reporté avec « Caresse le tendrement » prononcé à la place du
+    // texte d'explication du défi. Le filtre `mode == breath` plus bas ne
+    // suffit pas : entre la transition de phase défi et l'application du
+    // step breath sur le BeepEngine, le mode courant peut encore être le
+    // mode précédent (rhythm/lick/hold).
+    if (isChallengeActive || _inPostChallengeBreath) {
+      _randomCommentTimer =
+          Timer(const Duration(seconds: 3), _fireRandomComment);
+      return;
+    }
+
     // Pas de random pendant beg / breath : ces modes sont vocaux ou
     // respiratoires, l'utilisatrice doit pouvoir se concentrer sur la
     // consigne scriptée sans qu'un commentaire random vienne par-dessus.
