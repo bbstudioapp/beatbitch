@@ -81,6 +81,20 @@ class FinalPicker {
   bool _finalUnlocked(UnlockKey? key) =>
       HumiliationGates.finalUnlocked(key, unlockedKeys);
 
+  /// Palier hold le plus profond acquis (cf. doc dans
+  /// `PositionPickers.milestoneHoldCeilingIdx`). Logique dupliquée ici
+  /// pour éviter une dépendance cyclique vers `PositionPickers` —
+  /// `FinalPicker` ne consulte que `unlockedKeys` et `config.maxDepthIndex`.
+  int _holdCeilingIdx() {
+    if (unlockedKeys.contains(UnlockKey.fullHold)) return Position.full.index;
+    if (unlockedKeys.contains(UnlockKey.throatHold)) {
+      return Position.throat.index;
+    }
+    if (unlockedKeys.contains(UnlockKey.holdMid)) return Position.mid.index;
+    if (unlockedKeys.isEmpty) return config.maxDepthIndex;
+    return Position.head.index;
+  }
+
   /// Tronque la durée d'un hold final pour qu'elle reste finançable par
   /// `humilCap`. Le `target` peut être visé si l'humil suffit, sinon on
   /// redescend par paliers d'1s jusqu'à 10s minimum (= seuil d'unlock).
@@ -161,10 +175,20 @@ class FinalPicker {
     // Exclusions Custom (dose `none`) : on retire en plus les finals dont
     // le mode est explicitement banni — un final hold reste possible
     // quand rhythm est exclu, un final hand quand hold est exclu, etc.
+    //
+    // Floor hold : un final hold ne peut pas régresser vers une zone plus
+    // shallow que le palier hold déjà acquis. Sinon une joueuse qui a
+    // tenu hold mid voyait sortir un final hold head dans une séance
+    // suivante (humilCap intermédiaire), perçu comme une régression.
+    // Cohérent avec le ceiling hold appliqué dans `PositionPickers`.
+    final holdCeilingIdx = _holdCeilingIdx();
     final valid = <FinalVariant>[];
     for (final c in candidates) {
       if (!_finalUnlocked(c.gate)) continue;
       if (_isModeForbidden(c.draft.mode)) continue;
+      if (c.draft.mode == SessionMode.hold && c.draft.to != null) {
+        if (c.draft.to!.index < holdCeilingIdx) continue;
+      }
       if (humilCap >= c.req && _isUnlocked(c.draft)) valid.add(c);
     }
     if (valid.isEmpty) {
