@@ -175,6 +175,9 @@
       "displayLabel": "Première gorge tenue",
       "unlocks": ["throat_hold"],
       "requires": ["basics"],
+      "requiresCapability": [
+        {"axis": "rhythm.depth_max", "min": 2}
+      ],
       "branches": ["endurance", "profondeur"],
       "sequence": [
         {"time": 0,  "text": "Aujourd'hui tu vas tenir gorge. Échauffe.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 100, "duration": 10},
@@ -223,6 +226,9 @@
       "displayLabel": "Gorge en mouvement",
       "unlocks": ["throat_pulse"],
       "requires": ["basics"],
+      "requiresCapability": [
+        {"axis": "hold.throat.streak", "min": 3}
+      ],
       "branches": ["profondeur", "rythmeBiffle"],
       "sequence": [
         {"time": 0,  "text": "Maintenant on bouge dans la gorge. Trois allers-retours, pas plus.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 90, "duration": 8},
@@ -240,6 +246,9 @@
       "displayLabel": "Premier hold à fond",
       "unlocks": ["full_hold"],
       "requires": ["basics"],
+      "requiresCapability": [
+        {"axis": "hold.throat.streak", "min": 3}
+      ],
       "branches": ["endurance", "profondeur"],
       "sequence": [
         {"time": 0,  "text": "Aujourd'hui tu vas tout prendre.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 100, "duration": 10},
@@ -256,6 +265,10 @@
       "displayLabel": "Mouvement à fond",
       "unlocks": ["full_pulse"],
       "requires": ["basics"],
+      "requiresCapability": [
+        {"axis": "hold.full.streak", "min": 2},
+        {"axis": "rhythm.depth_max", "min": 3}
+      ],
       "branches": ["profondeur", "rythmeBiffle"],
       "sequence": [
         {"time": 0,  "text": "Échauffement avant la profondeur.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 100, "duration": 10},
@@ -396,6 +409,9 @@
       "placement": "final",
       "unlocks": ["final_hold_mid"],
       "requires": ["basics"],
+      "requiresCapability": [
+        {"axis": "rhythm.depth_max", "min": 2}
+      ],
       "branches": ["profondeur", "obeissance"],
       "sequence": [
         {"time": 0,  "text": "Descends. Va jusqu'au milieu. Reste-là.", "mode": "hold", "to": "mid", "duration": 7},
@@ -409,6 +425,9 @@
       "placement": "final",
       "unlocks": ["final_biffle"],
       "requires": ["basics"],
+      "requiresCapability": [
+        {"axis": "biffle.streak", "min": 5}
+      ],
       "requiresHands": true,
       "branches": ["rythmeBiffle", "sloppy"],
       "sequence": [
@@ -424,6 +443,9 @@
       "placement": "final",
       "unlocks": ["final_hold_throat"],
       "requires": ["basics"],
+      "requiresCapability": [
+        {"axis": "hold.throat.streak", "min": 3}
+      ],
       "branches": ["profondeur", "endurance"],
       "sequence": [
         {"time": 0, "text": "Descends gorge. Ouvre. Tiens-la.", "mode": "hold", "to": "throat", "duration": 3},
@@ -437,6 +459,9 @@
       "placement": "final",
       "unlocks": ["final_hold_full"],
       "requires": ["basics"],
+      "requiresCapability": [
+        {"axis": "hold.full.streak", "min": 2}
+      ],
       "branches": ["profondeur", "endurance"],
       "sequence": [
         {"time": 0, "text": "Descends. À fond. Gorge à plat.", "mode": "hold", "to": "full", "duration": 3},
@@ -449,6 +474,9 @@
       "displayLabel": "Une seconde, c'est tout",
       "unlocks": ["fake_breath"],
       "requires": ["basics"],
+      "requiresCapability": [
+        {"axis": "rhythm.depth_max", "min": 4}
+      ],
       "branches": ["obeissance", "endurance"],
       "sequence": [
         {"time": 0,  "text": "Vas-y. Plus profond. Suis-moi.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 100, "duration": 12},
