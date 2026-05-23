@@ -1072,9 +1072,30 @@ class _CareerScreenState extends State<CareerScreen> {
           }
           final bundle = snapshot.data!;
           // Phase 19.12 : difficulté + titre dérivent exclusivement de
-          // `sessionsCompleted` + `lengthChoice` via le resolver. Plus
-          // de gate par niveau pour la bâclée — toujours disponible.
-          final lengthChoice = _selectedLengthChoice ?? bundle.lastLengthChoice;
+          // `sessionsCompleted` + `lengthChoice` via le resolver.
+          // Gating retabli post-playtest (cf. premier retour test 0.6 —
+          // une débutante se retrouvait sur 25-45 min ou bâclée intense
+          // sans repère). Constantes définies plus bas.
+          final isBacheeUnlocked =
+              isSessionLengthBacheeUnlocked(bundle.totalSeconds);
+          final isLongerUnlocked = isSessionLengthLongerUnlocked(
+            totalSeconds: bundle.totalSeconds,
+            completedSessions: bundle.completedSessions,
+          );
+          final persistedChoice =
+              _selectedLengthChoice ?? bundle.lastLengthChoice;
+          // Fallback sur courte si la choice persistée n'est plus
+          // sélectionnable (ex. joueuse reset stats → bachee redevient
+          // lockée alors qu'elle l'avait sélectionnée auparavant).
+          final lengthChoice = switch (persistedChoice) {
+            SessionLengthChoice.bachee when !isBacheeUnlocked =>
+              SessionLengthChoice.courte,
+            SessionLengthChoice.moyenne when !isLongerUnlocked =>
+              SessionLengthChoice.courte,
+            SessionLengthChoice.longue when !isLongerUnlocked =>
+              SessionLengthChoice.courte,
+            _ => persistedChoice,
+          };
           final cfg = CareerDifficultyResolver.resolveForCareer(
             sessionsCompleted: bundle.completedSessions,
             lengthChoice: lengthChoice,
@@ -1156,10 +1177,8 @@ class _CareerScreenState extends State<CareerScreen> {
               const SizedBox(height: 8),
               _DurationPicker(
                 value: lengthChoice,
-                // Phase 19.12 : bâclée toujours déblocable (plus de
-                // gate par niveau — le palier reste un signal UX, pas
-                // un verrou pédagogique).
-                isBacheeUnlocked: true,
+                isBacheeUnlocked: isBacheeUnlocked,
+                isLongerUnlocked: isLongerUnlocked,
                 onChanged: (v) => setState(() => _selectedLengthChoice = v),
               ),
               const SizedBox(height: 8),
@@ -1319,20 +1338,68 @@ class _SectionLabel extends StatelessWidget {
 /// Remplace `_LevelPicker` (Phase 19.4). Depuis Phase 19.12 tous les
 /// paliers sont toujours sélectionnables — `isBacheeUnlocked` reste
 /// par cohérence d'API mais le caller passe `true` constamment.
+///
+/// Seuils de déverrouillage des paliers :
+/// - Bâclée : 30 min de jeu cumulé (intense dès le départ → on attend
+///   un peu d'acclimatation).
+/// - Moyenne / Longue : 10 min de jeu OU 1 séance complétée (on évite
+///   qu'une débutante se lance sur 25-45 min avant d'avoir testé une
+///   séance courte).
+const int kSessionLengthBacheeUnlockTotalSeconds = 1800;
+const int kSessionLengthLongerUnlockTotalSeconds = 600;
+
+/// Vrai si la palier « Bâclée » est sélectionnable pour la joueuse.
+@visibleForTesting
+bool isSessionLengthBacheeUnlocked(int totalSeconds) {
+  return totalSeconds >= kSessionLengthBacheeUnlockTotalSeconds;
+}
+
+/// Vrai si les paliers « Moyenne » et « Longue » sont sélectionnables.
+/// Le « OU » est volontaire : une joueuse qui a complété une séance courte
+/// a prouvé qu'elle tenait le format, peu importe le wallclock cumulé.
+@visibleForTesting
+bool isSessionLengthLongerUnlocked({
+  required int totalSeconds,
+  required int completedSessions,
+}) {
+  return completedSessions >= 1 ||
+      totalSeconds >= kSessionLengthLongerUnlockTotalSeconds;
+}
+
 class _DurationPicker extends StatelessWidget {
   final SessionLengthChoice value;
   final bool isBacheeUnlocked;
+  final bool isLongerUnlocked;
   final ValueChanged<SessionLengthChoice> onChanged;
 
   const _DurationPicker({
     required this.value,
     required this.isBacheeUnlocked,
+    required this.isLongerUnlocked,
     required this.onChanged,
   });
+
+  bool _isLocked(SessionLengthChoice c) {
+    switch (c) {
+      case SessionLengthChoice.bachee:
+        return !isBacheeUnlocked;
+      case SessionLengthChoice.moyenne:
+      case SessionLengthChoice.longue:
+        return !isLongerUnlocked;
+      case SessionLengthChoice.courte:
+        return false;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
+    final selectedLocked = _isLocked(value);
+    final selectedHint = !selectedLocked
+        ? null
+        : (value == SessionLengthChoice.bachee
+            ? t.sessionLengthBacheeLockedHint
+            : t.sessionLengthLongerLockedHint);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1344,7 +1411,7 @@ class _DurationPicker extends StatelessWidget {
                   label: c.localizedLabel(context),
                   duration: c.localizedDuration(context),
                   selected: c == value,
-                  locked: c == SessionLengthChoice.bachee && !isBacheeUnlocked,
+                  locked: _isLocked(c),
                   onTap: () => onChanged(c),
                 ),
               ),
@@ -1353,10 +1420,10 @@ class _DurationPicker extends StatelessWidget {
             ],
           ],
         ),
-        if (value == SessionLengthChoice.bachee && !isBacheeUnlocked) ...[
+        if (selectedHint != null) ...[
           const SizedBox(height: 8),
           Text(
-            t.sessionLengthBacheeLockedHint,
+            selectedHint,
             style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
           ),
         ],

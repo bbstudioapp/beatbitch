@@ -1129,8 +1129,14 @@ abstract class AppLocalizations {
   /// No description provided for @sessionLengthBacheeLockedHint.
   ///
   /// In fr, this message translates to:
-  /// **'Bâclée disponible plus tard (intense dès le départ).'**
+  /// **'Bâclée déverrouillée après 30 min de jeu cumulé.'**
   String get sessionLengthBacheeLockedHint;
+
+  /// No description provided for @sessionLengthLongerLockedHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Disponible après ta première séance terminée (ou 10 min de jeu).'**
+  String get sessionLengthLongerLockedHint;
 
   /// No description provided for @careerChallengesToggle.
   ///
