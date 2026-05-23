@@ -711,12 +711,12 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String careerSessionName(int level) {
-    return 'Carrière niveau $level';
+    return 'Carrière';
   }
 
   @override
   String careerSessionNameQuickie(int level) {
-    return 'Carrière niveau $level — bâclée';
+    return 'Carrière — bâclée';
   }
 
   @override

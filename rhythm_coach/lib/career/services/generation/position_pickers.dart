@@ -141,7 +141,6 @@ class PositionPickers {
 
   /// Profondeur max débloquée pour un hold, basée sur les milestones :
   /// fullHold > throatHold > holdMid > head (socle de base).
-  /// Capée aussi par [maxDepthIndex] (cohérence niveau).
   ///
   /// Sémantique design : on privilégie le palier max débloqué, mais on
   /// tolère une dose du palier juste en-dessous tant que le palier
@@ -151,23 +150,27 @@ class PositionPickers {
   /// Les holds tip/head n'ont pas de clé (socle ouvert par
   /// `intro_basics`) → en carrière sans milestone hold acquise, le
   /// plancher est `head`.
+  ///
+  /// **Pas de cap par `maxDepthIndex`** : ce dernier dérive du profil
+  /// rhythm (`rhythm.depth_max.comfort`), donc une débutante qui n'a
+  /// jamais fait de rhythm mid voyait son hold mid acquis dégradé en
+  /// head — alors qu'un défi hold prouve la capacité hold indépendamment
+  /// du rhythm. La capacité hold est bornée en aval par
+  /// `_clampToCapability` sur `hold.X.streak` directement.
   int milestoneHoldCeilingIdx() {
-    final int milestoneCap;
-    if (unlockedKeys.contains(UnlockKey.fullHold)) {
-      milestoneCap = Position.full.index;
-    } else if (unlockedKeys.contains(UnlockKey.throatHold)) {
-      milestoneCap = Position.throat.index;
-    } else if (unlockedKeys.contains(UnlockKey.holdMid)) {
-      milestoneCap = Position.mid.index;
-    } else if (unlockedKeys.isEmpty) {
-      // Hérité (mode démo / scénario non-carrière) : on retombe sur le cap
-      // de niveau. Évite que le mode démo se fige sur head.
-      milestoneCap = config.maxDepthIndex;
-    } else {
-      // Carrière, socle de base : head est le hold le plus profond libre.
-      milestoneCap = Position.head.index;
+    if (unlockedKeys.contains(UnlockKey.fullHold)) return Position.full.index;
+    if (unlockedKeys.contains(UnlockKey.throatHold)) {
+      return Position.throat.index;
     }
-    return min(milestoneCap, config.maxDepthIndex);
+    if (unlockedKeys.contains(UnlockKey.holdMid)) return Position.mid.index;
+    if (unlockedKeys.isEmpty) {
+      // Hérité (mode démo / scénario non-carrière) : on retombe sur le cap
+      // de profondeur passé en config. Évite que le mode démo se fige
+      // sur head.
+      return config.maxDepthIndex;
+    }
+    // Carrière, socle de base : head est le hold le plus profond libre.
+    return Position.head.index;
   }
 
   /// Cap de profondeur autorisé pour les modes rythmés (rhythm/hand) en

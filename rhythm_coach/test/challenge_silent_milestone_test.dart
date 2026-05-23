@@ -234,12 +234,13 @@ void main() {
     );
 
     test(
-      'minLevel filtre la passe principale (bug F7 — freestyle level 7 '
-      'acquitté en niveau 1)',
+      'minLevel n\'est plus consulté — la télémétrie pilote l\'acquittement',
       () {
-        // `intro_freestyle` (level 7) ne doit pas être acquittée par
-        // `reconcileFromCapability` quand le profil contient déjà
-        // `motion_streak ≥ 30` mais que la joueuse est sous le palier.
+        // Nouvelle philo (cf. mémoire feedback_milestone_unlock_rules) :
+        // gating par télémétrie, pas par level. Si la capability est
+        // prouvée par le défi, on acquitte la milestone quel que soit
+        // son `minLevel`. Le param `playerLevel` est conservé pour
+        // rétrocompat des call sites mais n'est plus consulté.
         final svc = MilestoneService();
         final freestyle = _milestone(
           id: 'intro_freestyle',
@@ -254,25 +255,25 @@ void main() {
         const profile = CapabilityProfile({
           CapabilityAxis.rhythmMotionStreak: CapabilityAxisState(best: 45.0),
         });
-        // Défi sur l'axe motion_streak (matchedAxis OK), playerLevel < 7.
-        final out = svc.milestonesAcquittableByChallenge(
+        // Au level 1, freestyle est acquittable (gating capability satisfait).
+        final outLow = svc.milestonesAcquittableByChallenge(
           axis: CapabilityAxis.rhythmMotionStreak,
           reached: 45.0,
           profile: profile,
           acquiredUnlocks: const {},
           playerLevel: 1,
         );
-        expect(out, isEmpty);
+        expect(outLow.map((m) => m.id), ['intro_freestyle']);
 
-        // Au niveau ≥ 7, freestyle est acquittable.
-        final outAtLevel = svc.milestonesAcquittableByChallenge(
+        // Même comportement au-dessus du palier minLevel.
+        final outHigh = svc.milestonesAcquittableByChallenge(
           axis: CapabilityAxis.rhythmMotionStreak,
           reached: 45.0,
           profile: profile,
           acquiredUnlocks: const {},
           playerLevel: 7,
         );
-        expect(outAtLevel.map((m) => m.id), ['intro_freestyle']);
+        expect(outHigh.map((m) => m.id), ['intro_freestyle']);
       },
     );
   });

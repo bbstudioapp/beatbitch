@@ -795,22 +795,11 @@ class MilestoneService extends ChangeNotifier {
         if (acquittedIds.contains(m.id)) continue;
         if (m.requiresCapability.isEmpty) continue;
         if (!m.requires.every(liveUnlocks.contains)) continue;
-        // Filtre `minLevel` sur la passe principale uniquement : une
-        // milestone qui débloque un mode entier (freestyle level 7,
-        // biffleBasic level 5, encore level 5…) ne doit pas être
-        // acquittée par défi tant que la joueuse n'a pas atteint le
-        // palier. Sans cette garde, `reconcileFromCapability` au start
-        // de session acquittait `intro_freestyle` dès que le profil
-        // portait `motion_streak ≥ 30` (atteint par n'importe quel
-        // rythme soutenu de la séance précédente) — bug F7 reporté
-        // (action freestyle utilisable dès la séance 2 alors que la
-        // joueuse est au niveau 1).
-        //
-        // La cascade transitive ci-dessous (passe `_impliedHoldUnlocksByAxis`)
-        // ne porte volontairement PAS ce filtre : la pédagogie « tenir
-        // gorge X s prouve les paliers shallow à la même durée » doit
-        // fonctionner dès le tuto niveau 1.
-        if (m.minLevel > playerLevel) continue;
+        // Plus de filtre `minLevel` ici : la philo est passée au gating
+        // par télémétrie. Si la joueuse a prouvé la capability d'une
+        // milestone via un défi, on l'acquitte indépendamment de son
+        // niveau global. Le param `playerLevel` est conservé pour la
+        // rétrocompat du call site mais n'est plus consulté.
         // Garde-fou : le défi doit avoir poussé **au moins un axe** que
         // la milestone attend, sinon l'acquittement « par défi » n'a aucun
         // sens — la milestone est juste devenue candidate parce que le

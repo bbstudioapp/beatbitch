@@ -1327,13 +1327,13 @@ abstract class AppLocalizations {
   /// No description provided for @careerSessionName.
   ///
   /// In fr, this message translates to:
-  /// **'Carrière niveau {level}'**
+  /// **'Carrière'**
   String careerSessionName(int level);
 
   /// No description provided for @careerSessionNameQuickie.
   ///
   /// In fr, this message translates to:
-  /// **'Carrière niveau {level} — bâclée'**
+  /// **'Carrière — bâclée'**
   String careerSessionNameQuickie(int level);
 
   /// No description provided for @careerMilestonesBranchesPrefix.

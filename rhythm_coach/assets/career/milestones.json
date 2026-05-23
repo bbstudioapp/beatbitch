@@ -187,7 +187,7 @@
       "unlocks": ["throat_hold"],
       "requires": ["hold_mid"],
       "requiresCapability": [
-        {"axis": "rhythm.depth_max", "min": 2}
+        {"axis": "hold.throat.streak", "min": 3}
       ],
       "branches": ["endurance", "profondeur"],
       "sequence": [

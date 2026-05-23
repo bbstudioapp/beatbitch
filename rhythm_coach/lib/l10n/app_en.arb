@@ -305,13 +305,13 @@
       "count": { "type": "int" }
     }
   },
-  "careerSessionName": "Career level {level}",
+  "careerSessionName": "Career",
   "@careerSessionName": {
     "placeholders": {
       "level": { "type": "int" }
     }
   },
-  "careerSessionNameQuickie": "Career level {level} — quickie",
+  "careerSessionNameQuickie": "Career — quickie",
   "@careerSessionNameQuickie": {
     "placeholders": {
       "level": { "type": "int" }
