@@ -568,14 +568,6 @@ class AppLocalizationsDe extends AppLocalizations {
       'Volle Sitzung, mehrere eingeschobene Herausforderungen.';
 
   @override
-  String get sessionLengthBacheeLockedHint =>
-      'Quickie wird nach 30 Min. kumulierter Spielzeit freigeschaltet.';
-
-  @override
-  String get sessionLengthLongerLockedHint =>
-      'Verfügbar nach deiner ersten abgeschlossenen Sitzung (oder 10 Min. Spielzeit).';
-
-  @override
   String get careerChallengesToggle => 'Herausforderungen in der Sitzung';
 
   @override

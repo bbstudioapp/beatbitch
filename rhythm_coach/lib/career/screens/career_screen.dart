@@ -1078,10 +1078,12 @@ class _CareerScreenState extends State<CareerScreen> {
           // sans repère). Constantes définies plus bas.
           final isBacheeUnlocked =
               isSessionLengthBacheeUnlocked(bundle.totalSeconds);
-          final isLongerUnlocked = isSessionLengthLongerUnlocked(
+          final isMoyenneUnlocked = isSessionLengthMoyenneUnlocked(
             totalSeconds: bundle.totalSeconds,
             completedSessions: bundle.completedSessions,
           );
+          final isLongueUnlocked =
+              isSessionLengthLongueUnlocked(bundle.totalSeconds);
           final persistedChoice =
               _selectedLengthChoice ?? bundle.lastLengthChoice;
           // Fallback sur courte si la choice persistée n'est plus
@@ -1090,9 +1092,9 @@ class _CareerScreenState extends State<CareerScreen> {
           final lengthChoice = switch (persistedChoice) {
             SessionLengthChoice.bachee when !isBacheeUnlocked =>
               SessionLengthChoice.courte,
-            SessionLengthChoice.moyenne when !isLongerUnlocked =>
+            SessionLengthChoice.moyenne when !isMoyenneUnlocked =>
               SessionLengthChoice.courte,
-            SessionLengthChoice.longue when !isLongerUnlocked =>
+            SessionLengthChoice.longue when !isLongueUnlocked =>
               SessionLengthChoice.courte,
             _ => persistedChoice,
           };
@@ -1178,7 +1180,8 @@ class _CareerScreenState extends State<CareerScreen> {
               _DurationPicker(
                 value: lengthChoice,
                 isBacheeUnlocked: isBacheeUnlocked,
-                isLongerUnlocked: isLongerUnlocked,
+                isMoyenneUnlocked: isMoyenneUnlocked,
+                isLongueUnlocked: isLongueUnlocked,
                 onChanged: (v) => setState(() => _selectedLengthChoice = v),
               ),
               const SizedBox(height: 8),
@@ -1349,11 +1352,14 @@ class _SectionLabel extends StatelessWidget {
 /// Seuils de déverrouillage des paliers :
 /// - Bâclée : 30 min de jeu cumulé (intense dès le départ → on attend
 ///   un peu d'acclimatation).
-/// - Moyenne / Longue : 10 min de jeu OU 1 séance complétée (on évite
-///   qu'une débutante se lance sur 25-45 min avant d'avoir testé une
-///   séance courte).
+/// - Moyenne : 10 min de jeu OU 1 séance complétée (on évite qu'une
+///   débutante se lance sur 25 min avant d'avoir testé une courte).
+/// - Longue : 1 h de jeu cumulé (≈ avoir tenu au moins une Moyenne
+///   entière ou plusieurs Courtes ; pas de bypass session pour éviter
+///   qu'une Bâclée de 6 min ne déverrouille un format 45 min).
 const int kSessionLengthBacheeUnlockTotalSeconds = 1800;
-const int kSessionLengthLongerUnlockTotalSeconds = 600;
+const int kSessionLengthMoyenneUnlockTotalSeconds = 600;
+const int kSessionLengthLongueUnlockTotalSeconds = 3600;
 
 /// Vrai si la palier « Bâclée » est sélectionnable pour la joueuse.
 @visibleForTesting
@@ -1361,78 +1367,75 @@ bool isSessionLengthBacheeUnlocked(int totalSeconds) {
   return totalSeconds >= kSessionLengthBacheeUnlockTotalSeconds;
 }
 
-/// Vrai si les paliers « Moyenne » et « Longue » sont sélectionnables.
-/// Le « OU » est volontaire : une joueuse qui a complété une séance courte
-/// a prouvé qu'elle tenait le format, peu importe le wallclock cumulé.
+/// Vrai si le palier « Moyenne » (25 min) est sélectionnable. Le « OU »
+/// est volontaire : une joueuse qui a complété une séance courte a prouvé
+/// qu'elle tenait le format, peu importe le wallclock cumulé.
 @visibleForTesting
-bool isSessionLengthLongerUnlocked({
+bool isSessionLengthMoyenneUnlocked({
   required int totalSeconds,
   required int completedSessions,
 }) {
   return completedSessions >= 1 ||
-      totalSeconds >= kSessionLengthLongerUnlockTotalSeconds;
+      totalSeconds >= kSessionLengthMoyenneUnlockTotalSeconds;
+}
+
+/// Vrai si le palier « Longue » (45 min) est sélectionnable. Pas de
+/// bypass par séance complétée : une Bâclée de 6 min ne suffit pas à
+/// faire signer pour 45 min — il faut avoir tenu un volume comparable
+/// (≈ une Moyenne entière ou plusieurs Courtes).
+@visibleForTesting
+bool isSessionLengthLongueUnlocked(int totalSeconds) {
+  return totalSeconds >= kSessionLengthLongueUnlockTotalSeconds;
 }
 
 class _DurationPicker extends StatelessWidget {
   final SessionLengthChoice value;
   final bool isBacheeUnlocked;
-  final bool isLongerUnlocked;
+  final bool isMoyenneUnlocked;
+  final bool isLongueUnlocked;
   final ValueChanged<SessionLengthChoice> onChanged;
 
   const _DurationPicker({
     required this.value,
     required this.isBacheeUnlocked,
-    required this.isLongerUnlocked,
+    required this.isMoyenneUnlocked,
+    required this.isLongueUnlocked,
     required this.onChanged,
   });
 
-  bool _isLocked(SessionLengthChoice c) {
+  bool _isUnlocked(SessionLengthChoice c) {
     switch (c) {
       case SessionLengthChoice.bachee:
-        return !isBacheeUnlocked;
+        return isBacheeUnlocked;
       case SessionLengthChoice.moyenne:
+        return isMoyenneUnlocked;
       case SessionLengthChoice.longue:
-        return !isLongerUnlocked;
+        return isLongueUnlocked;
       case SessionLengthChoice.courte:
-        return false;
+        return true;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context);
-    final selectedLocked = _isLocked(value);
-    final selectedHint = !selectedLocked
-        ? null
-        : (value == SessionLengthChoice.bachee
-            ? t.sessionLengthBacheeLockedHint
-            : t.sessionLengthLongerLockedHint);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    // Révélation progressive : on cache purement et simplement les paliers
+    // pas encore déverrouillés. Pas d'annonce du seuil — la joueuse les
+    // découvre au moment où ils apparaissent (effet de surprise plutôt
+    // que carrot dangling).
+    final visible =
+        SessionLengthChoice.values.where(_isUnlocked).toList(growable: false);
+    return Row(
       children: [
-        Row(
-          children: [
-            for (final c in SessionLengthChoice.values) ...[
-              Expanded(
-                child: _DurationChoiceCard(
-                  label: c.localizedLabel(context),
-                  duration: c.localizedDuration(context),
-                  selected: c == value,
-                  locked: _isLocked(c),
-                  onTap: () => onChanged(c),
-                ),
-              ),
-              if (c != SessionLengthChoice.values.last)
-                const SizedBox(width: 8),
-            ],
-          ],
-        ),
-        if (selectedHint != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            selectedHint,
-            style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+        for (var i = 0; i < visible.length; i++) ...[
+          Expanded(
+            child: _DurationChoiceCard(
+              label: visible[i].localizedLabel(context),
+              duration: visible[i].localizedDuration(context),
+              selected: visible[i] == value,
+              onTap: () => onChanged(visible[i]),
+            ),
           ),
+          if (i != visible.length - 1) const SizedBox(width: 8),
         ],
       ],
     );
@@ -1443,14 +1446,12 @@ class _DurationChoiceCard extends StatelessWidget {
   final String label;
   final String duration;
   final bool selected;
-  final bool locked;
   final VoidCallback onTap;
 
   const _DurationChoiceCard({
     required this.label,
     required this.duration,
     required this.selected,
-    required this.locked,
     required this.onTap,
   });
 
@@ -1458,14 +1459,10 @@ class _DurationChoiceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     const accent = AppTheme.accent;
     final bg = selected ? accent.withValues(alpha: 0.18) : AppTheme.surface;
-    final borderColor = selected
-        ? accent
-        : (locked ? AppTheme.textMuted : accent.withValues(alpha: 0.25));
-    final labelColor = locked ? AppTheme.textMuted : AppTheme.textPrimary;
-    final durationColor = locked ? AppTheme.textMuted : AppTheme.textSecondary;
+    final borderColor = selected ? accent : accent.withValues(alpha: 0.25);
     return InkWell(
       borderRadius: BorderRadius.circular(12),
-      onTap: locked ? null : onTap,
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
@@ -1479,23 +1476,19 @@ class _DurationChoiceCard extends StatelessWidget {
             Text(
               label,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: labelColor,
+                color: AppTheme.textPrimary,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               duration,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 11, color: durationColor),
+              style:
+                  const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
             ),
-            if (locked) ...[
-              const SizedBox(height: 4),
-              const Icon(Icons.lock_outline,
-                  size: 14, color: AppTheme.textMuted),
-            ],
           ],
         ),
       ),
