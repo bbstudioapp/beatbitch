@@ -48,7 +48,6 @@
         "Circle around the head, that's very good {name}.",
         "Lick it like you adore it {name}.",
         "With the tip of your lips too {name}, take your time.",
-        {"text": "Kiss the tip {name}, all tenderly.", "max_depth": "head"},
         "Run your tongue wherever you like {name}, enjoy yourself."
       ],
       "medium": [
