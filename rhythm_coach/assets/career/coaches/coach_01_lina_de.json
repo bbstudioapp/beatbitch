@@ -48,7 +48,7 @@
         "Kreis um die Eichel herum, das ist sehr gut {name}.",
         "Leck ihn, als würdest du ihn anbeten {name}.",
         "Auch mit den Lippenspitzen {name}, lass dir Zeit.",
-        "Küss die Spitze {name}, ganz zärtlich.",
+        {"text": "Küss die Spitze {name}, ganz zärtlich.", "max_depth": "head"},
         "Lass deine Zunge wandern, wohin du willst {name}, genieß es."
       ],
       "medium": [
