@@ -250,6 +250,7 @@ extension ChallengeOrchestrator on SessionController {
           _challengeStepStartedAtSec = r;
           _challengeCurrentText = null;
           _challengeSpokenText = null;
+          _challengeCrossingsCount = 0;
           _applyChallengeStepNow(stepStart);
         }
       }
@@ -285,24 +286,38 @@ extension ChallengeOrchestrator on SessionController {
     final stepEnd = ch.kind == ChallengeAxisKind.duration
         ? target
         : ch.nominalDurationSeconds;
+    // Quand le défi pilote par franchissements (axes franchissement gorge),
+    // le compteur de crossings peut court-circuiter la durée nominale.
+    // L'annonce d'extension reste calée sur la durée pour les défis durée
+    // / BPM standards ; sur un défi crossings, on l'annonce 2 franchissements
+    // avant le seuil (équivalent dramaturgique des « 3 s avant la fin »).
+    final crossingsTarget = ch.targetCrossings;
+    final crossingsReached =
+        crossingsTarget != null && _challengeCrossingsCount >= crossingsTarget;
+    final crossingsPreExtend = crossingsTarget != null &&
+        _challengeCrossingsCount >= crossingsTarget - 2 &&
+        _challengeCrossingsCount < crossingsTarget;
     // Annonce coach « tu peux rester si tu veux » 3 s avant la fin
     // nominale — tous axes (BPM/profondeur inclus). L'exploratoire reste
     // exclu : il n'a pas de seuil cible, l'annonce d'extension n'a pas
     // de sens (cf. spec § 3.2).
     if (!ch.isExploratory &&
         phase == ChallengePhase.live &&
-        elapsedInStep >= stepEnd - 3 &&
-        elapsedInStep < stepEnd) {
+        ((crossingsTarget == null &&
+                elapsedInStep >= stepEnd - 3 &&
+                elapsedInStep < stepEnd) ||
+            crossingsPreExtend)) {
       _challengePhase = ChallengePhase.preExtend;
       _challengeCurrentText = _pickChallengePhrase(ch, 'extension') ??
           _fallbackChallengeText(ch, 'extension');
       _speakChallengePhraseIfAny();
     }
-    if (SessionController.shouldEnterAtSeuilPhase(
-      phase: phase,
-      elapsedInStep: elapsedInStep,
-      stepEnd: stepEnd,
-    )) {
+    if (crossingsReached ||
+        SessionController.shouldEnterAtSeuilPhase(
+          phase: phase,
+          elapsedInStep: elapsedInStep,
+          stepEnd: stepEnd,
+        )) {
       _challengePhase = ChallengePhase.atSeuil;
       // Wallclock (`r`) et non `t` : la timeline session est freezée pendant
       // tout le défi (cf. `_onTick` qui décrémente `_timelineOffset`), donc
@@ -482,6 +497,11 @@ extension ChallengeOrchestrator on SessionController {
     // Fire-and-forget : la persistance shared_preferences n'a pas besoin
     // de bloquer le retour de session vers la timeline.
     unawaited(_finalizeChallengeAcquittals());
+    // Notifie le caller pour qu'il incrémente le compteur d'essais sur
+    // l'axe (consommé par `crossingsTargetForAttempts` au défi suivant).
+    if (ch != null) {
+      onChallengeOutcome?.call(ch, outcome);
+    }
   }
 
   /// Étape asynchrone post-défi : acquitte les milestones dont la capacité

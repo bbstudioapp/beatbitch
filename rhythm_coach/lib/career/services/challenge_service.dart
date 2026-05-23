@@ -59,12 +59,38 @@ const int kChallengeBpmRampStart = 50;
 /// throat, 5)` débloque toute la chaîne hold précédente.
 const int kChallengeTutorialDurationSeconds = 5;
 
+/// Axes « franchissement gorge » dont le défi se mesure naturellement en
+/// nombre de passages de la barre gorge plutôt qu'en durée. Une rampe BPM
+/// 60→169 sur un head→throat fait dériver la durée nécessaire d'un facteur
+/// 2-3 selon l'allure, alors qu'un compteur « 5 franchissements » reste
+/// stable et lisible pour la joueuse.
+const Set<CapabilityAxis> kCrossingsChallengeAxes = {
+  CapabilityAxis.rhythmBpmCeilThroat,
+  CapabilityAxis.rhythmBpmCeilFull,
+  CapabilityAxis.gorgeCrossingsBpmThroat,
+  CapabilityAxis.gorgeCrossingsBpmFull,
+};
+
+/// Progression du nombre de franchissements visés selon le nombre de défis
+/// déjà joués sur l'axe — formule fermée, pas de plafond :
+/// `5 + n × (n + 5) / 2` (deltas 3, 4, 5, 6, …).
+///
+/// Échantillons : 0→5, 1→8, 2→12, 3→17, 4→23, 5→30, 10→80. Le 1er défi
+/// reste très court (la joueuse découvre le système, cherche les boutons).
+/// Les suivants montent crescendo, sans cap — un palier élevé reflète
+/// une joueuse qui a déjà encaissé plusieurs défis du type.
+int crossingsTargetForAttempts(int attempts) {
+  if (attempts <= 0) return 5;
+  return 5 + (attempts * (attempts + 5)) ~/ 2;
+}
+
 /// Service stateless de persistance du toggle/tutoriel + factory de défis.
 /// Toutes les opérations de persistance lisent/écrivent `SharedPreferences`
 /// (pas de cache local — alignement avec le pattern `StatsService`).
 class ChallengeService {
   static const String keyEnabled = 'challenges.enabled';
   static const String keyTutorialSeen = 'challenges.tutorial_seen';
+  static const String _kAttemptsPrefix = 'challenges.attempts.';
 
   /// `true` quand la joueuse a activé les défis dans `CareerScreen`.
   /// Défaut `true` : le tutoriel scripté au 1ᵉʳ défi (hold throat 5 s,
@@ -94,11 +120,35 @@ class ChallengeService {
     await prefs.setBool(keyTutorialSeen, true);
   }
 
-  /// Reset les deux clés. Câblé au bouton reset du ProfileScreen.
+  /// Reset toutes les clés (toggle, tuto, compteurs d'essais par axe).
+  /// Câblé au bouton reset du ProfileScreen.
   Future<void> resetAll() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(keyEnabled);
     await prefs.remove(keyTutorialSeen);
+    for (final key in prefs.getKeys().toList()) {
+      if (key.startsWith(_kAttemptsPrefix)) {
+        await prefs.remove(key);
+      }
+    }
+  }
+
+  /// Nombre de défis déjà joués sur [axis] (tous outcomes confondus :
+  /// success / fail / skip / timeout — un défi entamé compte, qu'il
+  /// aboutisse ou pas). Sert à la calibration du nombre de franchissements
+  /// visés (cf. [crossingsTargetForAttempts]).
+  Future<int> attemptsCount(CapabilityAxis axis) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('$_kAttemptsPrefix${axis.storageKey}') ?? 0;
+  }
+
+  /// Incrémente le compteur d'essais sur [axis] (appelé à la fin de tout
+  /// défi, peu importe l'outcome). Idempotence non garantie : un appel
+  /// par défi terminé.
+  Future<void> incrementAttempts(CapabilityAxis axis) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = '$_kAttemptsPrefix${axis.storageKey}';
+    await prefs.setInt(key, (prefs.getInt(key) ?? 0) + 1);
   }
 
   /// Construit un défi pour la séance ou retourne `null` si aucun axe
@@ -108,14 +158,14 @@ class ChallengeService {
   /// séance — exclus pour éviter l'empilement (cf. spec § 5.5).
   /// [isTutorial] : `true` au premier défi de la joueuse, force un défi
   /// scripté sur axe robuste (`holdThroatStreak` 5 s).
-  Challenge? buildForSession({
+  Future<Challenge?> buildForSession({
     required CapabilityProfile? profile,
     required Map<CapabilityAxis, double> ceilings,
     required Set<CapabilityAxis> excludeAxes,
     required Random rng,
     required bool isTutorial,
     SpecializationBranch? showcaseBranch,
-  }) {
+  }) async {
     if (isTutorial) {
       return _buildTutorialChallenge();
     }
@@ -134,7 +184,9 @@ class ChallengeService {
       );
       if (axis != null) {
         final comfort = profile!.comfortOf(axis)!;
-        return _buildChallenge(axis: axis, comfort: comfort);
+        final crossings = await _resolveCrossingsTargetFor(axis);
+        return _buildChallenge(
+            axis: axis, comfort: comfort, targetCrossings: crossings);
       }
     }
     final axis = _pickAxis(
@@ -146,7 +198,9 @@ class ChallengeService {
     if (axis != null) {
       final comfort = profile?.comfortOf(axis);
       if (comfort != null) {
-        return _buildChallenge(axis: axis, comfort: comfort);
+        final crossings = await _resolveCrossingsTargetFor(axis);
+        return _buildChallenge(
+            axis: axis, comfort: comfort, targetCrossings: crossings);
       }
     }
     // Phase 2 — fallback exploratoire : aucun axe candidat avec un
@@ -158,7 +212,19 @@ class ChallengeService {
       rng: rng,
     );
     if (exploratoryAxis == null) return null;
-    return _buildExploratoryChallenge(axis: exploratoryAxis);
+    final crossings = await _resolveCrossingsTargetFor(exploratoryAxis);
+    return _buildExploratoryChallenge(
+        axis: exploratoryAxis, targetCrossings: crossings);
+  }
+
+  /// Retourne le compteur de franchissements à viser pour [axis], ou `null`
+  /// si l'axe n'est pas un axe « franchissement » (cf. [kCrossingsChallengeAxes]).
+  /// La valeur dépend du nombre de défis déjà joués sur cet axe
+  /// (progression {0:5, 1:8, 2:12, 3+:16}).
+  Future<int?> _resolveCrossingsTargetFor(CapabilityAxis axis) async {
+    if (!kCrossingsChallengeAxes.contains(axis)) return null;
+    final attempts = await attemptsCount(axis);
+    return crossingsTargetForAttempts(attempts);
   }
 
   /// Phase finale défis — sélectionne le plus ancien axe pilotant de la
@@ -262,7 +328,10 @@ class ChallengeService {
   ///
   /// Pour les axes BPM exploratoires : rampe douce depuis `kChallengeBpmRampStart`
   /// (~50 BPM) jusqu'au seuil estimé — démarrage gentil pour découvrir.
-  Challenge _buildExploratoryChallenge({required CapabilityAxis axis}) {
+  Challenge _buildExploratoryChallenge({
+    required CapabilityAxis axis,
+    int? targetCrossings,
+  }) {
     final kind = _kindOf(axis);
     final threshold = Challenge.initialEstimateSecondsForAxis(axis);
     final mode = _modeOf(axis);
@@ -281,6 +350,7 @@ class ChallengeService {
       bpm: bpm,
       bpmEnd: bpmEnd,
       branch: branchOf(axis),
+      targetCrossings: targetCrossings,
       isExploratory: true,
     );
   }
@@ -295,6 +365,7 @@ class ChallengeService {
   Challenge _buildChallenge({
     required CapabilityAxis axis,
     required double comfort,
+    int? targetCrossings,
   }) {
     final kind = _kindOf(axis);
     final threshold = thresholdFor(kind, comfort, axis);
@@ -315,6 +386,7 @@ class ChallengeService {
       bpmEnd: bpmEnd,
       branch: branchOf(axis),
       comfortAtCalibration: comfort,
+      targetCrossings: targetCrossings,
     );
   }
 

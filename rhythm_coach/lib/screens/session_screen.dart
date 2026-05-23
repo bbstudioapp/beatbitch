@@ -118,6 +118,12 @@ class SessionScreen extends StatefulWidget {
   final Future<void> Function(SessionController controller)?
       onPostChallengeRegen;
 
+  /// Callback consommé par `SessionController.onChallengeOutcome` à la fin
+  /// de tout défi. Le caller persiste un compteur d'essais par axe pour
+  /// faire monter la cible « franchissements » du défi suivant. Null = no-op.
+  final void Function(Challenge challenge, ChallengeOutcome outcome)?
+      onChallengeOutcome;
+
   /// Si true, démarre la session automatiquement (sans bouton play et
   /// sans décompte d'intro). Utilisé pour les sessions « encore » qui
   /// enchaînent directement depuis l'écran finished précédent.
@@ -232,6 +238,7 @@ class SessionScreen extends StatefulWidget {
     this.onRequestEncore,
     this.onMilestoneRetry,
     this.onPostChallengeRegen,
+    this.onChallengeOutcome,
     this.autoStart = false,
     this.holdVerifier,
     this.canSave = false,
@@ -296,6 +303,7 @@ class _SessionScreenState extends State<SessionScreen>
     );
     _controller.onMilestoneRetry = widget.onMilestoneRetry;
     _controller.onPostChallengeRegen = widget.onPostChallengeRegen;
+    _controller.onChallengeOutcome = widget.onChallengeOutcome;
     final anatomy = widget.anatomy ?? AnatomyProfile.defaults;
     // En carrière, la 6e ligne (balls) se révèle progressivement : il faut
     // que la zone existe ET que la milestone `lickBalls` ait été acquittée
