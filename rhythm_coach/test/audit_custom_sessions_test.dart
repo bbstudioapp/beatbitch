@@ -95,8 +95,14 @@ List<_Flag> _validate(_Scenario sc, List<SessionStep> steps) {
     }
   }
 
-  // 3. Dosage `frequent` doit produire plus d'occurrences que les modes
-  //    `rare` du même scénario.
+  // 3. Dosage `frequent` ne doit pas être grossièrement dominé par les
+  //    modes `rare` du même scénario. `frequent` (×2.2) est un
+  //    multiplicateur relatif, pas un veto absolu — une légère inversion
+  //    due aux phases scriptées (boosts finish + mini-vagues + pre-finisher
+  //    hardcodés en rhythm) est acceptable. On ne flagge que les
+  //    inversions grossières où `rare ≥ 2× frequent` : c'est le signe que
+  //    le dosage utilisateur est ignoré, pas juste atténué par la
+  //    dramaturgie.
   final frequentModes = sc.config.doses.entries
       .where((e) => e.value == ModeDose.frequent)
       .map((e) => e.key)
@@ -109,11 +115,11 @@ List<_Flag> _validate(_Scenario sc, List<SessionStep> steps) {
     final fc = modeCounts[fm] ?? 0;
     for (final rm in rareModes) {
       final rc = modeCounts[rm] ?? 0;
-      if (fc > 0 && rc > fc) {
+      if (fc > 0 && rc >= fc * 2) {
         flags.add(_Flag(
           'DOSE-ORDER',
-          '${fm.name} frequent ($fc) ≤ ${rm.name} rare ($rc) — '
-              'inversion du dosage',
+          '${fm.name} frequent ($fc) écrasé par ${rm.name} rare ($rc) — '
+              'ratio ≥ 2× indique que le dosage est ignoré',
         ));
       }
     }

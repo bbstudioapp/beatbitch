@@ -122,10 +122,20 @@ class ModePicker {
     return false;
   }
 
+  /// Seuil au-dessus duquel un `coachWeight` est considéré comme un
+  /// dosage utilisateur explicite (= `frequent` en mode Custom = 2.2,
+  /// au-dessus du `normal` = 1.0). Au-delà, le verrou de continuité
+  /// « tout ramène à bouche » est neutralisé : l'utilisatrice a choisi
+  /// de privilégier ce mode, on respecte. En dessous (rare/normal/none),
+  /// la friction de continuité s'applique normalement — la bouche reste
+  /// le cœur de l'app par défaut.
+  static const double _explicitDoseThreshold = 1.5;
+
   static double continuityMultiplier(
     SessionMode candidate,
     ModeContinuityState state, {
     required Map<SessionMode, ModeRules> rules,
+    double coachWeight = 1.0,
   }) {
     // Malus anti-cycle (×0.2) appliqué EN PLUS du multiplicateur de
     // type ci-dessous : si émettre `candidate` prolongerait un cycle
@@ -136,7 +146,13 @@ class ModePicker {
     // hold rare ne disparaît pas s'il n'y a pas d'alternative crédible).
     final cycleMul =
         _extendsRepeatedCycle(candidate, state.recentModes) ? 0.2 : 1.0;
-    return _typeMultiplier(candidate, state, rules: rules) * cycleMul;
+    return _typeMultiplier(
+          candidate,
+          state,
+          rules: rules,
+          coachWeight: coachWeight,
+        ) *
+        cycleMul;
   }
 
   /// Multiplicateur historique basé uniquement sur le **type** du
@@ -147,6 +163,7 @@ class ModePicker {
     SessionMode candidate,
     ModeContinuityState state, {
     required Map<SessionMode, ModeRules> rules,
+    double coachWeight = 1.0,
   }) {
     final last = state.lastType;
     if (last == null) return 1.0;
@@ -163,6 +180,15 @@ class ModePicker {
     final cand = rules[candidate]!.classify(null);
     if (cand == StepType.transit) return 1.0;
 
+    // L'utilisatrice a explicitement priorisé ce mode (dose `frequent`
+    // en Custom). On respecte son dosage : pas de friction de continuité
+    // qui le repousserait au profit de la bouche. Le `coachWeight` brut
+    // (2.2) suffit alors à dominer naturellement les modes en `normal`
+    // (×1.0) ou `rare` (×0.4). La logique « ramener à bouche » reste
+    // active pour les modes non priorisés, et le « retour à bouche »
+    // reste lui-même favorable pour ne pas casser les phases bouche.
+    final isExplicitlyDosed = coachWeight >= _explicitDoseThreshold;
+
     // Verrou strict : si on a déjà 2+ steps consécutifs hors bouche
     // (peu importe lequel), on pousse fortement pour rebasculer sur
     // bouche. Plus on s'écarte longtemps, plus le retour est verrouillé.
@@ -170,6 +196,7 @@ class ModePicker {
       if (cand == StepType.bouche) {
         return 6.0 + state.stepsOutsideBouche * 1.5;
       }
+      if (isExplicitlyDosed) return 1.0; // dosage utilisateur respecté
       return 0.05; // quasi banni — sert juste de fallback si bouche bloqué
     }
 
@@ -177,7 +204,8 @@ class ModePicker {
       if (last == StepType.bouche) return 3.0;
       // langue / libre/main : continuité dégradée pour ne pas s'éterniser.
       // 1 step de plus est OK, mais au-delà on pousse le retour à bouche.
-      return state.stepsInLastType >= 2 ? 0.6 : 1.8;
+      if (state.stepsInLastType >= 2 && !isExplicitlyDosed) return 0.6;
+      return 1.8;
     }
     if (cand == StepType.bouche) {
       // Retour à bouche : encouragé dès la 1re excursion, fort dès 2.
@@ -185,6 +213,7 @@ class ModePicker {
       return 1.4;
     }
     if (last == StepType.bouche) {
+      if (isExplicitlyDosed) return 1.0; // dosage utilisateur respecté
       // Quitter bouche est très onéreux : on n'en sort qu'après une vraie
       // phase de bouche (3+ steps), et même là la friction reste marquée.
       if (state.stepsInLastType < 3) return 0.10;
@@ -206,7 +235,12 @@ class ModePicker {
   }) {
     final base = baseWeight(m, spec, rules: rules);
     final coachFactor = coachWeights[m] ?? 1.0;
-    final continuityMul = continuityMultiplier(m, continuity, rules: rules);
+    final continuityMul = continuityMultiplier(
+      m,
+      continuity,
+      rules: rules,
+      coachWeight: coachFactor,
+    );
     final result = base * coachFactor * continuityMul;
     return result < 0 ? 0 : result;
   }
