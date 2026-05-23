@@ -115,13 +115,23 @@ class CapabilityRegulator {
 
   /// Gain de `comfort` sur une session de réussite surchargée, modulé par
   /// `successRate` (fraction de `comfort` ; sert aussi de plafond par session).
-  static const double kRatchetUpGainMin = 0.04;
-  static const double kRatchetUpGainMax = 0.14;
+  ///
+  /// Anciennes valeurs `[0.04, 0.14]` produisaient une progression invisible
+  /// d'une session à l'autre — défi 16 s puis 17 s puis 18 s, perçu comme
+  /// répétitif. Le user a explicitement demandé que « le confort bumpe
+  /// avec la pratique ». Valeurs `[0.12, 0.35]` donnent des sauts plus
+  /// visibles ; le cap `kRatchetAnchorHeadroom` ci-dessous reste la borne
+  /// haute (jamais loin de `reached`).
+  static const double kRatchetUpGainMin = 0.12;
+  static const double kRatchetUpGainMax = 0.35;
 
   /// Le `comfort` après ratchet ↑ ne dépasse pas `reached × ce facteur` (et,
   /// pour les axes `minimize`, ne descend pas sous `reached × (2 − ce facteur)`)
   /// — on reste ancré sur ce que la joueuse vient de démontrer.
-  static const double kRatchetAnchorHeadroom = 1.05;
+  /// `1.05` était trop conservateur : avec un défi tenu net (reached =
+  /// comfort × 1.30), le cap à 1.05 × reached limitait quand même la
+  /// montée. `1.15` laisse l'ancrage respirer.
+  static const double kRatchetAnchorHeadroom = 1.15;
 
   /// Rabot du `comfort` sur tap-out/fail/débordement imputé.
   static const double kRatchetDownFactor = 0.85;
