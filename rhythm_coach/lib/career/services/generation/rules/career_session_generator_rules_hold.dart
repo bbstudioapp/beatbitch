@@ -88,19 +88,24 @@ class HoldRules extends ModeRules {
 
   @override
   StepDraft? tryDegrade(StepDraft draft) {
-    // (1) Hold throat/full long → raccourcir d'abord (la durée pèse
-    // beaucoup sur l'humiliation requise, la position reste contractuelle).
-    if ((draft.to == Position.throat || draft.to == Position.full) &&
-        (draft.duration ?? 0) > 5) {
+    // (1) Tant que la durée a du gras à gratter, on raccourcit AVANT de
+    // descendre la position. Sinon une cascade humil légère faisait
+    // tomber `hold mid 9 s → hold head 9 s` — alors qu'il suffisait de
+    // raccourcir pour rentrer dans le cap, et qu'un hold head est
+    // régressif quand mid/throat sont acquittés (cf. `pickHoldPosition` :
+    // un hold ne descend jamais sous le palier max débloqué). Plancher
+    // 2 s aligné sur l'ancien raccourcissement throat/full.
+    final dur = draft.duration ?? 0;
+    if (dur > 2) {
       return StepDraft(
         mode: draft.mode,
         bpm: draft.bpm,
         from: draft.from,
         to: draft.to,
-        duration: max(2, (draft.duration ?? 0) ~/ 2),
+        duration: max(2, dur ~/ 2),
       );
     }
-    // (2) Descendre `to` d'un cran (la position tenue). Note : hold
+    // (2) Plus rien à raccourcir : descendre `to` d'un cran. Note : hold
     // descend jusqu'à `tip`, contrairement aux modes rythmiques qui
     // s'arrêtent à `head`.
     if (draft.to != null && draft.to!.index > Position.tip.index) {

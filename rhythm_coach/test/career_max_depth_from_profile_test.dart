@@ -30,18 +30,19 @@ void main() {
       );
     });
 
-    test('comfort 0.5 → arrondi à head (idx 1) — plancher tenu', () {
-      // 0.5 arrondit à 0 = tip, mais le plancher est head (idx 1).
+    test('comfort 0.5 → arrondi à tip mais plancher mid (idx 2)', () {
+      // 0.5 arrondit à 0 = tip, mais le plancher pédagogique est mid
+      // (les basics couvrent déjà la profondeur mid).
       expect(
         CareerLevelGates.maxDepthIndexForProfile(_profileWithDepth(0.5)),
-        Position.head.index,
+        Position.mid.index,
       );
     });
 
-    test('comfort 1.4 → head (idx 1)', () {
+    test('comfort 1.4 → head arrondi, mais plancher mid (idx 2)', () {
       expect(
         CareerLevelGates.maxDepthIndexForProfile(_profileWithDepth(1.4)),
-        Position.head.index,
+        Position.mid.index,
       );
     });
 
