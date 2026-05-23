@@ -1514,15 +1514,6 @@ class _InvestmentBar extends StatelessWidget {
         a.requirements.minPlayerSeconds
             .compareTo(b.requirements.minPlayerSeconds));
 
-    // Coach max — fixe le bord droit de la barre. Si la joueuse dépasse,
-    // on garde le bord à 110 % du dernier seuil pour ne pas surcharger
-    // visuellement quand totalSeconds est très au-dessus.
-    final lastSeuil =
-        principals.isEmpty ? 1 : principals.last.requirements.minPlayerSeconds;
-    final barMaxSeconds = (lastSeuil * 1.1).round();
-    final clampedSeconds = totalSeconds.clamp(0, barMaxSeconds);
-    final progress = barMaxSeconds == 0 ? 0.0 : clampedSeconds / barMaxSeconds;
-
     // Prochain coach non encore débloqué = premier dont le seuil est
     // strictement supérieur à totalSeconds.
     Coach? nextCoach;
@@ -1532,6 +1523,26 @@ class _InvestmentBar extends StatelessWidget {
         break;
       }
     }
+
+    // Révélation progressive : la barre s'ancre sur le **prochain** coach
+    // à débloquer (= tier+1). On ne montre pas la progression vers les
+    // paliers supérieurs encore inconnus (Nyx à 25 h démoralise une
+    // débutante à 0 s). Une fois tous débloqués (`nextCoach == null`), on
+    // ancre sur le dernier palier pour matérialiser la complétion totale.
+    final visiblePrincipals = nextCoach == null
+        ? principals
+        : principals
+            .where((c) =>
+                c.requirements.minPlayerSeconds <=
+                nextCoach!.requirements.minPlayerSeconds)
+            .toList();
+
+    final lastSeuil = visiblePrincipals.isEmpty
+        ? 1
+        : visiblePrincipals.last.requirements.minPlayerSeconds;
+    final barMaxSeconds = lastSeuil;
+    final clampedSeconds = totalSeconds.clamp(0, barMaxSeconds);
+    final progress = barMaxSeconds == 0 ? 0.0 : clampedSeconds / barMaxSeconds;
 
     final timeLabel = formatDurationCompact(context, totalSeconds);
 
@@ -1599,8 +1610,10 @@ class _InvestmentBar extends StatelessWidget {
                         ),
                       ),
                     ),
-                    // Marqueurs tiers (jalons)
-                    for (final c in principals)
+                    // Marqueurs tiers (jalons) — bornés à `visiblePrincipals`
+                    // pour rester cohérent avec l'ancrage de la barre sur
+                    // le prochain coach.
+                    for (final c in visiblePrincipals)
                       _TierMarker(
                         leftPx: barMaxSeconds == 0
                             ? 0

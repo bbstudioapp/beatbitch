@@ -138,8 +138,14 @@ class CoachPickerScreen extends StatelessWidget {
       body: AnimatedBuilder(
         animation: service,
         builder: (context, _) {
+          // Révélation progressive : on ne dévoile que le palier en cours
+          // + le palier juste suivant (= prochain coach à débloquer). Les
+          // tiers supérieurs restent cachés — leur existence et identité
+          // se révèlent à mesure que la joueuse progresse, pas en flash dès
+          // la 1ʳᵉ ouverture du picker.
           final coaches = [...service.coaches]
-            ..sort((a, b) => a.tier.compareTo(b.tier));
+            ..sort((a, b) => a.tier.compareTo(b.tier))
+            ..removeWhere((c) => c.tier > service.currentTier + 1);
 
           return ListView.separated(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
