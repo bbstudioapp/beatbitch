@@ -99,6 +99,9 @@
       "displayLabel": "Fais du bruit, sois sale",
       "unlocks": ["sloppy_loud_suck"],
       "requires": ["basics"],
+      "requiresCapability": [
+        {"axis": "rhythm.depth_max", "min": 2}
+      ],
       "branches": ["sloppy"],
       "sequence": [
         {"time": 0,  "text": "Aujourd'hui je veux t'entendre. Sois bruyante, sois sale, ne te retiens pas. Plus c'est mouillé, plus j'aime.", "mode": "rhythm", "from": "tip", "to": "head", "bpm": 75, "duration": 12},
