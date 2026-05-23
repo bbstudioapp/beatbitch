@@ -1224,9 +1224,11 @@ class _CareerScreenState extends State<CareerScreen> {
               ),
               // Switch « stimulation à la main » (Phase 19.12 : plus de
               // gate par niveau, toujours visible). Si une milestone
-              // pending impose les mains, on garde le toggle interactif
-              // (la joueuse peut sortir du contexte pédagogique en
-              // désactivant — un message dédié l'avertit).
+              // pending impose les mains, on force ON + désactive le
+              // toggle pour que le label « Verrouillé pour cette séance »
+              // soit cohérent avec le comportement (sinon l'utilisatrice
+              // pouvait désactiver malgré le message — confus côté UX,
+              // retour playtest 0.6).
               () {
                 final pendingMilestone = milestoneService.pendingFor(
                   humiliationScore: bundle.humiliationScore,
@@ -1240,6 +1242,9 @@ class _CareerScreenState extends State<CareerScreen> {
                 final subtitle = milestoneLocksHand
                     ? t.careerIncludeHandMilestoneLocked
                     : t.careerIncludeHandSubtitle;
+                final value = milestoneLocksHand
+                    ? true
+                    : (_includeHandOverride ?? bundle.includeHand);
                 return SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(
@@ -1256,8 +1261,10 @@ class _CareerScreenState extends State<CareerScreen> {
                       color: AppTheme.textMuted,
                     ),
                   ),
-                  value: _includeHandOverride ?? bundle.includeHand,
-                  onChanged: (v) => setState(() => _includeHandOverride = v),
+                  value: value,
+                  onChanged: milestoneLocksHand
+                      ? null
+                      : (v) => setState(() => _includeHandOverride = v),
                 );
               }(),
               const SizedBox(height: 16),
