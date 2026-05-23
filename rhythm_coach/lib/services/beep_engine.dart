@@ -88,29 +88,41 @@ class BeepEngine {
   /// hold_beep ~450 ms) : sans cette marge des bips manquaient par moments.
   static const int _poolSize = 4;
 
-  /// Samples ≥ 200 ms pour lesquels on force un `seek(Duration.zero)` avant
-  /// chaque `resume()`. Sur Android, `audioplayers` ne remet pas toujours la
-  /// position à 0 entre deux `resume()` rapprochés si le plugin n'a pas encore
-  /// vu `onPlayerComplete` (le canal natif considère le player encore en
-  /// lecture) → le `resume()` passe sans erreur mais ne re-déclenche rien : le
-  /// bip est silencieusement perdu. Symptôme observé : « bip de gorge qui ne
-  /// sonne pas » par moments. Le pool round-robin de 4 dilue déjà le problème
-  /// mais ne le supprime pas quand le sample est long (le player suivant peut
-  /// hériter du même état "playing" mal réinitialisé).
+  /// Samples joués en boucle pour lesquels on force un `seek(Duration.zero)`
+  /// avant chaque `resume()`. Sur Android, `audioplayers` ne remet pas
+  /// toujours la position à 0 entre deux `resume()` rapprochés si le plugin
+  /// n'a pas encore vu `onPlayerComplete` (le canal natif considère le
+  /// player encore en lecture) → le `resume()` passe sans erreur mais ne
+  /// re-déclenche rien : le bip est silencieusement perdu. Symptôme
+  /// observé : « bip qui ne sonne pas » de temps à autre (~5-10 % à BPM
+  /// rapide, sur rhythm/lick à toutes profondeurs).
   ///
-  /// Coût : un appel canal natif de plus par bip sur ces assets. Les samples
-  /// courts (tip/head/mid 110–160 ms, hand_down/up 60–90 ms, biffle 140 ms)
-  /// gardent le chemin rapide — leur durée laisse au plugin le temps de voir
-  /// la complétion entre deux beats même à 180 BPM.
+  /// Historiquement seul un sous-ensemble (≥ 200 ms : throat/full/hold/…)
+  /// était traité, sous l'hypothèse que les samples courts (tip/head/mid
+  /// 110–160 ms, hand/biffle ~60-140 ms) terminaient assez tôt pour
+  /// laisser le plugin voir la complétion entre deux beats. En pratique
+  /// le scheduling Android sporadique fait sauter quelques bips courts
+  /// quand même → on étend le seek systématique à tous les samples de
+  /// loop (positions + hand + biffle + hold-layer + breath + suckle).
   ///
-  /// Freestyle start/end et finale_chime sont longs aussi mais joués une seule
-  /// fois par session → pas de risque de chevauchement.
+  /// Coût : un appel canal natif de plus par bip. Acceptable vu le gain
+  /// de fiabilité — un bip silencieux casse la cadence perçue plus
+  /// qu'un appel async de 1-2 ms ne la dégrade.
+  ///
+  /// Freestyle start/end et finale_chime sont exclus : joués une seule
+  /// fois par session, aucun risque de chevauchement.
   static const Set<String> _longSampleAssets = {
+    _tipAsset,
+    _headAsset,
+    _midAsset,
     _throatAsset,
     _fullAsset,
     _ballsAsset,
     _holdAsset,
+    _biffleAsset,
     _breathAsset,
+    _handDownAsset,
+    _handUpAsset,
     _suckleAsset,
   };
 
