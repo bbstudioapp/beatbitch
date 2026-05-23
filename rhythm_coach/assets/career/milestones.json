@@ -3,7 +3,6 @@
   "milestones": [
     {
       "id": "intro_basics",
-      "level": 1,
       "displayLabel": "Première séance — apprends les bases",
       "unlocks": [
         "basics"
@@ -34,7 +33,6 @@
     },
     {
       "id": "intro_deeper_basics",
-      "level": 3,
       "displayLabel": "Plus profond — rythme en bouche",
       "unlocks": ["rhythm_mid_basic"],
       "requires": [
@@ -50,7 +48,6 @@
     },
     {
       "id": "intro_lick_full",
-      "level": 4,
       "displayLabel": "Lèche-moi en entier",
       "unlocks": ["lick_full"],
       "requires": [
@@ -67,7 +64,6 @@
     },
     {
       "id": "intro_beg_libre",
-      "level": 3,
       "displayLabel": "Première supplique",
       "unlocks": ["beg_libre"],
       "requires": [
@@ -85,7 +81,6 @@
     },
     {
       "id": "intro_sloppy_drool",
-      "level": 3,
       "displayLabel": "Lèche humide — fais-moi baver",
       "unlocks": ["sloppy_drool_basic"],
       "requires": [
@@ -101,13 +96,9 @@
     },
     {
       "id": "intro_sloppy_loud_suck",
-      "level": 4,
       "displayLabel": "Fais du bruit, sois sale",
       "unlocks": ["sloppy_loud_suck"],
       "requires": ["basics"],
-      "requiresCapability": [
-        {"axis": "noswallow.streak", "min": 5}
-      ],
       "branches": ["sloppy"],
       "sequence": [
         {"time": 0,  "text": "Aujourd'hui je veux t'entendre. Sois bruyante, sois sale, ne te retiens pas. Plus c'est mouillé, plus j'aime.", "mode": "rhythm", "from": "tip", "to": "head", "bpm": 75, "duration": 12},
@@ -118,7 +109,6 @@
     },
     {
       "id": "intro_hold_mid",
-      "level": 3,
       "displayLabel": "Hold position médiane",
       "unlocks": ["hold_mid"],
       "requires": [
@@ -137,7 +127,6 @@
     },
     {
       "id": "intro_biffle",
-      "level": 5,
       "displayLabel": "Premiers biffles",
       "unlocks": ["biffle_basic"],
       "requires": [
@@ -154,13 +143,9 @@
     },
     {
       "id": "intro_encore",
-      "level": 5,
       "displayLabel": "Apprends à en redemander",
       "unlocks": ["encore"],
       "requires": ["basics"],
-      "requiresCapability": [
-        {"axis": "hold.throat.streak", "min": 5}
-      ],
       "branches": ["obeissance"],
       "sequence": [
         {"time": 0,  "text": "Tu sais finir une séance. Maintenant tu vas apprendre quelque chose de plus difficile : redemander.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 85, "duration": 10},
@@ -173,13 +158,9 @@
     },
     {
       "id": "intro_sloppy_overflow",
-      "level": 5,
       "displayLabel": "Laisse-le déborder",
       "unlocks": ["sloppy_overflow"],
       "requires": ["basics"],
-      "requiresCapability": [
-        {"axis": "noswallow.streak", "min": 8}
-      ],
       "branches": ["sloppy"],
       "sequence": [
         {"time": 0,  "text": "Aujourd'hui ça déborde. Lèche longtemps, salive sans ravaler, laisse couler sur ton menton.", "mode": "lick", "from": "tip", "to": "head", "bpm": 60, "duration": 14},
@@ -191,13 +172,9 @@
     },
     {
       "id": "intro_hold_throat",
-      "level": 6,
       "displayLabel": "Première gorge tenue",
       "unlocks": ["throat_hold"],
       "requires": ["basics"],
-      "requiresCapability": [
-        {"axis": "hold.throat.streak", "min": 3}
-      ],
       "branches": ["endurance", "profondeur"],
       "sequence": [
         {"time": 0,  "text": "Aujourd'hui tu vas tenir gorge. Échauffe.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 100, "duration": 10},
@@ -211,7 +188,6 @@
     },
     {
       "id": "intro_sloppy_biffle_slow",
-      "level": 6,
       "displayLabel": "Coups lents, bouche grande ouverte",
       "unlocks": ["sloppy_biffle_slow"],
       "requires": ["basics"],
@@ -228,7 +204,6 @@
     },
     {
       "id": "intro_freestyle",
-      "level": 7,
       "displayLabel": "Phase libre",
       "unlocks": ["freestyle"],
       "requires": [
@@ -245,13 +220,9 @@
     },
     {
       "id": "intro_throat_pulse",
-      "level": 10,
       "displayLabel": "Gorge en mouvement",
       "unlocks": ["throat_pulse"],
       "requires": ["basics"],
-      "requiresCapability": [
-        {"axis": "hold.throat.streak", "min": 3}
-      ],
       "branches": ["profondeur", "rythmeBiffle"],
       "sequence": [
         {"time": 0,  "text": "Maintenant on bouge dans la gorge. Trois allers-retours, pas plus.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 90, "duration": 8},
@@ -266,13 +237,9 @@
     },
     {
       "id": "intro_hold_full",
-      "level": 11,
       "displayLabel": "Premier hold à fond",
       "unlocks": ["full_hold"],
       "requires": ["basics"],
-      "requiresCapability": [
-        {"axis": "hold.throat.streak", "min": 5}
-      ],
       "branches": ["endurance", "profondeur"],
       "sequence": [
         {"time": 0,  "text": "Aujourd'hui tu vas tout prendre.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 100, "duration": 10},
@@ -286,13 +253,9 @@
     },
     {
       "id": "intro_full_pulse",
-      "level": 12,
       "displayLabel": "Mouvement à fond",
       "unlocks": ["full_pulse"],
       "requires": ["basics"],
-      "requiresCapability": [
-        {"axis": "hold.full.streak", "min": 2}
-      ],
       "branches": ["profondeur", "rythmeBiffle"],
       "sequence": [
         {"time": 0,  "text": "Échauffement avant la profondeur.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 100, "duration": 10},
@@ -303,13 +266,9 @@
     },
     {
       "id": "intro_balls_lick",
-      "level": 9,
       "displayLabel": "Lèche-moi les couilles",
       "unlocks": ["lick_balls"],
       "requires": ["basics"],
-      "requiresCapability": [
-        {"axis": "lick.depth_max", "min": 3}
-      ],
       "branches": ["sloppy"],
       "requiresHands": true,
       "sequence": [
@@ -323,13 +282,9 @@
     },
     {
       "id": "balls_hold_short",
-      "level": 11,
       "displayLabel": "Tiens-les en bouche",
       "unlocks": ["hold_balls"],
       "requires": ["basics"],
-      "requiresCapability": [
-        {"axis": "lick.depth_max", "min": 4}
-      ],
       "branches": ["sloppy", "endurance"],
       "requiresHands": true,
       "sequence": [
@@ -344,13 +299,9 @@
     },
     {
       "id": "balls_beg",
-      "level": 14,
       "displayLabel": "Supplique sur les couilles",
       "unlocks": ["beg_balls"],
       "requires": ["basics"],
-      "requiresCapability": [
-        {"axis": "hold.full.streak", "min": 3}
-      ],
       "branches": ["obeissance", "sloppy"],
       "requiresHands": true,
       "sequence": [
@@ -364,7 +315,6 @@
     },
     {
       "id": "intro_suckle_head",
-      "level": 4,
       "displayLabel": "Aspire — la bouche bosse sans bouger",
       "unlocks": ["suckle_head"],
       "requires": ["basics"],
@@ -379,13 +329,9 @@
     },
     {
       "id": "intro_suckle_balls",
-      "level": 11,
       "displayLabel": "Aspire-les",
       "unlocks": ["suckle_balls"],
       "requires": ["basics"],
-      "requiresCapability": [
-        {"axis": "hold.full.streak", "min": 5}
-      ],
       "branches": ["sloppy", "obeissance"],
       "requiresHands": true,
       "sequence": [
@@ -399,7 +345,6 @@
     },
     {
       "id": "intro_final_hold_tip",
-      "level": 2,
       "displayLabel": "Apothéose — sauce sur la langue",
       "placement": "final",
       "unlocks": ["final_hold_tip"],
@@ -416,7 +361,6 @@
     },
     {
       "id": "intro_final_lick_tip_head",
-      "level": 3,
       "displayLabel": "Apothéose — langue lente jusqu'à la sauce",
       "placement": "final",
       "unlocks": ["final_lick_tip_head"],
@@ -433,7 +377,6 @@
     },
     {
       "id": "intro_final_hold_head",
-      "level": 4,
       "displayLabel": "Apothéose — gland tenu, bouche figée",
       "placement": "final",
       "unlocks": ["final_hold_head"],
@@ -449,14 +392,10 @@
     },
     {
       "id": "intro_final_hold_mid",
-      "level": 5,
       "displayLabel": "Apothéose — sauce profonde dans la bouche",
       "placement": "final",
       "unlocks": ["final_hold_mid"],
       "requires": ["basics"],
-      "requiresCapability": [
-        {"axis": "hold.throat.streak", "min": 2}
-      ],
       "branches": ["profondeur", "obeissance"],
       "sequence": [
         {"time": 0,  "text": "Descends. Va jusqu'au milieu. Reste-là.", "mode": "hold", "to": "mid", "duration": 7},
@@ -466,14 +405,10 @@
     },
     {
       "id": "intro_final_biffle",
-      "level": 5,
       "displayLabel": "Apothéose — coups au visage",
       "placement": "final",
       "unlocks": ["final_biffle"],
       "requires": ["basics"],
-      "requiresCapability": [
-        {"axis": "biffle.streak", "min": 5}
-      ],
       "requiresHands": true,
       "branches": ["rythmeBiffle", "sloppy"],
       "sequence": [
@@ -485,14 +420,10 @@
     },
     {
       "id": "intro_final_hold_throat",
-      "level": 6,
       "displayLabel": "Apothéose — gorge ouverte",
       "placement": "final",
       "unlocks": ["final_hold_throat"],
       "requires": ["basics"],
-      "requiresCapability": [
-        {"axis": "hold.throat.streak", "min": 5}
-      ],
       "branches": ["profondeur", "endurance"],
       "sequence": [
         {"time": 0, "text": "Descends gorge. Ouvre. Tiens-la.", "mode": "hold", "to": "throat", "duration": 3},
@@ -502,14 +433,10 @@
     },
     {
       "id": "intro_final_hold_full",
-      "level": 11,
       "displayLabel": "Apothéose — vidée à fond",
       "placement": "final",
       "unlocks": ["final_hold_full"],
       "requires": ["basics"],
-      "requiresCapability": [
-        {"axis": "hold.full.streak", "min": 3}
-      ],
       "branches": ["profondeur", "endurance"],
       "sequence": [
         {"time": 0, "text": "Descends. À fond. Gorge à plat.", "mode": "hold", "to": "full", "duration": 3},
@@ -519,13 +446,9 @@
     },
     {
       "id": "intro_fake_breath",
-      "level": 11,
       "displayLabel": "Une seconde, c'est tout",
       "unlocks": ["fake_breath"],
       "requires": ["basics"],
-      "requiresCapability": [
-        {"axis": "gorge.crossings_pm.throat", "min": 60}
-      ],
       "branches": ["obeissance", "endurance"],
       "sequence": [
         {"time": 0,  "text": "Vas-y. Plus profond. Suis-moi.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 100, "duration": 12},
@@ -538,13 +461,9 @@
     },
     {
       "id": "intro_surprise_notifs",
-      "level": 4,
       "displayLabel": "Notifications surprises",
       "unlocks": ["surprise_notifs"],
       "requires": ["basics"],
-      "requiresCapability": [
-        {"axis": "gorge.engagement_streak", "min": 5}
-      ],
       "branches": ["obeissance"],
       "sequence": [
         {"time": 0,  "text": "À partir d'aujourd'hui, je peux te surprendre. Je vais te faire bosser quand JE veux.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 100, "duration": 10},
@@ -555,13 +474,9 @@
     },
     {
       "id": "intro_swallow_control",
-      "level": 4,
       "displayLabel": "Garde ta salive",
       "unlocks": ["sloppy_swallow_control"],
       "requires": ["basics"],
-      "requiresCapability": [
-        {"axis": "noswallow.streak", "min": 3}
-      ],
       "branches": ["sloppy", "obeissance"],
       "sequence": [
         {"time": 0,  "text": "Aujourd'hui tu apprends à te retenir. À partir de maintenant, je vais t'interdire d'avaler. Ta salive, tu la gardes en bouche jusqu'à ce que je te le permette.", "mode": "lick", "from": "tip", "to": "head", "bpm": 70, "duration": 14},
@@ -576,7 +491,6 @@
     },
     {
       "id": "intro_sloppy_spit",
-      "level": 5,
       "displayLabel": "Crache pour moi",
       "unlocks": ["sloppy_spit"],
       "requires": ["basics"],
