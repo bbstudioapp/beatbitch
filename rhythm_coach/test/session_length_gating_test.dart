@@ -5,7 +5,9 @@
 /// proposer bâclée (intense dès le départ) et moyenne/longue (25-45 min
 /// sans repère). Le gating remet une marche pédagogique :
 /// - Bâclée : 30 min de jeu cumulé (intense + court = pas pour la 1ʳᵉ fois)
-/// - Moyenne/Longue : 1 séance complétée OU 10 min de jeu (peu importe lequel)
+/// - Moyenne : 1 séance complétée OU 10 min de jeu
+/// - Longue : 1 h de jeu cumulé (pas de bypass session — un format 45 min
+///   demande d'avoir tenu au moins une moyenne ou plusieurs courtes)
 library;
 
 import 'package:flutter_test/flutter_test.dart';
@@ -31,10 +33,10 @@ void main() {
     });
   });
 
-  group('isSessionLengthLongerUnlocked', () {
+  group('isSessionLengthMoyenneUnlocked', () {
     test('0 s + 0 session → verrouillée', () {
       expect(
-        isSessionLengthLongerUnlocked(
+        isSessionLengthMoyenneUnlocked(
           totalSeconds: 0,
           completedSessions: 0,
         ),
@@ -44,7 +46,7 @@ void main() {
 
     test('599 s + 0 session (sous 10 min, pas de séance) → verrouillée', () {
       expect(
-        isSessionLengthLongerUnlocked(
+        isSessionLengthMoyenneUnlocked(
           totalSeconds: 599,
           completedSessions: 0,
         ),
@@ -54,7 +56,7 @@ void main() {
 
     test('600 s + 0 session (10 min pile) → déverrouillée', () {
       expect(
-        isSessionLengthLongerUnlocked(
+        isSessionLengthMoyenneUnlocked(
           totalSeconds: 600,
           completedSessions: 0,
         ),
@@ -66,7 +68,7 @@ void main() {
       // Cas typique : joueuse interrompt sa 1ʳᵉ séance avant 10 min mais
       // la termine via debug ou Termine-moi. La séance complétée prime.
       expect(
-        isSessionLengthLongerUnlocked(
+        isSessionLengthMoyenneUnlocked(
           totalSeconds: 0,
           completedSessions: 1,
         ),
@@ -76,12 +78,41 @@ void main() {
 
     test('0 s + 3 sessions → déverrouillée', () {
       expect(
-        isSessionLengthLongerUnlocked(
+        isSessionLengthMoyenneUnlocked(
           totalSeconds: 0,
           completedSessions: 3,
         ),
         isTrue,
       );
     });
+  });
+
+  group('isSessionLengthLongueUnlocked', () {
+    test('0 s → verrouillée', () {
+      expect(isSessionLengthLongueUnlocked(0), isFalse);
+    });
+
+    test('3599 s (juste sous 1 h) → verrouillée', () {
+      expect(isSessionLengthLongueUnlocked(3599), isFalse);
+    });
+
+    test('3600 s (1 h pile) → déverrouillée', () {
+      expect(isSessionLengthLongueUnlocked(3600), isTrue);
+    });
+
+    test('7200 s (2 h) → déverrouillée', () {
+      expect(isSessionLengthLongueUnlocked(7200), isTrue);
+    });
+
+    test(
+      'pas de bypass session : 1 séance bâclée ne suffit pas (= '
+      '360 s < 1 h)',
+      () {
+        // Sanity check : la signature n'accepte pas `completedSessions`,
+        // donc la séance bâclée ne peut pas servir de bypass. Le test
+        // matérialise la décision de design (vs `isSessionLengthMoyenneUnlocked`).
+        expect(isSessionLengthLongueUnlocked(360), isFalse);
+      },
+    );
   });
 }

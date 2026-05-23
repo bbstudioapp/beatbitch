@@ -241,8 +241,6 @@
   "sessionLengthLongueLabel": "Longue",
   "sessionLengthLongueDuration": "~45 min",
   "sessionLengthLongueDescription": "Séance pleine, plusieurs défis intercalés.",
-  "sessionLengthBacheeLockedHint": "Bâclée déverrouillée après 30 min de jeu cumulé.",
-  "sessionLengthLongerLockedHint": "Disponible après ta première séance terminée (ou 10 min de jeu).",
   "careerChallengesToggle": "Défis intra-séance",
   "careerChallengesDescription": "Un défi opt-in vers 60 % de la séance. Calibre vite, peut faire monter le niveau plus rapidement.",
   "challengePassButton": "PASSE",

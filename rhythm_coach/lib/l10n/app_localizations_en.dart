@@ -569,14 +569,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Full session, several challenges intercut.';
 
   @override
-  String get sessionLengthBacheeLockedHint =>
-      'Quickie unlocks after 30 min of cumulative play.';
-
-  @override
-  String get sessionLengthLongerLockedHint =>
-      'Available after your first completed session (or 10 min of play).';
-
-  @override
   String get careerChallengesToggle => 'In-session challenges';
 
   @override

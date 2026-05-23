@@ -569,14 +569,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Séance pleine, plusieurs défis intercalés.';
 
   @override
-  String get sessionLengthBacheeLockedHint =>
-      'Bâclée déverrouillée après 30 min de jeu cumulé.';
-
-  @override
-  String get sessionLengthLongerLockedHint =>
-      'Disponible après ta première séance terminée (ou 10 min de jeu).';
-
-  @override
   String get careerChallengesToggle => 'Défis intra-séance';
 
   @override

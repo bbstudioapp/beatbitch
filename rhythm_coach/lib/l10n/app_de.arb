@@ -241,8 +241,6 @@
   "sessionLengthLongueLabel": "Lang",
   "sessionLengthLongueDuration": "~45 Min.",
   "sessionLengthLongueDescription": "Volle Sitzung, mehrere eingeschobene Herausforderungen.",
-  "sessionLengthBacheeLockedHint": "Quickie wird nach 30 Min. kumulierter Spielzeit freigeschaltet.",
-  "sessionLengthLongerLockedHint": "Verfügbar nach deiner ersten abgeschlossenen Sitzung (oder 10 Min. Spielzeit).",
   "careerChallengesToggle": "Herausforderungen in der Sitzung",
   "careerChallengesDescription": "Eine optionale Herausforderung etwa bei 60 % der Sitzung. Kalibriert schnell, kann das Level-Up beschleunigen.",
   "challengePassButton": "ÜBERSPR.",
