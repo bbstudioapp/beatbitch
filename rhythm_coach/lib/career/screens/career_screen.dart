@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -346,7 +347,7 @@ class _CareerScreenState extends State<CareerScreen> {
       // les défis suivants.
       var isFirst = true;
       for (var i = 0; i < targetCount; i++) {
-        final next = _challengeService.buildForSession(
+        final next = await _challengeService.buildForSession(
           profile: bundle.capabilityProfile,
           ceilings: const {},
           excludeAxes: excludedAxes,
@@ -469,6 +470,13 @@ class _CareerScreenState extends State<CareerScreen> {
             clamped,
             includeHand,
           ),
+          onChallengeOutcome: (ch, _) {
+            // Compteur d'essais par axe — fait monter la cible « franchissements »
+            // (cf. `crossingsTargetForAttempts`) du prochain défi sur le
+            // même axe. Fire-and-forget : la persistance n'a pas besoin
+            // de bloquer la fin du défi.
+            unawaited(_challengeService.incrementAttempts(ch.axis));
+          },
           anatomy: anatomy,
         ),
       ),
@@ -1027,6 +1035,9 @@ class _CareerScreenState extends State<CareerScreen> {
             level,
             includeHand,
           ),
+          onChallengeOutcome: (ch, _) {
+            unawaited(_challengeService.incrementAttempts(ch.axis));
+          },
           anatomy: widget.userProfile.anatomy,
         ),
       ),

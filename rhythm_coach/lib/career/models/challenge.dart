@@ -134,6 +134,17 @@ class Challenge {
   /// `null` si profil neuf (cas dégénéré géré par le tutoriel).
   final double? comfortAtCalibration;
 
+  /// Nombre de franchissements gorge à atteindre pour boucler le défi (=
+  /// passer en phase `atSeuil`). Réservé aux défis « franchissement »
+  /// (axes `rhythmBpmCeilThroat`, `rhythmBpmCeilFull`, `gorgeCrossingsBpm*`)
+  /// dont la mesure naturelle est un compteur, pas une durée — la rampe
+  /// BPM rend la durée nominale trompeuse (5 franchissements à 60 BPM ≠
+  /// 5 franchissements à 169 BPM). Quand présent, la phase `live` bascule
+  /// en `atSeuil` dès que le compteur atteint cette valeur, **ou** que la
+  /// durée nominale est atteinte (fallback safety net). `null` pour les
+  /// défis durée/profondeur ou rythme non-franchissement.
+  final int? targetCrossings;
+
   /// Vrai pour le premier défi de la joueuse — séquence scriptée avec
   /// tooltips et textes coach pédagogiques (flag `challenges.tutorial_seen`).
   final bool isTutorial;
@@ -165,6 +176,7 @@ class Challenge {
     this.bpm,
     this.bpmEnd,
     this.comfortAtCalibration,
+    this.targetCrossings,
     this.isTutorial = false,
     this.isExploratory = false,
   });

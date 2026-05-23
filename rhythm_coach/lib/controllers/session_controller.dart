@@ -267,6 +267,15 @@ class SessionController extends ChangeNotifier {
   /// par extension (cf. spec § 5.2 succès étendu).
   int _challengeExtensionsCount = 0;
 
+  /// Compteur de franchissements gorge atteints depuis le début de la
+  /// phase `live` du défi courant. Incrémenté dans `_handleBeat` quand le
+  /// beat émis matche la position cible du défi (`Challenge.to`). Sert à
+  /// déclencher la bascule en `atSeuil` quand `Challenge.targetCrossings`
+  /// est posé — alternative à la durée nominale pour les défis dont la
+  /// rampe BPM rend la durée trompeuse.
+  int _challengeCrossingsCount = 0;
+  int get challengeCrossingsCount => _challengeCrossingsCount;
+
   /// Outcome du défi courant (= dernier défi armé) — posé par les triggers
   /// (skipped/fail/netSuccess/extendedSuccess) ou par `_finish` via
   /// timeout. Null entre 2 défis ou quand aucun défi n'a encore été armé.
@@ -376,6 +385,15 @@ class SessionController extends ChangeNotifier {
   /// continue avec le contenu généré au start (qui ne sait rien des
   /// nouveaux unlocks). No-op si non set (sessions hors carrière, tests).
   Future<void> Function(SessionController controller)? onPostChallengeRegen;
+
+  /// Callback déclenché à la fin de tout défi (peu importe l'outcome :
+  /// fail / netSuccess / extendedSuccess / skipped / timeout). Le caller
+  /// l'utilise pour persister un compteur d'essais par axe — fait monter
+  /// la cible « franchissements » du défi suivant sur le même axe (cf.
+  /// `ChallengeService.attemptsCount` / `crossingsTargetForAttempts`).
+  /// No-op si non set.
+  void Function(Challenge challenge, ChallengeOutcome outcome)?
+      onChallengeOutcome;
 
   /// Allocation de spécialisation courante. Consommée par la génération de
   /// punition carrière contextuelle (`_generateCareerPunishmentOrNull` →
@@ -596,8 +614,26 @@ class SessionController extends ChangeNotifier {
     if (!_session.noStats && !isChallengeActive) {
       _stats.recordBeat(mode: e.mode, to: e.to);
       _stats.markModeUsed(e.mode);
+    } else {
+      _onChallengeBeatIfCrossingsTracked(e);
     }
     _stamina.onBeat(e);
+  }
+
+  /// Incrémente [_challengeCrossingsCount] quand le défi est en `live` /
+  /// `preExtend` et que le beat émis atteint la position cible du défi.
+  /// No-op hors phase de comptage ou si le défi ne pilote pas un compteur
+  /// (`targetCrossings == null`).
+  void _onChallengeBeatIfCrossingsTracked(BeatEvent e) {
+    final ch = _activeChallenge;
+    if (ch == null || ch.targetCrossings == null) return;
+    if (_challengePhase != ChallengePhase.live &&
+        _challengePhase != ChallengePhase.preExtend) {
+      return;
+    }
+    final target = ch.to;
+    if (target == null) return;
+    if (e.to == target) _challengeCrossingsCount++;
   }
 
   /// Vrai si l'utilisatrice a cliqué au moins une fois sur FAIL pendant

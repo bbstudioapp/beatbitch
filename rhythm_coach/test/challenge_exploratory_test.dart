@@ -8,10 +8,16 @@ import 'package:beat_bitch/services/capability_service.dart';
 import 'package:beat_bitch/services/humiliation_engine.dart';
 import 'package:beat_bitch/services/obedience_engine.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  setUp(() {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+  });
+
   group('Challenge.initialEstimateSecondsForAxis', () {
-    test('paliers débutante par type d\'axe', () {
+    test('paliers débutante par type d\'axe', () async {
       expect(
           Challenge.initialEstimateSecondsForAxis(
               CapabilityAxis.holdThroatStreak),
@@ -39,9 +45,9 @@ void main() {
   });
 
   group('ChallengeService.buildForSession — fallback exploratoire', () {
-    test('profil totalement vide → exploratoire valide', () {
+    test('profil totalement vide → exploratoire valide', () async {
       final svc = ChallengeService();
-      final challenge = svc.buildForSession(
+      final challenge = await svc.buildForSession(
         profile: const CapabilityProfile({}),
         ceilings: const {},
         excludeAxes: const {},
@@ -56,10 +62,11 @@ void main() {
           Challenge.initialEstimateSecondsForAxis(challenge.axis));
     });
 
-    test('profil avec axes vierges + exclusions → pick parmi candidats', () {
+    test('profil avec axes vierges + exclusions → pick parmi candidats',
+        () async {
       final svc = ChallengeService();
       // Profil totalement vide, mais on exclut explicitement holdThroatStreak.
-      final challenge = svc.buildForSession(
+      final challenge = await svc.buildForSession(
         profile: const CapabilityProfile({}),
         ceilings: const {},
         excludeAxes: {CapabilityAxis.holdThroatStreak},
@@ -71,7 +78,7 @@ void main() {
       expect(challenge.isExploratory, isTrue);
     });
 
-    test('profil avec un axe prouvé → hybride (pas exploratoire)', () {
+    test('profil avec un axe prouvé → hybride (pas exploratoire)', () async {
       final svc = ChallengeService();
       const profile = CapabilityProfile({
         CapabilityAxis.holdThroatStreak: CapabilityAxisState(
@@ -81,7 +88,7 @@ void main() {
           lastSeenSession: 1,
         ),
       });
-      final challenge = svc.buildForSession(
+      final challenge = await svc.buildForSession(
         profile: profile,
         ceilings: const {},
         excludeAxes: const {},
@@ -93,7 +100,7 @@ void main() {
       expect(challenge.comfortAtCalibration, 10.0);
     });
 
-    test('aucun axe candidat (tous exclus) → null', () {
+    test('aucun axe candidat (tous exclus) → null', () async {
       final svc = ChallengeService();
       // Tous les axes pilotants exclus → ni overload ni exploratoire.
       final allOverloadable = {
@@ -112,7 +119,7 @@ void main() {
         CapabilityAxis.biffleStreak,
         CapabilityAxis.biffleBpmMax,
       };
-      final challenge = svc.buildForSession(
+      final challenge = await svc.buildForSession(
         profile: const CapabilityProfile({}),
         ceilings: const {},
         excludeAxes: allOverloadable,
@@ -124,7 +131,7 @@ void main() {
   });
 
   group('Challenge.extensionSeconds avec comfort=null (exploratoire)', () {
-    test('plancher 10 s en l\'absence de comfort prouvé', () {
+    test('plancher 10 s en l\'absence de comfort prouvé', () async {
       const ch = Challenge(
         axis: CapabilityAxis.holdThroatStreak,
         kind: ChallengeAxisKind.duration,
@@ -139,7 +146,7 @@ void main() {
 
   group('Outcomes exploratoires — bumps engine', () {
     test('extension : +1 humil / +1 obed par tient encore (pas de base +2)',
-        () {
+        () async {
       // En Phase 2 exploratoire, le SessionController n'appelle pas
       // onChallengeNetSuccess sur netSuccess/extendedSuccess. On vérifie
       // ici les méthodes engines existent et bumpent comme prévu — la

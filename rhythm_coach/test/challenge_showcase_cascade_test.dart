@@ -5,11 +5,17 @@ import 'package:beat_bitch/career/services/challenge_service.dart';
 import 'package:beat_bitch/services/capability_axis.dart';
 import 'package:beat_bitch/services/capability_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  setUp(() {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+  });
+
   group('ChallengeService.buildForSession — cascade showcase', () {
     test('showcase=endurance + axe pilotant prouvé → pick branche prioritaire',
-        () {
+        () async {
       final svc = ChallengeService();
       // Profil avec UN axe profondeur (rhythmDepthMax) ET un axe endurance
       // (holdThroatStreak) prouvés. Sans showcase, pickOverloadAxis aurait
@@ -29,7 +35,7 @@ void main() {
           lastSeenSession: 1,
         ),
       });
-      final challenge = svc.buildForSession(
+      final challenge = await svc.buildForSession(
         profile: profile,
         ceilings: const {},
         excludeAxes: const {},
@@ -45,7 +51,7 @@ void main() {
 
     test(
         'showcase=endurance mais aucun axe endurance prouvé → fallback overload',
-        () {
+        () async {
       final svc = ChallengeService();
       // Profil avec uniquement profondeur (pas endurance) prouvée.
       const profile = CapabilityProfile({
@@ -56,7 +62,7 @@ void main() {
           lastSeenSession: 1,
         ),
       });
-      final challenge = svc.buildForSession(
+      final challenge = await svc.buildForSession(
         profile: profile,
         ceilings: const {},
         excludeAxes: const {},
@@ -69,7 +75,7 @@ void main() {
       expect(challenge!.axis, CapabilityAxis.rhythmDepthMax);
     });
 
-    test('showcase=null → comportement standard (pickOverloadAxis)', () {
+    test('showcase=null → comportement standard (pickOverloadAxis)', () async {
       final svc = ChallengeService();
       const profile = CapabilityProfile({
         CapabilityAxis.holdThroatStreak: CapabilityAxisState(
@@ -79,7 +85,7 @@ void main() {
           lastSeenSession: 1,
         ),
       });
-      final challenge = svc.buildForSession(
+      final challenge = await svc.buildForSession(
         profile: profile,
         ceilings: const {},
         excludeAxes: const {},
@@ -90,7 +96,7 @@ void main() {
       expect(challenge!.axis, CapabilityAxis.holdThroatStreak);
     });
 
-    test('showcase=endurance + axe excluded → fallback', () {
+    test('showcase=endurance + axe excluded → fallback', () async {
       final svc = ChallengeService();
       const profile = CapabilityProfile({
         CapabilityAxis.holdThroatStreak: CapabilityAxisState(
@@ -107,7 +113,7 @@ void main() {
         ),
       });
       // L'axe le plus ancien (holdThroatStreak avec lastSeen=1) est exclu.
-      final challenge = svc.buildForSession(
+      final challenge = await svc.buildForSession(
         profile: profile,
         ceilings: const {},
         excludeAxes: {CapabilityAxis.holdThroatStreak},
@@ -122,7 +128,7 @@ void main() {
 
     test(
         'showcase=endurance + 2 axes endurance prouvés → pick le plus ancien (lastSeen min)',
-        () {
+        () async {
       final svc = ChallengeService();
       const profile = CapabilityProfile({
         CapabilityAxis.holdThroatStreak: CapabilityAxisState(
@@ -138,7 +144,7 @@ void main() {
           lastSeenSession: 2, // plus ancien
         ),
       });
-      final challenge = svc.buildForSession(
+      final challenge = await svc.buildForSession(
         profile: profile,
         ceilings: const {},
         excludeAxes: const {},
@@ -151,7 +157,8 @@ void main() {
       expect(challenge!.axis, CapabilityAxis.holdFullStreak);
     });
 
-    test('showcase=obeissance (aucun axe pilotant) → fallback overload', () {
+    test('showcase=obeissance (aucun axe pilotant) → fallback overload',
+        () async {
       final svc = ChallengeService();
       // L'obéissance n'a pas d'axe capability (branchOf retournera null
       // pour tous les axes pilotants). La cascade showcase doit
@@ -164,7 +171,7 @@ void main() {
           lastSeenSession: 1,
         ),
       });
-      final challenge = svc.buildForSession(
+      final challenge = await svc.buildForSession(
         profile: profile,
         ceilings: const {},
         excludeAxes: const {},

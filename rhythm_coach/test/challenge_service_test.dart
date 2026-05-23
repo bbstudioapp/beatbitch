@@ -8,6 +8,7 @@ import 'package:beat_bitch/models/session_step.dart';
 import 'package:beat_bitch/services/capability_axis.dart';
 import 'package:beat_bitch/services/capability_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Construit un `CapabilityProfile` minimal avec un comfort posé sur un
 /// axe précis. Les autres axes restent vides → `pickOverloadAxis` les
@@ -24,10 +25,16 @@ CapabilityProfile _profileWithComfort(CapabilityAxis axis, double comfort) {
 }
 
 void main() {
+  setUp(() {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+  });
+
   group('ChallengeService.buildForSession', () {
-    test('tutoriel : axe robuste hold throat 5 s, isTutorial flag posé', () {
+    test('tutoriel : axe robuste hold throat 5 s, isTutorial flag posé',
+        () async {
       final svc = ChallengeService();
-      final challenge = svc.buildForSession(
+      final challenge = await svc.buildForSession(
         profile: null,
         ceilings: const {},
         excludeAxes: const {},
@@ -44,10 +51,11 @@ void main() {
       expect(challenge.branch, SpecializationBranch.endurance);
     });
 
-    test('non-tutoriel : pickOverloadAxis utilisé, seuil = comfort × 1.30', () {
+    test('non-tutoriel : pickOverloadAxis utilisé, seuil = comfort × 1.30',
+        () async {
       final svc = ChallengeService();
       final profile = _profileWithComfort(CapabilityAxis.holdThroatStreak, 10);
-      final challenge = svc.buildForSession(
+      final challenge = await svc.buildForSession(
         profile: profile,
         ceilings: const {},
         excludeAxes: const {},
@@ -61,11 +69,11 @@ void main() {
       expect(challenge.comfortAtCalibration, 10.0);
     });
 
-    test('axe BPM : rampe comfort → comfort × 1.30 (bpm/bpmEnd)', () {
+    test('axe BPM : rampe comfort → comfort × 1.30 (bpm/bpmEnd)', () async {
       final svc = ChallengeService();
       final profile =
           _profileWithComfort(CapabilityAxis.rhythmBpmCeilThroat, 100);
-      final challenge = svc.buildForSession(
+      final challenge = await svc.buildForSession(
         profile: profile,
         ceilings: const {},
         excludeAxes: const {},
@@ -86,11 +94,11 @@ void main() {
       expect(challenge.to, Position.throat);
     });
 
-    test('axe profondeur : seuil = comfort + 1 cran', () {
+    test('axe profondeur : seuil = comfort + 1 cran', () async {
       final svc = ChallengeService();
       // rhythmDepthMax comfort = 2 (mid) → seuil = cran 3 (throat).
       final profile = _profileWithComfort(CapabilityAxis.rhythmDepthMax, 2);
-      final challenge = svc.buildForSession(
+      final challenge = await svc.buildForSession(
         profile: profile,
         ceilings: const {},
         excludeAxes: const {},
@@ -104,10 +112,10 @@ void main() {
 
     test(
         'axes exclus du pickOverloadAxis : fallback exploratoire sur axes vierges (Phase 2)',
-        () {
+        () async {
       final svc = ChallengeService();
       final profile = _profileWithComfort(CapabilityAxis.holdThroatStreak, 10);
-      final challenge = svc.buildForSession(
+      final challenge = await svc.buildForSession(
         profile: profile,
         ceilings: const {},
         excludeAxes: {CapabilityAxis.holdThroatStreak},
@@ -121,9 +129,9 @@ void main() {
       expect(challenge.axis, isNot(CapabilityAxis.holdThroatStreak));
     });
 
-    test('profil vide → exploratoire valide (Phase 2)', () {
+    test('profil vide → exploratoire valide (Phase 2)', () async {
       final svc = ChallengeService();
-      final challenge = svc.buildForSession(
+      final challenge = await svc.buildForSession(
         profile: const CapabilityProfile({}),
         ceilings: const {},
         excludeAxes: const {},
@@ -135,10 +143,103 @@ void main() {
       expect(challenge, isNotNull);
       expect(challenge!.isExploratory, isTrue);
     });
+
+    test(
+      'axe franchissement gorge : targetCrossings posé selon attemptsCount',
+      () async {
+        final svc = ChallengeService();
+        final profile =
+            _profileWithComfort(CapabilityAxis.rhythmBpmCeilThroat, 100);
+        // 1er essai (attemptsCount = 0) → 5 franchissements.
+        final first = await svc.buildForSession(
+          profile: profile,
+          ceilings: const {},
+          excludeAxes: const {},
+          rng: Random(0),
+          isTutorial: false,
+        );
+        expect(first?.axis, CapabilityAxis.rhythmBpmCeilThroat);
+        expect(first?.targetCrossings, 5);
+
+        // Incrémente le compteur — le 2e essai monte à 8.
+        await svc.incrementAttempts(CapabilityAxis.rhythmBpmCeilThroat);
+        final second = await svc.buildForSession(
+          profile: profile,
+          ceilings: const {},
+          excludeAxes: const {},
+          rng: Random(0),
+          isTutorial: false,
+        );
+        expect(second?.targetCrossings, 8);
+
+        // 3e essai → 12.
+        await svc.incrementAttempts(CapabilityAxis.rhythmBpmCeilThroat);
+        final third = await svc.buildForSession(
+          profile: profile,
+          ceilings: const {},
+          excludeAxes: const {},
+          rng: Random(0),
+          isTutorial: false,
+        );
+        expect(third?.targetCrossings, 12);
+      },
+    );
+
+    test(
+      'axe non-franchissement : targetCrossings null',
+      () async {
+        final svc = ChallengeService();
+        final profile =
+            _profileWithComfort(CapabilityAxis.holdThroatStreak, 10);
+        final challenge = await svc.buildForSession(
+          profile: profile,
+          ceilings: const {},
+          excludeAxes: const {},
+          rng: Random(0),
+          isTutorial: false,
+        );
+        expect(challenge?.axis, CapabilityAxis.holdThroatStreak);
+        expect(challenge?.targetCrossings, isNull);
+      },
+    );
+
+    test(
+      'tutoriel : targetCrossings null (le tuto est hold, pas franchissement)',
+      () async {
+        final svc = ChallengeService();
+        final challenge = await svc.buildForSession(
+          profile: null,
+          ceilings: const {},
+          excludeAxes: const {},
+          rng: Random(42),
+          isTutorial: true,
+        );
+        expect(challenge?.isTutorial, isTrue);
+        expect(challenge?.targetCrossings, isNull);
+      },
+    );
+  });
+
+  group('crossingsTargetForAttempts', () {
+    test('progression no-limit : 5, 8, 12, 17, 23, 30 …', () {
+      expect(crossingsTargetForAttempts(0), 5);
+      expect(crossingsTargetForAttempts(1), 8);
+      expect(crossingsTargetForAttempts(2), 12);
+      expect(crossingsTargetForAttempts(3), 17);
+      expect(crossingsTargetForAttempts(4), 23);
+      expect(crossingsTargetForAttempts(5), 30);
+      // Pas de cap : à 10 défis, 80 franchissements.
+      expect(crossingsTargetForAttempts(10), 80);
+    });
+
+    test('valeurs négatives → 5 (cas défensif)', () {
+      expect(crossingsTargetForAttempts(-1), 5);
+      expect(crossingsTargetForAttempts(-99), 5);
+    });
   });
 
   group('ChallengeService.branchOf', () {
-    test('mapping axes → branches connues', () {
+    test('mapping axes → branches connues', () async {
       expect(ChallengeService.branchOf(CapabilityAxis.holdThroatStreak),
           SpecializationBranch.endurance);
       expect(ChallengeService.branchOf(CapabilityAxis.rhythmDepthMax),
@@ -149,7 +250,7 @@ void main() {
           SpecializationBranch.sloppy);
     });
 
-    test('axes non pilotants par branche → null', () {
+    test('axes non pilotants par branche → null', () async {
       expect(ChallengeService.branchOf(CapabilityAxis.handStreak), isNull);
       expect(ChallengeService.branchOf(CapabilityAxis.lickStreak), isNull);
       expect(ChallengeService.branchOf(CapabilityAxis.breathMinDose), isNull);
@@ -157,7 +258,7 @@ void main() {
   });
 
   group('ChallengeService.thresholdFor', () {
-    test('maximize duration : comfort × 1.30', () {
+    test('maximize duration : comfort × 1.30', () async {
       expect(
         ChallengeService.thresholdFor(
           ChallengeAxisKind.duration,
@@ -168,7 +269,7 @@ void main() {
       );
     });
 
-    test('maximize bpm : comfort × 1.30', () {
+    test('maximize bpm : comfort × 1.30', () async {
       expect(
         ChallengeService.thresholdFor(
           ChallengeAxisKind.bpm,
@@ -179,7 +280,7 @@ void main() {
       );
     });
 
-    test('minimize bpm : comfort / 1.30 (rampe descendante)', () {
+    test('minimize bpm : comfort / 1.30 (rampe descendante)', () async {
       // 60 / 1.30 ≈ 46.
       expect(
         ChallengeService.thresholdFor(
@@ -191,7 +292,8 @@ void main() {
       );
     });
 
-    test('minimize bpm : plancher à 18 si la division descend plus bas', () {
+    test('minimize bpm : plancher à 18 si la division descend plus bas',
+        () async {
       // 20 / 1.30 ≈ 15 → planché à 18.
       expect(
         ChallengeService.thresholdFor(
@@ -203,7 +305,7 @@ void main() {
       );
     });
 
-    test('maximize depthCran : +1 cran', () {
+    test('maximize depthCran : +1 cran', () async {
       expect(
         ChallengeService.thresholdFor(
           ChallengeAxisKind.depthCran,
@@ -214,7 +316,7 @@ void main() {
       );
     });
 
-    test('depthCran : clamp au dernier cran disponible', () {
+    test('depthCran : clamp au dernier cran disponible', () async {
       // comfort = dernier cran → +1 sortirait de la plage, clampé.
       final lastCran = Position.values.length - 1;
       expect(
@@ -240,7 +342,7 @@ void main() {
       );
     }
 
-    test('axes durée : durée = targetThreshold', () {
+    test('axes durée : durée = targetThreshold', () async {
       expect(
         mk(CapabilityAxis.holdThroatStreak, ChallengeAxisKind.duration,
                 threshold: 15)
@@ -255,7 +357,7 @@ void main() {
       );
     });
 
-    test('axes BPM : durée par axe — table de calibration', () {
+    test('axes BPM : durée par axe — table de calibration', () async {
       final cases = <CapabilityAxis, int>{
         CapabilityAxis.rhythmBpmCeilShallow: 25,
         CapabilityAxis.rhythmBpmCeilThroat: 8,
@@ -276,7 +378,7 @@ void main() {
       }
     });
 
-    test('axe profondeur : rhythmDepthMax = 12 s', () {
+    test('axe profondeur : rhythmDepthMax = 12 s', () async {
       expect(
         mk(CapabilityAxis.rhythmDepthMax, ChallengeAxisKind.depthCran)
             .nominalDurationSeconds,
@@ -284,7 +386,7 @@ void main() {
       );
     });
 
-    test('axe BPM non listé : fallback 30 s', () {
+    test('axe BPM non listé : fallback 30 s', () async {
       // breathMinDose est BPM-like (minimize) mais non câblé dans _modeOf —
       // sert ici de proxy d'un axe pilotant pas encore couvert par la table.
       expect(
@@ -296,7 +398,7 @@ void main() {
   });
 
   group('Challenge.extensionSeconds', () {
-    test('plancher à 10 s pour comfort bas', () {
+    test('plancher à 10 s pour comfort bas', () async {
       const ch = Challenge(
         axis: CapabilityAxis.holdThroatStreak,
         kind: ChallengeAxisKind.duration,
@@ -308,7 +410,7 @@ void main() {
       expect(ch.extensionSeconds, 10);
     });
 
-    test('comfort × 0.30 pour comfort élevé', () {
+    test('comfort × 0.30 pour comfort élevé', () async {
       const ch = Challenge(
         axis: CapabilityAxis.holdThroatStreak,
         kind: ChallengeAxisKind.duration,
