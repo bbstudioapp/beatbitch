@@ -338,8 +338,39 @@ class SimState {
   double humilCareer = 0;
   double humilSession = 0;
   double obed = 0;
-  int level = 1;
   int sessionIndex = 0;
+
+  /// Compteurs d'investissement (remplacent l'ancien `level`).
+  int totalSeconds = 0;
+  int sessionsCompleted = 0; // sessions terminées sans fail/abandon
+  int noFailStreak = 0;
+  int encoresAsked = 0;
+
+  /// Proxy interne pour les helpers qui consomment encore un `int`
+  /// (BPM caps, estimateurs comfort, durée, etc.) — équivalent au
+  /// `synthLevel` prod (`CareerDifficultyResolver.synthLevelFor`).
+  /// Plus aucun « level-up » : la valeur dérive strictement des
+  /// sessions terminées.
+  int get synthLevel {
+    final n = sessionsCompleted < 0 ? 0 : sessionsCompleted;
+    return n ~/ 2 + 1 > 30 ? 30 : n ~/ 2 + 1;
+  }
+
+  /// Réputation = formule `ReputationService.snapshot` privée du facteur
+  /// `niveau_max × 100` (qu'on cherche précisément à supprimer). Reflète
+  /// l'investissement (sessions + endurance + records) sans accélérateur
+  /// arbitraire.
+  double get reputation {
+    final holdFullBest = (caps[CapabilityAxis.holdFullStreak]?.best ?? 0);
+    final throatfuckProxy =
+        (caps[CapabilityAxis.gorgeCrossingsLifetime]?.best ?? 0);
+    return sessionsCompleted * 5.0 +
+        noFailStreak * 3.0 +
+        holdFullBest * 2.0 +
+        throatfuckProxy * 0.5 +
+        encoresAsked * 10.0;
+  }
+
   Set<UnlockKey> unlocked = <UnlockKey>{};
   Set<String> completedMilestones = <String>{};
   Map<CapabilityAxis, CapState> caps = <CapabilityAxis, CapState>{};
@@ -372,7 +403,10 @@ class SimState {
 
 class TimelineRow {
   final int session;
-  final int level;
+  final int synthLevel;
+  final int sessionsCompleted;
+  final int totalSeconds;
+  final double reputation;
   final double humilCareer;
   final double obed;
   final List<UnlockKey> unlocksGained;
@@ -381,13 +415,16 @@ class TimelineRow {
   final String? milestoneFinalInserted;
   final String outcome; // clean / fail / abandon / encore / quickie
   final List<CapabilityAxis> axesTouched;
-  final bool levelUp;
+  final bool synthBumped;
   final String?
       challengeSummary; // ex. `hold.throat × net ×2`, `tut`, null si pas de défi
 
   TimelineRow({
     required this.session,
-    required this.level,
+    required this.synthLevel,
+    required this.sessionsCompleted,
+    required this.totalSeconds,
+    required this.reputation,
     required this.humilCareer,
     required this.obed,
     required this.unlocksGained,
@@ -396,7 +433,7 @@ class TimelineRow {
     required this.milestoneFinalInserted,
     required this.outcome,
     required this.axesTouched,
-    required this.levelUp,
+    required this.synthBumped,
     this.challengeSummary,
   });
 }
@@ -477,7 +514,7 @@ List<SimMilestone> _allPendingMilestones({
   final candidates = catalog
       .where((m) => m.placement == placement)
       .where((m) => !excludeIds.contains(m.id))
-      .where((m) => (m.minLevel - _branchAdvance(m, profile)) <= state.level)
+      .where((m) => (m.minLevel - _branchAdvance(m, profile)) <= state.synthLevel)
       .where((m) => m.humilRequired <= cap)
       .where((m) => !state.completedMilestones.contains(m.id))
       .where((m) => m.requires.every(state.unlocked.contains))
@@ -493,7 +530,7 @@ List<SimMilestone> _allPendingMilestones({
 
   int lagOf(SimMilestone m) {
     if (!isBody) return 0;
-    return state.level - (m.minLevel - _branchAdvance(m, profile));
+    return state.synthLevel - (m.minLevel - _branchAdvance(m, profile));
   }
 
   bool isOverdue(SimMilestone m) {
@@ -1077,16 +1114,6 @@ List<UnlockKey> _acquitMilestonesViaChallenge({
   final liveUnlocks = Set<UnlockKey>.from(state.unlocked);
   final gained = <UnlockKey>[];
 
-  bool capOk(SimCapReq req) {
-    if (req.axis == axis) {
-      return minimize ? reached <= req.min : reached >= req.min;
-    }
-    final st = state.caps[req.axis];
-    if (st == null) return false;
-    final reqMinimize = req.axis.recordKind == CapabilityRecordKind.minimize;
-    return reqMinimize ? st.best <= req.min : st.best >= req.min;
-  }
-
   // Passe 1 — milestones avec requiresCapability matchant l'axe + autres caps OK.
   // Parité prod : `matchedAxis` est requis (cf. MilestoneService ligne 814-839)
   // — sinon un défi `biffle.streak` acquittait des milestones hold dont
@@ -1426,8 +1453,10 @@ class SimResult {
   final List<String> coherenceIssues;
   // milestones jamais déclenchées (placement, id, raison)
   final List<({String id, String reason})> unreachedMilestones;
-  // n° session pour atteindre L5, L10, L15, L20 (ou null si jamais atteint)
-  final Map<int, int?> sessionsForLevels;
+  // n° session où chaque seuil d'investissement a été franchi (sessions
+  // complétées : 5/10/15/20). Remplace l'ancien `sessionsForLevels`
+  // (jalons level) — désormais on suit l'investissement direct.
+  final Map<int, int?> sessionsForCompletionMilestones;
   // Catalogue complet (rétention faible — sert à calculer le lag à
   // l'acquisition dans le rendu).
   final List<SimMilestone> catalog;
@@ -1437,7 +1466,7 @@ class SimResult {
     required this.finalState,
     required this.coherenceIssues,
     required this.unreachedMilestones,
-    required this.sessionsForLevels,
+    required this.sessionsForCompletionMilestones,
     required this.catalog,
   });
 }
@@ -1450,11 +1479,25 @@ SimResult _runSim({
   final rng = Random(seed);
   final state = SimState();
   final timeline = <TimelineRow>[];
-  final sessionsForLevels = <int, int?>{5: null, 10: null, 15: null, 20: null};
+  final sessionsForCompletionMilestones = <int, int?>{
+    5: null,
+    10: null,
+    15: null,
+    20: null,
+  };
 
   for (var i = 0; i < profile.sessions; i++) {
     state.sessionIndex = i + 1;
-    final duration = _durationForLevel(state.level);
+    final duration = _durationForLevel(state.synthLevel);
+    // Jalons d'investissement : on note la séance où chaque palier
+    // « X sessions terminées » est franchi pour la première fois
+    // (5/10/15/20). Calculé en début de session sur l'état d'entrée.
+    for (final t in sessionsForCompletionMilestones.keys) {
+      if (sessionsForCompletionMilestones[t] == null &&
+          state.sessionsCompleted >= t) {
+        sessionsForCompletionMilestones[t] = state.sessionIndex;
+      }
+    }
 
     // Pick body + final milestones — récupère la queue complète pour
     // pouvoir vieillir les candidates non choisies (cf. aging sort, parité
@@ -1587,7 +1630,7 @@ SimResult _runSim({
     }
 
     // Encore en fin de séance.
-    final canEncore = state.level >= 5 &&
+    final canEncore = state.synthLevel >= 5 &&
         ((state.unlocked.contains(UnlockKey.encore) &&
                 (state.humilCareer + sessionScore >= 30 || state.obed >= 50)) ||
             state.obed >= 80);
@@ -1680,7 +1723,7 @@ SimResult _runSim({
     final touched = <CapabilityAxis>{};
     if (cleanSession) {
       // (a) Cibles "naturelles" du profil.
-      final profileTargets = profile.axisTargets(state.level, profile);
+      final profileTargets = profile.axisTargets(state.synthLevel, profile);
       profileTargets.forEach((axis, target) {
         if (isQuickie) {
           // Quickie : best mis à jour mais avec cible un peu plus basse —
@@ -1812,29 +1855,22 @@ SimResult _runSim({
     // au start (humil trop faible) peut le devenir après la chauffe de
     // session + les bonus d'unlock acquis. On reproduit fidèlement en
     // recalculant `bodyAll` ici, plutôt qu'en réutilisant celui du start.
-    final milestoneAcquittedThisSession = cleanSession &&
-        ((bodyM != null && bodyOutcome == 'clean') ||
-            (bodyM2 != null && body2Outcome == 'clean') ||
-            (finalM != null && finalOutcome == 'clean'));
-    final bodyAllPostFinish = _allPendingMilestones(
-      catalog: catalog,
-      state: state,
-      profile: profile,
-      placement: MilestonePlace.body,
-    );
-    final hasPendingAtCurrentLevel = bodyAllPostFinish.isNotEmpty;
-    var leveledUp = false;
-    if (cleanSession &&
-        !isQuickie &&
-        (milestoneAcquittedThisSession || !hasPendingAtCurrentLevel)) {
-      state.level += 1;
-      leveledUp = true;
-      for (final t in sessionsForLevels.keys) {
-        if (sessionsForLevels[t] == null && state.level >= t) {
-          sessionsForLevels[t] = state.sessionIndex;
-        }
-      }
+    // Tracking d'investissement post-finish. Aligné sur prod
+    // (`StatsService.recordSessionCompleted` incrémente quel que soit
+    // l'outcome). Le `synthLevel` dérive automatiquement de
+    // `sessionsCompleted` (cf. `SimState.synthLevel`) — plus de
+    // « level-up » discret.
+    state.sessionsCompleted += 1;
+    state.totalSeconds += duration;
+    if (cleanSession) {
+      state.noFailStreak += 1;
+      if (askedEncore) state.encoresAsked += 1;
+    } else {
+      state.noFailStreak = 0;
     }
+    final reachedSynthBefore =
+        timeline.isEmpty ? 1 : timeline.last.synthLevel;
+    final synthBumped = state.synthLevel > reachedSynthBefore;
 
     final outcome = isQuickie
         ? 'quickie${cleanSession ? '+clean' : '+fail'}'
@@ -1844,7 +1880,10 @@ SimResult _runSim({
 
     timeline.add(TimelineRow(
       session: state.sessionIndex,
-      level: state.level,
+      synthLevel: state.synthLevel,
+      sessionsCompleted: state.sessionsCompleted,
+      totalSeconds: state.totalSeconds,
+      reputation: state.reputation,
       humilCareer: state.humilCareer,
       obed: state.obed,
       unlocksGained: gained,
@@ -1853,7 +1892,7 @@ SimResult _runSim({
       milestoneFinalInserted: finalInsertedId,
       outcome: outcome,
       axesTouched: touched.toList(),
-      levelUp: leveledUp,
+      synthBumped: synthBumped,
       challengeSummary:
           simChallenge != null ? _formatChallengeSummary(simChallenge) : null,
     ));
@@ -1866,9 +1905,9 @@ SimResult _runSim({
   for (final m in catalog) {
     if (state.completedMilestones.contains(m.id)) continue;
     final reasons = <String>[];
-    if (m.minLevel - _branchAdvance(m, profile) > state.level) {
+    if (m.minLevel - _branchAdvance(m, profile) > state.synthLevel) {
       reasons.add(
-          'level ${state.level} < min ${m.minLevel - _branchAdvance(m, profile)}');
+          'level ${state.synthLevel} < min ${m.minLevel - _branchAdvance(m, profile)}');
     }
     if (m.humilRequired > state.humilCareer + _humilTolerance(state.obed)) {
       reasons.add(
@@ -1943,30 +1982,40 @@ SimResult _runSim({
     }
   }
 
-  // (3) Palier de niveau bloqué : level a stagné ≥ 5 sessions consécutives.
-  //     Un cluster de stagnation produit 1 entrée (pas 1 par session).
+  // (3) Sessions non-créditées : ≥ 5 sessions consécutives qui n'ont pas
+  //     bumpé `sessionsCompleted` (fails/abandons en chaîne, ou quickies
+  //     spammées). Remplace l'ancien LEVEL-STUCK qui n'a plus de sens
+  //     depuis que le synthLevel dérive de `sessionsCompleted`.
   var stagnation = 0;
   int? stagnationStartSession;
-  void emitStagnation(int endSession, int level) {
+  int? stagnationLastSessionsCompleted;
+  void emitStagnation(int endSession, int sessionsCompleted) {
     if (stagnation >= 5 && stagnationStartSession != null) {
-      coherence.add('LEVEL-STUCK  niveau $level pendant $stagnation sessions '
-          '(s$stagnationStartSession → s$endSession)');
+      coherence.add(
+          'PROGRESS-STUCK  sessionsCompleted resté à $sessionsCompleted pendant '
+          '$stagnation sessions (s$stagnationStartSession → s$endSession)');
     }
     stagnation = 0;
     stagnationStartSession = null;
+    stagnationLastSessionsCompleted = null;
   }
 
   for (var i = 0; i < timeline.length; i++) {
     final r = timeline[i];
-    if (!r.levelUp) {
+    if (stagnationLastSessionsCompleted != null &&
+        r.sessionsCompleted == stagnationLastSessionsCompleted) {
       stagnation++;
-      stagnationStartSession ??= r.session;
     } else {
-      emitStagnation(r.session - 1, r.level - 1);
+      if (stagnationLastSessionsCompleted != null) {
+        emitStagnation(r.session - 1, stagnationLastSessionsCompleted!);
+      }
+      stagnation = 1;
+      stagnationStartSession = r.session;
+      stagnationLastSessionsCompleted = r.sessionsCompleted;
     }
   }
-  if (timeline.isNotEmpty) {
-    emitStagnation(timeline.last.session, timeline.last.level);
+  if (timeline.isNotEmpty && stagnationLastSessionsCompleted != null) {
+    emitStagnation(timeline.last.session, stagnationLastSessionsCompleted!);
   }
   // (4) Feature-milestones jamais débloquées chez un profil compatible.
   for (final featureId in const [
@@ -1991,7 +2040,7 @@ SimResult _runSim({
     if (m.id == '__none__') continue;
     if (state.completedMilestones.contains(featureId)) continue;
     // Profil compatible = niveau atteint + tous les prérequis débloqués.
-    final compatible = state.level >= m.minLevel &&
+    final compatible = state.synthLevel >= m.minLevel &&
         m.requires.every(state.unlocked.contains) &&
         _capabilitySatisfied(m, state);
     if (compatible) {
@@ -2055,7 +2104,7 @@ SimResult _runSim({
     finalState: state,
     coherenceIssues: coherence,
     unreachedMilestones: unreached,
-    sessionsForLevels: sessionsForLevels,
+    sessionsForCompletionMilestones: sessionsForCompletionMilestones,
     catalog: catalog,
   );
 }
@@ -2112,8 +2161,8 @@ String _renderMarkdown(SimResult r) {
   b.writeln('## Timeline (${r.timeline.length} sessions)');
   b.writeln();
   b.writeln(
-      '| # | lvl | humil | obed | milestone (body / final) | challenge | outcome | unlocks | axes touchés |');
-  b.writeln('|---:|---:|---:|---:|---|---|---|---|---|');
+      '| # | sessions | temps | rep | humil | obed | milestone (body / final) | challenge | outcome | unlocks | axes touchés |');
+  b.writeln('|---:|---:|---:|---:|---:|---:|---|---|---|---|---|');
   for (final t in r.timeline) {
     final body = t.milestoneBody2Inserted != null
         ? '${t.milestoneBodyInserted ?? '—'} + ${t.milestoneBody2Inserted}'
@@ -2126,8 +2175,14 @@ String _renderMarkdown(SimResult r) {
     final axesStr = axes.isEmpty
         ? ''
         : (axes.length > 4 ? '${axes.take(4).join(", ")}…' : axes.join(', '));
-    b.writeln('| ${t.session} | ${t.level}${t.levelUp ? "↑" : ""} | '
-        '${t.humilCareer.toStringAsFixed(1)} | ${t.obed.toStringAsFixed(1)} | '
+    final mins = (t.totalSeconds / 60).round();
+    final timeStr = mins >= 60
+        ? '${mins ~/ 60}h${(mins % 60).toString().padLeft(2, '0')}'
+        : '${mins}m';
+    b.writeln(
+        '| ${t.session} | ${t.sessionsCompleted}${t.synthBumped ? "↑" : ""} '
+        '| $timeStr | ${t.reputation.toStringAsFixed(0)} '
+        '| ${t.humilCareer.toStringAsFixed(1)} | ${t.obed.toStringAsFixed(1)} | '
         '$body / $fin | ${t.challengeSummary ?? '—'} | ${t.outcome} | $unlocks | $axesStr |');
   }
   b.writeln();
@@ -2135,11 +2190,18 @@ String _renderMarkdown(SimResult r) {
   // Récap
   b.writeln('## Récap');
   b.writeln();
-  b.write('- Sessions pour atteindre le niveau ');
-  b.writeln(r.sessionsForLevels.entries
-      .map((e) => 'L${e.key}=${e.value ?? "—"}')
+  b.write('- Séances pour atteindre ');
+  b.writeln(r.sessionsForCompletionMilestones.entries
+      .map((e) => '${e.key} compl.=${e.value ?? "—"}')
       .join(', '));
-  b.writeln('- Niveau final : ${r.finalState.level}');
+  final finalMins = (r.finalState.totalSeconds / 60).round();
+  final finalTime = finalMins >= 60
+      ? '${finalMins ~/ 60}h${(finalMins % 60).toString().padLeft(2, '0')}'
+      : '${finalMins}m';
+  b.writeln('- Sessions complétées : ${r.finalState.sessionsCompleted}');
+  b.writeln('- Temps de jeu cumulé : $finalTime');
+  b.writeln(
+      '- Réputation finale : ${r.finalState.reputation.toStringAsFixed(0)}');
   b.writeln(
       '- Humil career final : ${r.finalState.humilCareer.toStringAsFixed(1)}');
   b.writeln('- Obédiance finale : ${r.finalState.obed.toStringAsFixed(1)}');
@@ -2208,7 +2270,7 @@ String _renderMarkdown(SimResult r) {
     final effectiveMin = m.minLevel - advance;
     int? firstReached;
     for (final t in r.timeline) {
-      if (t.level >= effectiveMin) {
+      if (t.synthLevel >= effectiveMin) {
         firstReached = t.session;
         break;
       }
@@ -2284,11 +2346,13 @@ String _renderTsv(SimResult r) {
   b.writeln(
       '# skill_final\t${r.profile.currentSkillAt(r.timeline.length).toStringAsFixed(2)}');
   b.writeln(
-      'session\tlevel\thumil\tobed\tbody\tbody2\tfinal\tchallenge\toutcome\tunlocks\taxes');
+      'session\tsessionsCompleted\ttotalSeconds\treputation\thumil\tobed\tbody\tbody2\tfinal\tchallenge\toutcome\tunlocks\taxes');
   for (final t in r.timeline) {
     b.writeln([
       t.session,
-      t.level,
+      t.sessionsCompleted,
+      t.totalSeconds,
+      t.reputation.toStringAsFixed(1),
       t.humilCareer.toStringAsFixed(1),
       t.obed.toStringAsFixed(1),
       t.milestoneBodyInserted ?? '',
