@@ -87,14 +87,22 @@ class SessionConfig {
 
   // ─── Méthodes dérivées (pures, lisent uniquement les fields ci-dessus) ───
 
-  /// True si le mode est exclu par le caller via `coachModeWeights[m] == 0`.
-  /// Un coach normal ne pose jamais 0 (cf. CoachMeta) → toujours false hors
-  /// Custom. En Custom, c'est le dosage `none` de `CustomSessionConfig` qui
-  /// pose le 0 et qui doit être honoré partout (palette finale, mini-vagues,
-  /// pré-finisher, intro, recovery…), pas seulement dans `_pickWeightedMode`.
+  /// True si le mode est exclu :
+  /// - en Custom via `coachModeWeights[m] == 0` (dose `none` de
+  ///   `CustomSessionConfig` — un coach normal ne pose jamais 0) ;
+  /// - en carrière via le toggle joueuse `includeHand: false` qui bloque
+  ///   hand **et** biffle (la biffle implique la main sur la queue —
+  ///   cohérence avec le pré-tirage `biffleBpm` du `FinalPicker` qui ne
+  ///   prépare déjà rien quand `!includeHand`).
+  /// Doit être honoré partout (palette finale, mini-vagues, pré-finisher,
+  /// burst, intro, recovery…), pas seulement dans `_pickWeightedMode`.
   bool isModeForbidden(SessionMode m) {
     final w = coachModeWeights[m];
-    return w != null && w <= 0;
+    if (w != null && w <= 0) return true;
+    if (!includeHand && (m == SessionMode.hand || m == SessionMode.biffle)) {
+      return true;
+    }
+    return false;
   }
 
   /// Points investis dans la branche [b] (lecture courte de `spec`).
