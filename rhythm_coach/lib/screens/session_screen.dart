@@ -2272,8 +2272,15 @@ class _FinishedPanelState extends State<_FinishedPanel> {
   }
 
   Future<void> _refreshSpecPoints() async {
-    final sessions = await CareerProgressService().getCompletedSessions();
-    final available = await SpecializationService().availablePoints(sessions);
+    // `availablePoints` attend des **secondes cumulées** (cf. retour playtest
+    // 0.6 — attribution des points basée sur le temps, pas sur le nombre
+    // de sessions). Passer `getCompletedSessions()` ici donnait toujours 0
+    // (premier seuil = 300 s, soit 300 sessions pour atteindre le 1ᵉʳ point)
+    // → la prompt automatique post-séance d'attribution était silencieusement
+    // morte.
+    final totalSeconds = await StatsService().getTotalSeconds();
+    final available =
+        await SpecializationService().availablePoints(totalSeconds);
     if (!mounted) return;
     setState(() => _availableSpecPoints = available);
   }

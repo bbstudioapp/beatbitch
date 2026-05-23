@@ -12,6 +12,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:beat_bitch/career/models/session_length_choice.dart';
 import 'package:beat_bitch/career/screens/career_screen.dart';
 
 void main() {
@@ -114,5 +115,70 @@ void main() {
         expect(isSessionLengthLongueUnlocked(360), isFalse);
       },
     );
+  });
+
+  // Helper partagé entre `build` (rendu du picker) et `_start` (génération +
+  // persistance). Bug détecté en review PR #249 : `_start` lisait
+  // `bundle.lastLengthChoice` brut, court-circuitant le fallback du picker.
+  group('resolveSessionLengthChoice', () {
+    test('persisted déverrouillé → pas de fallback', () {
+      expect(
+        resolveSessionLengthChoice(
+          persisted: SessionLengthChoice.longue,
+          bacheeUnlocked: true,
+          moyenneUnlocked: true,
+          longueUnlocked: true,
+        ),
+        SessionLengthChoice.longue,
+      );
+    });
+
+    test('longue persisté + gate Longue lock → fallback courte', () {
+      expect(
+        resolveSessionLengthChoice(
+          persisted: SessionLengthChoice.longue,
+          bacheeUnlocked: true,
+          moyenneUnlocked: true,
+          longueUnlocked: false,
+        ),
+        SessionLengthChoice.courte,
+      );
+    });
+
+    test('moyenne persisté + gate Moyenne lock → fallback courte', () {
+      expect(
+        resolveSessionLengthChoice(
+          persisted: SessionLengthChoice.moyenne,
+          bacheeUnlocked: true,
+          moyenneUnlocked: false,
+          longueUnlocked: false,
+        ),
+        SessionLengthChoice.courte,
+      );
+    });
+
+    test('bachee persisté + gate Bâclée lock → fallback courte', () {
+      expect(
+        resolveSessionLengthChoice(
+          persisted: SessionLengthChoice.bachee,
+          bacheeUnlocked: false,
+          moyenneUnlocked: true,
+          longueUnlocked: true,
+        ),
+        SessionLengthChoice.courte,
+      );
+    });
+
+    test('courte persisté → toujours retourne courte (jamais lockée)', () {
+      expect(
+        resolveSessionLengthChoice(
+          persisted: SessionLengthChoice.courte,
+          bacheeUnlocked: false,
+          moyenneUnlocked: false,
+          longueUnlocked: false,
+        ),
+        SessionLengthChoice.courte,
+      );
+    });
   });
 }
