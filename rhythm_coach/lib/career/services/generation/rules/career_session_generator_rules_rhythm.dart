@@ -230,6 +230,11 @@ class RhythmRules extends ModeRules {
   /// restent côté générateur (cf. `_buildMiniWave`).
   @override
   List<StepDraft>? buildMiniWaveSegment(MiniWaveCtx ctx) {
+    // Step #1 reste mid : amorce de la vague (BPM 100). Steps #2 et #3
+    // montent à throat dès que `throatPulse` débloqué — la mini-vague est
+    // un mini-finish d'intensité, pas une récup ; sa profondeur doit
+    // refléter ce que la joueuse a appris. Sans throat, vague entière à
+    // mid (dramaturgie préservée, comportement legacy).
     return [
       const StepDraft(
         mode: SessionMode.rhythm,
@@ -238,11 +243,11 @@ class RhythmRules extends ModeRules {
         to: Position.mid,
         duration: 12,
       ),
-      const StepDraft(
+      StepDraft(
         mode: SessionMode.rhythm,
         bpm: 120,
         from: Position.head,
-        to: Position.mid,
+        to: ctx.hasThroat ? Position.throat : Position.mid,
         duration: 10,
       ),
       StepDraft(
@@ -266,21 +271,36 @@ class RhythmRules extends ModeRules {
 
   @override
   StepDraft buildRecovery(RecoveryCtx ctx) {
-    // La baseline (tip→head) reste ouverte tant que la joueuse n'a pas
-    // appris la gorge — gate sur `throatHold` plutôt que `holdMid` :
-    // les premiers paliers ont besoin de variété (tip→head, tip→mid,
-    // head→mid se mélangent), ce serait trop pauvre de tout aligner sur
-    // head→mid dès le niveau 4. Dès que la gorge est débloquée, le
-    // rhythm de recovery passe à head→mid — la baseline doit refléter
-    // le niveau. BPM bas — le coût stamina reste modéré pour ne pas
-    // creuser la dette d'endurance qu'on cherche justement à combler
-    // ailleurs.
-    final hasThroat = ctx.gen.state.unlockedKeys.contains(UnlockKey.throatHold);
+    // Baseline rhythm en recovery : reflète le niveau acquis. La douceur
+    // d'une recovery vient du BPM bas (40-55 BPM = 1 pulse toutes les
+    // ~1.5 s, mouvement lent), pas de la profondeur. La profondeur suit
+    // donc ce que la joueuse a appris :
+    // - `throatPulse` (gate rhythm pour `to=throat`) → `head→throat`,
+    //   la joueuse mature ne récupère plus en surface — sinon 70 % des
+    //   rhythms restent superficiels à mi-carrière (pattern Pattern 2).
+    // - `throatHold` seul (palier intermédiaire avant le pulse) →
+    //   `head→mid`.
+    // - sinon → `tip→head` (débutante, baseline du socle).
+    // Côté coût stamina : `depthMul` favorise throat (1.30) sur mid
+    // (1.45), donc throat n'est pas plus coûteux que mid à BPM bas.
+    final unlocks = ctx.gen.state.unlockedKeys;
+    final Position from;
+    final Position to;
+    if (unlocks.contains(UnlockKey.throatPulse)) {
+      from = Position.head;
+      to = Position.throat;
+    } else if (unlocks.contains(UnlockKey.throatHold)) {
+      from = Position.head;
+      to = Position.mid;
+    } else {
+      from = Position.tip;
+      to = Position.head;
+    }
     return StepDraft(
       mode: SessionMode.rhythm,
       bpm: ctx.bpm,
-      from: hasThroat ? Position.head : Position.tip,
-      to: hasThroat ? Position.mid : Position.head,
+      from: from,
+      to: to,
       duration: ctx.duration,
     );
   }

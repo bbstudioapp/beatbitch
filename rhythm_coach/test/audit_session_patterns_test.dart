@@ -216,10 +216,12 @@ List<_PatternFlag> _analyze(List<SessionStep> steps, _Scenario sc) {
   }
   final rhythmTotal = rhythmAmplitudes.values.fold(0, (a, b) => a + b);
 
-  // 3. Détection : rhythm à `to ≤ mid` dominant alors que throat débloqué.
-  //    Cohérence du brief : la joueuse à `throat_hold` débloqué devrait
-  //    voir plus de rhythm head→throat / mid→throat.
-  if (sc.unlocks.contains(UnlockKey.throatHold) && rhythmTotal > 0) {
+  // 3. Détection : rhythm à `to ≤ mid` dominant alors que throat débloqué
+  //    pour le rythme. L'unlock pertinent est `throat_pulse` (la profondeur
+  //    rhythm est gatée par cette milestone) et non `throat_hold` qui ne
+  //    concerne que les holds. Une joueuse avec `throat_pulse` devrait voir
+  //    plus de rhythm head→throat / mid→throat.
+  if (sc.unlocks.contains(UnlockKey.throatPulse) && rhythmTotal > 0) {
     var shallow = 0;
     for (final s in config) {
       if (s.mode != SessionMode.rhythm) continue;
@@ -232,7 +234,7 @@ List<_PatternFlag> _analyze(List<SessionStep> steps, _Scenario sc) {
       flags.add(_PatternFlag(
         'RHYTHM-LOW-DEPTH',
         '${(pct * 100).toStringAsFixed(0)}% des rhythms ont `to ≤ mid` '
-            '($shallow/$rhythmTotal) alors que throat_hold est débloqué — '
+            '($shallow/$rhythmTotal) alors que throat_pulse est débloqué — '
             'profondeur sous-exploitée',
       ));
     }
