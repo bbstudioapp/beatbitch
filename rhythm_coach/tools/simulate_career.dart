@@ -1088,6 +1088,9 @@ List<UnlockKey> _acquitMilestonesViaChallenge({
   }
 
   // Passe 1 — milestones avec requiresCapability matchant l'axe + autres caps OK.
+  // Parité prod : `matchedAxis` est requis (cf. MilestoneService ligne 814-839)
+  // — sinon un défi `biffle.streak` acquittait des milestones hold dont
+  // les autres caps étaient déjà satisfaites par le profil.
   var added = true;
   while (added) {
     added = false;
@@ -1095,7 +1098,27 @@ List<UnlockKey> _acquitMilestonesViaChallenge({
       if (state.completedMilestones.contains(m.id)) continue;
       if (m.requiresCapability.isEmpty) continue;
       if (!m.requires.every(liveUnlocks.contains)) continue;
-      if (!m.requiresCapability.every(capOk)) continue;
+      var matchedAxis = false;
+      var allOk = true;
+      for (final req in m.requiresCapability) {
+        if (req.axis == axis) {
+          matchedAxis = true;
+          final ok = minimize ? reached <= req.min : reached >= req.min;
+          if (!ok) {
+            allOk = false;
+            break;
+          }
+        } else {
+          final st = state.caps[req.axis];
+          final reqMin = req.axis.recordKind == CapabilityRecordKind.minimize;
+          if (st == null ||
+              (reqMin ? st.best > req.min : st.best < req.min)) {
+            allOk = false;
+            break;
+          }
+        }
+      }
+      if (!matchedAxis || !allOk) continue;
       state.completedMilestones.add(m.id);
       state.candidacyAge.remove(m.id);
       for (final u in m.unlocks) {
