@@ -8,9 +8,6 @@
   ],
   "tier": 5,
   "isPrincipal": true,
-  "requirements": {
-    "minPlayerLevel": 25
-  },
   "modeWeights": {
     "beg": 1.6,
     "hold": 1.2,

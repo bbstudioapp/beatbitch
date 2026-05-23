@@ -8,9 +8,6 @@
   ],
   "tier": 2,
   "isPrincipal": true,
-  "requirements": {
-    "minPlayerLevel": 7
-  },
   "tts": {
     "voice": "fr-fr-x-frc-local",
     "voiceLocale": "fr-FR",
