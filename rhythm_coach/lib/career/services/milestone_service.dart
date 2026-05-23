@@ -719,7 +719,10 @@ class MilestoneService extends ChangeNotifier {
   ///
   /// Retourne le nombre de milestones acquittées (utile pour le caller
   /// qui peut vouloir loguer / régénérer le bundle d'unlocks).
-  Future<int> reconcileFromCapability(CapabilityProfile profile) async {
+  Future<int> reconcileFromCapability(
+    CapabilityProfile profile, {
+    int playerLevel = 1,
+  }) async {
     if (!_loaded) return 0;
     final touchedAxes = <CapabilityAxis>{};
     for (final axis in CapabilityAxis.values) {
@@ -734,6 +737,7 @@ class MilestoneService extends ChangeNotifier {
         reached: reached,
         profile: profile,
         acquiredUnlocks: acquiredUnlockKeys(),
+        playerLevel: playerLevel,
       );
       for (final m in acquittables) {
         if (_completed.contains(m.id)) continue;
@@ -767,6 +771,7 @@ class MilestoneService extends ChangeNotifier {
     required double reached,
     required CapabilityProfile profile,
     required Set<UnlockKey> acquiredUnlocks,
+    int playerLevel = 1,
   }) {
     // Cascade transitive : à chaque pass, on cherche les milestones
     // acquittables avec le set d'unlocks courant. Quand une milestone
@@ -790,9 +795,33 @@ class MilestoneService extends ChangeNotifier {
         if (acquittedIds.contains(m.id)) continue;
         if (m.requiresCapability.isEmpty) continue;
         if (!m.requires.every(liveUnlocks.contains)) continue;
+        // Filtre `minLevel` sur la passe principale uniquement : une
+        // milestone qui débloque un mode entier (freestyle level 7,
+        // biffleBasic level 5, encore level 5…) ne doit pas être
+        // acquittée par défi tant que la joueuse n'a pas atteint le
+        // palier. Sans cette garde, `reconcileFromCapability` au start
+        // de session acquittait `intro_freestyle` dès que le profil
+        // portait `motion_streak ≥ 30` (atteint par n'importe quel
+        // rythme soutenu de la séance précédente) — bug F7 reporté
+        // (action freestyle utilisable dès la séance 2 alors que la
+        // joueuse est au niveau 1).
+        //
+        // La cascade transitive ci-dessous (passe `_impliedHoldUnlocksByAxis`)
+        // ne porte volontairement PAS ce filtre : la pédagogie « tenir
+        // gorge X s prouve les paliers shallow à la même durée » doit
+        // fonctionner dès le tuto niveau 1.
+        if (m.minLevel > playerLevel) continue;
+        // Garde-fou : le défi doit avoir poussé **au moins un axe** que
+        // la milestone attend, sinon l'acquittement « par défi » n'a aucun
+        // sens — la milestone est juste devenue candidate parce que le
+        // profil satisfaisait déjà ses requis. Sans cette garde, un défi
+        // hold throat acquittait des milestones étrangères dont le profil
+        // satisfaisait par hasard tous les autres requirements.
+        var matchedAxis = false;
         var allOk = true;
         for (final req in m.requiresCapability) {
           if (req.axis == axis) {
+            matchedAxis = true;
             final ok = axis.recordKind == CapabilityRecordKind.minimize
                 ? reached <= req.min
                 : reached >= req.min;
@@ -807,7 +836,7 @@ class MilestoneService extends ChangeNotifier {
             }
           }
         }
-        if (allOk) {
+        if (allOk && matchedAxis) {
           acquittedIds.add(m.id);
           liveUnlocks.addAll(m.unlocks);
           addedThisPass = true;

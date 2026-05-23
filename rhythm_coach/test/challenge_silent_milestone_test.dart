@@ -13,6 +13,7 @@ LevelMilestone _milestone({
   required List<CapabilityRequirement> requiresCapability,
   List<UnlockKey> unlocks = const [],
   List<UnlockKey> requires = const [],
+  int minLevel = 1,
 }) {
   return LevelMilestone(
     id: id,
@@ -23,6 +24,7 @@ LevelMilestone _milestone({
     unlocks: unlocks,
     requires: requires,
     requiresCapability: requiresCapability,
+    minLevel: minLevel,
   );
 }
 
@@ -196,6 +198,83 @@ void main() {
       );
       expect(out, isEmpty);
     });
+
+    test(
+      'défi pousse un axe que la milestone n\'attend pas → ignorée même si '
+      'profil satisfait ses autres requirements',
+      () {
+        // Garde-fou `matchedAxis` : sans elle, un défi hold throat
+        // acquittait toute milestone dont les `requiresCapability`
+        // étaient déjà satisfaits par ailleurs dans le profil
+        // (`reconcileFromCapability` partait de chaque axe avec data,
+        // donc acquittait `intro_freestyle` dès que motion_streak ≥ 30
+        // — bug F7 reporté).
+        final svc = MilestoneService();
+        final unrelated = _milestone(
+          id: 'unrelated',
+          requiresCapability: [
+            const CapabilityRequirement(
+                axis: CapabilityAxis.rhythmMotionStreak, min: 30.0),
+          ],
+        );
+        svc.seedForTest(catalog: [unrelated]);
+        const profile = CapabilityProfile({
+          CapabilityAxis.rhythmMotionStreak: CapabilityAxisState(best: 45.0),
+        });
+        // Défi sur holdThroatStreak (axe différent de motion_streak).
+        final out = svc.milestonesAcquittableByChallenge(
+          axis: CapabilityAxis.holdThroatStreak,
+          reached: 5.0,
+          profile: profile,
+          acquiredUnlocks: const {},
+          playerLevel: 99,
+        );
+        expect(out, isEmpty);
+      },
+    );
+
+    test(
+      'minLevel filtre la passe principale (bug F7 — freestyle level 7 '
+      'acquitté en niveau 1)',
+      () {
+        // `intro_freestyle` (level 7) ne doit pas être acquittée par
+        // `reconcileFromCapability` quand le profil contient déjà
+        // `motion_streak ≥ 30` mais que la joueuse est sous le palier.
+        final svc = MilestoneService();
+        final freestyle = _milestone(
+          id: 'intro_freestyle',
+          requiresCapability: [
+            const CapabilityRequirement(
+                axis: CapabilityAxis.rhythmMotionStreak, min: 30.0),
+          ],
+          unlocks: [UnlockKey.freestyle],
+          minLevel: 7,
+        );
+        svc.seedForTest(catalog: [freestyle]);
+        const profile = CapabilityProfile({
+          CapabilityAxis.rhythmMotionStreak: CapabilityAxisState(best: 45.0),
+        });
+        // Défi sur l'axe motion_streak (matchedAxis OK), playerLevel < 7.
+        final out = svc.milestonesAcquittableByChallenge(
+          axis: CapabilityAxis.rhythmMotionStreak,
+          reached: 45.0,
+          profile: profile,
+          acquiredUnlocks: const {},
+          playerLevel: 1,
+        );
+        expect(out, isEmpty);
+
+        // Au niveau ≥ 7, freestyle est acquittable.
+        final outAtLevel = svc.milestonesAcquittableByChallenge(
+          axis: CapabilityAxis.rhythmMotionStreak,
+          reached: 45.0,
+          profile: profile,
+          acquiredUnlocks: const {},
+          playerLevel: 7,
+        );
+        expect(outAtLevel.map((m) => m.id), ['intro_freestyle']);
+      },
+    );
   });
 
   group('milestonesAcquittableByChallenge — cascade transitive holds', () {

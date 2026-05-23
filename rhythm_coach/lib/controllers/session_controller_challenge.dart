@@ -778,6 +778,7 @@ extension ChallengeOrchestrator on SessionController {
       reached: reached,
       profile: profile,
       acquiredUnlocks: _unlockedKeys,
+      playerLevel: _careerLevel,
     );
     for (final m in acquittable) {
       await milestoneService.markCompletedViaChallenge(m.id);

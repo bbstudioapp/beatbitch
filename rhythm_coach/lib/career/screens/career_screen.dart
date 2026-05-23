@@ -105,6 +105,14 @@ class _CareerScreenState extends State<CareerScreen> {
     ]);
     final capabilityProfile = results[8] as CapabilityProfile;
     final totalSeconds = results[12] as int;
+    final completedSessions = results[3] as int;
+    // Level synthétique dérivé de `completedSessions` (cf.
+    // `CareerDifficultyResolver.synthLevelFor`). Passé au reconcile pour
+    // gater les milestones de mode entier (freestyle level 7, biffleBasic
+    // level 5…) qui ne doivent pas être auto-acquittées sur la base
+    // d'une capacité prouvée si la joueuse n'a pas atteint le palier.
+    final synthLevel =
+        CareerDifficultyResolver.synthLevelFor(completedSessions);
     // Rattrapage à froid : acquitte les milestones que le profil de
     // capacités prouve déjà (cas typique : la cascade transitive du défi
     // a été livrée après que la joueuse l'ait joué — sans rattrapage,
@@ -114,10 +122,10 @@ class _CareerScreenState extends State<CareerScreen> {
     // temps cumulé — les deux opérations sont indépendantes
     // (MilestoneService vs CoachService).
     await Future.wait([
-      milestoneService.reconcileFromCapability(capabilityProfile),
+      milestoneService.reconcileFromCapability(capabilityProfile,
+          playerLevel: synthLevel),
       coachService.syncFromTotalSeconds(totalSeconds),
     ]);
-    final completedSessions = results[3] as int;
     return _CareerBundle(
       bank: results[0] as PhraseBank,
       punishments: results[1] as PunishmentBundle,
