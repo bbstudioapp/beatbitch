@@ -355,8 +355,16 @@ extension ChallengeOrchestrator on SessionController {
   /// Bascule en phase `countdown` (3-2-1 TTS + UI). Le chiffre TTS est
   /// énoncé par `_updateChallengePhase` à chaque seconde via
   /// `_maybeSpeakCountdownDigit`.
+  ///
+  /// Coupe le TTS en cours : si la phrase d'annonce du défi (`attempt`,
+  /// posée à l'entrée en `breath`) est encore en train d'être prononcée
+  /// au moment où la joueuse tape GO, le countdown skipperait les
+  /// chiffres tant que `_tts.isSpeaking` (cf. `_maybeSpeakCountdownDigit`).
+  /// On préfère arrêter net la phrase pour que « 3-2-1 » s'enchaîne
+  /// proprement (la phrase a déjà eu sa fenêtre d'écoute pendant le breath).
   void _enterChallengeCountdown() {
     if (_challengePhase != ChallengePhase.breath) return;
+    unawaited(_tts.stop());
     _challengePhase = ChallengePhase.countdown;
     _challengeCountdownStartedAtSec = _realSec.toInt();
     _challengeCountdownLastDigitSpoken = -1;

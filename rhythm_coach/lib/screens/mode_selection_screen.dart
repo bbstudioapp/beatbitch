@@ -104,7 +104,10 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
         context,
         onTestVoice: () {
           if (!mounted) return;
-          _openSoundDemo();
+          // La VoiceSettingsSection (slider + bouton « Tester la voix ») a
+          // été déplacée de SoundDemoScreen vers ProfileScreen — l'onboarding
+          // doit donc renvoyer vers Profil, pas vers Sons.
+          _openProfile();
         },
       );
     }
@@ -200,6 +203,17 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => const SurpriseSettingsScreen(),
+      ),
+    );
+  }
+
+  void _openProfile() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ProfileScreen(
+          userProfile: _userProfile,
+          tts: _tts,
+        ),
       ),
     );
   }
@@ -303,14 +317,7 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
           IconButton(
             tooltip: t.modeSelectionProfileTooltip,
             icon: const Icon(Icons.person_outline),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => ProfileScreen(
-                  userProfile: _userProfile,
-                  tts: _tts,
-                ),
-              ),
-            ),
+            onPressed: _openProfile,
           ),
           IconButton(
             tooltip: t.modeSelectionSoundsTooltip,

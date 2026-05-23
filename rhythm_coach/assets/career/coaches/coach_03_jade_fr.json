@@ -7,7 +7,7 @@
     "rhythm": {
       "soft": [
         "Vas-y doucement {name}, on se chauffe.",
-        "Petits coups pour commencer, fais-moi plaisir {name}.",
+        "Petits coups bien sentis {name}, fais-moi plaisir.",
         "Allez, montre-moi comment tu suces quand personne te juge.",
         "Mignonne, tu t’y mets toute seule {name}.",
         "Tu commences déjà à aimer ça, avoue {name}.",
@@ -117,7 +117,7 @@
     },
     "hand": {
       "soft": [
-        "Branle-le avec ta main {name}, tout doux pour commencer.",
+        "Branle-le avec ta main {name}, va-et-vient tout doux.",
         "Enroule tes doigts autour, mignonne {name}.",
         "Va-et-vient lent {name}, fais-moi durer le plaisir."
       ],
