@@ -514,7 +514,8 @@ List<SimMilestone> _allPendingMilestones({
   final candidates = catalog
       .where((m) => m.placement == placement)
       .where((m) => !excludeIds.contains(m.id))
-      .where((m) => (m.minLevel - _branchAdvance(m, profile)) <= state.synthLevel)
+      .where(
+          (m) => (m.minLevel - _branchAdvance(m, profile)) <= state.synthLevel)
       .where((m) => m.humilRequired <= cap)
       .where((m) => !state.completedMilestones.contains(m.id))
       .where((m) => m.requires.every(state.unlocked.contains))
@@ -1138,8 +1139,7 @@ List<UnlockKey> _acquitMilestonesViaChallenge({
         } else {
           final st = state.caps[req.axis];
           final reqMin = req.axis.recordKind == CapabilityRecordKind.minimize;
-          if (st == null ||
-              (reqMin ? st.best > req.min : st.best < req.min)) {
+          if (st == null || (reqMin ? st.best > req.min : st.best < req.min)) {
             allOk = false;
             break;
           }
@@ -1868,8 +1868,7 @@ SimResult _runSim({
     } else {
       state.noFailStreak = 0;
     }
-    final reachedSynthBefore =
-        timeline.isEmpty ? 1 : timeline.last.synthLevel;
+    final reachedSynthBefore = timeline.isEmpty ? 1 : timeline.last.synthLevel;
     final synthBumped = state.synthLevel > reachedSynthBefore;
 
     final outcome = isQuickie
