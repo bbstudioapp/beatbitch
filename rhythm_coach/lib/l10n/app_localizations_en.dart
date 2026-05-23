@@ -710,12 +710,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String careerSessionName(int level) {
-    return 'Career level $level';
+    return 'Career';
   }
 
   @override
   String careerSessionNameQuickie(int level) {
-    return 'Career level $level — quickie';
+    return 'Career — quickie';
   }
 
   @override

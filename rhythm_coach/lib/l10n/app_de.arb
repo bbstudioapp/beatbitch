@@ -305,13 +305,13 @@
       "count": { "type": "int" }
     }
   },
-  "careerSessionName": "Karriere Stufe {level}",
+  "careerSessionName": "Karriere",
   "@careerSessionName": {
     "placeholders": {
       "level": { "type": "int" }
     }
   },
-  "careerSessionNameQuickie": "Karriere Stufe {level} — Quickie",
+  "careerSessionNameQuickie": "Karriere — Quickie",
   "@careerSessionNameQuickie": {
     "placeholders": {
       "level": { "type": "int" }
