@@ -54,8 +54,6 @@ class PositionPickers {
     required this.rules,
   });
 
-  int _pts(SpecializationBranch b) => config.spec.pointsIn(b);
-
   bool _isModeForbidden(SessionMode m) => config.isModeForbidden(m);
 
   bool _isUnlocked(StepDraft d) => HumiliationGates.isUnlocked(
@@ -145,10 +143,11 @@ class PositionPickers {
   /// fullHold > throatHold > holdMid > head (socle de base).
   /// Capée aussi par [maxDepthIndex] (cohérence niveau).
   ///
-  /// Sémantique design : « le seul hold qui a du sens est le plus profond
-  /// que tu sais tenir ». Aller moins profond perd le côté narratif —
-  /// l'utilisatrice qui sait tenir gorge n'a aucune raison de tenir mid
-  /// pendant une session normale, c'est juste de la baisse arbitraire.
+  /// Sémantique design : on privilégie le palier max débloqué, mais on
+  /// tolère une dose du palier juste en-dessous tant que le palier
+  /// supérieur n'est pas ouvert (variété, casser la monotonie d'une
+  /// session 100 % au palier max). Le tirage exact est dans
+  /// [pickHoldPosition].
   /// Les holds tip/head n'ont pas de clé (socle ouvert par
   /// `intro_basics`) → en carrière sans milestone hold acquise, le
   /// plancher est `head`.
@@ -192,23 +191,30 @@ class PositionPickers {
     return min(milestoneCap, config.maxDepthIndex);
   }
 
-  /// Choix de la position d'un hold. Règle : on ne tient **que la
-  /// profondeur max débloquée**. Si full est ouverte, on tire entre throat
-  /// et full (ampScore + spé profondeur biaisent vers full). Si throat est
-  /// le max, on ne tient que throat — pas de retour à mid arbitraire. Au
-  /// tout début (mid max), on tient mid.
+  /// Choix de la position d'un hold. Règle : on privilégie le palier max
+  /// débloqué, mais on tolère une dose du palier juste en-dessous pour
+  /// la variété tant que le palier supérieur reste fermé.
+  /// - Full ouvert : 50 % throat / 50 % full. Une fois full ouverte,
+  ///   throat doit continuer à sortir (palier précédent toléré pour
+  ///   variété — la session ne devient pas mono-palier).
+  /// - Throat ouvert (full fermé) : 70 % throat / 30 % mid. Throat reste
+  ///   dominant ; mid pour casser la monotonie.
+  /// - Mid ouvert (throat fermé) : on ne tient que mid (rien à varier
+  ///   en-dessous, head/tip sont sous le palier d'apprentissage).
+  /// - Socle (rien d'ouvert) : on tient `head`.
   Position pickHoldPosition(double ampScore) {
     final ceilingIdx = milestoneHoldCeilingIdx();
-    final depthPts = _pts(SpecializationBranch.profondeur);
-    // Cas full ouvert : choix throat / full pondéré par ampScore + spé.
-    // La probabilité de full croît avec l'ampScore et la spé profondeur ;
-    // le clamp à `_capabilityProfile` côté `_clampToCapability` joue le
-    // rôle de garde-fou pour ne pas spammer du full dès l'ouverture.
     if (ceilingIdx >= Position.full.index) {
-      final adjusted = (ampScore + 0.10 * depthPts).clamp(0.0, 1.0);
-      return adjusted >= 0.55 ? Position.full : Position.throat;
+      // Full ouvert : 50/50 throat/full. Le clamp `_clampToCapability` en
+      // aval garde-fou si la joueuse n'a pas encore prouvé tenir full.
+      return rng.nextDouble() < 0.50 ? Position.throat : Position.full;
     }
-    // Cap inférieur ou égal à throat : on tient strictement le max.
+    if (ceilingIdx == Position.throat.index) {
+      // Throat ouvert, full fermé : 70/30 throat/mid pour variété.
+      return rng.nextDouble() < 0.30 ? Position.mid : Position.throat;
+    }
+    // Cap mid (premier palier hold) ou head (socle) : on tient strictement
+    // le max — rien à varier en-dessous.
     return Position.values[ceilingIdx];
   }
 

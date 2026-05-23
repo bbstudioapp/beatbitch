@@ -336,6 +336,63 @@ void main() {
         expect(out, isEmpty);
       },
     );
+
+    test(
+      'défi hold throat 5 s acquitte la milestone palier throat elle-même',
+      () {
+        // Régression : avant le fix, `_impliedHoldUnlocksByAxis[holdThroatStreak]`
+        // contenait `holdHead` / `holdMid` mais pas `throatHold` lui-même. La
+        // milestone `intro_hold_throat` (unlocks=[throatHold]) n'était donc
+        // jamais acquittée par son propre défi → le palier throat ne sortait
+        // pas du générateur en session suivante.
+        final svc = MilestoneService();
+        final holdMid = _milestone(
+          id: 'intro_hold_mid',
+          requiresCapability: const [],
+          unlocks: [UnlockKey.holdMid],
+        );
+        final holdThroat = _milestone(
+          id: 'intro_hold_throat',
+          requiresCapability: const [],
+          requires: [UnlockKey.holdMid],
+          unlocks: [UnlockKey.throatHold],
+        );
+        svc.seedForTest(catalog: [holdMid, holdThroat]);
+        final out = svc.milestonesAcquittableByChallenge(
+          axis: CapabilityAxis.holdThroatStreak,
+          reached: 5.0,
+          profile: const CapabilityProfile({}),
+          acquiredUnlocks: const {},
+        );
+        // Les deux doivent passer : holdMid via implication shallow, puis
+        // holdThroat via cascade transitive avec holdMid dans liveUnlocks.
+        expect(
+          out.map((m) => m.id),
+          containsAll(['intro_hold_mid', 'intro_hold_throat']),
+        );
+      },
+    );
+
+    test(
+      'défi hold full acquitte la milestone palier full elle-même',
+      () {
+        // Symétrique du test ci-dessus pour `fullHold` / `holdFullStreak`.
+        final svc = MilestoneService();
+        final holdFull = _milestone(
+          id: 'intro_hold_full',
+          requiresCapability: const [],
+          unlocks: [UnlockKey.fullHold],
+        );
+        svc.seedForTest(catalog: [holdFull]);
+        final out = svc.milestonesAcquittableByChallenge(
+          axis: CapabilityAxis.holdFullStreak,
+          reached: 5.0,
+          profile: const CapabilityProfile({}),
+          acquiredUnlocks: const {},
+        );
+        expect(out.map((m) => m.id), contains('intro_hold_full'));
+      },
+    );
   });
 
   group('reconcileFromCapability — rattrapage à froid', () {
