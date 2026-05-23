@@ -82,13 +82,16 @@ class CareerLevelGates {
 
   /// Plafond de profondeur dérivé du `CapabilityProfile` (Phase 19.7).
   /// Lit `rhythm.depth_max.comfort` (en cran, double), l'arrondit et le
-  /// borne dans `[head, full]`.
+  /// borne dans `[mid, full]`.
   ///
-  /// Plancher à `head` (= idx 1) : `tip` n'est jamais une borne haute
-  /// utile (une joueuse sans profil démarre déjà avec des actions
-  /// `tip`/`head` débloquées par les milestones d'intro). Plafond à
-  /// `full` (= idx 4) : on n'autorise pas `balls` via ce mécanisme —
-  /// l'anatomie balls a son propre gating.
+  /// Plancher à `mid` (= idx 2) : les basics enseignent déjà la
+  /// progression jusqu'à `mid` (cf. `intro_deeper_basics`, `intro_hold_mid`,
+  /// `intro_biffle`… tous des `rhythm head→mid`). Une session 2 qui
+  /// retombe à `tip/head` parce que la session 1 n'a pas réussi à pousser
+  /// `rhythm.depth_max` au-delà de `head` (fail, step trop court, …) est
+  /// régressive : on serait pédagogiquement plus bas que ce que les
+  /// basics couvrent. Plafond à `full` (= idx 4) : on n'autorise pas
+  /// `balls` via ce mécanisme — l'anatomie balls a son propre gating.
   ///
   /// Quand le profil ne porte pas encore de donnée pour cet axe
   /// (joueuse neuve, axe jamais sollicité), on retombe sur
@@ -100,6 +103,6 @@ class CareerLevelGates {
     final comfort = profile.comfortOf(CapabilityAxis.rhythmDepthMax);
     if (comfort == null) return defaultMaxDepthIndex();
     final rounded = comfort.round();
-    return rounded.clamp(Position.head.index, Position.full.index);
+    return rounded.clamp(Position.mid.index, Position.full.index);
   }
 }

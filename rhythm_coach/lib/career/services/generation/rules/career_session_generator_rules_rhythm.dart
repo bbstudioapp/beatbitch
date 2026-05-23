@@ -107,11 +107,15 @@ class RhythmRules extends ModeRules {
     var bpmEnd = draft.bpmEnd;
     var dur = draft.duration;
 
-    // Profondeur (cran). Plancher `head` : un rhythm a besoin d'au moins
-    // une amplitude tip↔head, jamais tip↔tip.
+    // Profondeur (cran). Plancher `mid` : les basics enseignent déjà la
+    // progression jusqu'à `mid` (`intro_deeper_basics`, `intro_hold_mid`,
+    // `intro_biffle` sont tous des `rhythm head→mid`). Clamper à `head`
+    // ferait régresser la session 2 sous le palier que la session 1 a
+    // couvert pédagogiquement, dès que la session 1 ne pousse pas
+    // `rhythm.depth_max` au-delà de `head` (fail, step trop court).
     final depthCap = c.capabilityCapFor(CapabilityAxis.rhythmDepthMax);
     if (depthCap != null && to != null) {
-      final capIdx = max(Position.head.index,
+      final capIdx = max(Position.mid.index,
           depthCap.round().clamp(0, Position.values.length - 1));
       if (to.index > capIdx) to = Position.values[capIdx];
     }
