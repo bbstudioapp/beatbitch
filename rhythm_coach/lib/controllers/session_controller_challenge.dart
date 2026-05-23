@@ -457,8 +457,20 @@ extension ChallengeOrchestrator on SessionController {
         ChallengeOutcome.extendedSuccess => 'success',
         ChallengeOutcome.skipped => 'skip',
       };
-      _challengeCurrentText =
+      final closingText =
           _pickChallengePhrase(ch, tier) ?? _fallbackChallengeText(ch, tier);
+      _challengeCurrentText = closingText;
+      // Pose aussi le texte résolu sur `_lastSpokenResolvedText` :
+      // - `_speakChallengePhraseIfAny` bail si TTS speaking → sans cela
+      //   l'affichage retombe sur la phrase du step pré-défi pendant
+      //   tout le breath post-défi.
+      // - Le widget consulte `challengeCurrentText` pendant la phase
+      //   live, mais après `phase == ended` il retombe sur
+      //   `currentDisplayText` → ce dernier doit refléter la phrase
+      //   de clôture du défi, pas l'historique pré-défi.
+      if (closingText != null && closingText.isNotEmpty) {
+        _lastSpokenResolvedText = _tts.resolveText(closingText);
+      }
       _speakChallengePhraseIfAny();
       // Crédite directement le tracker capability de la valeur prouvée
       // par le défi. Indispensable parce que la timeline est freezée
