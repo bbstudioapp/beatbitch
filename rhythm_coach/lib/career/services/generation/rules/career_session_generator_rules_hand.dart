@@ -109,8 +109,13 @@ class HandRules extends ModeRules {
   /// pour clôturer une séance à ce stade. Il ne subsiste alors que
   /// comme fallback technique ultime côté picker, ou si une
   /// milestone-final venait à le scripter explicitement.
+  ///
+  /// Skip aussi si `includeHand == false` (option carrière joueuse) :
+  /// la baseline hand serait sinon proposée comme final même quand la
+  /// joueuse a explicitement désactivé la main — bug F9 reporté.
   @override
   List<FinalVariant> finalVariants(FinalCtx ctx) {
+    if (!ctx.includeHand) return const [];
     if (ctx.handBaselineBpm == null) return const [];
     return [
       FinalVariant(

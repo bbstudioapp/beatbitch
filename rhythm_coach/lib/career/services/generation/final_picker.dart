@@ -171,9 +171,12 @@ class FinalPicker {
       // Fallback dur : hand head→mid 50 BPM. Toujours unlocked, req=0,
       // garanti même si la palette change ou si humilCap est négatif.
       // Hand n'a pas d'axe de capacité → `clampToCapability` no-op.
-      // Si hand est exclu en Custom, on retombe sur le 1ᵉʳ mode autorisé
+      // Si hand est exclu (Custom dose `none` OU toggle carrière
+      // `includeHand: false`), on retombe sur le 1ᵉʳ mode bouche
       // disponible — hold head court reste un final acceptable.
-      if (_isModeForbidden(SessionMode.hand)) {
+      final handBlocked =
+          _isModeForbidden(SessionMode.hand) || !config.includeHand;
+      if (handBlocked) {
         if (!_isModeForbidden(SessionMode.lick)) {
           return capClamps.clampToCapability(const StepDraft(
             mode: SessionMode.lick,
