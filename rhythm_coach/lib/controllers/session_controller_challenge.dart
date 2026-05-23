@@ -298,7 +298,11 @@ extension ChallengeOrchestrator on SessionController {
           _fallbackChallengeText(ch, 'extension');
       _speakChallengePhraseIfAny();
     }
-    if (elapsedInStep >= stepEnd) {
+    if (SessionController.shouldEnterAtSeuilPhase(
+      phase: phase,
+      elapsedInStep: elapsedInStep,
+      stepEnd: stepEnd,
+    )) {
       _challengePhase = ChallengePhase.atSeuil;
       // Wallclock (`r`) et non `t` : la timeline session est freezée pendant
       // tout le défi (cf. `_onTick` qui décrémente `_timelineOffset`), donc

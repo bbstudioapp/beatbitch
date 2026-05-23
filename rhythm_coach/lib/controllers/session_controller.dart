@@ -1761,6 +1761,33 @@ class SessionController extends ChangeNotifier {
     );
   }
 
+  /// Décide si la machine d'états défi doit transitionner vers `atSeuil`
+  /// au tick courant. Vrai uniquement quand on est encore en phase active
+  /// (`live` ou `preExtend`) et qu'on vient d'atteindre la fin nominale
+  /// du step défi.
+  ///
+  /// Garde indispensable : après `_completeChallenge`, `phase` passe à
+  /// `ended` mais `_challengeStepStartedAtSec` reste posé jusqu'à
+  /// l'expiration du breath post-défi (~10 s plus tard). Sans cette garde,
+  /// `elapsedInStep` continue de grandir en wallclock, dépasse `stepEnd`
+  /// au tick suivant, et la transition vers `atSeuil` écrase `phase=ended`.
+  /// Conséquence : timeout 8 s → `_completeChallenge` rappelé sur le même
+  /// `_activeChallengeIndex` → `_excisChallengeFromSession` redécale
+  /// `durationSeconds` de `-shift` à chaque tour → boucle infinie qui ronge
+  /// la durée de séance jusqu'à `_finish` (observé sur un défi tuto hold
+  /// throat : 12 min de session terminées en 7 min de timeline).
+  @visibleForTesting
+  static bool shouldEnterAtSeuilPhase({
+    required ChallengePhase phase,
+    required int elapsedInStep,
+    required int stepEnd,
+  }) {
+    if (phase != ChallengePhase.live && phase != ChallengePhase.preExtend) {
+      return false;
+    }
+    return elapsedInStep >= stepEnd;
+  }
+
   // ─── Scheduler des commentaires aléatoires ─────────────────────────────
 
   /// Programme le prochain commentaire aléatoire dans [min, max] secondes.
