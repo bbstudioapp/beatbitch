@@ -163,8 +163,27 @@ class _CareerScreenState extends State<CareerScreen> {
     // générateur recalcule la config via `resolveForCareer` à partir
     // de `sessionsCompleted` + `lengthChoice`).
     final clamped = bundle.synthLevel;
-    final lengthChoice = _selectedLengthChoice ?? bundle.lastLengthChoice;
-    await _progress.setLastLengthChoice(lengthChoice);
+    // Même fallback que `build` (cf. resolveSessionLengthChoice) — sinon
+    // un choix persisté désormais lock (ex. `longue` choisie sous l'ancienne
+    // gate ≥1 séance OU ≥10 min) lancerait quand même une séance 45 min
+    // alors que le picker affiche courte.
+    final persistedChoice = _selectedLengthChoice ?? bundle.lastLengthChoice;
+    final lengthChoice = resolveSessionLengthChoice(
+      persisted: persistedChoice,
+      bacheeUnlocked: isSessionLengthBacheeUnlocked(bundle.totalSeconds),
+      moyenneUnlocked: isSessionLengthMoyenneUnlocked(
+        totalSeconds: bundle.totalSeconds,
+        completedSessions: bundle.completedSessions,
+      ),
+      longueUnlocked: isSessionLengthLongueUnlocked(bundle.totalSeconds),
+    );
+    // Ne persister que sur action utilisateur explicite (= elle a tap une
+    // carte). Sans ce garde, le fallback à courte écraserait silencieusement
+    // un choix `longue` original quand totalSeconds redescend (reset stats /
+    // debug) — la joueuse perdrait sa préférence pour de bon.
+    if (_selectedLengthChoice != null) {
+      await _progress.setLastLengthChoice(lengthChoice);
+    }
 
     // Phase 19.12 : la règle `requiresHands` des milestones reste, mais
     // plus de gate par niveau — le toggle hand respecte simplement le
@@ -1089,15 +1108,15 @@ class _CareerScreenState extends State<CareerScreen> {
           // Fallback sur courte si la choice persistée n'est plus
           // sélectionnable (ex. joueuse reset stats → bachee redevient
           // lockée alors qu'elle l'avait sélectionnée auparavant).
-          final lengthChoice = switch (persistedChoice) {
-            SessionLengthChoice.bachee when !isBacheeUnlocked =>
-              SessionLengthChoice.courte,
-            SessionLengthChoice.moyenne when !isMoyenneUnlocked =>
-              SessionLengthChoice.courte,
-            SessionLengthChoice.longue when !isLongueUnlocked =>
-              SessionLengthChoice.courte,
-            _ => persistedChoice,
-          };
+          // Délégué à `resolveSessionLengthChoice` pour que `_start` y
+          // passe aussi (sinon la chaîne `_start → générateur` lit la
+          // valeur brute et peut lancer une séance que le picker cache).
+          final lengthChoice = resolveSessionLengthChoice(
+            persisted: persistedChoice,
+            bacheeUnlocked: isBacheeUnlocked,
+            moyenneUnlocked: isMoyenneUnlocked,
+            longueUnlocked: isLongueUnlocked,
+          );
           final cfg = CareerDifficultyResolver.resolveForCareer(
             sessionsCompleted: bundle.completedSessions,
             lengthChoice: lengthChoice,
@@ -1345,13 +1364,19 @@ class _SectionLabel extends StatelessWidget {
 
 /// Picker de durée de séance — 4 paliers (bâclée/courte/moyenne/longue).
 ///
-/// Remplace `_LevelPicker` (Phase 19.4). Depuis Phase 19.12 tous les
-/// paliers sont toujours sélectionnables — `isBacheeUnlocked` reste
-/// par cohérence d'API mais le caller passe `true` constamment.
+/// Remplace `_LevelPicker` (Phase 19.4). Depuis le retour playtest 0.6,
+/// les paliers sont gatés par investissement (totalSeconds + sessions),
+/// et les paliers non débloqués sont **cachés** plutôt que grisés
+/// (révélation progressive par surprise, pas de carrot dangling). Les
+/// 3 flags `is*Unlocked` sont donc load-bearing — ne pas les supposer
+/// constants.
 ///
 /// Seuils de déverrouillage des paliers :
 /// - Bâclée : 30 min de jeu cumulé (intense dès le départ → on attend
-///   un peu d'acclimatation).
+///   un peu d'acclimatation). Pas de bypass session : l'asymétrie avec
+///   Moyenne est intentionnelle — Bâclée est un format « pression
+///   maximale immédiate » qui demande un repère d'endurance, pas juste
+///   une preuve de format tenu.
 /// - Moyenne : 10 min de jeu OU 1 séance complétée (on évite qu'une
 ///   débutante se lance sur 25 min avant d'avoir testé une courte).
 /// - Longue : 1 h de jeu cumulé (≈ avoir tenu au moins une Moyenne
@@ -1386,6 +1411,33 @@ bool isSessionLengthMoyenneUnlocked({
 @visibleForTesting
 bool isSessionLengthLongueUnlocked(int totalSeconds) {
   return totalSeconds >= kSessionLengthLongueUnlockTotalSeconds;
+}
+
+/// Résout le choix de durée effectif en clamp ant à `courte` quand le
+/// palier persisté n'est plus déverrouillé. Helper partagé entre `build`
+/// (pour le rendu du picker) et `_start` (pour la génération + persistance),
+/// sinon `_start` lit `bundle.lastLengthChoice` brut et peut lancer une
+/// séance à une durée que le picker cache (bug détecté en review PR #249).
+///
+/// Switch **exhaustif** sur tous les cas de `SessionLengthChoice` — pas
+/// de `_` catch-all : ajouter une 5ᵉ valeur d'enum déclenche une erreur
+/// de compilation explicite et force le maintenant à choisir.
+@visibleForTesting
+SessionLengthChoice resolveSessionLengthChoice({
+  required SessionLengthChoice persisted,
+  required bool bacheeUnlocked,
+  required bool moyenneUnlocked,
+  required bool longueUnlocked,
+}) {
+  return switch (persisted) {
+    SessionLengthChoice.bachee =>
+      bacheeUnlocked ? persisted : SessionLengthChoice.courte,
+    SessionLengthChoice.moyenne =>
+      moyenneUnlocked ? persisted : SessionLengthChoice.courte,
+    SessionLengthChoice.longue =>
+      longueUnlocked ? persisted : SessionLengthChoice.courte,
+    SessionLengthChoice.courte => persisted,
+  };
 }
 
 class _DurationPicker extends StatelessWidget {
@@ -1424,6 +1476,14 @@ class _DurationPicker extends StatelessWidget {
     // que carrot dangling).
     final visible =
         SessionLengthChoice.values.where(_isUnlocked).toList(growable: false);
+    // Defensive : `value` doit toujours être visible pour qu'une carte soit
+    // highlighted. Le caller doit clamp via `resolveSessionLengthChoice`
+    // avant de passer la valeur — sans ce clamp, le Row rend 0 carte
+    // sélectionnée silencieusement (pas de crash, pas de visuel).
+    assert(
+        visible.contains(value),
+        '_DurationPicker.value ($value) doit être dans visible ($visible) — '
+        'utiliser `resolveSessionLengthChoice` côté caller');
     return Row(
       children: [
         for (var i = 0; i < visible.length; i++) ...[
