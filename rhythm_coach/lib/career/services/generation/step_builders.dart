@@ -229,8 +229,13 @@ class StepBuilders {
   /// en pratique. La séquence brute est déléguée au mode qui porte
   /// le rôle `miniWaveCore` (cf. B.PR5).
   List<StepDraft> buildMiniWave(double humilCap) {
-    final hasThroat = state.unlockedKeys.contains(UnlockKey.throatHold) ||
-        config.maxDepthIndex >= Position.throat.index;
+    // Gate pertinent pour un step rhythm : la profondeur rhythm est gatée
+    // par `throatPulse` (intro_throat_pulse), pas par `throatHold` qui
+    // concerne les holds. Mode hérité (unlockedKeys vide) : on retombe
+    // sur le cap de niveau pour ne pas bloquer la démo.
+    final hasThroat = state.unlockedKeys.contains(UnlockKey.throatPulse) ||
+        (state.unlockedKeys.isEmpty &&
+            config.maxDepthIndex >= Position.throat.index);
     final raw = rules[_miniWaveCoreMode]!
             .buildMiniWaveSegment(MiniWaveCtx(hasThroat: hasThroat)) ??
         const <StepDraft>[];
