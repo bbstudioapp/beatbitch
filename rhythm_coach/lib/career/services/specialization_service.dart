@@ -4,9 +4,10 @@ import '../models/specialization.dart';
 
 /// Persistance des points de spécialisation + règles de gain et respec.
 ///
-/// **Gain** (Phase 19.12) : 1 point tous les 4 sessions complétées
-/// (4 sessions → 1 pt, 8 sessions → 2 pts, etc.). En dessous de 4
-/// sessions, 0 point.
+/// **Gain** (retour playtest 0.6) : basé sur le temps cumulé.
+/// 1ᵉʳ point à 5 min, puis delta +5 min entre chaque point suivant
+/// (5, 15, 30, 50, 1 h 15 …). Cf. [totalPointsForSeconds] pour la
+/// formule et la table de seuils.
 ///
 /// **Respec** : remet tous les compteurs à 0, pose un cooldown
 /// empêchant un nouveau respec avant 3 jours. Plus de pénalité de
@@ -28,15 +29,35 @@ class SpecializationService {
   /// Cooldown en heures entre deux respecs.
   static const int respecCooldownHours = 72;
 
-  /// Nombre total de points de spé acquis pour un compteur de sessions
-  /// donné (Phase 19.12). 1 point tous les 4 sessions complétées.
+  /// Nombre total de points de spé acquis pour un investissement temps
+  /// cumulé donné (retour playtest 0.6 — l'attribution se base désormais
+  /// sur le temps passé, pas le nombre de sessions, parce que la durée
+  /// du contenu joué reflète mieux l'investissement réel que le compteur
+  /// de sessions, surtout avec les paliers Bâclée/Courte/Moyenne/Longue
+  /// très contrastés).
   ///
-  /// Équivalent à l'ancien `totalPointsForLevel(level) = level ~/ 2`
-  /// quand `level ≈ 1 + sessions/2` (cf. `CareerDifficultyResolver`) :
-  /// 1 point tous les 2 levels ⇔ 1 point tous les 4 sessions.
-  static int totalPointsForSessions(int sessions) {
-    if (sessions < 4) return 0;
-    return sessions ~/ 4;
+  /// Cadence : 1ᵉʳ point à 5 min, puis le delta entre 2 points augmente
+  /// de 5 min à chaque fois (5, +10, +15, +20, +25 …). Seuil cumulé pour
+  /// le n-ième point : `2.5 × n × (n+1)` minutes = `n × (n+1) × 150`
+  /// secondes.
+  ///
+  /// | n | seuil    |
+  /// |---|----------|
+  /// | 1 |  5 min   |
+  /// | 2 | 15 min   |
+  /// | 3 | 30 min   |
+  /// | 4 | 50 min   |
+  /// | 5 | 1 h 15   |
+  /// | 6 | 1 h 45   |
+  /// | 7 | 2 h 20   |
+  /// | 8 | 3 h      |
+  static int totalPointsForSeconds(int totalSeconds) {
+    if (totalSeconds < 300) return 0;
+    var n = 0;
+    while (totalSeconds >= (n + 1) * (n + 2) * 150) {
+      n++;
+    }
+    return n;
   }
 
   /// Clé legacy : points investis dans l'ancienne branche `resilience`
@@ -68,10 +89,9 @@ class SpecializationService {
   /// (= au moins une milestone candidate touche cette branche) sera
   /// biaisée pour la mettre en vitrine. Voir [peekShowcase] /
   /// [consumeShowcase].
-  Future<bool> invest(
-      SpecializationBranch branch, int sessionsCompleted) async {
+  Future<bool> invest(SpecializationBranch branch, int totalSeconds) async {
     final alloc = await load();
-    final cap = totalPointsForSessions(sessionsCompleted);
+    final cap = totalPointsForSeconds(totalSeconds);
     if (alloc.totalSpent >= cap) return false;
     final prefs = await SharedPreferences.getInstance();
     final newValue = alloc.pointsIn(branch) + 1;
@@ -137,11 +157,12 @@ class SpecializationService {
     }
   }
 
-  /// Combien de points disponibles à dépenser pour un compteur de
-  /// sessions donné (Phase 19.12).
-  Future<int> availablePoints(int sessionsCompleted) async {
+  /// Combien de points disponibles à dépenser pour un temps cumulé
+  /// donné (retour playtest 0.6 — cadence basée sur le temps, cf.
+  /// [totalPointsForSeconds]).
+  Future<int> availablePoints(int totalSeconds) async {
     final alloc = await load();
-    final cap = totalPointsForSessions(sessionsCompleted);
+    final cap = totalPointsForSeconds(totalSeconds);
     return (cap - alloc.totalSpent).clamp(0, cap);
   }
 
