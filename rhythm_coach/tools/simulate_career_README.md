@@ -52,7 +52,7 @@ régression) :
 | nom | skill init | growth/sess. | description |
 |---|---:|---:|---|
 | `fail_prone` | 0.35 | +0.008 | Fail ambiant 25 %, milestones échouées 1/3, abandons fréquents. |
-| `quickie_spammer` | 0.60 | +0.001 | Sessions bâclées 90 %. Pas de level-up. Pas de défi (parité prod : `!quickie`). |
+| `quickie_spammer` | 0.60 | +0.001 | Sessions bâclées 90 %. Compte les sessions terminées (parité prod) mais ne pousse pas les axes — la réputation monte par sessions + temps, pas par exploits. Pas de défi (parité prod : `!quickie`). |
 
 Chaque profil porte :
 - une allocation par branche de spécialisation,
@@ -72,9 +72,15 @@ Pour chaque profil, 3-4 sections :
 ### 1. Timeline
 
 Une ligne par session :
-`n° | level | humil | obed | milestone (body / final) | challenge | outcome | unlocks | axes touchés`.
+`n° | sessions | temps | rep | humil | obed | milestone (body / final) | challenge | outcome | unlocks | axes touchés`.
 
-- `↑` à côté du level signale un level-up à cette session.
+- `sessions` = nombre de sessions terminées (toutes complétées, parité prod
+  `StatsService.recordSessionCompleted`).
+- `temps` = temps de jeu cumulé (durée des séances jouées).
+- `rep` = score de réputation (parité `ReputationService.snapshot`, sans
+  le facteur `niveau_max × 100` qui supposait un level désormais aboli).
+- `↑` à côté de `sessions` marque un bump du `synthLevel` interne
+  (= proxy pour les helpers générateur — pas exposé en sortie).
 - `challenge` au format `axis × outcome[×N]` :
   - `tut` — défi tutoriel (hold throat 5 s).
   - `net` — succès net (seuil atteint, JE M'ARRÊTE ou timeout).
@@ -85,8 +91,10 @@ Une ligne par session :
 
 ### 2. Récap
 
-- Sessions pour atteindre L5 / L10 / L15 / L20.
-- Niveau / humil / obed finaux.
+- Séances où chaque seuil d'investissement a été franchi (5 / 10 / 15 /
+  20 sessions terminées).
+- Sessions complétées, temps de jeu cumulé, réputation finale, humil et
+  obed finaux.
 - Liste des unlocks acquis dans l'ordre (avec milestone d'origine ;
   ceux marqués `(challenge)` ou `(challenge:transitive)` sont issus de
   l'acquittement implicite via défi).
@@ -112,8 +120,10 @@ Détecte automatiquement :
   une milestone plus dure (gap > 5). Souvent un signal informationnel :
   le tri par branchScore peut volontairement retarder un palier facile
   dont la branche n'est pas investie. Vérifier au cas par cas.
-- `LEVEL-STUCK` — niveau bloqué ≥ 5 sessions consécutives (typique du
-  `quickie_spammer` ou d'une joueuse qui collectionne les fails).
+- `PROGRESS-STUCK` — `sessionsCompleted` resté constant ≥ 5 sessions
+  consécutives (jamais en pratique depuis l'alignement prod : toutes les
+  sessions terminées comptent, fail inclus). Remplace l'ancien
+  `LEVEL-STUCK`.
 - `FEATURE-MISSED` — une *feature-milestone* (`intro_surprise_notifs`,
   `intro_fake_breath`, `intro_freestyle`, `intro_encore`) reste pending
   alors que la joueuse est éligible (level, requires, capability OK).
