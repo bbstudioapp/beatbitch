@@ -1105,8 +1105,8 @@ class _CareerScreenState extends State<CareerScreen> {
           final activeCoach = _resolveCoach(bundle);
           final principal = coachService.currentTierPrincipal;
           final isFreeTraining = !coachService.advancesTier(activeCoach);
-          final freeSpecPoints = SpecializationService.totalPointsForSessions(
-                bundle.completedSessions,
+          final freeSpecPoints = SpecializationService.totalPointsForSeconds(
+                bundle.totalSeconds,
               ) -
               bundle.specialization.totalSpent;
           final hasPendingSpecPoints = freeSpecPoints > 0;
