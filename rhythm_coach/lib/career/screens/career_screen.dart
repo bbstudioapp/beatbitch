@@ -380,6 +380,9 @@ class _CareerScreenState extends State<CareerScreen> {
           // tente de l'honorer en priorité (axe pilotant de la branche).
           // Appliqué seulement au premier défi pour ne pas saturer.
           showcaseBranch: isFirst ? showcaseBranch : null,
+          // Gating par unlock : les défis « modèle gorge » (apnée /
+          // engagement) exigent des unlocks préalables (cf. spec § bug 5).
+          unlocks: unlockedKeys,
         );
         // 2ᵉ essai : on retombe sur l'ancien tirage (pool restreinte
         // accepte la répétition inter-sessions plutôt que de générer
@@ -392,6 +395,7 @@ class _CareerScreenState extends State<CareerScreen> {
             rng: Random(),
             isTutorial: false,
             showcaseBranch: isFirst ? showcaseBranch : null,
+            unlocks: unlockedKeys,
           );
         }
         if (next == null) break;

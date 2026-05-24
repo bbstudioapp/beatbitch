@@ -1252,6 +1252,78 @@ abstract class AppLocalizations {
   /// **'Monte le rythme jusqu\'à {bpm} BPM'**
   String challengeBannerRhythm(int bpm);
 
+  /// No description provided for @challengeBannerRhythmShallow.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rythme peu profond — monte jusqu\'à {bpm} BPM'**
+  String challengeBannerRhythmShallow(int bpm);
+
+  /// No description provided for @challengeBannerRhythmThroat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rythme jusqu\'à la gorge — monte à {bpm} BPM'**
+  String challengeBannerRhythmThroat(int bpm);
+
+  /// No description provided for @challengeBannerRhythmFull.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rythme à fond — monte à {bpm} BPM'**
+  String challengeBannerRhythmFull(int bpm);
+
+  /// No description provided for @challengeBannerGorgeCrossingsThroat.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count} fois jusqu\'à la gorge à {bpm} BPM'**
+  String challengeBannerGorgeCrossingsThroat(int count, int bpm);
+
+  /// No description provided for @challengeBannerGorgeCrossingsFull.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count} fois jusqu\'au fond à {bpm} BPM'**
+  String challengeBannerGorgeCrossingsFull(int count, int bpm);
+
+  /// No description provided for @challengeBannerGorgeApnee.
+  ///
+  /// In fr, this message translates to:
+  /// **'Apnée gorge — alterne tenues et coups profonds'**
+  String get challengeBannerGorgeApnee;
+
+  /// No description provided for @challengeBannerGorgeEngagement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Garde la gorge en jeu — tenues et rythmes profonds'**
+  String get challengeBannerGorgeEngagement;
+
+  /// No description provided for @challengeBannerDepthMax.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pousse la profondeur d\'un cran en rythme'**
+  String get challengeBannerDepthMax;
+
+  /// No description provided for @challengeBannerMotionStreak.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rythme non-stop {seconds} secondes — varie positions et BPM'**
+  String challengeBannerMotionStreak(int seconds);
+
+  /// No description provided for @challengeBannerNoBreathStreak.
+  ///
+  /// In fr, this message translates to:
+  /// **'{seconds} s sans respirer — rythme et tenues'**
+  String challengeBannerNoBreathStreak(int seconds);
+
+  /// No description provided for @challengeBannerNoSwallowStreak.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bouche ouverte, langue dehors — {seconds} s sans avaler'**
+  String challengeBannerNoSwallowStreak(int seconds);
+
+  /// No description provided for @challengeBannerBiffleStreak.
+  ///
+  /// In fr, this message translates to:
+  /// **'Encaisse les coups {seconds} secondes'**
+  String challengeBannerBiffleStreak(int seconds);
+
   /// No description provided for @challengeBannerBiffle.
   ///
   /// In fr, this message translates to:

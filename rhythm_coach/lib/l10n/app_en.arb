@@ -277,6 +277,51 @@
   "@challengeBannerRhythm": {
     "placeholders": { "bpm": { "type": "int" } }
   },
+  "challengeBannerRhythmShallow": "Shallow rhythm — ramp up to {bpm} BPM",
+  "@challengeBannerRhythmShallow": {
+    "placeholders": { "bpm": { "type": "int" } }
+  },
+  "challengeBannerRhythmThroat": "Rhythm to the throat — ramp up to {bpm} BPM",
+  "@challengeBannerRhythmThroat": {
+    "placeholders": { "bpm": { "type": "int" } }
+  },
+  "challengeBannerRhythmFull": "Rhythm all the way down — ramp up to {bpm} BPM",
+  "@challengeBannerRhythmFull": {
+    "placeholders": { "bpm": { "type": "int" } }
+  },
+  "challengeBannerGorgeCrossingsThroat": "{count} crossings to the throat at {bpm} BPM",
+  "@challengeBannerGorgeCrossingsThroat": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "bpm": { "type": "int" }
+    }
+  },
+  "challengeBannerGorgeCrossingsFull": "{count} crossings all the way down at {bpm} BPM",
+  "@challengeBannerGorgeCrossingsFull": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "bpm": { "type": "int" }
+    }
+  },
+  "challengeBannerGorgeApnee": "Throat apnea — alternate holds and deep strokes",
+  "challengeBannerGorgeEngagement": "Keep the throat in play — holds and deep rhythms",
+  "challengeBannerDepthMax": "Push the depth one notch in rhythm",
+  "challengeBannerMotionStreak": "Non-stop rhythm {seconds} seconds — vary positions and BPM",
+  "@challengeBannerMotionStreak": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerNoBreathStreak": "{seconds} s without breathing — rhythm and holds",
+  "@challengeBannerNoBreathStreak": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerNoSwallowStreak": "Mouth open, tongue out — {seconds} s without swallowing",
+  "@challengeBannerNoSwallowStreak": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerBiffleStreak": "Take the slaps for {seconds} seconds",
+  "@challengeBannerBiffleStreak": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
   "challengeBannerBiffle": "Take the slaps up to {bpm} BPM",
   "@challengeBannerBiffle": {
     "placeholders": { "bpm": { "type": "int" } }
