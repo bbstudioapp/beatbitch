@@ -77,7 +77,15 @@ void main() {
 
     test('showcase=null → comportement standard (pickOverloadAxis)', () async {
       final svc = ChallengeService();
+      // Profondeur prouvée throat pour passer le gating profondeur posé
+      // par bug 5 (les défis throat exigent rhythm.depth_max.comfort ≥ 3).
       const profile = CapabilityProfile({
+        CapabilityAxis.rhythmDepthMax: CapabilityAxisState(
+          best: 3.0,
+          comfort: 3.0,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
         CapabilityAxis.holdThroatStreak: CapabilityAxisState(
           best: 10.0,
           comfort: 10.0,
@@ -98,7 +106,14 @@ void main() {
 
     test('showcase=endurance + axe excluded → fallback', () async {
       final svc = ChallengeService();
+      // Profondeur full prouvée pour permettre les défis holdFullStreak.
       const profile = CapabilityProfile({
+        CapabilityAxis.rhythmDepthMax: CapabilityAxisState(
+          best: 4.0,
+          comfort: 4.0,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
         CapabilityAxis.holdThroatStreak: CapabilityAxisState(
           best: 10.0,
           comfort: 10.0,
@@ -131,6 +146,12 @@ void main() {
         () async {
       final svc = ChallengeService();
       const profile = CapabilityProfile({
+        CapabilityAxis.rhythmDepthMax: CapabilityAxisState(
+          best: 4.0,
+          comfort: 4.0,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
         CapabilityAxis.holdThroatStreak: CapabilityAxisState(
           best: 10.0,
           comfort: 10.0,
@@ -163,7 +184,14 @@ void main() {
       // L'obéissance n'a pas d'axe capability (branchOf retournera null
       // pour tous les axes pilotants). La cascade showcase doit
       // graciously retomber sur pickOverloadAxis.
+      // Profondeur throat prouvée pour passer le gating posé par bug 5.
       const profile = CapabilityProfile({
+        CapabilityAxis.rhythmDepthMax: CapabilityAxisState(
+          best: 3.0,
+          comfort: 3.0,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
         CapabilityAxis.holdThroatStreak: CapabilityAxisState(
           best: 10.0,
           comfort: 10.0,

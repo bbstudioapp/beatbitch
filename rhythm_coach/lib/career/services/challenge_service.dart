@@ -213,6 +213,15 @@ class ChallengeService {
     if (isTutorial) {
       return _buildTutorialChallenge();
     }
+    // Gating profondeur (cf. retour stefsub v0.5.0) : un défi qui exige
+    // une profondeur cible (head→throat, throat, full…) ne doit pas être
+    // proposé tant que la joueuse n'a pas validé cette profondeur en
+    // session normale via `rhythm.depth_max.comfort`. Sans ce filtre, la
+    // 1ʳᵉ rencontre avec head→throat se ferait sous forme d'un défi long
+    // alors que la session normale clampe à mid. Le tuto reste exempté
+    // (forcé sur holdThroatStreak via _buildTutorialChallenge plus haut).
+    final depthGated = depthGatedAxes(profile);
+    final effectiveExclude = <CapabilityAxis>{...excludeAxes, ...depthGated};
     // Cascade showcase (spec § 5.1, étape 1) : si une branche est en
     // tête de file `SpecializationService.peekShowcase()`, on essaye de
     // honorer le point spé fraîchement dépensé en piochant un axe
@@ -224,19 +233,22 @@ class ChallengeService {
       final axis = _pickAxisOfBranch(
         branch: showcaseBranch,
         profile: profile,
-        excludeAxes: excludeAxes,
+        excludeAxes: effectiveExclude,
       );
       if (axis != null) {
         final comfort = profile!.comfortOf(axis)!;
         final crossings = await _resolveCrossingsTargetFor(axis);
         return _buildChallenge(
-            axis: axis, comfort: comfort, targetCrossings: crossings);
+            axis: axis,
+            comfort: comfort,
+            targetCrossings: crossings,
+            profile: profile);
       }
     }
     final axis = _pickAxis(
       profile: profile,
       ceilings: ceilings,
-      excludeAxes: excludeAxes,
+      excludeAxes: effectiveExclude,
       rng: rng,
     );
     if (axis != null) {
@@ -244,7 +256,10 @@ class ChallengeService {
       if (comfort != null) {
         final crossings = await _resolveCrossingsTargetFor(axis);
         return _buildChallenge(
-            axis: axis, comfort: comfort, targetCrossings: crossings);
+            axis: axis,
+            comfort: comfort,
+            targetCrossings: crossings,
+            profile: profile);
       }
     }
     // Phase 2 — fallback exploratoire : aucun axe candidat avec un
@@ -252,13 +267,13 @@ class ChallengeService {
     // mais on peut peut-être amorcer un axe vierge. Cf. spec § 3.2.
     final exploratoryAxis = _pickExploratoryAxis(
       profile: profile,
-      excludeAxes: excludeAxes,
+      excludeAxes: effectiveExclude,
       rng: rng,
     );
     if (exploratoryAxis == null) return null;
     final crossings = await _resolveCrossingsTargetFor(exploratoryAxis);
     return _buildExploratoryChallenge(
-        axis: exploratoryAxis, targetCrossings: crossings);
+        axis: exploratoryAxis, targetCrossings: crossings, profile: profile);
   }
 
   /// Retourne le compteur de franchissements à viser pour [axis], ou `null`
@@ -375,12 +390,12 @@ class ChallengeService {
   Challenge _buildExploratoryChallenge({
     required CapabilityAxis axis,
     int? targetCrossings,
+    CapabilityProfile? profile,
   }) {
     final kind = _kindOf(axis);
     final threshold = Challenge.initialEstimateSecondsForAxis(axis);
     final mode = _modeOf(axis);
-    final from = _fromOf(axis);
-    final to = _toOf(axis);
+    final (from, to) = _resolveAmplitude(axis: axis, profile: profile);
     final isBpm = kind == ChallengeAxisKind.bpm;
     final bpm = isBpm ? kChallengeBpmRampStart : null;
     final bpmEnd = isBpm ? threshold : null;
@@ -410,12 +425,12 @@ class ChallengeService {
     required CapabilityAxis axis,
     required double comfort,
     int? targetCrossings,
+    CapabilityProfile? profile,
   }) {
     final kind = _kindOf(axis);
     final threshold = thresholdFor(kind, comfort, axis);
     final mode = _modeOf(axis);
-    final from = _fromOf(axis);
-    final to = _toOf(axis);
+    final (from, to) = _resolveAmplitude(axis: axis, profile: profile);
     final isBpm = kind == ChallengeAxisKind.bpm;
     final bpm = isBpm ? comfort.round() : null;
     final bpmEnd = isBpm ? threshold : null;
@@ -432,6 +447,113 @@ class ChallengeService {
       comfortAtCalibration: comfort,
       targetCrossings: targetCrossings,
     );
+  }
+
+  /// Résout `(from, to)` pour un défi sur [axis], en dégradant l'amplitude
+  /// selon `rhythm.depth_max.comfort` pour les axes d'endurance/vitesse
+  /// non-profondeur (cf. [_amplitudeDegradedAxes]).
+  ///
+  /// Sans cette dégradation, `rhythmMotionStreak` (endurance rythme
+  /// cumulée, accumulée passivement par toute session de rythme) propose
+  /// un défi `rhythm head→throat` à une joueuse qui n'a jamais touché à
+  /// throat en session normale (clampée à mid par `rhythm.depth_max`).
+  /// Le défi devient alors le 1ᵉʳ contact avec l'amplitude profonde —
+  /// brutal et incohérent (cf. retour stefsub v0.5.0).
+  ///
+  /// Pour les axes profondeur explicites (`holdThroatStreak`,
+  /// `rhythmBpmCeilThroat`, etc.), l'amplitude reste celle de l'axe :
+  /// c'est leur rôle d'exposer la limite, le gating en amont
+  /// ([_depthGatedAxes]) garantit qu'ils ne sont proposés que sur des
+  /// profils où la profondeur est déjà prouvée.
+  static (Position?, Position?) _resolveAmplitude({
+    required CapabilityAxis axis,
+    required CapabilityProfile? profile,
+  }) {
+    final from = _fromOf(axis);
+    final to = _toOf(axis);
+    if (!_amplitudeDegradedAxes.contains(axis)) return (from, to);
+    if (to == null || profile == null) return (from, to);
+    final depthComfort = profile.comfortOf(CapabilityAxis.rhythmDepthMax);
+    if (depthComfort == null) return (from, to);
+    final maxIdx = depthComfort.round().clamp(0, Position.values.length - 1);
+    if (to.index <= maxIdx) return (from, to);
+    final clampedTo = Position.values[maxIdx];
+    if (from == null) return (from, clampedTo);
+    // Convention rythme : `from < to` strict. Si le clamp ramène `to` à
+    // la hauteur de `from`, on descend `from` d'un cran pour préserver
+    // l'amplitude.
+    if (from.index >= clampedTo.index) {
+      final newFromIdx =
+          (clampedTo.index - 1).clamp(0, Position.values.length - 1);
+      return (Position.values[newFromIdx], clampedTo);
+    }
+    return (from, clampedTo);
+  }
+
+  /// Axes pour lesquels l'amplitude proposée par le défi est bornée par
+  /// `rhythm.depth_max.comfort` — leur sémantique est endurance/vitesse,
+  /// pas profondeur, donc rien ne justifie d'imposer une amplitude que la
+  /// joueuse n'a jamais touchée. Cf. [_resolveAmplitude].
+  static const Set<CapabilityAxis> _amplitudeDegradedAxes = {
+    CapabilityAxis.rhythmMotionStreak,
+    CapabilityAxis.effortNoBreathStreak,
+    CapabilityAxis.noswallowStreak,
+  };
+
+  /// Profondeur minimale (en `rhythm.depth_max.comfort`) exigée pour
+  /// proposer un défi sur [axis]. `null` si l'axe n'a pas d'exigence (modes
+  /// hand/lick/biffle, axes endurance shallow, axes d'endurance dégradés
+  /// via [_amplitudeDegradedAxes]). Sert au gating dans [buildForSession]
+  /// — un axe dont l'exigence n'est pas satisfaite est exclu du tirage.
+  static Position? _axisDepthGate(CapabilityAxis axis) {
+    switch (axis) {
+      case CapabilityAxis.holdThroatStreak:
+      case CapabilityAxis.gorgeApneeStreak:
+      case CapabilityAxis.gorgeEngagementStreak:
+      case CapabilityAxis.gorgeCrossingsBpmThroat:
+      case CapabilityAxis.rhythmBpmCeilThroat:
+        return Position.throat;
+      case CapabilityAxis.holdFullStreak:
+      case CapabilityAxis.gorgeCrossingsBpmFull:
+      case CapabilityAxis.rhythmBpmCeilFull:
+        return Position.full;
+      // ignore: no_default_cases
+      default:
+        return null;
+    }
+  }
+
+  /// `true` si la profondeur exigée par [axis] est satisfaite côté
+  /// `rhythm.depth_max.comfort`. Retourne `true` pour les axes non gatés
+  /// (pas d'exigence). `false` si pas de profil OU si l'axe demande une
+  /// profondeur strictement au-dessus de `comfort` (joueuse neuve incluse :
+  /// pas de défi profond tant qu'aucune base n'est posée).
+  ///
+  /// [rhythmDepthMax] n'est jamais gaté ici — son rôle explicite est de
+  /// pousser la profondeur d'un cran, donc il doit pouvoir proposer une
+  /// cible au-delà du `comfort` courant.
+  static bool _axisDepthRequirementMet(
+      CapabilityAxis axis, CapabilityProfile? profile) {
+    final required = _axisDepthGate(axis);
+    if (required == null) return true;
+    if (profile == null) return false;
+    final depthComfort = profile.comfortOf(CapabilityAxis.rhythmDepthMax);
+    if (depthComfort == null) return false;
+    return depthComfort.round() >= required.index;
+  }
+
+  /// Axes à exclure du tirage tant que leur profondeur cible n'est pas
+  /// atteinte. Consommé par [buildForSession] qui les ajoute à
+  /// `excludeAxes` avant chaque pick — cohérent avec le mécanisme
+  /// existant d'exclusion des axes déjà couverts par milestones. Exposé
+  /// (sans préfixe `_`) pour permettre aux tests d'asserter directement
+  /// le gating sans monter une session complète.
+  static Set<CapabilityAxis> depthGatedAxes(CapabilityProfile? profile) {
+    return {
+      for (final a in CapabilityAxis.values)
+        if (_axisDepthGate(a) != null && !_axisDepthRequirementMet(a, profile))
+          a,
+    };
   }
 
   /// Forme du seuil pour un axe — `duration`, `bpm` ou `depthCran`.
