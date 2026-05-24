@@ -26,6 +26,7 @@ import '../../services/capability_axis.dart';
 import '../../services/capability_service.dart';
 import '../models/challenge.dart';
 import '../models/specialization.dart';
+import '../models/unlock_key.dart';
 import 'generation/capability_clamps.dart';
 
 /// Coefficient appliqué au `comfort` pour calibrer le seuil cible du défi
@@ -209,6 +210,7 @@ class ChallengeService {
     required Random rng,
     required bool isTutorial,
     SpecializationBranch? showcaseBranch,
+    Set<UnlockKey> unlocks = const {},
   }) async {
     if (isTutorial) {
       return _buildTutorialChallenge();
@@ -220,8 +222,20 @@ class ChallengeService {
     // 1ʳᵉ rencontre avec head→throat se ferait sous forme d'un défi long
     // alors que la session normale clampe à mid. Le tuto reste exempté
     // (forcé sur holdThroatStreak via _buildTutorialChallenge plus haut).
+    //
+    // Gating unlocks pour axes « modèle gorge » (apnée / engagement) : ils
+    // nécessitent des unlocks pédagogiques préalables (fullPulse+fullHold
+    // pour l'apnée, throatPulse pour l'engagement) — sans ça, on demande
+    // à la joueuse une séquence qui mélange profondeurs qu'elle n'a pas
+    // encore débloquées. Pas appliqué en mode hérité (set vide).
     final depthGated = depthGatedAxes(profile);
-    final effectiveExclude = <CapabilityAxis>{...excludeAxes, ...depthGated};
+    final unlockGated =
+        unlocks.isEmpty ? const <CapabilityAxis>{} : unlockGatedAxes(unlocks);
+    final effectiveExclude = <CapabilityAxis>{
+      ...excludeAxes,
+      ...depthGated,
+      ...unlockGated,
+    };
     // Cascade showcase (spec § 5.1, étape 1) : si une branche est en
     // tête de file `SpecializationService.peekShowcase()`, on essaye de
     // honorer le point spé fraîchement dépensé en piochant un axe
@@ -540,6 +554,41 @@ class ChallengeService {
     final depthComfort = profile.comfortOf(CapabilityAxis.rhythmDepthMax);
     if (depthComfort == null) return false;
     return depthComfort.round() >= required.index;
+  }
+
+  /// Pré-requis `UnlockKey` d'un axe — set vide si l'axe n'a pas de
+  /// dépendance d'unlock. Sémantique : ces axes proposent une **séquence
+  /// de défi** qui mélange plusieurs profondeurs / actions, et n'a de sens
+  /// pédagogiquement que si la joueuse a déjà débloqué les profondeurs
+  /// participantes. Sans ces gates, on lui demanderait un défi mixé
+  /// (hold throat + hold full + rythme profond) alors qu'elle n'a pas
+  /// validé `fullPulse`/`fullHold` ni `throatPulse` côté session normale.
+  static Set<UnlockKey> _axisUnlockRequirements(CapabilityAxis axis) {
+    switch (axis) {
+      // Apnée gorge — défi qui alterne hold throat, hold full, et rythme
+      // profond (head→throat / mid→full). Demande la maîtrise du fond.
+      case CapabilityAxis.gorgeApneeStreak:
+        return const {UnlockKey.fullPulse, UnlockKey.fullHold};
+      // Engagement gorge — défi qui mélange holds + rythmes profonds avec
+      // uniquement les profondeurs débloquées (palier accessible plus tôt).
+      case CapabilityAxis.gorgeEngagementStreak:
+        return const {UnlockKey.throatPulse};
+      default:
+        return const {};
+    }
+  }
+
+  /// Axes à exclure du tirage tant que tous leurs [UnlockKey] pré-requis
+  /// ne sont pas dans [acquired]. Pendant en mode hérité (set vide),
+  /// retourne vide → aucun gating par unlock (compat sessions hors
+  /// carrière). Exposé pour les tests.
+  static Set<CapabilityAxis> unlockGatedAxes(Set<UnlockKey> acquired) {
+    return {
+      for (final a in CapabilityAxis.values)
+        if (_axisUnlockRequirements(a).isNotEmpty &&
+            !acquired.containsAll(_axisUnlockRequirements(a)))
+          a,
+    };
   }
 
   /// Axes à exclure du tirage tant que leur profondeur cible n'est pas

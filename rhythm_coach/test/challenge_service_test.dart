@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:beat_bitch/career/models/challenge.dart';
 import 'package:beat_bitch/career/models/specialization.dart';
+import 'package:beat_bitch/career/models/unlock_key.dart';
 import 'package:beat_bitch/career/services/challenge_service.dart';
 import 'package:beat_bitch/models/session.dart';
 import 'package:beat_bitch/models/session_step.dart';
@@ -340,6 +341,130 @@ void main() {
         ChallengeService.axesSharingVisualSignature(
             CapabilityAxis.rhythmBpmCeilThroat),
         isEmpty,
+      );
+    });
+  });
+
+  group('ChallengeService — gating unlocks (modèle gorge)', () {
+    test(
+        'unlockGatedAxes : pas d\'unlocks → gorgeApnee et gorgeEngagement '
+        'gatés', () {
+      final gated = ChallengeService.unlockGatedAxes(const {});
+      expect(gated, contains(CapabilityAxis.gorgeApneeStreak));
+      expect(gated, contains(CapabilityAxis.gorgeEngagementStreak));
+    });
+
+    test(
+        'unlockGatedAxes : seulement throatPulse → gorgeEngagement ouvert, '
+        'gorgeApnee toujours gaté', () {
+      final gated =
+          ChallengeService.unlockGatedAxes(const {UnlockKey.throatPulse});
+      expect(gated, isNot(contains(CapabilityAxis.gorgeEngagementStreak)));
+      // gorgeApnee exige fullPulse + fullHold en plus.
+      expect(gated, contains(CapabilityAxis.gorgeApneeStreak));
+    });
+
+    test('unlockGatedAxes : fullPulse + fullHold → gorgeApnee ouvert', () {
+      final gated = ChallengeService.unlockGatedAxes(
+          const {UnlockKey.fullPulse, UnlockKey.fullHold});
+      expect(gated, isNot(contains(CapabilityAxis.gorgeApneeStreak)));
+    });
+
+    test(
+        'unlockGatedAxes : fullPulse seul (fullHold manquant) → gorgeApnee '
+        'gaté', () {
+      final gated =
+          ChallengeService.unlockGatedAxes(const {UnlockKey.fullPulse});
+      expect(gated, contains(CapabilityAxis.gorgeApneeStreak));
+    });
+
+    test(
+        'buildForSession : sans unlocks → gorgeApnee et gorgeEngagement '
+        'ne sortent pas même si comfort prouvé', () async {
+      final svc = ChallengeService();
+      // Comfort prouvé sur gorgeApnee + gorgeEngagement + holdThroatStreak.
+      // Sans unlocks, gorgeApnee et gorgeEngagement sont gatés ; seul
+      // holdThroatStreak peut sortir (sous réserve du gating profondeur,
+      // qu'on satisfait via rhythmDepthMax).
+      const profile = CapabilityProfile({
+        CapabilityAxis.rhythmDepthMax: CapabilityAxisState(
+          best: 4.0,
+          comfort: 4.0,
+          successRate: 0.9,
+          lastSeenSession: 100,
+        ),
+        CapabilityAxis.gorgeApneeStreak: CapabilityAxisState(
+          best: 10.0,
+          comfort: 10.0,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
+        CapabilityAxis.gorgeEngagementStreak: CapabilityAxisState(
+          best: 20.0,
+          comfort: 20.0,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
+        CapabilityAxis.holdThroatStreak: CapabilityAxisState(
+          best: 10.0,
+          comfort: 10.0,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
+      });
+      // unlocks vide ≠ mode hérité : le mode hérité utilise un set vide
+      // pour signifier « pas de gating ». Ici, on simule un mode hérité.
+      // On passe explicitement un set non-vide mais sans les keys requises
+      // pour que le gating s'active.
+      final challenge = await svc.buildForSession(
+        profile: profile,
+        ceilings: const {},
+        excludeAxes: const {},
+        rng: Random(0),
+        isTutorial: false,
+        unlocks: const {UnlockKey.basics},
+      );
+      expect(challenge, isNotNull);
+      expect(challenge!.axis, isNot(CapabilityAxis.gorgeApneeStreak));
+      expect(challenge.axis, isNot(CapabilityAxis.gorgeEngagementStreak));
+    });
+
+    test(
+        'buildForSession : mode hérité (unlocks vide) → gating unlock '
+        'désactivé', () async {
+      final svc = ChallengeService();
+      const profile = CapabilityProfile({
+        CapabilityAxis.rhythmDepthMax: CapabilityAxisState(
+          best: 4.0,
+          comfort: 4.0,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
+        CapabilityAxis.gorgeApneeStreak: CapabilityAxisState(
+          best: 10.0,
+          comfort: 10.0,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
+      });
+      final challenge = await svc.buildForSession(
+        profile: profile,
+        ceilings: const {},
+        excludeAxes: const {},
+        rng: Random(0),
+        isTutorial: false,
+        // unlocks: default {} → mode hérité, pas de gating.
+      );
+      expect(challenge, isNotNull);
+      // Sans gating, le seul axe candidat hors rhythmDepthMax est
+      // gorgeApneeStreak (rhythmDepthMax est lastSeen=1 donc moins
+      // attractif que les éventuels axes plus anciens).
+      expect(
+        challenge!.axis,
+        anyOf(
+          CapabilityAxis.gorgeApneeStreak,
+          CapabilityAxis.rhythmDepthMax,
+        ),
       );
     });
   });

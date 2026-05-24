@@ -173,33 +173,75 @@ extension ChallengeOrchestrator on SessionController {
   }
 
   /// Libellé d'objectif du défi (ex. « Tiens gorge 10 secondes ») —
-  /// affiché en sous-titre du banner UI pendant `live` pour
-  /// rappeler à la joueuse ce qu'elle doit faire. Pas dit en TTS (la
-  /// coach a déjà fait l'annonce pendant le breath).
+  /// affiché en sous-titre du banner UI pendant `live` pour rappeler à la
+  /// joueuse ce qu'elle doit faire. Pas dit en TTS (la coach a déjà fait
+  /// l'annonce pendant le breath).
+  ///
+  /// Dispatch par **axe** (pas par `kind` seul) : chaque axe pilotant a
+  /// son banner dédié pour décrire spécifiquement ce qu'on teste — sans
+  /// ce mapping, des axes très différents (endurance rythme vs apnée
+  /// gorge vs profondeur max) tombaient tous sur « Pousse ta limite » et
+  /// la joueuse n'avait aucune indication de ce qu'on lui demandait.
+  /// Cf. retour stefsub v0.5.0 sur la clarté des défis.
   String? challengeObjectiveText() {
     final ch = _activeChallenge;
     final l10n = _appLocalizations;
     if (ch == null || l10n == null) return null;
-    switch (ch.kind) {
-      case ChallengeAxisKind.duration:
-        if (ch.axis == CapabilityAxis.holdThroatStreak ||
-            ch.axis == CapabilityAxis.gorgeApneeStreak ||
-            ch.axis == CapabilityAxis.gorgeEngagementStreak) {
-          return l10n.challengeBannerHoldThroat(ch.targetThreshold);
-        }
-        if (ch.axis == CapabilityAxis.holdFullStreak) {
-          return l10n.challengeBannerHoldFull(ch.targetThreshold);
-        }
+    final t = ch.targetThreshold;
+    final crossings = ch.targetCrossings;
+    switch (ch.axis) {
+      // Tenues simples (durée).
+      case CapabilityAxis.holdThroatStreak:
+        return l10n.challengeBannerHoldThroat(t);
+      case CapabilityAxis.holdFullStreak:
+        return l10n.challengeBannerHoldFull(t);
+      // Modèle gorge — apnée vs engagement (mécaniques distinctes, banners
+      // distincts pour que la joueuse comprenne ce qu'on lui demande).
+      case CapabilityAxis.gorgeApneeStreak:
+        return l10n.challengeBannerGorgeApnee;
+      case CapabilityAxis.gorgeEngagementStreak:
+        return l10n.challengeBannerGorgeEngagement;
+      // Franchissements gorge — compteur de passages, pas durée. Affiche
+      // le nombre cible (`targetCrossings`) + BPM (`targetThreshold` =
+      // BPM cible). Fallback BPM seul si crossings absent (cas exploratoire).
+      case CapabilityAxis.gorgeCrossingsBpmThroat:
+        return crossings != null
+            ? l10n.challengeBannerGorgeCrossingsThroat(crossings, t)
+            : l10n.challengeBannerRhythmThroat(t);
+      case CapabilityAxis.gorgeCrossingsBpmFull:
+        return crossings != null
+            ? l10n.challengeBannerGorgeCrossingsFull(crossings, t)
+            : l10n.challengeBannerRhythmFull(t);
+      // Rythme BPM — banner par bande de profondeur (shallow/throat/full)
+      // pour que la joueuse sache l'amplitude visée, pas juste le BPM.
+      case CapabilityAxis.rhythmBpmCeilShallow:
+        return l10n.challengeBannerRhythmShallow(t);
+      case CapabilityAxis.rhythmBpmCeilThroat:
+        return l10n.challengeBannerRhythmThroat(t);
+      case CapabilityAxis.rhythmBpmCeilFull:
+        return l10n.challengeBannerRhythmFull(t);
+      // Profondeur — pousse d'un cran.
+      case CapabilityAxis.rhythmDepthMax:
+        return l10n.challengeBannerDepthMax;
+      // Endurance — durée d'effort sans pause / sans respi / sans avaler.
+      case CapabilityAxis.rhythmMotionStreak:
+        return l10n.challengeBannerMotionStreak(t);
+      case CapabilityAxis.effortNoBreathStreak:
+        return l10n.challengeBannerNoBreathStreak(t);
+      case CapabilityAxis.noswallowStreak:
+        return l10n.challengeBannerNoSwallowStreak(t);
+      // Biffle — durée ou BPM.
+      case CapabilityAxis.biffleStreak:
+        return l10n.challengeBannerBiffleStreak(t);
+      case CapabilityAxis.biffleBpmMax:
+        return l10n.challengeBannerBiffle(t);
+      // Axes non-pilotants ou cas non-couverts (ne devrait pas arriver via
+      // le flow normal, mais on garde un fallback générique).
+      // ignore: no_default_cases
+      default:
         if (ch.mode == SessionMode.hold) {
-          return l10n.challengeBannerHoldGeneric(ch.targetThreshold);
+          return l10n.challengeBannerHoldGeneric(t);
         }
-        return l10n.challengeBannerGeneric;
-      case ChallengeAxisKind.bpm:
-        if (ch.mode == SessionMode.biffle) {
-          return l10n.challengeBannerBiffle(ch.targetThreshold);
-        }
-        return l10n.challengeBannerRhythm(ch.targetThreshold);
-      case ChallengeAxisKind.depthCran:
         return l10n.challengeBannerGeneric;
     }
   }

@@ -649,6 +649,62 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String challengeBannerRhythmShallow(int bpm) {
+    return 'Shallow rhythm — ramp up to $bpm BPM';
+  }
+
+  @override
+  String challengeBannerRhythmThroat(int bpm) {
+    return 'Rhythm to the throat — ramp up to $bpm BPM';
+  }
+
+  @override
+  String challengeBannerRhythmFull(int bpm) {
+    return 'Rhythm all the way down — ramp up to $bpm BPM';
+  }
+
+  @override
+  String challengeBannerGorgeCrossingsThroat(int count, int bpm) {
+    return '$count crossings to the throat at $bpm BPM';
+  }
+
+  @override
+  String challengeBannerGorgeCrossingsFull(int count, int bpm) {
+    return '$count crossings all the way down at $bpm BPM';
+  }
+
+  @override
+  String get challengeBannerGorgeApnee =>
+      'Throat apnea — alternate holds and deep strokes';
+
+  @override
+  String get challengeBannerGorgeEngagement =>
+      'Keep the throat in play — holds and deep rhythms';
+
+  @override
+  String get challengeBannerDepthMax => 'Push the depth one notch in rhythm';
+
+  @override
+  String challengeBannerMotionStreak(int seconds) {
+    return 'Non-stop rhythm $seconds seconds — vary positions and BPM';
+  }
+
+  @override
+  String challengeBannerNoBreathStreak(int seconds) {
+    return '$seconds s without breathing — rhythm and holds';
+  }
+
+  @override
+  String challengeBannerNoSwallowStreak(int seconds) {
+    return 'Mouth open, tongue out — $seconds s without swallowing';
+  }
+
+  @override
+  String challengeBannerBiffleStreak(int seconds) {
+    return 'Take the slaps for $seconds seconds';
+  }
+
+  @override
   String challengeBannerBiffle(int bpm) {
     return 'Take the slaps up to $bpm BPM';
   }
