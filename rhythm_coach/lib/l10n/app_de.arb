@@ -258,7 +258,7 @@
   "challengeAttemptTutorialHoldThroat": "Erste Herausforderung: Du hältst tief fünf Sekunden. Drücke und halte HALTEN, lass deinen Finger auf dem Bildschirm. Wenn du vor dem Schwellenwert loslässt, ist es gescheitert. Am Schwellenwert wird die Taste grün: loslassen zum Beenden, oder weiterhalten um weiter zu pushen.",
   "challengeExtensionDefault": "Du kannst länger bleiben, wenn du willst, oder loslassen.",
   "challengeSuccessDefault": "Du hast bis zum Ende gehalten. Braves Mädchen.",
-  "challengeStopDefault": "Du hast aufgehört. Gut.",
+  "challengeStopDefault": "Du hast bis zum Schwellenwert gehalten. Gut gemacht.",
   "challengeFailDefault": "Du hast vor dem Schwellenwert nachgegeben. Kein Problem, beim nächsten Mal schaffst du es.",
   "challengeSkipDefault": "Wie du willst, wir heben es fürs nächste Mal auf.",
   "challengeBannerHoldThroat": "Halte tief {seconds} Sekunden",

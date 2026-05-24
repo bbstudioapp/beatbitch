@@ -618,7 +618,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get challengeSuccessDefault => 'You held it all the way. Good girl.';
 
   @override
-  String get challengeStopDefault => 'You chose to stop. Good.';
+  String get challengeStopDefault => 'You held to the threshold. Well done.';
 
   @override
   String get challengeFailDefault =>

@@ -620,7 +620,7 @@ class AppLocalizationsFr extends AppLocalizations {
       'Tu as tenu jusqu\'au bout. Bonne fille.';
 
   @override
-  String get challengeStopDefault => 'Tu as choisi d\'arrêter. Bien.';
+  String get challengeStopDefault => 'Tu as tenu jusqu\'au seuil. Bien.';
 
   @override
   String get challengeFailDefault =>

@@ -1213,7 +1213,7 @@ abstract class AppLocalizations {
   /// No description provided for @challengeStopDefault.
   ///
   /// In fr, this message translates to:
-  /// **'Tu as choisi d\'arrêter. Bien.'**
+  /// **'Tu as tenu jusqu\'au seuil. Bien.'**
   String get challengeStopDefault;
 
   /// No description provided for @challengeFailDefault.
