@@ -25,7 +25,7 @@ Les **portraits** des coachs vivent dans le sous-dossier `portraits/` (cf. la se
   "id":          "coach_03_jade",         // documentaire (résolu par nom de fichier)
   "name":        "Jade",                  // prénom du coach (pas localisé)
   "archetype":   "taquinSadique",         // bienveillant | strict | taquinSadique | brutal | hautain | sansPitie
-  "specialties": ["rythmeBiffle", "sloppy"],  // 0..N branches : endurance | profondeur | rythmeBiffle | obeissance | sloppy | resilience
+  "specialties": ["rythmeBiffle", "sloppy"],  // 0..N branches : endurance | profondeur | rythmeBiffle | obeissance | sloppy
 
   "tier":        3,                       // palier de coach (1..6) — détermine le déblocage
   "isPrincipal": true,                    // si true, c'est le Coach Principal du palier
@@ -34,26 +34,18 @@ Les **portraits** des coachs vivent dans le sous-dossier `portraits/` (cf. la se
 
   "requirements": {
     "requiresHands":            true,                          // toggle « inclure la main » actif
-    "minPlayerLevel":           13,                            // niveau global minimum requis
-    "mustHaveUnlockedBranches": ["profondeur"],                // 0..N branches à avoir investies (≥ 1 point)
-    "requiredBranchPoints":     { "resilience": 3, "sloppy": 2 }  // seuils par branche (AND)
+    "minPlayerLevel":           13                             // niveau global minimum requis
   }
 }
 ```
 
 Tous les champs sont **optionnels** : un champ absent = la valeur par défaut codée est conservée. Tu peux donc créer un fichier `coach_xx.json` ne contenant que `{ "tier": 4 }` pour ne changer que ça.
 
-### Différence `mustHaveUnlockedBranches` vs `requiredBranchPoints`
-
-- `mustHaveUnlockedBranches: ["profondeur"]` → "il faut **au moins 1 point** dans profondeur". Check binaire, simple.
-- `requiredBranchPoints: { "profondeur": 3 }` → "il faut **au moins 3 points** dans profondeur". Pour des coachs qui n'apparaissent que quand le joueur a réellement spécialisé. Si une branche est dans les deux, c'est `requiredBranchPoints` qui gagne (seuil plus strict).
-
-**Convention** : ne rédige dans le JSON que ce qui **diffère** du défaut. Réécrire `requiresHands: false` ou `mustHaveUnlockedBranches: []` partout est du bruit (ce sont les défauts de `CoachRequirement`). Pareil pour `requirements: {}` complètement vide → omettre la clé.
+**Convention** : ne rédige dans le JSON que ce qui **diffère** du défaut. Réécrire `requiresHands: false` partout est du bruit (c'est le défaut de `CoachRequirement`). Pareil pour `requirements: {}` complètement vide → omettre la clé.
 
 Défauts à ne pas répéter :
 - `requirements.requiresHands` → `false`
 - `requirements.minPlayerLevel` → `1`
-- `requirements.mustHaveUnlockedBranches` → `[]`
 - `portrait` → le chemin codé dans `CoachCatalog.defaults` (par convention `assets/career/coaches/portraits/<id>.png` pour les 6 coachs livrés). N'écrire la clé que pour pointer ailleurs.
 
 > ⚠ **Ne jamais renommer un `id`** : il sert de clé pour la sélection persistée des joueurs ET de nom de fichier asset. Le renommer = perdre toutes les sélections existantes.

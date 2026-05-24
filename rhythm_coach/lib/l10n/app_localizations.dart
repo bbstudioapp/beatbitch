@@ -550,6 +550,72 @@ abstract class AppLocalizations {
   /// **'pts de réputation'**
   String get profileReputationUnit;
 
+  /// No description provided for @reputationTierBonneEleve.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bonne élève'**
+  String get reputationTierBonneEleve;
+
+  /// No description provided for @reputationTierPetiteSuceuse.
+  ///
+  /// In fr, this message translates to:
+  /// **'Petite suceuse'**
+  String get reputationTierPetiteSuceuse;
+
+  /// No description provided for @reputationTierSuceuseConfirmee.
+  ///
+  /// In fr, this message translates to:
+  /// **'Suceuse confirmée'**
+  String get reputationTierSuceuseConfirmee;
+
+  /// No description provided for @reputationTierPuteReconnue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pute reconnue'**
+  String get reputationTierPuteReconnue;
+
+  /// No description provided for @reputationTierPuteConsacree.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pute consacrée'**
+  String get reputationTierPuteConsacree;
+
+  /// No description provided for @reputationTierReineDesSuceuses.
+  ///
+  /// In fr, this message translates to:
+  /// **'Reine des suceuses'**
+  String get reputationTierReineDesSuceuses;
+
+  /// No description provided for @reputationTierReineDesPutes.
+  ///
+  /// In fr, this message translates to:
+  /// **'Reine des putes'**
+  String get reputationTierReineDesPutes;
+
+  /// No description provided for @careerInvestmentBarTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Temps cumulé'**
+  String get careerInvestmentBarTitle;
+
+  /// No description provided for @careerInvestmentSessions.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count} séances'**
+  String careerInvestmentSessions(int count);
+
+  /// No description provided for @careerInvestmentNextCoach.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prochain coach : {name} ({remaining})'**
+  String careerInvestmentNextCoach(String name, String remaining);
+
+  /// No description provided for @careerInvestmentAllUnlocked.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tous les coachs débloqués.'**
+  String get careerInvestmentAllUnlocked;
+
   /// No description provided for @profileStatSessionsCompleted.
   ///
   /// In fr, this message translates to:
@@ -964,17 +1030,11 @@ abstract class AppLocalizations {
   /// **'Erreur de chargement :\n{error}'**
   String careerLoadError(String error);
 
-  /// No description provided for @careerLevelSection.
+  /// No description provided for @careerDurationSection.
   ///
   /// In fr, this message translates to:
-  /// **'Niveau'**
-  String get careerLevelSection;
-
-  /// No description provided for @careerMaxLevel.
-  ///
-  /// In fr, this message translates to:
-  /// **'max {level}'**
-  String careerMaxLevel(int level);
+  /// **'Durée'**
+  String get careerDurationSection;
 
   /// No description provided for @careerQuickieToggle.
   ///
@@ -993,6 +1053,222 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'6 min, intense tout du long. Pour quand t\'as pas le temps.'**
   String get careerQuickieDescription;
+
+  /// No description provided for @sessionLengthBacheeLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bâclée'**
+  String get sessionLengthBacheeLabel;
+
+  /// No description provided for @sessionLengthBacheeDuration.
+  ///
+  /// In fr, this message translates to:
+  /// **'~6 min'**
+  String get sessionLengthBacheeDuration;
+
+  /// No description provided for @sessionLengthBacheeDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Express, intense tout du long.'**
+  String get sessionLengthBacheeDescription;
+
+  /// No description provided for @sessionLengthCourteLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Courte'**
+  String get sessionLengthCourteLabel;
+
+  /// No description provided for @sessionLengthCourteDuration.
+  ///
+  /// In fr, this message translates to:
+  /// **'~12 min'**
+  String get sessionLengthCourteDuration;
+
+  /// No description provided for @sessionLengthCourteDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Format compact, un défi possible.'**
+  String get sessionLengthCourteDescription;
+
+  /// No description provided for @sessionLengthMoyenneLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Moyenne'**
+  String get sessionLengthMoyenneLabel;
+
+  /// No description provided for @sessionLengthMoyenneDuration.
+  ///
+  /// In fr, this message translates to:
+  /// **'~25 min'**
+  String get sessionLengthMoyenneDuration;
+
+  /// No description provided for @sessionLengthMoyenneDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Deux milestones max, du contenu varié.'**
+  String get sessionLengthMoyenneDescription;
+
+  /// No description provided for @sessionLengthLongueLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Longue'**
+  String get sessionLengthLongueLabel;
+
+  /// No description provided for @sessionLengthLongueDuration.
+  ///
+  /// In fr, this message translates to:
+  /// **'~45 min'**
+  String get sessionLengthLongueDuration;
+
+  /// No description provided for @sessionLengthLongueDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Séance pleine, plusieurs défis intercalés.'**
+  String get sessionLengthLongueDescription;
+
+  /// No description provided for @careerChallengesToggle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Défis intra-séance'**
+  String get careerChallengesToggle;
+
+  /// No description provided for @careerChallengesDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un défi opt-in vers 60 % de la séance. Calibre vite, peut faire monter le niveau plus rapidement.'**
+  String get careerChallengesDescription;
+
+  /// No description provided for @challengePassButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'PASSE'**
+  String get challengePassButton;
+
+  /// No description provided for @challengeGoButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'MAINTIENS'**
+  String get challengeGoButton;
+
+  /// No description provided for @challengeHoldHintLive.
+  ///
+  /// In fr, this message translates to:
+  /// **'Garde le doigt sur l\'écran'**
+  String get challengeHoldHintLive;
+
+  /// No description provided for @challengeHoldHintAtSeuil.
+  ///
+  /// In fr, this message translates to:
+  /// **'Relâche pour arrêter, ou continue'**
+  String get challengeHoldHintAtSeuil;
+
+  /// No description provided for @challengeHoldHintTolerance.
+  ///
+  /// In fr, this message translates to:
+  /// **'Repose ton doigt'**
+  String get challengeHoldHintTolerance;
+
+  /// No description provided for @challengeCountdownReleaseRetry.
+  ///
+  /// In fr, this message translates to:
+  /// **'Maintiens bien ton doigt cette fois.'**
+  String get challengeCountdownReleaseRetry;
+
+  /// No description provided for @challengeTutorialBanner.
+  ///
+  /// In fr, this message translates to:
+  /// **'Premier défi : tu vas tenir une position le temps demandé. Maintiens MAINTIENS quand tu es prête (garde le doigt), ou tape PASSE pour skipper.'**
+  String get challengeTutorialBanner;
+
+  /// No description provided for @challengeBannerCountdown.
+  ///
+  /// In fr, this message translates to:
+  /// **'{digit}'**
+  String challengeBannerCountdown(int digit);
+
+  /// No description provided for @challengeAttemptDefault.
+  ///
+  /// In fr, this message translates to:
+  /// **'Défi : on va pousser ta limite. Maintiens MAINTIENS quand tu es prête, je compterai trois deux un avant de démarrer. Garde le doigt sur l\'écran tant que tu tiens.'**
+  String get challengeAttemptDefault;
+
+  /// No description provided for @challengeAttemptTutorialHoldThroat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Premier défi : tu vas tenir en gorge cinq secondes. Maintiens MAINTIENS, garde le doigt sur l\'écran. Si tu lâches avant le seuil, c\'est raté. Au seuil, le bouton devient vert : relâche pour arrêter, ou continue à tenir pour aller plus loin.'**
+  String get challengeAttemptTutorialHoldThroat;
+
+  /// No description provided for @challengeExtensionDefault.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu peux rester encore si tu veux, ou relâcher.'**
+  String get challengeExtensionDefault;
+
+  /// No description provided for @challengeSuccessDefault.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu as tenu jusqu\'au bout. Bonne fille.'**
+  String get challengeSuccessDefault;
+
+  /// No description provided for @challengeStopDefault.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu as choisi d\'arrêter. Bien.'**
+  String get challengeStopDefault;
+
+  /// No description provided for @challengeFailDefault.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu as craqué avant le seuil. Pas grave, tu y arriveras la prochaine.'**
+  String get challengeFailDefault;
+
+  /// No description provided for @challengeSkipDefault.
+  ///
+  /// In fr, this message translates to:
+  /// **'Comme tu veux, on garde pour la prochaine.'**
+  String get challengeSkipDefault;
+
+  /// No description provided for @challengeBannerHoldThroat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tiens gorge {seconds} secondes'**
+  String challengeBannerHoldThroat(int seconds);
+
+  /// No description provided for @challengeBannerHoldFull.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tiens à fond {seconds} secondes'**
+  String challengeBannerHoldFull(int seconds);
+
+  /// No description provided for @challengeBannerHoldGeneric.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tiens la position {seconds} secondes'**
+  String challengeBannerHoldGeneric(int seconds);
+
+  /// No description provided for @challengeBannerRhythm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Monte le rythme jusqu\'à {bpm} BPM'**
+  String challengeBannerRhythm(int bpm);
+
+  /// No description provided for @challengeBannerBiffle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Encaisse les coups jusqu\'à {bpm} BPM'**
+  String challengeBannerBiffle(int bpm);
+
+  /// No description provided for @challengeBannerGeneric.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pousse ta limite'**
+  String get challengeBannerGeneric;
+
+  /// No description provided for @challengeBannerThresholdReached.
+  ///
+  /// In fr, this message translates to:
+  /// **'Seuil atteint — continue ou arrête'**
+  String get challengeBannerThresholdReached;
 
   /// No description provided for @careerIncludeHandToggle.
   ///
@@ -1042,22 +1318,16 @@ abstract class AppLocalizations {
   /// **'Sessions complétées : {count}'**
   String careerCompletedSessions(int count);
 
-  /// No description provided for @careerLevelLockedHint.
-  ///
-  /// In fr, this message translates to:
-  /// **'Niveau 1 (termine une séance pour débloquer le suivant)'**
-  String get careerLevelLockedHint;
-
   /// No description provided for @careerSessionName.
   ///
   /// In fr, this message translates to:
-  /// **'Carrière niveau {level}'**
+  /// **'Carrière'**
   String careerSessionName(int level);
 
   /// No description provided for @careerSessionNameQuickie.
   ///
   /// In fr, this message translates to:
-  /// **'Carrière niveau {level} — bâclée'**
+  /// **'Carrière — bâclée'**
   String careerSessionNameQuickie(int level);
 
   /// No description provided for @careerMilestonesBranchesPrefix.
@@ -1245,12 +1515,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'points disponibles'**
   String get specPointsAvailableLabel;
-
-  /// No description provided for @specLevelLabel.
-  ///
-  /// In fr, this message translates to:
-  /// **'Niveau {level}'**
-  String specLevelLabel(int level);
 
   /// No description provided for @specSpentLabel.
   ///
@@ -2596,12 +2860,6 @@ abstract class AppLocalizations {
   /// **'VERROUILLÉ'**
   String get coachBadgeLocked;
 
-  /// No description provided for @coachRequiresHands.
-  ///
-  /// In fr, this message translates to:
-  /// **'Mains obligatoires'**
-  String get coachRequiresHands;
-
   /// No description provided for @coachSummaryPrincipal.
   ///
   /// In fr, this message translates to:
@@ -2698,30 +2956,11 @@ abstract class AppLocalizations {
   /// **'Ce coach est encore verrouillé — atteins le palier {tier} pour le débloquer.'**
   String coachErrorLockedTier(int tier);
 
-  /// No description provided for @coachErrorRequiresHands.
+  /// No description provided for @coachErrorMinPlayerSeconds.
   ///
   /// In fr, this message translates to:
-  /// **'{coachName} a besoin que tu actives la main dans les options.'**
-  String coachErrorRequiresHands(String coachName);
-
-  /// No description provided for @coachErrorMinLevel.
-  ///
-  /// In fr, this message translates to:
-  /// **'{coachName} demande le niveau {minLevel} minimum.'**
-  String coachErrorMinLevel(String coachName, int minLevel);
-
-  /// No description provided for @coachErrorMissingSpecialization.
-  ///
-  /// In fr, this message translates to:
-  /// **'Ce coach demande au moins 1 point dans une spécialisation que tu n\'as pas investie.'**
-  String get coachErrorMissingSpecialization;
-
-  /// No description provided for @coachErrorInsufficientBranchPoints.
-  ///
-  /// In fr, this message translates to:
-  /// **'{coachName} demande : {requirements}. Investis tes points de spécialisation.'**
-  String coachErrorInsufficientBranchPoints(
-      String coachName, String requirements);
+  /// **'{coachName} se débloque à {duration} de jeu cumulé.'**
+  String coachErrorMinPlayerSeconds(String coachName, String duration);
 
   /// Annonce TTS post-finale_chime quand la milestone qui débloque sloppy_drool_basic est acquittée.
   ///
@@ -2752,12 +2991,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Quand tu vas profond, ta bouche déborde encore plus. Profite.'**
   String get unlockAnnouncementSloppyDroolDeep;
-
-  /// Annonce TTS post-finale_chime quand la milestone qui débloque rhythm_head_mid_sustained est acquittée.
-  ///
-  /// In fr, this message translates to:
-  /// **'Tu peux tenir la cadence plus d\'une minute maintenant, sans pause. Je te le demanderai.'**
-  String get unlockAnnouncementRhythmHeadMidSustained;
 
   /// Tooltip de l'icône de notification dans l'AppBar du ModeSelectionScreen.
   ///

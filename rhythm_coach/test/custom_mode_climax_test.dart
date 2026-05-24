@@ -1,9 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:beat_bitch/career/models/career_generation_inputs.dart';
 import 'package:beat_bitch/career/models/phrase_bank.dart';
-import 'package:beat_bitch/career/models/unlock_key.dart';
-import 'package:beat_bitch/career/services/career_session_generator.dart';
+import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
 import 'package:beat_bitch/models/session.dart';
-import 'package:beat_bitch/models/session_step.dart';
 
 /// Garde-fou issue #43 : en mode Custom (= `unlockedKeys` vide, convention
 /// « mode hérité »), le `_pickFinal` du générateur doit promouvoir le final
@@ -54,7 +53,7 @@ void main() {
           humiliationCareer: 400.0,
           humiliationSession: 0.0,
           obedience: 100.0,
-          intensityFloorOverride: 0.45,
+          custom: const CustomOverrides(intensityFloor: 0.45),
         );
         final f = _finalStep(result.session);
         expect(f.mode, SessionMode.hold,
@@ -80,7 +79,7 @@ void main() {
         durationSeconds: 12 * 60,
         unlockedKeys: const {},
         humiliationCareer: 400.0,
-        maxDepthIndexOverride: Position.throat.index,
+        custom: CustomOverrides(maxDepthIndex: Position.throat.index),
       );
       final f = _finalStep(result.session);
       expect(f.mode, SessionMode.hold);

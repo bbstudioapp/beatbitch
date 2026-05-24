@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../career/services/career_difficulty_resolver.dart';
 import '../career/services/career_progress_service.dart';
+import '../career/services/challenge_service.dart';
 import '../career/services/custom_config_service.dart';
 import '../career/services/debug_settings_service.dart';
 import '../career/services/specialization_service.dart';
@@ -54,6 +56,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final CareerProgressService _career = CareerProgressService();
   final SpecializationService _spec = SpecializationService();
   final CustomConfigService _customConfigs = CustomConfigService();
+  final ChallengeService _challenges = ChallengeService();
   late Future<_ProfileBundle> _bundleFuture;
   bool _resetting = false;
 
@@ -111,6 +114,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       coachService.resetAll(),
       milestoneService.resetAll(),
       _customConfigs.resetAll(),
+      _challenges.resetAll(),
     ]);
     if (!mounted) return;
     setState(() {
@@ -146,7 +150,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             );
           }
           final bundle = snapshot.data!;
-          final level = bundle.reputation.maxLevel;
+          // SynthLevel dérivé des sessions (cf. Phase 19) — conserve
+          // l'affichage du titre level historique.
+          final level = CareerDifficultyResolver.synthLevelFor(
+              bundle.reputation.stats.sessionsCompleted);
           final title = localizedCareerLevelTitle(context, level);
 
           return ListView(
@@ -156,6 +163,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 title: title,
                 level: level,
                 score: bundle.reputation.score,
+                tier: bundle.reputation.tier,
               ),
               const SizedBox(height: 24),
               _SectionLabel(t.soundsIdentitySection),
@@ -443,11 +451,13 @@ class _ReputationCard extends StatelessWidget {
   final String title;
   final int level;
   final int score;
+  final ReputationTier tier;
 
   const _ReputationCard({
     required this.title,
     required this.level,
     required this.score,
+    required this.tier,
   });
 
   @override
@@ -496,6 +506,16 @@ class _ReputationCard extends StatelessWidget {
               fontWeight: FontWeight.w800,
               color: AppTheme.textPrimary,
               letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            tier.localizedLabel(context),
+            style: TextStyle(
+              fontSize: 14,
+              fontStyle: FontStyle.italic,
+              color: AppTheme.accent.withValues(alpha: 0.85),
+              letterSpacing: 0.3,
             ),
           ),
           const SizedBox(height: 18),

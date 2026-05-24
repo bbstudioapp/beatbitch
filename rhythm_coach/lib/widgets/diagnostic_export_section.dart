@@ -273,7 +273,7 @@ Future<_DeliverOutcome> _deliver({
     await FileSaver.instance.saveFile(
       name: filename.replaceAll('.json', ''),
       bytes: bytes,
-      ext: 'json',
+      fileExtension: 'json',
       mimeType: MimeType.json,
     );
     return _DeliverOutcome.saved;
@@ -281,16 +281,18 @@ Future<_DeliverOutcome> _deliver({
   switch (defaultTargetPlatform) {
     case TargetPlatform.android:
     case TargetPlatform.iOS:
-      await Share.shareXFiles(
-        [
-          XFile.fromData(
-            bytes,
-            mimeType: 'application/json',
-            name: filename,
-          ),
-        ],
-        subject: subject,
-        fileNameOverrides: [filename],
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [
+            XFile.fromData(
+              bytes,
+              mimeType: 'application/json',
+              name: filename,
+            ),
+          ],
+          subject: subject,
+          fileNameOverrides: [filename],
+        ),
       );
       return _DeliverOutcome.shared;
     case TargetPlatform.linux:

@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:beat_bitch/career/models/career_generation_inputs.dart';
 import 'package:beat_bitch/career/models/phrase_bank.dart';
-import 'package:beat_bitch/career/services/career_session_generator.dart';
-import 'package:beat_bitch/models/session.dart';
+import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
 
 List<PhraseEntry> _p(List<String> texts) =>
     texts.map((t) => PhraseEntry(text: t)).toList();
@@ -43,7 +43,7 @@ void main() {
           durationSeconds: 12 * 60,
           humiliationCareer: 400.0,
           obedience: 100.0,
-          bpmRange: (lo, hi),
+          custom: const CustomOverrides(bpmRange: (lo, hi)),
         );
         for (final step in result.session.steps) {
           if (step.isTextOnly) continue;
@@ -71,7 +71,7 @@ void main() {
           durationSeconds: 12 * 60,
           humiliationCareer: 400.0,
           obedience: 100.0,
-          holdDurationRange: (lo, hi),
+          custom: const CustomOverrides(holdDurationRange: (lo, hi)),
         );
         for (final step in result.session.steps) {
           if (step.isTextOnly) continue;
@@ -96,7 +96,7 @@ void main() {
         bank: _bank(),
         durationSeconds: 8 * 60,
         humiliationCareer: 400.0,
-        bpmRange: (140, 80),
+        custom: const CustomOverrides(bpmRange: (140, 80)),
       );
       // Aucun crash + BPM dans [80, 140] sur les rythmés.
       for (final step in result.session.steps) {

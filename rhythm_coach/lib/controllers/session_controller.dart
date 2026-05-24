@@ -4,16 +4,16 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
+import '../career/models/career_generation_inputs.dart';
+import '../career/models/challenge.dart';
 import '../career/models/level_milestone.dart';
 import '../career/models/phrase_bank.dart';
-import '../career/models/specialization.dart';
-import '../career/models/unlock_key.dart';
-import '../career/services/career_session_generator.dart';
+import '../career/services/generation/career_session_generator.dart';
+import '../career/services/specialization_service.dart';
 import '../l10n/app_localizations.dart';
 import '../main.dart' show milestoneService;
 import '../models/punishment.dart';
 import '../models/session.dart';
-import '../models/session_step.dart';
 import '../services/ambience_engine.dart';
 import '../services/backgrounds_service.dart';
 import '../services/badge_service.dart';
@@ -30,6 +30,10 @@ import '../services/saliva_engine.dart';
 import '../services/stamina_engine.dart';
 import '../services/stats_service.dart';
 import '../services/tts_service.dart';
+
+part 'session_controller_challenge.dart';
+part 'session_controller_fail_flow.dart';
+part 'session_controller_career_hooks.dart';
 
 enum SessionState { idle, running, paused, finished, failing }
 
@@ -92,7 +96,15 @@ class SessionController extends ChangeNotifier {
   /// carrière (Phase 5). Vide hors carrière → la génération de punition est
   /// inhibée par `_generateCareerPunishmentOrNull` de toute façon, mais on
   /// reste cohérent : pas de set partiel.
-  final Set<UnlockKey> _unlockedKeys;
+  ///
+  /// Mutable (non `final`) : se met à jour quand un défi acquitte
+  /// silencieusement des milestones intra-séance (cf.
+  /// `_finalizeChallengeAcquittals`). Les filtres runtime
+  /// (`random_comments.pickFor`, punition carrière) voient le nouvel
+  /// unlock immédiatement après le défi. La régénération des steps à
+  /// venir, elle, est portée par le caller via `onPostChallengeRegen`
+  /// (déclenché seulement quand le set s'élargit réellement).
+  Set<UnlockKey> _unlockedKeys;
 
   /// Mirroir du toggle `hand` propagé au générateur principal — repassé au
   /// générateur de punition carrière (Phase 5) pour exclure les compositions
@@ -222,7 +234,6 @@ class SessionController extends ChangeNotifier {
   /// peut être réarmé entre l'await et le check, et l'ancien flow continue
   /// son chemin par-dessus le nouveau.
   int _failGen = 0;
-  bool _isFailFlowAlive(int gen) => _failActive && _failGen == gen;
 
   Timer? _punishmentTicker;
 
@@ -231,6 +242,120 @@ class SessionController extends ChangeNotifier {
   /// passer par `_failActive` (qui couperait tout le flow fail).
   Completer<void>? _punishmentCompleter;
   bool _punishmentAbandoned = false;
+
+  // ─── État du défi intra-séance (Phase 1) ──────────────────────────────
+
+  /// Phase courante du défi. `none` quand aucun défi n'est en cours
+  /// (cas par défaut, hors carrière, ou avant/après la fenêtre défi).
+  ChallengePhase _challengePhase = ChallengePhase.none;
+  ChallengePhase get challengePhase => _challengePhase;
+
+  /// Seconde absolue de début du step défi (matérialisée). Sert au calcul
+  /// `elapsedInChallengeStep = elapsedSeconds - _challengeStepStartedAtSec`
+  /// pour piloter les transitions de phase.
+  int? _challengeStepStartedAtSec;
+
+  /// Seconde absolue (wallclock `_realSec`) d'entrée en phase `atSeuil`.
+  /// Sert à dériver le compteur d'extensions : tant que la joueuse maintient
+  /// le doigt au-delà du seuil, chaque tranche `ch.extensionSeconds` au-dessus
+  /// de ce point vaut +1 extension (bumps +1 humil/+1 obed au `_finish`).
+  int? _challengeAtSeuilStartedAtSec;
+
+  /// True tant qu'un doigt (touch) ou la touche espace (desktop) est présent
+  /// pendant un défi. Pilote les transitions :
+  /// - `breath` : la pression initiale sur GO démarre le countdown
+  /// - `countdown`/`live` : la perte du doigt arme la tolérance
+  /// - `atSeuil` : le release ferme le défi avec netSuccess/extendedSuccess
+  bool _challengeHoldActive = false;
+  bool get challengeHoldActive => _challengeHoldActive;
+
+  /// Seconde absolue (wallclock `_realSec`) à laquelle le doigt a décroché
+  /// pendant un défi actif. `null` quand le doigt est présent OU quand on
+  /// est en phase qui ne dépend pas du hold (`breath`, `ended`, `none`).
+  /// Sert au calcul de la tolérance 1 s avant fail.
+  int? _challengeReleaseAtRealSec;
+
+  /// Compteur de releases pendant le countdown 3-2-1 pour le défi courant.
+  /// Le 1er release ramène en `breath` avec une annonce pédagogique
+  /// (« tu dois maintenir le doigt »). Le 2e release au même défi vaut
+  /// `skipped` (PASSE silencieux). Reset à chaque entrée en `none`.
+  int _challengeCountdownReleaseCount = 0;
+
+  /// Compteur de `JE TIENS ENCORE` acquis. Au `_finish` : +1 humil/+1 obed
+  /// par extension (cf. spec § 5.2 succès étendu). Posé par
+  /// `_completeChallenge` à partir de la durée tenue au-delà du seuil
+  /// (`tranches = (releaseAt - atSeuilEnteredAt) ÷ ch.extensionSeconds`).
+  int _challengeExtensionsCount = 0;
+
+  /// Compteur de franchissements gorge atteints depuis le début de la
+  /// phase `live` du défi courant. Incrémenté dans `_handleBeat` quand le
+  /// beat émis matche la position cible du défi (`Challenge.to`). Sert à
+  /// déclencher la bascule en `atSeuil` quand `Challenge.targetCrossings`
+  /// est posé — alternative à la durée nominale pour les défis dont la
+  /// rampe BPM rend la durée trompeuse.
+  int _challengeCrossingsCount = 0;
+  int get challengeCrossingsCount => _challengeCrossingsCount;
+
+  /// Outcome du défi courant (= dernier défi armé) — posé par les triggers
+  /// (skipped/fail/netSuccess/extendedSuccess) ou par `_finish` via
+  /// timeout. Null entre 2 défis ou quand aucun défi n'a encore été armé.
+  /// Pour la multi-défi (Phase 19.5.b), l'historique complet est dans
+  /// [_completedChallenges] — `_challengeOutcome` reflète seulement le
+  /// défi en cours / qui vient de se terminer.
+  ChallengeOutcome? _challengeOutcome;
+
+  /// Index du défi actif dans `_session.challenges` (-1 = aucun défi en
+  /// cours). Sert à savoir lequel des N défis est armé et à le marquer
+  /// comme « traité » à la fin du breath post-défi pour que le suivant
+  /// puisse être armé à son trigger time.
+  int _activeChallengeIndex = -1;
+
+  /// Set d'index de défis déjà acquittés (`_completeChallenge` appelé pour
+  /// eux). Sert à éviter de re-armer un défi qui a déjà été traité, dans
+  /// le cas où la session reboucle sur le même `breathStartTime` après un
+  /// rebase de timeline. Persiste sur toute la session.
+  final Set<int> _completedChallengeIndices = <int>{};
+
+  /// Historique des défis complétés (outcome + extensions) pour appliquer
+  /// les bumps humil/obed multi-défi au `_finish`. Push à chaque
+  /// `_completeChallenge`. Une entrée par défi armé qui a abouti
+  /// (succès/fail/skip/timeout).
+  final List<_CompletedChallengeRecord> _completedChallenges =
+      <_CompletedChallengeRecord>[];
+
+  /// Phrase coach à afficher pendant la fenêtre défi (annonce / extension /
+  /// outcome). Posée par les transitions de phase ; null si le coach n'a
+  /// pas de phrase pour l'axe (l'UI retombe alors sur les libellés
+  /// localisés via `AppLocalizations`).
+  String? _challengeCurrentText;
+
+  /// Miroir de la dernière `_challengeCurrentText` qui a effectivement été
+  /// envoyée au TTS via `_speakChallengePhraseIfAny`. Permet de re-tenter
+  /// la prononciation au tick suivant si le TTS était occupé (random
+  /// comment en cours, phrase scriptée précédente non terminée) au moment
+  /// de la transition de phase défi — sans risquer de prononcer deux fois
+  /// la même phrase.
+  String? _challengeSpokenText;
+
+  /// Snapshot du défi de la séance courante (clone de `session.challenge`).
+  /// Posé au `start()` ou au `_checkSteps` quand on entre dans le breath.
+  Challenge? _activeChallenge;
+
+  /// Seconde absolue à laquelle la phase `countdown` (3-2-1) démarre.
+  /// `null` tant qu'on n'y est pas. Sert au calcul du chiffre courant
+  /// (3 → 2 → 1) côté UI et au déclenchement TTS dans `_updateChallengePhase`.
+  int? _challengeCountdownStartedAtSec;
+
+  /// Dernier chiffre du countdown énoncé en TTS. Évite de dire 2× le
+  /// même chiffre dans le même tick (le ticker tourne à 200 ms).
+  int _challengeCountdownLastDigitSpoken = -1;
+
+  /// Temps réel écoulé depuis le start de la session, en secondes (fraction
+  /// préservée). Lit `_stopwatch.elapsed` brut sans `_timelineOffset` — ne
+  /// suit donc PAS le freeze imposé pendant les défis. Sert exclusivement à
+  /// piloter la machine d'états défi (durée du countdown, du step, du
+  /// timeout atSeuil) indépendamment du gel du timer session.
+  double get _realSec => _stopwatch.elapsedMilliseconds / 1000.0;
 
   // ─── Commentaires aléatoires ───────────────────────────────────────────
 
@@ -257,17 +382,57 @@ class SessionController extends ChangeNotifier {
     _appLocalizations = l10n;
   }
 
+  /// Wrapper privé sur `notifyListeners()` accessible depuis les extensions
+  /// `ChallengeOrchestrator` (`session_controller_challenge.dart`),
+  /// `FailFlowOrchestrator` (`session_controller_fail_flow.dart`) et
+  /// `CareerHooksOrchestrator` (`session_controller_career_hooks.dart`).
+  /// L'annotation `@protected` de `ChangeNotifier.notifyListeners` ne
+  /// permet l'appel que depuis l'intérieur d'une sous-classe, pas depuis
+  /// une extension — d'où ce passe-plat.
+  void _notify() => notifyListeners();
+
   /// Callback déclenché par `triggerFail` quand l'utilisatrice rate dans
   /// la fenêtre milestone et qu'un retry est encore disponible. Retourne
   /// `true` si le retry a été pris en charge (le contrôleur saute alors
   /// le flow fail standard). Set depuis `SessionScreen`.
   Future<bool> Function(SessionController controller)? onMilestoneRetry;
 
+  /// Callback déclenché par `_finalizeChallengeAcquittals` lorsqu'un défi
+  /// vient d'élargir le set d'unlocks acquittés (au moins une milestone
+  /// acquittée silencieusement via `markCompletedViaChallenge`). Le caller
+  /// est attendu pour régénérer le reste de la séance avec les nouveaux
+  /// unlocks et appeler `requestPostChallengeRegen` — sinon la timeline
+  /// continue avec le contenu généré au start (qui ne sait rien des
+  /// nouveaux unlocks). No-op si non set (sessions hors carrière, tests).
+  Future<void> Function(SessionController controller)? onPostChallengeRegen;
+
+  /// Callback déclenché à la fin de tout défi (peu importe l'outcome :
+  /// fail / netSuccess / extendedSuccess / skipped / timeout). Le caller
+  /// l'utilise pour persister un compteur d'essais par axe — fait monter
+  /// la cible « franchissements » du défi suivant sur le même axe (cf.
+  /// `ChallengeService.attemptsCount` / `crossingsTargetForAttempts`).
+  /// No-op si non set.
+  void Function(Challenge challenge, ChallengeOutcome outcome)?
+      onChallengeOutcome;
+
+  /// Callback haptic du défi. Émis par le contrôleur sur les transitions
+  /// clés du gameplay hold-to-keep : `light` à l'entrée seuil et à chaque
+  /// extension franchie, `heavy` au fail par tolérance épuisée. Câblé par
+  /// la UI à `HapticFeedback.{light,heavy}Impact()`. No-op si non set
+  /// (tests, sessions hors widget tree).
+  void Function(ChallengeHapticKind kind)? onChallengeHaptic;
+
   /// Allocation de spécialisation courante. Consommée par la génération de
   /// punition carrière contextuelle (`_generateCareerPunishmentOrNull` →
   /// `CareerSessionGenerator.generatePunishment`). Null = pas de spé connue
   /// (sessions hors carrière).
   final SpecializationAllocation? _specialization;
+
+  /// Service spécialisation — pour consommer la tête de la file showcase
+  /// au `_finish` quand le défi de la séance a effectivement matché la
+  /// branche fraîchement boostée (cf. spec § 5.1 cascade). Null hors
+  /// carrière (le SessionController fonctionne sans consume).
+  final SpecializationService? _specializationService;
 
   /// Probabilité par minute qu'une mini-punition inopinée se déclenche en
   /// cours de séance. Dérivée de la personnalité du coach (cf.
@@ -329,6 +494,7 @@ class SessionController extends ChangeNotifier {
     List<double>? staminaProfile,
     HoldVerifier? holdVerifier,
     SpecializationAllocation? specialization,
+    SpecializationService? specializationService,
     double miniPunishmentRate = 0.0,
     double seedHumiliationSession = 0.0,
     int careerLevel = 0,
@@ -352,12 +518,13 @@ class SessionController extends ChangeNotifier {
         _staminaProfile = staminaProfile,
         _holdVerifier = holdVerifier,
         _specialization = specialization,
+        _specializationService = specializationService,
         _miniPunishmentRate = miniPunishmentRate,
         _seedHumiliationSession = seedHumiliationSession,
         _careerLevel = careerLevel,
         _capabilityOverloadAxis = capabilityOverloadAxis,
         _capabilityProfile = capabilityProfile,
-        _unlockedKeys = unlockedKeys,
+        _unlockedKeys = Set<UnlockKey>.from(unlockedKeys),
         _includeHand = includeHand,
         _isQuickie = isQuickie,
         _coachTag = coachTag {
@@ -464,11 +631,35 @@ class SessionController extends ChangeNotifier {
   }
 
   void _handleBeat(BeatEvent e) {
-    if (!_session.noStats) {
+    // Pendant un défi : ne pas accumuler les stats lifetime (throatfucks,
+    // biffles, mode utilisé). Le défi est une événement exceptionnel
+    // (surcharge calibrée × 1.50), pas une pratique standard — un défi
+    // rhythm head→throat à 120 BPM sur 45 s consomme 90 beats et gonfle
+    // artificiellement le compteur throatfucks. L'imputation capability
+    // se fait séparément par le `CapabilityTracker` qui voit le step
+    // défi comme tout autre step.
+    if (!_session.noStats && !isChallengeActive) {
       _stats.recordBeat(mode: e.mode, to: e.to);
       _stats.markModeUsed(e.mode);
+    } else {
+      _onChallengeBeatIfCrossingsTracked(e);
     }
     _stamina.onBeat(e);
+  }
+
+  /// Incrémente [_challengeCrossingsCount] quand le défi est en `live` et
+  /// que le beat émis atteint la position cible du défi.
+  /// No-op hors phase de comptage ou si le défi ne pilote pas un compteur
+  /// (`targetCrossings == null`).
+  void _onChallengeBeatIfCrossingsTracked(BeatEvent e) {
+    final ch = _activeChallenge;
+    if (ch == null || ch.targetCrossings == null) return;
+    if (_challengePhase != ChallengePhase.live) {
+      return;
+    }
+    final target = ch.to;
+    if (target == null) return;
+    if (e.to == target) _challengeCrossingsCount++;
   }
 
   /// Vrai si l'utilisatrice a cliqué au moins une fois sur FAIL pendant
@@ -486,6 +677,13 @@ class SessionController extends ChangeNotifier {
   List<BadgeUnlock> _sessionBadgeUnlocks = const [];
   List<BadgeUnlock> get sessionBadgeUnlocks => _sessionBadgeUnlocks;
 
+  /// Liste des paliers nouvellement franchis, calculée par `_finish` mais
+  /// gardée en attente jusqu'à `revealBadgeUnlocks()` (cf. extension
+  /// `CareerHooksOrchestrator`). On préserve la même API publique
+  /// (`sessionBadgeUnlocks`) une fois la révélation faite, pour que l'UI
+  /// continue de pouvoir consommer la liste.
+  List<BadgeUnlock> _pendingBadgeUnlocks = const [];
+
   /// Milestones acquittées **dans cette séance** (= viennent d'être
   /// `markCompleted` sans fail, n'étaient pas déjà acquittées avant).
   /// Vide tant que [_finish] n'a pas terminé son acquittement. Consommé
@@ -495,8 +693,9 @@ class SessionController extends ChangeNotifier {
   List<LevelMilestone> get sessionMilestoneUnlocks => _sessionMilestoneUnlocks;
 
   /// True si au moins une milestone vient d'être acquittée pendant cette
-  /// séance (consulté après [_finish] par le caller pour décider du
-  /// level-up via `CareerProgressService.canLevelUp`).
+  /// séance. Consulté pour la cosmétique post-séance (badges, annonces)
+  /// — Phase 19.12 a retiré l'utilisation pour le level-up qui n'existe
+  /// plus.
   bool get milestoneAcquittedThisSession => _sessionMilestoneUnlocks.isNotEmpty;
 
   /// True si la séance avait au moins une milestone candidate planifiée
@@ -799,6 +998,21 @@ class SessionController extends ChangeNotifier {
     _hadFailThisSession = false;
     _currentHoldFullDuration = 0;
     _lastHoldTickAtSecond = -1;
+    // Phase 1 défis — reset complet de la machine d'états.
+    _challengePhase = ChallengePhase.none;
+    _challengeStepStartedAtSec = null;
+    _challengeAtSeuilStartedAtSec = null;
+    _challengeHoldActive = false;
+    _challengeReleaseAtRealSec = null;
+    _challengeCountdownReleaseCount = 0;
+    _challengeExtensionsCount = 0;
+    _challengeOutcome = null;
+    _challengeCurrentText = null;
+    _challengeSpokenText = null;
+    _activeChallenge = null;
+    _challengeCountdownStartedAtSec = null;
+    _challengeCountdownLastDigitSpoken = -1;
+    _postChallengeBreathRealEndSec = null;
     notifyListeners();
   }
 
@@ -834,9 +1048,29 @@ class SessionController extends ChangeNotifier {
   }
 
   void _onTick() {
+    // `_updateChallengePhase` AVANT `_checkSteps` : si on franchit la fin
+    // nominale du step défi à ce tick, la phase doit basculer en `atSeuil`
+    // avant que `_checkSteps` ne consomme le step suivant naturel — sinon
+    // on enchaîne sur autre chose (rythme → hold head…) alors que l'UI
+    // attend toujours la décision joueuse au seuil.
+    _updateChallengePhase();
     _checkSteps();
     _accrueHoldSecond();
     _checkProgressMarkers();
+    // Freeze la timeline session pendant TOUTE la durée du défi (breath
+    // d'attente joueuse + countdown + step défi + atSeuil + extensions +
+    // breath post-défi). Le défi est intégralement hors du décompte de
+    // session — c'est un bonus skippable qui ne consomme jamais de temps
+    // de séance, peu importe combien la joueuse attend / prolonge.
+    //
+    // Les transitions internes (live → atSeuil, tolérance de release, fin
+    // du breath post-défi) sont mesurées sur `_realSec` (= `_stopwatch.elapsed`
+    // brut, jamais freezé) pour rester indépendantes de ce gel — sans
+    // cela, `_inPostChallengeBreath` ne se terminerait jamais (son seuil
+    // ne serait jamais franchi par un `elapsedSeconds` gelé).
+    if (isChallengeActive || _inPostChallengeBreath) {
+      _timelineOffset -= _tickInterval;
+    }
     if (elapsedSeconds >= session.durationSeconds) {
       _finish();
       return;
@@ -968,6 +1202,17 @@ class SessionController extends ChangeNotifier {
   }
 
   void _checkSteps() {
+    // Phase 1 défis — quand la joueuse est au-delà du seuil (`atSeuil`)
+    // et continue de tenir, on ne consomme pas les steps suivants : la
+    // séance reste freezée sur le step défi qui continue à jouer son
+    // loop tant que le doigt est présent.
+    if (_challengePhase == ChallengePhase.atSeuil) {
+      return;
+    }
+    // Pareil pendant le breath de récup post-défi : le BeepEngine joue
+    // un breath, le coach fait son rapport, la joueuse souffle. Le step
+    // suivant attend.
+    if (_inPostChallengeBreath) return;
     final s = elapsedSeconds;
     var modeChanged = false;
     while (_nextStepIndex < session.steps.length &&
@@ -1018,6 +1263,11 @@ class SessionController extends ChangeNotifier {
         }
       }
 
+      // Phase 1 défis — la machine d'états est désormais drivée par
+      // `_updateChallengePhase` (appelée dans `_onTick`) sur la base
+      // d'`elapsedSeconds` vs `session.challengeBreathStartTime` /
+      // `challengeStepTime`. Plus de transition basée sur la consommation
+      // de step (fragile au timing TTS / différé `_timelineOffset`).
       if (!step.isTextOnly) {
         // Avant de changer de mode : si on quittait un hold full, on crédite
         // sa durée pour le badge Iron Lungs (uniquement quand le hold est
@@ -1115,10 +1365,17 @@ class SessionController extends ChangeNotifier {
   /// [_lastSpokenResolvedText] : ainsi l'UI peut afficher exactement ce
   /// qui a été prononcé (le resolver re-tirerait un surnom différent si
   /// on l'appelait depuis le widget).
-  void _speakScripted(String text) {
+  ///
+  /// [trackForDisplay] : `false` pour les énoncés courts/techniques qui
+  /// ne doivent pas rester affichés dans le panneau d'instruction (ex.
+  /// chiffres du countdown défi « 3 », « 2 », « 1 » — sinon « 1 » reste
+  /// scotché à l'écran pendant tout le step défi).
+  void _speakScripted(String text, {bool trackForDisplay = true}) {
     _lastScriptedSpeakAt = DateTime.now();
     final resolved = _tts.resolveText(text);
-    _lastSpokenResolvedText = resolved;
+    if (trackForDisplay) {
+      _lastSpokenResolvedText = resolved;
+    }
     if (_tts.isSpeaking) {
       _tts.stop().then((_) => _tts.speak(resolved));
     } else {
@@ -1152,6 +1409,18 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
     await _beep.playFinaleChime(category: session.finalCategory);
   }
+
+  /// Instant **wallclock** (`_realSec.toInt()`-style) à partir duquel le
+  /// breath de récup post-défi expire. `null` = pas de breath en cours.
+  /// Pendant cette fenêtre, `_checkSteps` ne consomme aucun step suivant
+  /// ET la timeline session est freezée (cf. `_onTick`) — le défi entier
+  /// (breath d'annonce + step + post-défi breath) est gratuit du point de
+  /// vue du timer de séance. La sémantique wallclock est nécessaire pour
+  /// que le freeze fonctionne : si on indexait sur `elapsedSeconds`,
+  /// celui-ci ne dépasserait jamais le seuil tant qu'on freeze et le
+  /// breath ne se terminerait pas. Les getters dérivés et la machine
+  /// d'états vivent dans le `part` `session_controller_challenge.dart`.
+  int? _postChallengeBreathRealEndSec;
 
   Future<void> _finish() async {
     _stopwatch.stop();
@@ -1216,14 +1485,12 @@ class SessionController extends ChangeNotifier {
       await _stats.setObedienceLevel(_obedience.score);
     }
 
-    // Acquittement milestone AVANT le bascule en `finished` : sans ça,
-    // `_recordCareerCompletion` côté SessionScreen (déclenché par le
-    // notifyListeners de l'isFinished) appelle `recordSessionCompleted`
-    // sur un `canLevelUp` qui retourne false (la milestone du niveau
-    // courant est encore pending) → le niveau ne s'incrémente jamais.
-    // Le bonus humiliation +2 d'unlock est appliqué ici, mais l'annonce
-    // TTS est déplacée APRÈS le bascule (sinon notifyListeners attend la
-    // fin de l'announce).
+    // Acquittement milestone AVANT le bascule en `finished` : pose les
+    // bonus immédiatement et alimente `_pendingBadgeUnlocks` avant que
+    // `_FinishedPanel` ne capture son état initial. Le bonus humiliation
+    // +2 d'unlock est appliqué ici, mais l'annonce TTS est déplacée
+    // APRÈS le bascule (sinon notifyListeners attend la fin de
+    // l'announce).
     String? milestoneAnnouncement;
     // Body milestone (insertion en milieu de séance) et final milestone
     // (placement `finalApotheose`, en remplacement de la phase finish)
@@ -1257,7 +1524,30 @@ class SessionController extends ChangeNotifier {
     await markIfPresent(session.finalMilestoneId, isFinal: true);
     _sessionMilestoneUnlocks = List<LevelMilestone>.unmodifiable(newlyUnlocked);
 
+    // Phase 1 défis — applique les bumps humil/obed liés à l'outcome
+    // (cf. spec § 5.2 / 5.3). Posé après les bonus milestone pour
+    // s'additionner au careerScore avant la persistance ci-dessous.
+    _applyChallengeOutcome();
+
+    // L'acquittement silencieux des milestones via défi (`§ 5.4`) et le
+    // consume showcase (`§ 5.1`) sont désormais faits **dès la fin du défi**
+    // dans `_completeChallenge → _finalizeChallengeAcquittals`, pour que
+    // les unlocks débloqués pendant la séance soient visibles avant la
+    // fin de session (et pour la séance suivante). Idempotent : la
+    // séance peut se terminer avant que le défi ne s'achève (cas rare —
+    // session courte + défi sur fin de fenêtre), auquel cas
+    // `_finalizeChallengeAcquittals` n'a pas eu lieu et on rattrape ici.
+    if (_challengePhase != ChallengePhase.ended && _challengeOutcome != null) {
+      await _acquitMilestonesViaChallenge();
+      await _consumeShowcaseIfMatched();
+    }
     if (!_session.noStats) {
+      // Repersiste l'obédiance si elle a bougé via l'outcome défi
+      // (le `setObedienceLevel` ci-dessus a été appelé AVANT
+      // `_applyChallengeOutcome`).
+      if (_challengeOutcome != null) {
+        await _stats.setObedienceLevel(_obedience.score);
+      }
       // Persiste le score career une fois pour toutes : delta de fin +
       // d'éventuels bonus milestone sont déjà incorporés.
       await _stats.setHumiliationLevel(_humiliation.careerScore);
@@ -1371,93 +1661,32 @@ class SessionController extends ChangeNotifier {
     return null;
   }
 
-  /// Phrase `tapout` du coach (Phase 4) si le « je peux pas » est imputable à
-  /// un axe poussé au-delà de sa zone de confort (§6), avec une chance ∝ niveau.
-  /// Suppose `CapabilityTracker.onFail()` déjà appelé (les `sessionCeilings`
-  /// sont à jour). `null` = pas de phrase dédiée → l'appelant retombe sur le
-  /// tirage de fail standard.
-  String? _tapoutPhraseOrNull() {
-    final tracker = _capabilityTracker;
-    final profile = _capabilityProfile;
-    final bank = _phraseBank;
-    if (tracker == null || profile == null || bank == null) return null;
-    final axis =
-        CapabilityRegulator.attributeTapOut(tracker.sessionCeilings, profile);
-    if (axis == null) return null;
-    if (_random.nextDouble() >=
-        CapabilityRegulator.progressPhraseChanceForLevel(_careerLevel)) {
-      return null;
-    }
-    final phrase = bank.pickProgressPhrase(axis.storageKey, 'tapout', _random);
-    return (phrase != null && phrase.isNotEmpty) ? phrase : null;
-  }
-
-  /// Détecte si la séance vient de battre le `best` de l'axe poussé cette
-  /// séance (`_capabilityOverloadAxis`, axe pilotant `maximize`) en comparant
-  /// `reached` au snapshot pré-séance. Renvoie l'axe en cas de record propre,
-  /// `null` sinon — pas d'axe surchargé, pas d'amélioration, ou séance avec un
-  /// « je peux pas » (on ne célèbre pas un record juste après un tap-out, §9 ;
-  /// le `best` reste enregistré par `CapabilityService.commit` quoi qu'il arrive).
-  CapabilityAxis? _detectCapabilityRecord(SessionCapabilityReport? report) {
-    if (report == null || _hadFailThisSession) return null;
-    final axis = _capabilityOverloadAxis;
-    final profile = _capabilityProfile;
-    if (axis == null || profile == null) return null;
-    if (!axis.pilotant || axis.recordKind != CapabilityRecordKind.maximize) {
-      return null;
-    }
-    final reached = report.reached[axis];
-    if (reached == null) return null;
-    final before = profile.bestOf(axis);
-    return (before == null || reached > before) ? axis : null;
-  }
-
-  /// Liste des paliers nouvellement franchis, calculée par `_finish` mais
-  /// gardée en attente jusqu'à `revealBadgeUnlocks()`. On préserve la
-  /// même API publique (`sessionBadgeUnlocks`) une fois la révélation
-  /// faite, pour que l'UI continue de pouvoir consommer la liste.
-  List<BadgeUnlock> _pendingBadgeUnlocks = const [];
-
-  /// True si des badges ont été détectés à la complétion mais pas encore
-  /// révélés (l'utilisateur n'a pas tapé MERCI). Permet à l'UI d'afficher
-  /// le bouton MERCI avant la grille de badges.
-  bool get hasPendingBadges => _pendingBadgeUnlocks.isNotEmpty;
-
-  /// Révèle les paliers de badges atteints pendant la séance : déplace la
-  /// liste pending vers `sessionBadgeUnlocks`, lance les annonces TTS, et
-  /// notifie l'UI. À appeler depuis le bouton MERCI de l'écran de fin.
-  /// La phrase TTS est localisée via [_appLocalizations] (poussé depuis
-  /// l'UI par [setAppLocalizations]) ; null retombe sur le libellé FR.
-  Future<void> revealBadgeUnlocks() async {
-    if (_pendingBadgeUnlocks.isEmpty) return;
-    final unlocks = _pendingBadgeUnlocks;
-    _pendingBadgeUnlocks = const [];
-    _sessionBadgeUnlocks = unlocks;
-    notifyListeners();
-    for (final u in unlocks) {
-      if (_released) break;
-      await _tts.speak(u.announcement(_appLocalizations));
-    }
-  }
-
-  // ─── Action « Supplier » (mode Carrière) ───────────────────────────────
-
-  /// Coupe la timeline restante et la remplace par : un beg insistant
-  /// immédiat (à `elapsedSeconds`), suivi des [upcomingSteps] rebased
-  /// pour démarrer juste après le beg. Utilisé par le bouton « SUPPLIER »
-  /// du mode Carrière, qui régénère une suite à un niveau supérieur
-  /// pendant que l'utilisateur supplie.
+  /// Helper pur : assemble la nouvelle [Session] qui remplace la suite
+  /// après un Supplier (bouton « SUPPLIER » du mode Carrière) ou un retry
+  /// milestone. Préfixe un beg insistant à [start], rebase les steps de
+  /// [upcoming] sur `start + insistentBeg.duration`, et fusionne les
+  /// milestones :
   ///
-  /// Les `upcomingSteps` doivent avoir leur `time` exprimé relativement
-  /// à zéro (le générateur produit toujours un `time` croissant à partir
-  /// de 0) — la méthode rebase elle-même.
-  Future<void> requestUpgrade({
+  /// - **Body milestones de [previous]** : conservées UNIQUEMENT si leur
+  ///   fenêtre `[start, start+dur]` se termine avant [start] (Supplier
+  ///   ne les a pas coupées → seront acquittées à `_finish`). Sinon
+  ///   abandonnées — sinon le `markIfPresent` de `_finish` acquitterait
+  ///   une milestone que l'utilisatrice n'a pas jouée.
+  /// - **Body milestones de [upcoming]** : ajoutées avec décalage `offset`
+  ///   (cas typique du retry milestone qui replante la milestone ratée).
+  /// - **Final milestone** : prise de [upcoming] uniquement (Supplier
+  ///   remplace le final, comme `finalStepTime` / `silentFinishStartTime`).
+  ///
+  /// Si la fusion produit plus de 2 body milestones (cas extrême : 2
+  /// anciennes passées + 2 nouvelles), on conserve les 2 premières
+  /// chronologiquement.
+  @visibleForTesting
+  static Session buildUpgradedSession({
+    required Session previous,
+    required Session upcoming,
     required SessionStep insistentBeg,
-    required Session upcomingSession,
-  }) async {
-    if (_state != SessionState.running) return;
-
-    final start = elapsedSeconds;
+    required int start,
+  }) {
     final begDuration = insistentBeg.duration ?? 12;
     final offset = start + begDuration;
 
@@ -1471,493 +1700,148 @@ class SessionController extends ChangeNotifier {
         bpm: insistentBeg.bpm,
         duration: begDuration,
       ),
-      ...upcomingSession.steps.map(
-        (s) => SessionStep(
+      for (final s in upcoming.steps)
+        SessionStep(
           time: s.time + offset,
           text: s.text,
           mode: s.mode,
           from: s.from,
           to: s.to,
           bpm: s.bpm,
+          bpmEnd: s.bpmEnd,
           duration: s.duration,
+          chainAction: s.chainAction,
+          swallowMode: s.swallowMode,
+          background: s.background,
         ),
-      ),
     ];
 
-    // Décale les timestamps de fin (finalStep / silentFinish) du regen pour
-    // qu'ils tombent sur les bons steps du nouveau `_session`. Sans ça, le
-    // contrôleur ne reconnaît pas le step final → le `finale_chime` est
-    // joué via le fallback de `_finish` ET la phrase finale est rejouée
-    // (« voilà je jouis » + chime APRÈS la phrase d'action déjà speakée du
-    // step final). Doublait l'apothéose à chaque Supplier.
-    final upFinalStepTime = upcomingSession.finalStepTime;
-    final upSilentFinish = upcomingSession.silentFinishStartTime;
+    final bodies = <({String id, int start, int? duration})>[];
+    void addPrevIfWindowEnded(int? mStart, int? mDur, String? id) {
+      if (id == null || mStart == null || mDur == null) return;
+      if ((mStart + mDur) <= start) {
+        bodies.add((id: id, start: mStart, duration: mDur));
+      }
+    }
 
-    _session = Session(
-      id: '${_session.id}:upgraded',
-      name: _session.name,
-      description: _session.description,
-      durationSeconds: offset + upcomingSession.durationSeconds,
-      defaultMode: _session.defaultMode,
+    addPrevIfWindowEnded(previous.milestoneStartTime,
+        previous.milestoneDurationSeconds, previous.milestoneId);
+    addPrevIfWindowEnded(previous.secondMilestoneStartTime,
+        previous.secondMilestoneDurationSeconds, previous.secondMilestoneId);
+
+    void addUpcoming(int? mStart, int? mDur, String? id) {
+      if (id == null || mStart == null) return;
+      bodies.add((id: id, start: mStart + offset, duration: mDur));
+    }
+
+    addUpcoming(upcoming.milestoneStartTime, upcoming.milestoneDurationSeconds,
+        upcoming.milestoneId);
+    addUpcoming(upcoming.secondMilestoneStartTime,
+        upcoming.secondMilestoneDurationSeconds, upcoming.secondMilestoneId);
+
+    bodies.sort((a, b) => a.start.compareTo(b.start));
+    final mid1 = bodies.isNotEmpty ? bodies[0] : null;
+    final mid2 = bodies.length >= 2 ? bodies[1] : null;
+
+    final upFinalStepTime = upcoming.finalStepTime;
+    final upSilentFinish = upcoming.silentFinishStartTime;
+    final upFinalMsStart = upcoming.finalMilestoneStartTime;
+
+    return Session(
+      id: '${previous.id}:upgraded',
+      name: previous.name,
+      description: previous.description,
+      durationSeconds: offset + upcoming.durationSeconds,
+      defaultMode: previous.defaultMode,
       steps: newSteps,
+      milestoneId: mid1?.id,
+      milestoneStartTime: mid1?.start,
+      milestoneDurationSeconds: mid1?.duration,
+      secondMilestoneId: mid2?.id,
+      secondMilestoneStartTime: mid2?.start,
+      secondMilestoneDurationSeconds: mid2?.duration,
+      finalMilestoneId: upcoming.finalMilestoneId,
+      finalMilestoneStartTime:
+          upFinalMsStart != null ? upFinalMsStart + offset : null,
+      finalMilestoneDurationSeconds: upcoming.finalMilestoneDurationSeconds,
       finalStepTime: upFinalStepTime != null ? upFinalStepTime + offset : null,
       silentFinishStartTime:
           upSilentFinish != null ? upSilentFinish + offset : null,
-      finalCategory: upcomingSession.finalCategory,
-      noStats: _session.noStats,
+      finalCategory: upcoming.finalCategory,
+      noStats: previous.noStats,
     );
-
-    // Coupe le TTS en cours pour ne pas garder une phrase orpheline
-    // de l'ancien step. Le beg insistant va parler tout de suite.
-    await _tts.stop();
-
-    _nextStepIndex = 0;
-    _lastConfigStep = null;
-    // Reset du flag chime : la régen apporte son propre step final +
-    // apothéose. Si l'ancienne session avait déjà tiré son chime (cas
-    // rare où Supplier est cliqué pile entre final et fin), on doit
-    // pouvoir rejouer le chime de la nouvelle.
-    _finalChimePlayed = false;
-    _finaleChimeStarted = false;
-
-    // Force le déclenchement immédiat du beg (time = start ≤ elapsedSeconds).
-    _checkSteps();
-    notifyListeners();
   }
 
-  // ─── Flow FAIL ─────────────────────────────────────────────────────────
-
-  /// Déclenche la séquence : pause → phrase fail → respiration → punition →
-  /// reprise du loop session là où il était.
+  /// Helper pur : assemble la nouvelle [Session] qui remplace la suite après
+  /// un défi qui a élargi les unlocks. Rebase les steps de [upcoming] sur
+  /// [breathEnd] et propage les métadonnées de fin (finalStepTime,
+  /// silentFinishStartTime, finalCategory) en les décalant aussi.
   ///
-  /// Le bouton appelant doit vérifier [canTriggerFail] pour ne pas appeler
-  /// cette méthode hors d'un état running.
-  Future<void> triggerFail() async {
-    if (!canTriggerFail) return;
-
-    // Retry milestone : si on rate dans la fenêtre pédagogique, on tente
-    // d'abord de proposer une nouvelle tentative via le callback (qui
-    // regénère + appelle requestUpgrade). Si le callback prend la main,
-    // on saute entièrement le flow fail standard — pas de pénalités, pas
-    // de phrase fail, pas de punition. La milestone est juste rejouée.
-    //
-    // Le profil de capacités, lui, voit ce fail : on fige les plafonds de
-    // session AVANT le callback pour que la régénération du retry lise des
-    // `capabilitySessionCeilings` à jour. `onFail` est idempotent (streaks
-    // remis à 0), donc le ré-appel du flow standard plus bas (cas retry non
-    // pris en charge) est sans effet.
-    if (_isInMilestoneWindow() && onMilestoneRetry != null) {
-      _capabilityTracker?.onFail();
-      final handled = await onMilestoneRetry!(this);
-      if (handled) return;
-    }
-
-    // Cas particulier : on est déjà dans le flow fail, en pleine punition
-    // → on abandonne la punition (malus obéissance, pas de re-punition).
-    if (_state == SessionState.failing && _failPhase == FailPhase.punishment) {
-      _abandonPunishment();
-      return;
-    }
-
-    _failActive = true;
-    final myGen = ++_failGen;
-    _hadFailThisSession = true;
-    _stamina.onFail();
-    _saliva.onFail();
-    // Capacités : fige les plafonds de session sur la valeur live des
-    // streaks, puis les vide — un streak interrompu par un fail ne devient
-    // jamais un record propre (cf. §3/§6 de la spec).
-    _capabilityTracker?.onFail();
-    // Le mode forbidden est levé par le fail : la salope a craqué, on
-    // repart sur des bases neutres. Si la session veut re-imposer le
-    // forbidden après reprise, c'est au scénario de poser un step le
-    // demandant explicitement.
-    _swallowMode = SwallowMode.allowed;
-    // Pénalités amplifiées si on craque dans la dernière minute (la
-    // session est presque terminée — c'est ruiné). Cumulable avec ×2 si
-    // une milestone candidate au niveau courant était présente et n'a pas
-    // été acquittée : « tu pouvais avancer, tu as raté ». Au pire ×4.
-    final lastMinuteMul = _isInLastMinute() ? 2.0 : 1.0;
-    final missedMilestone = _milestoneOpportunityMissed();
-    _obedience.onFail(
-      multiplier: lastMinuteMul,
-      milestoneOpportunityMissed: missedMilestone,
-    );
-    _humiliation.onFail(
-      multiplier: lastMinuteMul,
-      milestoneOpportunityMissed: missedMilestone,
-    );
-    _punishmentAbandoned = false;
-    // Le hold full en cours est interrompu : pas de crédit Iron Lungs.
-    _currentHoldFullDuration = 0;
-    // Le hold éventuellement en cours est interrompu — disarm la caméra
-    // pour ne pas spammer de rappels pendant la phrase de fail / breath.
-    _disarmHoldVerifier();
-
-    // 1) Mise en pause du timing principal et du loop courant.
-    _stopwatch.stop();
-    _ticker?.cancel();
-    _ticker = null;
-    _stopRandomComments();
-    await _tts.stop();
-    await _beep.pause();
-
-    _state = SessionState.failing;
-
-    try {
-      // 2) Phrase de fail.
-      _failPhase = FailPhase.phrase;
-      // On résout immédiatement : le contenu stocké dans `_currentFailPhrase`
-      // est la version affichable (sans `{name}`). Le speak qui suit est
-      // alors un pass-through pour le placeholder déjà absent.
-      // Si la salope a avalé alors que c'était interdit, on tire dans le
-      // pool dédié `failPhrasesSwallow` (transgression de consigne) plutôt
-      // que dans le pool générique. Fallback transparent au pool standard
-      // si le pool dédié est vide (sécurité contre un JSON incomplet).
-      final swallowPool = _punishmentBundle.failPhrasesSwallow;
-      final usingSwallowPool =
-          _swallowMode == SwallowMode.forbidden && swallowPool.isNotEmpty;
-      final pool =
-          usingSwallowPool ? swallowPool : _punishmentBundle.failPhrases;
-      // Phase 4 — coach audible : si le « je peux pas » est imputable à un axe
-      // poussé au-delà de sa zone de confort (§6, attribution non ambiguë grâce
-      // à la surcharge isolée) et que le dé ∝ niveau tombe juste, on remplace la
-      // phrase de fail standard par une variante DOUCE « limite reconnue » (tier
-      // `tapout`). Jamais sur le pool « avalement interdit transgressé »
-      // (indiscipline ≠ limite légitime).
-      final tapoutPhrase = usingSwallowPool ? null : _tapoutPhraseOrNull();
-      final raw = tapoutPhrase ?? _pickRandom(pool);
-      _currentFailPhrase = raw == null ? null : _tts.resolveText(raw);
-      notifyListeners();
-      if (_currentFailPhrase != null) {
-        // awaitSpeakCompletion(true) → ce await retourne quand la phrase
-        // est entièrement prononcée.
-        _lastScriptedSpeakAt = DateTime.now();
-        await _tts.speak(_currentFailPhrase!);
-      }
-      if (!_isFailFlowAlive(myGen)) return;
-
-      // 3) Respiration : toujours présente comme phase de transition,
-      //    mais raccourcie quand l'endurance projetée à l'instant t est
-      //    confortable (pas besoin d'imposer une longue récup à
-      //    quelqu'une qui n'en a pas besoin).
-      _failPhase = FailPhase.breath;
-      notifyListeners();
-      final stamina = _staminaAtNow();
-      final isFresh = stamina != null && stamina > _breathSkipStaminaThreshold;
-      final breathSeconds =
-          isFresh ? (3 + _random.nextInt(3)) : (8 + _random.nextInt(8));
-      await _beep.applyStep(
+  /// Conserve [previous.challenge] (et ses timestamps) pour rester cohérent
+  /// avec `_updateChallengePhase` qui se met en `phase == ended` à ce stade
+  /// — le challenge ne sera pas re-déclenché.
+  @visibleForTesting
+  static Session buildPostChallengeRegenSession({
+    required Session previous,
+    required Session upcoming,
+    required int breathEnd,
+  }) {
+    final newSteps = <SessionStep>[
+      for (final s in upcoming.steps)
         SessionStep(
-          time: 0,
-          mode: SessionMode.breath,
-          duration: breathSeconds,
+          time: s.time + breathEnd,
+          text: s.text,
+          mode: s.mode,
+          from: s.from,
+          to: s.to,
+          bpm: s.bpm,
+          bpmEnd: s.bpmEnd,
+          duration: s.duration,
+          chainAction: s.chainAction,
+          swallowMode: s.swallowMode,
+          background: s.background,
         ),
-        session.defaultMode,
-      );
-      await _syncAmbienceToCurrentMode();
-      await _waitInterruptible(Duration(seconds: breathSeconds), gen: myGen);
-      if (!_isFailFlowAlive(myGen)) return;
-
-      // 4) Punition. En carrière, on génère une composition contextuelle
-      //    bornée par le profil de capacités (§7 — Phase 5). Hors carrière
-      //    (Custom, scénarios JSON), on retombe sur le tirage statique dans
-      //    `punishments.json` — comportement historique.
-      _currentPunishment = _generateCareerPunishmentOrNull() ??
-          _pickRandom(_punishmentBundle.punishments);
-      _failPhase = FailPhase.punishment;
-      notifyListeners();
-      if (_currentPunishment != null) {
-        await _runPunishment(_currentPunishment!);
-        // Bonus seulement si la punition a été menée à terme (ni stop()
-        // global, ni abandon volontaire via le bouton FAIL).
-        if (_isFailFlowAlive(myGen) && !_punishmentAbandoned) {
-          _humiliation.onPunishmentCompleted();
-          _obedience.onPunishmentCompleted();
-        }
-      }
-      if (!_isFailFlowAlive(myGen)) return;
-
-      // 5) Saut à la section suivante : on cherche le prochain step de
-      //    config et on avance la timeline jusqu'à son `time`. Tous les
-      //    steps text-only intermédiaires sont consommés silencieusement.
-      //    Si aucune section suivante n'existe, on restaure le loop d'avant
-      //    le fail pour ne pas laisser la séance sans audio.
-      final jumped = _skipToNextSection();
-      if (!jumped) {
-        await _restorePreviousLoop();
-      }
-
-      _stopwatch.start();
-      _startTicker();
-      _startRandomComments();
-      _state = SessionState.running;
-      // Coup de pouce immédiat : si on a sauté pile sur le `time` du
-      // prochain step, on le déclenche tout de suite plutôt que d'attendre
-      // le prochain tick (200 ms d'écart audible sinon).
-      _checkSteps();
-    } finally {
-      // Ne nettoie le state global que si on est toujours owner du flow —
-      // sinon on écraserait celui d'un nouveau triggerFail qui aurait pris
-      // la main pendant l'un de nos awaits.
-      if (_failGen == myGen) {
-        _failPhase = null;
-        _currentFailPhrase = null;
-        _currentPunishment = null;
-        _failActive = false;
-        notifyListeners();
-      }
-    }
-  }
-
-  /// Joue toutes les étapes d'une punition selon leur `time` relatif,
-  /// jusqu'à atteindre [Punishment.durationSeconds]. Interruptible via
-  /// `_abandonPunishment()` (qui complète `_punishmentCompleter`).
-  Future<void> _runPunishment(Punishment p) async {
-    // Refuse les appels concurrents : si un précédent est encore actif,
-    // c'est un état incohérent (les flows fail/mini-punition s'attendent
-    // tous via await). On ne ré-entre pas ; le caller verra un retour
-    // immédiat et la séquence en cours continuera son cycle.
-    final previous = _punishmentCompleter;
-    if (previous != null && !previous.isCompleted) {
-      if (kDebugMode) {
-        debugPrint(
-            '[SessionController] _runPunishment ignoré : précédent encore actif');
-      }
-      return;
-    }
-    // Annule un ticker éventuellement orphelin pour ne pas le superposer.
-    _punishmentTicker?.cancel();
-    _punishmentTicker = null;
-
-    final completer = Completer<void>();
-    _punishmentCompleter = completer;
-    final stopwatch = Stopwatch()..start();
-    var nextIdx = 0;
-
-    void tick() {
-      // Si on n'est plus le completer en cours (un nouveau _runPunishment
-      // a démarré), on stoppe ce tick fantôme sans toucher au state global.
-      if (_punishmentCompleter != completer) {
-        if (!completer.isCompleted) completer.complete();
-        return;
-      }
-      if (!_failActive) {
-        if (!completer.isCompleted) completer.complete();
-        return;
-      }
-
-      final s = stopwatch.elapsed.inSeconds;
-      var modeChanged = false;
-      while (nextIdx < p.steps.length && p.steps[nextIdx].time <= s) {
-        final step = p.steps[nextIdx];
-        if (!step.isTextOnly) {
-          _beep.applyStep(step, session.defaultMode);
-          modeChanged = true;
-        }
-        if (step.text.isNotEmpty) {
-          // fire-and-forget — flutter_tts file les phrases consécutives
-          _speakScripted(step.text);
-        }
-        nextIdx++;
-      }
-      if (modeChanged) {
-        _syncAmbienceToCurrentMode();
-      }
-
-      if (s >= p.durationSeconds) {
-        _punishmentTicker?.cancel();
-        _punishmentTicker = null;
-        stopwatch.stop();
-        if (!completer.isCompleted) completer.complete();
-      }
-    }
-
-    tick(); // déclenche le step à t=0 sans attendre
-    _punishmentTicker = Timer.periodic(_tickInterval, (_) => tick());
-
-    await completer.future;
-    // Ne nille le champ que si on est toujours owner (sinon on écraserait
-    // la référence d'un appelant suivant qui aurait pris la main).
-    if (_punishmentCompleter == completer) {
-      _punishmentCompleter = null;
-    }
-    await _beep.stop(); // coupe les bips de la punition avant de continuer
-  }
-
-  /// Interrompt la punition en cours (déclenché par un appui sur FAIL
-  /// pendant la phase punishment). Pénalité d'obéissance, pas de
-  /// re-punition pour éviter la spirale.
-  void _abandonPunishment() {
-    _punishmentAbandoned = true;
-    final mul = _isInLastMinute() ? 2.0 : 1.0;
-    _obedience.onPunishmentAbandoned(multiplier: mul);
-    _humiliation.onPunishmentAbandoned(multiplier: mul);
-    _punishmentTicker?.cancel();
-    _punishmentTicker = null;
-    final c = _punishmentCompleter;
-    if (c != null && !c.isCompleted) {
-      c.complete();
-    }
-  }
-
-  /// Tick mini-punition : 1 tirage par minute. Si le coach a un
-  /// `miniPunishmentRate` > 0 et que l'état autorise une mini-punition (pas
-  /// en milestone, pas dernière minute, pas en finish), tente de déclencher
-  /// `_runMiniPunishmentFlow`. Pas de garde sur `_state == running` ici
-  /// — `_accrueHoldSecond` ne s'appelle que sous le ticker, qui ne tourne
-  /// que pendant `running`.
-  void _accrueMiniPunishmentTick() {
-    _miniPunishmentTickAccumulator++;
-    if (_miniPunishmentTickAccumulator < 60) return;
-    _miniPunishmentTickAccumulator = 0;
-    if (_miniPunishmentRate <= 0) return;
-    if (_isInMilestoneWindow()) return;
-    if (_isInLastMinute()) return;
-    final shouldFire = computeMiniPunishmentTrigger(
-      rate: _miniPunishmentRate,
-      rngValue: _miniPunishmentRng.nextDouble(),
+    ];
+    final upFinalStepTime = upcoming.finalStepTime;
+    final upSilentFinish = upcoming.silentFinishStartTime;
+    return Session(
+      id: '${previous.id}:postchallenge',
+      name: previous.name,
+      description: previous.description,
+      durationSeconds: breathEnd + upcoming.durationSeconds,
+      defaultMode: previous.defaultMode,
+      steps: newSteps,
+      finalStepTime:
+          upFinalStepTime != null ? upFinalStepTime + breathEnd : null,
+      silentFinishStartTime:
+          upSilentFinish != null ? upSilentFinish + breathEnd : null,
+      finalCategory: upcoming.finalCategory,
+      noStats: previous.noStats,
+      challenges: previous.challenges,
+      challengeStepTimes: previous.challengeStepTimes,
+      challengeBreathStartTimes: previous.challengeBreathStartTimes,
     );
-    if (!shouldFire) return;
-    final shortPool = _punishmentBundle.punishments
-        .where((p) => p.durationSeconds < 20)
-        .toList();
-    if (shortPool.isEmpty) return;
-    final p = shortPool[_miniPunishmentRng.nextInt(shortPool.length)];
-    _miniPunishmentsTriggered++;
-    // Fire-and-forget : on ne bloque pas le ticker.
-    unawaited(_runMiniPunishmentFlow(p));
   }
 
-  /// Joue une mini-punition inopinée déclenchée par le tick coach.
-  /// Variante allégée du flow fail : pas de phrase fail, pas de breath de
-  /// récup, pas de saut de section. On enchaîne directement la punition
-  /// puis on restaure le loop précédent.
-  Future<void> _runMiniPunishmentFlow(Punishment p) async {
-    if (_state != SessionState.running) return;
-
-    _failActive = true;
-    final myGen = ++_failGen;
-    _disarmHoldVerifier();
-    _stopwatch.stop();
-    _ticker?.cancel();
-    _ticker = null;
-    _stopRandomComments();
-    await _tts.stop();
-    await _beep.pause();
-
-    _state = SessionState.failing;
-    _failPhase = FailPhase.punishment;
-    _currentPunishment = p;
-    notifyListeners();
-
-    try {
-      await _runPunishment(p);
-      if (_isFailFlowAlive(myGen) && !_punishmentAbandoned) {
-        _humiliation.onPunishmentCompleted();
-        _obedience.onPunishmentCompleted();
-      }
-      if (!_isFailFlowAlive(myGen)) return;
-      await _restorePreviousLoop();
-      _stopwatch.start();
-      _startTicker();
-      _startRandomComments();
-      _state = SessionState.running;
-      _checkSteps();
-    } finally {
-      if (_failGen == myGen) {
-        _failPhase = null;
-        _currentPunishment = null;
-        _punishmentAbandoned = false;
-        _failActive = false;
-        notifyListeners();
-      }
-    }
-  }
-
-  /// Génère une punition carrière contextuelle (Phase 5, §7) via
-  /// `CareerSessionGenerator.generatePunishment`. Renvoie `null` hors
-  /// carrière (pas de profil de capacités ou pas de banque coach) — le
-  /// caller retombe alors sur le tirage statique dans `punishments.json`.
+  /// Décide si la machine d'états défi doit transitionner vers `atSeuil`
+  /// au tick courant. Vrai uniquement quand on est encore en phase `live`
+  /// et qu'on vient d'atteindre la fin nominale du step défi.
   ///
-  /// On reconstruit un générateur à la volée (pas d'état conservé entre
-  /// fails) : la classe est suffisamment légère, le `Random()` interne
-  /// suffit pour la variation et on évite de propager une référence partagée
-  /// avec la chaîne de génération de session principale.
-  Punishment? _generateCareerPunishmentOrNull() {
-    final profile = _capabilityProfile;
-    final bank = _phraseBank;
-    if (profile == null || bank == null) return null;
-    final generator = CareerSessionGenerator();
-    return generator.generatePunishment(
-      level: _careerLevel,
-      bank: bank,
-      unlockedKeys: _unlockedKeys,
-      capabilityProfile: profile,
-      capabilitySessionCeilings:
-          _capabilityTracker?.sessionCeilings ?? const {},
-      capabilityOverloadAxis: _capabilityOverloadAxis,
-      specialization: _specialization,
-      humiliationCareer: _humiliation.careerScore,
-      humiliationSession: _humiliation.sessionScore,
-      obedience: _obedience.score,
-      includeHand: _includeHand,
-    );
-  }
-
-  /// Restaure le loop de bips qui tournait avant le fail (ou no-op
-  /// si aucune étape de config n'avait encore été appliquée).
-  Future<void> _restorePreviousLoop() async {
-    final last = _lastConfigStep;
-    if (last == null) return;
-    await _beep.applyStep(last, session.defaultMode);
-    _capabilityTracker?.onStepApplied(
-      mode: last.mode ?? session.defaultMode,
-      from: last.from,
-      to: last.to,
-      bpm: last.bpm,
-      duration: last.duration,
-    );
-    await _syncAmbienceToCurrentMode();
-  }
-
-  /// Cherche la prochaine étape avec configuration de bip (i.e. le début
-  /// d'une nouvelle « section ») strictement après [elapsedSeconds]. Si
-  /// trouvée, avance [_timelineOffset] pour faire correspondre l'horloge
-  /// effective à son `time`, et place [_nextStepIndex] dessus. Les éventuels
-  /// steps text-only entre la position courante et la nouvelle section
-  /// sont sautés silencieusement.
-  ///
-  /// Retourne true si un saut a eu lieu, false si on est déjà dans la
-  /// dernière section (pas de saut effectué).
-  bool _skipToNextSection() {
-    final currentSec = elapsedSeconds;
-    for (var i = _nextStepIndex; i < session.steps.length; i++) {
-      final step = session.steps[i];
-      if (!step.isTextOnly && step.time > currentSec) {
-        final delta = step.time - currentSec;
-        _timelineOffset += Duration(seconds: delta);
-        _nextStepIndex = i;
-        return true;
-      }
+  /// Garde indispensable : après `_completeChallenge`, `phase` passe à
+  /// `ended` mais `_challengeStepStartedAtSec` reste posé jusqu'à
+  /// l'expiration du breath post-défi (~10 s plus tard). Sans cette garde,
+  /// `elapsedInStep` continue de grandir en wallclock, dépasse `stepEnd`
+  /// au tick suivant, et la transition vers `atSeuil` écrase `phase=ended`.
+  @visibleForTesting
+  static bool shouldEnterAtSeuilPhase({
+    required ChallengePhase phase,
+    required int elapsedInStep,
+    required int stepEnd,
+  }) {
+    if (phase != ChallengePhase.live) {
+      return false;
     }
-    return false;
-  }
-
-  /// Délai annulable : si [_failActive] passe à false pendant l'attente
-  /// — ou si la génération a changé (un nouveau flow fail nous a remplacés)
-  /// — on retourne immédiatement.
-  Future<void> _waitInterruptible(Duration total, {required int gen}) async {
-    final elapsed = Stopwatch()..start();
-    while (elapsed.elapsed < total) {
-      if (!_isFailFlowAlive(gen)) return;
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    }
-  }
-
-  T? _pickRandom<T>(List<T> items) {
-    if (items.isEmpty) return null;
-    return items[_random.nextInt(items.length)];
+    return elapsedInStep >= stepEnd;
   }
 
   // ─── Scheduler des commentaires aléatoires ─────────────────────────────
@@ -2010,6 +1894,22 @@ class SessionController extends ChangeNotifier {
     // que de stopper : la fenêtre se referme d'elle-même quand la milestone
     // se termine, le scheduler reprend naturellement.
     if (_isInMilestoneWindow()) {
+      _randomCommentTimer =
+          Timer(const Duration(seconds: 3), _fireRandomComment);
+      return;
+    }
+
+    // Pas de random pendant tout un défi (breath d'annonce + countdown +
+    // step défi + atSeuil + extensions + breath post-défi). Pendant cette
+    // fenêtre, la dramaturgie est entièrement pilotée par les phrases
+    // `challengePhrases` du coach (annonce, extension, outcome) — un random
+    // viendrait écraser l'annonce d'explication (mode QUEUE_FLUSH du TTS),
+    // bug reporté avec « Caresse le tendrement » prononcé à la place du
+    // texte d'explication du défi. Le filtre `mode == breath` plus bas ne
+    // suffit pas : entre la transition de phase défi et l'application du
+    // step breath sur le BeepEngine, le mode courant peut encore être le
+    // mode précédent (rhythm/lick/hold).
+    if (isChallengeActive || _inPostChallengeBreath) {
       _randomCommentTimer =
           Timer(const Duration(seconds: 3), _fireRandomComment);
       return;

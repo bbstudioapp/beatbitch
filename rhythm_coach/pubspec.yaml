@@ -1,7 +1,7 @@
 name: beat_bitch
 description: An offline rhythmic voice coach for Android.
 publish_to: 'none'
-version: 0.4.2+10
+version: 0.5.0+11
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -15,24 +15,24 @@ dependencies:
   intl: any
   flutter_tts: ^4.2.0
   provider: ^6.1.2
-  wakelock_plus: ^1.2.8
+  wakelock_plus: ^1.6.1
   audioplayers: ^6.1.0
   shared_preferences: ^2.3.0
-  camera: ^0.11.0
+  camera: ^0.12.0+1
   google_mlkit_face_detection: ^0.13.0
-  sensors_plus: ^6.0.1
-  permission_handler: ^11.3.1
+  sensors_plus: ^7.0.0
+  permission_handler: ^12.0.1
   path_provider: ^2.1.4
-  flutter_local_notifications: ^17.2.3
-  timezone: ^0.9.4
-  package_info_plus: ^9.0.0
-  share_plus: ^10.1.2
-  file_saver: ^0.2.14
+  flutter_local_notifications: ^21.0.0
+  timezone: ^0.11.0
+  package_info_plus: ^10.1.0
+  share_plus: ^13.1.0
+  file_saver: ^0.4.0
   file_selector: ^1.0.3
   crypto: ^3.0.5
 
 dev_dependencies:
-  flutter_lints: ^4.0.0
+  flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
   flutter_test:
     sdk: flutter

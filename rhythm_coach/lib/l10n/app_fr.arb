@@ -119,6 +119,26 @@
     }
   },
   "profileReputationUnit": "pts de réputation",
+  "reputationTierBonneEleve": "Bonne élève",
+  "reputationTierPetiteSuceuse": "Petite suceuse",
+  "reputationTierSuceuseConfirmee": "Suceuse confirmée",
+  "reputationTierPuteReconnue": "Pute reconnue",
+  "reputationTierPuteConsacree": "Pute consacrée",
+  "reputationTierReineDesSuceuses": "Reine des suceuses",
+  "reputationTierReineDesPutes": "Reine des putes",
+  "careerInvestmentBarTitle": "Temps cumulé",
+  "careerInvestmentSessions": "{count} séances",
+  "@careerInvestmentSessions": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "careerInvestmentNextCoach": "Prochain coach : {name} ({remaining})",
+  "@careerInvestmentNextCoach": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "remaining": { "type": "String" }
+    }
+  },
+  "careerInvestmentAllUnlocked": "Tous les coachs débloqués.",
   "profileStatSessionsCompleted": "Sessions terminées",
   "profileStatNoFailStreak": "Streak sans fail",
   "profileStatDailyStreak": "Streak quotidien",
@@ -205,16 +225,64 @@
       "error": { "type": "String" }
     }
   },
-  "careerLevelSection": "Niveau",
-  "careerMaxLevel": "max {level}",
-  "@careerMaxLevel": {
-    "placeholders": {
-      "level": { "type": "int" }
-    }
-  },
+  "careerDurationSection": "Durée",
   "careerQuickieToggle": "Session bâclée",
   "careerQuickieSubtitle": "6 min — intense",
   "careerQuickieDescription": "6 min, intense tout du long. Pour quand t'as pas le temps.",
+  "sessionLengthBacheeLabel": "Bâclée",
+  "sessionLengthBacheeDuration": "~6 min",
+  "sessionLengthBacheeDescription": "Express, intense tout du long.",
+  "sessionLengthCourteLabel": "Courte",
+  "sessionLengthCourteDuration": "~12 min",
+  "sessionLengthCourteDescription": "Format compact, un défi possible.",
+  "sessionLengthMoyenneLabel": "Moyenne",
+  "sessionLengthMoyenneDuration": "~25 min",
+  "sessionLengthMoyenneDescription": "Deux milestones max, du contenu varié.",
+  "sessionLengthLongueLabel": "Longue",
+  "sessionLengthLongueDuration": "~45 min",
+  "sessionLengthLongueDescription": "Séance pleine, plusieurs défis intercalés.",
+  "careerChallengesToggle": "Défis intra-séance",
+  "careerChallengesDescription": "Un défi opt-in vers 60 % de la séance. Calibre vite, peut faire monter le niveau plus rapidement.",
+  "challengePassButton": "PASSE",
+  "challengeGoButton": "MAINTIENS",
+  "challengeHoldHintLive": "Garde le doigt sur l'écran",
+  "challengeHoldHintAtSeuil": "Relâche pour arrêter, ou continue",
+  "challengeHoldHintTolerance": "Repose ton doigt",
+  "challengeCountdownReleaseRetry": "Maintiens bien ton doigt cette fois.",
+  "challengeTutorialBanner": "Premier défi : tu vas tenir une position le temps demandé. Maintiens MAINTIENS quand tu es prête (garde le doigt), ou tape PASSE pour skipper.",
+  "challengeBannerCountdown": "{digit}",
+  "@challengeBannerCountdown": {
+    "placeholders": { "digit": { "type": "int" } }
+  },
+  "challengeAttemptDefault": "Défi : on va pousser ta limite. Maintiens MAINTIENS quand tu es prête, je compterai trois deux un avant de démarrer. Garde le doigt sur l'écran tant que tu tiens.",
+  "challengeAttemptTutorialHoldThroat": "Premier défi : tu vas tenir en gorge cinq secondes. Maintiens MAINTIENS, garde le doigt sur l'écran. Si tu lâches avant le seuil, c'est raté. Au seuil, le bouton devient vert : relâche pour arrêter, ou continue à tenir pour aller plus loin.",
+  "challengeExtensionDefault": "Tu peux rester encore si tu veux, ou relâcher.",
+  "challengeSuccessDefault": "Tu as tenu jusqu'au bout. Bonne fille.",
+  "challengeStopDefault": "Tu as choisi d'arrêter. Bien.",
+  "challengeFailDefault": "Tu as craqué avant le seuil. Pas grave, tu y arriveras la prochaine.",
+  "challengeSkipDefault": "Comme tu veux, on garde pour la prochaine.",
+  "challengeBannerHoldThroat": "Tiens gorge {seconds} secondes",
+  "@challengeBannerHoldThroat": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerHoldFull": "Tiens à fond {seconds} secondes",
+  "@challengeBannerHoldFull": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerHoldGeneric": "Tiens la position {seconds} secondes",
+  "@challengeBannerHoldGeneric": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerRhythm": "Monte le rythme jusqu'à {bpm} BPM",
+  "@challengeBannerRhythm": {
+    "placeholders": { "bpm": { "type": "int" } }
+  },
+  "challengeBannerBiffle": "Encaisse les coups jusqu'à {bpm} BPM",
+  "@challengeBannerBiffle": {
+    "placeholders": { "bpm": { "type": "int" } }
+  },
+  "challengeBannerGeneric": "Pousse ta limite",
+  "challengeBannerThresholdReached": "Seuil atteint — continue ou arrête",
   "careerIncludeHandToggle": "Inclure la stimulation à la main",
   "careerIncludeHandSubtitle": "Désactive aussi les coups de queue (biffle) — les deux nécessitent la main.",
   "careerIncludeHandMilestoneLocked": "Verrouillé pour cette séance — le milestone d'apprentissage utilise la main.",
@@ -233,15 +301,13 @@
       "count": { "type": "int" }
     }
   },
-  "careerLevelLockedHint": "Niveau 1 (termine une séance pour débloquer le suivant)",
-
-  "careerSessionName": "Carrière niveau {level}",
+  "careerSessionName": "Carrière",
   "@careerSessionName": {
     "placeholders": {
       "level": { "type": "int" }
     }
   },
-  "careerSessionNameQuickie": "Carrière niveau {level} — bâclée",
+  "careerSessionNameQuickie": "Carrière — bâclée",
   "@careerSessionNameQuickie": {
     "placeholders": {
       "level": { "type": "int" }
@@ -303,10 +369,6 @@
   "specRespecConfirmAction": "Respec",
   "specIntro": "Investis tes points pour signaler au moteur ce que tu aimes. Plus tu investis dans une branche, plus le générateur te proposera ce style — sans déséquilibrer tes stats.",
   "specPointsAvailableLabel": "points disponibles",
-  "specLevelLabel": "Niveau {level}",
-  "@specLevelLabel": {
-    "placeholders": { "level": { "type": "int" } }
-  },
   "specSpentLabel": "{spent} / {cap} dépensés",
   "@specSpentLabel": {
     "placeholders": {
@@ -643,7 +705,6 @@
   "coachBadgePalierAcquis": "PALIER ACQUIS",
   "coachBadgeFreeTraining": "ENTRAÎNEMENT LIBRE",
   "coachBadgeLocked": "VERROUILLÉ",
-  "coachRequiresHands": "Mains obligatoires",
   "coachSummaryPrincipal": "{title} · Principal palier {tier}",
   "@coachSummaryPrincipal": {
     "placeholders": {
@@ -697,26 +758,13 @@
   "@coachErrorLockedTier": {
     "placeholders": { "tier": { "type": "int" } }
   },
-  "coachErrorRequiresHands": "{coachName} a besoin que tu actives la main dans les options.",
-  "@coachErrorRequiresHands": {
-    "placeholders": { "coachName": { "type": "String" } }
-  },
-  "coachErrorMinLevel": "{coachName} demande le niveau {minLevel} minimum.",
-  "@coachErrorMinLevel": {
+  "coachErrorMinPlayerSeconds": "{coachName} se débloque à {duration} de jeu cumulé.",
+  "@coachErrorMinPlayerSeconds": {
     "placeholders": {
       "coachName": { "type": "String" },
-      "minLevel": { "type": "int" }
+      "duration": { "type": "String" }
     }
   },
-  "coachErrorMissingSpecialization": "Ce coach demande au moins 1 point dans une spécialisation que tu n'as pas investie.",
-  "coachErrorInsufficientBranchPoints": "{coachName} demande : {requirements}. Investis tes points de spécialisation.",
-  "@coachErrorInsufficientBranchPoints": {
-    "placeholders": {
-      "coachName": { "type": "String" },
-      "requirements": { "type": "String" }
-    }
-  },
-
   "unlockAnnouncementSloppyDroolBasic": "Désormais ta bouche garde plus de salive, et ton lèche en produit plus. Bave-moi dessus, sois sale.",
   "@unlockAnnouncementSloppyDroolBasic": {
     "description": "Annonce TTS post-finale_chime quand la milestone qui débloque sloppy_drool_basic est acquittée."
@@ -740,11 +788,6 @@
   "unlockAnnouncementSloppyDroolDeep": "Quand tu vas profond, ta bouche déborde encore plus. Profite.",
   "@unlockAnnouncementSloppyDroolDeep": {
     "description": "Annonce TTS post-finale_chime quand la milestone qui débloque sloppy_drool_deep est acquittée."
-  },
-
-  "unlockAnnouncementRhythmHeadMidSustained": "Tu peux tenir la cadence plus d'une minute maintenant, sans pause. Je te le demanderai.",
-  "@unlockAnnouncementRhythmHeadMidSustained": {
-    "description": "Annonce TTS post-finale_chime quand la milestone qui débloque rhythm_head_mid_sustained est acquittée."
   },
 
   "modeSelectionSurpriseTooltip": "Rappels surprise",

@@ -119,6 +119,26 @@
     }
   },
   "profileReputationUnit": "reputation pts",
+  "reputationTierBonneEleve": "Good student",
+  "reputationTierPetiteSuceuse": "Little sucker",
+  "reputationTierSuceuseConfirmee": "Seasoned sucker",
+  "reputationTierPuteReconnue": "Known whore",
+  "reputationTierPuteConsacree": "Accomplished whore",
+  "reputationTierReineDesSuceuses": "Queen of suckers",
+  "reputationTierReineDesPutes": "Queen of whores",
+  "careerInvestmentBarTitle": "Total time",
+  "careerInvestmentSessions": "{count} sessions",
+  "@careerInvestmentSessions": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "careerInvestmentNextCoach": "Next coach: {name} ({remaining})",
+  "@careerInvestmentNextCoach": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "remaining": { "type": "String" }
+    }
+  },
+  "careerInvestmentAllUnlocked": "All coaches unlocked.",
   "profileStatSessionsCompleted": "Sessions completed",
   "profileStatNoFailStreak": "No-fail streak",
   "profileStatDailyStreak": "Daily streak",
@@ -205,16 +225,64 @@
       "error": { "type": "String" }
     }
   },
-  "careerLevelSection": "Level",
-  "careerMaxLevel": "max {level}",
-  "@careerMaxLevel": {
-    "placeholders": {
-      "level": { "type": "int" }
-    }
-  },
+  "careerDurationSection": "Duration",
   "careerQuickieToggle": "Quickie",
   "careerQuickieSubtitle": "6 min — intense",
   "careerQuickieDescription": "6 min, intense the whole way through. For when you don't have time.",
+  "sessionLengthBacheeLabel": "Quickie",
+  "sessionLengthBacheeDuration": "~6 min",
+  "sessionLengthBacheeDescription": "Express, intense the whole way through.",
+  "sessionLengthCourteLabel": "Short",
+  "sessionLengthCourteDuration": "~12 min",
+  "sessionLengthCourteDescription": "Compact format, one challenge possible.",
+  "sessionLengthMoyenneLabel": "Medium",
+  "sessionLengthMoyenneDuration": "~25 min",
+  "sessionLengthMoyenneDescription": "Up to two milestones, varied content.",
+  "sessionLengthLongueLabel": "Long",
+  "sessionLengthLongueDuration": "~45 min",
+  "sessionLengthLongueDescription": "Full session, several challenges intercut.",
+  "careerChallengesToggle": "In-session challenges",
+  "careerChallengesDescription": "An opt-in challenge around 60% of the session. Calibrates fast, can speed up your level progression.",
+  "challengePassButton": "SKIP",
+  "challengeGoButton": "HOLD",
+  "challengeHoldHintLive": "Keep your finger on the screen",
+  "challengeHoldHintAtSeuil": "Release to stop, or keep holding",
+  "challengeHoldHintTolerance": "Put your finger back",
+  "challengeCountdownReleaseRetry": "Keep your finger this time.",
+  "challengeTutorialBanner": "First challenge: you'll hold a position for the requested time. Press and hold HOLD when ready (keep your finger), or tap SKIP to skip it.",
+  "challengeBannerCountdown": "{digit}",
+  "@challengeBannerCountdown": {
+    "placeholders": { "digit": { "type": "int" } }
+  },
+  "challengeAttemptDefault": "Challenge: we're pushing your limit. Press and hold HOLD when ready, I'll count three two one before we start. Keep your finger on the screen as long as you hold.",
+  "challengeAttemptTutorialHoldThroat": "First challenge: you'll hold deep for five seconds. Press and hold HOLD, keep your finger on the screen. If you let go before the threshold, it's failed. At the threshold the button turns green: release to stop, or keep holding to push further.",
+  "challengeExtensionDefault": "You can stay longer if you want, or let go.",
+  "challengeSuccessDefault": "You held it all the way. Good girl.",
+  "challengeStopDefault": "You chose to stop. Good.",
+  "challengeFailDefault": "You broke before the threshold. No worries, you'll get it next time.",
+  "challengeSkipDefault": "As you wish, we'll keep it for next time.",
+  "challengeBannerHoldThroat": "Hold deep {seconds} seconds",
+  "@challengeBannerHoldThroat": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerHoldFull": "Hold all the way {seconds} seconds",
+  "@challengeBannerHoldFull": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerHoldGeneric": "Hold the position {seconds} seconds",
+  "@challengeBannerHoldGeneric": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerRhythm": "Ramp the rhythm up to {bpm} BPM",
+  "@challengeBannerRhythm": {
+    "placeholders": { "bpm": { "type": "int" } }
+  },
+  "challengeBannerBiffle": "Take the slaps up to {bpm} BPM",
+  "@challengeBannerBiffle": {
+    "placeholders": { "bpm": { "type": "int" } }
+  },
+  "challengeBannerGeneric": "Push your limit",
+  "challengeBannerThresholdReached": "Threshold reached — keep going or stop",
   "careerIncludeHandToggle": "Include hand stimulation",
   "careerIncludeHandSubtitle": "Also disables cock slaps (biffle) — both need the hand.",
   "careerIncludeHandMilestoneLocked": "Locked for this session — the learning milestone uses the hand.",
@@ -233,15 +301,13 @@
       "count": { "type": "int" }
     }
   },
-  "careerLevelLockedHint": "Level 1 (finish a session to unlock the next one)",
-
-  "careerSessionName": "Career level {level}",
+  "careerSessionName": "Career",
   "@careerSessionName": {
     "placeholders": {
       "level": { "type": "int" }
     }
   },
-  "careerSessionNameQuickie": "Career level {level} — quickie",
+  "careerSessionNameQuickie": "Career — quickie",
   "@careerSessionNameQuickie": {
     "placeholders": {
       "level": { "type": "int" }
@@ -303,10 +369,6 @@
   "specRespecConfirmAction": "Respec",
   "specIntro": "Spend your points to tell the engine what you like. The more you invest in a branch, the more the generator leans into that style — without unbalancing your stats.",
   "specPointsAvailableLabel": "available points",
-  "specLevelLabel": "Level {level}",
-  "@specLevelLabel": {
-    "placeholders": { "level": { "type": "int" } }
-  },
   "specSpentLabel": "{spent} / {cap} spent",
   "@specSpentLabel": {
     "placeholders": {
@@ -643,7 +705,6 @@
   "coachBadgePalierAcquis": "TIER UNLOCKED",
   "coachBadgeFreeTraining": "FREE TRAINING",
   "coachBadgeLocked": "LOCKED",
-  "coachRequiresHands": "Hands required",
   "coachSummaryPrincipal": "{title} · Primary tier {tier}",
   "@coachSummaryPrincipal": {
     "placeholders": {
@@ -697,26 +758,13 @@
   "@coachErrorLockedTier": {
     "placeholders": { "tier": { "type": "int" } }
   },
-  "coachErrorRequiresHands": "{coachName} needs you to enable the hand in the options.",
-  "@coachErrorRequiresHands": {
-    "placeholders": { "coachName": { "type": "String" } }
-  },
-  "coachErrorMinLevel": "{coachName} requires level {minLevel} minimum.",
-  "@coachErrorMinLevel": {
+  "coachErrorMinPlayerSeconds": "{coachName} unlocks at {duration} of total play time.",
+  "@coachErrorMinPlayerSeconds": {
     "placeholders": {
       "coachName": { "type": "String" },
-      "minLevel": { "type": "int" }
+      "duration": { "type": "String" }
     }
   },
-  "coachErrorMissingSpecialization": "This coach requires at least 1 point in a specialization you haven't invested in.",
-  "coachErrorInsufficientBranchPoints": "{coachName} requires: {requirements}. Spend your specialization points.",
-  "@coachErrorInsufficientBranchPoints": {
-    "placeholders": {
-      "coachName": { "type": "String" },
-      "requirements": { "type": "String" }
-    }
-  },
-
   "unlockAnnouncementSloppyDroolBasic": "From now on your mouth holds more spit, and your licking makes more. Drool on me, be filthy.",
   "@unlockAnnouncementSloppyDroolBasic": {
     "description": "Post-finale_chime TTS announcement when the milestone unlocking sloppy_drool_basic is acknowledged."
@@ -740,11 +788,6 @@
   "unlockAnnouncementSloppyDroolDeep": "When you go deep, your mouth overflows even more. Enjoy it.",
   "@unlockAnnouncementSloppyDroolDeep": {
     "description": "Post-finale_chime TTS announcement when the milestone unlocking sloppy_drool_deep is acknowledged."
-  },
-
-  "unlockAnnouncementRhythmHeadMidSustained": "You can hold the pace longer than a minute now, no break. I'll be asking for it.",
-  "@unlockAnnouncementRhythmHeadMidSustained": {
-    "description": "Post-finale_chime TTS announcement when the milestone unlocking rhythm_head_mid_sustained is acknowledged."
   },
 
   "modeSelectionSurpriseTooltip": "Surprise reminders",

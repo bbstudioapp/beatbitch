@@ -1,12 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:beat_bitch/career/models/career_generation_inputs.dart';
 import 'package:beat_bitch/career/models/level_milestone.dart';
 import 'package:beat_bitch/career/models/phrase_bank.dart';
-import 'package:beat_bitch/career/models/unlock_key.dart';
-import 'package:beat_bitch/career/services/career_session_generator.dart';
+import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
 import 'package:beat_bitch/career/services/milestone_service.dart';
-import 'package:beat_bitch/models/anatomy_profile.dart';
-import 'package:beat_bitch/models/session.dart';
-import 'package:beat_bitch/models/session_step.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 List<PhraseEntry> _p(List<String> texts) =>
@@ -155,7 +152,7 @@ void main() {
           UnlockKey.begBalls,
         }),
         humiliationCareer: 400.0,
-        maxDepthIndexOverride: Position.balls.index,
+        custom: CustomOverrides(maxDepthIndex: Position.balls.index),
         anatomy: const AnatomyProfile(hasBalls: true),
       );
       for (final s in result.session.steps) {
@@ -186,7 +183,7 @@ void main() {
         bank: _bank(),
         unlockedKeys: UnlockKey.values.toSet(),
         humiliationCareer: 30.0,
-        maxDepthIndexOverride: Position.mid.index,
+        custom: CustomOverrides(maxDepthIndex: Position.mid.index),
         anatomy: const AnatomyProfile(hasBalls: true),
       );
       final lickBallsSteps = result.session.steps.where((s) =>
@@ -208,7 +205,7 @@ void main() {
         bank: _bank(),
         unlockedKeys: UnlockKey.values.toSet(),
         humiliationCareer: 30.0,
-        maxDepthIndexOverride: Position.mid.index,
+        custom: CustomOverrides(maxDepthIndex: Position.mid.index),
         anatomy: const AnatomyProfile(hasBalls: false),
       );
       final touchesBalls = result.session.steps.any(

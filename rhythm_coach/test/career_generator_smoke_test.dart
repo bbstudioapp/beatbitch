@@ -1,10 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:beat_bitch/career/models/career_generation_inputs.dart';
 import 'package:beat_bitch/career/models/level_milestone.dart';
 import 'package:beat_bitch/career/models/phrase_bank.dart';
-import 'package:beat_bitch/career/models/unlock_key.dart';
-import 'package:beat_bitch/career/services/career_session_generator.dart';
-import 'package:beat_bitch/models/session.dart';
-import 'package:beat_bitch/models/session_step.dart';
+import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
 import 'package:beat_bitch/services/humiliation_engine.dart';
 
 List<PhraseEntry> _p(List<String> texts) =>
@@ -120,7 +118,7 @@ void main() {
     final result = CareerSessionGenerator(seed: 1234).generate(
       level: 2,
       bank: _bank(),
-      finalMilestone: milestone,
+      milestones: const MilestonePlan(finalMilestone: milestone),
       unlockedKeys: _allUnlocks,
     );
 
@@ -170,7 +168,7 @@ void main() {
         ),
       ],
       durationSeconds: 10,
-      unlocks: [UnlockKey.holdMidShort],
+      unlocks: [UnlockKey.holdMid],
     );
     const finalM = LevelMilestone(
       id: 'final_test',
@@ -192,8 +190,7 @@ void main() {
     final result = CareerSessionGenerator(seed: 1234).generate(
       level: 2,
       bank: _bank(),
-      insertedBodies: [body],
-      finalMilestone: finalM,
+      milestones: const MilestonePlan(bodies: [body], finalMilestone: finalM),
       unlockedKeys: _allUnlocks,
     );
 
@@ -317,7 +314,7 @@ void main() {
       UnlockKey.basics,
       UnlockKey.rhythmMidBasic,
       UnlockKey.lickFull,
-      UnlockKey.holdMidShort,
+      UnlockKey.holdMid,
       UnlockKey.biffleBasic,
       UnlockKey.begLibre,
     };
@@ -348,7 +345,7 @@ void main() {
       final r = CareerSessionGenerator(seed: seed).generate(
         level: 4,
         bank: _bank(),
-        insertedBodies: [milestone],
+        milestones: const MilestonePlan(bodies: [milestone]),
         unlockedKeys: initial,
         humiliationCareer: 30.0,
       );

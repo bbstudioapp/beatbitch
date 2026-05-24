@@ -7,7 +7,7 @@
     "rhythm": {
       "soft": [
         "Lass es langsam angehen {name}, wir wärmen uns auf.",
-        "Kleine Stöße zum Anfang, mach mich glücklich {name}.",
+        "Schöne kleine Stöße {name}, mach mich glücklich.",
         "Komm, zeig mir, wie du lutschst, wenn keiner zuschaut.",
         "Süß, dass du ganz von allein loslegst {name}.",
         "Du fängst schon an, es zu mögen, gib's zu {name}.",
@@ -117,7 +117,7 @@
     },
     "hand": {
       "soft": [
-        "Wichs ihn mit der Hand {name}, ganz sanft zum Anfang.",
+        "Wichs ihn mit der Hand {name}, ganz sanft hin und her.",
         "Leg deine Finger drumherum, Süße {name}.",
         "Langsam hin und her {name}, lass mir das Vergnügen dauern."
       ],

@@ -77,13 +77,9 @@ class BadgeUnlock {
 
   /// Phrase TTS d'annonce, neutre et factuelle (la coach garde son ton
   /// salace pour le reste). Format intentionnellement court, lu pendant
-  /// l'animation de fin de séance. Utilise les libellés FR du modèle si
-  /// [l10n] est null (rétrocompatibilité avec les call sites hors UI) —
-  /// sinon résout le nom de famille et le palier dans la locale active.
-  String announcement([AppLocalizations? l10n]) {
-    if (l10n == null) {
-      return 'Badge débloqué : ${definition.displayName}, palier ${tier.label}.';
-    }
+  /// l'animation de fin de séance. Résout le nom de famille et le palier
+  /// dans la locale active.
+  String announcement(AppLocalizations l10n) {
     return l10n.badgeUnlockAnnouncement(
       _localizedFamilyName(l10n),
       _localizedTierLabel(l10n),

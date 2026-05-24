@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:beat_bitch/career/models/career_generation_inputs.dart';
 import 'package:beat_bitch/career/models/phrase_bank.dart';
-import 'package:beat_bitch/career/services/career_session_generator.dart';
+import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
 import 'package:beat_bitch/models/session.dart';
-import 'package:beat_bitch/models/session_step.dart';
 
 /// Garde-fou issue #68 : en Custom Extrême avec hand=rare et rhythm=frequent,
 /// le sprint final (boosts pre-final) ne devait pas systématiquement utiliser
@@ -81,7 +81,7 @@ void main() {
           unlockedKeys: const {}, // mode hérité Custom
           humiliationCareer: 400.0,
           obedience: 100.0,
-          intensityFloorOverride: 0.45,
+          custom: const CustomOverrides(intensityFloor: 0.45),
           coachModeWeights: _doses({
             SessionMode.hand: 0.4, // rare
             SessionMode.rhythm: 2.2, // frequent

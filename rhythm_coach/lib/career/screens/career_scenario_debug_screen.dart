@@ -4,17 +4,14 @@ import '../../l10n/app_localizations.dart';
 import '../../l10n/enum_labels.dart';
 import '../../main.dart' show milestoneService;
 import '../../models/session.dart';
-import '../../models/session_step.dart';
 import '../../services/humiliation_engine.dart';
 import '../../services/stats_service.dart';
 import '../../theme/app_theme.dart';
-import '../models/career_level.dart';
+import '../models/career_generation_inputs.dart';
 import '../models/level_milestone.dart';
-import '../models/phrase_bank.dart';
-import '../models/specialization.dart';
-import '../models/unlock_key.dart';
+import '../services/career_difficulty_resolver.dart';
 import '../services/career_progress_service.dart';
-import '../services/career_session_generator.dart';
+import '../services/generation/career_session_generator.dart';
 import '../services/milestone_loader.dart';
 import '../services/phrase_bank_loader.dart';
 import '../services/specialization_service.dart';
@@ -88,7 +85,9 @@ class _CareerScenarioDebugScreenState extends State<CareerScenarioDebugScreen> {
     final spec = await SpecializationService().load();
     final humil = await stats.getHumiliationLevel();
     final obed = await stats.getObedienceLevel();
-    final maxLevel = await progress.getMaxLevel();
+    // SynthLevel dérivé des sessions pour initialiser le slider debug
+    // (capped à 20 ici pour rester dans la plage utilisable de l'écran).
+    final sessions = await progress.getCompletedSessions();
     final includeHand = await progress.getIncludeHand();
     if (!mounted) return;
     setState(() {
@@ -97,7 +96,7 @@ class _CareerScenarioDebugScreenState extends State<CareerScenarioDebugScreen> {
       _spec = spec;
       _humil = humil;
       _obed = obed;
-      _level = maxLevel.clamp(1, 20);
+      _level = CareerDifficultyResolver.synthLevelFor(sessions).clamp(1, 20);
       _includeHand = includeHand;
       _unlocks = milestoneService.acquiredUnlockKeys();
       _ready = true;
@@ -122,10 +121,12 @@ class _CareerScenarioDebugScreenState extends State<CareerScenarioDebugScreen> {
       obedience: _obed,
       durationSeconds: _durationOverride > 0 ? _durationOverride : null,
       specialization: _spec,
-      insertedBodies: milestone == null ? const [] : [milestone],
-      finalMilestone: finalMilestone,
       unlockedKeys: _unlocks,
-      milestoneTextResolver: milestoneService.getStepText,
+      milestones: MilestonePlan(
+        bodies: milestone == null ? const [] : [milestone],
+        finalMilestone: finalMilestone,
+        textResolver: milestoneService.getStepText,
+      ),
     );
     setState(() {
       _result = result;
@@ -199,10 +200,12 @@ class _CareerScenarioDebugScreenState extends State<CareerScenarioDebugScreen> {
       intense: true,
       humiliationCareer: _humil,
       obedience: _obed,
-      insertedBodies: milestone == null ? const [] : [milestone],
-      finalMilestone: finalMilestone,
       unlockedKeys: _unlocks,
-      milestoneTextResolver: milestoneService.getStepText,
+      milestones: MilestonePlan(
+        bodies: milestone == null ? const [] : [milestone],
+        finalMilestone: finalMilestone,
+        textResolver: milestoneService.getStepText,
+      ),
     );
     setState(() {
       _forkResult = fork;
@@ -559,7 +562,7 @@ class _CareerScenarioDebugScreenState extends State<CareerScenarioDebugScreen> {
     final res = _result;
     if (res == null) return const SizedBox.shrink();
     final session = res.session;
-    final cfg = CareerLevel.forLevel(_level);
+    final cfg = CareerDifficultyResolver.resolve(_level);
     final modes = <SessionMode>{
       for (final s in session.steps)
         if (s.mode != null) s.mode!,
@@ -583,7 +586,7 @@ class _CareerScenarioDebugScreenState extends State<CareerScenarioDebugScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              '${cfg.title} • ${_formatTime(session.durationSeconds)} • ${session.steps.length} steps',
+              '${localizedCareerLevelTitle(context, cfg.level)} • ${_formatTime(session.durationSeconds)} • ${session.steps.length} steps',
               style: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
             ),
             if (_appliedMilestone != null)

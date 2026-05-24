@@ -231,20 +231,6 @@
         "Steck noch mehr ein. Eine echte Hure hört nicht auf.",
         "Du wirst durchhalten, weil ich es so entscheide."
       ]
-    },
-    "resilience": {
-      "soft": [
-        "Du steckst es ein, ohne dich zu beschweren {name}. Das erwartet man von einem Ding wie dir.",
-        "Du kannst still leiden {name}. Gut."
-      ],
-      "medium": [
-        "Du nimmst alles, was ich dir gebe {name}. Ohne zu zucken.",
-        "Du brichst nicht zusammen {name}. Steck es weiter ein."
-      ],
-      "hard": [
-        "Du steckst ein, was andere zusammenbrechen lassen würde {name}. Bleib so.",
-        "Unzerstörbar, wenn ich es so entscheide {name}. Beweis es."
-      ]
     }
   },
   "progressPhrases": {

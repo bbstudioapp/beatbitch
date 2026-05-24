@@ -62,6 +62,15 @@ class StatsService {
     return prefs.getDouble(_kHumiliationLevel) ?? 0.0;
   }
 
+  /// Lecture rapide du temps total cumulé persisté, en secondes. Sert au
+  /// déblocage des coachs par investissement (Phase 19.10) — plus simple
+  /// que de charger un `snapshot()` complet quand seul ce compteur
+  /// importe.
+  Future<int> getTotalSeconds() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_kTotalSeconds) ?? 0;
+  }
+
   /// Persiste le score d'humiliation atteint à la fin d'une session.
   /// Le score est un thermomètre cumulé entre sessions, sans borne haute
   /// (les longues carrières peuvent dépasser 100). Borne basse : 0.

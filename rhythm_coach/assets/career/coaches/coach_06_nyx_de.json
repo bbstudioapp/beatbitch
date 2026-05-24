@@ -185,20 +185,6 @@
         "Eine Kehle wie deine wird durchgefickt. Keine Schonung."
       ]
     },
-    "resilience": {
-      "soft": [
-        "Du schluckst es ohne zu zucken {name}. Das ist dein einziges Verdienst.",
-        "Du weißt zu leiden {name}. Glück für dich."
-      ],
-      "medium": [
-        "Du nimmst alles, was ich gebe {name}. Gut.",
-        "Du brichst nicht {name}. Schluck weiter."
-      ],
-      "hard": [
-        "Unzerstörbar {name}. Beweis es noch mal.",
-        "Du schluckst, was jeden anderen brechen würde {name}. Bleib so."
-      ]
-    },
     "obeissance": {
       "soft": [
         "Du tust, was ich sage {name}. Selbstverständlich.",

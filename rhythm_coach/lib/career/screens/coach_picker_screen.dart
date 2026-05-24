@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../l10n/format_helpers.dart';
 import '../../theme/app_theme.dart';
 import '../models/coach.dart';
-import '../models/specialization.dart';
 import '../services/coach_service.dart';
 import '../widgets/coach_portrait.dart';
 
@@ -16,24 +16,21 @@ import '../widgets/coach_portrait.dart';
 /// de confirmation expliquant que la session ne fera pas progresser le palier.
 class CoachPickerScreen extends StatelessWidget {
   final CoachService service;
-  final int playerMaxLevel;
+  final int playerTotalSeconds;
   final bool handsEnabled;
-  final SpecializationAllocation specialization;
 
   const CoachPickerScreen({
     super.key,
     required this.service,
-    required this.playerMaxLevel,
+    required this.playerTotalSeconds,
     required this.handsEnabled,
-    required this.specialization,
   });
 
   Future<void> _handleTap(BuildContext context, Coach coach) async {
     final status = service.evaluate(
       coach,
-      playerMaxLevel: playerMaxLevel,
+      playerTotalSeconds: playerTotalSeconds,
       handsEnabled: handsEnabled,
-      branchPoints: specialization.points,
     );
 
     final t = AppLocalizations.of(context);
@@ -41,26 +38,17 @@ class CoachPickerScreen extends StatelessWidget {
       case CoachSelectionStatus.lockedTier:
         _snack(context, t.coachErrorLockedTier(coach.tier));
         return;
-      case CoachSelectionStatus.blockedRequiresHands:
-        _snack(context, t.coachErrorRequiresHands(coach.name));
-        return;
-      case CoachSelectionStatus.blockedMinLevel:
+      case CoachSelectionStatus.blockedMinPlayerSeconds:
         _snack(
-            context,
-            t.coachErrorMinLevel(
-                coach.name, coach.requirements.minPlayerLevel));
-        return;
-      case CoachSelectionStatus.blockedMissingSpecialization:
-        _snack(context, t.coachErrorMissingSpecialization);
-        return;
-      case CoachSelectionStatus.blockedInsufficientBranchPoints:
-        final missing = coach.requirements.requiredBranchPoints.entries
-            .where((e) => (specialization.points[e.key] ?? 0) < e.value)
-            .map((e) =>
-                '${SpecializationBranchMeta.forBranch(e.key).label} ≥ ${e.value}')
-            .join(', ');
-        _snack(
-            context, t.coachErrorInsufficientBranchPoints(coach.name, missing));
+          context,
+          t.coachErrorMinPlayerSeconds(
+            coach.name,
+            formatDurationCompact(
+              context,
+              coach.requirements.minPlayerSeconds,
+            ),
+          ),
+        );
         return;
       case CoachSelectionStatus.selectedAdvancing:
         await service.selectCoach(coach);
@@ -150,8 +138,14 @@ class CoachPickerScreen extends StatelessWidget {
       body: AnimatedBuilder(
         animation: service,
         builder: (context, _) {
+          // Révélation progressive : on ne dévoile que le palier en cours
+          // + le palier juste suivant (= prochain coach à débloquer). Les
+          // tiers supérieurs restent cachés — leur existence et identité
+          // se révèlent à mesure que la joueuse progresse, pas en flash dès
+          // la 1ʳᵉ ouverture du picker.
           final coaches = [...service.coaches]
-            ..sort((a, b) => a.tier.compareTo(b.tier));
+            ..sort((a, b) => a.tier.compareTo(b.tier))
+            ..removeWhere((c) => c.tier > service.currentTier + 1);
 
           return ListView.separated(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
@@ -307,21 +301,6 @@ class _CoachCard extends StatelessWidget {
                           height: 1.35,
                         ),
                       ),
-                      if (coach.requirements.requiresHands) ...[
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            const Icon(Icons.pan_tool_alt,
-                                size: 14, color: AppTheme.textMuted),
-                            const SizedBox(width: 6),
-                            Text(
-                              t.coachRequiresHands,
-                              style: const TextStyle(
-                                  fontSize: 11, color: AppTheme.textMuted),
-                            ),
-                          ],
-                        ),
-                      ],
                     ],
                   ),
                 ),

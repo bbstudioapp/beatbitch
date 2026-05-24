@@ -2,9 +2,50 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:beat_bitch/career/models/coach.dart';
 import 'package:beat_bitch/career/models/coach_catalog.dart';
-import 'package:beat_bitch/career/models/specialization.dart';
+import 'package:beat_bitch/career/services/coach_loader.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  group('CoachLoader — overrides JSON ne dégradent pas les seeds', () {
+    test(
+      'catalogue chargé depuis assets garde les minPlayerSeconds de CoachCatalog.defaults',
+      () async {
+        final loaded = await CoachLoader().load();
+
+        // Régression : des blocs `requirements` legacy (Phase 19 :
+        // `minPlayerLevel`, `requiresHands`) traînaient dans les JSON coach.
+        // `CoachMeta.fromJson` les lisait, `withMeta` écrasait les seeds
+        // 3600/10800/… par 0, et `CoachService.attachPhrases` pétait son
+        // assert au boot. Le contrat documenté dans `CoachRequirement.fromJson`
+        // est : « les overrides JSON ne touchent pas les requirements » —
+        // donc le catalogue chargé doit avoir exactement les mêmes
+        // `minPlayerSeconds` que `CoachCatalog.defaults`.
+        final expectedById = {
+          for (final c in CoachCatalog.defaults)
+            c.id: c.requirements.minPlayerSeconds,
+        };
+        for (final c in loaded) {
+          expect(
+            c.requirements.minPlayerSeconds,
+            expectedById[c.id],
+            reason:
+                'coach ${c.id} : minPlayerSeconds chargé ne matche pas le seed '
+                '(override JSON résiduel ?)',
+          );
+        }
+
+        // Et le catalogue final doit passer la validation (suite stricte).
+        final issues = CoachCatalogValidator.validate(loaded);
+        expect(
+          issues,
+          isEmpty,
+          reason: 'catalogue post-load incohérent : ${issues.join("; ")}',
+        );
+      },
+    );
+  });
+
   group('CoachCatalogValidator', () {
     test('catalogue par défaut est cohérent (zéro warning)', () {
       final issues = CoachCatalogValidator.validate(CoachCatalog.defaults);
@@ -72,7 +113,7 @@ void main() {
         specialties: [],
         tier: 1,
         isPrincipal: true,
-        requirements: CoachRequirement(minPlayerLevel: 10),
+        requirements: CoachRequirement(minPlayerSeconds: 10),
       );
       const t2 = Coach(
         id: 'b',
@@ -83,42 +124,10 @@ void main() {
         specialties: [],
         tier: 2,
         isPrincipal: true,
-        requirements: CoachRequirement(minPlayerLevel: 5), // < 10 KO
+        requirements: CoachRequirement(minPlayerSeconds: 5), // < 10 KO
       );
       final issues = CoachCatalogValidator.validate([t1, t2]);
       expect(issues.any((s) => s.contains('strictement supérieur')), isTrue);
-    });
-  });
-
-  group('requiredBranchPoints', () {
-    test('parsing JSON', () {
-      final r = CoachRequirement.fromJson({
-        'requiredBranchPoints': {'profondeur': 3, 'sloppy': 1},
-      });
-      expect(r.requiredBranchPoints[SpecializationBranch.profondeur], 3);
-      expect(r.requiredBranchPoints[SpecializationBranch.sloppy], 1);
-    });
-
-    test('valeurs <=0 ou non-numériques ignorées', () {
-      final r = CoachRequirement.fromJson({
-        'requiredBranchPoints': {
-          'profondeur': 0,
-          'sloppy': -2,
-          'unknown': 5,
-        },
-      });
-      expect(r.requiredBranchPoints, isEmpty);
-    });
-
-    test(
-        'seuil non atteint → blockedInsufficientBranchPoints (à intégrer côté CoachService)',
-        () {
-      // Smoke test : on s'assure juste que la structure est correcte ;
-      // l'évaluation côté CoachService est testée dans coach_service_test.
-      const r = CoachRequirement(
-        requiredBranchPoints: {SpecializationBranch.endurance: 3},
-      );
-      expect(r.requiredBranchPoints[SpecializationBranch.endurance], 3);
     });
   });
 }

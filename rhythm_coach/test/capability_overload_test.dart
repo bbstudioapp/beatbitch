@@ -1,12 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:beat_bitch/career/models/career_generation_inputs.dart';
 import 'package:beat_bitch/career/models/coach.dart';
 import 'package:beat_bitch/career/models/coach_catalog.dart';
 import 'package:beat_bitch/career/models/phrase_bank.dart';
-import 'package:beat_bitch/career/models/unlock_key.dart';
-import 'package:beat_bitch/career/services/career_session_generator.dart';
-import 'package:beat_bitch/models/session.dart';
-import 'package:beat_bitch/models/session_step.dart';
-import 'package:beat_bitch/services/capability_axis.dart';
+import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
 import 'package:beat_bitch/services/capability_service.dart';
 
 /// Tests de la **surcharge isolée** (Phase 3) côté générateur : un (et un seul)
@@ -50,8 +47,10 @@ CareerGenerationResult _gen(
       includeHand: true,
       humiliationCareer: 100.0,
       unlockedKeys: unlocks ?? _allUnlocks,
-      capabilityProfile: profile,
-      capabilitySessionCeilings: ceilings,
+      capability: CapabilityInputs(
+        profile: profile,
+        sessionCeilings: ceilings,
+      ),
     );
 
 void main() {
@@ -237,7 +236,7 @@ void main() {
         openingPhrase: openingPhrase,
         humiliationCareer: 100.0,
         unlockedKeys: _allUnlocks,
-        capabilityProfile: profile,
+        capability: CapabilityInputs(profile: profile),
       );
       return r.session.steps
           .firstWhere((s) => !s.isTextOnly && s.time == 0)

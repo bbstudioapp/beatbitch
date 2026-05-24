@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../career/models/challenge.dart';
 import '../career/models/level_milestone.dart';
 import '../career/models/phrase_bank.dart';
 import '../career/models/specialization.dart';
@@ -109,6 +110,20 @@ class SessionScreen extends StatefulWidget {
   /// flow fail standard à chaque fail.
   final Future<bool> Function(SessionController controller)? onMilestoneRetry;
 
+  /// Callback consommé par `SessionController.onPostChallengeRegen` quand
+  /// un défi vient d'élargir le set d'unlocks acquittés. Le caller régénère
+  /// le reste de la séance avec les nouveaux unlocks et appelle
+  /// `requestPostChallengeRegen`. Null = pas de régen (la timeline initiale
+  /// continue, les unlocks ne profiteront qu'à la séance suivante).
+  final Future<void> Function(SessionController controller)?
+      onPostChallengeRegen;
+
+  /// Callback consommé par `SessionController.onChallengeOutcome` à la fin
+  /// de tout défi. Le caller persiste un compteur d'essais par axe pour
+  /// faire monter la cible « franchissements » du défi suivant. Null = no-op.
+  final void Function(Challenge challenge, ChallengeOutcome outcome)?
+      onChallengeOutcome;
+
   /// Si true, démarre la session automatiquement (sans bouton play et
   /// sans décompte d'intro). Utilisé pour les sessions « encore » qui
   /// enchaînent directement depuis l'écran finished précédent.
@@ -165,6 +180,12 @@ class SessionScreen extends StatefulWidget {
   /// la génération de punition carrière contextuelle. Null = hors carrière.
   final SpecializationAllocation? specialization;
 
+  /// Service spécialisation — propagé au SessionController pour permettre
+  /// la consume de la file showcase au `_finish` quand le défi a tourné
+  /// sur la branche fraîchement boostée (cf. spec § 5.1 cascade). Null
+  /// hors carrière.
+  final SpecializationService? specializationService;
+
   /// Probabilité par minute qu'une mini-punition inopinée se déclenche en
   /// cours de séance (cf. `Coach.miniPunishmentRate`, dérivé de l'archétype
   /// du coach). 0 = jamais — valeur des écrans sans notion de coach.
@@ -216,6 +237,8 @@ class SessionScreen extends StatefulWidget {
     this.endButtonLabel,
     this.onRequestEncore,
     this.onMilestoneRetry,
+    this.onPostChallengeRegen,
+    this.onChallengeOutcome,
     this.autoStart = false,
     this.holdVerifier,
     this.canSave = false,
@@ -226,6 +249,7 @@ class SessionScreen extends StatefulWidget {
     this.includeHand = true,
     this.coachAdvancesTier = true,
     this.specialization,
+    this.specializationService,
     this.miniPunishmentRate = 0.0,
     this.coachTag,
     this.seedHumiliationSession = 0.0,
@@ -263,6 +287,7 @@ class _SessionScreenState extends State<SessionScreen>
       phraseBank: widget.phraseBank,
       holdVerifier: widget.holdVerifier,
       specialization: widget.specialization,
+      specializationService: widget.specializationService,
       miniPunishmentRate: widget.miniPunishmentRate,
       coachTag: widget.coachTag,
       seedHumiliationSession: widget.seedHumiliationSession,
@@ -277,6 +302,9 @@ class _SessionScreenState extends State<SessionScreen>
       isQuickie: widget.isQuickie,
     );
     _controller.onMilestoneRetry = widget.onMilestoneRetry;
+    _controller.onPostChallengeRegen = widget.onPostChallengeRegen;
+    _controller.onChallengeOutcome = widget.onChallengeOutcome;
+    _controller.onChallengeHaptic = _handleChallengeHaptic;
     final anatomy = widget.anatomy ?? AnatomyProfile.defaults;
     // En carrière, la 6e ligne (balls) se révèle progressivement : il faut
     // que la zone existe ET que la milestone `lickBalls` ait été acquittée
@@ -357,6 +385,19 @@ class _SessionScreenState extends State<SessionScreen>
     super.dispose();
   }
 
+  void _handleChallengeHaptic(ChallengeHapticKind kind) {
+    // No-op silencieux hors Android — HapticFeedback ignore proprement
+    // sur Linux/Windows/Web.
+    switch (kind) {
+      case ChallengeHapticKind.light:
+        HapticFeedback.lightImpact();
+        break;
+      case ChallengeHapticKind.heavy:
+        HapticFeedback.heavyImpact();
+        break;
+    }
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Quand l'app passe en arrière-plan (home, lock, autre app), on coupe
@@ -386,45 +427,12 @@ class _SessionScreenState extends State<SessionScreen>
   }
 
   Future<void> _recordCareerCompletion() async {
-    final progress = CareerProgressService();
-    final currentMax = await progress.getMaxLevel();
-    final level = widget.careerLevel ?? 0;
-    final atMaxLevel = level >= currentMax;
-    // Level-up gaté par milestone : on n'autorise un palier qu'après
-    // l'acquittement d'une milestone candidate au niveau courant (ou si
-    // aucune ne l'était — catalogue épuisé, pas de piège). On consulte
-    // pendingFor avec les scores post-finish (≈ ceux que la séance suivante
-    // verra au start) pour rester cohérent avec ce que `pendingFor` choisirait
-    // la prochaine fois. Tous les filtres consommés par `pendingFor` au start
-    // (career_screen) doivent être passés ici aussi — sinon une milestone
-    // exclue au start (ex. balls quand `hasBalls=false`) redevient candidate
-    // au end et bloque le level-up indéfiniment. Skip si le caller a déjà
-    // bloqué le palier (quickie / fail / niveau insuffisant / coach hors
-    // palier).
-    final cleanSession = !_controller.hadFailThisSession;
-    bool hasPendingAtCurrentLevel = false;
-    if (atMaxLevel &&
-        cleanSession &&
-        !widget.isQuickie &&
-        widget.coachAdvancesTier) {
-      final pending = milestoneService.pendingFor(
-        humiliationScore: _controller.humiliation.careerScore,
-        obedience: _controller.obedience.score,
-        playerLevel: currentMax,
-        allocation: widget.specialization,
-        capabilityProfile: widget.capabilityProfile,
-        anatomy: widget.anatomy,
-      );
-      hasPendingAtCurrentLevel = pending != null;
-    }
-    final gateOk = progress.canLevelUp(
-      cleanSession: cleanSession,
-      isQuickie: widget.isQuickie,
-      milestoneAcquittedThisSession: _controller.milestoneAcquittedThisSession,
-      hasPendingAtCurrentLevel: hasPendingAtCurrentLevel,
-    );
-    final levelUp = atMaxLevel && widget.coachAdvancesTier && gateOk;
-    await progress.recordSessionCompleted(levelUp: levelUp);
+    // Phase 19.12 : plus de logique level-up — on incrémente seulement
+    // le compteur de sessions complétées. La progression de la joueuse
+    // est désormais portée par le temps cumulé (unlock coachs), le
+    // profil de capacités (difficulté) et les milestones acquittées
+    // (contenu pédagogique).
+    await CareerProgressService().recordSessionCompleted();
   }
 
   @override
@@ -510,6 +518,16 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
   /// dessous, la mini-session de finish n'aurait plus la place de jouer une
   /// vraie apothéose (le contrôleur passe directement en `finished`).
   static const int _finishNowMinRemainingSeconds = 75;
+
+  /// Pointers actifs pendant la fenêtre défi (touch + clavier confondus).
+  /// Sentinel `-1` = touche espace. Quand le set passe à vide,
+  /// `onChallengeHoldEnd` est signalé au contrôleur. Permet de gérer le
+  /// multi-doigts (un release individuel n'arrête rien tant qu'un autre
+  /// doigt tient) et la combinaison touch + clavier.
+  final Set<int> _challengeActivePointers = <int>{};
+  static const int _challengeKeyboardPointerId = -1;
+  late final FocusNode _challengeFocus =
+      FocusNode(debugLabel: 'challenge-hold');
 
   /// True tant que l'utilisateur n'a pas validé « Je suis prête » sur l'écran
   /// d'intro. Reste à false si aucun introText n'a été fourni.
@@ -608,7 +626,52 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
   void dispose() {
     _prepTimer?.cancel();
     _autoChainCtrl?.removeListener(_maybeAutoChain);
+    _challengeFocus.dispose();
     super.dispose();
+  }
+
+  void _handleChallengePointerDown(PointerDownEvent e) {
+    final ctrl = context.read<SessionController>();
+    if (!ctrl.isChallengeActive) return;
+    _challengeActivePointers.add(e.pointer);
+    // En `breath`, seul le bouton MAINTIENS (via son propre Listener) doit
+    // démarrer le countdown. Un tap n'importe où sur l'écran n'arme rien.
+    // En `countdown`/`live`/`atSeuil`, n'importe quel doigt suffit à
+    // maintenir le hold actif.
+    if (ctrl.challengePhase != ChallengePhase.breath) {
+      ctrl.onChallengeHoldStart();
+    }
+  }
+
+  void _handleChallengePointerUp(PointerEvent e) {
+    if (!_challengeActivePointers.remove(e.pointer)) return;
+    if (_challengeActivePointers.isEmpty) {
+      context.read<SessionController>().onChallengeHoldEnd();
+    }
+  }
+
+  KeyEventResult _handleChallengeKeyEvent(FocusNode node, KeyEvent e) {
+    if (e.logicalKey != LogicalKeyboardKey.space) {
+      return KeyEventResult.ignored;
+    }
+    final ctrl = context.read<SessionController>();
+    if (!ctrl.isChallengeActive) return KeyEventResult.ignored;
+    if (e is KeyDownEvent) {
+      if (_challengeActivePointers.add(_challengeKeyboardPointerId)) {
+        // Sur desktop, espace équivaut à un doigt sur l'écran — y compris
+        // en breath (matérialise « tu peux démarrer » au clavier).
+        ctrl.onChallengeHoldStart();
+      }
+      return KeyEventResult.handled;
+    }
+    if (e is KeyUpEvent) {
+      if (_challengeActivePointers.remove(_challengeKeyboardPointerId) &&
+          _challengeActivePointers.isEmpty) {
+        ctrl.onChallengeHoldEnd();
+      }
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 
   /// Listener du controller en mode non-stop : à la fin de séance, programme
@@ -810,109 +873,128 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                     ),
                 ],
               ),
-        body: Stack(
-          children: [
-            // Background d'ambiance derrière toute l'UI. Subtil, animé,
-            // n'intercepte aucun tap (IgnorePointer interne). Le toggle
-            // utilisateur `showBackgroundMedia` (page SONS) court-circuite
-            // les médias et ne rend que le dégradé.
-            Positioned.fill(
-                child: SessionBackground(mediaEnabled: _showBackgroundMedia)),
-            SafeArea(
-              child: _introPending
-                  ? _IntroPanel(
-                      text: _resolvedIntroText!,
-                      onReady: _onIntroReady,
-                      onReplay: _speakIntro,
-                    )
-                  : (inPrep
-                      ? _PrepCountdownPanel(seconds: _prepCountdown!)
-                      : (ctrl.isFinished
-                          ? (ctrl.hasPendingBadges
-                              // Phase 1 : juste après le post-final. On garde
-                              // l'écran de séance (animation, timer, ambiance)
-                              // visible, et on superpose un overlay centré avec
-                              // les boutons MERCI / ENCORE / SAUVEGARDER. Tap
-                              // MERCI → révélation des badges → bascule sur le
-                              // panel complet (phase 2) au prochain rebuild
-                              // (notifyListeners de revealBadgeUnlocks).
-                              ? Stack(
+        body: Focus(
+          focusNode: _challengeFocus,
+          autofocus: true,
+          onKeyEvent: _handleChallengeKeyEvent,
+          child: Listener(
+            // `translucent` : on capte les events partout (y compris zones
+            // sans widget) sans bloquer la propagation vers les widgets
+            // enfants. Le bouton FAIL, les sliders volume etc. continuent
+            // de répondre normalement.
+            behavior: HitTestBehavior.translucent,
+            onPointerDown: _handleChallengePointerDown,
+            onPointerUp: _handleChallengePointerUp,
+            onPointerCancel: _handleChallengePointerUp,
+            child: Stack(
+              children: [
+                // Background d'ambiance derrière toute l'UI. Subtil, animé,
+                // n'intercepte aucun tap (IgnorePointer interne). Le toggle
+                // utilisateur `showBackgroundMedia` (page SONS) court-circuite
+                // les médias et ne rend que le dégradé.
+                Positioned.fill(
+                    child:
+                        SessionBackground(mediaEnabled: _showBackgroundMedia)),
+                SafeArea(
+                  child: _introPending
+                      ? _IntroPanel(
+                          text: _resolvedIntroText!,
+                          onReady: _onIntroReady,
+                          onReplay: _speakIntro,
+                        )
+                      : (inPrep
+                          ? _PrepCountdownPanel(seconds: _prepCountdown!)
+                          : (ctrl.isFinished
+                              ? (ctrl.hasPendingBadges
+                                  // Phase 1 : juste après le post-final. On garde
+                                  // l'écran de séance (animation, timer, ambiance)
+                                  // visible, et on superpose un overlay centré avec
+                                  // les boutons MERCI / ENCORE / SAUVEGARDER. Tap
+                                  // MERCI → révélation des badges → bascule sur le
+                                  // panel complet (phase 2) au prochain rebuild
+                                  // (notifyListeners de revealBadgeUnlocks).
+                                  ? Stack(
+                                      children: [
+                                        Positioned.fill(
+                                          child: _buildRunningView(ctrl),
+                                        ),
+                                        Positioned.fill(
+                                          child: _FinishedOverlay(
+                                            endButtonLabel:
+                                                widget.endButtonLabel ??
+                                                    t.sessionFinishedDefaultEnd,
+                                            onThanks: ctrl.revealBadgeUnlocks,
+                                            onEncore: (widget.onRequestEncore ==
+                                                        null ||
+                                                    _finishNowDone)
+                                                ? null
+                                                : () => widget
+                                                    .onRequestEncore!(ctrl),
+                                            onSave: widget.canSave
+                                                ? () => _handleSave(ctrl)
+                                                : null,
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  // Phase 2 : badges révélés. Panel complet avec
+                                  // détails badges + points spé + bouton de sortie.
+                                  : _FinishedPanel(
+                                      badgeUnlocks: ctrl.sessionBadgeUnlocks,
+                                      milestoneUnlocks:
+                                          ctrl.sessionMilestoneUnlocks,
+                                      hasPendingBadges: false,
+                                      onRevealBadges: ctrl.revealBadgeUnlocks,
+                                      endButtonLabel: widget.endButtonLabel ??
+                                          t.sessionFinishedDefaultEnd,
+                                      onEnd: widget.closeAppOnEnd
+                                          ? SystemNavigator.pop
+                                          : () => Navigator.of(context).pop(),
+                                      onEncore: (widget.onRequestEncore ==
+                                                  null ||
+                                              _finishNowDone)
+                                          ? null
+                                          : () => widget.onRequestEncore!(ctrl),
+                                      onSave: widget.canSave
+                                          ? () => _handleSave(ctrl)
+                                          : null,
+                                      elapsedSeconds: ctrl.elapsedSeconds,
+                                    ))
+                              : Stack(
                                   children: [
                                     Positioned.fill(
-                                      child: _buildRunningView(ctrl),
-                                    ),
-                                    Positioned.fill(
-                                      child: _FinishedOverlay(
-                                        endButtonLabel: widget.endButtonLabel ??
-                                            t.sessionFinishedDefaultEnd,
-                                        onThanks: ctrl.revealBadgeUnlocks,
-                                        onEncore: (widget.onRequestEncore ==
-                                                    null ||
-                                                _finishNowDone)
-                                            ? null
-                                            : () =>
-                                                widget.onRequestEncore!(ctrl),
-                                        onSave: widget.canSave
-                                            ? () => _handleSave(ctrl)
-                                            : null,
+                                        child: _buildRunningView(ctrl)),
+                                    // Overlay flou + bouton play centré quand la
+                                    // séance est en pause. Couvre l'intégralité de
+                                    // l'écran de jeu, peu importe le mode prod /
+                                    // debug — la reprise est toujours à un tap.
+                                    if (ctrl.isPaused)
+                                      Positioned.fill(
+                                        child: _PausedOverlay(
+                                          onResume: ctrl.resume,
+                                        ),
                                       ),
-                                    ),
                                   ],
-                                )
-                              // Phase 2 : badges révélés. Panel complet avec
-                              // détails badges + points spé + bouton de sortie.
-                              : _FinishedPanel(
-                                  badgeUnlocks: ctrl.sessionBadgeUnlocks,
-                                  milestoneUnlocks:
-                                      ctrl.sessionMilestoneUnlocks,
-                                  hasPendingBadges: false,
-                                  onRevealBadges: ctrl.revealBadgeUnlocks,
-                                  endButtonLabel: widget.endButtonLabel ??
-                                      t.sessionFinishedDefaultEnd,
-                                  onEnd: widget.closeAppOnEnd
-                                      ? SystemNavigator.pop
-                                      : () => Navigator.of(context).pop(),
-                                  onEncore: (widget.onRequestEncore == null ||
-                                          _finishNowDone)
-                                      ? null
-                                      : () => widget.onRequestEncore!(ctrl),
-                                  onSave: widget.canSave
-                                      ? () => _handleSave(ctrl)
-                                      : null,
-                                  elapsedSeconds: ctrl.elapsedSeconds,
-                                ))
-                          : Stack(
-                              children: [
-                                Positioned.fill(child: _buildRunningView(ctrl)),
-                                // Overlay flou + bouton play centré quand la
-                                // séance est en pause. Couvre l'intégralité de
-                                // l'écran de jeu, peu importe le mode prod /
-                                // debug — la reprise est toujours à un tap.
-                                if (ctrl.isPaused)
-                                  Positioned.fill(
-                                    child: _PausedOverlay(
-                                      onResume: ctrl.resume,
-                                    ),
-                                  ),
-                              ],
-                            ))),
-            ),
-            // Halo blanc crémeux du final : par-dessus tout le reste (sauf
-            // l'AppBar), s'allume pile quand le `finale_chime` retentit et
-            // que la séance tourne encore — quelques giclées irrégulières +
-            // pulses de vibration, puis une brume qui se résorbe.
-            // Démonté dès qu'on bascule sur le panel de fin Phase 2 (badges
-            // révélés) : sinon les résidus blancs restent posés par-dessus
-            // et masquent le texte blanc du `_FinishedPanel` (issue #42).
-            // La Phase 1 (`_FinishedOverlay`) garde l'overlay : ses boutons
-            // ont déjà un voile sombre derrière eux et restent lisibles.
-            if (!ctrl.isFinished || ctrl.hasPendingBadges)
-              Positioned.fill(
-                child: SessionFinaleOverlay(
-                  active: ctrl.isRunning && ctrl.finaleChimeStarted,
+                                ))),
                 ),
-              ),
-          ],
+                // Halo blanc crémeux du final : par-dessus tout le reste (sauf
+                // l'AppBar), s'allume pile quand le `finale_chime` retentit et
+                // que la séance tourne encore — quelques giclées irrégulières +
+                // pulses de vibration, puis une brume qui se résorbe.
+                // Démonté dès qu'on bascule sur le panel de fin Phase 2 (badges
+                // révélés) : sinon les résidus blancs restent posés par-dessus
+                // et masquent le texte blanc du `_FinishedPanel` (issue #42).
+                // La Phase 1 (`_FinishedOverlay`) garde l'overlay : ses boutons
+                // ont déjà un voile sombre derrière eux et restent lisibles.
+                if (!ctrl.isFinished || ctrl.hasPendingBadges)
+                  Positioned.fill(
+                    child: SessionFinaleOverlay(
+                      active: ctrl.isRunning && ctrl.finaleChimeStarted,
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -1050,7 +1132,13 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                     ),
                     SizedBox(height: showBar ? 8 : 12),
                   ],
-                  _FailButton(controller: ctrl),
+                  if (ctrl.isChallengeActive) ...[
+                    _ChallengeBanner(controller: ctrl),
+                    SizedBox(height: showBar ? 6 : 10),
+                    _ChallengeButtons(controller: ctrl),
+                    SizedBox(height: showBar ? 8 : 12),
+                  ] else
+                    _FailButton(controller: ctrl),
                   if (_showSkipSessionButton &&
                       (ctrl.isRunning || ctrl.isPaused)) ...[
                     SizedBox(height: showBar ? 8 : 12),
@@ -1369,6 +1457,252 @@ class _FailButton extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Boutons du système de défis intra-séance (gameplay hold-to-keep).
+/// Le widget choisit son rendu selon la phase courante du défi :
+/// - `breath` : `PASSE` (tap, gris) + `MAINTIENS` (hold-to-start, ambre) —
+///   le hold initial sur MAINTIENS démarre le countdown.
+/// - `countdown` / `live` : un seul gros bouton ambre « MAINTIENS ». La
+///   joueuse doit garder le doigt sur l'écran (n'importe où — la capture
+///   est globale via `_SessionScreenState._handlePointerDown`). Pendant
+///   la tolérance (1 s après release), le bouton pulse rouge.
+/// - `atSeuil` : un seul gros bouton vert « RELÂCHE QUAND TU VEUX » —
+///   relâcher = succès, continuer à tenir = +1 extension par tranche.
+class _ChallengeButtons extends StatelessWidget {
+  static const Color _passColor = Color(0xFF757575);
+  static const Color _goColor = Color(0xFFFFB300);
+  static const Color _atSeuilColor = Color(0xFF4CAF50);
+  static const Color _toleranceColor = Color(0xFFEF5350);
+
+  final SessionController controller;
+  const _ChallengeButtons({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final phase = controller.challengePhase;
+    if (phase == ChallengePhase.breath) {
+      // PASSE (tap) à gauche, MAINTIENS (hold-to-start) à droite.
+      return Row(
+        children: [
+          Expanded(
+            child: _tapButton(
+              color: _passColor,
+              label: t.challengePassButton,
+              onTap: controller.triggerChallengePass,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 2,
+            child: _holdButton(
+              color: _goColor,
+              label: t.challengeGoButton,
+              onHoldStart: controller.onChallengeHoldStart,
+              onHoldEnd: controller.onChallengeHoldEnd,
+            ),
+          ),
+        ],
+      );
+    }
+    if (phase == ChallengePhase.countdown || phase == ChallengePhase.live) {
+      // Un seul bouton plein-largeur. La couleur de fond suit la
+      // progression de la tolérance de release : ambre → rouge.
+      return AnimatedBuilder(
+        animation: controller,
+        builder: (context, _) {
+          final progress = controller.challengeReleaseToleranceProgress;
+          final color = progress <= 0
+              ? _goColor
+              : Color.lerp(_goColor, _toleranceColor, progress) ?? _goColor;
+          final label = progress <= 0
+              ? t.challengeHoldHintLive
+              : t.challengeHoldHintTolerance;
+          return _tapButton(color: color, label: label, onTap: null);
+        },
+      );
+    }
+    if (phase == ChallengePhase.atSeuil) {
+      return AnimatedBuilder(
+        animation: controller,
+        builder: (context, _) {
+          return _tapButton(
+            color: _atSeuilColor,
+            label: t.challengeHoldHintAtSeuil,
+            onTap: null,
+          );
+        },
+      );
+    }
+    return const SizedBox.shrink();
+  }
+
+  Widget _tapButton({
+    required Color color,
+    required String label,
+    required VoidCallback? onTap,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      child: Material(
+        color: color,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: _buttonContent(label),
+        ),
+      ),
+    );
+  }
+
+  /// Bouton hold-to-keep. `Listener` direct (pas `GestureDetector`) pour
+  /// avoir un onPointerDown immédiat et un onPointerUp/Cancel fiables —
+  /// `GestureDetector.onLongPress*` ajoute un délai de reconnaissance qui
+  /// rendrait le démarrage du countdown moins responsive.
+  Widget _holdButton({
+    required Color color,
+    required String label,
+    required VoidCallback onHoldStart,
+    required VoidCallback onHoldEnd,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      child: Listener(
+        behavior: HitTestBehavior.opaque,
+        onPointerDown: (_) => onHoldStart(),
+        onPointerUp: (_) => onHoldEnd(),
+        onPointerCancel: (_) => onHoldEnd(),
+        child: Material(
+          color: color,
+          borderRadius: BorderRadius.circular(16),
+          child: _buttonContent(label),
+        ),
+      ),
+    );
+  }
+
+  Widget _buttonContent(String label) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 18),
+      child: Center(
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 2,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Banner d'instructions affiché au-dessus des boutons pendant la fenêtre
+/// défi. Trois rôles :
+/// 1. Banner tutoriel persistent (`challengeTutorialBanner`) tant que le
+///    challenge porte `isTutorial=true` — la joueuse comprend ce qui se
+///    passe la première fois.
+/// 2. Annonce coach courante (`controller.challengeCurrentText`) — la
+///    phrase dite en TTS est aussi affichée pour les utilisatrices qui
+///    ratent le son ou jouent en silencieux.
+/// 3. Objectif chiffré (`controller.challengeObjectiveText()`) — rappel
+///    statique pendant la phase `live` (« tiens gorge 10 secondes »),
+///    bascule sur « seuil atteint » au moment `atSeuil`.
+class _ChallengeBanner extends StatelessWidget {
+  static const Color _bg = Color(0xFF1F1F26);
+  static const Color _border = Color(0xFFFFB300);
+
+  final SessionController controller;
+  const _ChallengeBanner({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final phase = controller.challengePhase;
+    final ch = controller.activeChallenge;
+    final text = controller.challengeCurrentText;
+    // Phase countdown : gros chiffre central, pas d'autre texte.
+    if (phase == ChallengePhase.countdown) {
+      final digit = controller.challengeCountdownDigit;
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        decoration: BoxDecoration(
+          color: _bg,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _border, width: 2),
+        ),
+        child: Center(
+          child: Text(
+            digit?.toString() ?? '',
+            style: const TextStyle(
+              fontSize: 72,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFFFFB300),
+              height: 1.0,
+            ),
+          ),
+        ),
+      );
+    }
+    final objective = phase == ChallengePhase.atSeuil
+        ? t.challengeBannerThresholdReached
+        : controller.challengeObjectiveText();
+    final showTutorial = ch?.isTutorial ?? false;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: _bg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _border.withValues(alpha: 0.4), width: 1.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (showTutorial) ...[
+            Text(
+              t.challengeTutorialBanner,
+              style: const TextStyle(
+                fontSize: 12,
+                color: Color(0xFFFFB300),
+                fontWeight: FontWeight.w600,
+                height: 1.35,
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+          if (objective != null && objective.isNotEmpty)
+            Text(
+              objective,
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppTheme.textPrimary,
+                fontWeight: FontWeight.w700,
+                height: 1.3,
+              ),
+            ),
+          if (text != null && text.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              text,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppTheme.textMuted,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -2038,8 +2372,15 @@ class _FinishedPanelState extends State<_FinishedPanel> {
   }
 
   Future<void> _refreshSpecPoints() async {
-    final maxLevel = await CareerProgressService().getMaxLevel();
-    final available = await SpecializationService().availablePoints(maxLevel);
+    // `availablePoints` attend des **secondes cumulées** (cf. retour playtest
+    // 0.6 — attribution des points basée sur le temps, pas sur le nombre
+    // de sessions). Passer `getCompletedSessions()` ici donnait toujours 0
+    // (premier seuil = 300 s, soit 300 sessions pour atteindre le 1ᵉʳ point)
+    // → la prompt automatique post-séance d'attribution était silencieusement
+    // morte.
+    final totalSeconds = await StatsService().getTotalSeconds();
+    final available =
+        await SpecializationService().availablePoints(totalSeconds);
     if (!mounted) return;
     setState(() => _availableSpecPoints = available);
   }

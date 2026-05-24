@@ -119,6 +119,26 @@
     }
   },
   "profileReputationUnit": "Reputationspunkte",
+  "reputationTierBonneEleve": "Brave Schülerin",
+  "reputationTierPetiteSuceuse": "Kleine Saugerin",
+  "reputationTierSuceuseConfirmee": "Erfahrene Saugerin",
+  "reputationTierPuteReconnue": "Bekannte Hure",
+  "reputationTierPuteConsacree": "Anerkannte Hure",
+  "reputationTierReineDesSuceuses": "Königin der Saugerinnen",
+  "reputationTierReineDesPutes": "Königin der Huren",
+  "careerInvestmentBarTitle": "Gesamtzeit",
+  "careerInvestmentSessions": "{count} Sitzungen",
+  "@careerInvestmentSessions": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "careerInvestmentNextCoach": "Nächste Coach: {name} ({remaining})",
+  "@careerInvestmentNextCoach": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "remaining": { "type": "String" }
+    }
+  },
+  "careerInvestmentAllUnlocked": "Alle Coachs freigeschaltet.",
   "profileStatSessionsCompleted": "Abgeschlossene Sessions",
   "profileStatNoFailStreak": "Serie ohne Fail",
   "profileStatDailyStreak": "Tägliche Serie",
@@ -205,16 +225,64 @@
       "error": { "type": "String" }
     }
   },
-  "careerLevelSection": "Stufe",
-  "careerMaxLevel": "max. {level}",
-  "@careerMaxLevel": {
-    "placeholders": {
-      "level": { "type": "int" }
-    }
-  },
+  "careerDurationSection": "Dauer",
   "careerQuickieToggle": "Quickie",
   "careerQuickieSubtitle": "6 Min. — intensiv",
   "careerQuickieDescription": "6 Min., durchgehend intensiv. Für wenn du keine Zeit hast.",
+  "sessionLengthBacheeLabel": "Quickie",
+  "sessionLengthBacheeDuration": "~6 Min.",
+  "sessionLengthBacheeDescription": "Express, durchgehend intensiv.",
+  "sessionLengthCourteLabel": "Kurz",
+  "sessionLengthCourteDuration": "~12 Min.",
+  "sessionLengthCourteDescription": "Kompaktes Format, eine Herausforderung möglich.",
+  "sessionLengthMoyenneLabel": "Mittel",
+  "sessionLengthMoyenneDuration": "~25 Min.",
+  "sessionLengthMoyenneDescription": "Bis zu zwei Meilensteine, abwechslungsreich.",
+  "sessionLengthLongueLabel": "Lang",
+  "sessionLengthLongueDuration": "~45 Min.",
+  "sessionLengthLongueDescription": "Volle Sitzung, mehrere eingeschobene Herausforderungen.",
+  "careerChallengesToggle": "Herausforderungen in der Sitzung",
+  "careerChallengesDescription": "Eine optionale Herausforderung etwa bei 60 % der Sitzung. Kalibriert schnell, kann das Level-Up beschleunigen.",
+  "challengePassButton": "ÜBERSPR.",
+  "challengeGoButton": "HALTEN",
+  "challengeHoldHintLive": "Lass deinen Finger auf dem Bildschirm",
+  "challengeHoldHintAtSeuil": "Loslassen zum Beenden, oder weiterhalten",
+  "challengeHoldHintTolerance": "Leg deinen Finger zurück",
+  "challengeCountdownReleaseRetry": "Halte deinen Finger diesmal.",
+  "challengeTutorialBanner": "Erste Herausforderung: Du wirst eine Position für die geforderte Zeit halten. Drücke und halte HALTEN wenn du bereit bist (Finger drauf lassen), oder tippe ÜBERSPR. zum Überspringen.",
+  "challengeBannerCountdown": "{digit}",
+  "@challengeBannerCountdown": {
+    "placeholders": { "digit": { "type": "int" } }
+  },
+  "challengeAttemptDefault": "Herausforderung: Wir gehen an deine Grenze. Drücke und halte HALTEN wenn du bereit bist, ich zähle drei zwei eins vor dem Start. Lass deinen Finger auf dem Bildschirm, solange du hältst.",
+  "challengeAttemptTutorialHoldThroat": "Erste Herausforderung: Du hältst tief fünf Sekunden. Drücke und halte HALTEN, lass deinen Finger auf dem Bildschirm. Wenn du vor dem Schwellenwert loslässt, ist es gescheitert. Am Schwellenwert wird die Taste grün: loslassen zum Beenden, oder weiterhalten um weiter zu pushen.",
+  "challengeExtensionDefault": "Du kannst länger bleiben, wenn du willst, oder loslassen.",
+  "challengeSuccessDefault": "Du hast bis zum Ende gehalten. Braves Mädchen.",
+  "challengeStopDefault": "Du hast aufgehört. Gut.",
+  "challengeFailDefault": "Du hast vor dem Schwellenwert nachgegeben. Kein Problem, beim nächsten Mal schaffst du es.",
+  "challengeSkipDefault": "Wie du willst, wir heben es fürs nächste Mal auf.",
+  "challengeBannerHoldThroat": "Halte tief {seconds} Sekunden",
+  "@challengeBannerHoldThroat": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerHoldFull": "Halte ganz tief {seconds} Sekunden",
+  "@challengeBannerHoldFull": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerHoldGeneric": "Halte die Position {seconds} Sekunden",
+  "@challengeBannerHoldGeneric": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerRhythm": "Steigere den Rhythmus bis {bpm} BPM",
+  "@challengeBannerRhythm": {
+    "placeholders": { "bpm": { "type": "int" } }
+  },
+  "challengeBannerBiffle": "Nimm die Schläge bis {bpm} BPM",
+  "@challengeBannerBiffle": {
+    "placeholders": { "bpm": { "type": "int" } }
+  },
+  "challengeBannerGeneric": "Gehe an deine Grenze",
+  "challengeBannerThresholdReached": "Schwellenwert erreicht — weiter oder aufhören",
   "careerIncludeHandToggle": "Handstimulation einbeziehen",
   "careerIncludeHandSubtitle": "Deaktiviert auch die Schwanzschläge (Biffle) — beide brauchen die Hand.",
   "careerIncludeHandMilestoneLocked": "Für diese Session gesperrt — der Lern-Meilenstein nutzt die Hand.",
@@ -233,15 +301,13 @@
       "count": { "type": "int" }
     }
   },
-  "careerLevelLockedHint": "Stufe 1 (beende eine Session, um die nächste freizuschalten)",
-
-  "careerSessionName": "Karriere Stufe {level}",
+  "careerSessionName": "Karriere",
   "@careerSessionName": {
     "placeholders": {
       "level": { "type": "int" }
     }
   },
-  "careerSessionNameQuickie": "Karriere Stufe {level} — Quickie",
+  "careerSessionNameQuickie": "Karriere — Quickie",
   "@careerSessionNameQuickie": {
     "placeholders": {
       "level": { "type": "int" }
@@ -303,10 +369,6 @@
   "specRespecConfirmAction": "Respec",
   "specIntro": "Vergib deine Punkte, um der Engine zu sagen, was du magst. Je mehr du in einen Zweig investierst, desto stärker geht der Generator in diesen Stil — ohne deine Stats aus dem Gleichgewicht zu bringen.",
   "specPointsAvailableLabel": "verfügbare Punkte",
-  "specLevelLabel": "Stufe {level}",
-  "@specLevelLabel": {
-    "placeholders": { "level": { "type": "int" } }
-  },
   "specSpentLabel": "{spent} / {cap} vergeben",
   "@specSpentLabel": {
     "placeholders": {
@@ -643,7 +705,6 @@
   "coachBadgePalierAcquis": "STUFE FREIGESCHALTET",
   "coachBadgeFreeTraining": "FREIES TRAINING",
   "coachBadgeLocked": "GESPERRT",
-  "coachRequiresHands": "Hände erforderlich",
   "coachSummaryPrincipal": "{title} · Haupt-Stufe {tier}",
   "@coachSummaryPrincipal": {
     "placeholders": {
@@ -697,26 +758,13 @@
   "@coachErrorLockedTier": {
     "placeholders": { "tier": { "type": "int" } }
   },
-  "coachErrorRequiresHands": "{coachName} braucht, dass du die Hand in den Optionen aktivierst.",
-  "@coachErrorRequiresHands": {
-    "placeholders": { "coachName": { "type": "String" } }
-  },
-  "coachErrorMinLevel": "{coachName} erfordert mindestens Stufe {minLevel}.",
-  "@coachErrorMinLevel": {
+  "coachErrorMinPlayerSeconds": "{coachName} wird bei {duration} gespielter Gesamtzeit freigeschaltet.",
+  "@coachErrorMinPlayerSeconds": {
     "placeholders": {
       "coachName": { "type": "String" },
-      "minLevel": { "type": "int" }
+      "duration": { "type": "String" }
     }
   },
-  "coachErrorMissingSpecialization": "Dieser Coach erfordert mindestens 1 Punkt in einer Spezialisierung, in die du nicht investiert hast.",
-  "coachErrorInsufficientBranchPoints": "{coachName} erfordert: {requirements}. Vergib deine Spezialisierungspunkte.",
-  "@coachErrorInsufficientBranchPoints": {
-    "placeholders": {
-      "coachName": { "type": "String" },
-      "requirements": { "type": "String" }
-    }
-  },
-
   "unlockAnnouncementSloppyDroolBasic": "Ab jetzt hält dein Mund mehr Spucke, und dein Lecken erzeugt mehr davon. Sabber auf mich, sei dreckig.",
   "@unlockAnnouncementSloppyDroolBasic": {
     "description": "TTS-Ansage nach dem finale_chime, wenn der Meilenstein, der sloppy_drool_basic freischaltet, bestätigt wird."
@@ -740,11 +788,6 @@
   "unlockAnnouncementSloppyDroolDeep": "Wenn du tief gehst, läuft dein Mund noch mehr über. Genieß es.",
   "@unlockAnnouncementSloppyDroolDeep": {
     "description": "TTS-Ansage nach dem finale_chime, wenn der Meilenstein, der sloppy_drool_deep freischaltet, bestätigt wird."
-  },
-
-  "unlockAnnouncementRhythmHeadMidSustained": "Du kannst das Tempo jetzt länger als eine Minute halten, ohne Pause. Ich werde danach verlangen.",
-  "@unlockAnnouncementRhythmHeadMidSustained": {
-    "description": "TTS-Ansage nach dem finale_chime, wenn der Meilenstein, der rhythm_head_mid_sustained freischaltet, bestätigt wird."
   },
 
   "modeSelectionSurpriseTooltip": "Überraschungs-Erinnerungen",

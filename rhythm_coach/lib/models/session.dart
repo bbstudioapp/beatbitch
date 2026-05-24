@@ -1,3 +1,4 @@
+import '../career/models/challenge.dart';
 import 'final_category.dart';
 import 'session_step.dart';
 
@@ -139,6 +140,35 @@ class Session {
   /// laisser aucune trace dans le profil. Default false.
   final bool noStats;
 
+  /// Défis intra-séance attachés à cette session (Phase 1 + 19.5.b
+  /// multi-défi). Liste ordonnée par ordre d'insertion temporelle ; vide
+  /// = aucun défi (toggle off, hors carrière, JSON scriptés). Transient :
+  /// non sérialisé en JSON (les défis sont générés dynamiquement, pas
+  /// écrits dans un fichier source).
+  final List<Challenge> challenges;
+
+  /// Temps absolu (s) du breath de countdown qui précède chaque step
+  /// défi (parallèle à [challenges] — `challengeBreathStartTimes[i]`
+  /// correspond à `challenges[i]`). Vide si aucun défi.
+  final List<int> challengeBreathStartTimes;
+
+  /// Temps absolu (s) de chaque step défi lui-même (parallèle à
+  /// [challenges]). Vide si aucun défi.
+  final List<int> challengeStepTimes;
+
+  /// Compat : premier défi de la liste (ou null si vide). Conserve la
+  /// rétrocompat des call sites qui lisaient `session.challenge`.
+  Challenge? get challenge => challenges.isEmpty ? null : challenges.first;
+
+  /// Compat : temps du breath du premier défi (ou null).
+  int? get challengeBreathStartTime => challengeBreathStartTimes.isEmpty
+      ? null
+      : challengeBreathStartTimes.first;
+
+  /// Compat : temps du step du premier défi (ou null).
+  int? get challengeStepTime =>
+      challengeStepTimes.isEmpty ? null : challengeStepTimes.first;
+
   const Session({
     required this.id,
     required this.name,
@@ -161,6 +191,9 @@ class Session {
     this.silentFinishStartTime,
     this.finalStepTime,
     this.noStats = false,
+    this.challenges = const [],
+    this.challengeBreathStartTimes = const [],
+    this.challengeStepTimes = const [],
   });
 
   Duration get duration => Duration(seconds: durationSeconds);

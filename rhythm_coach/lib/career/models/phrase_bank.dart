@@ -194,6 +194,16 @@ class PhraseBank {
   String? pickProgressPhrase(String axisStorageKey, String tier, Random rng) =>
       null;
 
+  /// Tire une phrase du système de défis intra-séance (Phase 1) pour un axe
+  /// (clé = `CapabilityAxis.storageKey`) et un tier (`attempt`/`extension`/
+  /// `success`/`stop`/`fail`/`timeout`/`skip` — cf. `Challenge` et spec §7).
+  /// La banque globale n'en porte jamais → retourne toujours `null` (l'UI
+  /// retombe alors sur les libellés localisés via `AppLocalizations`).
+  /// Seul le pack d'un coach déclarant une section `challengePhrases` peut
+  /// renvoyer du texte (override dans `_CoachComposedPhraseBank`).
+  String? pickChallengePhrase(String axisStorageKey, String tier, Random rng) =>
+      null;
+
   /// Tire une phrase de transition pour un changement de vitesse ou de
   /// profondeur. Retourne null si la banque ne contient rien pour ce kind.
   String? pickTransition(TransitionKind kind, Random rng) {

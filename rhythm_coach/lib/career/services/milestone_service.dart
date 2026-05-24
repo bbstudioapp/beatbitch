@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/anatomy_profile.dart';
 import '../../models/session_step.dart';
+import '../../services/capability_axis.dart';
 import '../../services/capability_service.dart';
 import '../../services/locale_service.dart';
 import '../models/level_milestone.dart';
@@ -23,6 +24,19 @@ class MilestoneService extends ChangeNotifier {
   static const String _kCompletions = 'career.milestones_completed';
   static const String _kRetries = 'career.milestone_retries';
   static const String _kCandidacySeen = 'career.milestone_candidacy_seen';
+  static const String _kMigrated050 = 'career.milestones_migrated_0_5_0';
+
+  /// Renommages de milestone-id appliqués à la migration 0.5.0 (refonte
+  /// unlocks capability-only) : les milestones « palier scalaire short »
+  /// perdent leur suffixe (l'unlock devient binaire, la durée est bornée
+  /// par les capacités, pas par l'unlock). Pour ne pas casser le profil
+  /// des joueuses existantes qui ont déjà acquittement la milestone sous
+  /// l'ancien id, on réécrit les entrées `_completed` au premier load
+  /// post-update.
+  static const Map<String, String> _milestoneRenamesV050 = {
+    'intro_hold_throat_short': 'intro_hold_throat',
+    'intro_hold_full_short': 'intro_hold_full',
+  };
 
   /// Poids du vieillissement dans `sortScore` (cf. [allPendingFor]). Chaque
   /// session où la milestone est candidate sans être choisie ajoute cette
@@ -34,6 +48,14 @@ class MilestoneService extends ChangeNotifier {
   /// Volontairement bien plus petit que les autres termes : départage à
   /// `branchScore`+`age` comparables sans dominer.
   static const double _lowestBranchWeight = 0.1;
+
+  /// Boost appliqué dans `sortScore` quand une milestone touche la branche
+  /// en tête de la file showcase de [SpecializationService]. Volontairement
+  /// massif : il domine `branchScore` (max ≈ 25), aging (×0.5/session) et
+  /// `lowestBranch` à coup sûr — la séance suivant l'attribution d'un point
+  /// honore ce point en priorité (parmi les candidates *non overdue* : la
+  /// règle overdue est un rattrapage système qui passe avant).
+  static const double _showcaseBoost = 1000.0;
 
   final MilestoneLoader _loader = MilestoneLoader();
 
@@ -100,7 +122,55 @@ class MilestoneService extends ChangeNotifier {
       }
     }
     await _loadOverrides();
+    await _migrateToV050IfNeeded(prefs);
     _loaded = true;
+  }
+
+  /// Migration one-time appliquée au premier load post-0.5.0 :
+  /// - réécrit les ids `intro_hold_*_short` vers la version sans suffixe
+  ///   dans `_completed` et `_retries` (les unlocks scalaires `*_long` /
+  ///   `biffleFast` / `rhythmExtreme` / `rhythmHeadMidSustained` ont
+  ///   disparu — l'éventuel acquittement reste mappé via la nouvelle
+  ///   clé, voir `UnlockKey.fromString`) ;
+  /// - pose le flag `_kMigrated050` pour ne plus la relancer.
+  /// Idempotent — si une joueuse n'a aucune de ces entrées, la migration
+  /// pose juste le flag et ne touche à rien.
+  Future<void> _migrateToV050IfNeeded(SharedPreferences prefs) async {
+    if (prefs.getBool(_kMigrated050) == true) return;
+
+    var dirty = false;
+    final remappedCompleted = <String>{};
+    for (final id in _completed) {
+      final renamed = _milestoneRenamesV050[id];
+      if (renamed != null) {
+        remappedCompleted.add(renamed);
+        dirty = true;
+      } else {
+        remappedCompleted.add(id);
+      }
+    }
+    if (dirty) {
+      _completed = remappedCompleted;
+      await prefs.setString(_kCompletions, json.encode(_completed.toList()));
+    }
+
+    final remappedRetries = <String, int>{};
+    var retriesDirty = false;
+    for (final entry in _retries.entries) {
+      final renamed = _milestoneRenamesV050[entry.key];
+      if (renamed != null) {
+        remappedRetries[renamed] = entry.value;
+        retriesDirty = true;
+      } else {
+        remappedRetries[entry.key] = entry.value;
+      }
+    }
+    if (retriesDirty) {
+      _retries = remappedRetries;
+      await prefs.setString(_kRetries, json.encode(_retries));
+    }
+
+    await prefs.setBool(_kMigrated050, true);
   }
 
   /// Langue native du catalogue `milestones.json` : ses textes y sont
@@ -206,6 +276,7 @@ class MilestoneService extends ChangeNotifier {
     SpecializationAllocation? allocation,
     CapabilityProfile? capabilityProfile,
     AnatomyProfile? anatomy,
+    SpecializationBranch? showcaseBranch,
   }) {
     final all = allPendingFor(
       humiliationScore: humiliationScore,
@@ -214,6 +285,7 @@ class MilestoneService extends ChangeNotifier {
       allocation: allocation,
       capabilityProfile: capabilityProfile,
       anatomy: anatomy,
+      showcaseBranch: showcaseBranch,
     );
     return all.isEmpty ? null : all.first;
   }
@@ -238,12 +310,17 @@ class MilestoneService extends ChangeNotifier {
     SpecializationAllocation? allocation,
     CapabilityProfile? capabilityProfile,
     AnatomyProfile? anatomy,
+    SpecializationBranch? showcaseBranch,
   }) {
     if (count <= 0) return const [];
     final picked = <LevelMilestone>[];
     final simulatedUnlocks = <UnlockKey>{};
     final pickedIds = <String>{};
     for (var i = 0; i < count; i++) {
+      // Le showcase ne s'applique qu'au premier pick : une fois la branche
+      // mise en vitrine, les picks suivants reprennent le tri standard
+      // pour ne pas empiler 2 milestones de la même branche dans la séance.
+      final effectiveShowcase = i == 0 ? showcaseBranch : null;
       final candidates = allPendingFor(
         humiliationScore: humiliationScore,
         obedience: obedience,
@@ -251,6 +328,7 @@ class MilestoneService extends ChangeNotifier {
         allocation: allocation,
         capabilityProfile: capabilityProfile,
         anatomy: anatomy,
+        showcaseBranch: effectiveShowcase,
       );
       LevelMilestone? next;
       for (final m in candidates) {
@@ -340,6 +418,7 @@ class MilestoneService extends ChangeNotifier {
     CapabilityProfile? capabilityProfile,
     AnatomyProfile? anatomy,
     MilestonePlacement placement = MilestonePlacement.body,
+    SpecializationBranch? showcaseBranch,
   }) {
     final cap = humiliationScore + humilTolerance(obedience);
 
@@ -433,9 +512,17 @@ class MilestoneService extends ChangeNotifier {
     double sortScore(LevelMilestone m) {
       if (allocation == null) return 0;
       final age = _candidacyAge[m.id] ?? 0;
-      return branchScore(m).toDouble() +
+      var s = branchScore(m).toDouble() +
           _agingWeight * age -
           _lowestBranchWeight * lowestBranchPoints(m);
+      // Showcase : la séance qui suit l'attribution d'un point doit
+      // « consommer » ce point en mettant la branche associée en vitrine.
+      // Le boost domine `branchScore`/aging/lowestBranch — mais la règle
+      // *overdue* reste prioritaire (cf. tri principal plus bas).
+      if (showcaseBranch != null && m.branches.contains(showcaseBranch)) {
+        s += _showcaseBoost;
+      }
+      return s;
     }
 
     final candidates = _catalog
@@ -598,6 +685,250 @@ class MilestoneService extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  /// Acquittement silencieux d'une milestone par un défi intra-séance
+  /// (Phase 3 défis, cf. spec § 5.4). Sémantiquement équivalent à
+  /// `markCompleted(id, hadFail: false)` côté persistance, mais le caller
+  /// (`SessionController._finish`) court-circuite l'annonce TTS et le
+  /// bump milestone (déjà compté par l'outcome du défi).
+  ///
+  /// Méthode dédiée pour rendre l'intention claire dans le code appelant
+  /// et permettre d'éventuelles spécificités futures (ex. tag
+  /// « acquise via défi » dans la persistance).
+  Future<void> markCompletedViaChallenge(String id) async {
+    if (_completed.add(id)) {
+      await _persist();
+      await resetRetryCount(id);
+      await resetCandidacyAge(id);
+      notifyListeners();
+    }
+  }
+
+  /// Rattrapage à froid : acquitte les milestones que le [profile] de
+  /// capacités prouve **déjà**, indépendamment d'un défi récent. Réutilise
+  /// `milestonesAcquittableByChallenge` sur chaque axe du profil qui a une
+  /// donnée — y compris les axes transitifs des holds (cf.
+  /// `_impliedHoldUnlocksByAxis`).
+  ///
+  /// Sert quand un défi a été joué **avant** que la cascade transitive ne
+  /// soit livrée : les unlocks pédagogiques ne s'étaient pas alignés sur
+  /// la capacité prouvée, et les sessions suivantes proposent toujours
+  /// des actions plus shallow que ce que la joueuse sait faire (cap
+  /// `milestoneHoldCeilingIdx` figé à `head` malgré un hold throat tenu).
+  /// À appeler au start de chaque session carrière pour normaliser.
+  ///
+  /// Retourne le nombre de milestones acquittées (utile pour le caller
+  /// qui peut vouloir loguer / régénérer le bundle d'unlocks).
+  Future<int> reconcileFromCapability(
+    CapabilityProfile profile, {
+    int playerLevel = 1,
+  }) async {
+    if (!_loaded) return 0;
+    final touchedAxes = <CapabilityAxis>{};
+    for (final axis in CapabilityAxis.values) {
+      if (profile.bestOf(axis) != null) touchedAxes.add(axis);
+    }
+    var acquittedTotal = 0;
+    for (final axis in touchedAxes) {
+      final reached = profile.bestOf(axis);
+      if (reached == null) continue;
+      final acquittables = milestonesAcquittableByChallenge(
+        axis: axis,
+        reached: reached,
+        profile: profile,
+        acquiredUnlocks: acquiredUnlockKeys(),
+        playerLevel: playerLevel,
+      );
+      for (final m in acquittables) {
+        if (_completed.contains(m.id)) continue;
+        await markCompletedViaChallenge(m.id);
+        acquittedTotal++;
+      }
+    }
+    return acquittedTotal;
+  }
+
+  /// Phase 3 défis — retourne les milestones acquittables silencieusement
+  /// par un défi qui a poussé [axis] à la valeur [reached]. Une milestone
+  /// est acquittable quand :
+  ///
+  /// 1. Pas déjà acquittée.
+  /// 2. Au moins un de ses `requiresCapability` matche l'axe [axis] avec
+  ///    [reached] satisfaisant le seuil (`>= min` ou `<= min` selon
+  ///    `recordKind`).
+  /// 3. Ses autres `requiresCapability` (sur d'autres axes) sont déjà
+  ///    satisfaits par le [profile] courant.
+  /// 4. Ses pré-requis unlock (`requires`) sont satisfaits par
+  ///    [acquiredUnlocks].
+  ///
+  /// La sémantique : « la milestone serait devenue candidate normalement,
+  /// sauf que c'est le défi qui a poussé l'axe au seuil ». Pas de filtre
+  /// par `humilRequired` / `minLevel` / `anatomy` — l'acquittement par
+  /// défi est plus permissif que le filtre normal (la capacité prouvée
+  /// suffit).
+  List<LevelMilestone> milestonesAcquittableByChallenge({
+    required CapabilityAxis axis,
+    required double reached,
+    required CapabilityProfile profile,
+    required Set<UnlockKey> acquiredUnlocks,
+    int playerLevel = 1,
+  }) {
+    // Cascade transitive : à chaque pass, on cherche les milestones
+    // acquittables avec le set d'unlocks courant. Quand une milestone
+    // est acquittée, ses unlocks s'ajoutent au set, ce qui peut rendre
+    // une autre milestone acquittable (`requires` satisfait par le
+    // nouvel unlock). On itère jusqu'à fixed point.
+    //
+    // Sans cette cascade, débloquer un hold throat sans avoir déjà
+    // hold mid laissait le système dans un état incohérent : la capacité
+    // est prouvée (le défi l'a forcée), mais l'unlock n'arrivait jamais
+    // parce que la milestone intermédiaire n'avait pas été acquittée.
+    // En clair : on aligne les unlocks pédagogiques sur la capacité
+    // prouvée, en cascade.
+    final acquittedIds = <String>{};
+    final liveUnlocks = Set<UnlockKey>.from(acquiredUnlocks);
+    var addedThisPass = true;
+    while (addedThisPass) {
+      addedThisPass = false;
+      for (final m in _catalog) {
+        if (_completed.contains(m.id)) continue;
+        if (acquittedIds.contains(m.id)) continue;
+        if (m.requiresCapability.isEmpty) continue;
+        if (!m.requires.every(liveUnlocks.contains)) continue;
+        // Plus de filtre `minLevel` ici : la philo est passée au gating
+        // par télémétrie. Si la joueuse a prouvé la capability d'une
+        // milestone via un défi, on l'acquitte indépendamment de son
+        // niveau global. Le param `playerLevel` est conservé pour la
+        // rétrocompat du call site mais n'est plus consulté.
+        // Garde-fou : le défi doit avoir poussé **au moins un axe** que
+        // la milestone attend, sinon l'acquittement « par défi » n'a aucun
+        // sens — la milestone est juste devenue candidate parce que le
+        // profil satisfaisait déjà ses requis. Sans cette garde, un défi
+        // hold throat acquittait des milestones étrangères dont le profil
+        // satisfaisait par hasard tous les autres requirements.
+        var matchedAxis = false;
+        var allOk = true;
+        for (final req in m.requiresCapability) {
+          if (req.axis == axis) {
+            matchedAxis = true;
+            final ok = axis.recordKind == CapabilityRecordKind.minimize
+                ? reached <= req.min
+                : reached >= req.min;
+            if (!ok) {
+              allOk = false;
+              break;
+            }
+          } else {
+            if (!req.isSatisfiedBy(profile)) {
+              allOk = false;
+              break;
+            }
+          }
+        }
+        if (allOk && matchedAxis) {
+          acquittedIds.add(m.id);
+          liveUnlocks.addAll(m.unlocks);
+          addedThisPass = true;
+        }
+      }
+    }
+    // Passe transitive — holds. Un défi qui prouve qu'on tient une
+    // position profonde (gorge, fond) prouve implicitement qu'on tient
+    // les positions plus shallow à la même durée. On acquitte donc
+    // aussi les milestones dont l'unlock principal est dans
+    // `_impliedHoldUnlocksByAxis[axis]`, sans exiger qu'elles aient
+    // de `requiresCapability` explicite — ces milestones précèdent
+    // pédagogiquement le défi dans l'arbre d'apprentissage mais sont
+    // mécaniquement plus faciles que ce qui vient d'être tenu.
+    //
+    // Seuil minimum de 3 s : un défi exploratoire qui culmine à 1-2 s
+    // ne déclenche pas la transitivité (la preuve est insuffisante).
+    // Le tuto à 5 s passe, comme tout défi standard sur ces axes.
+    final implied = _impliedHoldUnlocksByAxis[axis];
+    if (implied != null && reached >= _transitiveHoldMinReached) {
+      var addedThisPass = true;
+      while (addedThisPass) {
+        addedThisPass = false;
+        for (final m in _catalog) {
+          if (_completed.contains(m.id)) continue;
+          if (acquittedIds.contains(m.id)) continue;
+          if (m.unlocks.isEmpty) continue;
+          if (!m.unlocks.any(implied.contains)) continue;
+          if (!m.requires.every(liveUnlocks.contains)) continue;
+          // Les `requiresCapability` éventuels doivent rester satisfaits —
+          // sinon on contournerait un gating métier explicite
+          // (ex. `rhythm.depth_max ≥ 2` pour `intro_hold_throat_short`).
+          // Pour l'axe poussé, on confronte `reached` au seuil ; pour les
+          // autres axes, on lit le profil. Pas de short-circuit `continue`
+          // sur l'axe poussé : un défi qui n'atteint pas le seuil d'une
+          // milestone sur son propre axe ne doit pas l'acquitter via
+          // transitivité.
+          var capsOk = true;
+          for (final req in m.requiresCapability) {
+            if (req.axis == axis) {
+              final ok = axis.recordKind == CapabilityRecordKind.minimize
+                  ? reached <= req.min
+                  : reached >= req.min;
+              if (!ok) {
+                capsOk = false;
+                break;
+              }
+            } else {
+              if (!req.isSatisfiedBy(profile)) {
+                capsOk = false;
+                break;
+              }
+            }
+          }
+          if (!capsOk) continue;
+          acquittedIds.add(m.id);
+          liveUnlocks.addAll(m.unlocks);
+          addedThisPass = true;
+        }
+      }
+    }
+    return [
+      for (final m in _catalog)
+        if (acquittedIds.contains(m.id)) m,
+    ];
+  }
+
+  /// Seuil minimum (en secondes) au-dessus duquel un défi sur un axe
+  /// `hold.*.streak` déclenche la transitivité vers les unlocks plus
+  /// shallow. Évite qu'un défi exploratoire d'une seconde fasse passer
+  /// d'un coup la chaîne entière des holds.
+  static const double _transitiveHoldMinReached = 3.0;
+
+  /// Unlocks implicitement prouvés quand un défi pousse un axe de hold
+  /// profond. Tenir gorge X s prouve qu'on tient gorge X s **et** les
+  /// positions plus shallow X s (la résistance physiologique est
+  /// strictement décroissante avec la profondeur). Pas de mapping
+  /// symétrique « shallow → profond » : tenir mid 5 s ne prouve PAS qu'on
+  /// tient gorge 5 s.
+  ///
+  /// L'unlock principal (`throatHold` / `fullHold`) est inclus pour que la
+  /// milestone correspondante soit acquittée par son propre défi — sinon
+  /// tenir gorge ne débloquerait jamais le palier hold gorge.
+  static const Map<CapabilityAxis, Set<UnlockKey>> _impliedHoldUnlocksByAxis = {
+    CapabilityAxis.holdThroatStreak: {
+      UnlockKey.holdHead,
+      UnlockKey.holdMid,
+      UnlockKey.throatHold,
+      UnlockKey.finalHoldTip,
+      UnlockKey.finalHoldHead,
+      UnlockKey.finalHoldMid,
+    },
+    CapabilityAxis.holdFullStreak: {
+      UnlockKey.holdHead,
+      UnlockKey.holdMid,
+      UnlockKey.throatHold,
+      UnlockKey.fullHold,
+      UnlockKey.finalHoldTip,
+      UnlockKey.finalHoldHead,
+      UnlockKey.finalHoldMid,
+      UnlockKey.finalHoldThroat,
+    },
+  };
 
   /// Cherche dans le catalogue la milestone d'id [id].
   LevelMilestone? findById(String id) {

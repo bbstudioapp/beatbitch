@@ -10,10 +10,6 @@ class CareerLevel {
   /// Plus le niveau monte, plus le dé peut atteindre des valeurs élevées.
   final double maxDifficultyCap;
 
-  /// Multiplicateur de régénération d'endurance au début d'une séance
-  /// (à `t = 0`). Reste autour de 1.0 quel que soit le niveau.
-  final double regenStartMultiplier;
-
   /// Multiplicateur de régénération en fin de séance (à `t = duration`).
   /// Augmente avec le niveau : plus on est avancé, plus la récup s'accélère
   /// vers la fin → moins de temps réel passé en récup, plus d'effort enchaîné.
@@ -23,18 +19,6 @@ class CareerLevel {
   /// difficulté/endurance avec durée — niveau 1 court, niveau 15+ long.
   final int durationSeconds;
 
-  /// Titre affichable du niveau (peut être partagé entre plusieurs niveaux
-  /// consécutifs).
-  final String title;
-
-  /// Profondeur maximale autorisée pour les rhythm/hold à ce niveau.
-  /// Niveau 1 : interdit throat et full. Au-delà : full possible.
-  final int maxDepthIndex;
-
-  /// Probabilité de tomber sur throat/full quand le tirage l'autorise
-  /// (rhythm + hold). Permet de raréfier au niveau 2 sans bannir.
-  final double deepProbability;
-
   /// Nombre de boosts émis pendant la phase finish. Scale avec le niveau
   /// pour allonger et durcir l'apothéose des paliers élevés. Le mode
   /// encore ajoute `encoreChainIndex * 2` par-dessus côté générateur.
@@ -43,12 +27,8 @@ class CareerLevel {
   const CareerLevel({
     required this.level,
     required this.maxDifficultyCap,
-    required this.regenStartMultiplier,
     required this.regenEndMultiplier,
     required this.durationSeconds,
-    required this.title,
-    required this.maxDepthIndex,
-    required this.deepProbability,
     required this.boostsCount,
   });
 
@@ -62,12 +42,8 @@ class CareerLevel {
     return CareerLevel(
       level: level,
       maxDifficultyCap: cap,
-      regenStartMultiplier: 1.0,
       regenEndMultiplier: regenEnd,
       durationSeconds: _durationForLevel(level),
-      title: _titleForLevel(level),
-      maxDepthIndex: _maxDepthForLevel(level),
-      deepProbability: _deepProbabilityForLevel(level),
       boostsCount: _boostsCountForLevel(level),
     );
   }
@@ -82,43 +58,6 @@ class CareerLevel {
     if (level <= 14) return 25 * 60;
     if (level <= 17) return 35 * 60;
     return 45 * 60;
-  }
-
-  /// Titres figés par paliers (doublons consécutifs assumés).
-  static String _titleForLevel(int level) {
-    if (level <= 2) return 'Débutante';
-    if (level <= 4) return 'Apprentie Suceuse';
-    if (level <= 6) return 'Petite Salope Confirmée';
-    if (level <= 8) return 'Bouche à Pipe';
-    if (level == 9) return 'Avaleuse';
-    if (level <= 12) return 'Throat Queen';
-    if (level <= 14) return 'Reine du Sloppy';
-    if (level <= 17) return 'Trou à Bite Officiel';
-    if (level <= 19) return 'Vide-Couilles Pro';
-    return 'Reine des Putes';
-  }
-
-  /// Profondeur max autorisée (index de Position) pour rhythm + hold :
-  /// niveaux 1-2 plafonnent à `mid` (2), niveau 3 ouvre throat (3),
-  /// niveau 4+ ouvre full (4).
-  static int _maxDepthForLevel(int level) {
-    if (level <= 2) return 2; // mid max — pas de throat/full
-    if (level <= 3) return 3; // throat possible, full encore interdit
-    return 4; // full ouvert
-  }
-
-  /// Probabilité de réellement tirer une position profonde (throat ou full)
-  /// quand le niveau l'autorise. 0 jusqu'au niveau 3 inclus : throat est
-  /// ouvert au niveau 3 (`maxDepthIndex = 3`) MAIS uniquement dans la
-  /// phase finish (boosts + finisher), pas dans le main loop — sinon
-  /// l'utilisatrice voit un step head→throat sans aucune prépa avant.
-  /// À partir du niveau 4 (full ouvert), throat/full peuvent apparaître
-  /// dans le main loop.
-  static double _deepProbabilityForLevel(int level) {
-    if (level <= 3) return 0.0;
-    if (level <= 5) return 0.30;
-    if (level <= 8) return 0.55;
-    return 0.80;
   }
 
   /// Nombre de boosts émis dans la phase finish. Plus on monte en niveau,

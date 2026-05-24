@@ -1,10 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:beat_bitch/career/models/career_generation_inputs.dart';
 import 'package:beat_bitch/career/models/phrase_bank.dart';
-import 'package:beat_bitch/career/services/career_session_generator.dart';
-import 'package:beat_bitch/models/session.dart';
-import 'package:beat_bitch/models/session_step.dart';
+import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
 import 'package:beat_bitch/services/capability_axis.dart';
 import 'package:beat_bitch/services/capability_leaderboard.dart';
 import 'package:beat_bitch/services/capability_service.dart';
@@ -199,9 +198,10 @@ void main() {
                 bank: _bank(),
                 humiliationCareer: 400.0,
                 unlockedKeys: const {},
-                noStats: true,
-                capabilityProfile:
-                    passProfile ? const CapabilityProfile({}) : null,
+                custom: const CustomOverrides(noStats: true),
+                capability: CapabilityInputs(
+                  profile: passProfile ? const CapabilityProfile({}) : null,
+                ),
               )
               .session
               .steps;

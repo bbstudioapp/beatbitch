@@ -15,9 +15,11 @@ void main() {
         'tier': 4,
         'isPrincipal': true,
         'requirements': {
+          // Legacy 0.5.0 : `requiresHands` toujours accepté dans le JSON
+          // mais ignoré silencieusement (le hand est désormais piloté par
+          // la milestone planifiée, pas par le coach).
           'requiresHands': true,
-          'minPlayerLevel': 12,
-          'mustHaveUnlockedBranches': ['profondeur'],
+          'minPlayerSeconds': 12,
         },
       });
       expect(m.name, 'Lina Override');
@@ -26,10 +28,7 @@ void main() {
           [SpecializationBranch.endurance, SpecializationBranch.sloppy]);
       expect(m.tier, 4);
       expect(m.isPrincipal, isTrue);
-      expect(m.requirements!.requiresHands, isTrue);
-      expect(m.requirements!.minPlayerLevel, 12);
-      expect(m.requirements!.mustHaveUnlockedBranches,
-          [SpecializationBranch.profondeur]);
+      expect(m.requirements!.minPlayerSeconds, 12);
     });
 
     test('JSON vide → CoachMeta.empty', () {
@@ -86,7 +85,7 @@ void main() {
         specialties: [SpecializationBranch.endurance],
         tier: 9,
         isPrincipal: false,
-        requirements: CoachRequirement(minPlayerLevel: 50),
+        requirements: CoachRequirement(minPlayerSeconds: 50),
       );
       final updated = base.withMeta(m);
       expect(updated.id, base.id, reason: 'id ne change jamais');
@@ -95,7 +94,7 @@ void main() {
       expect(updated.specialties, [SpecializationBranch.endurance]);
       expect(updated.tier, 9);
       expect(updated.isPrincipal, isFalse);
-      expect(updated.requirements.minPlayerLevel, 50);
+      expect(updated.requirements.minPlayerSeconds, 50);
     });
 
     test('override partiel : champs null = défauts conservés', () {

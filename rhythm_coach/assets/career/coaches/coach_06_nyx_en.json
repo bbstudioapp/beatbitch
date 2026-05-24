@@ -185,20 +185,6 @@
         "A throat like yours gets wrecked. No quarter."
       ]
     },
-    "resilience": {
-      "soft": [
-        "You take it without flinching {name}. That's your only merit.",
-        "You know how to suffer {name}. Lucky for you."
-      ],
-      "medium": [
-        "You take everything I give {name}. Good.",
-        "You don't break {name}. Keep taking it."
-      ],
-      "hard": [
-        "Indestructible {name}. Prove it again.",
-        "You take what would break anyone {name}. Stay like that."
-      ]
-    },
     "obeissance": {
       "soft": [
         "You do what I say {name}. Obviously.",

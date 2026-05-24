@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../career/models/coach.dart';
-import '../career/models/phrase_bank.dart';
-import '../career/models/specialization.dart';
+import '../career/services/career_difficulty_resolver.dart';
 import '../career/services/career_encore_gate.dart';
 import '../career/services/career_progress_service.dart';
-import '../career/services/career_session_generator.dart';
+import '../career/services/generation/career_session_generator.dart';
 import '../career/services/phrase_bank_loader.dart';
 import '../career/services/specialization_service.dart';
 import '../controllers/session_controller.dart';
@@ -26,7 +25,7 @@ class _SurpriseBundle {
   final PunishmentBundle punishments;
   final RandomCommentsBundle comments;
   final SpecializationAllocation specialization;
-  final int maxLevel;
+  final int synthLevel;
   final bool includeHand;
 
   _SurpriseBundle({
@@ -34,7 +33,7 @@ class _SurpriseBundle {
     required this.punishments,
     required this.comments,
     required this.specialization,
-    required this.maxLevel,
+    required this.synthLevel,
     required this.includeHand,
   });
 }
@@ -42,7 +41,7 @@ class _SurpriseBundle {
 /// Lance une session courte « surprise » sur tap d'une notification.
 /// Replique condensée du flow `_CareerScreenState._start` : charge les
 /// persistances carrière, génère via `CareerSessionGenerator(quickie: true,
-/// durationSeconds: <random 60-240>)`, push `SessionScreen` avec
+/// durationSeconds: random 60-240)`, push `SessionScreen` avec
 /// démarrage auto.
 ///
 /// La session est traitée comme une « bâclée » côté stats (alimente le
@@ -61,32 +60,47 @@ class SurpriseRouter {
     final stats = StatsService();
     final specService = SpecializationService();
 
-    final bank = await PhraseBankLoader().load();
-    final punishments = await PunishmentLoader().load();
-    final comments = await RandomCommentsLoader().load();
-    final maxLevel = (await progress.getMaxLevel()).clamp(1, 99);
-    final persistedIncludeHand = await progress.getIncludeHand();
-    final specialization = await specService.load();
-    final humiliationCareer = await stats.getHumiliationLevel();
-    final obedienceScore = await stats.getObedienceLevel();
-    final durationSeconds =
-        await SurpriseAlertService.instance.pickRandomDurationSeconds();
+    final results = await Future.wait([
+      PhraseBankLoader().load(),
+      PunishmentLoader().load(),
+      RandomCommentsLoader().load(),
+      progress.getCompletedSessions(),
+      progress.getIncludeHand(),
+      specService.load(),
+      stats.getHumiliationLevel(),
+      stats.getObedienceLevel(),
+      stats.getTotalSeconds(),
+      SurpriseAlertService.instance.pickRandomDurationSeconds(),
+    ]);
+    final bank = results[0] as PhraseBank;
+    final punishments = results[1] as PunishmentBundle;
+    final comments = results[2] as RandomCommentsBundle;
+    final sessions = results[3] as int;
+    final persistedIncludeHand = results[4] as bool;
+    final specialization = results[5] as SpecializationAllocation;
+    final humiliationCareer = results[6] as double;
+    final obedienceScore = results[7] as double;
+    final totalSeconds = results[8] as int;
+    final durationSeconds = results[9] as int;
 
     if (!context.mounted) return;
 
-    await coachService.syncFromCareerLevel(maxLevel);
+    await coachService.syncFromTotalSeconds(totalSeconds);
 
-    // Sous le seuil hand (< niveau 4), on force `includeHand` à true pour
-    // garder un finish abordable (cohérent avec `_includeHandUnlockLevel`
-    // côté CareerScreen).
-    final includeHand = maxLevel < 4 ? true : persistedIncludeHand;
+    // Phase 19.12 : plus de gate hand par niveau — respecte le choix
+    // persisté de la joueuse.
+    final includeHand = persistedIncludeHand;
+    // SynthLevel proxy pour le générateur (Custom path : pas de
+    // `lengthChoice` ni `sessionsCompleted` passé, on retombe sur
+    // `resolve(level)` legacy).
+    final synthLevel = CareerDifficultyResolver.synthLevelFor(sessions);
 
     final bundle = _SurpriseBundle(
       bank: bank,
       punishments: punishments,
       comments: comments,
       specialization: specialization,
-      maxLevel: maxLevel,
+      synthLevel: synthLevel,
       includeHand: includeHand,
     );
 
@@ -125,7 +139,7 @@ class SurpriseRouter {
 
     final result = CareerSessionGenerator().generate(
       durationSeconds: durationSeconds,
-      level: bundle.maxLevel,
+      level: bundle.synthLevel,
       bank: coachBank,
       includeHand: bundle.includeHand,
       // quickie=true : intensityFloor 0.65, intro raccourcie, pas de
@@ -141,7 +155,7 @@ class SurpriseRouter {
     );
 
     final canEncore = CareerEncoreGate.canEncore(
-      level: bundle.maxLevel,
+      level: bundle.synthLevel,
       humiliationScore: humiliationCareer,
       obedienceScore: obedienceScore,
       milestoneService: milestoneService,
@@ -162,7 +176,7 @@ class SurpriseRouter {
         randomComments: activeCoach.composeRandomComments(bundle.comments),
         isCareer: true,
         isQuickie: true,
-        careerLevel: bundle.maxLevel,
+        careerLevel: bundle.synthLevel,
         staminaProfile: result.staminaProfile,
         phraseBank: coachBank,
         autoStart: true,

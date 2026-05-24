@@ -95,6 +95,33 @@ void main() {
     }
   });
 
+  // Refonte 0.5.0 (capability-only) : les unlocks sont binaires
+  // (« autorise l'action »). La durée/BPM tenable est entièrement
+  // bornée par le `CapabilityProfile`, jamais par un palier d'unlock.
+  // Les anciens unlocks scalaires (`throat_hold_long`, `full_hold_long`,
+  // `biffle_fast`, `rhythm_extreme`, `rhythm_head_mid_sustained`) ont
+  // disparu de l'enum ; leurs équivalents `*_short` ont perdu leur
+  // suffixe (`hold_mid`, `throat_hold`, `full_hold`). Seul invariant
+  // restant : la séquence de la milestone qui débloque une action doit
+  // contenir au moins un step de l'action en question, pour qu'on
+  // démontre **ce qu'on déverrouille**. Pas de seuil de durée/BPM.
+  const unlocksRemovedV050 = <String>{
+    'throat_hold_long',
+    'full_hold_long',
+    'biffle_fast',
+    'rhythm_extreme',
+    'rhythm_head_mid_sustained',
+  };
+
+  test('unlocks retirés (0.5.0) ne sont plus accordés par milestone', () {
+    for (final u in unlocksRemovedV050) {
+      expect(granters.containsKey(u), isFalse,
+          reason: 'unlock "$u" a été retiré dans la refonte 0.5.0 '
+              '(capability-only) mais une milestone le produit encore '
+              '(${granters[u]}) — à supprimer du JSON');
+    }
+  });
+
   test('chaque unlock accordé est consommé quelque part', () {
     // Source Dart à scanner pour les références `UnlockKey.<name>`. On
     // exclut le debug screen (qui itère `UnlockKey.values`) et l'enum

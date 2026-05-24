@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../l10n/enum_labels.dart';
+import '../../l10n/format_helpers.dart';
+import '../../services/stats_service.dart';
 import '../../theme/app_theme.dart';
 import '../models/specialization.dart';
-import '../services/career_progress_service.dart';
+import '../models/specialization_meta.dart';
 import '../services/specialization_service.dart';
 
 /// Écran de répartition des points de spécialisation.
@@ -23,7 +25,7 @@ class SpecializationScreen extends StatefulWidget {
 
 class _SpecializationScreenState extends State<SpecializationScreen> {
   final SpecializationService _spec = SpecializationService();
-  final CareerProgressService _progress = CareerProgressService();
+  final StatsService _stats = StatsService();
 
   late Future<_SpecBundle> _bundleFuture;
 
@@ -36,15 +38,15 @@ class _SpecializationScreenState extends State<SpecializationScreen> {
   Future<_SpecBundle> _loadBundle() async {
     final results = await Future.wait([
       _spec.load(),
-      _progress.getMaxLevel(),
       _spec.canRespec(),
       _spec.respecCooldownRemainingHours(),
+      _stats.getTotalSeconds(),
     ]);
     return _SpecBundle(
       allocation: results[0] as SpecializationAllocation,
-      maxLevel: results[1] as int,
-      canRespec: results[2] as bool,
-      respecCooldownHours: results[3] as int,
+      canRespec: results[1] as bool,
+      respecCooldownHours: results[2] as int,
+      totalSeconds: results[3] as int,
     );
   }
 
@@ -54,8 +56,8 @@ class _SpecializationScreenState extends State<SpecializationScreen> {
     });
   }
 
-  Future<void> _invest(SpecializationBranch branch, int maxLevel) async {
-    final ok = await _spec.invest(branch, maxLevel);
+  Future<void> _invest(SpecializationBranch branch, int totalSeconds) async {
+    final ok = await _spec.invest(branch, totalSeconds);
     if (!ok) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -94,8 +96,10 @@ class _SpecializationScreenState extends State<SpecializationScreen> {
     );
     if (confirmed != true) return;
 
+    // Phase 19.12 : la pénalité `decrementMaxLevel` (-1 niveau global)
+    // disparaît avec le retrait du système de niveaux. Le cooldown
+    // 72 h reste l'unique frein contre les respec spam.
     await _spec.respec();
-    await _progress.decrementMaxLevel();
     _reload();
   }
 
@@ -124,7 +128,7 @@ class _SpecializationScreenState extends State<SpecializationScreen> {
           }
           final bundle = snapshot.data!;
           final cap =
-              SpecializationService.totalPointsForLevel(bundle.maxLevel);
+              SpecializationService.totalPointsForSeconds(bundle.totalSeconds);
           final available = cap - bundle.allocation.totalSpent;
 
           return ListView(
@@ -134,7 +138,7 @@ class _SpecializationScreenState extends State<SpecializationScreen> {
                 available: available,
                 cap: cap,
                 spent: bundle.allocation.totalSpent,
-                maxLevel: bundle.maxLevel,
+                totalSeconds: bundle.totalSeconds,
               ),
               const SizedBox(height: 16),
               Text(
@@ -153,7 +157,7 @@ class _SpecializationScreenState extends State<SpecializationScreen> {
                     meta: meta,
                     points: bundle.allocation.pointsIn(meta.branch),
                     canInvest: available > 0,
-                    onInvest: () => _invest(meta.branch, bundle.maxLevel),
+                    onInvest: () => _invest(meta.branch, bundle.totalSeconds),
                   ),
                 ),
               const SizedBox(height: 12),
@@ -174,13 +178,13 @@ class _Header extends StatelessWidget {
   final int available;
   final int cap;
   final int spent;
-  final int maxLevel;
+  final int totalSeconds;
 
   const _Header({
     required this.available,
     required this.cap,
     required this.spent,
-    required this.maxLevel,
+    required this.totalSeconds,
   });
 
   @override
@@ -221,7 +225,7 @@ class _Header extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                t.specLevelLabel(maxLevel),
+                formatDurationCompact(context, totalSeconds),
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
@@ -388,14 +392,14 @@ class _RespecButton extends StatelessWidget {
 
 class _SpecBundle {
   final SpecializationAllocation allocation;
-  final int maxLevel;
   final bool canRespec;
   final int respecCooldownHours;
+  final int totalSeconds;
 
   const _SpecBundle({
     required this.allocation,
-    required this.maxLevel,
     required this.canRespec,
     required this.respecCooldownHours,
+    required this.totalSeconds,
   });
 }

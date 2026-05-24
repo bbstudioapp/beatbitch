@@ -22,38 +22,24 @@ enum CoachArchetype {
 
 /// Contraintes optionnelles pour autoriser la sélection d'un coach.
 /// Évaluées par `CoachService.evaluate` à chaque demande.
+///
+/// Refonte 0.5.0 : l'ancien flag `requiresHands` a été retiré du coach.
+/// L'obligation de la stimulation main est désormais portée uniquement
+/// par la milestone planifiée (`LevelMilestone.requiresHands` — cf.
+/// `assets/career/milestones.json` et `career_screen._start`). Si une
+/// milestone insérée dans la prochaine session implique biffle/hand, le
+/// toggle `includeHand` est forcé à true côté `CareerScreen`, peu
+/// importe le coach choisi.
 class CoachRequirement {
-  /// Si true, le coach n'est sélectionnable que si le toggle « inclure la
-  /// stimulation main » est actif côté `CareerProgressService`.
-  /// Cas typique : coach axé biffle.
-  final bool requiresHands;
-
-  /// Branches de spécialisation devant avoir au moins 1 point investi.
-  /// Vide = pas de prérequis. Check binaire (présence) : pour exiger un
-  /// nombre de points spécifique, utiliser [requiredBranchPoints].
-  final List<SpecializationBranch> mustHaveUnlockedBranches;
-
-  /// Seuils de points requis par branche. Ex: `{ profondeur: 3 }` =
-  /// "au moins 3 points investis dans profondeur". Permet de débloquer
-  /// un coach uniquement quand le joueur a réellement investi dans une
-  /// spécialité (et pas juste effleuré 1 point).
-  ///
-  /// Sémantique : **toutes** les branches listées doivent atteindre leur
-  /// seuil (AND, pas OR). Si une branche apparaît à la fois ici et dans
-  /// `mustHaveUnlockedBranches`, le seuil le plus strict (= celui d'ici)
-  /// fait foi.
-  final Map<SpecializationBranch, int> requiredBranchPoints;
-
-  /// Niveau global minimum du joueur (CareerLevel) pour autoriser ce
-  /// coach. Permet d'ajouter des coachs annexes débloqués à un niveau
-  /// précis sans toucher au système de palier principal.
-  final int minPlayerLevel;
+  /// Temps total cumulé (en secondes) que la joueuse doit avoir investi
+  /// pour débloquer ce coach (Phase 19.10 — remplace l'ancien
+  /// `minPlayerLevel`). Le déblocage par investissement remplace le
+  /// déblocage par niveau de carrière qui disparaît avec Phase 19.
+  /// Defaut 0 : coach disponible dès le démarrage.
+  final int minPlayerSeconds;
 
   const CoachRequirement({
-    this.requiresHands = false,
-    this.mustHaveUnlockedBranches = const [],
-    this.requiredBranchPoints = const {},
-    this.minPlayerLevel = 1,
+    this.minPlayerSeconds = 0,
   });
 
   static const CoachRequirement none = CoachRequirement();
@@ -61,46 +47,17 @@ class CoachRequirement {
   /// Désérialise un objet JSON :
   /// ```jsonc
   /// {
-  ///   "requiresHands": false,
-  ///   "minPlayerLevel": 1,
-  ///   "mustHaveUnlockedBranches": ["profondeur"],
-  ///   "requiredBranchPoints": { "resilience": 3, "profondeur": 2 }
+  ///   "minPlayerSeconds": 0
   /// }
   /// ```
-  /// Toute clé absente garde sa valeur par défaut. Les noms de branches
-  /// inconnus sont ignorés silencieusement.
+  /// Toute clé absente garde sa valeur par défaut. Les clés legacy
+  /// `minPlayerLevel` (Phase 19) et `requiresHands` (0.5.0) sont
+  /// silencieusement ignorées — les `Coach`s sont matérialisés via
+  /// `CoachCatalog.defaults` qui pose les nouveaux seuils ; les
+  /// overrides JSON ne touchent pas les requirements.
   factory CoachRequirement.fromJson(Map<String, dynamic> json) {
-    SpecializationBranch? parseBranch(String name) {
-      for (final b in SpecializationBranch.values) {
-        if (b.name == name) return b;
-      }
-      return null;
-    }
-
-    final branchesNode = json['mustHaveUnlockedBranches'];
-    final branches = <SpecializationBranch>[];
-    if (branchesNode is List) {
-      for (final raw in branchesNode) {
-        final b = parseBranch(raw?.toString() ?? '');
-        if (b != null) branches.add(b);
-      }
-    }
-
-    final pointsNode = json['requiredBranchPoints'];
-    final points = <SpecializationBranch, int>{};
-    if (pointsNode is Map<String, dynamic>) {
-      pointsNode.forEach((key, value) {
-        final b = parseBranch(key);
-        final n = (value as num?)?.toInt();
-        if (b != null && n != null && n > 0) points[b] = n;
-      });
-    }
-
     return CoachRequirement(
-      requiresHands: json['requiresHands'] == true,
-      minPlayerLevel: (json['minPlayerLevel'] as num?)?.toInt() ?? 1,
-      mustHaveUnlockedBranches: branches,
-      requiredBranchPoints: points,
+      minPlayerSeconds: (json['minPlayerSeconds'] as num?)?.toInt() ?? 0,
     );
   }
 }
@@ -222,7 +179,7 @@ class CoachMeta {
   ///   "specialties": ["endurance", "profondeur"],
   ///   "tier": 1,
   ///   "isPrincipal": true,
-  ///   "requirements": { "requiresHands": false, "minPlayerLevel": 1 },
+  ///   "requirements": { "minPlayerSeconds": 0 },
   ///   "portrait": "assets/career/coaches/portraits/coach_01_lina.png"
   /// }
   /// ```
@@ -405,6 +362,25 @@ class CoachPhrasePack {
   /// silence — comportement de tous les coachs sauf Lina + Victoria.
   final Map<String, Map<String, List<PhraseEntry>>> progressPhrases;
 
+  /// Phrases du système de défis intra-séance (Phase 1). Pour chaque axe —
+  /// clé = `CapabilityAxis.storageKey` (ex. `"hold.throat.streak"`) — sept
+  /// tiers :
+  ///
+  /// - `attempt` : annonce du défi pendant le breath de countdown.
+  /// - `extension` : « tu peux rester là si tu veux » à `seuil - 3 s`.
+  /// - `success` : succès net (seuil atteint puis `JE M'ARRÊTE` ou timeout).
+  /// - `stop` : variante de `success` quand la joueuse a explicitement
+  ///   appuyé sur `JE M'ARRÊTE` (vs timeout — taquinerie possible).
+  /// - `fail` : tap-out avant le seuil (« tu pouvais rester si tu avais tenu »).
+  /// - `timeout` : timeout 8 s au seuil → succès auto, coach taquine.
+  /// - `skip` : commentaire neutre quand la joueuse appuie `PASSE`
+  ///   pendant le breath de countdown.
+  ///
+  /// Clé brute (String), tolérante : une clé inconnue n'est jamais
+  /// consultée. Vide / absent = fallback sur la PhraseBank globale (qui
+  /// n'a rien non plus → silence côté coach, l'UI affiche un texte localisé).
+  final Map<String, Map<String, List<PhraseEntry>>> challengePhrases;
+
   /// Commentaires aléatoires propres à ce coach. Si non vide, **remplacent**
   /// la liste globale de `random_comments.json` pendant la séance. Vide =
   /// fallback sur la liste globale (comportement historique). Sert à éviter
@@ -437,6 +413,7 @@ class CoachPhrasePack {
     this.progress = const {},
     this.branchPhrases = const {},
     this.progressPhrases = const {},
+    this.challengePhrases = const {},
     this.randomComments = const [],
     this.nicknames = CoachNicknamePool.empty,
     this.coachNicknames = const [],
@@ -454,6 +431,7 @@ class CoachPhrasePack {
       progress.isEmpty &&
       branchPhrases.isEmpty &&
       progressPhrases.isEmpty &&
+      challengePhrases.isEmpty &&
       randomComments.isEmpty &&
       nicknames.isEmpty &&
       coachNicknames.isEmpty &&
@@ -549,6 +527,22 @@ class CoachPhrasePack {
       });
     }
 
+    // challengePhrases : même forme que progressPhrases, tiers
+    // attempt|extension|success|stop|fail|timeout|skip (cf. spec §7).
+    final challengePhrases = <String, Map<String, List<PhraseEntry>>>{};
+    final challengePhrasesNode = root['challengePhrases'];
+    if (challengePhrasesNode is Map<String, dynamic>) {
+      challengePhrasesNode.forEach((axisKey, tiersRaw) {
+        if (axisKey.trim().isEmpty || tiersRaw is! Map<String, dynamic>) return;
+        final tiers = <String, List<PhraseEntry>>{};
+        tiersRaw.forEach((tier, raw) {
+          final list = PhraseEntry.listFromJson(raw);
+          if (list.isNotEmpty) tiers[tier] = list;
+        });
+        if (tiers.isNotEmpty) challengePhrases[axisKey] = tiers;
+      });
+    }
+
     final nicknamesNode = root['nicknames'];
     final nicknames = nicknamesNode is Map<String, dynamic>
         ? CoachNicknamePool.fromJson(nicknamesNode)
@@ -568,6 +562,7 @@ class CoachPhrasePack {
       progress: progress,
       branchPhrases: branchPhrases,
       progressPhrases: progressPhrases,
+      challengePhrases: challengePhrases,
       randomComments: stringList(root['randomComments']),
       nicknames: nicknames,
       coachNicknames: stringList(root['coachNicknames']),
@@ -816,6 +811,47 @@ class Coach {
     );
   }
 
+  /// Boost virtuel par branche listée dans [specialties]. La sémantique est
+  /// « le coach principal t'introduit ses spés sans dominer ce que tu as
+  /// déjà investi » (cf. [effectiveAllocation]). À 2 pts, l'effet est lisible
+  /// dans les biais Phase B (durée +10 %, ampScore +0.10, poids rhythm +0.40)
+  /// sans écraser une joueuse débutante.
+  static const int _specialtyBoost = 2;
+
+  /// Renvoie une allocation effective qui combine la spé persistée de la
+  /// joueuse [player] et un boost coach par branche listée dans
+  /// [specialties]. Sémantique « boost déclinant » :
+  ///
+  ///   `effective(branch) = max(player(branch), _specialtyBoost)`
+  ///       si `branch ∈ specialties`, sinon `player(branch)`
+  ///
+  /// Cas concrets :
+  /// - Joueuse 0 pt sur la branche coach → effective = 2 (le coach amène).
+  /// - Joueuse 5 pts sur la branche coach → effective = 5 (rien à apporter).
+  /// - Branche hors `specialties` → inchangée (le coach ne touche pas).
+  ///
+  /// Le résultat est consommé par le générateur (`Phase B` — pondérations
+  /// de durée, BPM, amplitude, poids de mode). N'affecte ni la coloration
+  /// de phrases (qui reste sur la spé joueuse pure pour ne pas créer de
+  /// branche dominante artificielle) ni le gating de milestones.
+  ///
+  /// `lastRespecMs` est passé tel quel.
+  SpecializationAllocation effectiveAllocation(
+      SpecializationAllocation player) {
+    if (specialties.isEmpty) return player;
+    final boosted = <SpecializationBranch, int>{};
+    for (final b in SpecializationBranch.values) {
+      final pts = player.pointsIn(b);
+      boosted[b] = specialties.contains(b) && pts < _specialtyBoost
+          ? _specialtyBoost
+          : pts;
+    }
+    return SpecializationAllocation(
+      points: boosted,
+      lastRespecMs: player.lastRespecMs,
+    );
+  }
+
   /// Construit une [PhraseBank] propre à ce coach, en composant son pack
   /// avec [fallback] (la banque globale du jeu). Règles :
   ///
@@ -982,6 +1018,16 @@ class _CoachComposedPhraseBank extends PhraseBank {
       if (picked != null) return picked;
     }
     return fallback.pickProgressPhrase(axisStorageKey, tier, rng);
+  }
+
+  @override
+  String? pickChallengePhrase(String axisStorageKey, String tier, Random rng) {
+    final pool = coachPhrases.challengePhrases[axisStorageKey]?[tier];
+    if (pool != null && pool.isNotEmpty) {
+      final picked = pickPhraseEntry(pool, rng);
+      if (picked != null) return picked;
+    }
+    return fallback.pickChallengePhrase(axisStorageKey, tier, rng);
   }
 
   @override

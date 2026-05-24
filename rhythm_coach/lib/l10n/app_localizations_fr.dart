@@ -256,6 +256,43 @@ class AppLocalizationsFr extends AppLocalizations {
   String get profileReputationUnit => 'pts de réputation';
 
   @override
+  String get reputationTierBonneEleve => 'Bonne élève';
+
+  @override
+  String get reputationTierPetiteSuceuse => 'Petite suceuse';
+
+  @override
+  String get reputationTierSuceuseConfirmee => 'Suceuse confirmée';
+
+  @override
+  String get reputationTierPuteReconnue => 'Pute reconnue';
+
+  @override
+  String get reputationTierPuteConsacree => 'Pute consacrée';
+
+  @override
+  String get reputationTierReineDesSuceuses => 'Reine des suceuses';
+
+  @override
+  String get reputationTierReineDesPutes => 'Reine des putes';
+
+  @override
+  String get careerInvestmentBarTitle => 'Temps cumulé';
+
+  @override
+  String careerInvestmentSessions(int count) {
+    return '$count séances';
+  }
+
+  @override
+  String careerInvestmentNextCoach(String name, String remaining) {
+    return 'Prochain coach : $name ($remaining)';
+  }
+
+  @override
+  String get careerInvestmentAllUnlocked => 'Tous les coachs débloqués.';
+
+  @override
   String get profileStatSessionsCompleted => 'Sessions terminées';
 
   @override
@@ -480,12 +517,7 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get careerLevelSection => 'Niveau';
-
-  @override
-  String careerMaxLevel(int level) {
-    return 'max $level';
-  }
+  String get careerDurationSection => 'Durée';
 
   @override
   String get careerQuickieToggle => 'Session bâclée';
@@ -496,6 +528,139 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get careerQuickieDescription =>
       '6 min, intense tout du long. Pour quand t\'as pas le temps.';
+
+  @override
+  String get sessionLengthBacheeLabel => 'Bâclée';
+
+  @override
+  String get sessionLengthBacheeDuration => '~6 min';
+
+  @override
+  String get sessionLengthBacheeDescription => 'Express, intense tout du long.';
+
+  @override
+  String get sessionLengthCourteLabel => 'Courte';
+
+  @override
+  String get sessionLengthCourteDuration => '~12 min';
+
+  @override
+  String get sessionLengthCourteDescription =>
+      'Format compact, un défi possible.';
+
+  @override
+  String get sessionLengthMoyenneLabel => 'Moyenne';
+
+  @override
+  String get sessionLengthMoyenneDuration => '~25 min';
+
+  @override
+  String get sessionLengthMoyenneDescription =>
+      'Deux milestones max, du contenu varié.';
+
+  @override
+  String get sessionLengthLongueLabel => 'Longue';
+
+  @override
+  String get sessionLengthLongueDuration => '~45 min';
+
+  @override
+  String get sessionLengthLongueDescription =>
+      'Séance pleine, plusieurs défis intercalés.';
+
+  @override
+  String get careerChallengesToggle => 'Défis intra-séance';
+
+  @override
+  String get careerChallengesDescription =>
+      'Un défi opt-in vers 60 % de la séance. Calibre vite, peut faire monter le niveau plus rapidement.';
+
+  @override
+  String get challengePassButton => 'PASSE';
+
+  @override
+  String get challengeGoButton => 'MAINTIENS';
+
+  @override
+  String get challengeHoldHintLive => 'Garde le doigt sur l\'écran';
+
+  @override
+  String get challengeHoldHintAtSeuil => 'Relâche pour arrêter, ou continue';
+
+  @override
+  String get challengeHoldHintTolerance => 'Repose ton doigt';
+
+  @override
+  String get challengeCountdownReleaseRetry =>
+      'Maintiens bien ton doigt cette fois.';
+
+  @override
+  String get challengeTutorialBanner =>
+      'Premier défi : tu vas tenir une position le temps demandé. Maintiens MAINTIENS quand tu es prête (garde le doigt), ou tape PASSE pour skipper.';
+
+  @override
+  String challengeBannerCountdown(int digit) {
+    return '$digit';
+  }
+
+  @override
+  String get challengeAttemptDefault =>
+      'Défi : on va pousser ta limite. Maintiens MAINTIENS quand tu es prête, je compterai trois deux un avant de démarrer. Garde le doigt sur l\'écran tant que tu tiens.';
+
+  @override
+  String get challengeAttemptTutorialHoldThroat =>
+      'Premier défi : tu vas tenir en gorge cinq secondes. Maintiens MAINTIENS, garde le doigt sur l\'écran. Si tu lâches avant le seuil, c\'est raté. Au seuil, le bouton devient vert : relâche pour arrêter, ou continue à tenir pour aller plus loin.';
+
+  @override
+  String get challengeExtensionDefault =>
+      'Tu peux rester encore si tu veux, ou relâcher.';
+
+  @override
+  String get challengeSuccessDefault =>
+      'Tu as tenu jusqu\'au bout. Bonne fille.';
+
+  @override
+  String get challengeStopDefault => 'Tu as choisi d\'arrêter. Bien.';
+
+  @override
+  String get challengeFailDefault =>
+      'Tu as craqué avant le seuil. Pas grave, tu y arriveras la prochaine.';
+
+  @override
+  String get challengeSkipDefault =>
+      'Comme tu veux, on garde pour la prochaine.';
+
+  @override
+  String challengeBannerHoldThroat(int seconds) {
+    return 'Tiens gorge $seconds secondes';
+  }
+
+  @override
+  String challengeBannerHoldFull(int seconds) {
+    return 'Tiens à fond $seconds secondes';
+  }
+
+  @override
+  String challengeBannerHoldGeneric(int seconds) {
+    return 'Tiens la position $seconds secondes';
+  }
+
+  @override
+  String challengeBannerRhythm(int bpm) {
+    return 'Monte le rythme jusqu\'à $bpm BPM';
+  }
+
+  @override
+  String challengeBannerBiffle(int bpm) {
+    return 'Encaisse les coups jusqu\'à $bpm BPM';
+  }
+
+  @override
+  String get challengeBannerGeneric => 'Pousse ta limite';
+
+  @override
+  String get challengeBannerThresholdReached =>
+      'Seuil atteint — continue ou arrête';
 
   @override
   String get careerIncludeHandToggle => 'Inclure la stimulation à la main';
@@ -535,17 +700,13 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get careerLevelLockedHint =>
-      'Niveau 1 (termine une séance pour débloquer le suivant)';
-
-  @override
   String careerSessionName(int level) {
-    return 'Carrière niveau $level';
+    return 'Carrière';
   }
 
   @override
   String careerSessionNameQuickie(int level) {
-    return 'Carrière niveau $level — bâclée';
+    return 'Carrière — bâclée';
   }
 
   @override
@@ -658,11 +819,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get specPointsAvailableLabel => 'points disponibles';
-
-  @override
-  String specLevelLabel(int level) {
-    return 'Niveau $level';
-  }
 
   @override
   String specSpentLabel(int spent, int cap) {
@@ -1413,9 +1569,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get coachBadgeLocked => 'VERROUILLÉ';
 
   @override
-  String get coachRequiresHands => 'Mains obligatoires';
-
-  @override
   String coachSummaryPrincipal(String title, int tier) {
     return '$title · Principal palier $tier';
   }
@@ -1485,23 +1638,8 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String coachErrorRequiresHands(String coachName) {
-    return '$coachName a besoin que tu actives la main dans les options.';
-  }
-
-  @override
-  String coachErrorMinLevel(String coachName, int minLevel) {
-    return '$coachName demande le niveau $minLevel minimum.';
-  }
-
-  @override
-  String get coachErrorMissingSpecialization =>
-      'Ce coach demande au moins 1 point dans une spécialisation que tu n\'as pas investie.';
-
-  @override
-  String coachErrorInsufficientBranchPoints(
-      String coachName, String requirements) {
-    return '$coachName demande : $requirements. Investis tes points de spécialisation.';
+  String coachErrorMinPlayerSeconds(String coachName, String duration) {
+    return '$coachName se débloque à $duration de jeu cumulé.';
   }
 
   @override
@@ -1523,10 +1661,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get unlockAnnouncementSloppyDroolDeep =>
       'Quand tu vas profond, ta bouche déborde encore plus. Profite.';
-
-  @override
-  String get unlockAnnouncementRhythmHeadMidSustained =>
-      'Tu peux tenir la cadence plus d\'une minute maintenant, sans pause. Je te le demanderai.';
 
   @override
   String get modeSelectionSurpriseTooltip => 'Rappels surprise';
