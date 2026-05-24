@@ -258,7 +258,7 @@
   "challengeAttemptTutorialHoldThroat": "First challenge: you'll hold deep for five seconds. Press and hold HOLD, keep your finger on the screen. If you let go before the threshold, it's failed. At the threshold the button turns green: release to stop, or keep holding to push further.",
   "challengeExtensionDefault": "You can stay longer if you want, or let go.",
   "challengeSuccessDefault": "You held it all the way. Good girl.",
-  "challengeStopDefault": "You chose to stop. Good.",
+  "challengeStopDefault": "You held to the threshold. Well done.",
   "challengeFailDefault": "You broke before the threshold. No worries, you'll get it next time.",
   "challengeSkipDefault": "As you wish, we'll keep it for next time.",
   "challengeBannerHoldThroat": "Hold deep {seconds} seconds",

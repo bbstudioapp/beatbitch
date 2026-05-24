@@ -258,7 +258,7 @@
   "challengeAttemptTutorialHoldThroat": "Premier défi : tu vas tenir en gorge cinq secondes. Maintiens MAINTIENS, garde le doigt sur l'écran. Si tu lâches avant le seuil, c'est raté. Au seuil, le bouton devient vert : relâche pour arrêter, ou continue à tenir pour aller plus loin.",
   "challengeExtensionDefault": "Tu peux rester encore si tu veux, ou relâcher.",
   "challengeSuccessDefault": "Tu as tenu jusqu'au bout. Bonne fille.",
-  "challengeStopDefault": "Tu as choisi d'arrêter. Bien.",
+  "challengeStopDefault": "Tu as tenu jusqu'au seuil. Bien.",
   "challengeFailDefault": "Tu as craqué avant le seuil. Pas grave, tu y arriveras la prochaine.",
   "challengeSkipDefault": "Comme tu veux, on garde pour la prochaine.",
   "challengeBannerHoldThroat": "Tiens gorge {seconds} secondes",

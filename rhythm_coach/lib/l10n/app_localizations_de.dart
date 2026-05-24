@@ -619,7 +619,8 @@ class AppLocalizationsDe extends AppLocalizations {
       'Du hast bis zum Ende gehalten. Braves Mädchen.';
 
   @override
-  String get challengeStopDefault => 'Du hast aufgehört. Gut.';
+  String get challengeStopDefault =>
+      'Du hast bis zum Schwellenwert gehalten. Gut gemacht.';
 
   @override
   String get challengeFailDefault =>

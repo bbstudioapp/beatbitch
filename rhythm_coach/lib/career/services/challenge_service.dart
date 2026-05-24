@@ -569,6 +569,34 @@ class ChallengeService {
     }
   }
 
+  /// Retourne les autres axes pilotants qui produiraient un défi
+  /// **visuellement identique** à [axis] côté joueuse : même mode, même
+  /// `from`, même `to`, et même `kind` (durée vs BPM rampe vs profondeur —
+  /// inclure `kind` préserve la variété entre un défi rythme à BPM constant
+  /// et un défi rythme avec rampe BPM, qui ne se ressentent pas pareil).
+  /// Sert au caller à élargir l'exclusion entre 2 picks successifs d'une
+  /// même session — sinon une joueuse ayant plusieurs axes hold throat
+  /// (`holdThroatStreak` + `gorgeApneeStreak` + `gorgeEngagementStreak`)
+  /// verrait deux défis « hold throat » différents uniquement par leur
+  /// durée dérivée du `comfort` de chaque axe (cf. retour stefsub v0.5.0).
+  /// L'axe lui-même n'est jamais inclus dans le retour : le caller a déjà
+  /// fait `excludeAxes.add(picked)` derrière le pick.
+  static Set<CapabilityAxis> axesSharingVisualSignature(CapabilityAxis axis) {
+    final mode = _modeOf(axis);
+    final from = _fromOf(axis);
+    final to = _toOf(axis);
+    final kind = _kindOf(axis);
+    return {
+      for (final a in CapabilityAxis.values)
+        if (a != axis &&
+            _modeOf(a) == mode &&
+            _fromOf(a) == from &&
+            _toOf(a) == to &&
+            _kindOf(a) == kind)
+          a,
+    };
+  }
+
   /// Construit le `SessionStep` matérialisant le défi (consommé par le
   /// générateur lors de l'insertion à 60 %). Propage `bpmEnd` pour les
   /// défis BPM en rampe (le BeepEngine interpole linéairement entre

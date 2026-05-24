@@ -220,6 +220,99 @@ void main() {
     );
   });
 
+  group('ChallengeService — signature visuelle (mode, from, to)', () {
+    // Plusieurs axes pilotants partagent la même signature visuelle
+    // côté joueuse (même mode, même from, même to). Quand la session
+    // contient plusieurs défis, exclure uniquement l'axe précédent ne
+    // suffit pas : on peut tirer un 2ᵉ axe différent qui produira un
+    // défi visuellement identique (deux « hold throat » successifs avec
+    // des durées incohérentes parce que dérivées de comforts d'axes
+    // différents). Cf. retour stefsub v0.5.0 (feedback_v0.5.1.md).
+    test(
+        '2 défis sur 3 axes hold throat synonymes — bug : 2 défis '
+        'visuellement identiques', () async {
+      final svc = ChallengeService();
+      // Trois axes différents, tous mappés vers (hold, throat, throat).
+      const profile = CapabilityProfile({
+        CapabilityAxis.holdThroatStreak: CapabilityAxisState(
+          best: 14,
+          comfort: 14,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
+        CapabilityAxis.gorgeApneeStreak: CapabilityAxisState(
+          best: 8,
+          comfort: 8,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
+        CapabilityAxis.gorgeEngagementStreak: CapabilityAxisState(
+          best: 20,
+          comfort: 20,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
+      });
+      // Simule la boucle de génération de career_screen : on pioche un
+      // défi, on ajoute son axe à excludeAxes, on recommence pour le
+      // défi suivant.
+      final excluded = <CapabilityAxis>{};
+      final picks = <Challenge>[];
+      for (var i = 0; i < 2; i++) {
+        final ch = await svc.buildForSession(
+          profile: profile,
+          ceilings: const {},
+          excludeAxes: excluded,
+          rng: Random(i),
+          isTutorial: false,
+        );
+        if (ch == null) break;
+        picks.add(ch);
+        excluded.add(ch.axis);
+        // Fix attendu : exclure aussi tous les axes partageant la même
+        // signature visuelle pour éviter le doublon perçu par la joueuse.
+        excluded.addAll(ChallengeService.axesSharingVisualSignature(ch.axis));
+      }
+      expect(picks.length, 2,
+          reason: '2 défis attendus parmi les axes hold throat');
+      final signatures =
+          picks.map((c) => '${c.mode}|${c.from}|${c.to}').toSet();
+      expect(signatures.length, 2,
+          reason: 'Les 2 défis doivent avoir des signatures (mode, from, to) '
+              'distinctes — sinon la joueuse voit deux fois le même défi avec '
+              'des durées incohérentes');
+    });
+
+    test(
+        'axesSharingVisualSignature : holdThroatStreak ⇔ gorgeApneeStreak ⇔ '
+        'gorgeEngagementStreak', () {
+      final group = ChallengeService.axesSharingVisualSignature(
+          CapabilityAxis.holdThroatStreak);
+      expect(group, contains(CapabilityAxis.gorgeApneeStreak));
+      expect(group, contains(CapabilityAxis.gorgeEngagementStreak));
+      // L'axe lui-même n'est pas dans le retour (le caller l'a déjà
+      // ajouté à excludeAxes via excluded.add(ch.axis)).
+      expect(group, isNot(contains(CapabilityAxis.holdThroatStreak)));
+    });
+
+    test('axesSharingVisualSignature : holdFullStreak isolé', () {
+      // hold full a sa propre signature (from/to = full), pas de doublon.
+      final group = ChallengeService.axesSharingVisualSignature(
+          CapabilityAxis.holdFullStreak);
+      expect(group, isEmpty);
+    });
+
+    test('axesSharingVisualSignature : axes rhythm distincts', () {
+      // rhythmBpmCeilThroat = (rhythm, head→throat) : sa signature ne
+      // matche pas rhythmBpmCeilFull = (rhythm, mid→full) ni shallow.
+      expect(
+        ChallengeService.axesSharingVisualSignature(
+            CapabilityAxis.rhythmBpmCeilThroat),
+        isEmpty,
+      );
+    });
+  });
+
   group('crossingsTargetForAttempts', () {
     test('progression no-limit : 5, 8, 12, 17, 23, 30 …', () {
       expect(crossingsTargetForAttempts(0), 5);

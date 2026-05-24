@@ -372,6 +372,14 @@ class _CareerScreenState extends State<CareerScreen> {
         if (next == null) break;
         challenges.add(next);
         excludedAxes.add(next.axis);
+        // Étend l'exclusion aux autres axes qui produiraient un défi
+        // visuellement identique (même mode/from/to/kind) — sans ça une
+        // joueuse avec plusieurs axes hold throat (holdThroatStreak,
+        // gorgeApneeStreak, gorgeEngagementStreak) verrait deux défis
+        // « hold throat » dont seule la durée diffère. Cf. retour stefsub
+        // v0.5.0.
+        excludedAxes
+            .addAll(ChallengeService.axesSharingVisualSignature(next.axis));
         isFirst = false;
       }
     }
