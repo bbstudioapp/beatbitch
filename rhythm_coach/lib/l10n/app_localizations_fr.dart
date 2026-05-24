@@ -579,31 +579,24 @@ class AppLocalizationsFr extends AppLocalizations {
   String get challengePassButton => 'PASSE';
 
   @override
-  String get challengeGoButton => 'GO';
+  String get challengeGoButton => 'MAINTIENS';
 
   @override
-  String get challengeExtendButton => 'JE TIENS';
+  String get challengeHoldHintLive => 'Garde le doigt sur l\'écran';
 
   @override
-  String get challengeStopButton => 'J\'ARRÊTE';
+  String get challengeHoldHintAtSeuil => 'Relâche pour arrêter, ou continue';
 
   @override
-  String get challengeAbortButton => 'STOP';
+  String get challengeHoldHintTolerance => 'Repose ton doigt';
 
   @override
-  String challengeSeuilAutoStopHint(int seconds) {
-    String _temp0 = intl.Intl.pluralLogic(
-      seconds,
-      locale: localeName,
-      other: 'Stop auto dans $seconds s',
-      one: 'Stop auto dans 1 s',
-    );
-    return '$_temp0';
-  }
+  String get challengeCountdownReleaseRetry =>
+      'Maintiens bien ton doigt cette fois.';
 
   @override
   String get challengeTutorialBanner =>
-      'Premier défi : tu vas tenir une position le temps demandé. Tape GO quand tu es prête, ou PASSE pour skipper.';
+      'Premier défi : tu vas tenir une position le temps demandé. Maintiens MAINTIENS quand tu es prête (garde le doigt), ou tape PASSE pour skipper.';
 
   @override
   String challengeBannerCountdown(int digit) {
@@ -612,15 +605,15 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get challengeAttemptDefault =>
-      'Défi : on va pousser ta limite. Tape GO quand tu es prête, je compterai trois deux un avant de démarrer.';
+      'Défi : on va pousser ta limite. Maintiens MAINTIENS quand tu es prête, je compterai trois deux un avant de démarrer. Garde le doigt sur l\'écran tant que tu tiens.';
 
   @override
   String get challengeAttemptTutorialHoldThroat =>
-      'Premier défi : tu vas tenir en gorge cinq secondes. Tape GO quand tu es prête, je compterai trois deux un avant de démarrer. Au seuil, deux boutons apparaîtront pour tenir plus longtemps ou arrêter.';
+      'Premier défi : tu vas tenir en gorge cinq secondes. Maintiens MAINTIENS, garde le doigt sur l\'écran. Si tu lâches avant le seuil, c\'est raté. Au seuil, le bouton devient vert : relâche pour arrêter, ou continue à tenir pour aller plus loin.';
 
   @override
   String get challengeExtensionDefault =>
-      'Tu peux rester encore si tu veux. Les boutons vont apparaître.';
+      'Tu peux rester encore si tu veux, ou relâcher.';
 
   @override
   String get challengeSuccessDefault =>
@@ -632,9 +625,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get challengeFailDefault =>
       'Tu as craqué avant le seuil. Pas grave, tu y arriveras la prochaine.';
-
-  @override
-  String get challengeTimeoutDefault => 'Temps écoulé, tu as tenu. Bien.';
 
   @override
   String get challengeSkipDefault =>

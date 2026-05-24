@@ -1147,37 +1147,37 @@ abstract class AppLocalizations {
   /// No description provided for @challengeGoButton.
   ///
   /// In fr, this message translates to:
-  /// **'GO'**
+  /// **'MAINTIENS'**
   String get challengeGoButton;
 
-  /// No description provided for @challengeExtendButton.
+  /// No description provided for @challengeHoldHintLive.
   ///
   /// In fr, this message translates to:
-  /// **'JE TIENS'**
-  String get challengeExtendButton;
+  /// **'Garde le doigt sur l\'écran'**
+  String get challengeHoldHintLive;
 
-  /// No description provided for @challengeStopButton.
+  /// No description provided for @challengeHoldHintAtSeuil.
   ///
   /// In fr, this message translates to:
-  /// **'J\'ARRÊTE'**
-  String get challengeStopButton;
+  /// **'Relâche pour arrêter, ou continue'**
+  String get challengeHoldHintAtSeuil;
 
-  /// No description provided for @challengeAbortButton.
+  /// No description provided for @challengeHoldHintTolerance.
   ///
   /// In fr, this message translates to:
-  /// **'STOP'**
-  String get challengeAbortButton;
+  /// **'Repose ton doigt'**
+  String get challengeHoldHintTolerance;
 
-  /// No description provided for @challengeSeuilAutoStopHint.
+  /// No description provided for @challengeCountdownReleaseRetry.
   ///
   /// In fr, this message translates to:
-  /// **'{seconds, plural, =1{Stop auto dans 1 s} other{Stop auto dans {seconds} s}}'**
-  String challengeSeuilAutoStopHint(int seconds);
+  /// **'Maintiens bien ton doigt cette fois.'**
+  String get challengeCountdownReleaseRetry;
 
   /// No description provided for @challengeTutorialBanner.
   ///
   /// In fr, this message translates to:
-  /// **'Premier défi : tu vas tenir une position le temps demandé. Tape GO quand tu es prête, ou PASSE pour skipper.'**
+  /// **'Premier défi : tu vas tenir une position le temps demandé. Maintiens MAINTIENS quand tu es prête (garde le doigt), ou tape PASSE pour skipper.'**
   String get challengeTutorialBanner;
 
   /// No description provided for @challengeBannerCountdown.
@@ -1189,19 +1189,19 @@ abstract class AppLocalizations {
   /// No description provided for @challengeAttemptDefault.
   ///
   /// In fr, this message translates to:
-  /// **'Défi : on va pousser ta limite. Tape GO quand tu es prête, je compterai trois deux un avant de démarrer.'**
+  /// **'Défi : on va pousser ta limite. Maintiens MAINTIENS quand tu es prête, je compterai trois deux un avant de démarrer. Garde le doigt sur l\'écran tant que tu tiens.'**
   String get challengeAttemptDefault;
 
   /// No description provided for @challengeAttemptTutorialHoldThroat.
   ///
   /// In fr, this message translates to:
-  /// **'Premier défi : tu vas tenir en gorge cinq secondes. Tape GO quand tu es prête, je compterai trois deux un avant de démarrer. Au seuil, deux boutons apparaîtront pour tenir plus longtemps ou arrêter.'**
+  /// **'Premier défi : tu vas tenir en gorge cinq secondes. Maintiens MAINTIENS, garde le doigt sur l\'écran. Si tu lâches avant le seuil, c\'est raté. Au seuil, le bouton devient vert : relâche pour arrêter, ou continue à tenir pour aller plus loin.'**
   String get challengeAttemptTutorialHoldThroat;
 
   /// No description provided for @challengeExtensionDefault.
   ///
   /// In fr, this message translates to:
-  /// **'Tu peux rester encore si tu veux. Les boutons vont apparaître.'**
+  /// **'Tu peux rester encore si tu veux, ou relâcher.'**
   String get challengeExtensionDefault;
 
   /// No description provided for @challengeSuccessDefault.
@@ -1221,12 +1221,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Tu as craqué avant le seuil. Pas grave, tu y arriveras la prochaine.'**
   String get challengeFailDefault;
-
-  /// No description provided for @challengeTimeoutDefault.
-  ///
-  /// In fr, this message translates to:
-  /// **'Temps écoulé, tu as tenu. Bien.'**
-  String get challengeTimeoutDefault;
 
   /// No description provided for @challengeSkipDefault.
   ///

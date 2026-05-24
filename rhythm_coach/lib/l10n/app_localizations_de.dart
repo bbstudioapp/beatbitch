@@ -578,31 +578,24 @@ class AppLocalizationsDe extends AppLocalizations {
   String get challengePassButton => 'ÜBERSPR.';
 
   @override
-  String get challengeGoButton => 'LOS';
+  String get challengeGoButton => 'HALTEN';
 
   @override
-  String get challengeExtendButton => 'ICH HALTE';
+  String get challengeHoldHintLive => 'Lass deinen Finger auf dem Bildschirm';
 
   @override
-  String get challengeStopButton => 'STOPP';
+  String get challengeHoldHintAtSeuil =>
+      'Loslassen zum Beenden, oder weiterhalten';
 
   @override
-  String get challengeAbortButton => 'STOP';
+  String get challengeHoldHintTolerance => 'Leg deinen Finger zurück';
 
   @override
-  String challengeSeuilAutoStopHint(int seconds) {
-    String _temp0 = intl.Intl.pluralLogic(
-      seconds,
-      locale: localeName,
-      other: 'Auto-Stop in $seconds s',
-      one: 'Auto-Stop in 1 s',
-    );
-    return '$_temp0';
-  }
+  String get challengeCountdownReleaseRetry => 'Halte deinen Finger diesmal.';
 
   @override
   String get challengeTutorialBanner =>
-      'Erste Herausforderung: Du wirst eine Position für die geforderte Zeit halten. Tippe LOS wenn du bereit bist, oder ÜBERSPR. zum Überspringen.';
+      'Erste Herausforderung: Du wirst eine Position für die geforderte Zeit halten. Drücke und halte HALTEN wenn du bereit bist (Finger drauf lassen), oder tippe ÜBERSPR. zum Überspringen.';
 
   @override
   String challengeBannerCountdown(int digit) {
@@ -611,15 +604,15 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get challengeAttemptDefault =>
-      'Herausforderung: Wir gehen an deine Grenze. Tippe LOS wenn du bereit bist, ich zähle drei zwei eins vor dem Start.';
+      'Herausforderung: Wir gehen an deine Grenze. Drücke und halte HALTEN wenn du bereit bist, ich zähle drei zwei eins vor dem Start. Lass deinen Finger auf dem Bildschirm, solange du hältst.';
 
   @override
   String get challengeAttemptTutorialHoldThroat =>
-      'Erste Herausforderung: Du hältst tief fünf Sekunden. Tippe LOS wenn du bereit bist, ich zähle drei zwei eins vor dem Start. Beim Schwellenwert erscheinen zwei Tasten zum länger Halten oder Aufhören.';
+      'Erste Herausforderung: Du hältst tief fünf Sekunden. Drücke und halte HALTEN, lass deinen Finger auf dem Bildschirm. Wenn du vor dem Schwellenwert loslässt, ist es gescheitert. Am Schwellenwert wird die Taste grün: loslassen zum Beenden, oder weiterhalten um weiter zu pushen.';
 
   @override
   String get challengeExtensionDefault =>
-      'Du kannst länger bleiben, wenn du willst. Die Tasten erscheinen.';
+      'Du kannst länger bleiben, wenn du willst, oder loslassen.';
 
   @override
   String get challengeSuccessDefault =>
@@ -631,9 +624,6 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get challengeFailDefault =>
       'Du hast vor dem Schwellenwert nachgegeben. Kein Problem, beim nächsten Mal schaffst du es.';
-
-  @override
-  String get challengeTimeoutDefault => 'Zeit um — du hast gehalten. Gut.';
 
   @override
   String get challengeSkipDefault =>

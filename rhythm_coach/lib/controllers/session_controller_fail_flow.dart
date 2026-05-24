@@ -41,39 +41,15 @@ extension FailFlowOrchestrator on SessionController {
   Future<void> triggerFail() async {
     if (!canTriggerFail) return;
 
-    // Phase 1 défis — repurposage du bouton FAIL pendant la fenêtre défi
-    // (cf. spec § 4.4) : pendant le breath de countdown = `PASSE` ; avant
-    // le seuil = fail défi (pas de flow punition complet) ; après le seuil
-    // = `JE M'ARRÊTE`. Aucun cas ne tombe dans le flow fail standard.
+    // Phase 1 défis — pendant un défi, le bouton FAIL classique est masqué
+    // côté UI (cf. _ChallengeButtons remplace _FailButton). La sortie est
+    // pilotée par le release du doigt : tolérance épuisée pendant
+    // `countdown`/`live` = fail, release pendant `atSeuil` = succès, release
+    // pendant `countdown` = retour breath / skipped (selon compteur). Si on
+    // arrive ici malgré tout (debug, test, harness), on no-op : la machine
+    // d'états défi a déjà son moteur dans `_updateChallengePhase`.
     if (isChallengeActive) {
-      // Phase 2 défi exploratoire : pas de notion d'échec (spec § 4.4),
-      // tap-out avant le seuil initial estimé = `JE M'ARRÊTE`. Le best
-      // capturé est la durée tenue (= elapsed dans le step, < seuil).
-      final isExploratory = _activeChallenge?.isExploratory ?? false;
-      switch (_challengePhase) {
-        case ChallengePhase.breath:
-        case ChallengePhase.countdown:
-          // Bouton FAIL pendant breath ou countdown = équivalent PASSE
-          // (la joueuse n'a pas encore commencé le défi).
-          _completeChallenge(ChallengeOutcome.skipped);
-          return;
-        case ChallengePhase.live:
-        case ChallengePhase.preExtend:
-          if (isExploratory) {
-            _completeChallenge(ChallengeOutcome.netSuccess);
-            return;
-          }
-          _capabilityTracker?.onFail();
-          _completeChallenge(ChallengeOutcome.fail);
-          return;
-        case ChallengePhase.atSeuil:
-        case ChallengePhase.openExtension:
-          triggerChallengeStop();
-          return;
-        case ChallengePhase.none:
-        case ChallengePhase.ended:
-          break;
-      }
+      return;
     }
 
     // Retry milestone : si on rate dans la fenêtre pédagogique, on tente
