@@ -579,31 +579,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get challengePassButton => 'SKIP';
 
   @override
-  String get challengeGoButton => 'GO';
+  String get challengeGoButton => 'HOLD';
 
   @override
-  String get challengeExtendButton => 'I HOLD';
+  String get challengeHoldHintLive => 'Keep your finger on the screen';
 
   @override
-  String get challengeStopButton => 'I STOP';
+  String get challengeHoldHintAtSeuil => 'Release to stop, or keep holding';
 
   @override
-  String get challengeAbortButton => 'STOP';
+  String get challengeHoldHintTolerance => 'Put your finger back';
 
   @override
-  String challengeSeuilAutoStopHint(int seconds) {
-    String _temp0 = intl.Intl.pluralLogic(
-      seconds,
-      locale: localeName,
-      other: 'Auto stop in $seconds s',
-      one: 'Auto stop in 1 s',
-    );
-    return '$_temp0';
-  }
+  String get challengeCountdownReleaseRetry => 'Keep your finger this time.';
 
   @override
   String get challengeTutorialBanner =>
-      'First challenge: you\'ll hold a position for the requested time. Tap GO when ready, or SKIP to skip it.';
+      'First challenge: you\'ll hold a position for the requested time. Press and hold HOLD when ready (keep your finger), or tap SKIP to skip it.';
 
   @override
   String challengeBannerCountdown(int digit) {
@@ -612,15 +604,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get challengeAttemptDefault =>
-      'Challenge: we\'re pushing your limit. Tap GO when ready, I\'ll count three two one before we start.';
+      'Challenge: we\'re pushing your limit. Press and hold HOLD when ready, I\'ll count three two one before we start. Keep your finger on the screen as long as you hold.';
 
   @override
   String get challengeAttemptTutorialHoldThroat =>
-      'First challenge: you\'ll hold deep for five seconds. Tap GO when ready, I\'ll count three two one before we start. At the threshold, two buttons will appear to hold longer or stop.';
+      'First challenge: you\'ll hold deep for five seconds. Press and hold HOLD, keep your finger on the screen. If you let go before the threshold, it\'s failed. At the threshold the button turns green: release to stop, or keep holding to push further.';
 
   @override
   String get challengeExtensionDefault =>
-      'You can stay longer if you want. Buttons will appear.';
+      'You can stay longer if you want, or let go.';
 
   @override
   String get challengeSuccessDefault => 'You held it all the way. Good girl.';
@@ -631,9 +623,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get challengeFailDefault =>
       'You broke before the threshold. No worries, you\'ll get it next time.';
-
-  @override
-  String get challengeTimeoutDefault => 'Time\'s up — you held it. Good.';
 
   @override
   String get challengeSkipDefault =>

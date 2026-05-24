@@ -49,34 +49,34 @@ enum ChallengeOutcome {
 
 /// Phase courante d'un défi en cours dans le `SessionController`. Pilote
 /// l'affichage des boutons et les annonces coach.
+///
+/// Gameplay hold-to-keep : le démarrage et la fin du défi sont pilotés
+/// par la présence du doigt (touch) ou de la touche espace (desktop) —
+/// cf. `SessionController.onChallengeHoldStart/End`.
 enum ChallengePhase {
   /// Pas de défi actif (état par défaut).
   none,
 
-  /// Breath du défi (~13 s) — annonce coach + boutons `PASSE` et `GO`
-  /// visibles. La joueuse peut appuyer `GO` pour démarrer le défi tout
-  /// de suite (le countdown 3-2-1 s'enclenche), ou laisser le breath se
-  /// dérouler — le countdown se lance automatiquement à `breath - 3 s`.
+  /// Breath du défi — annonce coach + boutons `PASSE` (tap) et `GO`
+  /// (hold-to-start) visibles. La joueuse maintient `GO` pour démarrer
+  /// le countdown 3-2-1, ou tape `PASSE` pour skipper.
   breath,
 
-  /// Compte à rebours 3-2-1 (TTS + gros chiffre dans le banner). Pas de
-  /// bouton. Dure 3 s. À la fin, transition automatique vers `live`.
+  /// Compte à rebours 3-2-1 (TTS + gros chiffre dans le banner). Le
+  /// doigt doit rester présent ; un release déclenche la tolérance puis
+  /// retour `breath` (1ère fois) ou skip (2e fois). À la fin, transition
+  /// automatique vers `live`.
   countdown,
 
-  /// Défi en cours, avant `seuil - 3 s`. Aucun bouton défi visible.
+  /// Défi en cours, doigt présent. La perte du doigt arme la tolérance
+  /// de release ; si la tolérance expire = fail.
   live,
 
-  /// `seuil - 3 s` franchi → annonce d'extension dite, toujours pas de
-  /// bouton (le seuil n'est pas encore atteint).
-  preExtend,
-
-  /// Seuil atteint → boutons `JE TIENS ENCORE` / `JE M'ARRÊTE` affichés,
-  /// timer timeout 8 s armé.
+  /// Seuil atteint — le bouton change de couleur, le coach annonce que
+  /// la joueuse peut relâcher ou continuer. Maintenir au-delà = +1
+  /// extension par tranche `extensionSeconds`. Release = succès net ou
+  /// étendu selon le nombre d'extensions accumulées.
   atSeuil,
-
-  /// `JE TIENS ENCORE` pressé → mode ouvert, prolongation
-  /// `max(10, comfort × 0.30)` s, re-prompt à expiration.
-  openExtension,
 
   /// Défi terminé, outcome déjà appliqué.
   ended,
@@ -152,13 +152,10 @@ class Challenge {
   /// Vrai pour un défi **exploratoire** (Phase 2) — axe vierge sans
   /// `bestOf` connu, donc impossible de poser un seuil cible × 1.50.
   /// Conséquences sur la machine d'états (cf. `SessionController`) :
-  /// - Pas de phase `preExtend` (« tu peux rester là si tu veux ») : on
-  ///   passe directement de `live` à `atSeuil` au seuil initial estimé.
-  /// - Le bouton FAIL pendant `live`/`preExtend` est traité comme
-  ///   `JE M'ARRÊTE` (cf. spec § 4.4 — pas de notion d'échec puisque pas
-  ///   de seuil cible).
+  /// - Pas d'annonce coach « tu peux rester là si tu veux » à l'entrée
+  ///   `atSeuil` (le seuil est estimé, pas prouvé — pas de cérémonie).
   /// - Pas de bumps de base humil/obed +2 sur succès (cf. spec § 5.2) —
-  ///   seules les extensions (+1 par « tient encore ») comptent.
+  ///   seules les extensions (durée tenue / `extensionSeconds`) comptent.
   ///
   /// Le `targetThreshold` représente ici le **seuil initial estimé** par
   /// défaut sur l'axe (cf. [initialEstimateSecondsForAxis]) — sert

@@ -1,11 +1,9 @@
 /// Régression : la garde de transition vers `atSeuil` doit ignorer les
-/// phases `ended` / `none` / `breath` / `countdown` / `atSeuil` /
-/// `openExtension`. Sans cette garde, après un `_completeChallenge`
-/// (phase=ended), `_challengeStepStartedAtSec` restant posé pendant le
-/// breath post-défi de 10 s faisait re-déclencher la transition vers
-/// `atSeuil` à chaque tick — d'où une boucle infinie d'acquittements
-/// (`_completeChallenge` rappelé toutes les 8 s par timeout du seuil),
-/// chacun re-excisant `-shift` de `durationSeconds` jusqu'au `_finish`.
+/// phases `ended` / `none` / `breath` / `countdown` / `atSeuil`.
+/// Sans cette garde, après un `_completeChallenge` (phase=ended),
+/// `_challengeStepStartedAtSec` restant posé pendant le breath post-défi
+/// de 10 s faisait re-déclencher la transition vers `atSeuil` à chaque
+/// tick — d'où une boucle infinie d'acquittements.
 ///
 /// Observé sur device : défi tuto hold throat → 12 min de séance terminées
 /// en 7 min de timeline (13 itérations × −18 s d'excision sur 720 s).
@@ -32,17 +30,6 @@ void main() {
           phase: ChallengePhase.live,
           elapsedInStep: 12,
           stepEnd: 10,
-        ),
-        isTrue,
-      );
-    });
-
-    test('phase preExtend + elapsedInStep ≥ stepEnd → transitionne', () {
-      expect(
-        SessionController.shouldEnterAtSeuilPhase(
-          phase: ChallengePhase.preExtend,
-          elapsedInStep: 5,
-          stepEnd: 5,
         ),
         isTrue,
       );
@@ -87,17 +74,6 @@ void main() {
       expect(
         SessionController.shouldEnterAtSeuilPhase(
           phase: ChallengePhase.atSeuil,
-          elapsedInStep: 100,
-          stepEnd: 5,
-        ),
-        isFalse,
-      );
-    });
-
-    test('phase openExtension → ne transitionne pas (géré ailleurs)', () {
-      expect(
-        SessionController.shouldEnterAtSeuilPhase(
-          phase: ChallengePhase.openExtension,
           elapsedInStep: 100,
           stepEnd: 5,
         ),

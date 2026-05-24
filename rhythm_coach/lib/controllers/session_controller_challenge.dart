@@ -1,19 +1,28 @@
 part of 'session_controller.dart';
 
-// ─── Défi intra-séance (Phase 1) ───────────────────────────────────────
+// ─── Défi intra-séance (Phase 1) — gameplay hold-to-keep ───────────────
 //
 // Machine d'états pilotée par les transitions de phase suivantes :
 //   none → breath (entrée dans le step breath de countdown)
-//   breath → live (entrée dans le step défi)
-//   live → preExtend (à `seuil - 3 s`)
-//   live | preExtend → atSeuil (au seuil cible)
-//   atSeuil → openExtension (JE TIENS ENCORE)
-//   atSeuil → ended (JE M'ARRÊTE ou timeout 8 s)
-//   openExtension → atSeuil (prolongation expirée → re-prompt)
-//   * → ended (FAIL pendant le défi, selon phase)
+//   breath → countdown (1ʳᵉ pression sur GO — début du hold)
+//   countdown → live (à countdown + 3 s)
+//   countdown → breath (release pendant le countdown — 1ère fois)
+//   countdown → ended (release pendant le countdown — 2ème fois = skipped)
+//   countdown | live → ended (release prolongé > tolérance = fail)
+//   live → atSeuil (au seuil cible, durée nominale ou crossings atteints)
+//   atSeuil → ended (release du doigt = netSuccess ou extendedSuccess
+//                    selon le nombre d'extensions dérivées de la durée
+//                    tenue au-delà du seuil)
+//   breath → ended (tap PASSE = skipped)
 //
 // Au passage en `ended`, `_challengeOutcome` est figé et le `_finish` de
 // session applique les bumps capability/humil/obed correspondants.
+//
+// La présence du doigt (touch) ou de la touche espace (desktop) est
+// signalée par `onChallengeHoldStart`/`onChallengeHoldEnd`. La perte du
+// doigt en `live`/`countdown` arme une tolérance de
+// `_challengeReleaseToleranceSec` s (le temps que le doigt « se repose »
+// par maladresse) avant fail.
 //
 // Les **champs** d'état du défi vivent toujours sur `SessionController`
 // (les extensions Dart ne peuvent pas porter de champs d'instance). Les
@@ -21,19 +30,36 @@ part of 'session_controller.dart';
 // d'extension `part of` — même unité de compilation, même accès aux
 // membres privés, juste un meilleur regroupement physique.
 
-/// Timeout en secondes pour le mini countdown post-seuil (`atSeuil`)
-/// avant le déclenchement automatique d'un succès net (cf. spec § 4.3).
-const int _challengeSeuilTimeoutSeconds = 8;
-
 /// Durée fixe du countdown 3-2-1 en secondes. Dit en TTS immédiatement
-/// après l'appui sur le bouton `GO` (plus d'auto-trigger : le défi
-/// attend une action manuelle — `GO` ou `PASSE` — pendant le breath).
+/// après le début du hold sur `GO` (le doigt doit rester sur l'écran
+/// pendant ces 3 s, sinon retour `breath` ou skip selon le compteur de
+/// releases — cf. `onChallengeHoldEnd`).
 const int _challengeCountdownDurationSec = 3;
+
+/// Tolérance, en secondes, accordée à la joueuse quand son doigt
+/// décroche pendant `countdown` ou `live`. Sous cette fenêtre, replacer
+/// le doigt remet le défi en marche transparent. Au-delà, le défi est
+/// fail.
+const int _challengeReleaseToleranceSec = 1;
 
 /// Durée du breath de récup post-défi (toutes voies). Donne au coach
 /// le temps de faire son rapport et à la joueuse de souffler avant
 /// que la séance ne reprenne.
 const int _postChallengeBreathSeconds = 10;
+
+/// Type d'événement haptique émis par le contrôleur pendant un défi.
+/// Câblé côté UI à `HapticFeedback.{light,heavy}Impact()`.
+enum ChallengeHapticKind {
+  /// Validation positive (entrée `atSeuil`, extension franchie).
+  light,
+
+  /// Échec du défi (tolérance de release expirée).
+  heavy,
+}
+
+// Alias privé pour conserver la cohérence interne (les helpers du
+// `part of` y réfèrent sans avoir à exposer publiquement).
+typedef _ChallengeHapticKind = ChallengeHapticKind;
 
 /// Snapshot d'un défi complété — sert à appliquer les bumps humil/obed
 /// au `_finish` quand plusieurs défis ont tourné dans la même séance
@@ -62,26 +88,27 @@ extension ChallengeOrchestrator on SessionController {
 
   // ─── Getters dérivés ────────────────────────────────────────────────
 
-  /// Chiffre du mini countdown affiché pendant `atSeuil` (compte à
-  /// rebours du timeout 8 s du stop auto). `null` hors phase atSeuil.
-  /// Sert au banner UI pour matérialiser le « tu peux continuer si tu
-  /// veux » en compte à rebours visible avant le stop auto.
-  int? get challengeSeuilCountdownDigit {
-    if (_challengePhase != ChallengePhase.atSeuil) return null;
-    final start = _challengeAtSeuilStartedAtSec;
-    if (start == null) return null;
-    final elapsed = _realSec.toInt() - start;
-    final remaining = _challengeSeuilTimeoutSeconds - elapsed;
-    if (remaining < 0) return 0;
-    if (remaining > _challengeSeuilTimeoutSeconds) {
-      return _challengeSeuilTimeoutSeconds;
+  /// Progression de la tolérance de release [0..1] pour pulse UI.
+  /// 0 = doigt présent (pas de tolérance en cours).
+  /// 1 = sur le point d'expirer (fail imminent).
+  /// Hors `countdown`/`live` ou doigt présent → 0.
+  double get challengeReleaseToleranceProgress {
+    final releaseAt = _challengeReleaseAtRealSec;
+    if (releaseAt == null) return 0;
+    if (_challengePhase != ChallengePhase.countdown &&
+        _challengePhase != ChallengePhase.live) {
+      return 0;
     }
-    return remaining;
+    final elapsedMs = (_realSec * 1000).toInt() - releaseAt * 1000;
+    final progress = elapsedMs / (_challengeReleaseToleranceSec * 1000);
+    if (progress < 0) return 0;
+    if (progress > 1) return 1;
+    return progress;
   }
 
-  /// `true` quand un step défi est en cours et qu'un appui sur le bouton
-  /// FAIL ne doit PAS déclencher le flow fail standard mais être routé vers
-  /// la machine d'états défi (cf. spec § 4.4 — bouton FAIL repurposé).
+  /// `true` quand un step défi est en cours. Sert à masquer le bouton FAIL
+  /// classique (la sortie défi est pilotée par le release du doigt) et à
+  /// activer la capture globale du touch côté UI.
   bool get isChallengeActive =>
       _challengePhase != ChallengePhase.none &&
       _challengePhase != ChallengePhase.ended;
@@ -138,8 +165,6 @@ extension ChallengeOrchestrator on SessionController {
         return l10n.challengeStopDefault;
       case 'fail':
         return l10n.challengeFailDefault;
-      case 'timeout':
-        return l10n.challengeTimeoutDefault;
       case 'skip':
         return l10n.challengeSkipDefault;
       default:
@@ -148,7 +173,7 @@ extension ChallengeOrchestrator on SessionController {
   }
 
   /// Libellé d'objectif du défi (ex. « Tiens gorge 10 secondes ») —
-  /// affiché en sous-titre du banner UI pendant `live`/`preExtend` pour
+  /// affiché en sous-titre du banner UI pendant `live` pour
   /// rappeler à la joueuse ce qu'elle doit faire. Pas dit en TTS (la
   /// coach a déjà fait l'annonce pendant le breath).
   String? challengeObjectiveText() {
@@ -198,7 +223,9 @@ extension ChallengeOrchestrator on SessionController {
       _challengeExtensionsCount = 0;
       _challengeStepStartedAtSec = null;
       _challengeAtSeuilStartedAtSec = null;
-      _challengeOpenExtensionDeadlineSec = null;
+      _challengeHoldActive = false;
+      _challengeReleaseAtRealSec = null;
+      _challengeCountdownReleaseCount = 0;
       _challengeCountdownStartedAtSec = null;
       _challengeCountdownLastDigitSpoken = -1;
       _challengeCurrentText = null;
@@ -221,6 +248,7 @@ extension ChallengeOrchestrator on SessionController {
         _activeChallengeIndex = i;
         _activeChallenge = ch;
         _challengePhase = ChallengePhase.breath;
+        _challengeCountdownReleaseCount = 0;
         _challengeCurrentText = _pickChallengePhrase(ch, 'attempt') ??
             _fallbackChallengeText(ch, 'attempt');
         _speakChallengePhraseIfAny();
@@ -241,6 +269,10 @@ extension ChallengeOrchestrator on SessionController {
     final r = _realSec.toInt();
     // Phase `countdown` : dire 3-2-1 en TTS et passer à `live` à 3 s.
     if (_challengePhase == ChallengePhase.countdown) {
+      // Tolérance release pendant le countdown : si le doigt décroche et
+      // ne revient pas dans la fenêtre, retour `breath` au 1er release,
+      // skip au 2e. Voir `onChallengeHoldEnd`.
+      if (_checkChallengeReleaseTolerance(r)) return;
       final countdownStart = _challengeCountdownStartedAtSec;
       if (countdownStart != null) {
         final elapsedInCountdown = r - countdownStart;
@@ -256,62 +288,42 @@ extension ChallengeOrchestrator on SessionController {
       }
       return;
     }
-    // À partir d'ici, on est forcément après le step défi (phase live,
-    // preExtend, atSeuil, ou openExtension). Calcul du temps écoulé
-    // dans le step défi pour piloter les transitions vers le seuil.
+    // À partir d'ici, on est forcément après le step défi (phase live ou
+    // atSeuil). Calcul du temps écoulé dans le step défi pour piloter
+    // les transitions.
     if (_challengeStepStartedAtSec == null) return;
     final elapsedInStep = r - _challengeStepStartedAtSec!;
     final target = ch.targetThreshold;
-    // Phase `openExtension` : la prolongation expire → re-prompt au seuil.
-    if (phase == ChallengePhase.openExtension) {
-      final deadline = _challengeOpenExtensionDeadlineSec;
-      if (deadline != null && r >= deadline) {
-        _challengePhase = ChallengePhase.atSeuil;
-        _challengeAtSeuilStartedAtSec = r;
-        _challengeOpenExtensionDeadlineSec = null;
-      }
-      return;
+    // Phase `live` ou `atSeuil` : tolérance de release (perte du doigt).
+    if (phase == ChallengePhase.live || phase == ChallengePhase.atSeuil) {
+      if (_checkChallengeReleaseTolerance(r)) return;
     }
-    // Phase `atSeuil` : surveille le timeout 8 s (succès net auto).
+    // Phase `atSeuil` : on attend le release du doigt (handled dans
+    // `onChallengeHoldEnd`). Aucun timeout auto. À chaque tranche
+    // `extensionSeconds` franchie tant que la joueuse tient encore, on
+    // émet un haptic léger (matérialise la prolongation) et on met à
+    // jour le compteur live — `_completeChallenge` lira la dernière
+    // valeur connue au release.
     if (phase == ChallengePhase.atSeuil) {
-      final seuilAt = _challengeAtSeuilStartedAtSec;
-      if (seuilAt != null && r - seuilAt >= _challengeSeuilTimeoutSeconds) {
-        _completeChallenge(ChallengeOutcome.netSuccess, byTimeout: true);
+      final newExt = _deriveChallengeExtensionsCount();
+      if (newExt > _challengeExtensionsCount) {
+        _challengeExtensionsCount = newExt;
+        _emitChallengeHaptic(_ChallengeHapticKind.light);
+        _notify();
       }
       return;
     }
-    // Phases `live` / `preExtend`. Pour tous les axes, on calque le seuil
-    // de fin sur la durée nominale du step défi (= `targetThreshold` pour
-    // les axes durée, fenêtre fixe 45 s/20 s pour BPM/profondeur).
+    // Phase `live`. Pour tous les axes, on calque le seuil de fin sur la
+    // durée nominale du step défi (= `targetThreshold` pour les axes
+    // durée, fenêtre fixe 45 s/20 s pour BPM/profondeur).
     final stepEnd = ch.kind == ChallengeAxisKind.duration
         ? target
         : ch.nominalDurationSeconds;
     // Quand le défi pilote par franchissements (axes franchissement gorge),
     // le compteur de crossings peut court-circuiter la durée nominale.
-    // L'annonce d'extension reste calée sur la durée pour les défis durée
-    // / BPM standards ; sur un défi crossings, on l'annonce 2 franchissements
-    // avant le seuil (équivalent dramaturgique des « 3 s avant la fin »).
     final crossingsTarget = ch.targetCrossings;
     final crossingsReached =
         crossingsTarget != null && _challengeCrossingsCount >= crossingsTarget;
-    final crossingsPreExtend = crossingsTarget != null &&
-        _challengeCrossingsCount >= crossingsTarget - 2 &&
-        _challengeCrossingsCount < crossingsTarget;
-    // Annonce coach « tu peux rester si tu veux » 3 s avant la fin
-    // nominale — tous axes (BPM/profondeur inclus). L'exploratoire reste
-    // exclu : il n'a pas de seuil cible, l'annonce d'extension n'a pas
-    // de sens (cf. spec § 3.2).
-    if (!ch.isExploratory &&
-        phase == ChallengePhase.live &&
-        ((crossingsTarget == null &&
-                elapsedInStep >= stepEnd - 3 &&
-                elapsedInStep < stepEnd) ||
-            crossingsPreExtend)) {
-      _challengePhase = ChallengePhase.preExtend;
-      _challengeCurrentText = _pickChallengePhrase(ch, 'extension') ??
-          _fallbackChallengeText(ch, 'extension');
-      _speakChallengePhraseIfAny();
-    }
     if (crossingsReached ||
         SessionController.shouldEnterAtSeuilPhase(
           phase: phase,
@@ -319,18 +331,21 @@ extension ChallengeOrchestrator on SessionController {
           stepEnd: stepEnd,
         )) {
       _challengePhase = ChallengePhase.atSeuil;
-      // Wallclock (`r`) et non `t` : la timeline session est freezée pendant
-      // tout le défi (cf. `_onTick` qui décrémente `_timelineOffset`), donc
-      // `t` accuse l'écart accumulé depuis le breath du défi. Mesurer le
-      // timeout 8 s du seuil (`r - seuilAt`) contre `t` fait déclencher le
-      // timeout immédiatement à la bascule — les boutons « Je tiens » /
-      // « J'arrête » apparaissent et disparaissent en un tick avant que la
-      // joueuse n'ait le temps de cliquer.
       _challengeAtSeuilStartedAtSec = r;
+      // Annonce coach « tu peux relâcher quand tu veux, ou continuer » à
+      // l'entrée seuil — remplace l'annonce historique `extension` qui
+      // tombait 3 s avant la fin nominale. L'exploratoire reste exclu :
+      // il n'a pas de seuil cible.
+      if (!ch.isExploratory) {
+        _challengeCurrentText = _pickChallengePhrase(ch, 'extension') ??
+            _fallbackChallengeText(ch, 'extension');
+        _speakChallengePhraseIfAny();
+      }
+      _emitChallengeHaptic(_ChallengeHapticKind.light);
     }
 
     // Retry passif de la phrase défi en attente : si la transition
-    // `none → breath` (ou `live → preExtend`) a posé `_challengeCurrentText`
+    // `none → breath` (ou `live → atSeuil`) a posé `_challengeCurrentText`
     // mais que le TTS était occupé (random comment, phrase scriptée d'un
     // step précédent), `_speakChallengePhraseIfAny` a skip et la phrase
     // n'est jamais prononcée. À chaque tick, si une phrase défi non-encore
@@ -339,6 +354,51 @@ extension ChallengeOrchestrator on SessionController {
         _challengeCurrentText != _challengeSpokenText) {
       _speakChallengePhraseIfAny();
     }
+  }
+
+  /// Si le doigt a décroché depuis assez longtemps (> tolérance), bascule
+  /// la machine d'états selon la phase courante : retour `breath` ou skip
+  /// pendant `countdown`, fail pendant `live`. Pendant `atSeuil`, le
+  /// release est traité immédiatement dans `onChallengeHoldEnd`, mais on
+  /// laisse aussi la tolérance s'exprimer si jamais l'ordre des events
+  /// l'amène jusqu'ici (cas dégénéré). Retourne `true` si une transition
+  /// a été appliquée (early-return côté caller).
+  bool _checkChallengeReleaseTolerance(int r) {
+    final releaseAt = _challengeReleaseAtRealSec;
+    if (releaseAt == null) return false;
+    if (r - releaseAt < _challengeReleaseToleranceSec) return false;
+    _challengeReleaseAtRealSec = null;
+    final phase = _challengePhase;
+    if (phase == ChallengePhase.countdown) {
+      // 1er release → retour `breath` avec rappel pédagogique ; 2e release
+      // au même défi → outcome `skipped`.
+      _challengeCountdownReleaseCount++;
+      if (_challengeCountdownReleaseCount >= 2) {
+        _completeChallenge(ChallengeOutcome.skipped);
+        return true;
+      }
+      _challengePhase = ChallengePhase.breath;
+      _challengeCountdownStartedAtSec = null;
+      _challengeCountdownLastDigitSpoken = -1;
+      _challengeCurrentText = _appLocalizations?.challengeCountdownReleaseRetry;
+      _challengeSpokenText = null;
+      _speakChallengePhraseIfAny();
+      _notify();
+      return true;
+    }
+    if (phase == ChallengePhase.live) {
+      _capabilityTracker?.onFail();
+      _completeChallenge(ChallengeOutcome.fail);
+      _emitChallengeHaptic(_ChallengeHapticKind.heavy);
+      return true;
+    }
+    return false;
+  }
+
+  void _emitChallengeHaptic(_ChallengeHapticKind kind) {
+    final cb = onChallengeHaptic;
+    if (cb == null) return;
+    cb(kind);
   }
 
   /// Bouton `PASSE` pendant le breath du défi — skip le défi entier.
@@ -350,21 +410,76 @@ extension ChallengeOrchestrator on SessionController {
     _completeChallenge(ChallengeOutcome.skipped);
   }
 
-  /// Bouton `GO` pendant le breath du défi — démarre le countdown 3-2-1
-  /// immédiatement. La joueuse contrôle son rythme : dès qu'elle est prête,
-  /// elle tape `GO` et 3 s plus tard le step défi démarre. La timeline
-  /// session est freezée pendant tout le défi : le countdown est mesuré
-  /// sur `_realSec` (cf. `_updateChallengePhase`).
-  void triggerChallengeGo() {
-    if (_challengePhase != ChallengePhase.breath) return;
-    if (_activeChallengeIndex < 0) return;
-    // Le step défi est encore dans `session.steps` à
-    // `time = challengeStepTimes[_activeChallengeIndex]`, mais `_checkSteps`
-    // est freezé sur la timeline gelée — on l'applique donc manuellement
-    // à l'entrée `live` (cf. `_updateChallengePhase`) et on avance
-    // `_nextStepIndex` past lui.
-    _enterChallengeCountdown();
+  /// Signal d'entrée du doigt (touch) ou de la touche espace (desktop)
+  /// pendant un défi. Idempotent : un appel répété tant que le hold est
+  /// déjà actif est un no-op (utile pour combiner touch + clavier sans
+  /// state synchronisé côté UI).
+  ///
+  /// Comportement par phase :
+  /// - `breath` : démarre le countdown 3-2-1 (équivalent ex-bouton GO).
+  /// - `countdown`/`live`/`atSeuil` : annule une éventuelle tolérance de
+  ///   release en cours (le doigt revient à temps).
+  /// - `none`/`ended` : no-op.
+  void onChallengeHoldStart() {
+    if (_challengePhase == ChallengePhase.none ||
+        _challengePhase == ChallengePhase.ended) {
+      return;
+    }
+    if (_challengeHoldActive) return;
+    _challengeHoldActive = true;
+    _challengeReleaseAtRealSec = null;
+    if (_challengePhase == ChallengePhase.breath) {
+      if (_activeChallengeIndex < 0) return;
+      _enterChallengeCountdown();
+    }
     _notify();
+  }
+
+  /// Signal de sortie du doigt / touche. Idempotent.
+  ///
+  /// Comportement par phase :
+  /// - `countdown`/`live` : arme la tolérance de release (`_realSec` figé).
+  ///   La transition effective (retour breath / skip / fail) est faite par
+  ///   `_checkChallengeReleaseTolerance` au prochain tick si le doigt ne
+  ///   revient pas dans la fenêtre.
+  /// - `atSeuil` : termine immédiatement le défi — netSuccess ou
+  ///   extendedSuccess selon le nombre d'extensions dérivées de la durée
+  ///   tenue au-delà du seuil.
+  /// - `breath`/`none`/`ended` : no-op (le hold n'a pas commencé / est
+  ///   déjà clos).
+  void onChallengeHoldEnd() {
+    if (!_challengeHoldActive) return;
+    _challengeHoldActive = false;
+    final phase = _challengePhase;
+    if (phase == ChallengePhase.atSeuil) {
+      _challengeReleaseAtRealSec = null;
+      _challengeExtensionsCount = _deriveChallengeExtensionsCount();
+      final outcome = _challengeExtensionsCount > 0
+          ? ChallengeOutcome.extendedSuccess
+          : ChallengeOutcome.netSuccess;
+      _completeChallenge(outcome);
+      return;
+    }
+    if (phase == ChallengePhase.countdown || phase == ChallengePhase.live) {
+      _challengeReleaseAtRealSec = _realSec.toInt();
+      _notify();
+      return;
+    }
+  }
+
+  /// Calcule le compteur d'extensions à appliquer au release après seuil.
+  /// = `floor((releaseAtRealSec − atSeuilEnteredAtRealSec) ÷ extensionSeconds)`.
+  /// Plancher 0 (release immédiate au seuil = pas d'extension).
+  int _deriveChallengeExtensionsCount() {
+    final ch = _activeChallenge;
+    if (ch == null) return 0;
+    final at = _challengeAtSeuilStartedAtSec;
+    if (at == null) return 0;
+    final tenu = _realSec.toInt() - at;
+    if (tenu <= 0) return 0;
+    final step = ch.extensionSeconds;
+    if (step <= 0) return 0;
+    return tenu ~/ step;
   }
 
   /// Bascule en phase `countdown` (3-2-1 TTS + UI). Le chiffre TTS est
@@ -373,10 +488,9 @@ extension ChallengeOrchestrator on SessionController {
   ///
   /// Coupe le TTS en cours : si la phrase d'annonce du défi (`attempt`,
   /// posée à l'entrée en `breath`) est encore en train d'être prononcée
-  /// au moment où la joueuse tape GO, le countdown skipperait les
-  /// chiffres tant que `_tts.isSpeaking` (cf. `_maybeSpeakCountdownDigit`).
-  /// On préfère arrêter net la phrase pour que « 3-2-1 » s'enchaîne
-  /// proprement (la phrase a déjà eu sa fenêtre d'écoute pendant le breath).
+  /// au moment du début du hold, le countdown skipperait les chiffres
+  /// tant que `_tts.isSpeaking`. On préfère arrêter net la phrase pour
+  /// que « 3-2-1 » s'enchaîne proprement.
   void _enterChallengeCountdown() {
     if (_challengePhase != ChallengePhase.breath) return;
     unawaited(_tts.stop());
@@ -399,42 +513,19 @@ extension ChallengeOrchestrator on SessionController {
     _speakScripted(digit.toString(), trackForDisplay: false);
   }
 
-  /// Bouton `JE TIENS ENCORE` — bascule en mode ouvert, +1 humil/+1 obed
-  /// par extension, deadline `max(10, comfort × 0.30)` s.
-  void triggerChallengeExtend() {
-    if (_challengePhase != ChallengePhase.atSeuil) return;
-    final ch = _activeChallenge;
-    if (ch == null) return;
-    _challengeExtensionsCount++;
-    _challengePhase = ChallengePhase.openExtension;
-    _challengeAtSeuilStartedAtSec = null;
-    _challengeOpenExtensionDeadlineSec = _realSec.toInt() + ch.extensionSeconds;
-    _notify();
-  }
-
-  /// Bouton `JE M'ARRÊTE` — succès net (ou étendu si extensions > 0).
-  void triggerChallengeStop() {
-    if (_challengePhase != ChallengePhase.atSeuil &&
-        _challengePhase != ChallengePhase.openExtension) {
-      return;
-    }
-    final outcome = _challengeExtensionsCount > 0
-        ? ChallengeOutcome.extendedSuccess
-        : ChallengeOutcome.netSuccess;
-    _completeChallenge(outcome);
-  }
-
   /// Termine le défi et fige l'outcome. Les bumps capability/humil/obed
   /// sont appliqués au `_finish` de session (cf. `_applyChallengeOutcome`).
   /// Enchaîne sur un breath de récup de 10 s : le step défi est skippé
   /// dans la timeline, le BeepEngine joue un breath, le coach fait son
-  /// rapport (`stop`/`fail`/`timeout`/`success`/`skip`). Pendant ce
-  /// breath, `_checkSteps` ne consomme pas le step suivant — la séance
-  /// "marque une pause" et la joueuse souffle.
-  void _completeChallenge(ChallengeOutcome outcome, {bool byTimeout = false}) {
+  /// rapport (`stop`/`fail`/`success`/`skip`). Pendant ce breath,
+  /// `_checkSteps` ne consomme pas le step suivant — la séance "marque
+  /// une pause" et la joueuse souffle.
+  void _completeChallenge(ChallengeOutcome outcome) {
     if (_challengePhase == ChallengePhase.ended) return;
     _challengeOutcome = outcome;
     _challengePhase = ChallengePhase.ended;
+    _challengeHoldActive = false;
+    _challengeReleaseAtRealSec = null;
     final ch = _activeChallenge;
     // Marque ce défi comme acquitté pour qu'il ne soit pas re-armé après
     // le reset post-breath (cf. `_updateChallengePhase`). Push aussi
@@ -453,7 +544,7 @@ extension ChallengeOrchestrator on SessionController {
     if (ch != null) {
       final tier = switch (outcome) {
         ChallengeOutcome.fail => 'fail',
-        ChallengeOutcome.netSuccess => byTimeout ? 'timeout' : 'stop',
+        ChallengeOutcome.netSuccess => 'stop',
         ChallengeOutcome.extendedSuccess => 'success',
         ChallengeOutcome.skipped => 'skip',
       };

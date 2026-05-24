@@ -255,16 +255,36 @@ class SessionController extends ChangeNotifier {
   /// pour piloter les transitions de phase.
   int? _challengeStepStartedAtSec;
 
-  /// Seconde absolue d'entrée en phase `atSeuil` — sert au timeout 8 s
-  /// (succès net auto).
+  /// Seconde absolue (wallclock `_realSec`) d'entrée en phase `atSeuil`.
+  /// Sert à dériver le compteur d'extensions : tant que la joueuse maintient
+  /// le doigt au-delà du seuil, chaque tranche `ch.extensionSeconds` au-dessus
+  /// de ce point vaut +1 extension (bumps +1 humil/+1 obed au `_finish`).
   int? _challengeAtSeuilStartedAtSec;
 
-  /// Seconde absolue à laquelle une prolongation `JE TIENS ENCORE` expire
-  /// (mode openExtension → re-prompt au seuil).
-  int? _challengeOpenExtensionDeadlineSec;
+  /// True tant qu'un doigt (touch) ou la touche espace (desktop) est présent
+  /// pendant un défi. Pilote les transitions :
+  /// - `breath` : la pression initiale sur GO démarre le countdown
+  /// - `countdown`/`live` : la perte du doigt arme la tolérance
+  /// - `atSeuil` : le release ferme le défi avec netSuccess/extendedSuccess
+  bool _challengeHoldActive = false;
+  bool get challengeHoldActive => _challengeHoldActive;
+
+  /// Seconde absolue (wallclock `_realSec`) à laquelle le doigt a décroché
+  /// pendant un défi actif. `null` quand le doigt est présent OU quand on
+  /// est en phase qui ne dépend pas du hold (`breath`, `ended`, `none`).
+  /// Sert au calcul de la tolérance 1 s avant fail.
+  int? _challengeReleaseAtRealSec;
+
+  /// Compteur de releases pendant le countdown 3-2-1 pour le défi courant.
+  /// Le 1er release ramène en `breath` avec une annonce pédagogique
+  /// (« tu dois maintenir le doigt »). Le 2e release au même défi vaut
+  /// `skipped` (PASSE silencieux). Reset à chaque entrée en `none`.
+  int _challengeCountdownReleaseCount = 0;
 
   /// Compteur de `JE TIENS ENCORE` acquis. Au `_finish` : +1 humil/+1 obed
-  /// par extension (cf. spec § 5.2 succès étendu).
+  /// par extension (cf. spec § 5.2 succès étendu). Posé par
+  /// `_completeChallenge` à partir de la durée tenue au-delà du seuil
+  /// (`tranches = (releaseAt - atSeuilEnteredAt) ÷ ch.extensionSeconds`).
   int _challengeExtensionsCount = 0;
 
   /// Compteur de franchissements gorge atteints depuis le début de la
@@ -394,6 +414,13 @@ class SessionController extends ChangeNotifier {
   /// No-op si non set.
   void Function(Challenge challenge, ChallengeOutcome outcome)?
       onChallengeOutcome;
+
+  /// Callback haptic du défi. Émis par le contrôleur sur les transitions
+  /// clés du gameplay hold-to-keep : `light` à l'entrée seuil et à chaque
+  /// extension franchie, `heavy` au fail par tolérance épuisée. Câblé par
+  /// la UI à `HapticFeedback.{light,heavy}Impact()`. No-op si non set
+  /// (tests, sessions hors widget tree).
+  void Function(ChallengeHapticKind kind)? onChallengeHaptic;
 
   /// Allocation de spécialisation courante. Consommée par la génération de
   /// punition carrière contextuelle (`_generateCareerPunishmentOrNull` →
@@ -620,15 +647,14 @@ class SessionController extends ChangeNotifier {
     _stamina.onBeat(e);
   }
 
-  /// Incrémente [_challengeCrossingsCount] quand le défi est en `live` /
-  /// `preExtend` et que le beat émis atteint la position cible du défi.
+  /// Incrémente [_challengeCrossingsCount] quand le défi est en `live` et
+  /// que le beat émis atteint la position cible du défi.
   /// No-op hors phase de comptage ou si le défi ne pilote pas un compteur
   /// (`targetCrossings == null`).
   void _onChallengeBeatIfCrossingsTracked(BeatEvent e) {
     final ch = _activeChallenge;
     if (ch == null || ch.targetCrossings == null) return;
-    if (_challengePhase != ChallengePhase.live &&
-        _challengePhase != ChallengePhase.preExtend) {
+    if (_challengePhase != ChallengePhase.live) {
       return;
     }
     final target = ch.to;
@@ -976,7 +1002,9 @@ class SessionController extends ChangeNotifier {
     _challengePhase = ChallengePhase.none;
     _challengeStepStartedAtSec = null;
     _challengeAtSeuilStartedAtSec = null;
-    _challengeOpenExtensionDeadlineSec = null;
+    _challengeHoldActive = false;
+    _challengeReleaseAtRealSec = null;
+    _challengeCountdownReleaseCount = 0;
     _challengeExtensionsCount = 0;
     _challengeOutcome = null;
     _challengeCurrentText = null;
@@ -1035,7 +1063,7 @@ class SessionController extends ChangeNotifier {
     // session — c'est un bonus skippable qui ne consomme jamais de temps
     // de séance, peu importe combien la joueuse attend / prolonge.
     //
-    // Les transitions internes (live → preExtend → atSeuil → timeout, fin
+    // Les transitions internes (live → atSeuil, tolérance de release, fin
     // du breath post-défi) sont mesurées sur `_realSec` (= `_stopwatch.elapsed`
     // brut, jamais freezé) pour rester indépendantes de ce gel — sans
     // cela, `_inPostChallengeBreath` ne se terminerait jamais (son seuil
@@ -1174,13 +1202,11 @@ class SessionController extends ChangeNotifier {
   }
 
   void _checkSteps() {
-    // Phase 1 défis — quand la joueuse est en train de décider au seuil
-    // (`atSeuil`) ou de prolonger (`openExtension`), on ne consomme pas
-    // les steps suivants : la séance "se met en pause" sur le step défi
-    // qui continue à jouer son loop. Sinon la session normale reprenait
-    // par-dessus les boutons d'extension (bug observé en sessions de test).
-    if (_challengePhase == ChallengePhase.atSeuil ||
-        _challengePhase == ChallengePhase.openExtension) {
+    // Phase 1 défis — quand la joueuse est au-delà du seuil (`atSeuil`)
+    // et continue de tenir, on ne consomme pas les steps suivants : la
+    // séance reste freezée sur le step défi qui continue à jouer son
+    // loop tant que le doigt est présent.
+    if (_challengePhase == ChallengePhase.atSeuil) {
       return;
     }
     // Pareil pendant le breath de récup post-défi : le BeepEngine joue
@@ -1798,27 +1824,21 @@ class SessionController extends ChangeNotifier {
   }
 
   /// Décide si la machine d'états défi doit transitionner vers `atSeuil`
-  /// au tick courant. Vrai uniquement quand on est encore en phase active
-  /// (`live` ou `preExtend`) et qu'on vient d'atteindre la fin nominale
-  /// du step défi.
+  /// au tick courant. Vrai uniquement quand on est encore en phase `live`
+  /// et qu'on vient d'atteindre la fin nominale du step défi.
   ///
   /// Garde indispensable : après `_completeChallenge`, `phase` passe à
   /// `ended` mais `_challengeStepStartedAtSec` reste posé jusqu'à
   /// l'expiration du breath post-défi (~10 s plus tard). Sans cette garde,
   /// `elapsedInStep` continue de grandir en wallclock, dépasse `stepEnd`
   /// au tick suivant, et la transition vers `atSeuil` écrase `phase=ended`.
-  /// Conséquence : timeout 8 s → `_completeChallenge` rappelé sur le même
-  /// `_activeChallengeIndex` → `_excisChallengeFromSession` redécale
-  /// `durationSeconds` de `-shift` à chaque tour → boucle infinie qui ronge
-  /// la durée de séance jusqu'à `_finish` (observé sur un défi tuto hold
-  /// throat : 12 min de session terminées en 7 min de timeline).
   @visibleForTesting
   static bool shouldEnterAtSeuilPhase({
     required ChallengePhase phase,
     required int elapsedInStep,
     required int stepEnd,
   }) {
-    if (phase != ChallengePhase.live && phase != ChallengePhase.preExtend) {
+    if (phase != ChallengePhase.live) {
       return false;
     }
     return elapsedInStep >= stepEnd;
