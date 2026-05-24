@@ -4,6 +4,8 @@
 
 ## [Non publié]
 
+## [0.5.0] — 2026-05-24
+
 ### Ajouté
 - **Showcase d'un point spé fraîchement attribué** — chaque appel à `SpecializationService.invest` empile la branche dans une file FIFO persistée. Au démarrage de la séance suivante, `career_screen._start` peek la tête et la passe à `MilestoneService.pendingForList(showcaseBranch:)`, qui boost massivement (`+1000`) toute milestone candidate touchant cette branche dans son `sortScore`. Si une milestone effectivement insérée matche la branche, la tête est consommée ; sinon la dette reste pour la prochaine séance. Objectif : rendre immédiatement visible l'effet d'un point dépensé — finis les 5 pts d'une joueuse expérimentée qui s'évaporent dans le bruit de l'aging. La règle *overdue* reste prioritaire (rattrapage système avant nice-to-have UX), et `respec()` / `resetAll()` vident la file. Sert aussi de levier d'orientation pour le système de défis (cf. cascade `ChallengeService`).
 
@@ -151,7 +153,8 @@ Grosse mise à jour du mode carrière : nouvelle enveloppe de difficulté, nouve
 ## [0.1.0] — 2026-05-08
 - Premier release public : coach vocal rythmique hors-ligne pour Android, adult gate 18+, onboarding, mode carrière + scénarios, badges, profil/réputation.
 
-[Non publié]: https://github.com/bbstudioapp/beatbitch/compare/v0.4.2...develop
+[Non publié]: https://github.com/bbstudioapp/beatbitch/compare/v0.5.0...develop
+[0.5.0]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.5.0
 [0.4.2]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.4.2
 [0.4.1]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.4.1
 [0.4.0]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.4.0
