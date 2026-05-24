@@ -313,6 +313,141 @@ void main() {
     });
   });
 
+  group('ChallengeService — anti-répétition inter-sessions', () {
+    test('lastSessionAxes : vide par défaut', () async {
+      final svc = ChallengeService();
+      expect(await svc.lastSessionAxes(), isEmpty);
+    });
+
+    test('recordSessionChallenges → lastSessionAxes : round-trip', () async {
+      final svc = ChallengeService();
+      await svc.recordSessionChallenges([
+        CapabilityAxis.holdThroatStreak,
+        CapabilityAxis.rhythmBpmCeilThroat,
+        CapabilityAxis.gorgeApneeStreak,
+      ]);
+      expect(
+        await svc.lastSessionAxes(),
+        {
+          CapabilityAxis.holdThroatStreak,
+          CapabilityAxis.rhythmBpmCeilThroat,
+          CapabilityAxis.gorgeApneeStreak,
+        },
+      );
+    });
+
+    test('recordSessionChallenges : écrase l\'ancienne liste', () async {
+      final svc = ChallengeService();
+      await svc.recordSessionChallenges([CapabilityAxis.holdThroatStreak]);
+      await svc.recordSessionChallenges([CapabilityAxis.rhythmBpmCeilShallow]);
+      // Pas d'union — la liste de la session précédente seule est conservée.
+      expect(
+        await svc.lastSessionAxes(),
+        {CapabilityAxis.rhythmBpmCeilShallow},
+      );
+    });
+
+    test('recordSessionChallenges : liste vide → reset', () async {
+      final svc = ChallengeService();
+      await svc.recordSessionChallenges([CapabilityAxis.holdThroatStreak]);
+      await svc.recordSessionChallenges(const []);
+      expect(await svc.lastSessionAxes(), isEmpty);
+    });
+
+    test('resetAll : nettoie aussi lastSessionAxes', () async {
+      final svc = ChallengeService();
+      await svc.recordSessionChallenges([CapabilityAxis.holdThroatStreak]);
+      await svc.resetAll();
+      expect(await svc.lastSessionAxes(), isEmpty);
+    });
+
+    test(
+      'session N+1 sur même profil restreint : exclure axes de la session N '
+      '→ axes différents si pool suffisante',
+      () async {
+        final svc = ChallengeService();
+        // Profil de stefsub-like : 3 axes prouvés (cf. retour v0.5.0).
+        // Plus un 4ᵉ vierge dans la pool overloadable (pour qu'un axe
+        // alternatif soit dispo après exclusion).
+        const profile = CapabilityProfile({
+          CapabilityAxis.holdThroatStreak: CapabilityAxisState(
+            best: 14,
+            comfort: 14,
+            successRate: 0.9,
+            lastSeenSession: 5,
+          ),
+          CapabilityAxis.rhythmBpmCeilThroat: CapabilityAxisState(
+            best: 100,
+            comfort: 100,
+            successRate: 0.9,
+            lastSeenSession: 5,
+          ),
+          CapabilityAxis.holdFullStreak: CapabilityAxisState(
+            best: 8,
+            comfort: 8,
+            successRate: 0.9,
+            lastSeenSession: 5,
+          ),
+        });
+        // Session N : pick le 1ᵉʳ axe via tirage standard.
+        final firstSession = await svc.buildForSession(
+          profile: profile,
+          ceilings: const {},
+          excludeAxes: const {},
+          rng: Random(0),
+          isTutorial: false,
+        );
+        expect(firstSession, isNotNull);
+        await svc.recordSessionChallenges([firstSession!.axis]);
+
+        // Session N+1 : exclure les axes de la session N → tirage doit
+        // tomber sur un autre axe prouvé.
+        final lastAxes = await svc.lastSessionAxes();
+        expect(lastAxes, contains(firstSession.axis));
+        final secondSession = await svc.buildForSession(
+          profile: profile,
+          ceilings: const {},
+          excludeAxes: lastAxes,
+          rng: Random(0),
+          isTutorial: false,
+        );
+        expect(secondSession, isNotNull);
+        expect(secondSession!.axis, isNot(firstSession.axis));
+      },
+    );
+
+    test(
+      'session N+1 avec pool totalement épuisée : exploratoire ou null '
+      '(fallback du caller : retirer l\'exclusion)',
+      () async {
+        final svc = ChallengeService();
+        const profile = CapabilityProfile({
+          CapabilityAxis.holdThroatStreak: CapabilityAxisState(
+            best: 14,
+            comfort: 14,
+            successRate: 0.9,
+            lastSeenSession: 1,
+          ),
+        });
+        await svc.recordSessionChallenges([CapabilityAxis.holdThroatStreak]);
+        // Exclure le seul axe prouvé : on retombe sur l'exploratoire d'un
+        // axe vierge — c'est le comportement attendu et c'est ok ici.
+        final challenge = await svc.buildForSession(
+          profile: profile,
+          ceilings: const {},
+          excludeAxes: await svc.lastSessionAxes(),
+          rng: Random(0),
+          isTutorial: false,
+        );
+        // L'exploratoire reste activé tant qu'il existe au moins un axe
+        // pilotant vierge non exclu (le cas ici).
+        expect(challenge, isNotNull);
+        expect(challenge!.isExploratory, isTrue);
+        expect(challenge.axis, isNot(CapabilityAxis.holdThroatStreak));
+      },
+    );
+  });
+
   group('crossingsTargetForAttempts', () {
     test('progression no-limit : 5, 8, 12, 17, 23, 30 …', () {
       expect(crossingsTargetForAttempts(0), 5);

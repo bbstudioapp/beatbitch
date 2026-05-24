@@ -92,6 +92,14 @@ class ChallengeService {
   static const String keyTutorialSeen = 'challenges.tutorial_seen';
   static const String _kAttemptsPrefix = 'challenges.attempts.';
 
+  /// Clé de persistance des axes pickés dans la dernière session de défis.
+  /// Sert à éviter de proposer **exactement le même set** deux séances de
+  /// suite : sur un profil jeune (peu d'axes prouvés), `pickOverloadAxis`
+  /// retombe sinon sur la même séquence à chaque tirage (cf. retour
+  /// stefsub v0.5.0). L'exclusion est *non bloquante* — le caller retombe
+  /// sur le tirage standard si la pool restante est vide.
+  static const String keyLastSessionAxes = 'challenges.last_session_axes';
+
   /// `true` quand la joueuse a activé les défis dans `CareerScreen`.
   /// Défaut `true` : le tutoriel scripté au 1ᵉʳ défi (hold throat 5 s,
   /// tooltips et textes coach pédagogiques) absorbe le choc pour une
@@ -120,17 +128,53 @@ class ChallengeService {
     await prefs.setBool(keyTutorialSeen, true);
   }
 
-  /// Reset toutes les clés (toggle, tuto, compteurs d'essais par axe).
-  /// Câblé au bouton reset du ProfileScreen.
+  /// Reset toutes les clés (toggle, tuto, compteurs d'essais par axe,
+  /// historique anti-répétition). Câblé au bouton reset du ProfileScreen.
   Future<void> resetAll() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(keyEnabled);
     await prefs.remove(keyTutorialSeen);
+    await prefs.remove(keyLastSessionAxes);
     for (final key in prefs.getKeys().toList()) {
       if (key.startsWith(_kAttemptsPrefix)) {
         await prefs.remove(key);
       }
     }
+  }
+
+  /// Axes des défis pickés à la **dernière session** (toutes outcomes
+  /// confondues — un défi proposé compte, qu'il ait été passé, raté ou
+  /// skip). Vide après reset / si aucune session de défi n'a été lancée.
+  /// Lu par le caller au démarrage de la session suivante pour les ajouter
+  /// à `excludeAxes` du premier essai. Stockage : `setStringList` des
+  /// `storageKey`. Les clés inconnues (axe disparu après refacto) sont
+  /// silencieusement ignorées au load.
+  Future<Set<CapabilityAxis>> lastSessionAxes() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList(keyLastSessionAxes) ?? const <String>[];
+    final out = <CapabilityAxis>{};
+    for (final key in raw) {
+      for (final a in CapabilityAxis.values) {
+        if (a.storageKey == key) {
+          out.add(a);
+          break;
+        }
+      }
+    }
+    return out;
+  }
+
+  /// Persiste les axes des défis pickés pour cette session. Écrase l'historique
+  /// précédent : on ne mémorise que la **dernière** session, pas une fenêtre
+  /// glissante (rétention plus longue empilerait l'exclusion et empêcherait
+  /// la rotation sur les axes une fois la pool épuisée). Appelée par le
+  /// caller juste après la génération des défis — l'anti-répétition couvre
+  /// donc les défis *proposés*, pas seulement ceux *joués* (une joueuse qui
+  /// quitte avant le 1ᵉʳ défi ne reverra pas le même set non plus).
+  Future<void> recordSessionChallenges(Iterable<CapabilityAxis> axes) async {
+    final prefs = await SharedPreferences.getInstance();
+    final keys = axes.map((a) => a.storageKey).toList(growable: false);
+    await prefs.setStringList(keyLastSessionAxes, keys);
   }
 
   /// Nombre de défis déjà joués sur [axis] (tous outcomes confondus :
