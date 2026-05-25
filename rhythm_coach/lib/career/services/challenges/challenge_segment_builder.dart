@@ -26,6 +26,9 @@ import '../../models/unlock_key.dart';
 import 'builders/biffle_bpm_max_builder.dart';
 import 'builders/hold_full_streak_builder.dart';
 import 'builders/hold_throat_streak_builder.dart';
+import 'builders/rhythm_bpm_ceil_full_builder.dart';
+import 'builders/rhythm_bpm_ceil_shallow_builder.dart';
+import 'builders/rhythm_bpm_ceil_throat_builder.dart';
 import 'builders/rhythm_depth_max_builder.dart';
 
 /// Interface de construction des sous-steps d'un défi.
@@ -67,8 +70,9 @@ abstract class ChallengeSegmentBuilder {
 /// Factory : retourne le builder dédié à l'axe du défi.
 ///
 /// Throws `StateError` pour un axe non encore couvert — les PRs suivantes
-/// (B.1.b → B.1.f) compléteront la table. Pour PR-B.1.a, seuls les 4 axes
-/// monolithiques sont câblés.
+/// (B.1.c → B.1.f) compléteront la table. PR-B.1.a a livré les 4 axes
+/// monolithiques ; PR-B.1.b ajoute les 3 axes rythme BPM avec choix
+/// d'amplitude.
 ChallengeSegmentBuilder builderForAxis(CapabilityAxis axis) {
   switch (axis) {
     case CapabilityAxis.holdThroatStreak:
@@ -79,13 +83,18 @@ ChallengeSegmentBuilder builderForAxis(CapabilityAxis axis) {
       return BiffleBpmMaxBuilder();
     case CapabilityAxis.rhythmDepthMax:
       return RhythmDepthMaxBuilder();
+    case CapabilityAxis.rhythmBpmCeilShallow:
+      return RhythmBpmCeilShallowBuilder();
+    case CapabilityAxis.rhythmBpmCeilThroat:
+      return RhythmBpmCeilThroatBuilder();
+    case CapabilityAxis.rhythmBpmCeilFull:
+      return RhythmBpmCeilFullBuilder();
     // ignore: no_default_cases
     default:
       throw StateError(
         'ChallengeSegmentBuilder : aucun builder enregistré pour $axis '
-        '(PR-B.1.a couvre uniquement holdThroatStreak / holdFullStreak / '
-        'biffleBpmMax / rhythmDepthMax — les autres axes arriveront dans '
-        'PR-B.1.b à PR-B.1.f).',
+        '(PR-B.1.a/b couvrent les 4 axes monolithiques et les 3 axes '
+        'rythme BPM — les autres axes arriveront dans PR-B.1.c à PR-B.1.f).',
       );
   }
 }
