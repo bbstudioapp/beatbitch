@@ -350,20 +350,29 @@ class StepBuilders {
     bool intense = false,
   }) {
     if (intense) {
-      // Plus profond et plus rapide que quickie : la régen
-      // post-Supplier prouve que l'utilisatrice « monte d'un niveau ».
-      // Profondeur plafonnée par les milestones acquittées (jamais
-      // throat sans `throat_pulse`, jamais full sans `full_pulse`) —
-      // on borne aussi à throat (idx 3) pour ne jamais lancer un
-      // intense full d'amorce.
-      final to = Position
-          .values[positionPickers.milestoneRhythmCeilingIdx().clamp(2, 3)];
+      // Escalade explicite (Supplier ou Encore) : on amorce direct au
+      // plus profond que les milestones autorisent. Cible = `full`
+      // (idx 4), bornée par `milestoneRhythmCeilingIdx()` (tombe à
+      // throat sans `full_pulse`, mid sans `throat_pulse`) et par
+      // `maxDepthIndex` (config). BPM adaptatif selon le `to` après
+      // clamp : full reste tenable à 80 BPM en amorce, throat tient
+      // 95, mid permet d'attaquer plus fort à 105.
+      final ceilingIdx = positionPickers.milestoneRhythmCeilingIdx();
+      final targetIdx = Position.full.index
+          .clamp(2, ceilingIdx)
+          .clamp(2, config.maxDepthIndex);
+      final to = Position.values[targetIdx];
+      final bpm = switch (to) {
+        Position.full => 80,
+        Position.throat => 95,
+        _ => 105,
+      };
       final intenseMode = _pickIntroMode();
       return rules[intenseMode]!.buildIntroStep(IntroCtx(
-        bpm: 90,
+        bpm: bpm,
         from: Position.head,
         to: to,
-        duration: 10,
+        duration: 14,
       ));
     }
     if (quickie) {

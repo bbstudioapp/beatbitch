@@ -575,6 +575,8 @@ class CareerSessionGenerator {
       overloadAxis: overload.axis,
       overloadFactor: overload.factor,
       lengthChoice: lengthChoice,
+      intense: intense,
+      encoreChainIndex: encoreChainIndex,
     );
     _initScratchpad(unlockedKeys: unlockedKeys, clearPatternBuffer: true);
     // Mode "Session bâclée" : 6 min par défaut, intense tout du long. Floor
@@ -593,8 +595,14 @@ class CareerSessionGenerator {
     final effectiveDuration = durationSeconds ??
         lengthChoice?.durationSeconds ??
         (quickie ? 6 * 60 : cfg.durationSeconds);
-    final intensityFloor =
-        custom.intensityFloor ?? (quickie ? 0.65 : (intense ? 0.55 : 0.0));
+    // Mode intense (Supplier ou Encore) : plancher solide qui scale par
+    // cran d'encore (+0.05/cran, plafond 0.75). Le cran 0 d'un intense
+    // démarre à 0.65 (Supplier ou 1er Encore) ; cran 1 = 0.70 ; cran 2+ =
+    // 0.75. Custom et quickie gardent leurs valeurs propres.
+    final intenseBaseFloor =
+        (0.65 + 0.05 * max(0, encoreChainIndex)).clamp(0.65, 0.75);
+    final intensityFloor = custom.intensityFloor ??
+        (quickie ? 0.65 : (intense ? intenseBaseFloor : 0.0));
     // Nombre de boosts en phase finish : table par niveau + bonus encore
     // (chaîne encore = +2 boosts par cran, sans plafond explicite côté
     // générateur). Le caller borne le nombre d'encores enchaînés via le
@@ -1844,15 +1852,24 @@ class CareerSessionGenerator {
     );
   }
 
-  /// Bump conditionnel d'un tier de phrase selon `_config.obedience`. Cf. doc
-  /// de `_pickPhrase`. Ne touche pas aux tiers `boost`/`finale`.
+  /// Bump conditionnel d'un tier de phrase selon `_config.obedience` et
+  /// l'escalade `_config.intense` (Supplier/Encore). Cf. doc de
+  /// `_pickPhrase`. Ne touche pas aux tiers `boost`/`finale`.
+  ///
+  /// **Bump intense** : quand la joueuse a réclamé plus dur via Supplier
+  /// ou Encore, on retire toute douceur — `soft → medium` à 100 %,
+  /// `medium → hard` à 60 %. Cumulé via "le plus dur gagne" avec le bump
+  /// obédiance qui pourrait être plus prudent à obédiance basse.
   String _bumpTierByObedience(String tier) {
     if (tier == 'boost' || tier == 'finale') return tier;
     final obed = _config.obedience;
+    final intense = _config.intense;
     final roll = _rng.nextDouble();
     if (tier == 'soft') {
       double pSoftToMedium;
-      if (obed >= 150) {
+      if (intense) {
+        pSoftToMedium = 1.0;
+      } else if (obed >= 150) {
         pSoftToMedium = 0.90;
       } else if (obed >= 80) {
         pSoftToMedium = 0.70;
@@ -1865,7 +1882,9 @@ class CareerSessionGenerator {
     }
     if (tier == 'medium') {
       double pMediumToHard;
-      if (obed >= 150) {
+      if (intense) {
+        pMediumToHard = 0.60;
+      } else if (obed >= 150) {
         pMediumToHard = 0.60;
       } else if (obed >= 80) {
         pMediumToHard = 0.30;
