@@ -404,6 +404,9 @@
       "requires": [
         "basics"
       ],
+      "acquittableByCapability": [
+        {"axis": "hold.throat.streak", "min": 5}
+      ],
       "branches": ["obeissance"],
       "sequence": [
         {"time": 0,  "text": "Lèvres sous le gland. Tiens. Pas un mouvement.", "mode": "hold", "to": "head", "duration": 7},
