@@ -147,27 +147,27 @@ class Session {
   /// écrits dans un fichier source).
   final List<Challenge> challenges;
 
-  /// Temps absolu (s) du breath de countdown qui précède chaque step
-  /// défi (parallèle à [challenges] — `challengeBreathStartTimes[i]`
-  /// correspond à `challenges[i]`). Vide si aucun défi.
-  final List<int> challengeBreathStartTimes;
-
-  /// Temps absolu (s) de chaque step défi lui-même (parallèle à
-  /// [challenges]). Vide si aucun défi.
-  final List<int> challengeStepTimes;
+  /// Temps absolu (s) du step trigger qui précède chaque défi (parallèle
+  /// à [challenges] — `challengeTriggerTimes[i]` correspond à
+  /// `challenges[i]`). Le trigger est un step `breath` de
+  /// `kChallengeBreathDurationSeconds` (13 s) qui sert de countdown
+  /// d'annonce ; à son terme, le `SessionController` arme la machine
+  /// d'états défi en phase `breath`. Vide si aucun défi.
+  ///
+  /// Phase B (streaming) : ce champ remplace l'ancien
+  /// `challengeBreathStartTimes`. Le step défi lui-même n'est plus
+  /// pré-positionné dans la timeline — le `ChallengeSegmentBuilder` émet
+  /// ses segments à la volée en runtime (cf. doc local
+  /// `specs/challenges_streaming_refonte.md`).
+  final List<int> challengeTriggerTimes;
 
   /// Compat : premier défi de la liste (ou null si vide). Conserve la
   /// rétrocompat des call sites qui lisaient `session.challenge`.
   Challenge? get challenge => challenges.isEmpty ? null : challenges.first;
 
-  /// Compat : temps du breath du premier défi (ou null).
-  int? get challengeBreathStartTime => challengeBreathStartTimes.isEmpty
-      ? null
-      : challengeBreathStartTimes.first;
-
-  /// Compat : temps du step du premier défi (ou null).
-  int? get challengeStepTime =>
-      challengeStepTimes.isEmpty ? null : challengeStepTimes.first;
+  /// Compat : temps du trigger du premier défi (ou null).
+  int? get challengeTriggerTime =>
+      challengeTriggerTimes.isEmpty ? null : challengeTriggerTimes.first;
 
   const Session({
     required this.id,
@@ -192,8 +192,7 @@ class Session {
     this.finalStepTime,
     this.noStats = false,
     this.challenges = const [],
-    this.challengeBreathStartTimes = const [],
-    this.challengeStepTimes = const [],
+    this.challengeTriggerTimes = const [],
   });
 
   Duration get duration => Duration(seconds: durationSeconds);

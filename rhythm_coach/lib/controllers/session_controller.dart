@@ -8,6 +8,7 @@ import '../career/models/career_generation_inputs.dart';
 import '../career/models/challenge.dart';
 import '../career/models/level_milestone.dart';
 import '../career/models/phrase_bank.dart';
+import '../career/services/challenges/challenge_segment_builder.dart';
 import '../career/services/generation/career_session_generator.dart';
 import '../career/services/specialization_service.dart';
 import '../l10n/app_localizations.dart';
@@ -340,6 +341,17 @@ class SessionController extends ChangeNotifier {
   /// Snapshot du défi de la séance courante (clone de `session.challenge`).
   /// Posé au `start()` ou au `_checkSteps` quand on entre dans le breath.
   Challenge? _activeChallenge;
+
+  /// Builder de segments du défi en cours (Phase B — streaming). Instancié
+  /// à l'entrée en phase `live` via `_startChallengeStreaming`, vidé au
+  /// reset post-`ended`. `null` hors fenêtre défi live/atSeuil.
+  ChallengeSegmentBuilder? _segmentBuilder;
+
+  /// Segment de défi actuellement joué par le BeepEngine. Posé par chaque
+  /// `_advanceChallengeSegment` ; sa `duration` sert à détecter la fin du
+  /// segment et à demander le suivant au builder. `null` hors fenêtre défi
+  /// live/atSeuil.
+  SessionStep? _currentChallengeSegment;
 
   /// Seconde absolue à laquelle la phase `countdown` (3-2-1) démarre.
   /// `null` tant qu'on n'y est pas. Sert au calcul du chiffre courant
@@ -1265,9 +1277,9 @@ class SessionController extends ChangeNotifier {
 
       // Phase 1 défis — la machine d'états est désormais drivée par
       // `_updateChallengePhase` (appelée dans `_onTick`) sur la base
-      // d'`elapsedSeconds` vs `session.challengeBreathStartTime` /
-      // `challengeStepTime`. Plus de transition basée sur la consommation
-      // de step (fragile au timing TTS / différé `_timelineOffset`).
+      // d'`elapsedSeconds` vs `session.challengeTriggerTimes`. Plus de
+      // transition basée sur la consommation de step (fragile au timing
+      // TTS / différé `_timelineOffset`).
       if (!step.isTextOnly) {
         // Avant de changer de mode : si on quittait un hold full, on crédite
         // sa durée pour le badge Iron Lungs (uniquement quand le hold est
@@ -1818,8 +1830,7 @@ class SessionController extends ChangeNotifier {
       finalCategory: upcoming.finalCategory,
       noStats: previous.noStats,
       challenges: previous.challenges,
-      challengeStepTimes: previous.challengeStepTimes,
-      challengeBreathStartTimes: previous.challengeBreathStartTimes,
+      challengeTriggerTimes: previous.challengeTriggerTimes,
     );
   }
 

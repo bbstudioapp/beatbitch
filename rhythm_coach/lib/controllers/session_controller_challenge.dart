@@ -247,11 +247,16 @@ extension ChallengeOrchestrator on SessionController {
   }
 
   /// Tick de mise à jour de la machine d'états défi. Drivée par
-  /// `elapsedSeconds` vs `session.challengeBreathStartTime` /
-  /// `challengeStepTime` : ne dépend plus de la consommation des steps
+  /// `elapsedSeconds` vs `session.challengeTriggerTimes` (fenêtre du step
+  /// breath de countdown) : ne dépend plus de la consommation des steps
   /// (qui peut être différée par le TTS ou interrompue par un fail), ce
   /// qui rendait la transition `breath → live` peu fiable. Appelée dans
   /// `_onTick` à chaque tick (200 ms).
+  ///
+  /// Phase B (streaming) : le step défi n'est plus pré-posé dans la
+  /// timeline — l'entrée en `live` instancie un `ChallengeSegmentBuilder`
+  /// et émet ses segments en runtime (cf. `_startChallengeStreaming` +
+  /// `_advanceChallengeSegment`).
   void _updateChallengePhase() {
     if (_session.challenges.isEmpty) return;
     final phase = _challengePhase;
@@ -272,6 +277,8 @@ extension ChallengeOrchestrator on SessionController {
       _challengeCountdownLastDigitSpoken = -1;
       _challengeCurrentText = null;
       _challengeSpokenText = null;
+      _segmentBuilder = null;
+      _currentChallengeSegment = null;
       _challengePhase = ChallengePhase.none;
     }
     final t = elapsedSeconds;
@@ -280,12 +287,13 @@ extension ChallengeOrchestrator on SessionController {
     // l'action joueuse (GO ou PASSE) — plus d'auto-trigger countdown.
     if (_challengePhase == ChallengePhase.none) {
       // Cherche le prochain défi à armer : index `i` non encore acquitté
-      // dont le breath time est atteint mais le step pas encore démarré.
+      // dont la fenêtre du step trigger (= breath de countdown 13 s) est
+      // ouverte.
       for (var i = 0; i < _session.challenges.length; i++) {
         if (_completedChallengeIndices.contains(i)) continue;
-        final breathStart = _session.challengeBreathStartTimes[i];
-        final stepStart = _session.challengeStepTimes[i];
-        if (t < breathStart || t >= stepStart) continue;
+        final triggerStart = _session.challengeTriggerTimes[i];
+        final triggerEnd = triggerStart + kChallengeBreathDurationSeconds;
+        if (t < triggerStart || t >= triggerEnd) continue;
         final ch = _session.challenges[i];
         _activeChallengeIndex = i;
         _activeChallenge = ch;
@@ -300,10 +308,6 @@ extension ChallengeOrchestrator on SessionController {
     }
     final ch = _activeChallenge;
     if (ch == null) return;
-    final stepStart = _activeChallengeIndex >= 0
-        ? _session.challengeStepTimes[_activeChallengeIndex]
-        : null;
-    if (stepStart == null) return;
     // À partir d'ici, on mesure les durées internes sur `_realSec`
     // (`_stopwatch.elapsed` brut). La timeline session est freezée pendant
     // le défi (`_onTick`) ; utiliser `elapsedSeconds` ferait stagner toutes
@@ -321,11 +325,10 @@ extension ChallengeOrchestrator on SessionController {
         _maybeSpeakCountdownDigit(elapsedInCountdown);
         if (elapsedInCountdown >= _challengeCountdownDurationSec) {
           _challengePhase = ChallengePhase.live;
-          _challengeStepStartedAtSec = r;
           _challengeCurrentText = null;
           _challengeSpokenText = null;
           _challengeCrossingsCount = 0;
-          _applyChallengeStepNow(stepStart);
+          _startChallengeStreaming(ch);
         }
       }
       return;
@@ -355,35 +358,37 @@ extension ChallengeOrchestrator on SessionController {
       }
       return;
     }
-    // Phase `live`. Pour tous les axes, on calque le seuil de fin sur la
-    // durée nominale du step défi (= `targetThreshold` pour les axes
-    // durée, fenêtre fixe 45 s/20 s pour BPM/profondeur).
-    final stepEnd = ch.kind == ChallengeAxisKind.duration
-        ? target
-        : ch.nominalDurationSeconds;
-    // Quand le défi pilote par franchissements (axes franchissement gorge),
-    // le compteur de crossings peut court-circuiter la durée nominale.
+    // Phase `live`. Demande au builder un nouveau segment dès que la
+    // durée du segment courant est consommée. Le builder décide quand le
+    // seuil est atteint (`thresholdReached`) — pas le contrôleur. Le
+    // court-circuit historique sur les crossings reste en place pour les
+    // axes franchissement (couverts par les builders dédiés en PR-B.1.e).
+    //
+    // Garde explicite `phase == live` : `_challengeStepStartedAtSec` reste
+    // posé pendant la fenêtre post-`ended` (10 s de breath de récup), il
+    // ne faut pas continuer à demander des segments à ce moment-là.
+    if (phase != ChallengePhase.live) return;
     final crossingsTarget = ch.targetCrossings;
     final crossingsReached =
         crossingsTarget != null && _challengeCrossingsCount >= crossingsTarget;
-    if (crossingsReached ||
-        SessionController.shouldEnterAtSeuilPhase(
-          phase: phase,
-          elapsedInStep: elapsedInStep,
-          stepEnd: stepEnd,
-        )) {
-      _challengePhase = ChallengePhase.atSeuil;
-      _challengeAtSeuilStartedAtSec = r;
-      // Annonce coach « tu peux relâcher quand tu veux, ou continuer » à
-      // l'entrée seuil — remplace l'annonce historique `extension` qui
-      // tombait 3 s avant la fin nominale. L'exploratoire reste exclu :
-      // il n'a pas de seuil cible.
-      if (!ch.isExploratory) {
-        _challengeCurrentText = _pickChallengePhrase(ch, 'extension') ??
-            _fallbackChallengeText(ch, 'extension');
-        _speakChallengePhraseIfAny();
+    if (crossingsReached) {
+      _enterChallengeAtSeuil(ch, r);
+      return;
+    }
+    final currentSegment = _currentChallengeSegment;
+    if (currentSegment != null) {
+      final segDur = currentSegment.duration ?? 0;
+      if (segDur > 0 && elapsedInStep >= segDur) {
+        _advanceChallengeSegment(r);
+        return;
       }
-      _emitChallengeHaptic(_ChallengeHapticKind.light);
+    }
+    // Fallback safety net : si le builder n'a plus de segment courant
+    // (cas dégénéré — ne devrait pas arriver pour un builder monolithique
+    // tant que le seuil n'est pas atteint), on bascule en atSeuil sur la
+    // base de la durée cumulée pour les axes durée.
+    if (ch.kind == ChallengeAxisKind.duration && elapsedInStep >= target) {
+      _enterChallengeAtSeuil(ch, r);
     }
 
     // Retry passif de la phrase défi en attente : si la transition
@@ -706,74 +711,109 @@ extension ChallengeOrchestrator on SessionController {
     }
   }
 
-  /// Applique manuellement le step défi (à l'entrée `live`) au BeepEngine.
-  /// Le step défi est dans `session.steps` à `time = challengeStepTime`,
-  /// mais la timeline session est freezée pendant le défi, donc
-  /// `_checkSteps` ne le consommerait jamais naturellement. On le pose
-  /// nous-mêmes (BeepEngine bascule en rythme/hold/biffle) puis on
-  /// avance `_nextStepIndex` past lui pour qu'à la reprise de session
-  /// (post-breath fini), `_checkSteps` consomme directement le step
-  /// suivant naturel — sinon le step défi se rejouerait après le breath.
-  void _applyChallengeStepNow(int stepStartTime) {
-    final steps = _session.steps;
-    for (var i = _nextStepIndex; i < steps.length; i++) {
-      final s = steps[i];
-      if (s.time != stepStartTime) continue;
-      if (s.isTextOnly) continue;
-      _beep.applyStep(s, _session.defaultMode);
-      _configApplied = true;
-      _lastConfigStep = s;
-      if (!_session.noStats) {
-        _stats.markModeUsed(s.mode ?? _session.defaultMode);
-      }
-      _capabilityTracker?.onStepApplied(
-        mode: s.mode ?? _session.defaultMode,
-        from: s.from,
-        to: s.to,
-        bpm: s.bpm,
-        duration: s.duration,
+  /// Démarre le streaming de segments du défi (Phase B). Appelé à l'entrée
+  /// en phase `live` (= après les 3 s du countdown). Instancie le builder
+  /// dédié à l'axe via `builderForAxis`, le configure avec le profil de
+  /// capacités et les unlocks runtime, puis émet le premier segment via
+  /// `_advanceChallengeSegment`.
+  void _startChallengeStreaming(Challenge challenge) {
+    final builder = builderForAxis(challenge.axis)
+      ..start(
+        challenge: challenge,
+        profile: _capabilityProfile,
+        unlocks: _unlockedKeys,
+        rng: _random,
       );
-      _armHoldVerifierIfHoldStep(s);
-      _syncAmbienceToCurrentMode();
-      _nextStepIndex = i + 1;
-      return;
-    }
+    _segmentBuilder = builder;
+    _currentChallengeSegment = null;
+    _advanceChallengeSegment(_realSec.toInt());
   }
 
-  /// Excise la fenêtre défi (breath d'annonce + step défi) de la timeline
-  /// session, en décalant tous les steps suivants ainsi que les
-  /// timestamps de fin (`durationSeconds`, `finalStepTime`,
-  /// `silentFinishStartTime`, milestones) de `-shift`. À l'issue,
-  /// l'`elapsedSeconds` courant (= `challengeBreathStartTime`, gelé
-  /// pendant le défi) coïncide exactement avec la position du step qui
-  /// suivait le défi dans l'ancienne timeline : la séance reprend
-  /// **immédiatement** là où elle en était avant le défi, sans saut
-  /// visible du timer.
-  ///
-  /// `shift = (challengeStepTime - challengeBreathStartTime) +
-  /// nominalDurationSeconds` (≈ 23 s pour le tuto : 13 s de breath
-  /// d'annonce + 10 s de step). Les steps qui tombaient dans la fenêtre
-  /// défi sont droppés (ils ont déjà été joués manuellement : le breath
-  /// par `_checkSteps` à l'entrée en phase `breath`, le step défi par
-  /// `_applyChallengeStepNow` à l'entrée `live`).
-  ///
-  /// No-op silencieux si `challengeBreathStartTime` ou `challengeStepTime`
-  /// est `null` (cas `PASSE` immédiat où le défi n'a pas été matérialisé
-  /// — la fenêtre reste vide dans la timeline mais aucun temps n'a été
-  /// consommé puisque le freeze s'arrête dès `phase == ended`).
-  void _excisChallengeFromSession() {
-    if (_activeChallengeIndex < 0) return;
-    if (_activeChallengeIndex >= _session.challengeBreathStartTimes.length) {
+  /// Demande au builder le prochain segment et l'applique au BeepEngine.
+  /// Si le builder ne fournit plus rien et a atteint son seuil, bascule
+  /// automatiquement en phase `atSeuil`. Si le builder est absent ou n'a
+  /// pas atteint le seuil mais n'émet plus rien (cas dégénéré), le défi
+  /// se fige sur le dernier segment — la boucle BeepEngine continue
+  /// jusqu'au release joueuse.
+  void _advanceChallengeSegment(int nowRealSec) {
+    final builder = _segmentBuilder;
+    if (builder == null) return;
+    final next = builder.next();
+    if (next == null) {
+      if (builder.thresholdReached) {
+        final ch = _activeChallenge;
+        if (ch != null) _enterChallengeAtSeuil(ch, nowRealSec);
+      }
       return;
     }
-    final breathStart =
-        _session.challengeBreathStartTimes[_activeChallengeIndex];
-    final stepStart = _session.challengeStepTimes[_activeChallengeIndex];
-    final stepDur = _activeChallenge?.nominalDurationSeconds;
-    if (stepDur == null) return;
-    final shift = (stepStart - breathStart) + stepDur;
+    _currentChallengeSegment = next;
+    _challengeStepStartedAtSec = nowRealSec;
+    if (_released) return;
+    _beep.applyStep(next, _session.defaultMode);
+    _configApplied = true;
+    _lastConfigStep = next;
+    if (!_session.noStats) {
+      _stats.markModeUsed(next.mode ?? _session.defaultMode);
+    }
+    _capabilityTracker?.onStepApplied(
+      mode: next.mode ?? _session.defaultMode,
+      from: next.from,
+      to: next.to,
+      bpm: next.bpm,
+      duration: next.duration,
+    );
+    _armHoldVerifierIfHoldStep(next);
+    _syncAmbienceToCurrentMode();
+  }
+
+  /// Bascule en phase `atSeuil` + annonce coach. Extrait pour mutualiser
+  /// entre la voie « builder épuisé + thresholdReached » et la voie
+  /// « crossings atteints » (axes franchissement).
+  void _enterChallengeAtSeuil(Challenge ch, int nowRealSec) {
+    _challengePhase = ChallengePhase.atSeuil;
+    _challengeAtSeuilStartedAtSec = nowRealSec;
+    if (!ch.isExploratory) {
+      _challengeCurrentText = _pickChallengePhrase(ch, 'extension') ??
+          _fallbackChallengeText(ch, 'extension');
+      _speakChallengePhraseIfAny();
+    }
+    _emitChallengeHaptic(_ChallengeHapticKind.light);
+  }
+
+  /// Excise la fenêtre défi (step trigger + enveloppe estimée pour le défi)
+  /// de la timeline session, en décalant tous les steps suivants ainsi que
+  /// les timestamps de fin (`durationSeconds`, `finalStepTime`,
+  /// `silentFinishStartTime`, milestones) de `-shift`. À l'issue,
+  /// l'`elapsedSeconds` courant (= `challengeTriggerTime`, gelé pendant le
+  /// défi) coïncide exactement avec la position du step qui suivait le défi
+  /// dans l'ancienne timeline : la séance reprend **immédiatement** là où
+  /// elle en était avant le défi, sans saut visible du timer.
+  ///
+  /// Phase B (streaming) : le step défi n'est plus pré-positionné dans la
+  /// timeline — le générateur ne pose que le step trigger et réserve une
+  /// enveloppe `kChallengeBreathDurationSeconds + nominalDurationSeconds`
+  /// pour ne pas chevaucher les blocs en aval. Le shift d'excision reprend
+  /// la même formule pour rester symétrique : `breath + estimate`. Seul le
+  /// step trigger lui-même tombe dans la fenêtre (la zone réservée après
+  /// trigger est vide par construction côté générateur).
+  ///
+  /// No-op silencieux si l'index défi est hors borne (cas `PASSE` immédiat
+  /// où le défi n'a pas été matérialisé) : aucune fenêtre à exciser puisque
+  /// la timeline est restée à `triggerTime` pendant le `breath` puis a
+  /// repris normalement à la fin du `breath` post-défi.
+  void _excisChallengeFromSession() {
+    if (_activeChallengeIndex < 0) return;
+    if (_activeChallengeIndex >= _session.challengeTriggerTimes.length) {
+      return;
+    }
+    final triggerStart = _session.challengeTriggerTimes[_activeChallengeIndex];
+    final ch = _activeChallenge;
+    if (ch == null) return;
+    final reservedStepDur = ch.nominalDurationSeconds;
+    final shift = kChallengeBreathDurationSeconds + reservedStepDur;
     if (shift <= 0) return;
-    final endOfChallenge = stepStart + stepDur;
+    final breathStart = triggerStart;
+    final endOfChallenge = triggerStart + shift;
 
     int? shiftLate(int? t) {
       if (t == null) return null;
@@ -836,11 +876,8 @@ extension ChallengeOrchestrator on SessionController {
       // `_completedChallengeIndices` côté controller garantit que les
       // défis déjà acquittés (le défi excisé inclus) ne se ré-arment pas.
       challenges: _session.challenges,
-      challengeBreathStartTimes: [
-        for (final t in _session.challengeBreathStartTimes) shiftLate(t)!,
-      ],
-      challengeStepTimes: [
-        for (final t in _session.challengeStepTimes) shiftLate(t)!,
+      challengeTriggerTimes: [
+        for (final t in _session.challengeTriggerTimes) shiftLate(t)!,
       ],
     );
 
