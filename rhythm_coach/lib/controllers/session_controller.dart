@@ -353,6 +353,12 @@ class SessionController extends ChangeNotifier {
   /// live/atSeuil.
   SessionStep? _currentChallengeSegment;
 
+  /// Snapshot du `_swallowMode` avant l'entrée en phase live d'un défi
+  /// `noswallowStreak`. Le contrôleur force `forbidden` pendant le défi
+  /// (le critère intrinsèque, cf. spec § 6) et restaure le mode initial à
+  /// la sortie. `null` hors fenêtre noswallow défi.
+  SwallowMode? _challengeSavedSwallowMode;
+
   /// Seconde absolue à laquelle la phase `countdown` (3-2-1) démarre.
   /// `null` tant qu'on n'y est pas. Sert au calcul du chiffre courant
   /// (3 → 2 → 1) côté UI et au déclenchement TTS dans `_updateChallengePhase`.

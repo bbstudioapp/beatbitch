@@ -85,8 +85,13 @@ void main() {
           isA<ChallengeSegmentBuilder>());
     });
 
-    test('throw StateError pour un axe non encore couvert', () {
-      expect(() => builderForAxis(CapabilityAxis.noswallowStreak),
+    test('retourne le bon type pour noswallowStreak de PR-B.1.f', () {
+      expect(builderForAxis(CapabilityAxis.noswallowStreak),
+          isA<ChallengeSegmentBuilder>());
+    });
+
+    test('throw StateError pour un axe non pilotant', () {
+      expect(() => builderForAxis(CapabilityAxis.lickStreak),
           throwsA(isA<StateError>()));
     });
   });
@@ -948,6 +953,133 @@ void main() {
         builder.next();
         expect(builder.thresholdReached, isFalse);
       }
+    });
+  });
+
+  group('NoswallowStreakBuilder', () {
+    const ch = Challenge(
+      axis: CapabilityAxis.noswallowStreak,
+      kind: ChallengeAxisKind.duration,
+      targetThreshold: 40,
+      mode: SessionMode.beg,
+      comfortAtCalibration: 30.0,
+    );
+
+    test('mode principal = beg sans from/to (langue dehors, bouche ouverte)',
+        () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: {UnlockKey.throatPulse},
+        rng: Random(0),
+      );
+      var begCount = 0;
+      for (var i = 0; i < 30; i++) {
+        final s = builder.next()!;
+        if (s.mode == SessionMode.beg) {
+          begCount++;
+          expect(s.from, isNull, reason: 'beg libre : pas de `from`');
+          expect(s.to, isNull, reason: 'beg libre : pas de `to`');
+        }
+      }
+      expect(begCount, greaterThan(15),
+          reason: '~75 % de begs attendus sur 30 tirages');
+    });
+
+    test('holds intercalés ~25 % avec from == to (throat ou tip)', () {
+      var holdCount = 0;
+      var totalCount = 0;
+      for (var seed = 0; seed < 5; seed++) {
+        final builder = builderForAxis(ch.axis);
+        builder.start(
+          challenge: ch,
+          profile: null,
+          unlocks: {UnlockKey.throatPulse},
+          rng: Random(seed),
+        );
+        for (var i = 0; i < 20; i++) {
+          final s = builder.next()!;
+          if (s.mode == SessionMode.hold) {
+            holdCount++;
+            expect(s.from, s.to, reason: 'hold : from == to');
+            expect([Position.throat, Position.tip].contains(s.from), isTrue,
+                reason: 'pool noswallow holds = throat ou tip');
+          }
+          totalCount++;
+        }
+      }
+      expect(holdCount, greaterThan(0));
+      // 25% sur 100 tirages cumulés ≈ 25 holds attendus, mais le gate
+      // anti-empilement (pas 2 holds d'affilée) le borne en pratique
+      // sous 50 %. Tolérance large.
+      expect(holdCount, lessThan(totalCount ~/ 2));
+    });
+
+    test('sans throatPulse : holds limités à tip', () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: <UnlockKey>{},
+        rng: Random(0),
+      );
+      for (var i = 0; i < 30; i++) {
+        final s = builder.next()!;
+        if (s.mode == SessionMode.hold) {
+          expect(s.from, Position.tip,
+              reason: 'sans throatPulse, seul tip est dispo');
+        }
+      }
+    });
+
+    test('jamais 2 holds d\'affilée (anti-empilement)', () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: {UnlockKey.throatPulse},
+        rng: Random(3),
+      );
+      SessionStep? prev;
+      for (var i = 0; i < 40; i++) {
+        final s = builder.next()!;
+        if (prev != null && prev.mode == SessionMode.hold) {
+          expect(s.mode, isNot(SessionMode.hold),
+              reason: 'segment $i : 2 holds d\'affilée interdits');
+        }
+        prev = s;
+      }
+    });
+
+    test('aucun texte injecté sur les sous-steps (banner permanent)', () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: {UnlockKey.throatPulse},
+        rng: Random(0),
+      );
+      for (var i = 0; i < 20; i++) {
+        final s = builder.next()!;
+        expect(s.text, isEmpty,
+            reason:
+                'le coach ne doit pas répéter la consigne à chaque sous-step');
+      }
+    });
+
+    test('thresholdReached après cumul ≥ targetThreshold', () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: {UnlockKey.throatPulse},
+        rng: Random(0),
+      );
+      while (!builder.thresholdReached) {
+        builder.next();
+      }
+      expect(builder.elapsedSegmentSeconds, greaterThanOrEqualTo(40));
     });
   });
 
