@@ -711,12 +711,17 @@ class _CareerScreenState extends State<CareerScreen> {
     int currentLevel,
   ) async {
     final t = AppLocalizations.of(context);
-    const begDuration = 12;
-    const levelJump = 2;
+    // Beg insistant allongé (12 → 15s) — la supplique se sent plus longue,
+    // cohérent avec le saut d'intensité de la régen qui suit.
+    const begDuration = 15;
     final remaining = ctrl.session.durationSeconds - ctrl.elapsedSeconds;
     if (remaining < begDuration + 30) return;
 
-    final newLevel = currentLevel + levelJump;
+    // Plus de saut de niveau : la difficulté supplémentaire passe par
+    // `intense: true` (boost comforts + intensityFloor + BPM cap finish +
+    // bump tier des phrases) — cf. `SessionConfig.intense` et
+    // `CapabilityClamps.capabilityCapFor`.
+    final newLevel = currentLevel;
     final activeCoach = _resolveCoach(bundle);
     final coachBank = activeCoach.toPhraseBank(
         fallback: bundle.bank, specialization: bundle.specialization);
@@ -1011,6 +1016,13 @@ class _CareerScreenState extends State<CareerScreen> {
       encoreChainIndex: encoreChainIndex,
       openingPhrase: encoreOpening,
       quickie: quickie,
+      // Le bouton « J'en veux encore » est une escalade explicite : on
+      // bascule la séance suivante en mode `intense` — plancher de
+      // difficulté solide, comforts boostés (cf. `CapabilityClamps`),
+      // first step direct sur `to: full` (borné milestone), BPM cap
+      // finish relevé, tier des phrases bumpé. L'`encoreChainIndex`
+      // continue de scaler en plus (boosts, BPM, durée finale, plancher).
+      intense: true,
       specialization: activeCoach.effectiveAllocation(bundle.specialization),
       humiliationCareer: humiliationCareer,
       humiliationSession: previousSessionHumiliation,

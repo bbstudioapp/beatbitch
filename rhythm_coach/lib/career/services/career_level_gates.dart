@@ -65,13 +65,20 @@ class CareerLevelGates {
       humiliationCareer < 5 && level <= 3 ? 0.70 : 0.25;
 
   /// Bonus de BPM cap appliqué aux boosts finish, scale par niveau +
-  /// chaîne d'encore (capé pour éviter les pics absurdes — le profil de
-  /// capacités borne en pratique via `clampToCapability`).
+  /// chaîne d'encore + escalade explicite (Supplier/Encore). Capé pour
+  /// éviter les pics absurdes — le profil de capacités borne en pratique
+  /// via `clampToCapability`. Le bonus `intense` (+15) traduit le bouton
+  /// d'escalade sur le sprint final : ~équivalent de +3.75 niveaux d'un
+  /// coup quand la joueuse a réclamé plus dur.
   static int finishBpmBoostBpm({
     required int level,
     required int encoreChainIndex,
+    bool intense = false,
   }) =>
-      ((level - 1) * 4 + max(0, encoreChainIndex) * 8).clamp(0, 70);
+      ((level - 1) * 4 +
+              max(0, encoreChainIndex) * 8 +
+              (intense ? 15 : 0))
+          .clamp(0, 70);
 
   /// Plafond de profondeur (index dans `Position.values`) par défaut pour
   /// une `SessionConfig` quand aucun profil de capacités n'est fourni
