@@ -42,11 +42,12 @@ void main() {
     );
     expect(result.challenge, isNull);
     expect(result.session.challenge, isNull);
-    expect(result.session.challengeBreathStartTime, isNull);
-    expect(result.session.challengeStepTime, isNull);
+    expect(result.session.challengeTriggerTime, isNull);
   });
 
-  test('challenge inséré : Session porte les méta + 2 steps consécutifs', () {
+  test(
+      'challenge inséré (Phase B streaming) : Session porte les méta + 1 step '
+      'trigger ; le step défi n\'est plus pré-positionné', () {
     final gen = CareerSessionGenerator(seed: 42);
     final result = gen.generate(
       level: 3,
@@ -56,24 +57,24 @@ void main() {
     );
     expect(result.challenge, _challengeHoldThroat);
     expect(result.session.challenge, _challengeHoldThroat);
-    final breathStart = result.session.challengeBreathStartTime;
-    final stepStart = result.session.challengeStepTime;
-    expect(breathStart, isNotNull);
-    expect(stepStart, isNotNull);
-    // Le step défi commence pile après le breath countdown (13 s).
-    expect(stepStart, breathStart! + kChallengeBreathDurationSeconds);
-    // Les 2 steps existent dans la timeline.
-    final breathStep =
-        result.session.steps.where((s) => s.time == breathStart).toList();
-    final challengeStep =
-        result.session.steps.where((s) => s.time == stepStart).toList();
-    expect(breathStep, hasLength(1));
-    expect(breathStep.first.mode, SessionMode.breath);
-    expect(breathStep.first.duration, kChallengeBreathDurationSeconds);
-    expect(challengeStep, hasLength(1));
-    expect(challengeStep.first.mode, SessionMode.hold);
-    expect(challengeStep.first.from, Position.throat);
-    expect(challengeStep.first.duration, 15);
+    final triggerStart = result.session.challengeTriggerTime;
+    expect(triggerStart, isNotNull);
+    // Le step trigger (breath de countdown) est seul dans la timeline ; le
+    // step défi sera émis en runtime par le ChallengeSegmentBuilder (Phase B).
+    final triggerStep =
+        result.session.steps.where((s) => s.time == triggerStart).toList();
+    expect(triggerStep, hasLength(1));
+    expect(triggerStep.first.mode, SessionMode.breath);
+    expect(triggerStep.first.duration, kChallengeBreathDurationSeconds);
+    // Aucun step matérialisé immédiatement après le trigger dans la fenêtre
+    // réservée au défi (le builder l'émettra à chaud).
+    final afterTrigger = triggerStart! + kChallengeBreathDurationSeconds;
+    final reservedEnd =
+        afterTrigger + _challengeHoldThroat.nominalDurationSeconds;
+    final stepsInWindow = result.session.steps
+        .where((s) => s.time >= afterTrigger && s.time < reservedEnd)
+        .toList();
+    expect(stepsInWindow, isEmpty);
   });
 
   test('insertion vers 60 % du temps planifié (± marge)', () {
@@ -84,7 +85,7 @@ void main() {
       unlockedKeys: UnlockKey.values.toSet(),
       challenge: const ChallengeInputs(challenges: [_challengeHoldThroat]),
     );
-    final breathStart = result.session.challengeBreathStartTime!;
+    final breathStart = result.session.challengeTriggerTime!;
     final total = result.session.durationSeconds;
     final ratio = breathStart / total;
     // Le scheduler insère au premier tick où `ctx.time >= 60% × genUntil`.
