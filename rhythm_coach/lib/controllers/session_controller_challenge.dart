@@ -279,6 +279,14 @@ extension ChallengeOrchestrator on SessionController {
       _challengeSpokenText = null;
       _segmentBuilder = null;
       _currentChallengeSegment = null;
+      // Restaure le mode de déglutition pré-défi si on l'avait forcé à
+      // `forbidden` pour un noswallowStreak. Pas de transition explicite
+      // forbidden → allowed côté SalivaEngine ici (équivalente à un step
+      // qui change le mode sans dire « avale tout »).
+      if (_challengeSavedSwallowMode != null) {
+        _swallowMode = _challengeSavedSwallowMode!;
+        _challengeSavedSwallowMode = null;
+      }
       _challengePhase = ChallengePhase.none;
     }
     final t = elapsedSeconds;
@@ -739,6 +747,11 @@ extension ChallengeOrchestrator on SessionController {
   /// dédié à l'axe via `builderForAxis`, le configure avec le profil de
   /// capacités et les unlocks runtime, puis émet le premier segment via
   /// `_advanceChallengeSegment`.
+  ///
+  /// Cas particulier `noswallowStreak` : on force `_swallowMode = forbidden`
+  /// pendant toute la durée du défi (critère intrinsèque — la salope est
+  /// censée garder la salive en bouche). Le mode pré-défi est sauvegardé
+  /// dans `_challengeSavedSwallowMode` et restauré au reset post-`ended`.
   void _startChallengeStreaming(Challenge challenge) {
     final builder = builderForAxis(challenge.axis)
       ..start(
@@ -749,6 +762,10 @@ extension ChallengeOrchestrator on SessionController {
       );
     _segmentBuilder = builder;
     _currentChallengeSegment = null;
+    if (challenge.axis == CapabilityAxis.noswallowStreak) {
+      _challengeSavedSwallowMode = _swallowMode;
+      _swallowMode = SwallowMode.forbidden;
+    }
     _advanceChallengeSegment(_realSec.toInt());
   }
 
