@@ -27,6 +27,8 @@ import 'builders/biffle_bpm_max_builder.dart';
 import 'builders/biffle_streak_builder.dart';
 import 'builders/effort_no_breath_streak_builder.dart';
 import 'builders/gorge_apnee_streak_builder.dart';
+import 'builders/gorge_crossings_bpm_full_builder.dart';
+import 'builders/gorge_crossings_bpm_throat_builder.dart';
 import 'builders/gorge_engagement_streak_builder.dart';
 import 'builders/hold_full_streak_builder.dart';
 import 'builders/hold_throat_streak_builder.dart';
@@ -74,8 +76,8 @@ abstract class ChallengeSegmentBuilder {
 
 /// Factory : retourne le builder dédié à l'axe du défi.
 ///
-/// Throws `StateError` pour un axe non encore couvert — les PRs suivantes
-/// (B.1.e → B.1.f) compléteront la table.
+/// Throws `StateError` pour un axe non encore couvert — la dernière PR
+/// (B.1.f) ajoutera `noswallowStreak`.
 ChallengeSegmentBuilder builderForAxis(CapabilityAxis axis) {
   switch (axis) {
     case CapabilityAxis.holdThroatStreak:
@@ -102,13 +104,16 @@ ChallengeSegmentBuilder builderForAxis(CapabilityAxis axis) {
       return GorgeApneeStreakBuilder();
     case CapabilityAxis.gorgeEngagementStreak:
       return GorgeEngagementStreakBuilder();
+    case CapabilityAxis.gorgeCrossingsBpmThroat:
+      return GorgeCrossingsBpmThroatBuilder();
+    case CapabilityAxis.gorgeCrossingsBpmFull:
+      return GorgeCrossingsBpmFullBuilder();
     // ignore: no_default_cases
     default:
       throw StateError(
         'ChallengeSegmentBuilder : aucun builder enregistré pour $axis '
-        '(PR-B.1.a-d couvrent monolithiques, rythme BPM, endurance et '
-        'modèle gorge — franchissements + noswallow arriveront dans '
-        'PR-B.1.e à PR-B.1.f).',
+        '(PR-B.1.a-e couvrent monolithiques, rythme BPM, endurance, '
+        'modèle gorge et franchissements — noswallow arrive dans PR-B.1.f).',
       );
   }
 }

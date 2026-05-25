@@ -77,8 +77,16 @@ void main() {
           isA<ChallengeSegmentBuilder>());
     });
 
+    test('retourne le bon type pour les 2 axes franchissements de PR-B.1.e',
+        () {
+      expect(builderForAxis(CapabilityAxis.gorgeCrossingsBpmThroat),
+          isA<ChallengeSegmentBuilder>());
+      expect(builderForAxis(CapabilityAxis.gorgeCrossingsBpmFull),
+          isA<ChallengeSegmentBuilder>());
+    });
+
     test('throw StateError pour un axe non encore couvert', () {
-      expect(() => builderForAxis(CapabilityAxis.gorgeCrossingsBpmThroat),
+      expect(() => builderForAxis(CapabilityAxis.noswallowStreak),
           throwsA(isA<StateError>()));
     });
   });
@@ -753,6 +761,193 @@ void main() {
         builder.next();
       }
       expect(builder.elapsedSegmentSeconds, greaterThanOrEqualTo(30));
+    });
+  });
+
+  group('GorgeCrossingsBpmThroatBuilder', () {
+    const ch = Challenge(
+      axis: CapabilityAxis.gorgeCrossingsBpmThroat,
+      kind: ChallengeAxisKind.bpm,
+      targetThreshold: 130,
+      mode: SessionMode.rhythm,
+      from: Position.head,
+      to: Position.throat,
+      bpm: 100,
+      bpmEnd: 130,
+      targetCrossings: 5,
+    );
+
+    test('BPM constant maximum (= bpmEnd) sur tous les sous-segments', () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: {UnlockKey.throatPulse},
+        rng: Random(0),
+      );
+      for (var i = 0; i < 8; i++) {
+        final s = builder.next()!;
+        expect(s.bpm, 130, reason: 'segment $i : BPM constant au max');
+        expect(s.bpmEnd, isNull, reason: 'pas de rampe');
+      }
+    });
+
+    test('chaque `to` = throat (gorge franchie à chaque sous-segment)', () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: {UnlockKey.throatPulse},
+        rng: Random(1),
+      );
+      for (var i = 0; i < 8; i++) {
+        final s = builder.next()!;
+        expect(s.to, Position.throat);
+      }
+    });
+
+    test('anti-répétition immédiate sur l\'amplitude (3 picks distincts)', () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: {UnlockKey.throatPulse},
+        rng: Random(2),
+      );
+      final amps = <(Position, Position)>[];
+      for (var i = 0; i < 6; i++) {
+        final s = builder.next()!;
+        amps.add((s.from!, s.to!));
+      }
+      for (var i = 1; i < amps.length; i++) {
+        expect(amps[i], isNot(amps[i - 1]),
+            reason: 'segment $i identique au précédent');
+      }
+    });
+
+    test('`thresholdReached` reste false (contrôleur tracke crossings)', () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: {UnlockKey.throatPulse},
+        rng: Random(0),
+      );
+      for (var i = 0; i < 20; i++) {
+        builder.next();
+        expect(builder.thresholdReached, isFalse);
+      }
+    });
+
+    test('sans throatPulse : fallback head→mid (safety net)', () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: <UnlockKey>{},
+        rng: Random(0),
+      );
+      final s = builder.next()!;
+      expect(s.from, Position.head);
+      expect(s.to, Position.mid);
+    });
+
+    test('sous-segments courts (~3 s)', () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: {UnlockKey.throatPulse},
+        rng: Random(0),
+      );
+      for (var i = 0; i < 5; i++) {
+        final s = builder.next()!;
+        expect(s.duration, lessThanOrEqualTo(5),
+            reason: 'sous-segments crossings très courts');
+      }
+    });
+  });
+
+  group('GorgeCrossingsBpmFullBuilder', () {
+    const ch = Challenge(
+      axis: CapabilityAxis.gorgeCrossingsBpmFull,
+      kind: ChallengeAxisKind.bpm,
+      targetThreshold: 120,
+      mode: SessionMode.rhythm,
+      from: Position.mid,
+      to: Position.full,
+      bpm: 92,
+      bpmEnd: 120,
+      targetCrossings: 5,
+    );
+
+    test(
+        'pool complet avec fullPulse + throatPulse : tip/head/mid/throat → full',
+        () {
+      const expected = {
+        (Position.tip, Position.full),
+        (Position.head, Position.full),
+        (Position.mid, Position.full),
+        (Position.throat, Position.full),
+      };
+      final picked = <(Position, Position)>{};
+      for (var seed = 0; seed < 80; seed++) {
+        final builder = builderForAxis(ch.axis);
+        builder.start(
+          challenge: ch,
+          profile: null,
+          unlocks: {UnlockKey.throatPulse, UnlockKey.fullPulse},
+          rng: Random(seed),
+        );
+        final s = builder.next()!;
+        picked.add((s.from!, s.to!));
+      }
+      expect(picked.difference(expected), isEmpty);
+      expect(picked.length, greaterThanOrEqualTo(3));
+    });
+
+    test('avec fullPulse sans throatPulse : exclut throat→full', () {
+      const forbidden = (Position.throat, Position.full);
+      for (var seed = 0; seed < 30; seed++) {
+        final builder = builderForAxis(ch.axis);
+        builder.start(
+          challenge: ch,
+          profile: null,
+          unlocks: {UnlockKey.fullPulse},
+          rng: Random(seed),
+        );
+        final s = builder.next()!;
+        expect((s.from!, s.to!) == forbidden, isFalse);
+      }
+    });
+
+    test('BPM constant maximum sur tous les sous-segments', () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: {UnlockKey.throatPulse, UnlockKey.fullPulse},
+        rng: Random(0),
+      );
+      for (var i = 0; i < 6; i++) {
+        final s = builder.next()!;
+        expect(s.bpm, 120);
+        expect(s.bpmEnd, isNull);
+      }
+    });
+
+    test('`thresholdReached` reste false', () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: {UnlockKey.throatPulse, UnlockKey.fullPulse},
+        rng: Random(0),
+      );
+      for (var i = 0; i < 15; i++) {
+        builder.next();
+        expect(builder.thresholdReached, isFalse);
+      }
     });
   });
 
