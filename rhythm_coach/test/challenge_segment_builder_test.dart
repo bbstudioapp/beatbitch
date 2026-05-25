@@ -60,6 +60,16 @@ void main() {
           isA<ChallengeSegmentBuilder>());
     });
 
+    test('retourne le bon type pour les 3 axes endurance/biffle de PR-B.1.c',
+        () {
+      expect(builderForAxis(CapabilityAxis.biffleStreak),
+          isA<ChallengeSegmentBuilder>());
+      expect(builderForAxis(CapabilityAxis.rhythmMotionStreak),
+          isA<ChallengeSegmentBuilder>());
+      expect(builderForAxis(CapabilityAxis.effortNoBreathStreak),
+          isA<ChallengeSegmentBuilder>());
+    });
+
     test('throw StateError pour un axe non encore couvert', () {
       expect(() => builderForAxis(CapabilityAxis.gorgeApneeStreak),
           throwsA(isA<StateError>()));
@@ -315,6 +325,217 @@ void main() {
       final seg = builder.next()!;
       expect(seg.from, Position.head);
       expect(seg.to, Position.mid);
+    });
+  });
+
+  group('BiffleStreakBuilder', () {
+    const ch = Challenge(
+      axis: CapabilityAxis.biffleStreak,
+      kind: ChallengeAxisKind.duration,
+      targetThreshold: 22,
+      mode: SessionMode.biffle,
+      comfortAtCalibration: 17.0,
+    );
+
+    test('émet 1 segment biffle de durée targetThreshold, BPM constant', () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: <UnlockKey>{},
+        rng: Random(0),
+      );
+      final seg = builder.next()!;
+      expect(seg.mode, SessionMode.biffle);
+      expect(seg.duration, 22);
+      expect(seg.bpm, isNotNull);
+      expect(seg.bpmEnd, isNull, reason: 'pas de rampe, BPM constant');
+      expect(builder.thresholdReached, isTrue);
+      expect(builder.next(), isNull);
+    });
+  });
+
+  group('RhythmMotionStreakBuilder', () {
+    const ch = Challenge(
+      axis: CapabilityAxis.rhythmMotionStreak,
+      kind: ChallengeAxisKind.duration,
+      targetThreshold: 40,
+      mode: SessionMode.rhythm,
+      from: Position.head,
+      to: Position.throat,
+      comfortAtCalibration: 30.0,
+    );
+
+    test('streaming : émet ≥ 3 segments avant `thresholdReached`', () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: {UnlockKey.throatPulse},
+        rng: Random(1),
+      );
+      final segs = <SessionStep>[];
+      while (!builder.thresholdReached && segs.length < 20) {
+        final s = builder.next();
+        if (s == null) break;
+        segs.add(s);
+      }
+      expect(segs.length, greaterThanOrEqualTo(3),
+          reason:
+              'targetThreshold 40s ÷ ~10-15s par segment ≥ 3 sous-segments');
+      expect(builder.elapsedSegmentSeconds, greaterThanOrEqualTo(40));
+    });
+
+    test(
+        'anti-répétition immédiate : segment N != segment N-1 en (mode/from/to)',
+        () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: {UnlockKey.fullPulse, UnlockKey.throatPulse},
+        rng: Random(7),
+      );
+      SessionStep? previous;
+      for (var i = 0; i < 12; i++) {
+        final s = builder.next()!;
+        if (previous != null) {
+          final samePosition = s.mode == previous.mode &&
+              s.from == previous.from &&
+              s.to == previous.to;
+          expect(samePosition, isFalse,
+              reason: 'segment $i identique au précédent (mode/from/to)');
+        }
+        previous = s;
+      }
+    });
+
+    test('continue à émettre après thresholdReached (extensions streaming)',
+        () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: {UnlockKey.throatPulse},
+        rng: Random(2),
+      );
+      // Drain jusqu'à seuil.
+      while (!builder.thresholdReached) {
+        builder.next();
+      }
+      // Extensions : doivent continuer à fournir des segments.
+      expect(builder.next(), isNotNull);
+      expect(builder.next(), isNotNull);
+    });
+
+    test('amplitude bornée par unlocks (sans throatPulse → reste shallow)', () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: <UnlockKey>{},
+        rng: Random(3),
+      );
+      for (var i = 0; i < 10; i++) {
+        final s = builder.next()!;
+        expect(s.to!.index, lessThanOrEqualTo(Position.mid.index),
+            reason: 'sans throatPulse, `to` ne peut pas dépasser mid');
+      }
+    });
+
+    test('aucun step `breath` dans la séquence', () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: {UnlockKey.fullPulse, UnlockKey.throatPulse},
+        rng: Random(4),
+      );
+      for (var i = 0; i < 15; i++) {
+        final s = builder.next()!;
+        expect(s.mode, isNot(SessionMode.breath),
+            reason: 'défi non-stop : aucun breath autorisé');
+      }
+    });
+  });
+
+  group('EffortNoBreathStreakBuilder', () {
+    const ch = Challenge(
+      axis: CapabilityAxis.effortNoBreathStreak,
+      kind: ChallengeAxisKind.duration,
+      targetThreshold: 35,
+      mode: SessionMode.rhythm,
+      from: Position.head,
+      to: Position.throat,
+      comfortAtCalibration: 25.0,
+    );
+
+    test('streaming + holds intercalés sur 100 tirages', () {
+      // Multiple seeds : 30 % de chance → au moins quelques holds devraient
+      // sortir sur 100 tirages cumulés (~30 attendus).
+      var holdCount = 0;
+      var totalCount = 0;
+      for (var seed = 0; seed < 5; seed++) {
+        final builder = builderForAxis(ch.axis);
+        builder.start(
+          challenge: ch,
+          profile: null,
+          unlocks: {UnlockKey.fullPulse, UnlockKey.throatPulse},
+          rng: Random(seed),
+        );
+        for (var i = 0; i < 20; i++) {
+          final s = builder.next()!;
+          if (s.mode == SessionMode.hold) holdCount++;
+          totalCount++;
+        }
+      }
+      expect(holdCount, greaterThan(0),
+          reason: 'avec 30 % proba et 100 tirages, au moins 1 hold attendu');
+      expect(holdCount, lessThan(totalCount ~/ 2),
+          reason: 'mais pas la moitié — c\'est un défi rythme, pas hold');
+    });
+
+    test('aucun hold si aucun unlock hold disponible', () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: <UnlockKey>{},
+        rng: Random(0),
+      );
+      for (var i = 0; i < 20; i++) {
+        final s = builder.next()!;
+        expect(s.mode, isNot(SessionMode.hold),
+            reason: 'sans throatPulse/fullPulse, pool de holds vide');
+      }
+    });
+
+    test('aucun step `breath` (no-breath par contrat)', () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: {UnlockKey.fullPulse, UnlockKey.throatPulse},
+        rng: Random(0),
+      );
+      for (var i = 0; i < 20; i++) {
+        final s = builder.next()!;
+        expect(s.mode, isNot(SessionMode.breath));
+      }
+    });
+
+    test('thresholdReached après cumul ≥ targetThreshold', () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: {UnlockKey.throatPulse},
+        rng: Random(0),
+      );
+      while (!builder.thresholdReached) {
+        builder.next();
+      }
+      expect(builder.elapsedSegmentSeconds, greaterThanOrEqualTo(35));
     });
   });
 
