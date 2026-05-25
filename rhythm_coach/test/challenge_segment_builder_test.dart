@@ -70,8 +70,15 @@ void main() {
           isA<ChallengeSegmentBuilder>());
     });
 
+    test('retourne le bon type pour les 2 axes modèle gorge de PR-B.1.d', () {
+      expect(builderForAxis(CapabilityAxis.gorgeApneeStreak),
+          isA<ChallengeSegmentBuilder>());
+      expect(builderForAxis(CapabilityAxis.gorgeEngagementStreak),
+          isA<ChallengeSegmentBuilder>());
+    });
+
     test('throw StateError pour un axe non encore couvert', () {
-      expect(() => builderForAxis(CapabilityAxis.gorgeApneeStreak),
+      expect(() => builderForAxis(CapabilityAxis.gorgeCrossingsBpmThroat),
           throwsA(isA<StateError>()));
     });
   });
@@ -536,6 +543,216 @@ void main() {
         builder.next();
       }
       expect(builder.elapsedSegmentSeconds, greaterThanOrEqualTo(35));
+    });
+  });
+
+  group('GorgeApneeStreakBuilder', () {
+    const ch = Challenge(
+      axis: CapabilityAxis.gorgeApneeStreak,
+      kind: ChallengeAxisKind.duration,
+      targetThreshold: 25,
+      mode: SessionMode.hold,
+      from: Position.throat,
+      to: Position.throat,
+      comfortAtCalibration: 18.0,
+    );
+
+    test('aucun step `breath` jamais émis (apnée pure)', () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: {UnlockKey.fullPulse, UnlockKey.fullHold},
+        rng: Random(0),
+      );
+      for (var i = 0; i < 20; i++) {
+        final s = builder.next()!;
+        expect(s.mode, isNot(SessionMode.breath));
+      }
+    });
+
+    test('chaque segment a `to` ≥ throat (= gorge en jeu)', () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: {UnlockKey.fullPulse, UnlockKey.fullHold},
+        rng: Random(1),
+      );
+      for (var i = 0; i < 20; i++) {
+        final s = builder.next()!;
+        expect(s.to!.index, greaterThanOrEqualTo(Position.throat.index),
+            reason: 'apnée gorge : chaque sous-step plonge à throat ou full');
+      }
+    });
+
+    test('streaming : ≥ 3 segments avant seuil + extensions continuent', () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: {UnlockKey.fullPulse, UnlockKey.fullHold},
+        rng: Random(2),
+      );
+      final segs = <SessionStep>[];
+      while (!builder.thresholdReached && segs.length < 30) {
+        final s = builder.next();
+        if (s == null) break;
+        segs.add(s);
+      }
+      expect(segs.length, greaterThanOrEqualTo(3));
+      expect(builder.elapsedSegmentSeconds, greaterThanOrEqualTo(25));
+      // Extensions : keep emitting.
+      expect(builder.next(), isNotNull);
+    });
+
+    test('anti-répétition immédiate sur le descriptor', () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: {UnlockKey.fullPulse, UnlockKey.fullHold},
+        rng: Random(5),
+      );
+      SessionStep? prev;
+      for (var i = 0; i < 15; i++) {
+        final s = builder.next()!;
+        if (prev != null) {
+          final identical = s.mode == prev.mode &&
+              s.from == prev.from &&
+              s.to == prev.to &&
+              s.bpm == prev.bpm;
+          // Note : `bpm` est tiré dans une plage, donc 2 picks d'un même
+          // descriptor pourraient théoriquement avoir le même BPM (rare).
+          // L'invariant fort est sur le descriptor (mode/from/to), pas le BPM.
+          final sameDescriptor =
+              s.mode == prev.mode && s.from == prev.from && s.to == prev.to;
+          if (sameDescriptor) {
+            // Le bpm doit alors différer pour qu'on tolère (cas dégénéré
+            // où 2 descriptors partagent mode/from/to — voir pool : head→throat
+            // et mid→full ont chacun 2 variantes BPM, donc même mode/from/to
+            // mais plage BPM distincte).
+            expect(identical, isFalse,
+                reason: 'segment $i exactement identique au précédent');
+          }
+        }
+        prev = s;
+      }
+    });
+  });
+
+  group('GorgeEngagementStreakBuilder', () {
+    const ch = Challenge(
+      axis: CapabilityAxis.gorgeEngagementStreak,
+      kind: ChallengeAxisKind.duration,
+      targetThreshold: 30,
+      mode: SessionMode.rhythm,
+      from: Position.head,
+      to: Position.throat,
+      comfortAtCalibration: 22.0,
+    );
+
+    test('pool filtré dynamiquement par unlocks (throatPulse seul → 1 entrée)',
+        () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: {UnlockKey.throatPulse},
+        rng: Random(0),
+      );
+      // Pool : seulement `rhythm head→throat` (pas throatHold/fullHold/fullPulse)
+      // → tous les engagement segments doivent être identiques en mode/from/to.
+      // Les seules variations viennent du BPM et de la durée.
+      final descriptors = <String>{};
+      for (var i = 0; i < 10; i++) {
+        final s = builder.next()!;
+        if (s.mode == SessionMode.breath) continue;
+        descriptors.add('${s.mode?.name}|${s.from?.name}|${s.to?.name}');
+      }
+      expect(descriptors.length, 1,
+          reason: 'pool restreint à rhythm head→throat sans autres unlocks');
+    });
+
+    test('pool plein avec tous les unlocks gorge', () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: {
+          UnlockKey.throatPulse,
+          UnlockKey.fullPulse,
+          UnlockKey.throatHold,
+          UnlockKey.fullHold,
+        },
+        rng: Random(3),
+      );
+      final descriptors = <String>{};
+      for (var i = 0; i < 50; i++) {
+        final s = builder.next()!;
+        if (s.mode == SessionMode.breath) continue;
+        descriptors.add('${s.mode?.name}|${s.from?.name}|${s.to?.name}');
+      }
+      expect(descriptors.length, greaterThanOrEqualTo(3),
+          reason:
+              'pool complet = 4 entrées, au moins 3 distinctes en 50 picks');
+    });
+
+    test('breath autorisé entre 2 segments mais ne compte pas dans le seuil',
+        () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: {UnlockKey.throatPulse, UnlockKey.fullPulse},
+        rng: Random(0),
+      );
+      var breathCount = 0;
+      var engageDurationCumulative = 0;
+      for (var i = 0; i < 30; i++) {
+        final s = builder.next()!;
+        if (s.mode == SessionMode.breath) {
+          breathCount++;
+        } else {
+          engageDurationCumulative += s.duration ?? 0;
+        }
+      }
+      // Sur 30 tirages avec proba 20 % → ~6 breaths attendus, tolérance large.
+      expect(breathCount, greaterThan(0),
+          reason: 'au moins un breath en 30 tirages');
+      // `elapsedSegmentSeconds` doit refléter le cumul des engagements, pas
+      // les breaths.
+      expect(builder.elapsedSegmentSeconds, engageDurationCumulative);
+    });
+
+    test('aucun breath en premier (besoin d\'un engagement avant)', () {
+      // Plusieurs seeds pour confirmer.
+      for (var seed = 0; seed < 10; seed++) {
+        final builder = builderForAxis(ch.axis);
+        builder.start(
+          challenge: ch,
+          profile: null,
+          unlocks: {UnlockKey.throatPulse, UnlockKey.fullPulse},
+          rng: Random(seed),
+        );
+        final first = builder.next()!;
+        expect(first.mode, isNot(SessionMode.breath),
+            reason: 'seed $seed : 1er segment ne doit pas être un breath');
+      }
+    });
+
+    test('thresholdReached après cumul ≥ targetThreshold (hors breaths)', () {
+      final builder = builderForAxis(ch.axis);
+      builder.start(
+        challenge: ch,
+        profile: null,
+        unlocks: {UnlockKey.throatPulse, UnlockKey.fullPulse},
+        rng: Random(0),
+      );
+      while (!builder.thresholdReached) {
+        builder.next();
+      }
+      expect(builder.elapsedSegmentSeconds, greaterThanOrEqualTo(30));
     });
   });
 
