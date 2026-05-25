@@ -349,7 +349,21 @@ extension ChallengeOrchestrator on SessionController {
     // émet un haptic léger (matérialise la prolongation) et on met à
     // jour le compteur live — `_completeChallenge` lira la dernière
     // valeur connue au release.
+    //
+    // Phase B (streaming) : pour les builders qui continuent d'émettre
+    // des segments pendant les extensions (endurance, modèle gorge), on
+    // avance aussi le segment courant ici quand sa durée est consommée.
+    // Les builders monolithiques retournent null à `next()` une fois
+    // leur unique segment émis → no-op (`_advanceChallengeSegment` clear
+    // `_currentChallengeSegment`, plus rien à advance).
     if (phase == ChallengePhase.atSeuil) {
+      final currentSegment = _currentChallengeSegment;
+      if (currentSegment != null) {
+        final segDur = currentSegment.duration ?? 0;
+        if (segDur > 0 && elapsedInStep >= segDur) {
+          _advanceChallengeSegment(r);
+        }
+      }
       final newExt = _deriveChallengeExtensionsCount();
       if (newExt > _challengeExtensionsCount) {
         _challengeExtensionsCount = newExt;
@@ -372,6 +386,15 @@ extension ChallengeOrchestrator on SessionController {
     final crossingsReached =
         crossingsTarget != null && _challengeCrossingsCount >= crossingsTarget;
     if (crossingsReached) {
+      _enterChallengeAtSeuil(ch, r);
+      return;
+    }
+    // Builders streaming : `thresholdReached` peut basculer entre 2
+    // transitions de segment (= la durée cumulée a atteint la cible
+    // pendant un sous-segment). On vérifie à chaque tick, pas seulement
+    // à segment-end, sinon l'entrée en atSeuil serait différée jusqu'à
+    // la prochaine transition.
+    if (_segmentBuilder?.thresholdReached ?? false) {
       _enterChallengeAtSeuil(ch, r);
       return;
     }
@@ -740,6 +763,10 @@ extension ChallengeOrchestrator on SessionController {
     if (builder == null) return;
     final next = builder.next();
     if (next == null) {
+      // Builder épuisé : on clear le segment courant pour que la boucle
+      // tick ne retente pas un advance à chaque tour (sinon, monolithique
+      // post-atSeuil = appels à next() perdus dans le vide à chaque tick).
+      _currentChallengeSegment = null;
       if (builder.thresholdReached) {
         final ch = _activeChallenge;
         if (ch != null) _enterChallengeAtSeuil(ch, nowRealSec);
@@ -767,9 +794,14 @@ extension ChallengeOrchestrator on SessionController {
   }
 
   /// Bascule en phase `atSeuil` + annonce coach. Extrait pour mutualiser
-  /// entre la voie « builder épuisé + thresholdReached » et la voie
-  /// « crossings atteints » (axes franchissement).
+  /// entre la voie « builder épuisé + thresholdReached », la voie
+  /// « crossings atteints » (axes franchissement) et la voie « streaming
+  /// `thresholdReached` flip en plein segment » (endurance).
+  ///
+  /// Idempotent : re-appeler en `atSeuil` est un no-op (évite de rejouer
+  /// l'annonce TTS et le haptic).
   void _enterChallengeAtSeuil(Challenge ch, int nowRealSec) {
+    if (_challengePhase == ChallengePhase.atSeuil) return;
     _challengePhase = ChallengePhase.atSeuil;
     _challengeAtSeuilStartedAtSec = nowRealSec;
     if (!ch.isExploratory) {
