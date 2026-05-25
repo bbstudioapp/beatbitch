@@ -75,9 +75,7 @@ class CareerLevelGates {
     required int encoreChainIndex,
     bool intense = false,
   }) =>
-      ((level - 1) * 4 +
-              max(0, encoreChainIndex) * 8 +
-              (intense ? 15 : 0))
+      ((level - 1) * 4 + max(0, encoreChainIndex) * 8 + (intense ? 15 : 0))
           .clamp(0, 70);
 
   /// Plafond de profondeur (index dans `Position.values`) par défaut pour
