@@ -99,9 +99,6 @@
       "displayLabel": "Fais du bruit, sois sale",
       "unlocks": ["sloppy_loud_suck"],
       "requires": ["basics"],
-      "requiresCapability": [
-        {"axis": "rhythm.depth_max", "min": 2}
-      ],
       "branches": ["sloppy"],
       "sequence": [
         {"time": 0,  "text": "Aujourd'hui je veux t'entendre. Sois bruyante, sois sale, ne te retiens pas. Plus c'est mouillé, plus j'aime.", "mode": "rhythm", "from": "tip", "to": "head", "bpm": 75, "duration": 12},
@@ -179,7 +176,10 @@
       "unlocks": ["throat_hold"],
       "requires": ["basics"],
       "requiresCapability": [
-        {"axis": "hold.throat.streak", "min": 3}
+        {"axis": "rhythm.depth_max", "min": 2}
+      ],
+      "acquittableByCapability": [
+        {"axis": "hold.throat.streak", "min": 5}
       ],
       "branches": ["endurance", "profondeur"],
       "sequence": [
@@ -196,9 +196,9 @@
       "id": "intro_sloppy_biffle_slow",
       "displayLabel": "Coups lents, bouche grande ouverte",
       "unlocks": ["sloppy_biffle_slow"],
-      "requires": ["basics"],
-      "requiresCapability": [
-        {"axis": "biffle.streak", "min": 8}
+      "requires": ["basics", "biffle_basic"],
+      "acquittableByCapability": [
+        {"axis": "biffle.streak", "min": 5}
       ],
       "branches": ["sloppy", "rythmeBiffle"],
       "requiresHands": true,
@@ -215,9 +215,6 @@
       "requires": [
         "basics"
       ],
-      "requiresCapability": [
-        {"axis": "rhythm.motion_streak", "min": 30}
-      ],
       "sequence": [
         {"time": 0,  "text": "Là tu fais ce que tu veux. Trente secondes pour me montrer.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 100, "duration": 8},
         {"time": 8,  "text": "Vas-y. Surprends-moi.", "mode": "freestyle", "duration": 30},
@@ -230,7 +227,10 @@
       "unlocks": ["throat_pulse"],
       "requires": ["basics"],
       "requiresCapability": [
-        {"axis": "hold.throat.streak", "min": 3}
+        {"axis": "hold.throat.streak", "min": 4}
+      ],
+      "acquittableByCapability": [
+        {"axis": "rhythm.bpm_ceil.throat", "min": 60}
       ],
       "branches": ["profondeur", "rythmeBiffle"],
       "sequence": [
@@ -250,7 +250,10 @@
       "unlocks": ["full_hold"],
       "requires": ["basics"],
       "requiresCapability": [
-        {"axis": "hold.throat.streak", "min": 3}
+        {"axis": "rhythm.depth_max", "min": 3}
+      ],
+      "acquittableByCapability": [
+        {"axis": "hold.full.streak", "min": 5}
       ],
       "branches": ["endurance", "profondeur"],
       "sequence": [
@@ -269,8 +272,10 @@
       "unlocks": ["full_pulse"],
       "requires": ["basics"],
       "requiresCapability": [
-        {"axis": "hold.full.streak", "min": 2},
-        {"axis": "rhythm.depth_max", "min": 3}
+        {"axis": "hold.full.streak", "min": 4}
+      ],
+      "acquittableByCapability": [
+        {"axis": "rhythm.bpm_ceil.full", "min": 60}
       ],
       "branches": ["profondeur", "rythmeBiffle"],
       "sequence": [
@@ -415,6 +420,9 @@
       "requiresCapability": [
         {"axis": "rhythm.depth_max", "min": 2}
       ],
+      "acquittableByCapability": [
+        {"axis": "hold.throat.streak", "min": 8}
+      ],
       "branches": ["profondeur", "obeissance"],
       "sequence": [
         {"time": 0,  "text": "Descends. Va jusqu'au milieu. Reste-là.", "mode": "hold", "to": "mid", "duration": 7},
@@ -477,9 +485,6 @@
       "displayLabel": "Une seconde, c'est tout",
       "unlocks": ["fake_breath"],
       "requires": ["basics"],
-      "requiresCapability": [
-        {"axis": "rhythm.depth_max", "min": 4}
-      ],
       "branches": ["obeissance", "endurance"],
       "sequence": [
         {"time": 0,  "text": "Vas-y. Plus profond. Suis-moi.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 100, "duration": 12},
@@ -525,9 +530,6 @@
       "displayLabel": "Crache pour moi",
       "unlocks": ["sloppy_spit"],
       "requires": ["basics"],
-      "requiresCapability": [
-        {"axis": "noswallow.streak", "min": 10}
-      ],
       "branches": ["sloppy"],
       "sequence": [
         {"time": 0,  "text": "Aujourd'hui tu apprends à cracher. C'est sale, c'est sonore, c'est ce que je veux. Échauffe.", "mode": "lick", "from": "tip", "to": "head", "bpm": 75, "duration": 12},

@@ -56,16 +56,39 @@ class LevelMilestone {
   /// pour que cette milestone soit candidate.
   final List<UnlockKey> requires;
 
-  /// Seuils de télémétrie à franchir pour que la milestone soit candidate
-  /// (gating capacité, 2ᵉ couche orthogonale à `humilRequired` et
-  /// `minLevel`). Chaque entrée exige `best ≥ min` (ou `best ≤ min` pour
-  /// les axes `minimize`) sur l'axe nommé. Liste vide = pas de gating
-  /// télémétrie (mode hérité — seuls humil/level pilotent).
+  /// Seuils de télémétrie à franchir pour que la milestone soit **candidate**
+  /// (gate d'apparition dans la file pending). 2ᵉ couche orthogonale à
+  /// `humilRequired` et `minLevel`. Chaque entrée exige `best ≥ min` (ou
+  /// `best ≤ min` pour les axes `minimize`) sur l'axe nommé. Liste vide =
+  /// pas de gating télémétrie (mode hérité — seuls humil/level pilotent).
+  ///
+  /// **Ne déclenche jamais d'acquittement silencieux** : ce champ filtre
+  /// uniquement la candidature. Pour qu'une milestone soit acquittée sans
+  /// avoir été jouée, utiliser [acquittableByCapability].
   ///
   /// Cf. doc local `~/beatbitch_career_unlocks_handoff.md` (passe 2).
   /// Quand `requiresCapability` est non vide, le `minLevel` devient un
   /// plancher mou de secours — la capacité prouvée pilote l'apparition.
   final List<CapabilityRequirement> requiresCapability;
+
+  /// Seuils de télémétrie qui acquittent la milestone **silencieusement**
+  /// (sans avoir joué sa séquence pédagogique). Distinct de
+  /// [requiresCapability] (gate de candidature) : ici on dit « si le
+  /// profil prouve cette capacité, on saute la pédagogie ».
+  ///
+  /// Cas d'usage :
+  /// - Paliers d'apothéose (`intro_final_*`) : le palier est consolidé,
+  ///   on n'a pas de séquence à rejouer.
+  /// - Milestone dont le défi tuto prouve déjà la capacité (ex.
+  ///   `intro_hold_throat` skippée si la joueuse a tenu throat 5 s).
+  ///
+  /// Liste vide = la milestone ne peut être acquittée qu'en étant
+  /// effectivement jouée (cas par défaut pour la pédagogie pure).
+  /// Sémantique des entrées identique à [requiresCapability] (`best ≥ min`
+  /// pour maximize, `best ≤ min` pour minimize). Consommée par
+  /// [MilestoneService.milestonesAcquittableByChallenge] et
+  /// [MilestoneService.reconcileFromCapability].
+  final List<CapabilityRequirement> acquittableByCapability;
 
   /// Plancher d'insertion : la milestone ne peut être insérée avant cette
   /// borne (en secondes depuis le début de la session). `null` → default 60.
@@ -114,6 +137,7 @@ class LevelMilestone {
     this.minLevel = 1,
     this.requires = const [],
     this.requiresCapability = const [],
+    this.acquittableByCapability = const [],
     this.insertAtMinSeconds,
     this.insertAtMaxSeconds,
     this.maxRetry = 1,
