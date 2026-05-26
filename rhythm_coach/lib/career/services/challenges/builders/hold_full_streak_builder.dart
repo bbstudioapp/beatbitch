@@ -11,10 +11,13 @@ import '../challenge_segment_builder.dart';
 /// Identique à [HoldThroatStreakBuilder] dans la mécanique — émet un unique
 /// segment `hold full` de durée `challenge.targetThreshold`. Le `from`/`to`
 /// du segment reprend exactement les positions calibrées sur le `Challenge`
-/// (en pratique `full/full`).
+/// (en pratique `full/full`). `thresholdReached` ne devient `true` qu'au 2ᵉ
+/// appel à `next()` (= segment précédent consommé) pour éviter une bascule
+/// instantanée en `atSeuil`.
 class HoldFullStreakBuilder implements ChallengeSegmentBuilder {
   Challenge? _challenge;
   bool _emitted = false;
+  bool _segmentConsumed = false;
 
   @override
   void start({
@@ -25,12 +28,17 @@ class HoldFullStreakBuilder implements ChallengeSegmentBuilder {
   }) {
     _challenge = challenge;
     _emitted = false;
+    _segmentConsumed = false;
   }
 
   @override
   SessionStep? next() {
     final ch = _challenge;
-    if (ch == null || _emitted) return null;
+    if (ch == null) return null;
+    if (_emitted) {
+      _segmentConsumed = true;
+      return null;
+    }
     _emitted = true;
     return SessionStep(
       time: 0,
@@ -42,7 +50,7 @@ class HoldFullStreakBuilder implements ChallengeSegmentBuilder {
   }
 
   @override
-  bool get thresholdReached => _emitted;
+  bool get thresholdReached => _segmentConsumed;
 
   @override
   int get elapsedSegmentSeconds =>

@@ -25,6 +25,7 @@ class RhythmBpmCeilShallowBuilder implements ChallengeSegmentBuilder {
   Position? _from;
   Position? _to;
   bool _emitted = false;
+  bool _segmentConsumed = false;
 
   @override
   void start({
@@ -39,12 +40,17 @@ class RhythmBpmCeilShallowBuilder implements ChallengeSegmentBuilder {
     _from = pick.$1;
     _to = pick.$2;
     _emitted = false;
+    _segmentConsumed = false;
   }
 
   @override
   SessionStep? next() {
     final ch = _challenge;
-    if (ch == null || _emitted) return null;
+    if (ch == null) return null;
+    if (_emitted) {
+      _segmentConsumed = true;
+      return null;
+    }
     _emitted = true;
     return SessionStep(
       time: 0,
@@ -58,7 +64,7 @@ class RhythmBpmCeilShallowBuilder implements ChallengeSegmentBuilder {
   }
 
   @override
-  bool get thresholdReached => _emitted;
+  bool get thresholdReached => _segmentConsumed;
 
   @override
   int get elapsedSegmentSeconds => _emitted ? _duration : 0;
