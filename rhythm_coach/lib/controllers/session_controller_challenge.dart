@@ -1004,11 +1004,17 @@ extension ChallengeOrchestrator on SessionController {
         reached = ch.targetThreshold.toDouble();
         break;
     }
+    // Combine les unlocks lifetime ET les unlocks provisoires de la séance
+    // courante (milestones insérées mais pas encore `markCompleted`). Sans
+    // cette union, un défi tuto qui tombe au milieu de la 1ère séance ne
+    // peut pas acquitter `intro_hold_throat`/`intro_hold_mid` (qui ont
+    // `requires: [basics]`) parce que `intro_basics` est en cours mais pas
+    // encore consolidée — la cascade post-défi ne décolle jamais.
     final acquittable = milestoneService.milestonesAcquittableByChallenge(
       axis: ch.axis,
       reached: reached,
       profile: profile,
-      acquiredUnlocks: _unlockedKeys,
+      acquiredUnlocks: milestoneService.effectiveUnlockKeysForChallenge(),
       playerLevel: _careerLevel,
     );
     for (final m in acquittable) {

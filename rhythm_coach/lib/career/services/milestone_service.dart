@@ -604,6 +604,17 @@ class MilestoneService extends ChangeNotifier {
     return out;
   }
 
+  /// `acquiredUnlockKeys` ∪ `_sessionUnlocks`. À utiliser pour évaluer les
+  /// prérequis (`requires`) d'une milestone candidate à l'acquittement par
+  /// défi en cours de séance : une milestone insérée mais pas encore
+  /// `markCompleted` (= `intro_basics` lors de la 1ère séance, le défi
+  /// tuto tombant au milieu) ne doit pas bloquer la cascade. Le générateur,
+  /// lui, continue d'utiliser [acquiredUnlockKeys] (qui exclut les
+  /// provisoires) pour rester aligné avec ce qui est consolidé lifetime.
+  Set<UnlockKey> effectiveUnlockKeysForChallenge() {
+    return acquiredUnlockKeys()..addAll(_sessionUnlocks);
+  }
+
   /// Phrase d'unlock à jouer en TTS après le finale_chime, si la milestone
   /// vient d'être acquittée. Priorité : override texte de la milestone, puis
   /// annonce par défaut basée sur le 1er unlock (cf. [defaultAnnouncementFor])
