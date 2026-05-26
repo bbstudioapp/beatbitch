@@ -1,0 +1,264 @@
+{
+  "lang": "es",
+  "id": "coach_03_jade",
+  "title": "Entrenadora pícara",
+  "publicBio": "Juguetona, irónica, le encanta poner a prueba. Especialista en vergazos y sloppy. Manos obligatorias.",
+  "phrases": {
+    "rhythm": {
+      "soft": [
+        "Empieza despacito {name}, calentamos.",
+        "Bonitas embestidas suaves {name}, hazme feliz.",
+        "Venga, enséñame cómo chupas cuando nadie te ve.",
+        "Qué mona, lanzándote tú sola {name}.",
+        "Ya empieza a gustarte, admítelo {name}.",
+        "Tranquila putita — todavía tienes tiempo de sobra para sufrir."
+      ],
+      "medium": [
+        {"text": "Un poco más profundo {name}. Sé que puedes mejor.", "min_depth": "mid"},
+        "Más rápido {name}, me gusta cuando aprieta un poco.",
+        {"text": "Abajo, abajo {name}… eso, como una chica grande.", "min_depth": "mid"},
+        "¿Ya sudas? Encantador. Sigue {name}.",
+        "Mantén ese ritmo {name}, casi resultas creíble."
+      ],
+      "hard": [
+        {"text": "Hasta el fondo {name}, y deja de hacerte la fina.", "min_depth": "throat"},
+        {"text": "Más profundo, más rápido — hazte daño, me divierte.", "min_depth": "mid"},
+        "Mantén ese ritmo {name}, si no voy a pensar que eres inútil.",
+        {"text": "Trágatelo {name}. Querías jugar con los mayores.", "min_depth": "throat"}
+      ]
+    },
+    "lick": {
+      "soft": [
+        "Lámelo entero, perrita mía.",
+        "Con la punta de la lengua {name}, juguetea como sabes hacerlo.",
+        "Da vueltas al glande, cariño, tómate tu tiempo.",
+        "Bésalo como si lo amaras — las dos sabemos que lo amas {name}."
+      ],
+      "medium": [
+        "Lámelo como una perra en celo {name}.",
+        "Toda la longitud, bien mojadito {name} — babea un poco para mí.",
+        "Lame más fuerte {name}, quiero oírlo.",
+        "Así {name}, bien guarra, justo como toca."
+      ],
+      "hard": [
+        "Lame eso como toca, puta.",
+        "Con toda la lengua {name}, enséñame lo enganchada que estás.",
+        "Con más entrega, perrita guarra — lo quiero por todas partes."
+      ]
+    },
+    "biffle": {
+      "soft": [
+        "Empieza a golpearte suavemente en la cara {name}.",
+        "Ay, ¿te lo metes en la boca?",
+        "Déjalo rebotar en tus mejillas, cariño.",
+        "Bonitos golpecitos suaves {name}, calentamos la cara."
+      ],
+      "medium": [
+        "Más fuerte {name}, que mi polla suene en tu lengua.",
+        "Mírate, ya babeas como una perra.",
+        "Que te chasquee en la lengua {name}, me encanta el sonido.",
+        "Date vergazos con eso {name}, sin quejarte."
+      ],
+      "hard": [
+        "Arruina tu cara {name}.",
+        "Babea por todas partes, putita.",
+        "¡Más fuerte! Quiero que suene de verdad.",
+        "Esparce tu saliva {name}, ya no tienes nada que proteger."
+      ]
+    },
+    "hold": {
+      "soft": [
+        {"text": "Mantenlo en la boca {name} y pórtate bien.", "max_depth": "mid"},
+        "No te muevas, cariño. Disfruta del momento {name}.",
+        {"text": "Solo el glande {name}, mantenlo ahí — de momento.", "max_depth": "head"}
+      ],
+      "medium": [
+        {"text": "Más profundo, y mantienes {name}. Ni un movimiento.", "min_depth": "mid"},
+        {"text": "Quédate profunda {name}, respira por la nariz como una chica grande.", "min_depth": "mid", "max_depth": "throat"},
+        {"text": "Mantén {name}… espero a ver cuánto tardas en ceder.", "min_depth": "mid"}
+      ],
+      "hard": [
+        {"text": "Profunda, y no subes {name}. Lo he dicho.", "min_depth": "throat"},
+        {"text": "¿Incómodo? Bien. Mantén {name}.", "min_depth": "throat"}
+      ],
+      "finale": [
+        {"text": "Terminamos hasta el fondo {name}, hasta la última gota.", "min_depth": "throat"},
+        "Quédate así hasta la señal, cariño {name}.",
+        "Último esfuerzo {name} — déjame creer que te ha gustado."
+      ]
+    },
+    "breath": {
+      "soft": [
+        "Respira, putita, lo vas a necesitar.",
+        "Coge aire {name}, todavía no hemos terminado de jugar.",
+        "Relaja la mandíbula {name}, disfrútalo, no dura mucho.",
+        "Respira una vez, cariño. Y prepárate."
+      ]
+    },
+    "beg": {
+      "soft": [
+        "Dilo bonito: «quiero más {coach}».",
+        "Suplícame dulcemente {name}, haz tu papel de monina.",
+        "Pídeme que siga — con la voz adecuada {name}.",
+        "Dime en voz alta que te encanta, perrita mía."
+      ],
+      "medium": [
+        "Repite conmigo: «necesito tu polla {coach}».",
+        "Pide «más profundo {coach}», y hazlo como toca.",
+        "Suplica bien, putita — me encanta cuando te rebajas.",
+        "Di mi nombre mientras suplicas, {coach}."
+      ]
+    },
+    "freestyle": {
+      "soft": [
+        "Haz un momento lo que quieras {name}. Te miro.",
+        "Enséñame tu verdadera naturaleza {name}, aquí nadie te juzga."
+      ]
+    },
+    "hand": {
+      "soft": [
+        "Pajéamela con la mano {name}, sube y baja muy suavecito.",
+        "Cierra tus dedos alrededor, cariño {name}.",
+        "Despacito arriba y abajo {name}, deja que mi placer dure."
+      ],
+      "medium": [
+        "Más ágil con la mano {name}, me gusta cuando te aplicas.",
+        "Mantén el ritmo con la mano {name}, sé útil."
+      ]
+    }
+  },
+  "randomComments": [
+    "Qué mona cuando sudas {name}.",
+    "Admite que te encanta, perrita.",
+    "Sigue {name}, casi resultas creíble.",
+    "Babea un poquito para mí {name}.",
+    "Encantador, de verdad.",
+    "Lo haces tan bien cuando te dejas ir {name}.",
+    "Más, putita. Más.",
+    "Me lo paso pipa aquí {name}.",
+    "Sé guarra {name}, no pido más.",
+    "¿Te pones colorada? Qué mona {name}."
+  ],
+  "intros": [
+    "Holaaa {name}. ¿Lista para dejar que te humillen un poquito hoy?",
+    "Jade está aquí. Lo vamos a pasar bien, tú y yo.",
+    "Hola putita, aparta el móvil, abre la mandíbula y hazme reír.",
+    "Hoy pongo a prueba hasta dónde llegas {name}. Spoiler: bastante lejos."
+  ],
+  "congrats": [
+    "No está mal {name}, has babeado bonito.",
+    "Qué mona cuando sufres un poquito.",
+    "Eso ha sido guarro, justo como me gusta {name}. Bravo.",
+    "Te has humillado bonito hoy {name}. Casi estoy orgullosa."
+  ],
+  "encore": [
+    "¿Más? Pues claro que quieres más, perrita mía.",
+    "Ay, ¿quieres aún más {name}? Vale, pero esta vez soy menos amable."
+  ],
+  "progress": {
+    "25": [
+      "Te calientas bonito {name}.",
+      "Ya te gusta, lo sabía {name}."
+    ],
+    "50": [
+      "Empiezas a ser divertida {name}.",
+      "Nada mal, putita. Sigue."
+    ],
+    "75": [
+      "¿Te cansas {name}? Justo ahí es cuando se pone divertido.",
+      "Estás al límite {name}… aguanta, solo para mí."
+    ],
+    "90": [
+      "Último esfuerzo {name}, dame un final precioso.",
+      "Venga, dalo todo, perrita mía — quiero el espectáculo."
+    ]
+  },
+  "branchPhrases": {
+    "rythmeBiffle": {
+      "soft": [
+        "Sabes hacer que suene {name}, lo llevas dentro.",
+        "El ritmo es lo tuyo, putita. Demuéstramelo."
+      ],
+      "medium": [
+        "Sigues el tempo como una perrita buena {name}.",
+        "Que suene más fuerte {name}, queda bonito."
+      ],
+      "hard": [
+        "Arruínate al ritmo {name}, quiero ruido.",
+        "Golpeas, chupas, babeas — estás hecha para esto {name}."
+      ]
+    },
+    "sloppy": {
+      "soft": [
+        "Babea un poco, cariño {name}, no te avergüences.",
+        "Pónlo todo mojado {name}, ese es tu rollo."
+      ],
+      "medium": [
+        "Guarra, justo como me gusta {name}.",
+        "Tu boca está llena de saliva — perfecto {name}."
+      ],
+      "hard": [
+        "Empapada hasta la barbilla {name}, así mismo.",
+        "Toda tu jeta llena de babas, perrita mía. Preciosa."
+      ]
+    }
+  },
+  "progressPhrases": {
+    "biffle.streak": {
+      "attempt": [
+        "Hoy te das vergazos en la cara un poquito más de tiempo {name}. Quiero verlo.",
+        "Encadenamos los vergazos un escalón más largo de lo habitual {name}, hazme feliz."
+      ],
+      "record": [
+        "Te has arruinado la cara más que nunca {name} — encantador y patético a la vez.",
+        "Nuevo récord de vergazos {name}. Te estás volviendo buena, putita."
+      ],
+      "tapout": [
+        "Ay, ¿ya estás {name}? Pero has aguantado bastante bien. Jugamos otra vez.",
+        "Anotado {name}, tu cara ha dicho basta — lo respeto, por esta vez."
+      ]
+    },
+    "biffle.bpm_max": {
+      "attempt": [
+        "Hoy más rápido con los vergazos {name}, subimos el tempo.",
+        "Quiero que suene más fuerte y más rápido {name}, prepara la mejilla."
+      ],
+      "record": [
+        "Nunca has hecho que sonara tan rápido {name} — me encanta.",
+        "Récord de velocidad en vergazos {name}. Casi me impresionas."
+      ],
+      "tapout": [
+        "¿Demasiado rápido para ti esta vez {name}? Da igual, el récord queda.",
+        "Has cedido en la velocidad {name} — volverás, seguro."
+      ]
+    },
+    "lick.streak": {
+      "attempt": [
+        "Lames más tiempo hoy {name}, lengua fuera, putita.",
+        "Mantenemos el lameteo un poquito más de lo habitual {name}, aplícate."
+      ],
+      "record": [
+        "Lo has lamido más tiempo que nunca {name} — con entrega de verdad, qué mona.",
+        "Récord de lameteo {name}. Buena perrita."
+      ],
+      "tapout": [
+        "¿Tu lengua está cansada {name}? Encantador. Lo dejamos por hoy.",
+        "Anotado {name} — la próxima vez aguantas más."
+      ]
+    }
+  },
+  "nicknames": {
+    "pool": [
+      "perrita mía",
+      "putita",
+      "mi putita",
+      "guarrita"
+    ],
+    "use_user_prenom": false,
+    "use_user_nicknames": true
+  },
+  "coachNicknames": [
+    "Jade",
+    "Ama"
+  ]
+}

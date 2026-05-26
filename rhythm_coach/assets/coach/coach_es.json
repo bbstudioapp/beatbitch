@@ -1,0 +1,31 @@
+{
+  "lang": "es",
+  "hold_nudges": {
+    "go_deeper": [
+      "más abajo",
+      "más profundo",
+      "más al fondo",
+      "sigue",
+      "trágatela"
+    ],
+    "go_up": [
+      "sube",
+      "menos profundo",
+      "sube un poco",
+      "no tan abajo"
+    ],
+    "lost": [
+      "dónde estás",
+      "no te salgas del encuadre",
+      "vuelve a la posición"
+    ]
+  },
+  "system": {
+    "prep_countdown": "En posición. Empezamos en {seconds} segundos.",
+    "encore_fallback": "Otra vez. Vuelve al trabajo."
+  },
+  "test_phrases": {
+    "voice": "Vamos {name}, enséñame de lo que eres capaz. Más profundo, más despacio.",
+    "identity": "Así, {name}. Tú puedes, {name}."
+  }
+}

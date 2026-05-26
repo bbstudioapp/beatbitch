@@ -1,0 +1,348 @@
+{
+  "lang": "es",
+  "id": "coach_01_lina",
+  "title": "Coach para principiantes",
+  "publicBio": "Acompañante dulce y paciente. Te guía en tus primeros pasos, celebra cada progreso. Sin insultos, sin dureza: nos tomamos nuestro tiempo.",
+  "phrases": {
+    "rhythm": {
+      "soft": [
+        "Empieza muy suave {name}, muy suavecito.",
+        "Tómatelo con calma {name}, sigue el ritmo.",
+        "Así mismo {name}, respira tranquila.",
+        "Lo estás haciendo muy bien {name}, sigue así.",
+        "Déjalo entrar despacito en tu boca {name}.",
+        "Estás perfecta así {name}, muy suave.",
+        "Despacio {name}, tenemos tiempo.",
+        "Movimientos pequeños y suaves {name}, sin prisa.",
+        "Así es {name}, encuentras tu ritmo tú sola.",
+        "Sin presión {name}, hazlo para ti.",
+        "Mantén tu boca bien suave {name}, eso es perfecto.",
+        "Puedes cerrar los ojos si te ayuda {name}, solo escúchame."
+      ],
+      "medium": [
+        {"text": "Ahora un poco más profundo {name}, cuando te sientas lista.", "min_depth": "mid"},
+        "Mantén ese ritmo, lo estás haciendo genial {name}.",
+        {"text": "Baja un poquito más, así mismo {name}.", "min_depth": "mid"},
+        "Controlas bien tu respiración, estoy orgullosa de ti {name}.",
+        "Quédate en ese ritmo {name}, estás progresando de verdad.",
+        "Lo que haces está bien {name}.",
+        "Puedes ir un poquito más rápido {name}, estoy contigo.",
+        "Mantente regular {name}, así es como se hace.",
+        {"text": "Un poquito más profundo {name}, lo tienes controlado.", "min_depth": "mid"},
+        "Bonita constancia {name}, lo oigo en tu respiración."
+      ],
+      "hard": [
+        {"text": "Baja más {name}, tú puedes.", "min_depth": "mid"},
+        "Mantén ese ritmo, sé que puedes {name}.",
+        {"text": "Baja un poquito más, despacio pero firme {name}.", "min_depth": "mid"},
+        "Unos pocos movimientos más {name}, sé que los tienes.",
+        {"text": "Llévalo hasta el fondo {name}, suave, tú puedes.", "min_depth": "throat"},
+        "Aguanta {name}, eres más fuerte de lo que crees.",
+        "Estoy aquí {name}, no sueltes el ritmo."
+      ]
+    },
+    "lick": {
+      "soft": [
+        "Lámelo suavecito con la punta de la lengua {name}.",
+        "Acarícialo con ternura {name}, tómate tu tiempo.",
+        "Da vueltas alrededor del glande, eso está muy bien {name}.",
+        "Lámelo como si lo adoraras {name}.",
+        "También con la punta de los labios {name}, sin prisa.",
+        "Deja vagar tu lengua donde quieras {name}, disfrútalo."
+      ],
+      "medium": [
+        "Lame por toda la longitud, bien mojadito {name}.",
+        "Usa bien tu lengua {name}, cúbrelo de saliva.",
+        "Lame con más ganas, eso está bien {name}.",
+        "Vuelve al glande {name}, quédate ahí un rato.",
+        "Bien mojada, tu lengua {name}, así mismo.",
+        "Lámelo despacio de abajo hacia arriba {name}."
+      ],
+      "hard": [
+        "Lámelo con más intensidad {name}, muéstrame tu deseo.",
+        "Con toda tu lengua {name}, demuéstrale cuánto lo quieres.",
+        "Con más entrega {name}, quiero oírte babear un poquito."
+      ]
+    },
+    "biffle": {
+      "soft": [
+        "Deja que te golpee suavecito en la mejilla {name}, como un juego.",
+        "Pequeños golpecitos suaves en tu cara {name}.",
+        "Juega con él {name}, déjalo rebotar en tus labios."
+      ]
+    },
+    "hold": {
+      "soft": [
+        {"text": "Mantenlo en la boca, respira tranquila {name}.", "max_depth": "mid"},
+        "Mantén la posición, eso está muy bien {name}.",
+        "Quédate así {name}, lo estás haciendo perfecto.",
+        {"text": "Apóyalo sobre tu lengua y quédate así {name}, muy tranquila.", "max_depth": "head"},
+        "No te muevas más {name}, respira, todo está bien.",
+        {"text": "Solo el glande, mantenlo ahí {name}.", "max_depth": "head"}
+      ],
+      "medium": [
+        {"text": "Baja un poquito más y mantén {name}.", "min_depth": "mid"},
+        {"text": "Quédate bien profunda, respira por la nariz {name}.", "min_depth": "mid", "max_depth": "throat"},
+        {"text": "Mantenlo bien fijo {name}, respira por la nariz, cuento contigo.", "min_depth": "mid", "max_depth": "throat"},
+        {"text": "Un poco más adentro {name}, y aguantas ahí tranquilamente.", "min_depth": "mid"},
+        {"text": "Quédate {name}, sé que es incómodo, estoy aquí.", "min_depth": "mid"}
+      ],
+      "hard": [
+        {"text": "Quédate bien profunda {name}, no subas.", "min_depth": "throat"},
+        {"text": "Un momento más profunda {name}, no subas todavía.", "min_depth": "throat"},
+        {"text": "Estás ahí {name}, mantenlo bien profundo, estoy orgullosa.", "min_depth": "throat"}
+      ],
+      "finale": [
+        {"text": "Quédate bien profunda hasta el final {name}.", "min_depth": "throat"},
+        "Último esfuerzo, mantenlo bien profundo {name}.",
+        "Preciosa {name}, quédate así hasta la señal.",
+        "Así es {name}, terminamos así, eres preciosa.",
+        {"text": "Mantenlo bien profundo hasta el final {name}, este es tu momento.", "min_depth": "throat"}
+      ]
+    },
+    "breath": {
+      "soft": [
+        "Respira tranquila {name}.",
+        "Coge aire profundo {name}.",
+        "Relaja la mandíbula {name}, exhala despacio.",
+        "Recupera el aliento {name}, has sido muy buena chica.",
+        "Mandíbula suelta {name}, toda la cara relajada.",
+        "Toma un poco de aire {name}, enseguida seguimos.",
+        "Cierra los ojos si quieres {name}, solo respira."
+      ]
+    },
+    "beg": {
+      "soft": [
+        "Di en voz alta «quiero más {coach}», bien suavecito.",
+        "Pídemelo bonito, «por favor, déjame seguir {coach}».",
+        "Dilo con tu vocecita de niña: «me encanta, no pares {coach}».",
+        "Pídeme bonito que siga.",
+        "Dime en voz alta por qué quieres más.",
+        "Susúrramelo, «más {coach}, por favor».",
+        "Pídemelo dulcemente {name}, quiero oírlo."
+      ],
+      "medium": [
+        "Repite conmigo: «necesito tu polla {coach}».",
+        "Pídeme claramente, «más profundo por favor {coach}».",
+        "Pídemelo diciendo mi nombre, {coach}.",
+        "Suplícame de verdad, quiero oírlo.",
+        "Dime «soy tuya {coach}», claramente.",
+        "Pídemelo, y dime por qué lo necesitas {name}."
+      ]
+    },
+    "freestyle": {
+      "soft": [
+        "Te toca un momento {name}, haz lo que quieras.",
+        "Disfrútalo {name}, enséñame lo que sabes hacer.",
+        "Este momento es tuyo {name}, saboréalo.",
+        "Date un gusto {name}, yo te miro."
+      ]
+    },
+    "hand": {
+      "soft": [
+        "Pajéamela suavecito con la mano {name}.",
+        "Cierra tus dedos alrededor {name}, muy suave.",
+        "Sube y baja despacito con la mano {name}, sin prisa.",
+        "Ayúdate con la mano {name}, eso está muy bien."
+      ],
+      "medium": [
+        "Un poco más ágil con la mano {name}, lo tienes controlado.",
+        "Mantén el ritmo con la mano {name}, estoy contigo."
+      ]
+    }
+  },
+  "randomComments": [
+    "Sigue {name}, muy suavecito.",
+    "Así mismo {name}.",
+    "Respira, estoy contigo {name}.",
+    "Relaja tu mandíbula {name}.",
+    "Vas progresando bien {name}.",
+    "Mantente concentrada, escucha mi voz.",
+    "Sigue el ritmo {name}, lo estás haciendo muy bien.",
+    "Estoy orgullosa de ti {name}.",
+    "Nos tomamos el tiempo, no te apures.",
+    "Estás justo donde tienes que estar {name}.",
+    "Lo haces para ti {name}, saboréalo.",
+    "Escucha a tu cuerpo {name}, del resto me ocupo yo.",
+    "Es suave, está bien, sigue {name}.",
+    "Te las arreglas muy bien tú sola {name}.",
+    "Sin prisa {name}, tenemos tiempo."
+  ],
+  "intros": [
+    "Hola {name}. Soy Lina, te voy a guiar suavemente durante esta sesión. Tómate tu tiempo, escucha mi voz y sigue el ritmo.",
+    "Hola {name}. Hoy vamos a ir muy tranquilas. Estoy aquí para ayudarte a progresar sin presión.",
+    "Bienvenida {name}. Te guiaré paso a paso. Conmigo estás segura.",
+    "Hey {name}. Soy Lina. Hoy nos ocupamos de ti, sin prisas. Sigue mi voz, del resto me encargo yo."
+  ],
+  "congrats": [
+    "Has sido muy buena chica {name}. Estoy orgullosa de ti.",
+    "Hasta aquí {name}. Lo has hecho muy bien hoy.",
+    "Bravo {name}, ha sido una sesión preciosa. Descansa ahora.",
+    "Estás progresando de verdad {name}.",
+    "Así es {name}, se acabó. Puedes estar orgullosa de ti, yo desde luego lo estoy."
+  ],
+  "encore": [
+    "¿Quieres más {name}? Bien, seguimos suavecito.",
+    "¿Lista para otra ronda {name}? Vamos con calma.",
+    "¿Un poquito más {name}? Encantada, seguimos bien suaves.",
+    "¿Me pides más {name}? Bien, pero a tu ritmo."
+  ],
+  "progress": {
+    "25": [
+      "Estás empezando bien {name}, noto cómo te relajas.",
+      "Así mismo {name}, entras en el ritmo."
+    ],
+    "50": [
+      "Lo estás haciendo muy bien {name}.",
+      "Veo cómo vas progresando {name}."
+    ],
+    "75": [
+      "Estás casi en tus límites {name}… aguantas.",
+      "Es impresionante {name}."
+    ],
+    "90": [
+      "Último esfuerzo {name}, casi lo tienes.",
+      "Dalo todo {name}, estoy contigo."
+    ]
+  },
+  "branchPhrases": {
+    "endurance": {
+      "soft": [
+        "Sabes aguantar mucho tiempo {name}, esa es tu fuerza.",
+        "Mantén el ritmo {name}, tienes la paciencia para hacerlo.",
+        "Llevas el esfuerzo sin pestañear {name}, eso es raro."
+      ],
+      "medium": [
+        "Nunca te debilitas {name}, eso es lo que me encanta de ti.",
+        "Así mismo, sigue aguantando {name}.",
+        "Resistes y resistes {name}, lo veo."
+      ],
+      "hard": [
+        "Aún puedes {name}, sé que puedes.",
+        "Aguanta un poquito más, eres una chica de resistencia.",
+        "Tu respiración aguanta {name}, esa es tu fuerza, confía en ella."
+      ]
+    },
+    "obeissance": {
+      "soft": [
+        "Eres una buena chica {name}.",
+        "Me escuchas tan bien {name}.",
+        "Haces exactamente lo que digo {name}, eso es perfecto."
+      ],
+      "medium": [
+        "Sigue obedeciéndome así {name}, lo estás haciendo genial.",
+        "Eres dócil, eso es lo que me encanta.",
+        "Nunca dudas cuando te pido algo {name}."
+      ],
+      "hard": [
+        "Buena chica {name}. De verdad buena chica.",
+        "Me obedeces perfectamente, estoy orgullosa.",
+        "Tan dócil {name}… sigue, me llenas de orgullo."
+      ]
+    },
+    "sloppy": {
+      "soft": [
+        "Déjate llevar {name}, babea un poquito.",
+        "Pónselo bien mojado con tu lengua {name}.",
+        "No tengas miedo de ensuciarlo todo {name}."
+      ],
+      "medium": [
+        "Babea encima {name}, no seas tímida.",
+        "Está bien tener la boca llena de saliva.",
+        "Déjala caer {name}, queda bonito cuando babeas."
+      ],
+      "hard": [
+        "Boca completamente llena {name}, no te avergüences de nada.",
+        "Empapada hasta la barbilla {name}, así mismo."
+      ]
+    }
+  },
+  "progressPhrases": {
+    "gorge.engagement_streak": {
+      "attempt": [
+        "Esta noche quiero tu garganta {name}, solo un poquito más de lo habitual — déjala que se acostumbre.",
+        "Nos tomamos el tiempo de bajar hasta tu garganta {name}, vas a notar la diferencia."
+      ],
+      "record": [
+        "Lo has mantenido más tiempo en tu garganta que nunca {name}, estoy orgullosa de en qué te estás convirtiendo.",
+        "Tu garganta te escucha mejor que antes {name}, mira lo lejos que hemos llegado."
+      ],
+      "tapout": [
+        "Tranquila cielo, tu garganta ya ha hecho mucho esta noche — justo en eso trabajamos.",
+        "Anotado {name}, lo dejamos aquí con tu garganta. Volverás sobre ello, tenemos tiempo."
+      ]
+    },
+    "hold.throat.streak": {
+      "attempt": [
+        "Esta noche lo aguantas un poquito más en tu garganta {name}, tú puedes.",
+        "Cuando te diga que mantengas profundo {name}, aguanta un pelín más de lo habitual, con confianza."
+      ],
+      "record": [
+        "Lo has mantenido al fondo de tu garganta como nunca {name}, sabía que podías.",
+        "Nadie aguanta así {name} — ni tú antes de esta noche. De verdad buena chica."
+      ],
+      "tapout": [
+        "Aun así lo has mantenido un buen rato ahí abajo {name}, en el resto trabajamos suavecito.",
+        "Tranquila cielo, tu garganta ha dicho que no — la escuchamos. El récord llegará."
+      ]
+    },
+    "noswallow.streak": {
+      "attempt": [
+        "Mantenlo un poquito más en la boca esta noche {name}, no tragues nada hasta que te lo diga.",
+        "Dejas que mi leche se acumule en tu boca {name}, sin tragar — un poquito más que la última vez."
+      ],
+      "record": [
+        "Has mantenido la boca llena sin tragar como nunca {name}, me obedeces tan bien.",
+        "Nuevo récord con la boca llena {name} — paciente, obediente, justo como me gustas."
+      ],
+      "tapout": [
+        "Lo has mantenido ya un buen rato antes de tragar {name}, eso ya es mucho. La paciencia llegará.",
+        "Tranquila cielo, tu boca ha sido honesta — la próxima vez aguantamos un poquito más."
+      ]
+    },
+    "effort.no_breath_streak": {
+      "attempt": [
+        "Esta noche seguimos un poquito más antes de tu pausa {name}, a tu propio ritmo.",
+        "Esta noche respiramos un poco menos {name} — no por crueldad, solo para ver lo que de verdad cargas."
+      ],
+      "record": [
+        "Lo has aguantado esta noche sin pausa como nunca {name}, eres más fuerte de lo que crees.",
+        "Has llevado el esfuerzo más lejos que nunca {name}, y se te nota."
+      ],
+      "tapout": [
+        "Respira cielo, lo necesitabas — tu cuerpo ha hablado, yo escucho.",
+        "Tranquila {name}, lo dejamos aquí con la respiración. Has aguantado preciosa, de verdad."
+      ]
+    },
+    "rhythm.motion_streak": {
+      "attempt": [
+        "Mantienes el movimiento un poquito más esta noche {name}, sin descuidar nada — yo te guío.",
+        "Mantén el ritmo un pelín más de lo habitual {name}, con confianza — sabes cómo se hace."
+      ],
+      "record": [
+        "No has soltado el ritmo esta noche como nunca {name}, así es como se hace.",
+        "Récord de resistencia {name} — buena chica, de verdad buena chica."
+      ],
+      "tapout": [
+        "Se te ha escapado el ritmo un pelín pronto {name}, no es nada — la próxima vez aguantamos más.",
+        "Tranquila cielo, acortamos la cadena. Te acercas, lo veo."
+      ]
+    }
+  },
+  "nicknames": {
+    "pool": [
+      "preciosa",
+      "cielo",
+      "cariño",
+      "bonita",
+      "mi ángel"
+    ],
+    "use_user_prenom": true,
+    "use_user_nicknames": false
+  },
+  "coachNicknames": [
+    "Lina",
+    "Coach",
+    "señora"
+  ]
+}

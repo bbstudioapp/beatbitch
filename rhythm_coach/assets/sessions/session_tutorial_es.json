@@ -1,0 +1,76 @@
+{
+  "lang": "es",
+  "id": "tutorial",
+  "name": "Tutorial — Todos los sonidos",
+  "description": "Descubre cada sonido y cada señal. La voz lo explica todo, paso a paso.",
+  "duration_seconds": 460,
+  "mode": "beg",
+  "no_stats": true,
+  "intro": "Bienvenida. Antes de meternos en una sesión de verdad, repasamos todos los sonidos y señales. Apoya el móvil de lado, no necesitas mirarlo. Durante este tutorial no tienes nada que hacer — no tienes que mamar, no tienes que ponerte en posición. Escuchas, eso es todo. Siete minutos, sin presión, sin riesgo de fallar. Cuando estés lista, confirma.",
+  "steps": [
+    {"time": 0, "text": "Empezamos con las posiciones. Hay cinco, de la más suave a la más profunda. Escucha cada sonido, te ayudará a orientarte en las sesiones reales. No tienes nada que hacer, solo escuchar."},
+
+    {"time": 16, "text": "Primera posición — la punta. El sonido más agudo, el más ligero.",
+                 "mode": "hold", "to": "tip", "duration": 3},
+
+    {"time": 25, "text": "Segunda posición — el glande. Un nivel más bajo.",
+                 "mode": "hold", "to": "head", "duration": 3},
+
+    {"time": 34, "text": "Tercera posición — el medio, justo antes de la garganta. Aún más profundo.",
+                 "mode": "hold", "to": "mid", "duration": 3},
+
+    {"time": 44, "text": "Cuarta posición — la entrada de la garganta. Aquí empieza a bajar de verdad.",
+                 "mode": "hold", "to": "throat", "duration": 3},
+
+    {"time": 54, "text": "Quinta posición — al fondo del todo, nariz contra los huevos. El sonido más grave. Recuerda: cuanto más grave el sonido, más al fondo tienes que ir.",
+                 "mode": "hold", "to": "full", "duration": 3},
+
+    {"time": 70, "text": "Ahora los ocho tipos de señales que te voy a dar. Las vemos una por una. Sigues sin tener que hacer nada, solo escuchar."},
+
+    {"time": 82, "text": "Primera señal — mamar al ritmo. El metrónomo de base. Un movimiento por bip. Ritmo lento, en el glande."},
+
+    {"time": 92, "mode": "rhythm", "from": "tip", "to": "head", "bpm": 55, "duration": 22},
+
+    {"time": 112, "text": "Ahora con amplitud real — del glande a la entrada de la garganta, más rápido.",
+                  "mode": "rhythm", "from": "head", "to": "throat", "bpm": 80, "duration": 28},
+
+    {"time": 130, "text": "¿Oyes la alternancia entre los dos tonos? Es tu guía para la amplitud del movimiento, del más agudo al más grave."},
+
+    {"time": 158, "text": "Segunda señal — lamer. Solo lamer. Lengua fuera, pasas por la punta y el glande, pero no te metes nada en la boca. El volumen es más bajo, es más suave, más sutil.",
+                  "mode": "lick", "from": "tip", "to": "head", "bpm": 75, "duration": 22},
+
+    {"time": 178, "text": "¿Ves la diferencia? Más ligero, más sugerido. Sin penetración, solo la lengua."},
+
+    {"time": 192, "text": "Tercera señal — mantener profundo. Un bip único, sostenido por una capa grave. Adoptas la posición y no te mueves durante la duración indicada. Aquí sería al fondo, diez segundos.",
+                  "mode": "hold", "to": "full", "duration": 10},
+
+    {"time": 210, "text": "Cuarta señal — respirar. Un único sonido suave. Es tu señal para soltar el aire, dejarte caer, recuperar.",
+                  "mode": "breath"},
+
+    {"time": 222, "text": "Siempre después de un esfuerzo, la respiración. No te la saltes."},
+
+    {"time": 236, "text": "Quinta señal — recibir vergazos en la cara. Un bip rápido específico, sin indicación de posición. Sacas la lengua, ofreces la mejilla, la frente, y dejas que la polla te golpee con cada bip. Nada dentro de la boca.",
+                  "mode": "biffle", "bpm": 130, "duration": 22},
+
+    {"time": 264, "text": "Sexta señal — suplicar. Sin bip, solo mi voz. Te doy una orden — suplícame, repite una frase, una acción — y lo haces en voz alta. Si indico una posición, la mantienes mientras hablas."},
+
+    {"time": 282, "text": "Séptima señal — la mano. Sueltas la boca, trabajas con la mano. El sonido es más apagado, el ritmo más cadencioso. Permite que tu garganta recupere mientras la cosa sigue subiendo.",
+                  "mode": "hand", "from": "head", "to": "mid", "bpm": 80, "duration": 14},
+
+    {"time": 302, "text": "Octava y última — la fase libre. Dos bips enmarcan un momento en el que haces lo que quieres. Sin señal, es tuyo.",
+                  "mode": "freestyle", "duration": 8},
+
+    {"time": 318, "text": "Esas son las ocho señales. Ahora dos o tres cosas prácticas."},
+
+    {"time": 332, "text": "El botón rojo de abajo — no puedo — es tu botón de seguridad. Lo pulsas cuando realmente no puedes seguir. Te digo lo que pienso de ti, te dejo respirar, te doy un pequeño castigo y saltamos a la sección siguiente. No pierdes tu sesión, sigues más adelante."},
+
+    {"time": 364, "text": "El icono ecualizador arriba en la pantalla de inicio abre la página Sonidos. Ahí puedes elegir mi voz, mi ritmo, y activar un pack de ambiente. En la pantalla Carrera también puedes desactivar la estimulación con la mano si no la quieres — eso desactiva también los vergazos."},
+
+    {"time": 392, "text": "Y mientras vas haciendo tus sesiones, vas desbloqueando insignias — Maratonista, Reina de la Garganta, Pulmones de Hierro y otras. Las anuncio al final de la sesión cuando desbloqueas una nueva. Mide tu camino."},
+
+    {"time": 420, "text": "Para terminar, un ejemplo real de súplica. Esta vez puedes participar si quieres. El medio, diez segundos — repite conmigo, en voz alta: solo soy una buena putita chupapollas, y quiero más.",
+                  "mode": "beg", "to": "mid", "duration": 10},
+
+    {"time": 444, "text": "Ya lo sabes todo. Te toca."}
+  ]
+}
