@@ -665,6 +665,7 @@ class _CareerScreenState extends State<CareerScreen> {
       voiceLocale: preset.voiceLocale,
       rate: preset.rate,
       pitch: preset.pitch,
+      preferredGender: preset.preferredGender,
     );
   }
 

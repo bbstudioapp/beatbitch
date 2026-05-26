@@ -146,6 +146,7 @@ class _CustomModeScreenState extends State<CustomModeScreen> {
       voiceLocale: preset.voiceLocale,
       rate: preset.rate,
       pitch: preset.pitch,
+      preferredGender: preset.preferredGender,
     );
   }
 

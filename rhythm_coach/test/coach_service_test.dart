@@ -16,10 +16,11 @@ void main() {
   // Seuils actuels du catalogue (cf. `CoachCatalog.defaults`) :
   //   tier 1 (Lina)     : 0
   //   tier 2 (Hélène)   : 3 600   = 1 h
-  //   tier 3 (Jade)     : 10 800  = 3 h
-  //   tier 4 (Morgan)   : 25 200  = 7 h
-  //   tier 5 (Victoria) : 54 000  = 15 h
-  //   tier 6 (Nyx)      : 90 000  = 25 h
+  //   tier 3 (Marc)     : 5 400   = 1 h 30
+  //   tier 4 (Jade)     : 10 800  = 3 h
+  //   tier 5 (Morgan)   : 25 200  = 7 h
+  //   tier 6 (Victoria) : 54 000  = 15 h
+  //   tier 7 (Nyx)      : 90 000  = 25 h
   group('CoachService — règle d\'avancement (Phase 19.10)', () {
     test('au démarrage, seul le Principal du palier 1 est débloqué', () async {
       final s = CoachService();
@@ -61,43 +62,44 @@ void main() {
       expect(s.isUnlocked(s.principalOfTier(2)!), isTrue);
     });
 
-    test('joueuse à 10 h cumulées (36000 s) débloque jusqu\'à Morgan (tier 4)',
+    test('joueuse à 10 h cumulées (36000 s) débloque jusqu\'à Morgan (tier 5)',
         () async {
       final s = CoachService();
       await s.load();
       final unlocked = await s.syncFromTotalSeconds(10 * 3600);
-      expect(s.currentTier, 4);
-      // Tiers 2, 3, 4 ouverts d'un coup.
-      expect(unlocked.length, 3);
+      expect(s.currentTier, 5);
+      // Tiers 2, 3, 4, 5 ouverts d'un coup (10 h passe 25 200 s = Morgan).
+      expect(unlocked.length, 4);
     });
 
     test('syncFromTotalSeconds ne régresse jamais le tier', () async {
       final s = CoachService();
       await s.load();
 
-      await s.syncFromTotalSeconds(10800); // tier 3
-      expect(s.currentTier, 3);
+      await s.syncFromTotalSeconds(10800); // tier 4 (Jade)
+      expect(s.currentTier, 4);
 
       // 30 min = en dessous du seuil tier 2.
       final unlocked = await s.syncFromTotalSeconds(1800);
       expect(unlocked, isEmpty);
-      expect(s.currentTier, 3, reason: 'Le tier ne doit jamais redescendre');
+      expect(s.currentTier, 4, reason: 'Le tier ne doit jamais redescendre');
     });
 
     test('syncFromTotalSeconds saute plusieurs paliers en un appel', () async {
       final s = CoachService();
       await s.load();
 
-      final unlocked = await s.syncFromTotalSeconds(25200); // 7h → tier 4
-      expect(s.currentTier, 4);
-      expect(unlocked.length, 3, reason: 'Tiers 2, 3 et 4 ouverts d\'un coup');
+      final unlocked = await s.syncFromTotalSeconds(25200); // 7 h → tier 5
+      expect(s.currentTier, 5);
+      expect(unlocked.length, 4,
+          reason: 'Tiers 2, 3, 4 et 5 ouverts d\'un coup');
     });
 
     test('après un Principal de tier inférieur, advancesTier reste false',
         () async {
       final s = CoachService();
       await s.load();
-      await s.syncFromTotalSeconds(10800); // tier 3
+      await s.syncFromTotalSeconds(10800); // tier 4 (Jade)
       final tier1 = s.principalOfTier(1)!;
       expect(s.advancesTier(tier1), isFalse);
       // Mais tier1 reste sélectionnable (entraînement libre).
@@ -112,9 +114,9 @@ void main() {
     test('coach non débloqué → lockedTier', () async {
       final s = CoachService();
       await s.load();
-      final tier3 = s.principalOfTier(3)!;
+      final tier4 = s.principalOfTier(4)!;
       final status = s.evaluate(
-        tier3,
+        tier4,
         playerTotalSeconds: 0,
         handsEnabled: true,
       );
@@ -126,7 +128,7 @@ void main() {
         'par la milestone, pas le coach)', () async {
       final s = CoachService();
       await s.load();
-      await s.syncFromTotalSeconds(25200); // tier 4 — Jade débloquée
+      await s.syncFromTotalSeconds(25200); // tier 5 — Jade et Morgan débloqués
       final jade = s.coaches.firstWhere((c) => c.id == 'coach_03_jade');
       // handsEnabled=false ne doit PLUS bloquer la sélection :
       // l'ancien `blockedRequiresHands` n'existe plus.

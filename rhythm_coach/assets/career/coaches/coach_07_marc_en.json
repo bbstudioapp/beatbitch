@@ -1,0 +1,214 @@
+{
+  "lang": "en",
+  "id": "coach_07_marc",
+  "title": "Brutal coach",
+  "publicBio": "Male POV, direct, raw. You suck his cock, he tells you what to do without sugar-coating. Works on pure depth and obedience.",
+  "phrases": {
+    "rhythm": {
+      "soft": [
+        "Suck me {name}.",
+        "Move your mouth on my cock {name}.",
+        "You're starting properly {name}. Keep going.",
+        "You know what to do {name}. Get on it.",
+        "Clean back-and-forth on my dick {name}.",
+        "Follow the tempo {name}. My cock sets the rhythm.",
+        "On my cock {name}. Nowhere else."
+      ],
+      "medium": [
+        {"text": "Deeper on my cock {name}.", "min_depth": "mid"},
+        "You're speeding up {name}. Follow the tempo.",
+        {"text": "Go further down on my dick {name}.", "min_depth": "mid"},
+        "Mouth wide open, I want serious work {name}.",
+        {"text": "Lower still on my cock {name}.", "min_depth": "mid"},
+        "Hold this rhythm {name}. Don't slow down.",
+        "That's it. Keep sucking me like that {name}."
+      ],
+      "hard": [
+        {"text": "Take it all the way {name}. To the hilt.", "min_depth": "throat"},
+        {"text": "Faster, deeper. I want my cock at the back.", "min_depth": "mid"},
+        "You hold this rhythm to the end {name}.",
+        {"text": "Take my dick {name}. That's why you're here.", "min_depth": "throat"},
+        "No pause {name}. Keep sucking me.",
+        {"text": "My cock in the back of your throat {name}. Don't let go.", "min_depth": "throat"}
+      ]
+    },
+    "lick": {
+      "soft": [
+        "Lick my cock {name}, apply yourself.",
+        "Run your tongue over my dick {name}.",
+        "Cover my head with your tongue {name}."
+      ],
+      "medium": [
+        "Full length of my cock {name}. Carefully.",
+        "More saliva {name}. I want my dick soaked.",
+        "Lick it the way you should {name}, not otherwise."
+      ]
+    },
+    "biffle": {
+      "soft": [
+        "Take my cock against your cheek {name}.",
+        "I'm slapping you with my dick {name}. Take it.",
+        "Your face is made for this {name}. Stay there."
+      ]
+    },
+    "hold": {
+      "soft": [
+        "Stay there {name}. Keep my cock in your mouth.",
+        {"text": "Hold it in your mouth {name}, no moving.", "max_depth": "mid"},
+        "Still {name}. Breathe through your nose.",
+        {"text": "Keep my dick there until I say {name}.", "max_depth": "throat"}
+      ],
+      "medium": [
+        {"text": "My cock at the back {name}, and you don't move.", "min_depth": "mid"},
+        {"text": "Lower, and you hold {name}.", "min_depth": "mid"},
+        {"text": "Don't come back up until I order it {name}.", "min_depth": "mid", "max_depth": "throat"}
+      ],
+      "hard": [
+        "My dick stays deep {name}. You hold.",
+        {"text": "My cock at the back of your throat, still {name}.", "min_depth": "throat"},
+        {"text": "It's uncomfortable. That's exactly what I want {name}.", "min_depth": "throat"}
+      ],
+      "finale": [
+        {"text": "Final hold. My dick stays deep {name}.", "min_depth": "mid"},
+        {"text": "We finish with my cock in your throat {name}. Don't move.", "min_depth": "throat"},
+        "Until my signal {name}. Not before."
+      ]
+    },
+    "breath": {
+      "soft": [
+        "Breathe {name}. My cock gives you two seconds.",
+        "Enjoy it {name}. It won't last.",
+        "Catch your breath {name}, we'll start again."
+      ]
+    },
+    "beg": {
+      "soft": [
+        "Ask me to continue {name}. Clearly.",
+        "Say it {name}: \"give me your cock {coach}\".",
+        "Articulate {name}. I want to hear you beg.",
+        "Ask me for my dick {name}. Properly."
+      ],
+      "medium": [
+        "Implore {name}: \"I need your cock {coach}\".",
+        "Beg me {name}. \"Deeper {coach}\".",
+        "Address me properly {coach}."
+      ]
+    },
+    "freestyle": {
+      "soft": [
+        "Show me how you suck {name}.",
+        "This moment is yours {name}. But on my cock.",
+        "Do what you want {name}. As long as it's on my dick."
+      ]
+    },
+    "hand": {
+      "soft": [
+        "Stroke me {name}. Clean motion.",
+        "Your hand on my cock {name}. Steady back-and-forth.",
+        "Use your hand to suck me {name}."
+      ],
+      "medium": [
+        "Firmer with your hand {name}. Work my cock.",
+        "Coordinate hand and mouth {name}. Don't drop the tempo."
+      ]
+    }
+  },
+  "randomComments": [
+    "Keep sucking me {name}.",
+    "Don't let go of my cock {name}.",
+    "That's it. Like that {name}.",
+    "Good slut {name}.",
+    "Your mouth is made for my dick {name}.",
+    "You're doing what you should {name}.",
+    "Don't slow down {name}.",
+    "I feel your tongue {name}. Keep going.",
+    "Stay on my cock {name}.",
+    "It's acceptable {name}. But you can do better."
+  ],
+  "intros": [
+    "It's me {name}. You're going to suck my cock now.",
+    "Marc. Open your mouth {name}, and listen.",
+    "No fuss {name}. My dick is yours for the session. Get to work.",
+    "You know my rule {name}: you suck, I order. We begin."
+  ],
+  "congrats": [
+    "You sucked my dick properly {name}.",
+    "Acceptable {name}. You did the work.",
+    "My cock is satisfied {name}. For this time.",
+    "You held the rhythm {name}. Keep that up."
+  ],
+  "encore": [
+    "Asking for more {name}? Good. Take my cock again.",
+    "Once more on my dick {name}. You know what to do."
+  ],
+  "progress": {
+    "25": [
+      "Good start {name}. Keep sucking me.",
+      "My cock starts to appreciate {name}."
+    ],
+    "50": [
+      "You suck well {name}. Halfway there.",
+      "You're holding the rhythm {name}. Continue."
+    ],
+    "75": [
+      "You're getting close to the end {name}. Don't flinch.",
+      "It's hard, and you're holding. My cock respects you {name}."
+    ],
+    "90": [
+      "Final push {name}. Give everything on my cock.",
+      "You finish this properly {name}. For me."
+    ]
+  },
+  "branchPhrases": {
+    "profondeur": {
+      "soft": [
+        "Lower on my cock {name}. You can.",
+        "Your throat is made for my dick {name}. Use it."
+      ],
+      "medium": [
+        "You're going down well on my cock {name}. More.",
+        "Your throat takes my dick cleanly {name}. Continue."
+      ],
+      "hard": [
+        "To the hilt {name}. That's your worth.",
+        "My cock in the back of your throat {name}. That's where you work."
+      ]
+    },
+    "obeissance": {
+      "soft": [
+        "You do what I say {name}. That's all I ask.",
+        "You obey me on my dick {name}. Good."
+      ],
+      "medium": [
+        "You didn't argue {name}. Continue.",
+        "You execute without flinching {name}. Good slut."
+      ],
+      "hard": [
+        "Perfect obedience {name}. My cock notes it.",
+        "You do exactly what I want {name}. Continue."
+      ]
+    }
+  },
+  "progressPhrases": {
+    "gorge.apnee_streak": {
+      "attempt": [
+        "Today my cock stays in your throat longer than usual {name}. You take it."
+      ],
+      "record": [
+        "You kept my dick longer than ever {name}. Good slut."
+      ],
+      "tapout": [
+        "Your throat said stop {name}. Noted. We'll work it higher next time."
+      ]
+    }
+  },
+  "nicknames": {
+    "pool": [],
+    "use_user_prenom": true,
+    "use_user_nicknames": true
+  },
+  "coachNicknames": [
+    "Marc",
+    "sir"
+  ]
+}

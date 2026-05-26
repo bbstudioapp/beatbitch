@@ -1,0 +1,16 @@
+{
+  "id": "coach_07_marc",
+  "name": "Marc",
+  "archetype": "brutal",
+  "specialties": [
+    "profondeur",
+    "obeissance"
+  ],
+  "tier": 3,
+  "isPrincipal": true,
+  "tts": {
+    "gender": "male",
+    "rate": 0.55,
+    "pitch": 0.85
+  }
+}

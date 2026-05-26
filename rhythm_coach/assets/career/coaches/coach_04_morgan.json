@@ -6,7 +6,7 @@
     "profondeur",
     "endurance"
   ],
-  "tier": 4,
+  "tier": 5,
   "isPrincipal": true,
   "tts": {
     "voice": "fr-FR-language",
