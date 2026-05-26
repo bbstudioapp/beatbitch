@@ -193,9 +193,15 @@ class BpmPacing {
     final humilBonus = max(0.0, config.humiliationCareer - unlockHumil);
     final rythmePts = config.pts(SpecializationBranch.rythmeBiffle);
     final profondeurPts = config.pts(SpecializationBranch.profondeur);
+    // Baseline `to=throat` 4 (au déblocage de `throat_pulse`, humil ≈ 10) :
+    // les premières apparitions tombent à 4-5 passages de gorge, le temps que
+    // la joueuse s'installe ; la cascade humil (×0.40/pt au-dessus du seuil)
+    // rattrape les anciennes valeurs (≈ 6 à humil 15, ≈ 10 à humil 25). Sans
+    // ce baseline plus bas, le déblocage produit immédiatement 6-8 passages
+    // d'affilée — trop dense pour une première rencontre.
     final maxPulses = to == Position.full
         ? 4 + humilBonus * 0.18 + profondeurPts * 1.0 + rythmePts * 0.4
-        : 6 + humilBonus * 0.30 + rythmePts * 0.7 + profondeurPts * 0.5;
+        : 4 + humilBonus * 0.40 + rythmePts * 0.7 + profondeurPts * 0.5;
     final cap = (maxPulses * 120 / bpm).floor().clamp(3, 60);
     return min(dur, cap);
   }
