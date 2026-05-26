@@ -135,8 +135,7 @@ void main() {
       expect(r.session.challenges.length, 4,
           reason:
               'tous les défis doivent être insérés dans la longue (~45 min)');
-      expect(r.session.challengeBreathStartTimes.length, 4);
-      expect(r.session.challengeStepTimes.length, 4);
+      expect(r.session.challengeTriggerTimes.length, 4);
     });
 
     test('défis distribués dans la fenêtre [0.20, 0.80] de genUntil', () {
@@ -148,7 +147,7 @@ void main() {
       );
       expect(r.session.challenges.length, 2);
       // Les 2 défis sont ordonnés temporellement et distincts.
-      final times = r.session.challengeBreathStartTimes;
+      final times = r.session.challengeTriggerTimes;
       expect(times[0], lessThan(times[1]));
       expect(times[1] - times[0], greaterThan(60),
           reason: 'les défis doivent être espacés pour ne pas se chevaucher');

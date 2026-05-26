@@ -604,6 +604,17 @@ class MilestoneService extends ChangeNotifier {
     return out;
   }
 
+  /// `acquiredUnlockKeys` ∪ `_sessionUnlocks`. À utiliser pour évaluer les
+  /// prérequis (`requires`) d'une milestone candidate à l'acquittement par
+  /// défi en cours de séance : une milestone insérée mais pas encore
+  /// `markCompleted` (= `intro_basics` lors de la 1ère séance, le défi
+  /// tuto tombant au milieu) ne doit pas bloquer la cascade. Le générateur,
+  /// lui, continue d'utiliser [acquiredUnlockKeys] (qui exclut les
+  /// provisoires) pour rester aligné avec ce qui est consolidé lifetime.
+  Set<UnlockKey> effectiveUnlockKeysForChallenge() {
+    return acquiredUnlockKeys()..addAll(_sessionUnlocks);
+  }
+
   /// Phrase d'unlock à jouer en TTS après le finale_chime, si la milestone
   /// vient d'être acquittée. Priorité : override texte de la milestone, puis
   /// annonce par défaut basée sur le 1er unlock (cf. [defaultAnnouncementFor])
@@ -710,12 +721,17 @@ class MilestoneService extends ChangeNotifier {
   /// donnée — y compris les axes transitifs des holds (cf.
   /// `_impliedHoldUnlocksByAxis`).
   ///
-  /// Sert quand un défi a été joué **avant** que la cascade transitive ne
-  /// soit livrée : les unlocks pédagogiques ne s'étaient pas alignés sur
-  /// la capacité prouvée, et les sessions suivantes proposent toujours
-  /// des actions plus shallow que ce que la joueuse sait faire (cap
-  /// `milestoneHoldCeilingIdx` figé à `head` malgré un hold throat tenu).
-  /// À appeler au start de chaque session carrière pour normaliser.
+  /// Sémantique (cf. `LevelMilestone.acquittableByCapability`) : seules
+  /// les milestones qui ont explicitement déclaré pouvoir être acquittées
+  /// par capacité sont concernées. Les milestones de pédagogie pure
+  /// (sans `acquittableByCapability`) restent JOUÉES quoi qu'il arrive,
+  /// même si leur capacité est prouvée par ailleurs — c'est le levier qui
+  /// garantit que la séquence scriptée n'est pas zappée silencieusement.
+  ///
+  /// Sert principalement aux paliers consolidés (`intro_final_*`) et aux
+  /// milestones dont le défi tuto prouve la capacité (skip pédagogie
+  /// volontaire). À appeler au start de chaque session carrière pour
+  /// normaliser.
   ///
   /// Retourne le nombre de milestones acquittées (utile pour le caller
   /// qui peut vouloir loguer / régénérer le bundle d'unlocks).
@@ -793,13 +809,14 @@ class MilestoneService extends ChangeNotifier {
       for (final m in _catalog) {
         if (_completed.contains(m.id)) continue;
         if (acquittedIds.contains(m.id)) continue;
-        if (m.requiresCapability.isEmpty) continue;
+        // Nouvelle sémantique (cf. `acquittableByCapability` dans
+        // `LevelMilestone`) : l'acquittement silencieux est piloté par ce
+        // champ dédié, pas par `requiresCapability` (qui reste un simple
+        // gate de candidature). Une milestone sans `acquittableByCapability`
+        // ne peut PAS être acquittée sans avoir été jouée — sa pédagogie
+        // reste obligatoire.
+        if (m.acquittableByCapability.isEmpty) continue;
         if (!m.requires.every(liveUnlocks.contains)) continue;
-        // Plus de filtre `minLevel` ici : la philo est passée au gating
-        // par télémétrie. Si la joueuse a prouvé la capability d'une
-        // milestone via un défi, on l'acquitte indépendamment de son
-        // niveau global. Le param `playerLevel` est conservé pour la
-        // rétrocompat du call site mais n'est plus consulté.
         // Garde-fou : le défi doit avoir poussé **au moins un axe** que
         // la milestone attend, sinon l'acquittement « par défi » n'a aucun
         // sens — la milestone est juste devenue candidate parce que le
@@ -808,7 +825,7 @@ class MilestoneService extends ChangeNotifier {
         // satisfaisait par hasard tous les autres requirements.
         var matchedAxis = false;
         var allOk = true;
-        for (final req in m.requiresCapability) {
+        for (final req in m.acquittableByCapability) {
           if (req.axis == axis) {
             matchedAxis = true;
             final ok = axis.recordKind == CapabilityRecordKind.minimize

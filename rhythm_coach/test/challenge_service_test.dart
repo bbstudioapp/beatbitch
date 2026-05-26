@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:beat_bitch/career/models/challenge.dart';
 import 'package:beat_bitch/career/models/specialization.dart';
+import 'package:beat_bitch/career/models/unlock_key.dart';
 import 'package:beat_bitch/career/services/challenge_service.dart';
 import 'package:beat_bitch/models/session.dart';
 import 'package:beat_bitch/models/session_step.dart';
@@ -13,15 +14,38 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Construit un `CapabilityProfile` minimal avec un comfort posé sur un
 /// axe précis. Les autres axes restent vides → `pickOverloadAxis` les
 /// ignore (pas de donnée prouvée).
-CapabilityProfile _profileWithComfort(CapabilityAxis axis, double comfort) {
-  return CapabilityProfile({
+///
+/// Pose aussi par défaut `rhythmDepthMax.comfort = 4` (full) — sans ça, le
+/// gating profondeur (cf. bug 5 v0.5.1) exclut tous les axes profonds du
+/// tirage, masquant l'intention du test. Mettre `withDepthAccess: false`
+/// pour simuler une joueuse qui n'a pas encore validé la profondeur en
+/// session normale (rare — utilisé par les tests dédiés au gating).
+CapabilityProfile _profileWithComfort(
+  CapabilityAxis axis,
+  double comfort, {
+  bool withDepthAccess = true,
+}) {
+  final entries = <CapabilityAxis, CapabilityAxisState>{
     axis: CapabilityAxisState(
       best: comfort,
       comfort: comfort,
       successRate: 0.9,
       lastSeenSession: 1,
     ),
-  });
+  };
+  if (withDepthAccess && axis != CapabilityAxis.rhythmDepthMax) {
+    // `lastSeenSession` volontairement plus récent que l'axe testé : la
+    // staleness de rhythmDepthMax est ainsi nulle face à l'autre axe →
+    // pickOverloadAxis préfère l'axe testé. Permet de poser la profondeur
+    // requise par le gating bug 5 sans polluer le tirage des autres tests.
+    entries[CapabilityAxis.rhythmDepthMax] = const CapabilityAxisState(
+      best: 4.0,
+      comfort: 4.0,
+      successRate: 0.9,
+      lastSeenSession: 100,
+    );
+  }
+  return CapabilityProfile(entries);
 }
 
 void main() {
@@ -114,7 +138,15 @@ void main() {
         'axes exclus du pickOverloadAxis : fallback exploratoire sur axes vierges (Phase 2)',
         () async {
       final svc = ChallengeService();
-      final profile = _profileWithComfort(CapabilityAxis.holdThroatStreak, 10);
+      // Pas de rhythmDepthMax (`withDepthAccess: false`) : le gating bug 5
+      // s'occupe d'exclure les autres axes profonds, le seul candidat
+      // (holdThroatStreak) est aussi exclu manuellement → fallback
+      // exploratoire actif.
+      final profile = _profileWithComfort(
+        CapabilityAxis.holdThroatStreak,
+        10,
+        withDepthAccess: false,
+      );
       final challenge = await svc.buildForSession(
         profile: profile,
         ceilings: const {},
@@ -216,6 +248,591 @@ void main() {
         );
         expect(challenge?.isTutorial, isTrue);
         expect(challenge?.targetCrossings, isNull);
+      },
+    );
+  });
+
+  group('ChallengeService — signature visuelle (mode, from, to)', () {
+    // Plusieurs axes pilotants partagent la même signature visuelle
+    // côté joueuse (même mode, même from, même to). Quand la session
+    // contient plusieurs défis, exclure uniquement l'axe précédent ne
+    // suffit pas : on peut tirer un 2ᵉ axe différent qui produira un
+    // défi visuellement identique (deux « hold throat » successifs avec
+    // des durées incohérentes parce que dérivées de comforts d'axes
+    // différents). Cf. retour stefsub v0.5.0 (feedback_v0.5.1.md).
+    test(
+        '2 défis sur 3 axes hold throat synonymes — bug : 2 défis '
+        'visuellement identiques', () async {
+      final svc = ChallengeService();
+      // Trois axes différents, tous mappés vers (hold, throat, throat).
+      const profile = CapabilityProfile({
+        CapabilityAxis.holdThroatStreak: CapabilityAxisState(
+          best: 14,
+          comfort: 14,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
+        CapabilityAxis.gorgeApneeStreak: CapabilityAxisState(
+          best: 8,
+          comfort: 8,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
+        CapabilityAxis.gorgeEngagementStreak: CapabilityAxisState(
+          best: 20,
+          comfort: 20,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
+      });
+      // Simule la boucle de génération de career_screen : on pioche un
+      // défi, on ajoute son axe à excludeAxes, on recommence pour le
+      // défi suivant.
+      final excluded = <CapabilityAxis>{};
+      final picks = <Challenge>[];
+      for (var i = 0; i < 2; i++) {
+        final ch = await svc.buildForSession(
+          profile: profile,
+          ceilings: const {},
+          excludeAxes: excluded,
+          rng: Random(i),
+          isTutorial: false,
+        );
+        if (ch == null) break;
+        picks.add(ch);
+        excluded.add(ch.axis);
+        // Fix attendu : exclure aussi tous les axes partageant la même
+        // signature visuelle pour éviter le doublon perçu par la joueuse.
+        excluded.addAll(ChallengeService.axesSharingVisualSignature(ch.axis));
+      }
+      expect(picks.length, 2,
+          reason: '2 défis attendus parmi les axes hold throat');
+      final signatures =
+          picks.map((c) => '${c.mode}|${c.from}|${c.to}').toSet();
+      expect(signatures.length, 2,
+          reason: 'Les 2 défis doivent avoir des signatures (mode, from, to) '
+              'distinctes — sinon la joueuse voit deux fois le même défi avec '
+              'des durées incohérentes');
+    });
+
+    test(
+        'axesSharingVisualSignature : holdThroatStreak ⇔ gorgeApneeStreak ⇔ '
+        'gorgeEngagementStreak', () {
+      final group = ChallengeService.axesSharingVisualSignature(
+          CapabilityAxis.holdThroatStreak);
+      expect(group, contains(CapabilityAxis.gorgeApneeStreak));
+      expect(group, contains(CapabilityAxis.gorgeEngagementStreak));
+      // L'axe lui-même n'est pas dans le retour (le caller l'a déjà
+      // ajouté à excludeAxes via excluded.add(ch.axis)).
+      expect(group, isNot(contains(CapabilityAxis.holdThroatStreak)));
+    });
+
+    test('axesSharingVisualSignature : holdFullStreak isolé', () {
+      // hold full a sa propre signature (from/to = full), pas de doublon.
+      final group = ChallengeService.axesSharingVisualSignature(
+          CapabilityAxis.holdFullStreak);
+      expect(group, isEmpty);
+    });
+
+    test('axesSharingVisualSignature : axes rhythm distincts', () {
+      // rhythmBpmCeilThroat = (rhythm, head→throat) : sa signature ne
+      // matche pas rhythmBpmCeilFull = (rhythm, mid→full) ni shallow.
+      expect(
+        ChallengeService.axesSharingVisualSignature(
+            CapabilityAxis.rhythmBpmCeilThroat),
+        isEmpty,
+      );
+    });
+  });
+
+  group('ChallengeService — gating unlocks (modèle gorge)', () {
+    test(
+        'unlockGatedAxes : pas d\'unlocks → gorgeApnee et gorgeEngagement '
+        'gatés', () {
+      final gated = ChallengeService.unlockGatedAxes(const {});
+      expect(gated, contains(CapabilityAxis.gorgeApneeStreak));
+      expect(gated, contains(CapabilityAxis.gorgeEngagementStreak));
+    });
+
+    test(
+        'unlockGatedAxes : seulement throatPulse → gorgeEngagement ouvert, '
+        'gorgeApnee toujours gaté', () {
+      final gated =
+          ChallengeService.unlockGatedAxes(const {UnlockKey.throatPulse});
+      expect(gated, isNot(contains(CapabilityAxis.gorgeEngagementStreak)));
+      // gorgeApnee exige fullPulse + fullHold en plus.
+      expect(gated, contains(CapabilityAxis.gorgeApneeStreak));
+    });
+
+    test('unlockGatedAxes : fullPulse + fullHold → gorgeApnee ouvert', () {
+      final gated = ChallengeService.unlockGatedAxes(
+          const {UnlockKey.fullPulse, UnlockKey.fullHold});
+      expect(gated, isNot(contains(CapabilityAxis.gorgeApneeStreak)));
+    });
+
+    test(
+        'unlockGatedAxes : fullPulse seul (fullHold manquant) → gorgeApnee '
+        'gaté', () {
+      final gated =
+          ChallengeService.unlockGatedAxes(const {UnlockKey.fullPulse});
+      expect(gated, contains(CapabilityAxis.gorgeApneeStreak));
+    });
+
+    test(
+        'buildForSession : sans unlocks → gorgeApnee et gorgeEngagement '
+        'ne sortent pas même si comfort prouvé', () async {
+      final svc = ChallengeService();
+      // Comfort prouvé sur gorgeApnee + gorgeEngagement + holdThroatStreak.
+      // Sans unlocks, gorgeApnee et gorgeEngagement sont gatés ; seul
+      // holdThroatStreak peut sortir (sous réserve du gating profondeur,
+      // qu'on satisfait via rhythmDepthMax).
+      const profile = CapabilityProfile({
+        CapabilityAxis.rhythmDepthMax: CapabilityAxisState(
+          best: 4.0,
+          comfort: 4.0,
+          successRate: 0.9,
+          lastSeenSession: 100,
+        ),
+        CapabilityAxis.gorgeApneeStreak: CapabilityAxisState(
+          best: 10.0,
+          comfort: 10.0,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
+        CapabilityAxis.gorgeEngagementStreak: CapabilityAxisState(
+          best: 20.0,
+          comfort: 20.0,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
+        CapabilityAxis.holdThroatStreak: CapabilityAxisState(
+          best: 10.0,
+          comfort: 10.0,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
+      });
+      // unlocks vide ≠ mode hérité : le mode hérité utilise un set vide
+      // pour signifier « pas de gating ». Ici, on simule un mode hérité.
+      // On passe explicitement un set non-vide mais sans les keys requises
+      // pour que le gating s'active.
+      final challenge = await svc.buildForSession(
+        profile: profile,
+        ceilings: const {},
+        excludeAxes: const {},
+        rng: Random(0),
+        isTutorial: false,
+        unlocks: const {UnlockKey.basics},
+      );
+      expect(challenge, isNotNull);
+      expect(challenge!.axis, isNot(CapabilityAxis.gorgeApneeStreak));
+      expect(challenge.axis, isNot(CapabilityAxis.gorgeEngagementStreak));
+    });
+
+    test(
+        'buildForSession : mode hérité (unlocks vide) → gating unlock '
+        'désactivé', () async {
+      final svc = ChallengeService();
+      const profile = CapabilityProfile({
+        CapabilityAxis.rhythmDepthMax: CapabilityAxisState(
+          best: 4.0,
+          comfort: 4.0,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
+        CapabilityAxis.gorgeApneeStreak: CapabilityAxisState(
+          best: 10.0,
+          comfort: 10.0,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
+      });
+      final challenge = await svc.buildForSession(
+        profile: profile,
+        ceilings: const {},
+        excludeAxes: const {},
+        rng: Random(0),
+        isTutorial: false,
+        // unlocks: default {} → mode hérité, pas de gating.
+      );
+      expect(challenge, isNotNull);
+      // Sans gating, le seul axe candidat hors rhythmDepthMax est
+      // gorgeApneeStreak (rhythmDepthMax est lastSeen=1 donc moins
+      // attractif que les éventuels axes plus anciens).
+      expect(
+        challenge!.axis,
+        anyOf(
+          CapabilityAxis.gorgeApneeStreak,
+          CapabilityAxis.rhythmDepthMax,
+        ),
+      );
+    });
+  });
+
+  group('ChallengeService — gating profondeur (bug 5)', () {
+    test('depthGatedAxes : profil neuf → tous les axes profonds gatés', () {
+      final gated = ChallengeService.depthGatedAxes(null);
+      // 5 axes throat + 3 axes full.
+      expect(gated, contains(CapabilityAxis.holdThroatStreak));
+      expect(gated, contains(CapabilityAxis.gorgeApneeStreak));
+      expect(gated, contains(CapabilityAxis.gorgeEngagementStreak));
+      expect(gated, contains(CapabilityAxis.rhythmBpmCeilThroat));
+      expect(gated, contains(CapabilityAxis.gorgeCrossingsBpmThroat));
+      expect(gated, contains(CapabilityAxis.holdFullStreak));
+      expect(gated, contains(CapabilityAxis.rhythmBpmCeilFull));
+      expect(gated, contains(CapabilityAxis.gorgeCrossingsBpmFull));
+    });
+
+    test('depthGatedAxes : rhythmDepthMax = mid → axes throat/full gatés', () {
+      const profile = CapabilityProfile({
+        CapabilityAxis.rhythmDepthMax: CapabilityAxisState(
+          best: 2.0,
+          comfort: 2.0,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
+      });
+      final gated = ChallengeService.depthGatedAxes(profile);
+      // mid (2) < throat (3) ⇒ tous les axes throat gatés.
+      expect(gated, contains(CapabilityAxis.holdThroatStreak));
+      expect(gated, contains(CapabilityAxis.rhythmBpmCeilThroat));
+      expect(gated, contains(CapabilityAxis.holdFullStreak));
+    });
+
+    test('depthGatedAxes : rhythmDepthMax = throat → axes throat ouverts', () {
+      const profile = CapabilityProfile({
+        CapabilityAxis.rhythmDepthMax: CapabilityAxisState(
+          best: 3.0,
+          comfort: 3.0,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
+      });
+      final gated = ChallengeService.depthGatedAxes(profile);
+      // throat (3) ≥ throat (3) ⇒ axes throat ouverts.
+      expect(gated, isNot(contains(CapabilityAxis.holdThroatStreak)));
+      expect(gated, isNot(contains(CapabilityAxis.rhythmBpmCeilThroat)));
+      // full (4) > throat (3) ⇒ axes full restent gatés.
+      expect(gated, contains(CapabilityAxis.holdFullStreak));
+      expect(gated, contains(CapabilityAxis.rhythmBpmCeilFull));
+    });
+
+    test('depthGatedAxes : rhythmDepthMax = full → aucun axe gaté', () {
+      const profile = CapabilityProfile({
+        CapabilityAxis.rhythmDepthMax: CapabilityAxisState(
+          best: 4.0,
+          comfort: 4.0,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
+      });
+      expect(ChallengeService.depthGatedAxes(profile), isEmpty);
+    });
+
+    test(
+        'buildForSession : profil sans profondeur throat → pas de défi sur '
+        'holdThroatStreak même si comfort posé', () async {
+      final svc = ChallengeService();
+      // holdThroatStreak prouvé (via tuto par exemple) mais rhythm.depth_max
+      // reste à mid : on ne reverra plus de défi hold throat tant que
+      // rhythm profondeur n'a pas monté.
+      const profile = CapabilityProfile({
+        CapabilityAxis.rhythmDepthMax: CapabilityAxisState(
+          best: 2.0,
+          comfort: 2.0,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
+        CapabilityAxis.holdThroatStreak: CapabilityAxisState(
+          best: 5.0,
+          comfort: 5.0,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
+      });
+      final challenge = await svc.buildForSession(
+        profile: profile,
+        ceilings: const {},
+        excludeAxes: const {},
+        rng: Random(0),
+        isTutorial: false,
+      );
+      // rhythmDepthMax reste candidat (son rôle est de pousser la
+      // profondeur — pas gaté).
+      expect(challenge, isNotNull);
+      expect(challenge!.axis, isNot(CapabilityAxis.holdThroatStreak));
+    });
+
+    test('buildForSession : tutoriel reste exempté du gating', () async {
+      final svc = ChallengeService();
+      // Pas de profil → axes profonds gatés normalement, mais le tuto
+      // est forcé sur holdThroatStreak.
+      final challenge = await svc.buildForSession(
+        profile: null,
+        ceilings: const {},
+        excludeAxes: const {},
+        rng: Random(42),
+        isTutorial: true,
+      );
+      expect(challenge, isNotNull);
+      expect(challenge!.isTutorial, isTrue);
+      expect(challenge.axis, CapabilityAxis.holdThroatStreak);
+    });
+
+    test(
+        'buildForSession : rhythmDepthMax non gaté — son rôle est de pousser '
+        'la profondeur d\'un cran', () async {
+      final svc = ChallengeService();
+      const profile = CapabilityProfile({
+        CapabilityAxis.rhythmDepthMax: CapabilityAxisState(
+          best: 2.0,
+          comfort: 2.0,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
+      });
+      final challenge = await svc.buildForSession(
+        profile: profile,
+        ceilings: const {},
+        excludeAxes: const {},
+        rng: Random(0),
+        isTutorial: false,
+      );
+      expect(challenge, isNotNull);
+      expect(challenge!.axis, CapabilityAxis.rhythmDepthMax);
+      expect(challenge.targetThreshold, 3); // mid + 1 cran = throat
+    });
+  });
+
+  group('ChallengeService — dégradation amplitude axes endurance (bug 5)', () {
+    test(
+        'rhythmMotionStreak avec rhythm.depth_max.comfort=mid → from/to '
+        'dégradés à tip→mid', () async {
+      final svc = ChallengeService();
+      const profile = CapabilityProfile({
+        CapabilityAxis.rhythmDepthMax: CapabilityAxisState(
+          best: 2.0, // mid
+          comfort: 2.0,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
+        CapabilityAxis.rhythmMotionStreak: CapabilityAxisState(
+          best: 70.0,
+          comfort: 70.0,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
+      });
+      // Force le tirage de rhythmMotionStreak en excluant rhythmDepthMax.
+      final challenge = await svc.buildForSession(
+        profile: profile,
+        ceilings: const {},
+        excludeAxes: {CapabilityAxis.rhythmDepthMax},
+        rng: Random(0),
+        isTutorial: false,
+      );
+      expect(challenge, isNotNull);
+      expect(challenge!.axis, CapabilityAxis.rhythmMotionStreak);
+      // Mapping standard = head→throat ; dégradé à profondeur mid →
+      // (head→mid) ou (tip→mid) selon la convention from<to.
+      expect(challenge.to, Position.mid);
+      expect(challenge.from!.index, lessThan(Position.mid.index));
+    });
+
+    test(
+        'rhythmMotionStreak avec rhythm.depth_max.comfort=throat → '
+        'pas de dégradation (head→throat préservé)', () async {
+      final svc = ChallengeService();
+      const profile = CapabilityProfile({
+        CapabilityAxis.rhythmDepthMax: CapabilityAxisState(
+          best: 3.0, // throat
+          comfort: 3.0,
+          successRate: 0.9,
+          lastSeenSession: 100,
+        ),
+        CapabilityAxis.rhythmMotionStreak: CapabilityAxisState(
+          best: 70.0,
+          comfort: 70.0,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
+      });
+      final challenge = await svc.buildForSession(
+        profile: profile,
+        ceilings: const {},
+        excludeAxes: const {},
+        rng: Random(0),
+        isTutorial: false,
+      );
+      expect(challenge, isNotNull);
+      expect(challenge!.axis, CapabilityAxis.rhythmMotionStreak);
+      expect(challenge.from, Position.head);
+      expect(challenge.to, Position.throat);
+    });
+
+    test(
+        'holdThroatStreak (axe profondeur) avec gating ouvert : pas de '
+        'dégradation, throat préservé', () async {
+      final svc = ChallengeService();
+      const profile = CapabilityProfile({
+        CapabilityAxis.rhythmDepthMax: CapabilityAxisState(
+          best: 3.0, // throat (passe le gating)
+          comfort: 3.0,
+          successRate: 0.9,
+          lastSeenSession: 100,
+        ),
+        CapabilityAxis.holdThroatStreak: CapabilityAxisState(
+          best: 10.0,
+          comfort: 10.0,
+          successRate: 0.9,
+          lastSeenSession: 1,
+        ),
+      });
+      final challenge = await svc.buildForSession(
+        profile: profile,
+        ceilings: const {},
+        excludeAxes: const {},
+        rng: Random(0),
+        isTutorial: false,
+      );
+      expect(challenge, isNotNull);
+      expect(challenge!.axis, CapabilityAxis.holdThroatStreak);
+      expect(challenge.from, Position.throat);
+      expect(challenge.to, Position.throat);
+    });
+  });
+
+  group('ChallengeService — anti-répétition inter-sessions', () {
+    test('lastSessionAxes : vide par défaut', () async {
+      final svc = ChallengeService();
+      expect(await svc.lastSessionAxes(), isEmpty);
+    });
+
+    test('recordSessionChallenges → lastSessionAxes : round-trip', () async {
+      final svc = ChallengeService();
+      await svc.recordSessionChallenges([
+        CapabilityAxis.holdThroatStreak,
+        CapabilityAxis.rhythmBpmCeilThroat,
+        CapabilityAxis.gorgeApneeStreak,
+      ]);
+      expect(
+        await svc.lastSessionAxes(),
+        {
+          CapabilityAxis.holdThroatStreak,
+          CapabilityAxis.rhythmBpmCeilThroat,
+          CapabilityAxis.gorgeApneeStreak,
+        },
+      );
+    });
+
+    test('recordSessionChallenges : écrase l\'ancienne liste', () async {
+      final svc = ChallengeService();
+      await svc.recordSessionChallenges([CapabilityAxis.holdThroatStreak]);
+      await svc.recordSessionChallenges([CapabilityAxis.rhythmBpmCeilShallow]);
+      // Pas d'union — la liste de la session précédente seule est conservée.
+      expect(
+        await svc.lastSessionAxes(),
+        {CapabilityAxis.rhythmBpmCeilShallow},
+      );
+    });
+
+    test('recordSessionChallenges : liste vide → reset', () async {
+      final svc = ChallengeService();
+      await svc.recordSessionChallenges([CapabilityAxis.holdThroatStreak]);
+      await svc.recordSessionChallenges(const []);
+      expect(await svc.lastSessionAxes(), isEmpty);
+    });
+
+    test('resetAll : nettoie aussi lastSessionAxes', () async {
+      final svc = ChallengeService();
+      await svc.recordSessionChallenges([CapabilityAxis.holdThroatStreak]);
+      await svc.resetAll();
+      expect(await svc.lastSessionAxes(), isEmpty);
+    });
+
+    test(
+      'session N+1 sur même profil restreint : exclure axes de la session N '
+      '→ axes différents si pool suffisante',
+      () async {
+        final svc = ChallengeService();
+        // Profil de stefsub-like : 3 axes prouvés (cf. retour v0.5.0).
+        // Plus un 4ᵉ vierge dans la pool overloadable (pour qu'un axe
+        // alternatif soit dispo après exclusion).
+        const profile = CapabilityProfile({
+          CapabilityAxis.holdThroatStreak: CapabilityAxisState(
+            best: 14,
+            comfort: 14,
+            successRate: 0.9,
+            lastSeenSession: 5,
+          ),
+          CapabilityAxis.rhythmBpmCeilThroat: CapabilityAxisState(
+            best: 100,
+            comfort: 100,
+            successRate: 0.9,
+            lastSeenSession: 5,
+          ),
+          CapabilityAxis.holdFullStreak: CapabilityAxisState(
+            best: 8,
+            comfort: 8,
+            successRate: 0.9,
+            lastSeenSession: 5,
+          ),
+        });
+        // Session N : pick le 1ᵉʳ axe via tirage standard.
+        final firstSession = await svc.buildForSession(
+          profile: profile,
+          ceilings: const {},
+          excludeAxes: const {},
+          rng: Random(0),
+          isTutorial: false,
+        );
+        expect(firstSession, isNotNull);
+        await svc.recordSessionChallenges([firstSession!.axis]);
+
+        // Session N+1 : exclure les axes de la session N → tirage doit
+        // tomber sur un autre axe prouvé.
+        final lastAxes = await svc.lastSessionAxes();
+        expect(lastAxes, contains(firstSession.axis));
+        final secondSession = await svc.buildForSession(
+          profile: profile,
+          ceilings: const {},
+          excludeAxes: lastAxes,
+          rng: Random(0),
+          isTutorial: false,
+        );
+        expect(secondSession, isNotNull);
+        expect(secondSession!.axis, isNot(firstSession.axis));
+      },
+    );
+
+    test(
+      'session N+1 avec pool totalement épuisée : exploratoire ou null '
+      '(fallback du caller : retirer l\'exclusion)',
+      () async {
+        final svc = ChallengeService();
+        const profile = CapabilityProfile({
+          CapabilityAxis.holdThroatStreak: CapabilityAxisState(
+            best: 14,
+            comfort: 14,
+            successRate: 0.9,
+            lastSeenSession: 1,
+          ),
+        });
+        await svc.recordSessionChallenges([CapabilityAxis.holdThroatStreak]);
+        // Exclure le seul axe prouvé : on retombe sur l'exploratoire d'un
+        // axe vierge — c'est le comportement attendu et c'est ok ici.
+        final challenge = await svc.buildForSession(
+          profile: profile,
+          ceilings: const {},
+          excludeAxes: await svc.lastSessionAxes(),
+          rng: Random(0),
+          isTutorial: false,
+        );
+        // L'exploratoire reste activé tant qu'il existe au moins un axe
+        // pilotant vierge non exclu (le cas ici).
+        expect(challenge, isNotNull);
+        expect(challenge!.isExploratory, isTrue);
+        expect(challenge.axis, isNot(CapabilityAxis.holdThroatStreak));
       },
     );
   });

@@ -105,7 +105,10 @@ class MilestoneLoader {
     final requiresHands = (raw['requiresHands'] as bool?) ?? false;
     final branches = _parseBranches(raw);
     final placement = _parsePlacement(raw['placement'] as String?);
-    final requiresCapability = _parseCapabilityRequirements(raw);
+    final requiresCapability =
+        _parseCapabilityRequirements(raw, 'requiresCapability');
+    final acquittableByCapability =
+        _parseCapabilityRequirements(raw, 'acquittableByCapability');
     return LevelMilestone(
       id: id,
       minLevel: minLevel,
@@ -116,6 +119,7 @@ class MilestoneLoader {
       unlocks: unlocks,
       requires: requires,
       requiresCapability: requiresCapability,
+      acquittableByCapability: acquittableByCapability,
       insertAtMinSeconds: insertMin,
       insertAtMaxSeconds: insertMax,
       maxRetry: maxRetry,
@@ -125,14 +129,15 @@ class MilestoneLoader {
     );
   }
 
-  /// Parse la liste `requiresCapability` du JSON. Format attendu :
-  /// `[{"axis": "hold.throat.streak", "min": 3.0}, ...]`. Le `axis` doit
-  /// matcher une `CapabilityAxis.storageKey` ; sinon l'entrée est
-  /// silencieusement ignorée (compatibilité avant — ajouter un nouvel axe
-  /// ne casse pas le parse).
+  /// Parse une liste de `CapabilityRequirement` portée par la clé [field]
+  /// du JSON (`requiresCapability` ou `acquittableByCapability`). Format
+  /// attendu : `[{"axis": "hold.throat.streak", "min": 3.0}, ...]`. Le
+  /// `axis` doit matcher une `CapabilityAxis.storageKey` ; sinon l'entrée
+  /// est silencieusement ignorée (compatibilité avant — ajouter un nouvel
+  /// axe ne casse pas le parse).
   static List<CapabilityRequirement> _parseCapabilityRequirements(
-      Map<String, dynamic> raw) {
-    final list = raw['requiresCapability'] as List<dynamic>? ?? const [];
+      Map<String, dynamic> raw, String field) {
+    final list = raw[field] as List<dynamic>? ?? const [];
     if (list.isEmpty) return const [];
     final out = <CapabilityRequirement>[];
     for (final entry in list) {

@@ -209,6 +209,21 @@ class CareerSessionGenerator {
     });
   }
 
+  /// Enveloppe temporelle conservative réservée par le générateur après
+  /// le trigger d'un défi, pour ne pas chevaucher les blocs en aval
+  /// (milestone, mini-vague, finish). Pour les builders monolithiques
+  /// (PR-B.1.a) on prend exactement la durée nominale du défi — identique
+  /// à l'ancien comportement où le step défi était matérialisé tel quel.
+  /// Quand les builders streaming arriveront (PR-B.1.c+), on ajoutera ici
+  /// une marge (≈ × 1.5 à × 2.0, cf. spec § 9.4).
+  ///
+  /// À l'exécution, `_excisChallengeFromSession` retire la fenêtre
+  /// effective `[trigger, trigger + breath + estimate]` de la timeline :
+  /// l'écart entre cette estimation et la durée réelle (release rapide,
+  /// extensions) est absorbé par le shift des steps suivants.
+  static int _estimatedChallengeDuration(Challenge ch) =>
+      ch.nominalDurationSeconds;
+
   /// Budget réservé en fin de session pour la phase d'accélération qui
   /// précède le hold final (bas niveaux uniquement). Permet d'enchaîner
   /// proprement effort → finisher sans dépasser la durée demandée.
@@ -560,6 +575,8 @@ class CareerSessionGenerator {
       overloadAxis: overload.axis,
       overloadFactor: overload.factor,
       lengthChoice: lengthChoice,
+      intense: intense,
+      encoreChainIndex: encoreChainIndex,
     );
     _initScratchpad(unlockedKeys: unlockedKeys, clearPatternBuffer: true);
     // Mode "Session bâclée" : 6 min par défaut, intense tout du long. Floor
@@ -578,8 +595,14 @@ class CareerSessionGenerator {
     final effectiveDuration = durationSeconds ??
         lengthChoice?.durationSeconds ??
         (quickie ? 6 * 60 : cfg.durationSeconds);
-    final intensityFloor =
-        custom.intensityFloor ?? (quickie ? 0.65 : (intense ? 0.55 : 0.0));
+    // Mode intense (Supplier ou Encore) : plancher solide qui scale par
+    // cran d'encore (+0.05/cran, plafond 0.75). Le cran 0 d'un intense
+    // démarre à 0.65 (Supplier ou 1er Encore) ; cran 1 = 0.70 ; cran 2+ =
+    // 0.75. Custom et quickie gardent leurs valeurs propres.
+    final intenseBaseFloor =
+        (0.65 + 0.05 * max(0, encoreChainIndex)).clamp(0.65, 0.75);
+    final intensityFloor = custom.intensityFloor ??
+        (quickie ? 0.65 : (intense ? intenseBaseFloor : 0.0));
     // Nombre de boosts en phase finish : table par niveau + bonus encore
     // (chaîne encore = +2 boosts par cran, sans plafond explicite côté
     // générateur). Le caller borne le nombre d'encores enchaînés via le
@@ -717,12 +740,11 @@ class CareerSessionGenerator {
     // l'enveloppe restante ne couvre pas breath + défi + marge pour la
     // phase finish (on préfère ne pas insérer un défi tronqué).
     final challengeQueue = List<Challenge>.from(challenge.challenges);
-    final challengeTriggerTimes = _computeChallengeTriggerTimes(
+    final plannedTriggerTimes = _computeChallengeTriggerTimes(
       count: challengeQueue.length,
       genUntil: genUntil,
     );
-    final challengeBreathStartTimes = <int>[];
-    final challengeStepTimes = <int>[];
+    final challengeTriggerTimes = <int>[];
     var nextChallengeIndex = 0;
     while (ctx.time < genUntil) {
       // Phase 1 — Insertion milestone : on traite les pending dans
@@ -742,45 +764,42 @@ class CareerSessionGenerator {
       // Phase 3 — Ordre de déglutition forcé : beg libre court quand la
       // simulation salive sature.
       if (_tryEmitSwallowOrder(ctx)) continue;
-      // Phase 3.5 — Défi(s) intra-séance (Phase 1 + 19.5.b multi-défi) :
-      // pour chaque défi à insérer, on attend `ctx.time >= triggerTime[i]`,
-      // puis on émet un step breath de countdown suivi du step défi. Le
-      // SessionController détecte ensuite via `Session.challenges` /
-      // `challengeBreathStartTimes` / `challengeStepTimes` pour armer la
-      // machine d'états live. Skip un défi si l'enveloppe restante ne
-      // couvre pas breath + défi + marge pour la phase finish (= défi
-      // perdu silencieusement, on préfère pas de défi à un défi tronqué).
+      // Phase 3.5 — Défi(s) intra-séance (Phase B — streaming).
+      // Pour chaque défi à insérer, on attend `ctx.time >= planned[i]`,
+      // puis on émet **uniquement** le step trigger (breath de countdown).
+      // Le step défi lui-même n'est plus pré-positionné : le
+      // `ChallengeSegmentBuilder` (instancié par le SessionController à
+      // l'entrée en phase `live`) émet ses segments à la volée en runtime.
+      //
+      // Côté générateur on **réserve** néanmoins une enveloppe temporelle
+      // après le trigger pour ne pas chevaucher la phase finish ou les
+      // blocs en aval — `_estimatedChallengeDuration(ch)` (conservative).
+      // À l'exécution, `_excisChallengeFromSession` retire la fenêtre
+      // effective (`breathDur + estimate`) et shift les steps suivants.
+      //
+      // Skip un défi si l'enveloppe restante ne couvre pas breath +
+      // estimate (= défi perdu silencieusement, on préfère pas de défi à
+      // un défi tronqué).
       if (nextChallengeIndex < challengeQueue.length &&
-          ctx.time >= challengeTriggerTimes[nextChallengeIndex]) {
+          ctx.time >= plannedTriggerTimes[nextChallengeIndex]) {
         final nextChallenge = challengeQueue[nextChallengeIndex];
         const breathDur = kChallengeBreathDurationSeconds;
-        final stepDur = nextChallenge.nominalDurationSeconds;
+        final reservedStepDur = _estimatedChallengeDuration(nextChallenge);
         final remaining = genUntil - ctx.time;
-        if (remaining >= breathDur + stepDur) {
-          // Step breath de countdown sans texte : la phrase `attempt` est
+        if (remaining >= breathDur + reservedStepDur) {
+          // Step trigger : breath sans texte. La phrase `attempt` est
           // dite et affichée par le `SessionController._updateChallengePhase`
-          // (banner + TTS) à l'entrée en phase `breath`. Si on injectait
-          // aussi le texte sur le step, le coach le disait deux fois (une
-          // via `_speakScripted(step.text)`, une via le banner) et le user
-          // voyait du texte coach normal + texte du cadre noir en double.
-          challengeBreathStartTimes.add(ctx.time);
+          // (banner + TTS) à l'entrée en phase `breath`.
+          challengeTriggerTimes.add(ctx.time);
           steps.add(SessionStep(
             time: ctx.time,
             mode: SessionMode.breath,
             duration: breathDur,
           ));
           ctx.time += breathDur;
-          challengeStepTimes.add(ctx.time);
-          steps.add(SessionStep(
-            time: ctx.time,
-            from: nextChallenge.from,
-            to: nextChallenge.to,
-            bpm: nextChallenge.bpm,
-            bpmEnd: nextChallenge.bpmEnd,
-            duration: stepDur,
-            mode: nextChallenge.mode,
-          ));
-          ctx.time += stepDur;
+          // Pas de step défi matérialisé ici — on réserve juste l'enveloppe
+          // pour la planification aval.
+          ctx.time += reservedStepDur;
           nextChallengeIndex++;
           continue;
         }
@@ -861,8 +880,7 @@ class CareerSessionGenerator {
         finalMilestoneStartTime: finalMilestoneStartTime,
         finalMilestoneDurationSeconds: finalMilestone.durationSeconds,
         challenges: challengeQueue.sublist(0, nextChallengeIndex),
-        challengeBreathStartTimes: challengeBreathStartTimes,
-        challengeStepTimes: challengeStepTimes,
+        challengeTriggerTimes: challengeTriggerTimes,
       );
     }
 
@@ -944,8 +962,7 @@ class CareerSessionGenerator {
       silentFinishStartTime: silentFinishStartTime,
       finalStepStartTime: finalStepStartTime,
       challenges: challengeQueue.sublist(0, nextChallengeIndex),
-      challengeBreathStartTimes: challengeBreathStartTimes,
-      challengeStepTimes: challengeStepTimes,
+      challengeTriggerTimes: challengeTriggerTimes,
     );
   }
 
@@ -1476,8 +1493,7 @@ class CareerSessionGenerator {
     int? finalMilestoneStartTime,
     int? finalMilestoneDurationSeconds,
     List<Challenge> challenges = const [],
-    List<int> challengeBreathStartTimes = const [],
-    List<int> challengeStepTimes = const [],
+    List<int> challengeTriggerTimes = const [],
   }) {
     final finalDuration = ctx.time + 2;
     final trimmedProfile = List<double>.generate(
@@ -1517,8 +1533,7 @@ class CareerSessionGenerator {
         finalStepTime: finalStepStartTime,
         noStats: ctx.noStats,
         challenges: challenges,
-        challengeBreathStartTimes: challengeBreathStartTimes,
-        challengeStepTimes: challengeStepTimes,
+        challengeTriggerTimes: challengeTriggerTimes,
       ),
       staminaProfile: trimmedProfile,
       overloadAxis: _config.overloadAxis,
@@ -1837,15 +1852,24 @@ class CareerSessionGenerator {
     );
   }
 
-  /// Bump conditionnel d'un tier de phrase selon `_config.obedience`. Cf. doc
-  /// de `_pickPhrase`. Ne touche pas aux tiers `boost`/`finale`.
+  /// Bump conditionnel d'un tier de phrase selon `_config.obedience` et
+  /// l'escalade `_config.intense` (Supplier/Encore). Cf. doc de
+  /// `_pickPhrase`. Ne touche pas aux tiers `boost`/`finale`.
+  ///
+  /// **Bump intense** : quand la joueuse a réclamé plus dur via Supplier
+  /// ou Encore, on retire toute douceur — `soft → medium` à 100 %,
+  /// `medium → hard` à 60 %. Cumulé via "le plus dur gagne" avec le bump
+  /// obédiance qui pourrait être plus prudent à obédiance basse.
   String _bumpTierByObedience(String tier) {
     if (tier == 'boost' || tier == 'finale') return tier;
     final obed = _config.obedience;
+    final intense = _config.intense;
     final roll = _rng.nextDouble();
     if (tier == 'soft') {
       double pSoftToMedium;
-      if (obed >= 150) {
+      if (intense) {
+        pSoftToMedium = 1.0;
+      } else if (obed >= 150) {
         pSoftToMedium = 0.90;
       } else if (obed >= 80) {
         pSoftToMedium = 0.70;
@@ -1858,7 +1882,9 @@ class CareerSessionGenerator {
     }
     if (tier == 'medium') {
       double pMediumToHard;
-      if (obed >= 150) {
+      if (intense) {
+        pMediumToHard = 0.60;
+      } else if (obed >= 150) {
         pMediumToHard = 0.60;
       } else if (obed >= 80) {
         pMediumToHard = 0.30;

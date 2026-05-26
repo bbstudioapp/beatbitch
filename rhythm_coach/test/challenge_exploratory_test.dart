@@ -80,7 +80,15 @@ void main() {
 
     test('profil avec un axe prouvé → hybride (pas exploratoire)', () async {
       final svc = ChallengeService();
+      // Profondeur throat prouvée pour passer le gating bug 5 sur
+      // holdThroatStreak.
       const profile = CapabilityProfile({
+        CapabilityAxis.rhythmDepthMax: CapabilityAxisState(
+          best: 3.0,
+          comfort: 3.0,
+          successRate: 0.9,
+          lastSeenSession: 100,
+        ),
         CapabilityAxis.holdThroatStreak: CapabilityAxisState(
           best: 10.0,
           comfort: 10.0,

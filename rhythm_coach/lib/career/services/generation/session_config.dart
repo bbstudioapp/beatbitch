@@ -52,6 +52,8 @@ class SessionConfig {
     required this.overloadAxis,
     required this.overloadFactor,
     this.lengthChoice,
+    this.intense = false,
+    this.encoreChainIndex = 0,
   });
 
   // Bornes globales
@@ -84,6 +86,19 @@ class SessionConfig {
   final Map<CapabilityAxis, double> capCeilings;
   final CapabilityAxis? overloadAxis;
   final double overloadFactor;
+
+  /// Séance déclenchée par un bouton d'escalade (Supplier ou Encore) :
+  /// la joueuse a explicitement demandé plus dur. Active partout : boost
+  /// global de comforts (≈ × `kIntenseComfortBoost` plafonné par les
+  /// `capCeilings`), bump du tier des phrases (soft→medium, medium→hard),
+  /// final allongé, BPM cap finish relevé. Cf. `CapabilityClamps.capabilityCapFor`
+  /// + `CareerLevelGates.finishBpmBoostBpm` + `FinishPhase` + `_bumpTierByObedience`.
+  final bool intense;
+
+  /// Rang de la chaîne d'encore courante (0 = première séance, 1 = 1er
+  /// encore, 2 = 2ᵉ encore…). Lu pour scaler l'`intensityFloor` quand
+  /// `intense` est actif sur l'encore (cf. `generate()`).
+  final int encoreChainIndex;
 
   // ─── Méthodes dérivées (pures, lisent uniquement les fields ci-dessus) ───
 

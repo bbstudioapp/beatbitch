@@ -350,30 +350,73 @@ class _CareerScreenState extends State<CareerScreen> {
       final targetCount =
           lengthChoice.targetChallengesFor(insertedBodies.length);
       final excludedAxes = <CapabilityAxis>{};
+      // Anti-répétition inter-sessions : exclure d'abord les axes pickés à
+      // la session précédente. Sur un profil jeune (3 axes prouvés) sans
+      // cette exclusion, `pickOverloadAxis` retombe sur les mêmes 3 axes
+      // dans le même ordre 2 séances de suite (cf. retour stefsub v0.5.0).
+      // Non bloquant : si la pool restante est trop petite pour atteindre
+      // `targetCount`, on retire ce filtre dans le 2ᵉ essai du pick.
+      final lastSessionAxes = await _challengeService.lastSessionAxes();
       // Premier défi seulement : le tutoriel est forcé sur l'axe hold
       // throat (cf. _buildTutorialChallenge), on ne le répète pas pour
       // les défis suivants.
       var isFirst = true;
       for (var i = 0; i < targetCount; i++) {
-        final next = await _challengeService.buildForSession(
+        final isTuto = isFirst && !_challengeTutorialSeen;
+        // 1er essai : exclusion stricte (axes session courante + signature
+        // visuelle + axes de la session précédente). Pas d'anti-repeat pour
+        // le tuto, qui est de toute façon forcé sur holdThroatStreak.
+        final strictExcluded = isTuto
+            ? excludedAxes
+            : <CapabilityAxis>{...excludedAxes, ...lastSessionAxes};
+        var next = await _challengeService.buildForSession(
           profile: bundle.capabilityProfile,
           ceilings: const {},
-          excludeAxes: excludedAxes,
+          excludeAxes: strictExcluded,
           rng: Random(),
-          // Tuto = seulement pour le tout premier défi de la joueuse,
-          // sur la séance qui contient le premier défi.
-          isTutorial: isFirst && !_challengeTutorialSeen,
+          isTutorial: isTuto,
           // Cascade showcase (spec § 5.1) : si la file showcase a une
           // tête non-encore-consommée par une milestone insérée, le défi
           // tente de l'honorer en priorité (axe pilotant de la branche).
           // Appliqué seulement au premier défi pour ne pas saturer.
           showcaseBranch: isFirst ? showcaseBranch : null,
+          // Gating par unlock : les défis « modèle gorge » (apnée /
+          // engagement) exigent des unlocks préalables (cf. spec § bug 5).
+          unlocks: unlockedKeys,
         );
+        // 2ᵉ essai : on retombe sur l'ancien tirage (pool restreinte
+        // accepte la répétition inter-sessions plutôt que de générer
+        // moins de défis que prévu).
+        if (next == null && !isTuto && lastSessionAxes.isNotEmpty) {
+          next = await _challengeService.buildForSession(
+            profile: bundle.capabilityProfile,
+            ceilings: const {},
+            excludeAxes: excludedAxes,
+            rng: Random(),
+            isTutorial: false,
+            showcaseBranch: isFirst ? showcaseBranch : null,
+            unlocks: unlockedKeys,
+          );
+        }
         if (next == null) break;
         challenges.add(next);
         excludedAxes.add(next.axis);
+        // Étend l'exclusion aux autres axes qui produiraient un défi
+        // visuellement identique (même mode/from/to/kind) — sans ça une
+        // joueuse avec plusieurs axes hold throat (holdThroatStreak,
+        // gorgeApneeStreak, gorgeEngagementStreak) verrait deux défis
+        // « hold throat » dont seule la durée diffère. Cf. retour stefsub
+        // v0.5.0.
+        excludedAxes
+            .addAll(ChallengeService.axesSharingVisualSignature(next.axis));
         isFirst = false;
       }
+      // Persiste les axes pickés pour la session suivante. Tutoriel inclus :
+      // sans ça, si la séance N+1 a aussi un défi, on revoit holdThroatStreak
+      // en 1ᵉʳ pick non-tuto (le tuto est consommé une fois pour toutes via
+      // `markTutorialSeen`).
+      unawaited(_challengeService
+          .recordSessionChallenges(challenges.map((c) => c.axis)));
     }
     final result = CareerSessionGenerator().generate(
       level: clamped,
@@ -668,12 +711,17 @@ class _CareerScreenState extends State<CareerScreen> {
     int currentLevel,
   ) async {
     final t = AppLocalizations.of(context);
-    const begDuration = 12;
-    const levelJump = 2;
+    // Beg insistant allongé (12 → 15s) — la supplique se sent plus longue,
+    // cohérent avec le saut d'intensité de la régen qui suit.
+    const begDuration = 15;
     final remaining = ctrl.session.durationSeconds - ctrl.elapsedSeconds;
     if (remaining < begDuration + 30) return;
 
-    final newLevel = currentLevel + levelJump;
+    // Plus de saut de niveau : la difficulté supplémentaire passe par
+    // `intense: true` (boost comforts + intensityFloor + BPM cap finish +
+    // bump tier des phrases) — cf. `SessionConfig.intense` et
+    // `CapabilityClamps.capabilityCapFor`.
+    final newLevel = currentLevel;
     final activeCoach = _resolveCoach(bundle);
     final coachBank = activeCoach.toPhraseBank(
         fallback: bundle.bank, specialization: bundle.specialization);
@@ -968,6 +1016,13 @@ class _CareerScreenState extends State<CareerScreen> {
       encoreChainIndex: encoreChainIndex,
       openingPhrase: encoreOpening,
       quickie: quickie,
+      // Le bouton « J'en veux encore » est une escalade explicite : on
+      // bascule la séance suivante en mode `intense` — plancher de
+      // difficulté solide, comforts boostés (cf. `CapabilityClamps`),
+      // first step direct sur `to: full` (borné milestone), BPM cap
+      // finish relevé, tier des phrases bumpé. L'`encoreChainIndex`
+      // continue de scaler en plus (boosts, BPM, durée finale, plancher).
+      intense: true,
       specialization: activeCoach.effectiveAllocation(bundle.specialization),
       humiliationCareer: humiliationCareer,
       humiliationSession: previousSessionHumiliation,

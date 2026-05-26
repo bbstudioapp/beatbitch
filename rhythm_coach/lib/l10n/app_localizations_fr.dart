@@ -595,10 +595,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Maintiens bien ton doigt cette fois.';
 
   @override
-  String get challengeTutorialBanner =>
-      'Premier défi : tu vas tenir une position le temps demandé. Maintiens MAINTIENS quand tu es prête (garde le doigt), ou tape PASSE pour skipper.';
-
-  @override
   String challengeBannerCountdown(int digit) {
     return '$digit';
   }
@@ -620,7 +616,7 @@ class AppLocalizationsFr extends AppLocalizations {
       'Tu as tenu jusqu\'au bout. Bonne fille.';
 
   @override
-  String get challengeStopDefault => 'Tu as choisi d\'arrêter. Bien.';
+  String get challengeStopDefault => 'Tu as tenu jusqu\'au seuil. Bien.';
 
   @override
   String get challengeFailDefault =>
@@ -648,6 +644,63 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String challengeBannerRhythm(int bpm) {
     return 'Monte le rythme jusqu\'à $bpm BPM';
+  }
+
+  @override
+  String challengeBannerRhythmShallow(int bpm) {
+    return 'Rythme peu profond — monte jusqu\'à $bpm BPM';
+  }
+
+  @override
+  String challengeBannerRhythmThroat(int bpm) {
+    return 'Rythme jusqu\'à la gorge — monte à $bpm BPM';
+  }
+
+  @override
+  String challengeBannerRhythmFull(int bpm) {
+    return 'Rythme à fond — monte à $bpm BPM';
+  }
+
+  @override
+  String challengeBannerGorgeCrossingsThroat(int count, int bpm) {
+    return '$count fois jusqu\'à la gorge à $bpm BPM';
+  }
+
+  @override
+  String challengeBannerGorgeCrossingsFull(int count, int bpm) {
+    return '$count fois jusqu\'au fond à $bpm BPM';
+  }
+
+  @override
+  String get challengeBannerGorgeApnee =>
+      'Apnée gorge — alterne tenues et coups profonds';
+
+  @override
+  String get challengeBannerGorgeEngagement =>
+      'Garde la gorge en jeu — tenues et rythmes profonds';
+
+  @override
+  String get challengeBannerDepthMax =>
+      'Pousse la profondeur d\'un cran en rythme';
+
+  @override
+  String challengeBannerMotionStreak(int seconds) {
+    return 'Rythme non-stop $seconds secondes — varie positions et BPM';
+  }
+
+  @override
+  String challengeBannerNoBreathStreak(int seconds) {
+    return '$seconds s sans respirer — rythme et tenues';
+  }
+
+  @override
+  String challengeBannerNoSwallowStreak(int seconds) {
+    return 'Bouche ouverte, langue dehors — $seconds s sans avaler';
+  }
+
+  @override
+  String challengeBannerBiffleStreak(int seconds) {
+    return 'Encaisse les coups $seconds secondes';
   }
 
   @override

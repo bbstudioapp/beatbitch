@@ -4,6 +4,29 @@
 
 ## [Non publié]
 
+## [0.5.1] — 2026-05-26
+
+Itération de calibration et de polish autour des **défis intra-séance** introduits en 0.5.0 : refonte mécanique des builders en mode streaming (un builder par axe), banners et verdicts plus lisibles, gating profondeur/amplitude resserré, et plusieurs correctifs de progression (acquittement, anti-répétition, redondances). Plus une montée d'intensité visible sur les Supplier / Encore et un calibrage du `throat_pulse`.
+
+### Ajouté
+- **Refonte des défis en streaming (Phase B.1)** — la mécanique monolithique d'origine est remplacée par un **builder par axe**, qui émet ses steps au fil de l'eau et permet de raisonner sur chaque axe indépendamment. Six PRs livrées : squelette streaming + 4 builders monolithiques (B.1.a), builders rythme BPM avec choix d'amplitude (B.1.b), endurance + biffle (B.1.c), modèle gorge (B.1.d), franchissements gorge (B.1.e), noswallow + `swallowMode` auto (B.1.f). Comportement utilisateur inchangé en façade, mais le système est désormais extensible axe par axe et beaucoup plus testable.
+- **Bump d'intensité visible sur Supplier et Encore** — quand la joueuse réclame un Supplier ou un Encore, la phase finish reprend avec un palier de BPM boost plus haut. Le sprint final ne retombe plus dans la même plage que la séance initiale.
+
+### Modifié
+- **Dépendances transitives** — bump via `pub upgrade` (rien de cassant, juste maintenir les transitives à jour).
+
+### Corrigé
+- **Calibrage `throat_pulse`** — la milestone et le cap de pulses étaient désalignés (la séquence pédagogique poussait au-delà du cap effectif). Recalibrés ensemble pour rester cohérents avec ce que le profil de capacités encaisse.
+- **Acquittement défi inclut les session unlocks** — après une régénération post-défi (Supplier / retry), certains `sessionUnlocks` accumulés pendant le défi n'étaient pas propagés à l'acquittement final → le palier était joué mais jamais consommé. La régen embarque désormais les session unlocks dans le payload.
+- **Final `hold_head` redondant après final `mid`** — le générateur pouvait émettre un final `hold_head` juste après un final `mid`, alors que le `mid` couvre déjà la zone. Garde-fou pour éviter l'enchaînement.
+- **Gate de candidature vs acquittement silencieux** — les sous-titres des boutons d'unlock n'étaient pas alignés sur le gate effectif (un bouton pouvait afficher « disponible » alors que la candidature était bloquée silencieusement). Séparation explicite des deux concepts → sous-titres corrects.
+- **Cadre noir du défi tuto épuré à l'objectif seul** — la banner du défi tuto affichait un cadre noir trop chargé qui débordait sur les éléments adjacents. Réduit à l'objectif seul, plus lisible sur petits écrans.
+- **`thresholdReached` différé jusqu'à consommation du segment** — sur les défis monolithiques, l'événement `thresholdReached` se déclenchait avant la consommation du segment courant, ce qui pouvait clore le défi un beat trop tôt. Désormais on attend la fin du segment avant de lever le flag.
+- **Banner défi explicite par axe** — chaque axe a sa banner dédiée + gating des unlocks `gorgeApnee` / `Engagement` resserré pour ne pas s'auto-déclencher hors fenêtre prévue.
+- **Gating profondeur + dégradation amplitude des axes endurance** — les axes endurance pouvaient demander une profondeur supérieure à `rhythm.depth_max.comfort` quand la séance était poussée. Clamp + dégradation d'amplitude propre quand la profondeur cible est trop haute.
+- **Anti-répétition inter-sessions sur les axes de défi** — empêche qu'un même axe soit tiré deux séances d'affilée (sauf si c'est le seul candidat). Plus de variété entre séances.
+- **Wording verdict `netSuccess` + dédup défis hold throat** — le verdict de succès net était parfois ambigu (« réussi » mais avec un drift en fin de tenue). Reformulé. + déduplication des défis hold throat qui pouvaient s'enchaîner deux fois sur le même axe.
+
 ## [0.5.0] — 2026-05-24
 
 ### Ajouté
@@ -153,7 +176,8 @@ Grosse mise à jour du mode carrière : nouvelle enveloppe de difficulté, nouve
 ## [0.1.0] — 2026-05-08
 - Premier release public : coach vocal rythmique hors-ligne pour Android, adult gate 18+, onboarding, mode carrière + scénarios, badges, profil/réputation.
 
-[Non publié]: https://github.com/bbstudioapp/beatbitch/compare/v0.5.0...develop
+[Non publié]: https://github.com/bbstudioapp/beatbitch/compare/v0.5.1...develop
+[0.5.1]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.5.1
 [0.5.0]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.5.0
 [0.4.2]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.4.2
 [0.4.1]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.4.1

@@ -255,6 +255,7 @@ class FinishPhase {
     final levelBpmBoost = CareerLevelGates.finishBpmBoostBpm(
       level: config.level,
       encoreChainIndex: ctx.encoreChainIndex,
+      intense: config.intense,
     );
     final bpmCap = useHandBurst
         ? (110 + levelBpmBoost).clamp(110, 300)
@@ -394,11 +395,13 @@ class FinishPhase {
     // des bumps évènementiels (punition complétée etc.) — uniquement
     // de la rampe automatique — donc c'est volontairement conservateur.
     final finalHumilCap = config.humilCapAt(ctx.time);
-    // En chaîne encore, on allonge le final pour que la dramaturgie
-    // de « tu en veux encore » se traduise aussi côté apothéose.
-    // Bornée par le clamp de `_finalPicker.pickFinal` pour rester
-    // raisonnable.
-    final finishMul = 1.0 + max(0, ctx.encoreChainIndex) * 0.10;
+    // Final allongé sur les séances d'escalade : +10 % de base dès que la
+    // séance est `intense` (bouton Supplier OU Encore — le bouton est
+    // explicite, l'apothéose doit l'être aussi) puis +10 % par cran de
+    // chaîne d'encore. Bornée par le clamp de `_finalPicker.pickFinal`
+    // pour rester raisonnable.
+    final finishMulBase = config.intense ? 1.10 : 1.0;
+    final finishMul = finishMulBase + max(0, ctx.encoreChainIndex) * 0.10;
     final finisherDraft = finalPicker.pickFinal(
       humilCap: finalHumilCap,
       maxDepth: config.maxDepthIndex,

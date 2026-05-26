@@ -594,10 +594,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get challengeCountdownReleaseRetry => 'Halte deinen Finger diesmal.';
 
   @override
-  String get challengeTutorialBanner =>
-      'Erste Herausforderung: Du wirst eine Position für die geforderte Zeit halten. Drücke und halte HALTEN wenn du bereit bist (Finger drauf lassen), oder tippe ÜBERSPR. zum Überspringen.';
-
-  @override
   String challengeBannerCountdown(int digit) {
     return '$digit';
   }
@@ -619,7 +615,8 @@ class AppLocalizationsDe extends AppLocalizations {
       'Du hast bis zum Ende gehalten. Braves Mädchen.';
 
   @override
-  String get challengeStopDefault => 'Du hast aufgehört. Gut.';
+  String get challengeStopDefault =>
+      'Du hast bis zum Schwellenwert gehalten. Gut gemacht.';
 
   @override
   String get challengeFailDefault =>
@@ -647,6 +644,63 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String challengeBannerRhythm(int bpm) {
     return 'Steigere den Rhythmus bis $bpm BPM';
+  }
+
+  @override
+  String challengeBannerRhythmShallow(int bpm) {
+    return 'Flacher Rhythmus — steigere bis $bpm BPM';
+  }
+
+  @override
+  String challengeBannerRhythmThroat(int bpm) {
+    return 'Rhythmus bis zum Hals — steigere bis $bpm BPM';
+  }
+
+  @override
+  String challengeBannerRhythmFull(int bpm) {
+    return 'Rhythmus bis zum Ende — steigere bis $bpm BPM';
+  }
+
+  @override
+  String challengeBannerGorgeCrossingsThroat(int count, int bpm) {
+    return '$count Mal bis zum Hals bei $bpm BPM';
+  }
+
+  @override
+  String challengeBannerGorgeCrossingsFull(int count, int bpm) {
+    return '$count Mal bis zum Ende bei $bpm BPM';
+  }
+
+  @override
+  String get challengeBannerGorgeApnee =>
+      'Hals-Apnoe — wechsle zwischen Halten und tiefen Stößen';
+
+  @override
+  String get challengeBannerGorgeEngagement =>
+      'Halte den Hals im Spiel — Halten und tiefe Rhythmen';
+
+  @override
+  String get challengeBannerDepthMax =>
+      'Schiebe die Tiefe eine Stufe weiter im Rhythmus';
+
+  @override
+  String challengeBannerMotionStreak(int seconds) {
+    return 'Non-stop Rhythmus $seconds Sekunden — wechsle Positionen und BPM';
+  }
+
+  @override
+  String challengeBannerNoBreathStreak(int seconds) {
+    return '$seconds s ohne zu atmen — Rhythmus und Halten';
+  }
+
+  @override
+  String challengeBannerNoSwallowStreak(int seconds) {
+    return 'Mund offen, Zunge raus — $seconds s ohne zu schlucken';
+  }
+
+  @override
+  String challengeBannerBiffleStreak(int seconds) {
+    return 'Nimm die Schläge $seconds Sekunden';
   }
 
   @override

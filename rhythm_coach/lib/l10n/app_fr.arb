@@ -249,7 +249,6 @@
   "challengeHoldHintAtSeuil": "Relâche pour arrêter, ou continue",
   "challengeHoldHintTolerance": "Repose ton doigt",
   "challengeCountdownReleaseRetry": "Maintiens bien ton doigt cette fois.",
-  "challengeTutorialBanner": "Premier défi : tu vas tenir une position le temps demandé. Maintiens MAINTIENS quand tu es prête (garde le doigt), ou tape PASSE pour skipper.",
   "challengeBannerCountdown": "{digit}",
   "@challengeBannerCountdown": {
     "placeholders": { "digit": { "type": "int" } }
@@ -258,7 +257,7 @@
   "challengeAttemptTutorialHoldThroat": "Premier défi : tu vas tenir en gorge cinq secondes. Maintiens MAINTIENS, garde le doigt sur l'écran. Si tu lâches avant le seuil, c'est raté. Au seuil, le bouton devient vert : relâche pour arrêter, ou continue à tenir pour aller plus loin.",
   "challengeExtensionDefault": "Tu peux rester encore si tu veux, ou relâcher.",
   "challengeSuccessDefault": "Tu as tenu jusqu'au bout. Bonne fille.",
-  "challengeStopDefault": "Tu as choisi d'arrêter. Bien.",
+  "challengeStopDefault": "Tu as tenu jusqu'au seuil. Bien.",
   "challengeFailDefault": "Tu as craqué avant le seuil. Pas grave, tu y arriveras la prochaine.",
   "challengeSkipDefault": "Comme tu veux, on garde pour la prochaine.",
   "challengeBannerHoldThroat": "Tiens gorge {seconds} secondes",
@@ -276,6 +275,51 @@
   "challengeBannerRhythm": "Monte le rythme jusqu'à {bpm} BPM",
   "@challengeBannerRhythm": {
     "placeholders": { "bpm": { "type": "int" } }
+  },
+  "challengeBannerRhythmShallow": "Rythme peu profond — monte jusqu'à {bpm} BPM",
+  "@challengeBannerRhythmShallow": {
+    "placeholders": { "bpm": { "type": "int" } }
+  },
+  "challengeBannerRhythmThroat": "Rythme jusqu'à la gorge — monte à {bpm} BPM",
+  "@challengeBannerRhythmThroat": {
+    "placeholders": { "bpm": { "type": "int" } }
+  },
+  "challengeBannerRhythmFull": "Rythme à fond — monte à {bpm} BPM",
+  "@challengeBannerRhythmFull": {
+    "placeholders": { "bpm": { "type": "int" } }
+  },
+  "challengeBannerGorgeCrossingsThroat": "{count} fois jusqu'à la gorge à {bpm} BPM",
+  "@challengeBannerGorgeCrossingsThroat": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "bpm": { "type": "int" }
+    }
+  },
+  "challengeBannerGorgeCrossingsFull": "{count} fois jusqu'au fond à {bpm} BPM",
+  "@challengeBannerGorgeCrossingsFull": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "bpm": { "type": "int" }
+    }
+  },
+  "challengeBannerGorgeApnee": "Apnée gorge — alterne tenues et coups profonds",
+  "challengeBannerGorgeEngagement": "Garde la gorge en jeu — tenues et rythmes profonds",
+  "challengeBannerDepthMax": "Pousse la profondeur d'un cran en rythme",
+  "challengeBannerMotionStreak": "Rythme non-stop {seconds} secondes — varie positions et BPM",
+  "@challengeBannerMotionStreak": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerNoBreathStreak": "{seconds} s sans respirer — rythme et tenues",
+  "@challengeBannerNoBreathStreak": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerNoSwallowStreak": "Bouche ouverte, langue dehors — {seconds} s sans avaler",
+  "@challengeBannerNoSwallowStreak": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "challengeBannerBiffleStreak": "Encaisse les coups {seconds} secondes",
+  "@challengeBannerBiffleStreak": {
+    "placeholders": { "seconds": { "type": "int" } }
   },
   "challengeBannerBiffle": "Encaisse les coups jusqu'à {bpm} BPM",
   "@challengeBannerBiffle": {

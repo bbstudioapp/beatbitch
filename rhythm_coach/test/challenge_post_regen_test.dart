@@ -161,8 +161,7 @@ void main() {
       int? finalStepTime,
       int? silentFinishStartTime,
       Challenge? challenge,
-      int? challengeStepTime,
-      int? challengeBreathStartTime,
+      int? challengeTriggerTime,
     }) {
       return Session(
         id: 'prev',
@@ -174,11 +173,8 @@ void main() {
         finalStepTime: finalStepTime,
         silentFinishStartTime: silentFinishStartTime,
         challenges: challenge == null ? const [] : [challenge],
-        challengeStepTimes:
-            challengeStepTime == null ? const [] : [challengeStepTime],
-        challengeBreathStartTimes: challengeBreathStartTime == null
-            ? const []
-            : [challengeBreathStartTime],
+        challengeTriggerTimes:
+            challengeTriggerTime == null ? const [] : [challengeTriggerTime],
         noStats: false,
       );
     }
@@ -272,8 +268,7 @@ void main() {
       );
       final previous = makePrevious(
         challenge: ch,
-        challengeStepTime: 340,
-        challengeBreathStartTime: 327,
+        challengeTriggerTime: 327,
       );
       final upcoming = makeUpcoming();
       final rebased = SessionController.buildPostChallengeRegenSession(
@@ -281,12 +276,11 @@ void main() {
         upcoming: upcoming,
         breathEnd: 360,
       );
-      // Les timestamps du défi déjà joué ne sont PAS rebaseés : ils
-      // restent dans le passé. Combinés à `_challengePhase == ended`,
-      // ils n'ont aucun effet → robuste.
+      // Le timestamp du défi déjà joué n'est PAS rebasé : il reste dans
+      // le passé. Combiné à `_challengePhase == ended`, il n'a aucun
+      // effet → robuste.
       expect(rebased.challenge, ch);
-      expect(rebased.challengeStepTime, 340);
-      expect(rebased.challengeBreathStartTime, 327);
+      expect(rebased.challengeTriggerTime, 327);
     });
 
     test('noStats hérite du previous (pas de bascule sandbox)', () {

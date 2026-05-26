@@ -10,7 +10,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 LevelMilestone _milestone({
   required String id,
-  required List<CapabilityRequirement> requiresCapability,
+  List<CapabilityRequirement> requiresCapability = const [],
+  List<CapabilityRequirement> acquittableByCapability = const [],
   List<UnlockKey> unlocks = const [],
   List<UnlockKey> requires = const [],
   int minLevel = 1,
@@ -24,6 +25,7 @@ LevelMilestone _milestone({
     unlocks: unlocks,
     requires: requires,
     requiresCapability: requiresCapability,
+    acquittableByCapability: acquittableByCapability,
     minLevel: minLevel,
   );
 }
@@ -43,10 +45,13 @@ void main() {
 
   group('milestonesAcquittableByChallenge', () {
     test('axe matche + seuil atteint → milestone retournée', () {
+      // L'acquittement silencieux est désormais piloté par
+      // `acquittableByCapability` (et non plus par `requiresCapability`
+      // qui ne sert plus que de gate de candidature).
       final svc = MilestoneService();
       final m = _milestone(
         id: 'm1',
-        requiresCapability: [
+        acquittableByCapability: [
           const CapabilityRequirement(
               axis: CapabilityAxis.holdThroatStreak, min: 10.0),
         ],
@@ -139,11 +144,12 @@ void main() {
       expect(out, isEmpty);
     });
 
-    test('autres requiresCapability satisfaits par profile → acquittée', () {
+    test('autres acquittableByCapability satisfaits par profile → acquittée',
+        () {
       final svc = MilestoneService();
       final m = _milestone(
         id: 'm1',
-        requiresCapability: [
+        acquittableByCapability: [
           const CapabilityRequirement(
               axis: CapabilityAxis.holdThroatStreak, min: 10.0),
           const CapabilityRequirement(
@@ -241,21 +247,26 @@ void main() {
         // prouvée par le défi, on acquitte la milestone quel que soit
         // son `minLevel`. Le param `playerLevel` est conservé pour
         // rétrocompat des call sites mais n'est plus consulté.
+        //
+        // Note : `intro_freestyle` du catalogue réel n'a plus de
+        // `acquittableByCapability` (la milestone est purement
+        // pédagogique). Ce test reste avec une milestone synthétique
+        // pour vérifier le mécanisme d'acquittement par capability.
         final svc = MilestoneService();
-        final freestyle = _milestone(
-          id: 'intro_freestyle',
-          requiresCapability: [
+        final synthetic = _milestone(
+          id: 'synthetic_freestyle',
+          acquittableByCapability: [
             const CapabilityRequirement(
                 axis: CapabilityAxis.rhythmMotionStreak, min: 30.0),
           ],
           unlocks: [UnlockKey.freestyle],
           minLevel: 7,
         );
-        svc.seedForTest(catalog: [freestyle]);
+        svc.seedForTest(catalog: [synthetic]);
         const profile = CapabilityProfile({
           CapabilityAxis.rhythmMotionStreak: CapabilityAxisState(best: 45.0),
         });
-        // Au level 1, freestyle est acquittable (gating capability satisfait).
+        // Au level 1, la milestone est acquittable (capability satisfaite).
         final outLow = svc.milestonesAcquittableByChallenge(
           axis: CapabilityAxis.rhythmMotionStreak,
           reached: 45.0,
@@ -263,7 +274,7 @@ void main() {
           acquiredUnlocks: const {},
           playerLevel: 1,
         );
-        expect(outLow.map((m) => m.id), ['intro_freestyle']);
+        expect(outLow.map((m) => m.id), ['synthetic_freestyle']);
 
         // Même comportement au-dessus du palier minLevel.
         final outHigh = svc.milestonesAcquittableByChallenge(
@@ -273,7 +284,7 @@ void main() {
           acquiredUnlocks: const {},
           playerLevel: 7,
         );
-        expect(outHigh.map((m) => m.id), ['intro_freestyle']);
+        expect(outHigh.map((m) => m.id), ['synthetic_freestyle']);
       },
     );
   });

@@ -159,9 +159,26 @@ class CapabilityClamps implements CapabilityClampSurface {
     return (axis: best, factor: factor);
   }
 
+  /// Boost multiplicateur appliqué aux `comfort` quand la séance est
+  /// `intense` (Supplier ou Encore — la joueuse a explicitement réclamé
+  /// plus dur). Cumulé avec la surcharge sur l'axe désigné `overloadAxis`.
+  /// Borné en pratique par les `capCeilings` (verrou §6) : on peut
+  /// dépasser un peu le `best` mais pas re-pousser un axe qui vient de
+  /// craquer cette séance.
+  static const double kIntenseComfortBoost = 1.30;
+
+  /// Bonus de cran de profondeur appliqué à `rhythmDepthMax` quand
+  /// `intense=true` (séance d'escalade). Cumulé avec le +1 cran de
+  /// surcharge si l'axe est aussi `overloadAxis`. Le clamp `to <=
+  /// maxDepthIndex` (Position.full) et les milestones acquittées bornent
+  /// en amont via `_maxDepthIndex`/`_milestoneRhythmCeilingIdx`, donc
+  /// "+1 cran" ne fait jamais sauter une milestone non débloquée.
+  static const int kIntenseDepthCranBonus = 1;
+
   /// Plafond effectif (= le plus contraignant) d'un axe de capacité pour
   /// la génération en cours : minimum de `comfort` (éventuellement
-  /// **surchargé** si c'est [overloadAxis] de la séance) et du plafond
+  /// **surchargé** si c'est [overloadAxis] de la séance, et **boosté**
+  /// par `kIntenseComfortBoost` si la séance est `intense`) et du plafond
   /// figé sur un FAIL de cette session ([ceilings], §6 — qui plafonne
   /// *même* l'axe surchargé : pas de re-fail dans la même séance).
   /// `null` si aucune donnée — l'enveloppe ne contraint alors rien
@@ -183,6 +200,16 @@ class CapabilityClamps implements CapabilityClampSurface {
         }
       } else {
         comfort = comfort * config.overloadFactor;
+      }
+    }
+    // Boost intense (Supplier / Encore) : cumulatif avec la surcharge
+    // de l'axe. Pour `rhythmDepthMax` (cran discret), bonus exprimé en
+    // crans ; pour le reste, facteur multiplicatif.
+    if (comfort != null && config.intense) {
+      if (axis == CapabilityAxis.rhythmDepthMax) {
+        comfort = comfort + kIntenseDepthCranBonus;
+      } else {
+        comfort = comfort * kIntenseComfortBoost;
       }
     }
     return minNullable(comfort, config.capCeilings[axis]);
