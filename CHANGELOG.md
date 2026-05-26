@@ -4,6 +4,13 @@
 
 ## [Non publié]
 
+### Ajouté
+- **Espagnol — 4ᵉ langue livrée** — l'app est désormais traduite en espagnol péninsulaire complet : UI (ARB), phrases coach système, banque carrière, 6 coachs (Lina/Hélène/Jade/Morgan/Victoria/Nyx avec persona respecté), 30 milestones, 4 sessions intégrées, surnoms, punitions, commentaires aléatoires, packs d'ambiance. Sélecteur de langue, repli système→EN et offre « Disponible en español » s'adaptent automatiquement.
+- **Voix TTS espagnoles préférées** — table de fallback `es-es-x-eef-local` / `ana` / `esc` / `es-us-x-sfb-local` dans `TtsService`, avec repli `gender=female` puis première voix dispo.
+
+### Modifié
+- **Loaders robustifiés avec cascade `_<lang>.json → _en.json → _fr.json`** — `PunishmentLoader`, `RandomCommentsLoader` et `PhraseBankLoader` ne crashent plus quand un asset éditorial manque pour une locale donnée. Permet d'ajouter une langue (UI traduite) avant d'avoir traduit le contenu, l'app reste utilisable avec un repli anglais transparent.
+
 ## [0.5.1] — 2026-05-26
 
 Itération de calibration et de polish autour des **défis intra-séance** introduits en 0.5.0 : refonte mécanique des builders en mode streaming (un builder par axe), banners et verdicts plus lisibles, gating profondeur/amplitude resserré, et plusieurs correctifs de progression (acquittement, anti-répétition, redondances). Plus une montée d'intensité visible sur les Supplier / Encore et un calibrage du `throat_pulse`.

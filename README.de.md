@@ -8,7 +8,7 @@
 
 > **Immersiver rhythmischer Sprach-Coach für Android, Windows, Linux, iOS (PWA) & Web.** Leg dein Handy flach auf die Seite, starte die Session, schließ die Augen. Eine Stimme führt dich, Beeps geben den Rhythmus vor — du musst nicht mehr auf den Bildschirm schauen.
 
-**Sprachen**: [English](README.md) · [Français](README.fr.md) · Deutsch
+**Sprachen**: [English](README.md) · [Français](README.fr.md) · Deutsch · [Español](README.es.md)
 
 ---
 
