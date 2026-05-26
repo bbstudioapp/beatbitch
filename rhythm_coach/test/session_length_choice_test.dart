@@ -33,12 +33,16 @@ void main() {
     });
 
     test('valeurs strictement croissantes (sanity check)', () {
-      final durations =
-          SessionLengthChoice.values.map((c) => c.durationSeconds).toList();
+      // `aleatoire` est un méta-choix sans durée concrète — exclu du
+      // contrat « durations strictement croissantes ».
+      final concrete = SessionLengthChoice.values
+          .where((c) => c != SessionLengthChoice.aleatoire)
+          .toList(growable: false);
+      final durations = concrete.map((c) => c.durationSeconds).toList();
       for (var i = 1; i < durations.length; i++) {
         expect(durations[i], greaterThan(durations[i - 1]),
-            reason: 'palier $i (${SessionLengthChoice.values[i]}) doit '
-                'être strictement plus long que ${SessionLengthChoice.values[i - 1]}');
+            reason: 'palier $i (${concrete[i]}) doit '
+                'être strictement plus long que ${concrete[i - 1]}');
       }
     });
   });

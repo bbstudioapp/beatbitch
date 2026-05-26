@@ -569,6 +569,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'Full session, several challenges intercut.';
 
   @override
+  String get sessionLengthAleatoireLabel => 'Random';
+
+  @override
+  String get sessionLengthAleatoireDuration => 'Surprise';
+
+  @override
+  String get sessionLengthAleatoireDescription =>
+      'Surprise length drawn between Short, Medium and Long. No timer.';
+
+  @override
   String get careerChallengesToggle => 'In-session challenges';
 
   @override

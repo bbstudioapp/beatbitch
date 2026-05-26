@@ -570,6 +570,16 @@ class AppLocalizationsEs extends AppLocalizations {
       'Sesión completa, varios retos intercalados.';
 
   @override
+  String get sessionLengthAleatoireLabel => 'Aleatoria';
+
+  @override
+  String get sessionLengthAleatoireDuration => 'Sorpresa';
+
+  @override
+  String get sessionLengthAleatoireDescription =>
+      'Duración sorpresa elegida entre Corta, Media y Larga. Sin temporizador.';
+
+  @override
   String get careerChallengesToggle => 'Retos intra-sesión';
 
   @override

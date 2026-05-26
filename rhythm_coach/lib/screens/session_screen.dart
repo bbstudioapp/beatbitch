@@ -218,6 +218,13 @@ class SessionScreen extends StatefulWidget {
   /// mais la zone reste masquée tant que l'unlock n'a pas été acquis).
   final AnatomyProfile? anatomy;
 
+  /// Si true, masque inconditionnellement le timer pendant la séance même
+  /// quand le toggle debug `DebugSettingsService.getShowTimer` est activé.
+  /// Utilisé par le palier de durée « aléatoire » (carrière) : la joueuse
+  /// a sciemment choisi la surprise — connaître la durée tirée casserait
+  /// l'effet recherché. Default false → comportement historique inchangé.
+  final bool hideTimerOverride;
+
   const SessionScreen({
     super.key,
     required this.session,
@@ -255,6 +262,7 @@ class SessionScreen extends StatefulWidget {
     this.seedHumiliationSession = 0.0,
     this.closeAppOnEnd = false,
     this.anatomy,
+    this.hideTimerOverride = false,
   });
 
   @override
@@ -454,6 +462,7 @@ class _SessionScreenState extends State<SessionScreen>
         canSave: widget.canSave,
         closeAppOnEnd: widget.closeAppOnEnd,
         positionRowCount: _positionRowCount,
+        hideTimerOverride: widget.hideTimerOverride,
       ),
     );
   }
@@ -473,6 +482,7 @@ class _SessionScreenContent extends StatefulWidget {
   final bool canSave;
   final bool closeAppOnEnd;
   final int positionRowCount;
+  final bool hideTimerOverride;
 
   final BeepEngine beep;
 
@@ -491,6 +501,7 @@ class _SessionScreenContent extends StatefulWidget {
     required this.canSave,
     required this.closeAppOnEnd,
     required this.positionRowCount,
+    required this.hideTimerOverride,
   });
 
   @override
@@ -574,7 +585,10 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     }
     debug.getShowTimer().then((value) {
       if (!mounted) return;
-      setState(() => _showTimer = value);
+      // `hideTimerOverride` force le masquage du timer (mode aléatoire en
+      // carrière : la joueuse a choisi la surprise sur la durée, on ne
+      // dévoile pas le tirage via un timer qui countdown).
+      setState(() => _showTimer = value && !widget.hideTimerOverride);
     });
     debug.getShowHumiliationBar().then((value) {
       if (!mounted) return;
@@ -606,7 +620,9 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     });
     debug.getShowSessionRemainingTime().then((value) {
       if (!mounted) return;
-      setState(() => _showRemainingTime = value);
+      // Même rationale que `_showTimer` plus haut : on n'affiche pas le
+      // chip « temps restant » quand l'écran cache volontairement la durée.
+      setState(() => _showRemainingTime = value && !widget.hideTimerOverride);
     });
     if (widget.introText != null && widget.introText!.trim().isNotEmpty) {
       _introPending = true;

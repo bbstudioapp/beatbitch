@@ -1128,6 +1128,24 @@ abstract class AppLocalizations {
   /// **'Séance pleine, plusieurs défis intercalés.'**
   String get sessionLengthLongueDescription;
 
+  /// No description provided for @sessionLengthAleatoireLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aléatoire'**
+  String get sessionLengthAleatoireLabel;
+
+  /// No description provided for @sessionLengthAleatoireDuration.
+  ///
+  /// In fr, this message translates to:
+  /// **'Surprise'**
+  String get sessionLengthAleatoireDuration;
+
+  /// No description provided for @sessionLengthAleatoireDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Durée surprise tirée parmi Courte, Moyenne ou Longue. Pas de minuteur.'**
+  String get sessionLengthAleatoireDescription;
+
   /// No description provided for @careerChallengesToggle.
   ///
   /// In fr, this message translates to:
