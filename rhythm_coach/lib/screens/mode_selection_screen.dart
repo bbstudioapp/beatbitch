@@ -7,7 +7,7 @@ import '../l10n/app_localizations.dart';
 import '../career/models/unlock_key.dart';
 import '../career/screens/career_screen.dart';
 import '../career/screens/custom_mode_screen.dart';
-import '../main.dart' show milestoneService;
+import '../main.dart' show coachService, milestoneService;
 import '../models/ambience_pack.dart';
 import '../services/adult_consent_service.dart';
 import '../services/ambience_engine.dart';
@@ -61,6 +61,16 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
     _ambience = AmbienceEngine();
     _userProfile = UserProfileService();
     _tts.attachProfile(_userProfile);
+    // Probe consulté par `CoachService.evaluate` pour gater les coachs qui
+    // exigent un genre de voix précis (Marc — masculin obligatoire). Posé
+    // dès maintenant : `hasVoiceMatchingSync` retourne `false` tant que le
+    // cache n'est pas rempli (init en cours), donc Marc démarre verrouillé
+    // puis se débloque automatiquement quand `_tts.init()` rafraîchit le
+    // cache des voix dispo. `coachService` notifie ses listeners ailleurs
+    // (changement de tier) — la transition initiale est invisible à l'œil.
+    coachService.setVoiceProbe(
+      (gender) => _tts.hasVoiceMatchingSync(gender: gender),
+    );
     LocaleService.instance.addListener(_handleLocaleChanged);
     // Chargement asynchrone du profil — pas besoin d'await ici, le service
     // expose un `notifyListeners` et la résolution `{name}` se contente du

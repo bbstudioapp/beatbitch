@@ -1697,6 +1697,14 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String coachErrorNoVoice(String coachName) {
+    return '$coachName necesita una voz que no está disponible en este dispositivo. Instala una voz masculina TTS en los ajustes del sistema para desbloquearlo.';
+  }
+
+  @override
+  String get coachBadgeNoVoice => 'SIN VOZ';
+
+  @override
   String get unlockAnnouncementSloppyDroolBasic =>
       'A partir de ahora tu boca retiene más saliva, y lamer te genera más. Babea sobre mí, sé guarra.';
 

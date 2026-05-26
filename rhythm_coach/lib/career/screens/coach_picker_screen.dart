@@ -50,6 +50,9 @@ class CoachPickerScreen extends StatelessWidget {
           ),
         );
         return;
+      case CoachSelectionStatus.lockedNoVoice:
+        _snack(context, t.coachErrorNoVoice(coach.name));
+        return;
       case CoachSelectionStatus.selectedAdvancing:
         await service.selectCoach(coach);
         if (context.mounted) Navigator.of(context).pop(coach);
@@ -157,9 +160,20 @@ class CoachPickerScreen extends StatelessWidget {
               final isCurrentPrincipal =
                   c.isPrincipal && c.tier == service.currentTier;
               final isSelected = service.selectedCoachId == c.id;
+              // Un coach peut être tier-unlocked mais bloqué côté voix
+              // (preferredGender pas dispo localement). On le signale
+              // explicitement à l'UI sans casser la sémantique `unlocked`
+              // utilisée par les autres branches.
+              final noVoice = service.evaluate(
+                    c,
+                    playerTotalSeconds: playerTotalSeconds,
+                    handsEnabled: handsEnabled,
+                  ) ==
+                  CoachSelectionStatus.lockedNoVoice;
               return _CoachCard(
                 coach: c,
                 unlocked: unlocked,
+                noVoice: noVoice,
                 isCurrentPrincipal: isCurrentPrincipal,
                 isSelected: isSelected,
                 onTap: () => _handleTap(context, c),
@@ -175,6 +189,7 @@ class CoachPickerScreen extends StatelessWidget {
 class _CoachCard extends StatelessWidget {
   final Coach coach;
   final bool unlocked;
+  final bool noVoice;
   final bool isCurrentPrincipal;
   final bool isSelected;
   final VoidCallback onTap;
@@ -182,6 +197,7 @@ class _CoachCard extends StatelessWidget {
   const _CoachCard({
     required this.coach,
     required this.unlocked,
+    required this.noVoice,
     required this.isCurrentPrincipal,
     required this.isSelected,
     required this.onTap,
@@ -196,7 +212,9 @@ class _CoachCard extends StatelessWidget {
             ? AppTheme.accent.withValues(alpha: 0.4)
             : Colors.white.withValues(alpha: 0.06));
 
-    final opacity = unlocked ? 1.0 : 0.45;
+    // `noVoice` se comporte visuellement comme un verrou : opacity réduite
+    // pour signaler qu'on ne peut pas le choisir.
+    final opacity = (unlocked && !noVoice) ? 1.0 : 0.45;
 
     return Opacity(
       opacity: opacity,
@@ -245,7 +263,13 @@ class _CoachCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          if (isCurrentPrincipal)
+                          if (noVoice)
+                            _Badge(
+                              icon: Icons.voice_over_off,
+                              label: t.coachBadgeNoVoice,
+                              color: AppTheme.textMuted,
+                            )
+                          else if (isCurrentPrincipal)
                             _Badge(
                               icon: Icons.star,
                               label: t.coachBadgePrincipal,

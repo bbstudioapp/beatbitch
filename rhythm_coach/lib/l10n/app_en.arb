@@ -810,6 +810,14 @@
       "duration": { "type": "String" }
     }
   },
+  "coachErrorNoVoice": "{coachName} needs a voice that isn't available on this device. Install a male TTS voice in system settings to unlock him.",
+  "@coachErrorNoVoice": {
+    "description": "Snackbar shown when tapping a coach whose required voice (cf. preferredGender) isn't installed locally.",
+    "placeholders": {
+      "coachName": { "type": "String" }
+    }
+  },
+  "coachBadgeNoVoice": "NO VOICE",
   "unlockAnnouncementSloppyDroolBasic": "From now on your mouth holds more spit, and your licking makes more. Drool on me, be filthy.",
   "@unlockAnnouncementSloppyDroolBasic": {
     "description": "Post-finale_chime TTS announcement when the milestone unlocking sloppy_drool_basic is acknowledged."

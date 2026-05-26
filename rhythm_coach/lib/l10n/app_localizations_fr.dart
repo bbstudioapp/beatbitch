@@ -1699,6 +1699,14 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String coachErrorNoVoice(String coachName) {
+    return '$coachName a besoin d\'une voix vocale qui n\'est pas disponible sur cet appareil. Installe une voix masculine TTS dans les paramètres système pour le débloquer.';
+  }
+
+  @override
+  String get coachBadgeNoVoice => 'VOIX INDISPO';
+
+  @override
   String get unlockAnnouncementSloppyDroolBasic =>
       'Désormais ta bouche garde plus de salive, et ton lèche en produit plus. Bave-moi dessus, sois sale.';
 

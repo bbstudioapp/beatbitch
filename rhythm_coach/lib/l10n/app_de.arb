@@ -810,6 +810,14 @@
       "duration": { "type": "String" }
     }
   },
+  "coachErrorNoVoice": "{coachName} braucht eine Stimme, die auf diesem Gerät nicht verfügbar ist. Installiere eine männliche TTS-Stimme in den Systemeinstellungen, um ihn freizuschalten.",
+  "@coachErrorNoVoice": {
+    "description": "Snackbar shown when tapping a coach whose required voice (cf. preferredGender) isn't installed locally.",
+    "placeholders": {
+      "coachName": { "type": "String" }
+    }
+  },
+  "coachBadgeNoVoice": "KEINE STIMME",
   "unlockAnnouncementSloppyDroolBasic": "Ab jetzt hält dein Mund mehr Spucke, und dein Lecken erzeugt mehr davon. Sabber auf mich, sei dreckig.",
   "@unlockAnnouncementSloppyDroolBasic": {
     "description": "TTS-Ansage nach dem finale_chime, wenn der Meilenstein, der sloppy_drool_basic freischaltet, bestätigt wird."

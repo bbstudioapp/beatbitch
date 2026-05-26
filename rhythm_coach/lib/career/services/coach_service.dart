@@ -21,6 +21,14 @@ enum CoachSelectionStatus {
   /// Le temps cumulé du joueur est en-dessous du `minPlayerSeconds` requis
   /// par le coach (Phase 19.10).
   blockedMinPlayerSeconds,
+
+  /// Le coach demande une voix d'un genre précis (cf.
+  /// `Coach.voicePreset.preferredGender`) qui n'est pas disponible sur
+  /// l'appareil dans la locale active. Concerne actuellement Marc (voix
+  /// masculine obligatoire) : indisponible sur Windows (Julie forcée), sur
+  /// Linux (pas d'API listVoices), ou sur Android quand aucune voix TTS
+  /// mâle locale n'est installée.
+  lockedNoVoice,
 }
 
 /// Source de vérité pour : palier courant, coach sélectionné, set des
@@ -43,8 +51,29 @@ class CoachService extends ChangeNotifier {
   Set<String> _unlockedIds = <String>{};
   bool _loaded = false;
 
-  CoachService({List<Coach>? coaches})
-      : _coaches = List.unmodifiable(coaches ?? CoachCatalog.defaults);
+  /// Probe optionnel consulté par `evaluate` pour gater un coach exigeant
+  /// une voix d'un genre précis (cf. `Coach.voicePreset.preferredGender`).
+  /// Si la fonction renvoie `false`, le coach reçoit le statut
+  /// `lockedNoVoice`. `null` (défaut) = pas de gating voix, comportement
+  /// historique.
+  ///
+  /// Branché en bootstrap depuis `main.dart` en pointant sur
+  /// `TtsService.hasVoiceMatchingSync`. Tests : on injecte un mock direct.
+  bool Function(String gender)? _voiceProbe;
+
+  CoachService({
+    List<Coach>? coaches,
+    bool Function(String gender)? voiceProbe,
+  })  : _coaches = List.unmodifiable(coaches ?? CoachCatalog.defaults),
+        _voiceProbe = voiceProbe;
+
+  /// Pose ou retire le probe de disponibilité de voix consulté par
+  /// `evaluate`. Permet de l'attacher après-coup (ex: bootstrap : on
+  /// instancie `CoachService` avant que `TtsService.init()` soit terminé).
+  void setVoiceProbe(bool Function(String gender)? probe) {
+    _voiceProbe = probe;
+    notifyListeners();
+  }
 
   /// Remplace la liste interne par [coaches]. Sert au bootstrap pour
   /// injecter les coachs avec leurs phrases chargées (`CoachLoader.load()`).
@@ -200,6 +229,13 @@ class CoachService extends ChangeNotifier {
     if (!isUnlocked(c)) return CoachSelectionStatus.lockedTier;
     if (playerTotalSeconds < c.requirements.minPlayerSeconds) {
       return CoachSelectionStatus.blockedMinPlayerSeconds;
+    }
+    // Check voix : si le coach exige un genre précis ET qu'un probe est
+    // branché ET que la voix n'est pas dispo → indisponible.
+    final probe = _voiceProbe;
+    final preferredGender = c.voicePreset.preferredGender;
+    if (preferredGender != null && probe != null && !probe(preferredGender)) {
+      return CoachSelectionStatus.lockedNoVoice;
     }
     return advancesTier(c)
         ? CoachSelectionStatus.selectedAdvancing
