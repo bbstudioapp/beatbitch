@@ -8,7 +8,11 @@
 /// - Moyenne : 1 séance complétée OU 10 min de jeu
 /// - Longue : 1 h de jeu cumulé (pas de bypass session — un format 45 min
 ///   demande d'avoir tenu au moins une moyenne ou plusieurs courtes)
+/// - Aléatoire : 3 h de jeu cumulé (palier « toutes les durées sont à
+///   l'aise », tirage surprise parmi courte/moyenne/longue)
 library;
+
+import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -117,6 +121,58 @@ void main() {
     );
   });
 
+  group('isSessionLengthAleatoireUnlocked', () {
+    test('0 s → verrouillée', () {
+      expect(isSessionLengthAleatoireUnlocked(0), isFalse);
+    });
+
+    test('3600 s (Longue débloquée mais pas Aléatoire) → verrouillée', () {
+      // L'aléatoire est volontairement plus haut que la Longue : on veut
+      // que la joueuse ait *vécu* les trois durées plusieurs fois (≈ 3 h
+      // cumulées) avant que la surprise tombe sur une 45 min.
+      expect(isSessionLengthAleatoireUnlocked(3600), isFalse);
+    });
+
+    test('10799 s (juste sous 3 h) → verrouillée', () {
+      expect(isSessionLengthAleatoireUnlocked(10799), isFalse);
+    });
+
+    test('10800 s (3 h pile) → déverrouillée', () {
+      expect(isSessionLengthAleatoireUnlocked(10800), isTrue);
+    });
+  });
+
+  group('SessionLengthChoice.resolveAleatoireIfNeeded', () {
+    test('non-aleatoire → identité (idempotent)', () {
+      final rng = Random(0);
+      for (final c in const [
+        SessionLengthChoice.bachee,
+        SessionLengthChoice.courte,
+        SessionLengthChoice.moyenne,
+        SessionLengthChoice.longue,
+      ]) {
+        expect(c.resolveAleatoireIfNeeded(rng), c);
+      }
+    });
+
+    test('aleatoire → tirage strictement dans courte/moyenne/longue', () {
+      // Bâclée explicitement exclue (cf. spec : aléatoire = surprise sur
+      // *la durée*, pas sur le format intensité maximale).
+      final rng = Random(42);
+      for (var i = 0; i < 200; i++) {
+        final drawn =
+            SessionLengthChoice.aleatoire.resolveAleatoireIfNeeded(rng);
+        expect(
+          SessionLengthChoice.aleatoireDrawPool.contains(drawn),
+          isTrue,
+          reason: 'tirage $drawn doit appartenir à aleatoireDrawPool',
+        );
+        expect(drawn, isNot(SessionLengthChoice.bachee));
+        expect(drawn, isNot(SessionLengthChoice.aleatoire));
+      }
+    });
+  });
+
   // Helper partagé entre `build` (rendu du picker) et `_start` (génération +
   // persistance). Bug détecté en review PR #249 : `_start` lisait
   // `bundle.lastLengthChoice` brut, court-circuitant le fallback du picker.
@@ -128,6 +184,7 @@ void main() {
           bacheeUnlocked: true,
           moyenneUnlocked: true,
           longueUnlocked: true,
+          aleatoireUnlocked: true,
         ),
         SessionLengthChoice.longue,
       );
@@ -140,6 +197,7 @@ void main() {
           bacheeUnlocked: true,
           moyenneUnlocked: true,
           longueUnlocked: false,
+          aleatoireUnlocked: false,
         ),
         SessionLengthChoice.courte,
       );
@@ -152,6 +210,7 @@ void main() {
           bacheeUnlocked: true,
           moyenneUnlocked: false,
           longueUnlocked: false,
+          aleatoireUnlocked: false,
         ),
         SessionLengthChoice.courte,
       );
@@ -164,6 +223,7 @@ void main() {
           bacheeUnlocked: false,
           moyenneUnlocked: true,
           longueUnlocked: true,
+          aleatoireUnlocked: true,
         ),
         SessionLengthChoice.courte,
       );
@@ -176,8 +236,35 @@ void main() {
           bacheeUnlocked: false,
           moyenneUnlocked: false,
           longueUnlocked: false,
+          aleatoireUnlocked: false,
         ),
         SessionLengthChoice.courte,
+      );
+    });
+
+    test('aleatoire persisté + gate Aléatoire lock → fallback courte', () {
+      expect(
+        resolveSessionLengthChoice(
+          persisted: SessionLengthChoice.aleatoire,
+          bacheeUnlocked: true,
+          moyenneUnlocked: true,
+          longueUnlocked: true,
+          aleatoireUnlocked: false,
+        ),
+        SessionLengthChoice.courte,
+      );
+    });
+
+    test('aleatoire persisté + gate Aléatoire ouvert → conservé', () {
+      expect(
+        resolveSessionLengthChoice(
+          persisted: SessionLengthChoice.aleatoire,
+          bacheeUnlocked: true,
+          moyenneUnlocked: true,
+          longueUnlocked: true,
+          aleatoireUnlocked: true,
+        ),
+        SessionLengthChoice.aleatoire,
       );
     });
   });

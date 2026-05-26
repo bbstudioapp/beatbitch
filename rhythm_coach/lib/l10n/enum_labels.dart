@@ -118,6 +118,7 @@ extension SessionLengthChoiceL10n on SessionLengthChoice {
       SessionLengthChoice.courte => t.sessionLengthCourteLabel,
       SessionLengthChoice.moyenne => t.sessionLengthMoyenneLabel,
       SessionLengthChoice.longue => t.sessionLengthLongueLabel,
+      SessionLengthChoice.aleatoire => t.sessionLengthAleatoireLabel,
     };
   }
 
@@ -128,6 +129,7 @@ extension SessionLengthChoiceL10n on SessionLengthChoice {
       SessionLengthChoice.courte => t.sessionLengthCourteDuration,
       SessionLengthChoice.moyenne => t.sessionLengthMoyenneDuration,
       SessionLengthChoice.longue => t.sessionLengthLongueDuration,
+      SessionLengthChoice.aleatoire => t.sessionLengthAleatoireDuration,
     };
   }
 }

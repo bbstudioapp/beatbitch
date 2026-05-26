@@ -568,6 +568,16 @@ class AppLocalizationsDe extends AppLocalizations {
       'Volle Sitzung, mehrere eingeschobene Herausforderungen.';
 
   @override
+  String get sessionLengthAleatoireLabel => 'Zufällig';
+
+  @override
+  String get sessionLengthAleatoireDuration => 'Überraschung';
+
+  @override
+  String get sessionLengthAleatoireDescription =>
+      'Überraschungslänge — gezogen zwischen Kurz, Mittel und Lang. Kein Timer.';
+
+  @override
   String get careerChallengesToggle => 'Herausforderungen in der Sitzung';
 
   @override
