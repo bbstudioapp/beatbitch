@@ -465,6 +465,7 @@
   "settingsLanguageFrench": "Français",
   "settingsLanguageEnglish": "English",
   "settingsLanguageGerman": "Deutsch",
+  "settingsLanguageSpanish": "Español",
   "languagePickerTitle": "Choisis ta langue",
   "languagePickerBody": "La langue de ton téléphone n'est pas (encore) disponible dans BeatBitch. Choisis celle que tu veux utiliser — tu pourras en changer plus tard dans les réglages (icône équaliseur).",
   "languageNewlyAvailableTitle": "Disponible en {language}",

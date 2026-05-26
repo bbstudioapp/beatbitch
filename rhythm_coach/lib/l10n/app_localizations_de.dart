@@ -942,6 +942,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsLanguageGerman => 'Deutsch';
 
   @override
+  String get settingsLanguageSpanish => 'Español';
+
+  @override
   String get languagePickerTitle => 'Wähl deine Sprache';
 
   @override
