@@ -23,6 +23,7 @@ class BiffleStreakBuilder implements ChallengeSegmentBuilder {
   Challenge? _challenge;
   int _bpm = _defaultBpm;
   bool _emitted = false;
+  bool _segmentConsumed = false;
 
   @override
   void start({
@@ -33,6 +34,7 @@ class BiffleStreakBuilder implements ChallengeSegmentBuilder {
   }) {
     _challenge = challenge;
     _emitted = false;
+    _segmentConsumed = false;
     // BPM de confort biffle si le profil l'a, sinon fallback. `ch.bpm` est
     // null pour les axes durée — ne pas s'en servir.
     final bpmComfort = profile?.comfortOf(CapabilityAxis.biffleBpmMax);
@@ -42,7 +44,11 @@ class BiffleStreakBuilder implements ChallengeSegmentBuilder {
   @override
   SessionStep? next() {
     final ch = _challenge;
-    if (ch == null || _emitted) return null;
+    if (ch == null) return null;
+    if (_emitted) {
+      _segmentConsumed = true;
+      return null;
+    }
     _emitted = true;
     return SessionStep(
       time: 0,
@@ -53,7 +59,7 @@ class BiffleStreakBuilder implements ChallengeSegmentBuilder {
   }
 
   @override
-  bool get thresholdReached => _emitted;
+  bool get thresholdReached => _segmentConsumed;
 
   @override
   int get elapsedSegmentSeconds =>

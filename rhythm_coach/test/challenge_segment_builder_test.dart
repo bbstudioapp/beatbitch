@@ -30,11 +30,16 @@ void _expectMonolithic(
   expect(seg.bpm, ch.bpm);
   expect(seg.bpmEnd, ch.bpmEnd);
   expect(seg.duration, expectedDuration);
-  expect(builder.thresholdReached, isTrue,
-      reason: 'après le segment unique, seuil atteint (monolithique)');
+  expect(builder.thresholdReached, isFalse,
+      reason: 'après émission, seuil pas encore atteint — le segment doit '
+          'être consommé par le contrôleur avant de basculer en atSeuil');
   expect(builder.elapsedSegmentSeconds, expectedDuration);
-  // Tous les appels suivants doivent rendre null — le builder est épuisé.
+  // 2ᵉ appel : le contrôleur revient demander un nouveau segment (= signe que
+  // le précédent a été tenu en entier). Le builder annonce alors le seuil
+  // atteint et arrête d'émettre.
   expect(builder.next(), isNull);
+  expect(builder.thresholdReached, isTrue,
+      reason: 'après le 2ᵉ appel à next(), seuil atteint (monolithique)');
   expect(builder.next(), isNull);
 }
 
@@ -370,8 +375,11 @@ void main() {
       expect(seg.duration, 22);
       expect(seg.bpm, isNotNull);
       expect(seg.bpmEnd, isNull, reason: 'pas de rampe, BPM constant');
-      expect(builder.thresholdReached, isTrue);
+      expect(builder.thresholdReached, isFalse,
+          reason: 'seuil pas encore atteint — segment à consommer d\'abord');
       expect(builder.next(), isNull);
+      expect(builder.thresholdReached, isTrue,
+          reason: '2ᵉ appel à next() = segment consommé');
     });
   });
 
@@ -1124,6 +1132,10 @@ void main() {
         rng: Random(0),
       );
       builder.next();
+      // 1er appel : segment émis mais pas encore consommé.
+      expect(builder.thresholdReached, isFalse);
+      expect(builder.next(), isNull);
+      // 2ᵉ appel : segment consommé → seuil atteint.
       expect(builder.thresholdReached, isTrue);
       // Réutilisation hypothétique : on re-`start` avec un nouveau challenge.
       const ch2 = Challenge(
