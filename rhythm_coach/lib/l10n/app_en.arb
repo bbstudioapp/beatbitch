@@ -249,7 +249,6 @@
   "challengeHoldHintAtSeuil": "Release to stop, or keep holding",
   "challengeHoldHintTolerance": "Put your finger back",
   "challengeCountdownReleaseRetry": "Keep your finger this time.",
-  "challengeTutorialBanner": "First challenge: you'll hold a position for the requested time. Press and hold HOLD when ready (keep your finger), or tap SKIP to skip it.",
   "challengeBannerCountdown": "{digit}",
   "@challengeBannerCountdown": {
     "placeholders": { "digit": { "type": "int" } }

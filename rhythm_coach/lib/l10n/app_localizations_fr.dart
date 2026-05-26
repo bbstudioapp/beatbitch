@@ -595,10 +595,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Maintiens bien ton doigt cette fois.';
 
   @override
-  String get challengeTutorialBanner =>
-      'Premier défi : tu vas tenir une position le temps demandé. Maintiens MAINTIENS quand tu es prête (garde le doigt), ou tape PASSE pour skipper.';
-
-  @override
   String challengeBannerCountdown(int digit) {
     return '$digit';
   }

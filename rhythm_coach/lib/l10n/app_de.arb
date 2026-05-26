@@ -249,7 +249,6 @@
   "challengeHoldHintAtSeuil": "Loslassen zum Beenden, oder weiterhalten",
   "challengeHoldHintTolerance": "Leg deinen Finger zurück",
   "challengeCountdownReleaseRetry": "Halte deinen Finger diesmal.",
-  "challengeTutorialBanner": "Erste Herausforderung: Du wirst eine Position für die geforderte Zeit halten. Drücke und halte HALTEN wenn du bereit bist (Finger drauf lassen), oder tippe ÜBERSPR. zum Überspringen.",
   "challengeBannerCountdown": "{digit}",
   "@challengeBannerCountdown": {
     "placeholders": { "digit": { "type": "int" } }

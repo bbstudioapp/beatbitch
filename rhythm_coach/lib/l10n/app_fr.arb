@@ -249,7 +249,6 @@
   "challengeHoldHintAtSeuil": "Relâche pour arrêter, ou continue",
   "challengeHoldHintTolerance": "Repose ton doigt",
   "challengeCountdownReleaseRetry": "Maintiens bien ton doigt cette fois.",
-  "challengeTutorialBanner": "Premier défi : tu vas tenir une position le temps demandé. Maintiens MAINTIENS quand tu es prête (garde le doigt), ou tape PASSE pour skipper.",
   "challengeBannerCountdown": "{digit}",
   "@challengeBannerCountdown": {
     "placeholders": { "digit": { "type": "int" } }

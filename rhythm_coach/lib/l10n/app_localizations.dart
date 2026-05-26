@@ -1174,12 +1174,6 @@ abstract class AppLocalizations {
   /// **'Maintiens bien ton doigt cette fois.'**
   String get challengeCountdownReleaseRetry;
 
-  /// No description provided for @challengeTutorialBanner.
-  ///
-  /// In fr, this message translates to:
-  /// **'Premier défi : tu vas tenir une position le temps demandé. Maintiens MAINTIENS quand tu es prête (garde le doigt), ou tape PASSE pour skipper.'**
-  String get challengeTutorialBanner;
-
   /// No description provided for @challengeBannerCountdown.
   ///
   /// In fr, this message translates to:
