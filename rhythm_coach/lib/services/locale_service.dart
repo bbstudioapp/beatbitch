@@ -9,6 +9,7 @@ const List<Locale> kSupportedLocales = [
   Locale('fr'),
   Locale('en'),
   Locale('de'),
+  Locale('es'),
 ];
 
 /// Locale de repli si aucune préférence persistée et que la locale système

@@ -21,9 +21,7 @@ class PhraseBankLoader {
 
   Future<PhraseBank> load({Locale? locale}) async {
     final lang = (locale ?? LocaleService.instance.current).languageCode;
-    final path =
-        lang == 'fr' ? _assetPathDefault : 'assets/career/phrases_$lang.json';
-    final raw = await rootBundle.loadString(path);
+    final raw = await _loadWithFallback(lang);
     final data = json.decode(raw) as Map<String, dynamic>;
 
     final byMode = <SessionMode, Map<String, List<PhraseEntry>>>{};
@@ -91,5 +89,21 @@ class PhraseBankLoader {
       postFinalLick: PhraseEntry.listFromJson(data['post_final_lick']),
       swallowOrders: PhraseEntry.listFromJson(data['swallow_order']),
     );
+  }
+
+  /// Cascade `_<lang>.json` → `_en.json` → `_fr.json`. Permet d'ajouter une
+  /// locale (UI traduite) avant d'avoir traduit la banque de phrases carrière.
+  Future<String> _loadWithFallback(String lang) async {
+    String pathFor(String l) =>
+        l == 'fr' ? _assetPathDefault : 'assets/career/phrases_$l.json';
+    for (final candidate in <String>{lang, 'en', 'fr'}) {
+      try {
+        return await rootBundle.loadString(pathFor(candidate));
+      } catch (_) {
+        continue;
+      }
+    }
+    throw StateError(
+        'Aucune banque de phrases trouvée (essayé: $lang, en, fr)');
   }
 }

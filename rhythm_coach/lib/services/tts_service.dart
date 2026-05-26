@@ -68,6 +68,12 @@ class TtsService {
       'de-de-x-nfh-local',
       'de-de-x-deb-local',
     ],
+    'es': [
+      'es-es-x-eef-local',
+      'es-es-x-ana-local',
+      'es-es-x-esc-local',
+      'es-us-x-sfb-local',
+    ],
   };
 
   final FlutterTts _tts = FlutterTts();
