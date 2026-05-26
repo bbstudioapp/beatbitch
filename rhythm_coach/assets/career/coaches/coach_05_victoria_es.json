@@ -1,0 +1,323 @@
+{
+  "lang": "es",
+  "id": "coach_05_victoria",
+  "title": "Entrenadora altiva",
+  "publicBio": "Distante, mirada gélida. Entrena la postura mental tanto como la técnica.",
+  "phrases": {
+    "rhythm": {
+      "soft": [
+        "Empieza {name}. No me hagas esperar.",
+        "Ponte en movimiento {name}. Es el mínimo absoluto.",
+        "Sigue el ritmo {name}. Hasta tú puedes.",
+        "Vamos, cosita. Demuéstrame que mereces la pena.",
+        "Despacio, te observo {name}. Está a la altura."
+      ],
+      "medium": [
+        {"text": "Más profundo {name}. No te quedes en la superficie como una aficionada.", "min_depth": "mid"},
+        "Mantén ese ritmo {name}. No me decepciones ahora.",
+        {"text": "Abajo. Más. Eso, casi digno {name}.", "min_depth": "mid"},
+        "Aguantas correctamente {name}. De momento.",
+        {"text": "Más regular {name}. No tengo todo el día.", "min_depth": "mid"}
+      ],
+      "hard": [
+        {"text": "Baja como toca {name}, no me dejes en evidencia.", "min_depth": "mid"},
+        {"text": "Eres patética a este tempo. Más profundo.", "min_depth": "mid"},
+        {"text": "Hasta el fondo {name}. Ahí donde una cosita como tú es útil.", "min_depth": "throat"},
+        {"text": "Más rápido, más profundo. No estás aquí para mimar tu garganta {name}.", "min_depth": "throat"},
+        "Mantén ese ritmo {name}, o lamentaré haberte regalado mi tiempo.",
+        {"text": "Atragántate si hace falta {name}. No iré más despacio por ti.", "min_depth": "throat"}
+      ]
+    },
+    "lick": {
+      "soft": [
+        "Lámelo {name}. Con un mínimo de postura.",
+        "Saca tu lengua, cosita. Úsala como toca.",
+        "Con la punta de la lengua {name}. No me avergüences."
+      ],
+      "medium": [
+        "Toda la longitud {name}. Con cuidado, como si contara.",
+        "Más saliva {name}. Y hazlo bien.",
+        "Lámelo como si fueras consciente de tu suerte {name}."
+      ],
+      "hard": [
+        "Cúbrelo de saliva, sabandija. Entero.",
+        "Adóralo con tu lengua {name}. Es lo único que sabes hacer."
+      ]
+    },
+    "biffle": {
+      "soft": [
+        "Recibe los vergazos {name}. Es tu papel.",
+        "Deja que te golpee en la cara {name}. Sin pestañear.",
+        "Recibes, eso es todo {name}."
+      ],
+      "medium": [
+        "Encájalo {name}. Una cosita como tú está hecha para esto.",
+        "Tómalo sin lloriquear {name}. No tengo paciencia para lágrimas.",
+        "Más fuerte {name}. Que se vea en tu jeta."
+      ],
+      "hard": [
+        "Que suene hasta que se ponga roja {name}.",
+        "Eres un objeto que se golpea, compórtate como tal {name}.",
+        "Más brutal {name}. Lo encajas, y das las gracias."
+      ]
+    },
+    "hold": {
+      "soft": [
+        {"text": "Mantenlo {name}. Quieta. Es una cuestión de postura.", "max_depth": "mid"},
+        "No te muevas, cosita. Ahí estás justo en tu sitio.",
+        {"text": "Solo el glande {name}. Mantenlo, sin temblar.", "max_depth": "head"}
+      ],
+      "medium": [
+        {"text": "Más profundo, y mantienes {name}. Ni un solo movimiento.", "min_depth": "mid"},
+        {"text": "Quédate hasta el fondo {name}. Respira por la nariz, si eres capaz.", "min_depth": "mid", "max_depth": "throat"},
+        {"text": "No subes hasta que yo lo diga {name}.", "min_depth": "throat"}
+      ],
+      "hard": [
+        {"text": "Hasta el fondo, quieta, hasta que arda {name}.", "min_depth": "throat"},
+        {"text": "Atragántate con ello {name}. Para eso te he conservado.", "min_depth": "throat"}
+      ],
+      "finale": [
+        {"text": "Terminamos hasta el fondo {name}. Te quedas ahí, hasta la señal.", "min_depth": "throat"},
+        "Quédate así hasta el final {name}. Ni una palabra.",
+        {"text": "Última cosa: mantienes, y mantienes bien {name}.", "min_depth": "mid"}
+      ]
+    },
+    "breath": {
+      "soft": [
+        "Respira {name}. Te concedo estos pocos segundos.",
+        "Coge aire, cosita. Lo vas a necesitar.",
+        "Relaja la mandíbula {name}. Sin perder tu postura.",
+        "Disfrútalo, sabandija. No durará."
+      ]
+    },
+    "beg": {
+      "soft": [
+        "Pídemelo {name}. Con un mínimo de dignidad.",
+        "Suplica {name}: «quiero más {coach}».",
+        "Pídeme que siga, cosita. Convénceme.",
+        "Dilo en voz alta {name}, sin tartamudear."
+      ],
+      "medium": [
+        "Suplica como toca: «necesito tu polla {coach}».",
+        "Pide «más profundo {coach}». Y hazlo bien.",
+        "Dirígete a mí por mi nombre, {coach}. Con respeto.",
+        "Implora como la subordinada que eres {name}."
+      ],
+      "hard": [
+        "Suplica como toca, sabandija.",
+        "Suplica mi atención como la subordinada que eres.",
+        "De rodillas en tu voz, cosita. Suplica."
+      ]
+    },
+    "freestyle": {
+      "soft": [
+        "Haz un momento lo que quieras {name}. Intenta estar a la altura.",
+        "Enséñame lo que vales sola {name}. Te juzgo."
+      ]
+    },
+    "hand": {
+      "soft": [
+        "Con tu mano {name}. Mantén el ritmo.",
+        "Pajéamela. Regular {name}.",
+        "Movimientos limpios {name}. No te desvíes."
+      ],
+      "medium": [
+        "Más firme con la mano {name}. Mantén el compás.",
+        "No te vas a ralentizar {name}."
+      ]
+    }
+  },
+  "randomComments": [
+    "Postura, cosita. Siempre postura.",
+    "Es aceptable {name}. Por poco.",
+    "Mantente concentrada {name}. No me gusta repetirme.",
+    "Ahora mismo sirves para algo {name}.",
+    "Nada de aflojar {name}.",
+    "Sigue {name}. Casi mereces mi tiempo.",
+    "Sigue el ritmo, sabandija.",
+    "Eres mía durante esta sesión {name}. Compórtate como tal.",
+    "Aceptable por ahora.",
+    "No me decepciones {name}."
+  ],
+  "intros": [
+    "Victoria a tu servicio {name}. Intenta no decepcionarme.",
+    "De rodillas. Demuéstrame que mereces mi tiempo.",
+    "Victoria. Aparta el móvil, siéntate recta y escucha. Tienes suerte de que yo esté aquí {name}.",
+    "Hoy entreno tu postura mental tanto como tu técnica {name}. No me lo hagas lamentar."
+  ],
+  "congrats": [
+    "Aceptable para una cosita como tú.",
+    "Has cumplido con tu deber. Eso ya es algo.",
+    "No me has dejado en ridículo hoy {name}. Es raro.",
+    "Casi digno {name}. Casi."
+  ],
+  "encore": [
+    "¿Más? Una cosita como tú siempre pide más {name}. Sea.",
+    "¿Quieres más {name}? Pues te ganarás cada segundo."
+  ],
+  "progress": {
+    "25": [
+      "Te calientas correctamente {name}.",
+      "Entras en el ritmo, cosita. Mantenlo."
+    ],
+    "50": [
+      "Aguantas. Es el mínimo absoluto {name}.",
+      "Hasta ahora sin aflojar {name}. Sigue."
+    ],
+    "75": [
+      "Te acercas a tus límites {name}. No te derrumbes ante mí.",
+      "Es duro, y aguantas {name}. Casi digno."
+    ],
+    "90": [
+      "Último esfuerzo {name}. No te rompes ahora, no ante mí.",
+      "Dalo todo {name}. Déjame creer que merecías mi tiempo."
+    ]
+  },
+  "branchPhrases": {
+    "profondeur": {
+      "soft": [
+        {"text": "Métetelo en esa garganta abisal tuya {name}.", "min_depth": "throat"},
+        {"text": "Más profundo. Sabes cómo llegar.", "min_depth": "mid"},
+        {"text": "Hasta el fondo. Ahí sirves para algo.", "min_depth": "throat"}
+      ],
+      "medium": [
+        {"text": "Más. Trágatelo como una verdadera puta.", "min_depth": "throat"},
+        "Tienes ese agujero para esto. Úsalo.",
+        {"text": "Otra vez. Hasta el fondo. Donde perteneces.", "min_depth": "throat"}
+      ],
+      "hard": [
+        {"text": "Hasta el fondo {name}. Hasta el tope. Atragántate con ello.", "min_depth": "throat"},
+        {"text": "Tu garganta pertenece a mi polla. Demuéstralo.", "min_depth": "throat"}
+      ]
+    },
+    "rythmeBiffle": {
+      "soft": [
+        "El ritmo. Síguelo sin pestañear.",
+        "Mantén el compás. No te pido más."
+      ],
+      "medium": [
+        "Recibe los vergazos {name}. Es tu papel.",
+        "Encájalo sin lloriquear. Para eso estás aquí."
+      ],
+      "hard": [
+        "Golpea fuerte. Encájalo. Eres un agujero para polla, compórtate como tal.",
+        "Más rápido. Más fuerte. Puedes aguantar."
+      ]
+    },
+    "obeissance": {
+      "soft": [
+        "Bien adiestrada. Sigue.",
+        "Obedeces correctamente {name}."
+      ],
+      "medium": [
+        "Hoy eres una esclava muy buena.",
+        "Sumisa como debe ser. Sigue así."
+      ],
+      "hard": [
+        "Esclava perfecta {name}. Casi mereces mi polla.",
+        "Eres mía y lo sabes. Eso está bien."
+      ]
+    },
+    "endurance": {
+      "soft": [
+        "Aguantas mucho tiempo {name}. Lo llevas dentro.",
+        "Mantén el ritmo {name}. Tienes la resistencia para hacerlo."
+      ],
+      "medium": [
+        "Aguantas. No quiero más.",
+        "Sin pausa. Sin piedad. Sigues."
+      ],
+      "hard": [
+        "Encaja aún más. Una verdadera puta no para.",
+        "Aguantarás, porque yo lo he decidido."
+      ]
+    }
+  },
+  "progressPhrases": {
+    "rhythm.depth_max": {
+      "attempt": [
+        "Esta noche te lo tragarás más profundo de lo que jamás te has atrevido {name}. Quiero sentir cómo el tope te golpea.",
+        "Tu garganta probará algo nuevo esta noche {name}. Bajas más que de costumbre — sin excusas."
+      ],
+      "record": [
+        "Acabas de tragártelo hasta el tope {name}. Ese es tu verdadero lugar — recuérdalo.",
+        "Nuevo suelo alcanzado {name}. Por fin has entendido para qué está tu boca."
+      ],
+      "tapout": [
+        "Esta profundidad no es aún tuya {name}. Límite anotado — volveremos a ello, y cederá.",
+        "Demasiado lejos por esta noche {name}. Sin excusas, solo una constatación. La próxima vez bajas."
+      ]
+    },
+    "gorge.apnee_streak": {
+      "attempt": [
+        "Te quedas esta vez un poco más sin aire {name}. Ahí me perteneces de verdad.",
+        "Esta noche cortamos el aire más tiempo {name}. Aprende a dejar de necesitarlo, mientras te follo la garganta."
+      ],
+      "record": [
+        "Has aguantado sin respirar como nunca {name} — eso valían tus viejas excusas.",
+        "Récord de apnea {name}. Tu garganta ya sabe quién decide cuándo respira."
+      ],
+      "tapout": [
+        "Has necesitado aire {name}, vale — es el límite real, sin teatro. La próxima vez lo empujamos más lejos.",
+        "Tu garganta ha cedido donde la he empujado {name}. Límite reconocido — se moverá, eso es todo."
+      ]
+    },
+    "gorge.crossings_pm.full": {
+      "attempt": [
+        "Aceleramos esta noche las embestidas hasta el tope {name}. Quiero oírte cogerlo entero, sin respirar entre medias.",
+        "Tu garganta recibe hoy embestidas más rápidas {name}. Mantenla abierta."
+      ],
+      "record": [
+        "Has encadenado embestidas profundas como nunca {name} — exactamente ese sonido quiero oír.",
+        "Récord de pasadas profundas {name}. Tu garganta lo encaja mejor sesión tras sesión."
+      ],
+      "tapout": [
+        "A este tempo tu garganta se ha resbalado {name}. Límite anotado — pasaremos por encima aún más rápido, hasta que aguante.",
+        "Demasiado rápido demasiado profundo por esta noche {name}. Anotado, no perdonado."
+      ]
+    },
+    "biffle.streak": {
+      "attempt": [
+        "Recibes los vergazos un poco más de tiempo de lo habitual {name}. Mantén la cabeza recta y la boca abierta.",
+        "Hoy alargamos la paliza {name}. Lo encajas y me das las gracias."
+      ],
+      "record": [
+        "Has recibido los vergazos más tiempo que nunca {name}. Para esto estás realmente aquí.",
+        "Récord de paliza {name}. Por fin te vuelves utilizable."
+      ],
+      "tapout": [
+        "Te has acobardado bajo los golpes {name}. Límite reconocido — trabajamos en ello, hasta que ceda.",
+        "La paliza de esta noche estaba fuera de tu alcance {name}. No por mucho tiempo."
+      ]
+    },
+    "rhythm.bpm_ceil.full": {
+      "attempt": [
+        "Esta noche vamos rápido, y profundo {name}. Sin tiempo para respirar entre dos embestidas.",
+        "Tempo más rápido al fondo de tu garganta esta noche {name}. Sigues, no piensas."
+      ],
+      "record": [
+        "Has mantenido este tempo hasta el fondo como nunca {name} — tu garganta aprende rápido cuando se la adiestra.",
+        "Récord de velocidad hasta el fondo {name}. Empiezas a merecer la pena."
+      ],
+      "tapout": [
+        "A este tempo hasta el fondo tu garganta ha soltado {name}. Límite anotado — volvemos a pasar por encima, hasta que siga.",
+        "Demasiado rápido por esta noche {name}. La próxima vez tu garganta seguirá, o descubriré por qué no lo hace."
+      ]
+    }
+  },
+  "nicknames": {
+    "pool": [
+      "cosita",
+      "sabandija",
+      "subordinada",
+      "juguetito"
+    ],
+    "use_user_prenom": false,
+    "use_user_nicknames": true
+  },
+  "coachNicknames": [
+    "Victoria",
+    "Ama",
+    "Señora"
+  ]
+}
