@@ -6,7 +6,7 @@
 
 > An immersive rhythmic voice coach. The phone lies on its side — no need to watch the screen. Everything is driven by voice and guidance beeps.
 
-**Languages**: English · [Français](README.fr.md) · [Deutsch](README.de.md)
+**Languages**: English · [Français](README.fr.md) · [Deutsch](README.de.md) · [Español](README.es.md)
 
 ---
 
@@ -25,7 +25,7 @@
 - **Career mode**: 20+ levels, 6 specialization branches, learning milestones, chained encore, quickie sessions, progression badges.
 - **Free scenarios**: editable JSON sessions, extensible punishments and random comments without touching code.
 - **Hold camera check** (experimental, opt-in): on-device detection via Google ML Kit — no image ever leaves the device.
-- **Multilingual**: French, English and German shipped; other locales = asset drop-in.
+- **Multilingual**: French, English, German and Spanish shipped; other locales = asset drop-in.
 - **18+ adult gate** non-skippable on first launch, 3-step onboarding.
 
 ## 100% offline · no telemetry

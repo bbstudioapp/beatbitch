@@ -8,7 +8,7 @@
 
 > **Coach vocal rythmique immersif pour Android, Windows, Linux, iOS (PWA) & web.** Tu poses ton téléphone à plat sur le côté, tu lances la séance, tu fermes les yeux. Une voix te guide, des bips marquent le rythme, tu n'as plus besoin de regarder l'écran.
 
-**Langues** : [English](README.md) · Français · [Deutsch](README.de.md)
+**Langues** : [English](README.md) · Français · [Deutsch](README.de.md) · [Español](README.es.md)
 
 ---
 

@@ -8,7 +8,7 @@
 
 > **Immersive rhythmic voice coach for Android, Windows, Linux, iOS (PWA) & web.** Drop your phone flat on its side, start the session, close your eyes. A voice guides you, beeps mark the rhythm — no screen-watching needed.
 
-**Languages**: English · [Français](README.fr.md) · [Deutsch](README.de.md)
+**Languages**: English · [Français](README.fr.md) · [Deutsch](README.de.md) · [Español](README.es.md)
 
 ---
 

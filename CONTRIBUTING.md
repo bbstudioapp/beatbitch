@@ -1,8 +1,8 @@
 # Contributing to BeatBitch
 
-You can write in French, English or German, everywhere — issues, PRs, commits.
+You can write in French, English, German or Spanish, everywhere — issues, PRs, commits.
 
-**Languages**: English · [Français](CONTRIBUTING.fr.md) · [Deutsch](CONTRIBUTING.de.md)
+**Languages**: English · [Français](CONTRIBUTING.fr.md) · [Deutsch](CONTRIBUTING.de.md) · [Español](CONTRIBUTING.es.md)
 
 ---
 
@@ -67,7 +67,7 @@ flutter analyze         # should return "No issues found!"
 
 ## i18n
 
-The app ships in **French, English and German**. To add another language (UI ARB + coach lines + sessions + ambiences), the complete procedure is in the *Internationalisation* section of [`rhythm_coach/CLAUDE.md`](rhythm_coach/CLAUDE.md).
+The app ships in **French, English, German and Spanish**. To add another language (UI ARB + coach lines + sessions + ambiences), the complete procedure is in the *Internationalisation* section of [`rhythm_coach/CLAUDE.md`](rhythm_coach/CLAUDE.md).
 
 > Editorial content is heavily styled (crude register, dominant tone). Literal translation won't work — plan a **native-speaker adaptation**.
 

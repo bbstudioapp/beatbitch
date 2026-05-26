@@ -1,8 +1,8 @@
 # Contribuer à BeatBitch
 
-Tu peux écrire en français, en anglais ou en allemand, partout — issues, PRs, commits.
+Tu peux écrire en français, en anglais, en allemand ou en espagnol, partout — issues, PRs, commits.
 
-**Langues** : [English](CONTRIBUTING.md) · Français · [Deutsch](CONTRIBUTING.de.md)
+**Langues** : [English](CONTRIBUTING.md) · Français · [Deutsch](CONTRIBUTING.de.md) · [Español](CONTRIBUTING.es.md)
 
 ---
 
@@ -67,7 +67,7 @@ flutter analyze         # doit retourner "No issues found!"
 
 ## Internationalisation
 
-L'app est livrée en **français, anglais et allemand**. Pour ajouter une autre langue (ARB UI + phrases coach + sessions + ambiances), la procédure complète est dans la section *Internationalisation* de [`rhythm_coach/CLAUDE.md`](rhythm_coach/CLAUDE.md).
+L'app est livrée en **français, anglais, allemand et espagnol**. Pour ajouter une autre langue (ARB UI + phrases coach + sessions + ambiances), la procédure complète est dans la section *Internationalisation* de [`rhythm_coach/CLAUDE.md`](rhythm_coach/CLAUDE.md).
 
 > Le contenu éditorial est très typé (registre cru, ton dominateur). Une traduction littérale ne marchera pas — prévoir une **adaptation** par locuteur natif.
 

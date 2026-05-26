@@ -6,7 +6,7 @@
 
 > Immersiver rhythmischer Sprach-Coach. Das Handy liegt auf der Seite — du musst nicht auf den Bildschirm schauen. Alles wird durch Stimme und Guidance-Beeps gesteuert.
 
-**Sprachen** : [English](README.md) · [Français](README.fr.md) · Deutsch
+**Sprachen** : [English](README.md) · [Français](README.fr.md) · Deutsch · [Español](README.es.md)
 
 ---
 
@@ -25,7 +25,7 @@
 - **Karriere-Modus**: 20+ Level, 6 Spezialisierungszweige, Lern-Milestones, verkettete Encores, Quickie-Sessions, Fortschritts-Badges.
 - **Freie Szenarien**: editierbare JSON-Sessions, erweiterbare Strafen und Zufallskommentare ohne Codeänderung.
 - **Hold-Kameraprüfung** (experimentell, opt-in): On-Device-Erkennung via Google ML Kit — kein Bild verlässt jemals das Gerät.
-- **Mehrsprachig**: Französisch, Englisch und Deutsch ausgeliefert; weitere Sprachen = einfaches Hinzufügen von Assets.
+- **Mehrsprachig**: Französisch, Englisch, Deutsch und Spanisch ausgeliefert; weitere Sprachen = einfaches Hinzufügen von Assets.
 - **18+-Adult-Gate** nicht überspringbar beim ersten Start, 3-Schritt-Onboarding.
 
 ## 100 % offline · keine Telemetrie
