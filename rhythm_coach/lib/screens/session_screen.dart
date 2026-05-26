@@ -1607,14 +1607,13 @@ class _ChallengeButtons extends StatelessWidget {
 }
 
 /// Banner d'instructions affiché au-dessus des boutons pendant la fenêtre
-/// défi. Trois rôles :
-/// 1. Banner tutoriel persistent (`challengeTutorialBanner`) tant que le
-///    challenge porte `isTutorial=true` — la joueuse comprend ce qui se
-///    passe la première fois.
-/// 2. Annonce coach courante (`controller.challengeCurrentText`) — la
+/// défi. Deux rôles :
+/// 1. Annonce coach courante (`controller.challengeCurrentText`) — la
 ///    phrase dite en TTS est aussi affichée pour les utilisatrices qui
-///    ratent le son ou jouent en silencieux.
-/// 3. Objectif chiffré (`controller.challengeObjectiveText()`) — rappel
+///    ratent le son ou jouent en silencieux. Masquée en mode tuto pour
+///    laisser respirer le cadre (la phrase d'attempt explicative tient
+///    en TTS, pas besoin de la dupliquer à l'écran).
+/// 2. Objectif chiffré (`controller.challengeObjectiveText()`) — rappel
 ///    statique pendant la phase `live` (« tiens gorge 10 secondes »),
 ///    bascule sur « seuil atteint » au moment `atSeuil`.
 class _ChallengeBanner extends StatelessWidget {
@@ -1657,7 +1656,11 @@ class _ChallengeBanner extends StatelessWidget {
     final objective = phase == ChallengePhase.atSeuil
         ? t.challengeBannerThresholdReached
         : controller.challengeObjectiveText();
-    final showTutorial = ch?.isTutorial ?? false;
+    final isTutorial = ch?.isTutorial ?? false;
+    // En tutoriel : le coach explique tout en TTS (phrase d'attempt riche +
+    // banner tuto déjà entendu). On garde le cadre noir minimal — juste
+    // l'objectif chiffré — pour éviter d'empiler 3 niveaux de texte sur un
+    // écran où la joueuse doit garder le doigt sur l'écran et écouter.
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1669,18 +1672,6 @@ class _ChallengeBanner extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (showTutorial) ...[
-            Text(
-              t.challengeTutorialBanner,
-              style: const TextStyle(
-                fontSize: 12,
-                color: Color(0xFFFFB300),
-                fontWeight: FontWeight.w600,
-                height: 1.35,
-              ),
-            ),
-            const SizedBox(height: 8),
-          ],
           if (objective != null && objective.isNotEmpty)
             Text(
               objective,
@@ -1691,7 +1682,7 @@ class _ChallengeBanner extends StatelessWidget {
                 height: 1.3,
               ),
             ),
-          if (text != null && text.isNotEmpty) ...[
+          if (!isTutorial && text != null && text.isNotEmpty) ...[
             const SizedBox(height: 6),
             Text(
               text,

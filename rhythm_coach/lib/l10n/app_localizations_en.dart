@@ -594,10 +594,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get challengeCountdownReleaseRetry => 'Keep your finger this time.';
 
   @override
-  String get challengeTutorialBanner =>
-      'First challenge: you\'ll hold a position for the requested time. Press and hold HOLD when ready (keep your finger), or tap SKIP to skip it.';
-
-  @override
   String challengeBannerCountdown(int digit) {
     return '$digit';
   }

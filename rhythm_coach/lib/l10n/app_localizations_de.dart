@@ -594,10 +594,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get challengeCountdownReleaseRetry => 'Halte deinen Finger diesmal.';
 
   @override
-  String get challengeTutorialBanner =>
-      'Erste Herausforderung: Du wirst eine Position für die geforderte Zeit halten. Drücke und halte HALTEN wenn du bereit bist (Finger drauf lassen), oder tippe ÜBERSPR. zum Überspringen.';
-
-  @override
   String challengeBannerCountdown(int digit) {
     return '$digit';
   }
