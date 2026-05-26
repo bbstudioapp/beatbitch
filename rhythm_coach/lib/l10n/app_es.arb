@@ -810,14 +810,6 @@
       "duration": { "type": "String" }
     }
   },
-  "coachErrorNoVoice": "{coachName} necesita una voz que no está disponible en este dispositivo. Instala una voz masculina TTS en los ajustes del sistema para desbloquearlo.",
-  "@coachErrorNoVoice": {
-    "description": "Snackbar shown when tapping a coach whose required voice (cf. preferredGender) isn't installed locally.",
-    "placeholders": {
-      "coachName": { "type": "String" }
-    }
-  },
-  "coachBadgeNoVoice": "SIN VOZ",
   "unlockAnnouncementSloppyDroolBasic": "A partir de ahora tu boca retiene más saliva, y lamer te genera más. Babea sobre mí, sé guarra.",
   "@unlockAnnouncementSloppyDroolBasic": {
     "description": "Post-finale_chime TTS announcement when the milestone unlocking sloppy_drool_basic is acknowledged."

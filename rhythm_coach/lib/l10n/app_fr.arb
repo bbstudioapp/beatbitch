@@ -810,14 +810,6 @@
       "duration": { "type": "String" }
     }
   },
-  "coachErrorNoVoice": "{coachName} a besoin d'une voix vocale qui n'est pas disponible sur cet appareil. Installe une voix masculine TTS dans les paramètres système pour le débloquer.",
-  "@coachErrorNoVoice": {
-    "description": "Snackbar affichée quand on tape sur un coach dont la voix exigée (cf. preferredGender) n'est pas dispo localement.",
-    "placeholders": {
-      "coachName": { "type": "String" }
-    }
-  },
-  "coachBadgeNoVoice": "VOIX INDISPO",
   "unlockAnnouncementSloppyDroolBasic": "Désormais ta bouche garde plus de salive, et ton lèche en produit plus. Bave-moi dessus, sois sale.",
   "@unlockAnnouncementSloppyDroolBasic": {
     "description": "Annonce TTS post-finale_chime quand la milestone qui débloque sloppy_drool_basic est acquittée."

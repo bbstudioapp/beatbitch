@@ -118,17 +118,6 @@ class TtsService {
   double _pitch = _platformDefaultPitch;
   String? _currentVoiceName;
 
-  /// Cache des genres présents dans les voix dispo pour la locale courante.
-  /// Rafraîchi à `init()` et à chaque `setLocale()` via
-  /// `_refreshAvailableGendersCache`. Consommé par `hasVoiceMatchingSync`
-  /// pour gater les coachs qui demandent une voix d'un genre précis (Marc
-  /// — masculin obligatoire).
-  ///
-  /// Sur Linux : reste vide (pas d'API pour lister les voix piper/spd-say).
-  /// Sur Windows : reflète SAPI (typiquement `{female}` via Julie seule).
-  /// Sur Android : reflète les voix installées sur l'appareil.
-  final Set<String> _availableGendersForCurrentLocale = <String>{};
-
   static bool get _isWindows => defaultTargetPlatform == TargetPlatform.windows;
   static bool get _isLinux => defaultTargetPlatform == TargetPlatform.linux;
   static double get _platformDefaultRate =>
@@ -213,7 +202,6 @@ class TtsService {
       await _tts.awaitSpeakCompletion(true);
     }
     await _selectVoice();
-    await _refreshAvailableGendersCache();
 
     _tts.setStartHandler(() => _speaking = true);
     _tts.setCompletionHandler(() => _speaking = false);
@@ -221,56 +209,6 @@ class TtsService {
     _tts.setErrorHandler((msg) => _speaking = false);
 
     _initialized = true;
-  }
-
-  /// Renvoie `true` si la locale courante a au moins une voix correspondant
-  /// au [gender] demandé (`'male'`, `'female'`, …). Sync, lit le cache
-  /// rempli au `init()` et à chaque `setLocale()` — consommable depuis
-  /// `CoachService.evaluate` sans casser sa signature.
-  ///
-  /// Plate-formes :
-  /// - **Android** : reflète les voix réellement installées.
-  /// - **Windows** : Julie est forcée (cf. `applyCoachVoicePreset`), donc
-  ///   seul `female` est présent. Un coach masculin (`Marc`) sera bloqué.
-  /// - **Linux** : cache vide par construction (pas d'API listVoices côté
-  ///   piper/spd-say). N'importe quel `gender` retourne `false` → un coach
-  ///   avec préférence de genre est bloqué.
-  ///
-  /// Si tu veux un coach toujours disponible quelle que soit la plate-forme,
-  /// ne déclare pas de `preferredGender` dans son JSON.
-  bool hasVoiceMatchingSync({required String gender}) {
-    return _availableGendersForCurrentLocale.contains(gender.toLowerCase());
-  }
-
-  Future<void> _refreshAvailableGendersCache() async {
-    _availableGendersForCurrentLocale.clear();
-    // Linux : pas d'API listVoices, le cache reste vide → tout coach avec
-    // préférence de genre déclarée est considéré indisponible.
-    if (_isLinux) return;
-    try {
-      final voices = await listVoicesForLocale(_locale);
-      for (final v in voices) {
-        final gender = (v['gender'] ?? '').toLowerCase();
-        if (gender.isNotEmpty) {
-          _availableGendersForCurrentLocale.add(gender);
-        }
-        // Fallback heuristique : certains moteurs n'exposent pas `gender`
-        // mais incluent male/female (ou homme/femme) dans le nom de voix.
-        // Ordre `female` d'abord car `male` est sous-chaîne de `female`.
-        final name = (v['name'] ?? '').toLowerCase();
-        if (name.contains('female') || name.contains('femme')) {
-          _availableGendersForCurrentLocale.add('female');
-        } else if (name.contains('male') || name.contains('homme')) {
-          _availableGendersForCurrentLocale.add('male');
-        }
-      }
-      if (kDebugMode) {
-        debugPrint('[TTS] genders dispo pour ${_locale.languageCode} : '
-            '$_availableGendersForCurrentLocale');
-      }
-    } catch (e) {
-      if (kDebugMode) debugPrint('[TTS] refreshAvailableGenders KO : $e');
-    }
   }
 
   /// Promesse de la dernière transition de locale en cours, ou `null` si
@@ -298,18 +236,9 @@ class TtsService {
 
   Future<void> _doSetLocale(Locale locale) async {
     _locale = locale;
-    if (!_initialized || _isLinux) {
-      // Linux : on rafraîchit quand même le cache (qui restera vide par
-      // construction) pour invalider d'éventuels résidus d'une locale
-      // précédente — défense en profondeur.
-      if (_initialized && _isLinux) {
-        await _refreshAvailableGendersCache();
-      }
-      return;
-    }
+    if (!_initialized || _isLinux) return;
     await _tts.setLanguage(_ttsLanguageTag(_locale));
     await _selectVoice();
-    await _refreshAvailableGendersCache();
   }
 
   /// Construit le tag BCP-47 attendu par flutter_tts (`fr-FR`, `en-US`…).

@@ -3036,18 +3036,6 @@ abstract class AppLocalizations {
   /// **'{coachName} se débloque à {duration} de jeu cumulé.'**
   String coachErrorMinPlayerSeconds(String coachName, String duration);
 
-  /// Snackbar affichée quand on tape sur un coach dont la voix exigée (cf. preferredGender) n'est pas dispo localement.
-  ///
-  /// In fr, this message translates to:
-  /// **'{coachName} a besoin d\'une voix vocale qui n\'est pas disponible sur cet appareil. Installe une voix masculine TTS dans les paramètres système pour le débloquer.'**
-  String coachErrorNoVoice(String coachName);
-
-  /// No description provided for @coachBadgeNoVoice.
-  ///
-  /// In fr, this message translates to:
-  /// **'VOIX INDISPO'**
-  String get coachBadgeNoVoice;
-
   /// Annonce TTS post-finale_chime quand la milestone qui débloque sloppy_drool_basic est acquittée.
   ///
   /// In fr, this message translates to:

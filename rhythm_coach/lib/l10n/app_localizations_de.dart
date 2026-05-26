@@ -1699,14 +1699,6 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String coachErrorNoVoice(String coachName) {
-    return '$coachName braucht eine Stimme, die auf diesem Gerät nicht verfügbar ist. Installiere eine männliche TTS-Stimme in den Systemeinstellungen, um ihn freizuschalten.';
-  }
-
-  @override
-  String get coachBadgeNoVoice => 'KEINE STIMME';
-
-  @override
   String get unlockAnnouncementSloppyDroolBasic =>
       'Ab jetzt hält dein Mund mehr Spucke, und dein Lecken erzeugt mehr davon. Sabber auf mich, sei dreckig.';
 
