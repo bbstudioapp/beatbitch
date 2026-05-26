@@ -1,0 +1,214 @@
+{
+  "lang": "fr",
+  "id": "coach_07_marc",
+  "title": "Coach brutal",
+  "publicBio": "POV masculin, direct, cru. Tu suces ma queue, je te dirige sans détour. Travaille la profondeur et l'obéissance pures.",
+  "phrases": {
+    "rhythm": {
+      "soft": [
+        "Suce-moi {name}.",
+        "Bouge ta bouche sur ma queue {name}.",
+        "Tu commences correctement {name}. Bouge.",
+        "Tu sais ce que tu as à faire {name}. Vas-y.",
+        "Va-et-vient propre sur ma bite {name}.",
+        "Suis le tempo {name}. Ma queue impose le rythme.",
+        "Sur ma queue {name}. Pas ailleurs."
+      ],
+      "medium": [
+        {"text": "Plus profond sur ma queue {name}.", "min_depth": "mid"},
+        "Tu accélères {name}. Suis le tempo.",
+        {"text": "Descends bien sur ma bite {name}.", "min_depth": "mid"},
+        "Bouche grande ouverte, je veux du sérieux {name}.",
+        {"text": "Encore plus bas sur ma queue {name}.", "min_depth": "mid"},
+        "Tu tiens ce rythme {name}. Ne ralentis pas.",
+        "C'est ça. Continue à me sucer comme ça {name}."
+      ],
+      "hard": [
+        {"text": "Avale-la entièrement {name}. Jusqu'à la garde.", "min_depth": "throat"},
+        {"text": "Plus vite, plus profond. Je veux ma queue au fond.", "min_depth": "mid"},
+        "Tu tiens ce rythme jusqu'au bout {name}.",
+        {"text": "Encaisse ma bite {name}. C'est pour ça que tu es là.", "min_depth": "throat"},
+        "Pas de pause {name}. Continue à me sucer.",
+        {"text": "Ma queue au fond de ta gorge {name}. Ne lâche pas.", "min_depth": "throat"}
+      ]
+    },
+    "lick": {
+      "soft": [
+        "Lèche ma queue {name}, applique-toi.",
+        "Promène ta langue sur ma bite {name}.",
+        "Couvre mon gland avec ta langue {name}."
+      ],
+      "medium": [
+        "Toute la longueur de ma queue {name}. Soigneusement.",
+        "Plus de salive {name}. Je veux ma bite trempée.",
+        "Lèche-la comme tu dois {name}, pas autrement."
+      ]
+    },
+    "biffle": {
+      "soft": [
+        "Prends ma queue contre ta joue {name}.",
+        "Je te gifle avec ma bite {name}. Encaisse.",
+        "Ton visage est fait pour ça {name}. Reste là."
+      ]
+    },
+    "hold": {
+      "soft": [
+        "Reste là {name}. Garde ma queue dans ta bouche.",
+        {"text": "Tiens-la dans ta bouche {name}, sans bouger.", "max_depth": "mid"},
+        "Immobile {name}. Respire par le nez.",
+        {"text": "Tu gardes ma bite là jusqu'à ce que je le dise {name}.", "max_depth": "throat"}
+      ],
+      "medium": [
+        {"text": "Ma queue au fond {name}, et tu ne bouges plus.", "min_depth": "mid"},
+        {"text": "Plus bas, et tu tiens {name}.", "min_depth": "mid"},
+        {"text": "Ne remonte pas avant mon ordre {name}.", "min_depth": "mid", "max_depth": "throat"}
+      ],
+      "hard": [
+        "Ma bite reste au fond {name}. Tu tiens.",
+        {"text": "Ma queue au fond de ta gorge, immobile {name}.", "min_depth": "throat"},
+        {"text": "C'est inconfortable. C'est exactement ce que je veux {name}.", "min_depth": "throat"}
+      ],
+      "finale": [
+        {"text": "Dernier hold. Ma bite reste au fond {name}.", "min_depth": "mid"},
+        {"text": "On finit avec ma queue dans ta gorge {name}. Ne bouge plus.", "min_depth": "throat"},
+        "Jusqu'à mon signal {name}. Pas avant."
+      ]
+    },
+    "breath": {
+      "soft": [
+        "Respire {name}. Ma queue te laisse tranquille deux secondes.",
+        "Profite {name}. Ça ne va pas durer.",
+        "Reprends ton souffle {name}, on va recommencer."
+      ]
+    },
+    "beg": {
+      "soft": [
+        "Demande-moi de continuer {name}. Bien clairement.",
+        "Dis-le {name} : « donne-moi ta queue {coach} ».",
+        "Articule {name}. Je veux t'entendre supplier.",
+        "Demande-moi ma bite {name}. Comme il faut."
+      ],
+      "medium": [
+        "Implore {name} : « j'ai besoin de ta queue {coach} ».",
+        "Supplie-moi {name}. « Plus profond {coach} ».",
+        "Adresse-toi à moi correctement {coach}."
+      ]
+    },
+    "freestyle": {
+      "soft": [
+        "Montre-moi comment tu suces {name}.",
+        "Ce moment est à toi {name}. Mais sur ma queue.",
+        "Fais ce que tu veux {name}. Tant que c'est sur ma bite."
+      ]
+    },
+    "hand": {
+      "soft": [
+        "Branle-moi {name}. Geste net.",
+        "Ta main sur ma queue {name}. Va-et-vient régulier.",
+        "Aide-toi de ta main pour me sucer {name}."
+      ],
+      "medium": [
+        "Plus ferme de la main {name}. Travaille ma queue.",
+        "Coordonne main et bouche {name}. Ne lâche pas le tempo."
+      ]
+    }
+  },
+  "randomComments": [
+    "Continue à me sucer {name}.",
+    "Ne lâche pas ma queue {name}.",
+    "C'est ça. Comme ça {name}.",
+    "Bonne salope {name}.",
+    "Ta bouche est faite pour ma bite {name}.",
+    "Tu fais ce qu'il faut {name}.",
+    "Ne ralentis pas {name}.",
+    "Je sens ta langue {name}. Continue.",
+    "Reste sur ma queue {name}.",
+    "C'est correct {name}. Mais tu peux mieux."
+  ],
+  "intros": [
+    "C'est moi {name}. Tu vas sucer ma queue maintenant.",
+    "Marc. Ouvre ta bouche {name}, et écoute-moi.",
+    "Pas de chichis {name}. Ma bite est à toi pour la séance. Au travail.",
+    "Tu connais ma règle {name} : tu suces, j'ordonne. On commence."
+  ],
+  "congrats": [
+    "Tu as bien sucé ma bite {name}.",
+    "C'est correct {name}. Tu as fait le travail.",
+    "Ma queue est satisfaite {name}. Pour cette fois.",
+    "Tu as tenu le rythme {name}. Continue comme ça."
+  ],
+  "encore": [
+    "Tu en redemandes {name} ? Bien. Reprends ma queue.",
+    "Encore une fois sur ma bite {name}. Tu sais quoi faire."
+  ],
+  "progress": {
+    "25": [
+      "Bon démarrage {name}. Continue à me sucer.",
+      "Ma queue commence à apprécier {name}."
+    ],
+    "50": [
+      "Tu suces bien {name}. À la moitié.",
+      "Tu tiens le rythme {name}. Continue."
+    ],
+    "75": [
+      "Tu approches de la fin {name}. Ne flanche pas.",
+      "C'est dur, et tu tiens. Ma bite te respecte {name}."
+    ],
+    "90": [
+      "Dernier effort {name}. Donne tout sur ma queue.",
+      "Tu finis ça proprement {name}. Pour moi."
+    ]
+  },
+  "branchPhrases": {
+    "profondeur": {
+      "soft": [
+        "Plus bas sur ma queue {name}. Tu peux.",
+        "Ta gorge est faite pour ma bite {name}. Sers-t'en."
+      ],
+      "medium": [
+        "Tu descends bien sur ma queue {name}. Encore.",
+        "Ta gorge prend ma bite proprement {name}. Continue."
+      ],
+      "hard": [
+        "Jusqu'à la garde {name}. C'est ta valeur.",
+        "Ma queue dans le fond de ta gorge {name}. C'est là que tu travailles."
+      ]
+    },
+    "obeissance": {
+      "soft": [
+        "Tu fais ce que je dis {name}. C'est tout ce que je demande.",
+        "Tu m'obéis sur ma bite {name}. Bien."
+      ],
+      "medium": [
+        "Tu n'as pas discuté {name}. Continue.",
+        "Tu exécutes sans broncher {name}. Bonne salope."
+      ],
+      "hard": [
+        "Obéissance parfaite {name}. Ma queue le note.",
+        "Tu fais exactement ce que je veux {name}. Continue."
+      ]
+    }
+  },
+  "progressPhrases": {
+    "gorge.apnee_streak": {
+      "attempt": [
+        "Aujourd'hui ma queue reste plus longtemps dans ta gorge {name}. Tu encaisses."
+      ],
+      "record": [
+        "Tu as gardé ma bite plus longtemps que jamais {name}. Bonne salope."
+      ],
+      "tapout": [
+        "Ta gorge a dit stop {name}. C'est noté. On la retravaillera plus haut."
+      ]
+    }
+  },
+  "nicknames": {
+    "pool": [],
+    "use_user_prenom": true,
+    "use_user_nicknames": true
+  },
+  "coachNicknames": [
+    "Marc",
+    "monsieur"
+  ]
+}

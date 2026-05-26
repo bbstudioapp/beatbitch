@@ -81,17 +81,34 @@ class CoachVoicePreset {
   /// Hauteur de voix. Plage usuelle 0.5..2.0. Null = `TtsService.defaultPitch`.
   final double? pitch;
 
+  /// Genre préféré de la voix TTS (`'male'` / `'female'`). Sert au
+  /// fallback de sélection automatique quand `voiceName` est absent ou
+  /// que la voix nommée n'existe pas sur l'appareil. Null = pas de
+  /// préférence (sélection par défaut, biais femelle historique).
+  ///
+  /// Note Phase masculin (Marc, tier 3) : sur Android, `_fallbackPick`
+  /// filtre `gender == preferredGender` ; sur Windows, Julie est forcée
+  /// peu importe la préférence (cf. CLAUDE.md, contrat SAPI) ; sur Linux,
+  /// la sélection de voix programmatique n'existe pas — le coach garde
+  /// son rate/pitch propre mais la voix reste celle de la plateforme.
+  final String? preferredGender;
+
   const CoachVoicePreset({
     this.voiceName,
     this.voiceLocale,
     this.rate,
     this.pitch,
+    this.preferredGender,
   });
 
   static const CoachVoicePreset empty = CoachVoicePreset();
 
   bool get isEmpty =>
-      voiceName == null && voiceLocale == null && rate == null && pitch == null;
+      voiceName == null &&
+      voiceLocale == null &&
+      rate == null &&
+      pitch == null &&
+      preferredGender == null;
 
   /// Désérialise depuis un objet JSON :
   /// ```jsonc
@@ -105,11 +122,19 @@ class CoachVoicePreset {
       return t.isEmpty ? null : t;
     }
 
+    final rawGender = asString(json['gender']);
+    final normalizedGender = rawGender?.toLowerCase();
+    final preferredGender =
+        (normalizedGender == 'male' || normalizedGender == 'female')
+            ? normalizedGender
+            : null;
+
     return CoachVoicePreset(
       voiceName: asString(json['voice'] ?? json['voiceName']),
       voiceLocale: asString(json['voiceLocale'] ?? json['locale']),
       rate: asDouble(json['rate']),
       pitch: asDouble(json['pitch']),
+      preferredGender: preferredGender,
     );
   }
 }

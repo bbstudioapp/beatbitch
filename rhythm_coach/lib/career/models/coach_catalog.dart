@@ -50,6 +50,29 @@ class CoachCatalog {
       requirements: CoachRequirement(minPlayerSeconds: 3600),
       portraitAsset: '$_portraitDir/coach_02_helene.png',
     ),
+    // Note : l'id `coach_07_marc` n'a pas de lien avec son tier (3). Les
+    // ids historiques `coach_03_jade`/`coach_04_morgan`/… sont conservés
+    // pour ne pas casser la sélection persistée des utilisatrices
+    // existantes — l'ordre des paliers est porté par `tier`, l'id reste
+    // un identifiant opaque (cf. `Coach.id`).
+    Coach(
+      id: 'coach_07_marc',
+      name: 'Marc',
+      title: 'Coach brutal',
+      archetype: CoachArchetype.brutal,
+      publicBio:
+          'POV masculin, direct, cru. Tu suces sa queue, il te dirige sans '
+          'détour. Travaille la profondeur et l\'obéissance pures.',
+      specialties: [
+        SpecializationBranch.profondeur,
+        SpecializationBranch.obeissance,
+      ],
+      tier: 3,
+      isPrincipal: true,
+      // 1h30 cumulées — pile entre Hélène (1h) et Jade (3h).
+      requirements: CoachRequirement(minPlayerSeconds: 5400),
+      portraitAsset: '$_portraitDir/coach_07_marc.png',
+    ),
     Coach(
       id: 'coach_03_jade',
       name: 'Jade',
@@ -62,7 +85,7 @@ class CoachCatalog {
         SpecializationBranch.rythmeBiffle,
         SpecializationBranch.sloppy,
       ],
-      tier: 3,
+      tier: 4,
       isPrincipal: true,
       // Phase 19.10 : 3h cumulées. (Refonte 0.5.0 : `requiresHands` retiré
       // du coach — le hand obligatoire est désormais piloté par la milestone
@@ -81,7 +104,7 @@ class CoachCatalog {
         SpecializationBranch.profondeur,
         SpecializationBranch.endurance,
       ],
-      tier: 4,
+      tier: 5,
       isPrincipal: true,
       // Phase 19.10 : 7h cumulées.
       requirements: CoachRequirement(minPlayerSeconds: 25200),
@@ -98,7 +121,7 @@ class CoachCatalog {
         SpecializationBranch.obeissance,
         SpecializationBranch.endurance,
       ],
-      tier: 5,
+      tier: 6,
       isPrincipal: true,
       // Phase 19.10 : 15h cumulées.
       requirements: CoachRequirement(minPlayerSeconds: 54000),
@@ -112,7 +135,7 @@ class CoachCatalog {
       publicBio: 'Le palier final. N\'arrête pas, ne félicite pas. Pour celles '
           'qui ont déjà tout encaissé.',
       specialties: SpecializationBranch.values,
-      tier: 6,
+      tier: 7,
       isPrincipal: true,
       // Phase 19.10 : 25h cumulées — palier terminal.
       requirements: CoachRequirement(minPlayerSeconds: 90000),
