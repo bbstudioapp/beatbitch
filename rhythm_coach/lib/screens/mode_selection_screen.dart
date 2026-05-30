@@ -27,6 +27,7 @@ import '../widgets/adult_gate_dialog.dart';
 import '../widgets/language_picker_dialog.dart';
 import '../widgets/onboarding_sheet.dart';
 import 'home_screen.dart';
+import 'music_mode_screen.dart';
 import 'profile_screen.dart';
 import 'sound_demo_screen.dart';
 import 'surprise_settings_screen.dart';
@@ -272,6 +273,14 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
     );
   }
 
+  void _openMusic() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => MusicModeScreen(beep: _beep),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
@@ -351,29 +360,36 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
               ),
               const SizedBox(height: 32),
               Expanded(
-                child: _ModeCard(
-                  title: t.modeSelectionCareerTitle,
-                  subtitle: t.modeSelectionCareerSubtitle,
-                  icon: Icons.military_tech_outlined,
-                  onTap: _openCareer,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: _ModeCard(
-                  title: t.modeSelectionScenarioTitle,
-                  subtitle: t.modeSelectionScenarioSubtitle,
-                  icon: Icons.menu_book_outlined,
-                  onTap: _openScenario,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: _ModeCard(
-                  title: t.modeSelectionCustomTitle,
-                  subtitle: t.modeSelectionCustomSubtitle,
-                  icon: Icons.tune,
-                  onTap: _openCustom,
+                child: ListView(
+                  children: [
+                    _ModeCard(
+                      title: t.modeSelectionCareerTitle,
+                      subtitle: t.modeSelectionCareerSubtitle,
+                      icon: Icons.military_tech_outlined,
+                      onTap: _openCareer,
+                    ),
+                    const SizedBox(height: 16),
+                    _ModeCard(
+                      title: t.modeSelectionScenarioTitle,
+                      subtitle: t.modeSelectionScenarioSubtitle,
+                      icon: Icons.menu_book_outlined,
+                      onTap: _openScenario,
+                    ),
+                    const SizedBox(height: 16),
+                    _ModeCard(
+                      title: t.modeSelectionCustomTitle,
+                      subtitle: t.modeSelectionCustomSubtitle,
+                      icon: Icons.tune,
+                      onTap: _openCustom,
+                    ),
+                    const SizedBox(height: 16),
+                    _ModeCard(
+                      title: t.modeSelectionMusicTitle,
+                      subtitle: t.modeSelectionMusicSubtitle,
+                      icon: Icons.music_note_outlined,
+                      onTap: _openMusic,
+                    ),
+                  ],
                 ),
               ),
             ],

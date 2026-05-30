@@ -1910,6 +1910,28 @@ class AppLocalizationsEs extends AppLocalizations {
       'Sesiones a medida: duración, mezcla de modos, dificultad, non-stop.';
 
   @override
+  String get modeSelectionMusicTitle => 'MUSIC';
+
+  @override
+  String get modeSelectionMusicSubtitle =>
+      'Síguele el ritmo a tu música: marca el tempo y los steps lo siguen.';
+
+  @override
+  String get musicTapPrompt => 'Marca el ritmo de tu música';
+
+  @override
+  String get musicTapAction => 'TOCAR';
+
+  @override
+  String get musicStart => 'EMPEZAR';
+
+  @override
+  String get musicStop => 'PARAR';
+
+  @override
+  String get musicWaitingTempo => 'Unos toques más…';
+
+  @override
   String get customAppBarTitle => 'Sesiones a medida';
 
   @override

@@ -3372,6 +3372,48 @@ abstract class AppLocalizations {
   /// **'Sessions sur mesure : durée, dosage des modes, difficulté, non-stop.'**
   String get modeSelectionCustomSubtitle;
 
+  /// No description provided for @modeSelectionMusicTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'MUSIC'**
+  String get modeSelectionMusicTitle;
+
+  /// No description provided for @modeSelectionMusicSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cale-toi sur ta musique : tape le tempo, les steps suivent le rythme.'**
+  String get modeSelectionMusicSubtitle;
+
+  /// No description provided for @musicTapPrompt.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tape le rythme de ta musique'**
+  String get musicTapPrompt;
+
+  /// No description provided for @musicTapAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'TAPER'**
+  String get musicTapAction;
+
+  /// No description provided for @musicStart.
+  ///
+  /// In fr, this message translates to:
+  /// **'DÉMARRER'**
+  String get musicStart;
+
+  /// No description provided for @musicStop.
+  ///
+  /// In fr, this message translates to:
+  /// **'STOP'**
+  String get musicStop;
+
+  /// No description provided for @musicWaitingTempo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Encore quelques taps…'**
+  String get musicWaitingTempo;
+
   /// No description provided for @customAppBarTitle.
   ///
   /// In fr, this message translates to:
