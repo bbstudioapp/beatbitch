@@ -318,6 +318,12 @@ abstract class AppLocalizations {
   /// **'FAIL'**
   String get sessionStateFailing;
 
+  /// No description provided for @sessionBreakBanner.
+  ///
+  /// In fr, this message translates to:
+  /// **'PAUSE'**
+  String get sessionBreakBanner;
+
   /// No description provided for @sessionFailPhasePhrase.
   ///
   /// In fr, this message translates to:
@@ -2549,6 +2555,42 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Couilles'**
   String get positionBalls;
+
+  /// No description provided for @postureFree.
+  ///
+  /// In fr, this message translates to:
+  /// **'Libre'**
+  String get postureFree;
+
+  /// No description provided for @postureSitting.
+  ///
+  /// In fr, this message translates to:
+  /// **'Assise'**
+  String get postureSitting;
+
+  /// No description provided for @postureStanding.
+  ///
+  /// In fr, this message translates to:
+  /// **'Debout'**
+  String get postureStanding;
+
+  /// No description provided for @postureKneeling.
+  ///
+  /// In fr, this message translates to:
+  /// **'À genoux'**
+  String get postureKneeling;
+
+  /// No description provided for @postureAllFours.
+  ///
+  /// In fr, this message translates to:
+  /// **'À quatre pattes'**
+  String get postureAllFours;
+
+  /// No description provided for @postureOnBack.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sur le dos'**
+  String get postureOnBack;
 
   /// No description provided for @modeShortRhythm.
   ///

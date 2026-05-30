@@ -123,6 +123,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get sessionStateFailing => 'FALLO';
 
   @override
+  String get sessionBreakBanner => 'PAUSA';
+
+  @override
   String get sessionFailPhasePhrase => 'Frase de fallo';
 
   @override
@@ -1421,6 +1424,24 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get positionBalls => 'Huevos';
+
+  @override
+  String get postureFree => 'Libre';
+
+  @override
+  String get postureSitting => 'Sentada';
+
+  @override
+  String get postureStanding => 'De pie';
+
+  @override
+  String get postureKneeling => 'De rodillas';
+
+  @override
+  String get postureAllFours => 'A cuatro patas';
+
+  @override
+  String get postureOnBack => 'Boca arriba';
 
   @override
   String get modeShortRhythm => 'MAMAR';

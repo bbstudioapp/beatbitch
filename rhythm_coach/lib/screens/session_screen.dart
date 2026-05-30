@@ -40,8 +40,10 @@ import '../services/stats_service.dart';
 import '../services/tts_service.dart';
 import 'camera_test_screen.dart';
 import '../theme/app_theme.dart';
+import '../models/posture.dart';
 import '../widgets/mode_badge_row.dart';
 import '../widgets/movement_animation.dart';
+import '../widgets/posture_indicator.dart';
 import '../widgets/session_background.dart';
 import '../widgets/session_finale_overlay.dart';
 import '../widgets/timer_display.dart';
@@ -1053,6 +1055,13 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                     )
                   else
                     const SizedBox(height: 30),
+                  // Indicateur de posture imposée (issue #77) : permanent dès
+                  // qu'une pose est imposée (hors `free`). Reflète
+                  // `currentPose`, qui ne change qu'à l'intro et aux breaks.
+                  if (ctrl.currentPose != Posture.free) ...[
+                    SizedBox(height: showBar ? 4 : 8),
+                    PostureIndicator(pose: ctrl.currentPose),
+                  ],
                   if (showBar) ...[
                     const SizedBox(height: 4),
                     StaminaBar(
@@ -1146,6 +1155,10 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                               _finishNowMinRemainingSeconds,
                       onPressed: _onFinishNow,
                     ),
+                    SizedBox(height: showBar ? 8 : 12),
+                  ],
+                  if (ctrl.breakActive) ...[
+                    _BreakBanner(controller: ctrl),
                     SizedBox(height: showBar ? 8 : 12),
                   ],
                   if (ctrl.isChallengeActive) ...[
@@ -1708,6 +1721,71 @@ class _ChallengeBanner extends StatelessWidget {
                 height: 1.4,
               ),
             ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Bannière de break scénarisé (issue #77) : « PAUSE » + décompte mm:ss +
+/// posture à venir. Affichée pendant `controller.breakActive` pour signaler
+/// que le gel de l'effort est **voulu** (≠ freeze/bug). Pattern visuel calqué
+/// sur `_ChallengeBanner` (cadre sombre, accent ambre). L'ordre courant
+/// (« bois une gorgée »…) reste affiché par `_CurrentInstruction`.
+class _BreakBanner extends StatelessWidget {
+  static const Color _bg = Color(0xFF14201A);
+  static const Color _border = Color(0xFF66BB6A);
+
+  final SessionController controller;
+  const _BreakBanner({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final b = controller.activeBreak;
+    final remaining = b == null
+        ? 0
+        : (b.endTime - controller.elapsedSeconds).clamp(0, b.durationSeconds);
+    final mm = (remaining ~/ 60).toString();
+    final ss = (remaining % 60).toString().padLeft(2, '0');
+    final newPose = b?.newPose;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: _bg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _border, width: 2),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                t.sessionBreakBanner,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 3,
+                  color: _border,
+                ),
+              ),
+              Text(
+                '$mm:$ss',
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  color: AppTheme.textPrimary,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+          if (newPose != null && newPose != Posture.free) ...[
+            const SizedBox(height: 10),
+            PostureIndicator(pose: newPose),
           ],
         ],
       ),
