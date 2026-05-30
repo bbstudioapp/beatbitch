@@ -709,13 +709,17 @@ class ChallengeService {
       // Rhythm shallow : head→mid (amplitude légère, bande `to ≤ mid`).
       case CapabilityAxis.rhythmBpmCeilShallow:
         return Position.head;
-      // Rhythm throat : head→throat (franchissement gorge à vitesse
-      // calibrée — l'axe mesure le BPM en bande throat).
+      // Rhythm throat / franchissement gorge throat : head→throat
+      // (franchissement gorge à vitesse calibrée). Le compteur de
+      // franchissements côté contrôleur exige un `to` non-null (cf. `_toOf`).
       case CapabilityAxis.rhythmBpmCeilThroat:
+      case CapabilityAxis.gorgeCrossingsBpmThroat:
         return Position.head;
-      // Rhythm full : mid→full (franchissement profond, le `from` ne
-      // peut pas être head pour rester réaliste à BPM élevé).
+      // Rhythm full / franchissement gorge full : mid→full (franchissement
+      // profond, le `from` ne peut pas être head pour rester réaliste à
+      // BPM élevé).
       case CapabilityAxis.rhythmBpmCeilFull:
+      case CapabilityAxis.gorgeCrossingsBpmFull:
         return Position.mid;
       case CapabilityAxis.rhythmMotionStreak:
       case CapabilityAxis.rhythmDepthMax:
@@ -735,10 +739,16 @@ class ChallengeService {
     switch (axis) {
       case CapabilityAxis.rhythmBpmCeilShallow:
         return Position.mid;
+      // `to` = position de comptage des franchissements. Indispensable non-null
+      // pour les axes `kCrossingsChallengeAxes` : `_onChallengeBeatIfCrossingsTracked`
+      // n'incrémente `_challengeCrossingsCount` que sur `e.to == ch.to`, donc un
+      // `to` null fige le compteur à 0 et le défi ne se termine jamais.
       case CapabilityAxis.rhythmBpmCeilThroat:
+      case CapabilityAxis.gorgeCrossingsBpmThroat:
       case CapabilityAxis.rhythmMotionStreak:
         return Position.throat;
       case CapabilityAxis.rhythmBpmCeilFull:
+      case CapabilityAxis.gorgeCrossingsBpmFull:
         return Position.full;
       case CapabilityAxis.rhythmDepthMax:
       case CapabilityAxis.effortNoBreathStreak:
