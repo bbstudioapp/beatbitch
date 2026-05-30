@@ -435,5 +435,54 @@
       "Moins profond, là.",
       "Reste plus haute."
     ]
+  },
+  "break_entry": [
+    "On souffle. Deux minutes pour toi.",
+    "Pause. Tu récupères, mais tu restes à moi.",
+    "On marque une pause. Respire.",
+    "Stop. On relâche un instant."
+  ],
+  "break_orders": [
+    "Bois une gorgée d'eau.",
+    "Respire à fond, par le ventre.",
+    "Regarde-toi dans la glace.",
+    "Détends ta mâchoire.",
+    "Essuie-toi, remets-toi en place.",
+    "Roule les épaules, relâche la nuque.",
+    "Hydrate-toi.",
+    "Ferme les yeux, respire calmement."
+  ],
+  "break_resume": [
+    "On reprend.",
+    "Fini de souffler. On y retourne.",
+    "Pause terminée, reprends.",
+    "Allez, on reprend le travail."
+  ],
+  "break_posture": {
+    "sitting": [
+      "Assieds-toi, bien droite.",
+      "Pose-toi, assise.",
+      "Mets-toi assise, dos droit."
+    ],
+    "standing": [
+      "Lève-toi. Debout.",
+      "Mets-toi debout.",
+      "Debout, bien droite."
+    ],
+    "kneeling": [
+      "À genoux, maintenant.",
+      "Mets-toi à genoux.",
+      "À genoux, c'est ta place."
+    ],
+    "all_fours": [
+      "À quatre pattes.",
+      "Mets-toi à quatre pattes.",
+      "À quatre pattes, comme une chienne."
+    ],
+    "on_back": [
+      "Allonge-toi sur le dos.",
+      "Sur le dos, maintenant.",
+      "Sur le dos, la tête en arrière."
+    ]
   }
 }

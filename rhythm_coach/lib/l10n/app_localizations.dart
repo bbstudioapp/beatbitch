@@ -2232,6 +2232,18 @@ abstract class AppLocalizations {
   /// **'Affiche un bouton dans la séance qui termine immédiatement comme un succès complet (badges, milestones, niveau). Pratique pour itérer sur le contenu sans tout jouer.'**
   String get soundsDebugSkipSessionSubtitle;
 
+  /// No description provided for @soundsDebugScriptedBreaks.
+  ///
+  /// In fr, this message translates to:
+  /// **'Postures + breaks scénarisés'**
+  String get soundsDebugScriptedBreaks;
+
+  /// No description provided for @soundsDebugScriptedBreaksSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Active les postures imposées (à genoux, à quatre pattes…) et les pauses actives de récup sur les sessions longues. Expérimental, en cours de calibration.'**
+  String get soundsDebugScriptedBreaksSubtitle;
+
   /// No description provided for @soundsShowBackgroundMedia.
   ///
   /// In fr, this message translates to:

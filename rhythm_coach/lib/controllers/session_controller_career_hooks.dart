@@ -136,6 +136,15 @@ extension CareerHooksOrchestrator on SessionController {
 
     _nextStepIndex = 0;
     _lastConfigStep = null;
+    // Reset de l'état break (issue #77) : la session régénérée n'a pas de
+    // break (`scriptedBreaks` non propagé aux régens mi-séance). Si un break
+    // était actif au moment du Supplier, on le clôt ici — sinon `_breakActive`
+    // resterait coincé à true (la nouvelle `breaks` vide fait sortir
+    // `_updateBreakPhase` tôt) et l'effort serait gelé. `_currentPose` est
+    // préservée (continuité de pose à travers l'upgrade).
+    _breakActive = false;
+    _activeBreak = null;
+    _nextBreakIndex = 0;
     // Reset du flag chime : la régen apporte son propre step final +
     // apothéose. Si l'ancienne session avait déjà tiré son chime (cas
     // rare où Supplier est cliqué pile entre final et fin), on doit
@@ -184,6 +193,11 @@ extension CareerHooksOrchestrator on SessionController {
 
     _nextStepIndex = 0;
     _lastConfigStep = null;
+    // Reset de l'état break (issue #77), même raison que `requestUpgrade` :
+    // la suite régénérée n'a pas de break, on évite un `_breakActive` coincé.
+    _breakActive = false;
+    _activeBreak = null;
+    _nextBreakIndex = 0;
     // Reset du flag chime : la régen apporte son propre step final + apothéose.
     _finalChimePlayed = false;
     _finaleChimeStarted = false;

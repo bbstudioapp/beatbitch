@@ -1260,6 +1260,13 @@ class AppLocalizationsDe extends AppLocalizations {
       'Zeigt einen Knopf in der Session, der sie sofort als vollen Erfolg beendet (Abzeichen, Meilensteine, Stufe). Praktisch, um an Inhalten zu feilen, ohne alles durchzuspielen.';
 
   @override
+  String get soundsDebugScriptedBreaks => 'Vorgegebene Posen + Breaks';
+
+  @override
+  String get soundsDebugScriptedBreaksSubtitle =>
+      'Aktiviert vorgegebene Posen (kniend, auf allen vieren…) und aktive Erholungspausen in langen Sessions. Experimentell, in Kalibrierung.';
+
+  @override
   String get soundsShowBackgroundMedia => 'Hintergrundmedien in der Session';
 
   @override

@@ -3,6 +3,7 @@ import 'dart:ui' show Locale;
 
 import 'package:flutter/services.dart' show rootBundle;
 
+import '../../models/posture.dart';
 import '../../models/session.dart';
 import '../../services/locale_service.dart';
 import '../models/phrase_bank.dart';
@@ -74,6 +75,19 @@ class PhraseBankLoader {
       });
     }
 
+    // Breaks scénarisés (issue #77) : phrases d'entrée / ordres / reprise +
+    // changement de posture par posture (clé = `Posture.serialized`).
+    final breakPostureChange = <Posture, List<PhraseEntry>>{};
+    final breakPostureNode = data['break_posture'];
+    if (breakPostureNode is Map<String, dynamic>) {
+      breakPostureNode.forEach((key, phrases) {
+        final pose = Posture.fromString(key);
+        if (pose == Posture.free) return; // pas d'imposition pour free
+        final list = PhraseEntry.listFromJson(phrases);
+        if (list.isNotEmpty) breakPostureChange[pose] = list;
+      });
+    }
+
     return PhraseBank(
       byMode: byMode,
       congrats: PhraseEntry.listFromJson(data['congrats']),
@@ -88,6 +102,10 @@ class PhraseBankLoader {
       postFinalBeg: PhraseEntry.listFromJson(data['post_final_beg']),
       postFinalLick: PhraseEntry.listFromJson(data['post_final_lick']),
       swallowOrders: PhraseEntry.listFromJson(data['swallow_order']),
+      breakEntry: PhraseEntry.listFromJson(data['break_entry']),
+      breakOrders: PhraseEntry.listFromJson(data['break_orders']),
+      breakResume: PhraseEntry.listFromJson(data['break_resume']),
+      breakPostureChange: breakPostureChange,
     );
   }
 

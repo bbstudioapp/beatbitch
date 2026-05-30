@@ -612,6 +612,8 @@
   "soundsDebugCameraHoldCheckSubtitle": "Pendant les holds, la caméra avant vérifie que la position est tenue. Le coach lance un rappel court si tu dérives. Nécessite d'avoir calibré la caméra (icône caméra de l'écran SCÉNARIO).",
   "soundsDebugSkipSession": "Bouton « terminer en succès »",
   "soundsDebugSkipSessionSubtitle": "Affiche un bouton dans la séance qui termine immédiatement comme un succès complet (badges, milestones, niveau). Pratique pour itérer sur le contenu sans tout jouer.",
+  "soundsDebugScriptedBreaks": "Postures + breaks scénarisés",
+  "soundsDebugScriptedBreaksSubtitle": "Active les postures imposées (à genoux, à quatre pattes…) et les pauses actives de récup sur les sessions longues. Expérimental, en cours de calibration.",
   "soundsShowBackgroundMedia": "Fonds média en séance",
   "soundsShowBackgroundMediaSubtitle": "Affiche les images/GIF présents dans assets/backgrounds/ en arrière-plan, avec rotation à chaque step. Désactive pour ne voir que le dégradé d'ambiance.",
   "sessionDebugFinishButton": "DEBUG : terminer en succès",

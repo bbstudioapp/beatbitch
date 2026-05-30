@@ -435,5 +435,54 @@
       "Weniger tief, so.",
       "Bleib weiter oben."
     ]
+  },
+  "break_entry": [
+    "Durchatmen. Zwei Minuten für dich.",
+    "Pause. Du erholst dich, aber du bleibst mein.",
+    "Wir machen kurz Pause. Atme.",
+    "Stopp. Lass einen Moment locker."
+  ],
+  "break_orders": [
+    "Trink einen Schluck Wasser.",
+    "Atme tief, aus dem Bauch.",
+    "Sieh dich im Spiegel an.",
+    "Entspann deinen Kiefer.",
+    "Wisch dich ab, mach dich zurecht.",
+    "Roll die Schultern, lockere den Nacken.",
+    "Trink etwas.",
+    "Schließ die Augen, atme ruhig."
+  ],
+  "break_resume": [
+    "Weiter geht's.",
+    "Genug verschnauft. Zurück an die Arbeit.",
+    "Pause vorbei, mach weiter.",
+    "Los, weiter."
+  ],
+  "break_posture": {
+    "sitting": [
+      "Setz dich hin, schön gerade.",
+      "Setz dich, sitzend.",
+      "Setz dich, Rücken gerade."
+    ],
+    "standing": [
+      "Steh auf. Aufrecht.",
+      "Stell dich hin.",
+      "Hoch, steh gerade."
+    ],
+    "kneeling": [
+      "Auf die Knie, jetzt.",
+      "Knie dich hin.",
+      "Auf die Knie, da gehörst du hin."
+    ],
+    "all_fours": [
+      "Auf alle viere.",
+      "Geh auf alle viere.",
+      "Auf alle viere, wie eine Hündin."
+    ],
+    "on_back": [
+      "Leg dich auf den Rücken.",
+      "Auf den Rücken, jetzt.",
+      "Auf den Rücken, Kopf nach hinten."
+    ]
   }
 }

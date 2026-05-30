@@ -435,5 +435,54 @@
       "Less deep, there.",
       "Stay higher."
     ]
+  },
+  "break_entry": [
+    "Breathe. Two minutes for you.",
+    "Break. You recover, but you stay mine.",
+    "We pause here. Breathe.",
+    "Stop. Ease off for a moment."
+  ],
+  "break_orders": [
+    "Take a sip of water.",
+    "Breathe deep, from the belly.",
+    "Look at yourself in the mirror.",
+    "Relax your jaw.",
+    "Wipe yourself, set yourself right.",
+    "Roll your shoulders, loosen your neck.",
+    "Hydrate.",
+    "Close your eyes, breathe slowly."
+  ],
+  "break_resume": [
+    "We resume.",
+    "Done catching your breath. Back to it.",
+    "Break's over, pick it up.",
+    "Come on, back to work."
+  ],
+  "break_posture": {
+    "sitting": [
+      "Sit down, nice and straight.",
+      "Settle down, seated.",
+      "Sit, back straight."
+    ],
+    "standing": [
+      "Get up. On your feet.",
+      "Stand up.",
+      "Up, stand straight."
+    ],
+    "kneeling": [
+      "On your knees, now.",
+      "Get on your knees.",
+      "On your knees, where you belong."
+    ],
+    "all_fours": [
+      "On all fours.",
+      "Get on all fours.",
+      "On all fours, like a bitch."
+    ],
+    "on_back": [
+      "Lie on your back.",
+      "On your back, now.",
+      "On your back, head tipped back."
+    ]
   }
 }

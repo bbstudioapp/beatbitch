@@ -29,6 +29,7 @@ import '../services/career_difficulty_resolver.dart';
 import '../services/career_encore_gate.dart';
 import '../services/career_progress_service.dart';
 import '../services/challenge_service.dart';
+import '../services/debug_settings_service.dart';
 import '../services/generation/career_session_generator.dart';
 import '../services/phrase_bank_loader.dart';
 import '../services/specialization_service.dart';
@@ -102,6 +103,7 @@ class _CareerScreenState extends State<CareerScreen> {
       _challengeService.tutorialSeen(),
       _progress.getLastLengthChoice(),
       _stats.getTotalSeconds(),
+      DebugSettingsService().getScriptedBreaks(),
     ]);
     final capabilityProfile = results[8] as CapabilityProfile;
     final totalSeconds = results[12] as int;
@@ -141,6 +143,7 @@ class _CareerScreenState extends State<CareerScreen> {
       lastLengthChoice: results[11] as SessionLengthChoice,
       totalSeconds: totalSeconds,
       synthLevel: CareerDifficultyResolver.synthLevelFor(completedSessions),
+      scriptedBreaks: results[13] as bool,
     );
   }
 
@@ -461,6 +464,7 @@ class _CareerScreenState extends State<CareerScreen> {
       // figé de plafond.
       capability: CapabilityInputs(profile: bundle.capabilityProfile),
       challenge: ChallengeInputs(challenges: challenges),
+      scriptedBreaks: bundle.scriptedBreaks,
     );
 
     final introText = coachBank.pickIntro(Random());
@@ -1059,6 +1063,7 @@ class _CareerScreenState extends State<CareerScreen> {
         profile: bundle.capabilityProfile,
         sessionCeilings: previousSessionCeilings,
       ),
+      scriptedBreaks: bundle.scriptedBreaks,
     );
 
     final camService = CameraMotionService();
@@ -2047,6 +2052,11 @@ class _CareerBundle {
   /// Sert au déblocage des coachs par investissement (Phase 19.10).
   final int totalSeconds;
 
+  /// Flag debug `debug.scripted_breaks` (issue #77). Quand `true`, les
+  /// postures imposées + breaks scénarisés sont activés : passé à
+  /// `generate(scriptedBreaks:)` à tous les call sites.
+  final bool scriptedBreaks;
+
   const _CareerBundle({
     required this.bank,
     required this.punishments,
@@ -2062,5 +2072,6 @@ class _CareerBundle {
     required this.lastLengthChoice,
     required this.totalSeconds,
     required this.synthLevel,
+    required this.scriptedBreaks,
   });
 }

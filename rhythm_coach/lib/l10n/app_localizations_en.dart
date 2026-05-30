@@ -1255,6 +1255,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Shows a button in the session that ends it immediately as a full success (badges, milestones, level). Useful to iterate on content without playing through.';
 
   @override
+  String get soundsDebugScriptedBreaks => 'Scripted postures + breaks';
+
+  @override
+  String get soundsDebugScriptedBreaksSubtitle =>
+      'Enables imposed postures (kneeling, on all fours…) and active recovery breaks on long sessions. Experimental, being calibrated.';
+
+  @override
   String get soundsShowBackgroundMedia => 'Background media in session';
 
   @override

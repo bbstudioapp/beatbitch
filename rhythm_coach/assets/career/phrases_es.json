@@ -435,5 +435,54 @@
       "Menos profundo, así.",
       "Quédate más arriba."
     ]
+  },
+  "break_entry": [
+    "Respira. Dos minutos para ti.",
+    "Pausa. Te recuperas, pero sigues siendo mía.",
+    "Paramos un momento. Respira.",
+    "Para. Afloja un instante."
+  ],
+  "break_orders": [
+    "Bebe un trago de agua.",
+    "Respira hondo, desde el vientre.",
+    "Mírate en el espejo.",
+    "Relaja la mandíbula.",
+    "Límpiate, recolócate.",
+    "Gira los hombros, suelta el cuello.",
+    "Hidrátate.",
+    "Cierra los ojos, respira tranquila."
+  ],
+  "break_resume": [
+    "Seguimos.",
+    "Ya has respirado. Volvemos.",
+    "Se acabó la pausa, sigue.",
+    "Vamos, de vuelta al trabajo."
+  ],
+  "break_posture": {
+    "sitting": [
+      "Siéntate, bien recta.",
+      "Ponte sentada.",
+      "Siéntate, espalda recta."
+    ],
+    "standing": [
+      "Levántate. De pie.",
+      "Ponte de pie.",
+      "Arriba, bien recta."
+    ],
+    "kneeling": [
+      "De rodillas, ahora.",
+      "Ponte de rodillas.",
+      "De rodillas, tu sitio."
+    ],
+    "all_fours": [
+      "A cuatro patas.",
+      "Ponte a cuatro patas.",
+      "A cuatro patas, como una perra."
+    ],
+    "on_back": [
+      "Túmbate de espaldas.",
+      "De espaldas, ahora.",
+      "Boca arriba, la cabeza hacia atrás."
+    ]
   }
 }
