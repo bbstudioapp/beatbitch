@@ -8,8 +8,8 @@ import '../services/beep_engine.dart';
 import '../services/capability_service.dart';
 import '../theme/app_theme.dart';
 
-/// Écran du mode Music (PR1) : taper le tempo, démarrer, voir la courbe de
-/// profondeur défiler en live. Cf. `specs/music_mode.md` §9.
+/// Écran du mode Music (PR1) : taper le tempo, démarrer, voir la jauge de
+/// profondeur animée en live. Cf. `specs/music_mode.md` §9.
 class MusicModeScreen extends StatefulWidget {
   final BeepEngine beep;
 
@@ -30,6 +30,8 @@ class _MusicModeScreenState extends State<MusicModeScreen> {
 
   Future<void> _init() async {
     await widget.beep.ensureReady();
+    // Mélange avec l'audio en cours (Spotify…) au lieu d'en prendre le focus.
+    await widget.beep.setMixWithOthers(true);
     final profile = await CapabilityService().snapshotProfile();
     if (!mounted) return;
     setState(() {
@@ -40,7 +42,8 @@ class _MusicModeScreenState extends State<MusicModeScreen> {
   @override
   void dispose() {
     // On ne dispose que le contrôleur : le BeepEngine est partagé (propriété
-    // de ModeSelectionScreen).
+    // de ModeSelectionScreen). On rend le focus audio exclusif en sortant.
+    widget.beep.setMixWithOthers(false);
     _controller?.dispose();
     super.dispose();
   }
@@ -94,21 +97,19 @@ class _MusicModeScreenState extends State<MusicModeScreen> {
                   border:
                       Border.all(color: AppTheme.accent.withValues(alpha: 0.4)),
                 ),
-                child: Center(
-                  child: c.recent.isEmpty
-                      ? Text(
-                          c.isRunning ? '' : t.musicTapAction,
+                clipBehavior: Clip.antiAlias,
+                child: c.isRunning
+                    ? _MusicDepthGauge(action: c.lastAction)
+                    : Center(
+                        child: Text(
+                          t.musicTapAction,
                           style: const TextStyle(
                             color: AppTheme.textMuted,
                             fontSize: 22,
                             letterSpacing: 2,
                           ),
-                        )
-                      : CustomPaint(
-                          size: Size.infinite,
-                          painter: _DepthCurvePainter(c.recent),
                         ),
-                ),
+                      ),
               ),
             ),
           ),
@@ -132,77 +133,112 @@ class _MusicModeScreenState extends State<MusicModeScreen> {
   }
 }
 
-/// Trace la courbe des profondeurs récentes : chaque action est un point,
-/// `y` = profondeur (plus bas = plus profond), reliés par une ligne. Les
-/// frappes sont pleines, les holds en anneau, les releases en petit tiret.
-class _DepthCurvePainter extends CustomPainter {
-  final List<SlotAction> actions;
+/// Jauge de profondeur live (façon `MovementAnimation` de la session) : une
+/// échelle verticale head→full, un orbe qui **glisse** vers la profondeur de
+/// la dernière [SlotAction] sur ~un battement. `strike` = orbe plein qui
+/// « pope », `hold` = anneau tenu, `release` = orbe atténué (remontée).
+class _MusicDepthGauge extends StatelessWidget {
+  final SlotAction? action;
 
-  _DepthCurvePainter(this.actions);
+  const _MusicDepthGauge({required this.action});
 
-  // Profondeurs jouables en music mode : head(1)..full(4).
-  static const _minIdx = 1; // head
-  static const _maxIdx = 4; // full
+  // Échelle music mode : head(1) en haut → full(4) en bas.
+  static const _rows = [
+    Position.head,
+    Position.mid,
+    Position.throat,
+    Position.full,
+  ];
 
-  double _y(Position p, double h) {
-    final norm = (p.index - _minIdx) / (_maxIdx - _minIdx);
-    return 16 + norm.clamp(0.0, 1.0) * (h - 32);
+  /// Alignement vertical (-0.8 = haut/head, 0.8 = bas/full).
+  static double _alignY(Position p) {
+    final frac = (p.index - Position.head.index) /
+        (Position.full.index - Position.head.index);
+    return -0.8 + frac.clamp(0.0, 1.0) * 1.6;
   }
 
   @override
-  void paint(Canvas canvas, Size size) {
-    if (actions.isEmpty) return;
-    final n = actions.length;
-    final dx = n == 1 ? 0.0 : (size.width - 32) / (n - 1);
+  Widget build(BuildContext context) {
+    final a = action;
+    final target = a?.depth ?? Position.head;
+    final beatMs = (a == null || a.bpm <= 0) ? 400 : (60000 / a.bpm).round();
+    final kind = a?.kind ?? SlotActionKind.release;
 
-    final line = Paint()
-      ..color = AppTheme.accent.withValues(alpha: 0.5)
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
-    final path = Path();
-    for (var i = 0; i < n; i++) {
-      final x = 16 + i * dx;
-      final y = _y(actions[i].depth, size.height);
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-    }
-    canvas.drawPath(path, line);
-
-    for (var i = 0; i < n; i++) {
-      final x = 16 + i * dx;
-      final y = _y(actions[i].depth, size.height);
-      final a = actions[i];
-      switch (a.kind) {
-        case SlotActionKind.strike:
-          canvas.drawCircle(
-            Offset(x, y),
-            5,
-            Paint()..color = AppTheme.accent,
-          );
-        case SlotActionKind.hold:
-          canvas.drawCircle(
-            Offset(x, y),
-            5,
-            Paint()
-              ..color = AppTheme.accent
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = 2,
-          );
-        case SlotActionKind.release:
-          canvas.drawCircle(
-            Offset(x, y),
-            2,
-            Paint()..color = AppTheme.textMuted,
-          );
-      }
-    }
+    return Stack(
+      children: [
+        // Lignes-repères + labels de profondeur.
+        for (final p in _rows)
+          Align(
+            alignment: Alignment(0, _alignY(p)),
+            child: Row(
+              children: [
+                const SizedBox(width: 12),
+                SizedBox(
+                  width: 56,
+                  child: Text(
+                    p.name,
+                    style: const TextStyle(
+                      color: AppTheme.textMuted,
+                      fontSize: 11,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Container(
+                    height: 1,
+                    color: AppTheme.textMuted.withValues(alpha: 0.18),
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
+            ),
+          ),
+        // Curseur de profondeur.
+        AnimatedAlign(
+          alignment: Alignment(0, _alignY(target)),
+          duration: Duration(milliseconds: beatMs),
+          curve: Curves.easeInOut,
+          child: _Cursor(kind: kind, beatKey: a?.beatIndex ?? 0),
+        ),
+      ],
+    );
   }
+}
+
+class _Cursor extends StatelessWidget {
+  final SlotActionKind kind;
+  final int beatKey;
+
+  const _Cursor({required this.kind, required this.beatKey});
 
   @override
-  bool shouldRepaint(_DepthCurvePainter oldDelegate) =>
-      oldDelegate.actions.length != actions.length ||
-      !identical(oldDelegate.actions, actions);
+  Widget build(BuildContext context) {
+    final isStrike = kind == SlotActionKind.strike;
+    final isHold = kind == SlotActionKind.hold;
+    final color =
+        kind == SlotActionKind.release ? AppTheme.textMuted : AppTheme.accent;
+    final orb = Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: isHold ? Colors.transparent : color,
+        border: isHold ? Border.all(color: color, width: 3) : null,
+        boxShadow: isStrike
+            ? [BoxShadow(color: color.withValues(alpha: 0.6), blurRadius: 16)]
+            : null,
+      ),
+    );
+    // « Pop » à chaque frappe : redémarre l'échelle à chaque nouveau battement.
+    if (!isStrike) return Opacity(opacity: 0.85, child: orb);
+    return TweenAnimationBuilder<double>(
+      key: ValueKey(beatKey),
+      tween: Tween(begin: 1.35, end: 1.0),
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      builder: (_, scale, child) => Transform.scale(scale: scale, child: child),
+      child: orb,
+    );
+  }
 }

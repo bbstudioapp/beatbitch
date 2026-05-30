@@ -23,9 +23,12 @@ class MusicSessionController extends ChangeNotifier {
   late final MusicSessionEngine _engine;
   StreamSubscription<SlotAction>? _actionSub;
 
-  /// Profondeurs récentes (ring buffer) pour la courbe live.
+  /// Profondeurs récentes (ring buffer) — historique léger.
   final List<SlotAction> recent = [];
   static const int recentMax = 48;
+
+  /// Dernière action émise — cible courante du curseur de profondeur.
+  SlotAction? get lastAction => recent.isEmpty ? null : recent.last;
 
   MusicSessionController({required this.beep, CapabilityProfile? profile}) {
     _engine = MusicSessionEngine(

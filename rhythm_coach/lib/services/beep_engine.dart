@@ -679,6 +679,20 @@ class BeepEngine {
 
   Future<void> ensureReady() => init();
 
+  /// Configure le contexte audio global. Quand [mix] est vrai, les bips se
+  /// **mélangent** à un autre son en cours (ex. Spotify en mode Music) au lieu
+  /// d'en prendre le focus exclusif : Android ne demande pas le focus
+  /// (`AndroidAudioFocus.none`), iOS ajoute `mixWithOthers`. Faux = retour au
+  /// comportement par défaut (focus exclusif).
+  Future<void> setMixWithOthers(bool mix) async {
+    final config = AudioContextConfig(
+      focus: mix
+          ? AudioContextConfigFocus.mixWithOthers
+          : AudioContextConfigFocus.gain,
+    );
+    await AudioPlayer.global.setAudioContext(config.build());
+  }
+
   void playPositionOnce(Position p) {
     if (!_initialized) return;
     _trigger(_assetForPosition(p), _rhythmVolume);
