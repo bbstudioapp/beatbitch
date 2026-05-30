@@ -12,11 +12,16 @@ import '../services/capability_service.dart';
 class MusicCapabilityBounds {
   final CapabilityProfile? profile;
 
-  const MusicCapabilityBounds(this.profile);
+  /// Mode debug : ignore complètement le gating (profondeur libre jusqu'à
+  /// `full`, aucun plafond BPM, aucune limite de hold). Pour la mise au point.
+  final bool ignoreGating;
+
+  const MusicCapabilityBounds(this.profile, {this.ignoreGating = false});
 
   /// Profondeur d'impact max autorisée. Plancher `mid`, plafond `full`
   /// (`balls` est latéral, hors music mode). `mid` par défaut.
   Position maxDepth() {
+    if (ignoreGating) return Position.full;
     final c = profile?.comfortOf(CapabilityAxis.rhythmDepthMax);
     if (c == null) return Position.mid;
     final idx = c.round().clamp(Position.mid.index, Position.full.index);
@@ -24,8 +29,9 @@ class MusicCapabilityBounds {
   }
 
   /// Plafond BPM pour une profondeur d'impact donnée (réutilise le mapping
-  /// carrière `rhythmBpmCeilShallow/Throat/Full`). `null` = pas de donnée.
+  /// carrière `rhythmBpmCeilShallow/Throat/Full`). `null` = pas de contrainte.
   int? bpmCeilFor(Position to) {
+    if (ignoreGating) return null;
     final axis = CapabilityClamps.rhythmBpmCeilAxisFor(to);
     return profile?.comfortOf(axis)?.round();
   }
@@ -33,6 +39,7 @@ class MusicCapabilityBounds {
   /// Endurance prouvée (secondes) à **tenir** cette profondeur (hold).
   /// `null` pour les profondeurs sans axe de hold (≤ mid) ou sans donnée.
   double? holdSecondsFor(Position to) {
+    if (ignoreGating) return null;
     final axis = switch (to) {
       Position.full || Position.balls => CapabilityAxis.holdFullStreak,
       Position.throat => CapabilityAxis.holdThroatStreak,

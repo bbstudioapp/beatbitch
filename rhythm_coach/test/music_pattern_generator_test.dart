@@ -156,6 +156,18 @@ void main() {
       expect(lvl1.every((f) => f.level == 1), isTrue);
     });
 
+    test(
+        'ignoreGating : profondeur libre (≥ throat) dès la phrase 0, sans plafond',
+        () {
+      // Aucun profil (joueuse neuve) : sans debug ce serait borné à mid.
+      final gen = MusicPatternGenerator(rng: Random(3), ignoreGating: true);
+      final p = gen.next(musicBpm: 150, phraseIndex: 0);
+      final deepest = _strikes(p).reduce((a, b) => a.index >= b.index ? a : b);
+      expect(deepest.index, greaterThanOrEqualTo(Position.throat.index),
+          reason: 'le debug doit autoriser la profondeur tout de suite');
+      expect(p.bpm, 150); // aucun plafond BPM en debug
+    });
+
     test('soupape hold : full sans endurance prouvée → pas de slot hold', () {
       final gen = MusicPatternGenerator(
         rng: Random(11),

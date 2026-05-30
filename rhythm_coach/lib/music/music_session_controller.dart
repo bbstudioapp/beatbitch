@@ -24,9 +24,16 @@ class MusicSessionController extends ChangeNotifier {
   late final MusicSessionEngine _engine;
   StreamSubscription<SlotAction>? _actionSub;
 
-  MusicSessionController({required this.beep, CapabilityProfile? profile}) {
+  MusicSessionController({
+    required this.beep,
+    CapabilityProfile? profile,
+    bool ignoreGating = false,
+  }) {
     _engine = MusicSessionEngine(
-      generator: MusicPatternGenerator(profile: profile),
+      generator: MusicPatternGenerator(
+        profile: profile,
+        ignoreGating: ignoreGating,
+      ),
     );
     _actionSub = _engine.actions.listen(_onAction);
     _engine.attach(_clock);

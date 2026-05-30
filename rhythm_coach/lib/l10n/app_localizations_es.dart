@@ -1932,6 +1932,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get musicWaitingTempo => 'Unos toques más…';
 
   @override
+  String get musicDebugTooltip => 'Debug: ignorar gating';
+
+  @override
   String get customAppBarTitle => 'Sesiones a medida';
 
   @override

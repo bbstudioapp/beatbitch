@@ -17,9 +17,13 @@ import 'onset_figures.dart';
 class MusicPatternGenerator {
   final MusicCapabilityBounds bounds;
   final Random rng;
+  final bool ignoreGating;
 
-  MusicPatternGenerator({CapabilityProfile? profile, Random? rng})
-      : bounds = MusicCapabilityBounds(profile),
+  MusicPatternGenerator({
+    CapabilityProfile? profile,
+    Random? rng,
+    this.ignoreGating = false,
+  })  : bounds = MusicCapabilityBounds(profile, ignoreGating: ignoreGating),
         rng = rng ?? Random();
 
   /// Ancre `from` fixe en PR1 (la remontée se fait toujours vers `head`).
@@ -33,8 +37,12 @@ class MusicPatternGenerator {
     // Profondeur visée : démarre à `mid`, +1 cran toutes les 2 phrases, bornée
     // par ce que la joueuse a prouvé (`rhythmDepthMax`).
     final maxDepth = bounds.maxDepth();
-    var targetIdx = (Position.mid.index + phraseIndex ~/ 2)
-        .clamp(Position.mid.index, maxDepth.index);
+    // En debug (ignoreGating) on vise direct le plus profond (pas d'escalade)
+    // pour voir tout de suite la variété de profondeur.
+    var targetIdx = ignoreGating
+        ? maxDepth.index
+        : (Position.mid.index + phraseIndex ~/ 2)
+            .clamp(Position.mid.index, maxDepth.index);
 
     // Mapping BPM : multiple musical (½×/1×/2×) sous le plafond de la
     // profondeur visée. Soupape : si même ½× dépasse, on réduit la profondeur
@@ -58,8 +66,8 @@ class MusicPatternGenerator {
     }
     final targetDepth = Position.values[targetIdx];
 
-    // Figure onset gatée par niveau (monte avec la phrase).
-    final maxLevel = (1 + phraseIndex ~/ 2).clamp(1, 3);
+    // Figure onset gatée par niveau (monte avec la phrase ; tout en debug).
+    final maxLevel = ignoreGating ? 3 : (1 + phraseIndex ~/ 2).clamp(1, 3);
     final pool = onsetFigureBank.where((f) => f.level <= maxLevel).toList();
     final figure = pool[rng.nextInt(pool.length)];
 

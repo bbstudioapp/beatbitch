@@ -943,6 +943,7 @@
   "musicStart": "START",
   "musicStop": "STOPP",
   "musicWaitingTempo": "Noch ein paar Mal tippen…",
+  "musicDebugTooltip": "Debug: Gating ignorieren",
   "customAppBarTitle": "Custom-Sessions",
   "customListEmptyTitle": "Noch keine gespeicherte Konfiguration",
   "customListEmptyBody": "Erstelle deine erste Konfiguration, um maßgeschneiderte Sessions zu generieren.",

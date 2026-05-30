@@ -21,6 +21,8 @@ class MusicModeScreen extends StatefulWidget {
 
 class _MusicModeScreenState extends State<MusicModeScreen> {
   MusicSessionController? _controller;
+  CapabilityProfile? _profile;
+  bool _debug = false;
 
   @override
   void initState() {
@@ -35,7 +37,24 @@ class _MusicModeScreenState extends State<MusicModeScreen> {
     final profile = await CapabilityService().snapshotProfile();
     if (!mounted) return;
     setState(() {
-      _controller = MusicSessionController(beep: widget.beep, profile: profile);
+      _profile = profile;
+      _controller = _make();
+    });
+  }
+
+  MusicSessionController _make() => MusicSessionController(
+        beep: widget.beep,
+        profile: _profile,
+        ignoreGating: _debug,
+      );
+
+  /// Bascule le mode debug (ignore le gating) — recrée le contrôleur, il faut
+  /// retaper le tempo.
+  void _toggleDebug() {
+    setState(() {
+      _debug = !_debug;
+      _controller?.dispose();
+      _controller = _make();
     });
   }
 
@@ -53,7 +72,19 @@ class _MusicModeScreenState extends State<MusicModeScreen> {
     final t = AppLocalizations.of(context);
     final c = _controller;
     return Scaffold(
-      appBar: AppBar(title: Text(t.modeSelectionMusicTitle)),
+      appBar: AppBar(
+        title: Text(t.modeSelectionMusicTitle),
+        actions: [
+          IconButton(
+            tooltip: t.musicDebugTooltip,
+            icon: Icon(
+              Icons.bug_report_outlined,
+              color: _debug ? AppTheme.accent : AppTheme.textMuted,
+            ),
+            onPressed: _toggleDebug,
+          ),
+        ],
+      ),
       body: SafeArea(
         child: c == null
             ? const Center(child: CircularProgressIndicator())

@@ -943,6 +943,7 @@
   "musicStart": "START",
   "musicStop": "STOP",
   "musicWaitingTempo": "A few more taps…",
+  "musicDebugTooltip": "Debug: ignore gating",
   "customAppBarTitle": "Custom sessions",
   "customListEmptyTitle": "No saved config yet",
   "customListEmptyBody": "Create your first config to generate tailor-made sessions.",

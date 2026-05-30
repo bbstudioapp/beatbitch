@@ -3414,6 +3414,12 @@ abstract class AppLocalizations {
   /// **'Encore quelques taps…'**
   String get musicWaitingTempo;
 
+  /// No description provided for @musicDebugTooltip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Debug : ignorer le gating'**
+  String get musicDebugTooltip;
+
   /// No description provided for @customAppBarTitle.
   ///
   /// In fr, this message translates to:
