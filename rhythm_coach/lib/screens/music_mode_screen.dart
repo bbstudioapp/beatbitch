@@ -133,6 +133,8 @@ class _MusicModeScreenState extends State<MusicModeScreen> {
                     ? _PatternView(
                         pattern: c.currentPattern!,
                         cursor: c.currentSlot,
+                        slotInterval:
+                            c.slotInterval ?? const Duration(milliseconds: 400),
                       )
                     : Center(
                         child: Text(
@@ -172,16 +174,57 @@ class _MusicModeScreenState extends State<MusicModeScreen> {
 /// **tête de lecture** sur le slot en cours. La même figure est répétée
 /// plusieurs phrases (cf. `MusicSessionEngine.repeatPhrases`) → on la voit
 /// boucler avant de changer.
-class _PatternView extends StatelessWidget {
+class _PatternView extends StatefulWidget {
   final BeatPattern pattern;
   final int cursor;
+  final Duration slotInterval;
 
-  const _PatternView({required this.pattern, required this.cursor});
+  const _PatternView({
+    required this.pattern,
+    required this.cursor,
+    required this.slotInterval,
+  });
 
   @override
-  Widget build(BuildContext context) => CustomPaint(
-        size: Size.infinite,
-        painter: _PatternPainter(pattern: pattern, cursor: cursor),
+  State<_PatternView> createState() => _PatternViewState();
+}
+
+class _PatternViewState extends State<_PatternView>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: widget.slotInterval)
+      ..forward();
+  }
+
+  @override
+  void didUpdateWidget(_PatternView old) {
+    super.didUpdateWidget(old);
+    _ctrl.duration = widget.slotInterval;
+    // Nouveau slot → la tête de lecture glisse de ce slot vers le suivant.
+    if (old.cursor != widget.cursor) _ctrl.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: _ctrl,
+        builder: (_, __) => CustomPaint(
+          size: Size.infinite,
+          painter: _PatternPainter(
+            pattern: widget.pattern,
+            cursor: widget.cursor,
+            frac: _ctrl.value,
+          ),
+        ),
       );
 }
 
@@ -189,7 +232,14 @@ class _PatternPainter extends CustomPainter {
   final BeatPattern pattern;
   final int cursor;
 
-  _PatternPainter({required this.pattern, required this.cursor});
+  /// Progression dans le slot courant (0→1) — pour la tête de lecture fluide.
+  final double frac;
+
+  _PatternPainter({
+    required this.pattern,
+    required this.cursor,
+    required this.frac,
+  });
 
   // Échelle complète : `tip` en haut (ancre la plus haute) → `full` en bas.
   static const _rows = [
@@ -268,29 +318,33 @@ class _PatternPainter extends CustomPainter {
     }
     if (n == 0) return;
 
-    // Bande de la tête de lecture.
-    if (cursor >= 0 && cursor < n) {
-      final cx = colX(cursor);
-      canvas.drawRect(
-        Rect.fromLTRB(
-            cx - colW / 2, _vPad - 10, cx + colW / 2, size.height - _vPad + 10),
-        Paint()..color = AppTheme.accent.withValues(alpha: 0.12),
-      );
-    }
+    // Tête de lecture fluide : glisse du slot courant vers le suivant.
+    final headX = colX(cursor) + frac.clamp(0.0, 1.0) * colW;
+    canvas.drawLine(
+      Offset(headX, _vPad - 10),
+      Offset(headX, size.height - _vPad + 10),
+      Paint()
+        ..color = AppTheme.accent.withValues(alpha: 0.55)
+        ..strokeWidth = 2,
+    );
 
     Offset pt(int i) => Offset(colX(i), _y(depths[i], size.height));
 
-    // Courbe du mouvement (zigzag) reliant frappes (creux) et ancres (sommets).
+    // Courbe du mouvement **arrondie** (splines via les milieux de segment)
+    // reliant frappes (creux) et ancres (sommets).
     final line = Paint()
-      ..color = AppTheme.accent.withValues(alpha: 0.45)
-      ..strokeWidth = 2
+      ..color = AppTheme.accent.withValues(alpha: 0.5)
+      ..strokeWidth = 2.5
       ..style = PaintingStyle.stroke
       ..strokeJoin = StrokeJoin.round;
-    final path = Path();
-    for (var i = 0; i < n; i++) {
-      final o = pt(i);
-      i == 0 ? path.moveTo(o.dx, o.dy) : path.lineTo(o.dx, o.dy);
+    final path = Path()..moveTo(pt(0).dx, pt(0).dy);
+    for (var i = 0; i < n - 1; i++) {
+      final c = pt(i);
+      final next = pt(i + 1);
+      final mid = Offset((c.dx + next.dx) / 2, (c.dy + next.dy) / 2);
+      path.quadraticBezierTo(c.dx, c.dy, mid.dx, mid.dy);
     }
+    path.lineTo(pt(n - 1).dx, pt(n - 1).dy);
     canvas.drawPath(path, line);
 
     // Paliers de hold : segment épais à la profondeur tenue.
@@ -327,5 +381,7 @@ class _PatternPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_PatternPainter old) =>
-      old.cursor != cursor || !identical(old.pattern, pattern);
+      old.frac != frac ||
+      old.cursor != cursor ||
+      !identical(old.pattern, pattern);
 }

@@ -51,6 +51,13 @@ class MusicSessionController extends ChangeNotifier {
   /// Slot en cours de lecture (tête de lecture sur le pattern).
   int get currentSlot => _engine.cursor;
 
+  /// Durée d'un slot (pour animer la tête de lecture). `null` sans tempo.
+  Duration? get slotInterval {
+    final b = _clock.bpm;
+    if (b == null || b <= 0) return null;
+    return Duration(milliseconds: (_engine.beatsPerSlot * 60000 / b).round());
+  }
+
   /// Enregistre un tap (la joueuse tape le rythme de sa musique).
   void tap() {
     _clock.tap();
