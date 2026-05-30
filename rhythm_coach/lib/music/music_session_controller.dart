@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../models/session_step.dart' show Position;
 import '../services/beep_engine.dart';
 import '../services/capability_service.dart';
 import 'beat_pattern.dart';
@@ -79,11 +80,17 @@ class MusicSessionController extends ChangeNotifier {
   void _onAction(SlotAction a) {
     switch (a.kind) {
       case SlotActionKind.strike:
-        beep.playPositionOnce(a.depth);
+        // Une frappe qui amorce un hold sonne comme un hold (1ᵉʳ temps
+        // seulement) ; une frappe simple sonne comme une plongée.
+        if (a.sustained) {
+          beep.playHoldOnce(a.depth);
+        } else {
+          beep.playPositionOnce(a.depth);
+        }
       case SlotActionKind.hold:
-        beep.playHoldOnce(a.depth);
+        break; // temps de hold suivants : muets (le hold a déjà sonné)
       case SlotActionKind.release:
-        break; // remontée muette
+        beep.playPositionOnce(Position.tip); // l'ancre sonne (tick léger)
     }
     notifyListeners();
   }

@@ -172,7 +172,7 @@ class _MusicModeScreenState extends State<MusicModeScreen> {
 /// Affichage du pattern courant (style séquenceur, debug + lisibilité) : une
 /// colonne par slot, `y` = profondeur jouée (head haut → full bas), avec la
 /// **tête de lecture** sur le slot en cours. La même figure est répétée
-/// plusieurs phrases (cf. `MusicSessionEngine.repeatPhrases`) → on la voit
+/// plusieurs boucles (cf. `MusicSessionEngine.repeatLoops`) → on la voit
 /// boucler avant de changer.
 class _PatternView extends StatefulWidget {
   final BeatPattern pattern;
@@ -330,21 +330,27 @@ class _PatternPainter extends CustomPainter {
 
     Offset pt(int i) => Offset(colX(i), _y(depths[i], size.height));
 
-    // Courbe du mouvement **arrondie** (splines via les milieux de segment)
-    // reliant frappes (creux) et ancres (sommets).
+    // Courbe du mouvement **arrondie qui passe par les nœuds** (Catmull-Rom →
+    // cubiques de Bézier) : reliant frappes (creux) et ancres (sommets) sans
+    // couper les angles sur les changements brusques.
     final line = Paint()
       ..color = AppTheme.accent.withValues(alpha: 0.5)
       ..strokeWidth = 2.5
       ..style = PaintingStyle.stroke
       ..strokeJoin = StrokeJoin.round;
+    Offset clampPt(int i) => pt(i.clamp(0, n - 1));
     final path = Path()..moveTo(pt(0).dx, pt(0).dy);
     for (var i = 0; i < n - 1; i++) {
-      final c = pt(i);
-      final next = pt(i + 1);
-      final mid = Offset((c.dx + next.dx) / 2, (c.dy + next.dy) / 2);
-      path.quadraticBezierTo(c.dx, c.dy, mid.dx, mid.dy);
+      final p0 = clampPt(i - 1);
+      final p1 = pt(i);
+      final p2 = pt(i + 1);
+      final p3 = clampPt(i + 2);
+      final c1 =
+          Offset(p1.dx + (p2.dx - p0.dx) / 6, p1.dy + (p2.dy - p0.dy) / 6);
+      final c2 =
+          Offset(p2.dx - (p3.dx - p1.dx) / 6, p2.dy - (p3.dy - p1.dy) / 6);
+      path.cubicTo(c1.dx, c1.dy, c2.dx, c2.dy, p2.dx, p2.dy);
     }
-    path.lineTo(pt(n - 1).dx, pt(n - 1).dy);
     canvas.drawPath(path, line);
 
     // Paliers de hold : segment épais à la profondeur tenue.

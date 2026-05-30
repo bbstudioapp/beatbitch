@@ -20,13 +20,15 @@ class OnsetFigure {
 
   const OnsetFigure(this.id, this.level, this.plunges);
 
-  /// Déploie en slots : pour chaque plongée `d`, une ancre (release) puis la
-  /// frappe puis `d-1` holds (toujours pair → alternance préservée).
+  /// Déploie en slots : pour chaque plongée `d`, la **frappe** d'abord puis
+  /// `d-1` holds puis l'**ancre** (release). Le 1ᵉʳ temps est donc une frappe
+  /// (pas une ancre) ; la dernière ancre précède cycliquement la 1ʳᵉ frappe.
+  /// `d-1` est pair → l'alternance ancre/frappe est préservée.
   List<SlotOnset> expand() => [
         for (final d in plunges) ...[
-          SlotOnset.release,
           SlotOnset.strike,
           for (var i = 1; i < d; i++) SlotOnset.hold,
+          SlotOnset.release,
         ],
       ];
 }

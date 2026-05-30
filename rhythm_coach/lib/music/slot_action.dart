@@ -27,10 +27,15 @@ class SlotAction {
   /// Tempo courant (battements/minute).
   final double bpm;
 
+  /// Pour une frappe : vraie si elle **amorce un hold** (suivie de holds) — le
+  /// son doit alors être celui d'un hold, pas d'une plongée.
+  final bool sustained;
+
   const SlotAction({
     required this.kind,
     required this.depth,
     required this.beatIndex,
     required this.bpm,
+    this.sustained = false,
   });
 }

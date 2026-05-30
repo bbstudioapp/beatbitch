@@ -119,13 +119,17 @@ class MusicSessionEngine {
   }
 
   SlotAction _emit(BeatTick tick) {
-    final slot = _pattern!.slots[_cursor];
+    final slots = _pattern!.slots;
+    final slot = slots[_cursor];
     return switch (slot.onset) {
       SlotOnset.strike => SlotAction(
           kind: SlotActionKind.strike,
           depth: _lastDepth = slot.to!,
           beatIndex: tick.beatIndex,
           bpm: tick.bpm,
+          // Frappe qui amorce un hold (slot suivant = hold) → son de hold.
+          sustained:
+              slots[(_cursor + 1) % slots.length].onset == SlotOnset.hold,
         ),
       SlotOnset.hold => SlotAction(
           kind: SlotActionKind.hold,
