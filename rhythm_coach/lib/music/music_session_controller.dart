@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../models/session_step.dart' show Position;
 import '../services/beep_engine.dart';
 import '../services/capability_service.dart';
+import 'beat_pattern.dart';
 import 'music_pattern_generator.dart';
 import 'music_session_engine.dart';
 import 'slot_action.dart';
@@ -24,17 +25,6 @@ class MusicSessionController extends ChangeNotifier {
   late final MusicSessionEngine _engine;
   StreamSubscription<SlotAction>? _actionSub;
 
-  /// Profondeurs récentes (ring buffer) — historique léger.
-  final List<SlotAction> recent = [];
-  static const int recentMax = 48;
-
-  /// Dernière action émise — cible courante du curseur de profondeur.
-  SlotAction? get lastAction => recent.isEmpty ? null : recent.last;
-
-  /// Slots à venir (anticipation visuelle).
-  List<({SlotActionKind kind, Position depth})> upcoming(int count) =>
-      _engine.peek(count);
-
   MusicSessionController({required this.beep, CapabilityProfile? profile}) {
     _engine = MusicSessionEngine(
       generator: MusicPatternGenerator(profile: profile),
@@ -48,6 +38,22 @@ class MusicSessionController extends ChangeNotifier {
   bool get hasTempo => _clock.hasTempo;
   bool get isStable => _clock.isStable;
   int get tapCount => _clock.tapCount;
+
+  /// Profondeur cible courante (la plus profonde de la figure jouée) — sert au
+  /// curseur de l'animation. Stable sur une phrase, s'approfondit avec elles.
+  Position get currentTargetDepth {
+    final p = _engine.currentPattern;
+    if (p == null) return Position.mid;
+    var deepest = Position.head;
+    for (final s in p.slots) {
+      if (s.onset == SlotOnset.strike &&
+          s.to != null &&
+          s.to!.index > deepest.index) {
+        deepest = s.to!;
+      }
+    }
+    return deepest.index < Position.mid.index ? Position.mid : deepest;
+  }
 
   /// Enregistre un tap (la joueuse tape le rythme de sa musique).
   void tap() {
@@ -76,8 +82,6 @@ class MusicSessionController extends ChangeNotifier {
       case SlotActionKind.release:
         break; // remontée muette
     }
-    recent.add(a);
-    if (recent.length > recentMax) recent.removeAt(0);
     notifyListeners();
   }
 
