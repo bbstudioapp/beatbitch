@@ -54,6 +54,7 @@ class SessionConfig {
     this.lengthChoice,
     this.intense = false,
     this.encoreChainIndex = 0,
+    this.scriptedBreaks = false,
   });
 
   // Bornes globales
@@ -99,6 +100,11 @@ class SessionConfig {
   /// encore, 2 = 2ᵉ encore…). Lu pour scaler l'`intensityFloor` quand
   /// `intense` est actif sur l'encore (cf. `generate()`).
   final int encoreChainIndex;
+
+  /// Active les postures imposées + breaks scénarisés (issue #77, flag debug
+  /// `debug.scripted_breaks`). `false` = comportement historique (posture
+  /// `free`, aucun break). Cf. spec `specs/scripted_breaks.md`.
+  final bool scriptedBreaks;
 
   // ─── Méthodes dérivées (pures, lisent uniquement les fields ci-dessus) ───
 
