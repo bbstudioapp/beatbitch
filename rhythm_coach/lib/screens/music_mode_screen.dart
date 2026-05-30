@@ -191,7 +191,9 @@ class _PatternPainter extends CustomPainter {
 
   _PatternPainter({required this.pattern, required this.cursor});
 
+  // Échelle complète : `tip` en haut (ancre la plus haute) → `full` en bas.
   static const _rows = [
+    Position.tip,
     Position.head,
     Position.mid,
     Position.throat,
@@ -202,25 +204,38 @@ class _PatternPainter extends CustomPainter {
   static const _vPad = 26.0;
 
   double _y(Position p, double h) {
-    final frac = (p.index - Position.head.index) /
-        (Position.full.index - Position.head.index);
+    final frac = p.index / Position.full.index; // tip(0)..full(4)
     return _vPad + frac.clamp(0.0, 1.0) * (h - 2 * _vPad);
   }
 
-  /// Profondeur affichée par slot : la cible pour une frappe, la profondeur
-  /// tenue pour un hold, l'ancre pour un release.
+  /// Profondeur affichée par slot (la **courbe du mouvement**) :
+  /// - frappe → sa profondeur (creux sur le temps) ;
+  /// - hold → la profondeur tenue (palier) ;
+  /// - release → l'**ancre** : un cran au-dessus de la plus haute des deux
+  ///   frappes voisines (donc `tip` entre des frappes head/mid).
   List<Position> _displayDepths() {
+    final slots = pattern.slots;
+    final n = slots.length;
+    final nextStrike = List<Position?>.filled(n, null);
+    Position? nxt;
+    for (var i = n - 1; i >= 0; i--) {
+      if (slots[i].onset == SlotOnset.strike) nxt = slots[i].to;
+      nextStrike[i] = nxt;
+    }
     final out = <Position>[];
-    var last = pattern.anchor;
-    for (final s in pattern.slots) {
-      switch (s.onset) {
+    var running = pattern.anchor; // dernière frappe (défaut = ancre)
+    for (var i = 0; i < n; i++) {
+      switch (slots[i].onset) {
         case SlotOnset.strike:
-          last = s.to!;
-          out.add(last);
+          running = slots[i].to!;
+          out.add(running);
         case SlotOnset.hold:
-          out.add(last);
+          out.add(running);
         case SlotOnset.release:
-          out.add(pattern.anchor);
+          final next = nextStrike[i] ?? running;
+          final shallower = running.index <= next.index ? running : next;
+          final idx = (shallower.index - 1).clamp(0, Position.full.index);
+          out.add(Position.values[idx]);
       }
     }
     return out;
@@ -263,45 +278,50 @@ class _PatternPainter extends CustomPainter {
       );
     }
 
-    // Contour (relie les nodes) pour lire la forme du pattern.
+    Offset pt(int i) => Offset(colX(i), _y(depths[i], size.height));
+
+    // Courbe du mouvement (zigzag) reliant frappes (creux) et ancres (sommets).
     final line = Paint()
-      ..color = AppTheme.accent.withValues(alpha: 0.35)
+      ..color = AppTheme.accent.withValues(alpha: 0.45)
       ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
+      ..style = PaintingStyle.stroke
+      ..strokeJoin = StrokeJoin.round;
     final path = Path();
     for (var i = 0; i < n; i++) {
-      final o = Offset(colX(i), _y(depths[i], size.height));
+      final o = pt(i);
       i == 0 ? path.moveTo(o.dx, o.dy) : path.lineTo(o.dx, o.dy);
     }
     canvas.drawPath(path, line);
 
-    // Nodes par nature de slot.
+    // Paliers de hold : segment épais à la profondeur tenue.
+    final holdPaint = Paint()
+      ..color = AppTheme.accent.withValues(alpha: 0.8)
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round;
+    for (var i = 1; i < n; i++) {
+      if (pattern.slots[i].onset == SlotOnset.hold) {
+        canvas.drawLine(pt(i - 1), pt(i), holdPaint);
+      }
+    }
+
+    // Nodes : frappe = creux plein, ancre (release) = sommet plein plus petit.
     for (var i = 0; i < n; i++) {
-      final o = Offset(colX(i), _y(depths[i], size.height));
-      final isNow = i == cursor;
       final onset = pattern.slots[i].onset;
-      final color =
-          onset == SlotOnset.release ? AppTheme.textMuted : AppTheme.accent;
+      if (onset == SlotOnset.hold) continue; // matérialisé par le palier
+      final o = pt(i);
+      final isNow = i == cursor;
       if (isNow) {
         canvas.drawCircle(
             o, 13, Paint()..color = AppTheme.accent.withValues(alpha: 0.25));
       }
-      final r = isNow ? 8.0 : 5.0;
-      switch (onset) {
-        case SlotOnset.strike:
-          canvas.drawCircle(o, r, Paint()..color = color);
-        case SlotOnset.hold:
-          canvas.drawCircle(
-            o,
-            r,
-            Paint()
-              ..color = color
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = 2.5,
-          );
-        case SlotOnset.release:
-          canvas.drawCircle(o, isNow ? 5 : 3, Paint()..color = color);
-      }
+      final isStrike = onset == SlotOnset.strike;
+      final r = isStrike ? (isNow ? 8.0 : 5.0) : (isNow ? 5.0 : 3.0);
+      canvas.drawCircle(
+        o,
+        r,
+        Paint()
+          ..color = AppTheme.accent.withValues(alpha: isStrike ? 1.0 : 0.7),
+      );
     }
   }
 
