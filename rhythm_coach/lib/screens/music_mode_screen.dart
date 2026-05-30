@@ -266,6 +266,15 @@ class _PatternPainter extends CustomPainter {
   List<Position> _displayDepths() {
     final slots = pattern.slots;
     final n = slots.length;
+    // Prochaine frappe (lookahead **cyclique** : la dernière ancre tient compte
+    // de la 1ʳᵉ frappe, donc reste au-dessus du premier temps).
+    Position? firstStrike;
+    for (final s in slots) {
+      if (s.onset == SlotOnset.strike) {
+        firstStrike = s.to;
+        break;
+      }
+    }
     final nextStrike = List<Position?>.filled(n, null);
     Position? nxt;
     for (var i = n - 1; i >= 0; i--) {
@@ -282,7 +291,7 @@ class _PatternPainter extends CustomPainter {
         case SlotOnset.hold:
           out.add(running);
         case SlotOnset.release:
-          final next = nextStrike[i] ?? running;
+          final next = nextStrike[i] ?? firstStrike ?? running;
           final shallower = running.index <= next.index ? running : next;
           final idx = (shallower.index - 1).clamp(0, Position.full.index);
           out.add(Position.values[idx]);
