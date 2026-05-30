@@ -61,6 +61,7 @@ extension BreakSequencer on SessionController {
     _activeBreak = b;
     _nextBreakIndex++;
     _breakOrderLastAtSec = elapsedSeconds;
+    _breakOrderInterval = _pickBreakOrderInterval();
     _disarmHoldVerifier();
     unawaited(_beep.pause());
     final entry = _phraseBank?.pickBreakEntry(_random);
@@ -75,16 +76,21 @@ extension BreakSequencer on SessionController {
     final bank = _phraseBank;
     if (bank == null) return;
     final now = elapsedSeconds;
-    if (now - _breakOrderLastAtSec <
-        SessionController._breakOrderIntervalSeconds) {
-      return;
-    }
+    if (now - _breakOrderLastAtSec < _breakOrderInterval) return;
     if (_tts.isSpeaking) return;
     final order = bank.pickBreakOrder(_random);
     if (order == null) return;
     _breakOrderLastAtSec = now;
+    _breakOrderInterval = _pickBreakOrderInterval();
     _speakScripted(order);
   }
+
+  /// Tire un intervalle d'ordre dans [min, max] (cadence irrégulière).
+  int _pickBreakOrderInterval() =>
+      SessionController._breakOrderMinIntervalSeconds +
+      _random.nextInt(SessionController._breakOrderMaxIntervalSeconds -
+          SessionController._breakOrderMinIntervalSeconds +
+          1);
 
   /// Sortie d'un break : applique la nouvelle posture, énonce la phrase de
   /// changement de pose (ou de reprise neutre en récup pure), et relâche

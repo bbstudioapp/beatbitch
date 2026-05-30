@@ -179,9 +179,13 @@ class SessionController extends ChangeNotifier {
   /// post-fail est inutile.
   static const double _breathSkipStaminaThreshold = 60.0;
 
-  /// Intervalle minimal (s) entre deux ordres énoncés pendant un break
-  /// scénarisé (issue #77). ~1 ordre toutes les 25 s sur une pause de 60-120 s.
-  static const int _breakOrderIntervalSeconds = 25;
+  /// Intervalle aléatoire borné (s) entre deux ordres énoncés pendant un break
+  /// scénarisé (issue #77). Tiré dans [min, max] après chaque ordre (et à
+  /// l'entrée) plutôt que fixe — une cadence régulière sonne mécanique, un peu
+  /// d'irrégularité est plus naturel (cf. variété des cycles de séance). ~1
+  /// ordre toutes les ~25 s en moyenne sur une pause de 60-120 s.
+  static const int _breakOrderMinIntervalSeconds = 18;
+  static const int _breakOrderMaxIntervalSeconds = 32;
 
   final Stopwatch _stopwatch = Stopwatch();
 
@@ -404,8 +408,13 @@ class SessionController extends ChangeNotifier {
   int _nextBreakIndex = 0;
 
   /// `elapsedSeconds` du dernier ordre de break énoncé. Sert à espacer les
-  /// ordres (`_breakOrderIntervalSeconds`).
+  /// ordres.
   int _breakOrderLastAtSec = 0;
+
+  /// Intervalle courant (s) avant le prochain ordre de break, re-tiré dans
+  /// [`_breakOrderMinIntervalSeconds`, `_breakOrderMaxIntervalSeconds`] à
+  /// l'entrée du break et après chaque ordre (cadence irrégulière).
+  int _breakOrderInterval = _breakOrderMinIntervalSeconds;
 
   /// Posture courante imposée (issue #77). Initialisée à
   /// `session.initialPose` au `start()`, mise à jour à la reprise de chaque
