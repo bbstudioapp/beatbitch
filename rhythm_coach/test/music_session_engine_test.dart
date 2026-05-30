@@ -104,16 +104,22 @@ void main() {
       }
     });
 
-    test('régénère sur frontière de phrase (1ʳᵉ frappe sur le downbeat)', () {
-      final eng = _engine(_fullCaps, 9);
+    test('garde la même figure repeatPhrases phrases puis régénère', () {
+      final eng = _engine(_fullCaps, 9); // repeatPhrases défaut = 4
       const grid = BeatGrid(bpm: 120, anchorMs: 0);
-      // Le tout 1er tick et chaque début de phrase doivent émettre.
-      expect(eng.onBeat(grid.tickFor(0)), isNotNull); // phrase 0
-      for (var i = 1; i < 16; i++) {
-        eng.onBeat(grid.tickFor(i));
+      eng.onBeat(grid.tickFor(0)); // phrase 0 → génère
+      final p0 = eng.currentPattern;
+      expect(p0, isNotNull);
+      // phrases 1, 2, 3 : même figure conservée.
+      for (final beat in [16, 32, 48]) {
+        expect(grid.tickFor(beat).isPhraseStart, isTrue);
+        eng.onBeat(grid.tickFor(beat));
+        expect(identical(eng.currentPattern, p0), isTrue,
+            reason: 'figure changée trop tôt au beat $beat');
       }
-      expect(grid.tickFor(16).isPhraseStart, isTrue);
-      expect(eng.onBeat(grid.tickFor(16)), isNotNull); // phrase 1, cursor 0
+      // phrase 4 : régénération.
+      eng.onBeat(grid.tickFor(64));
+      expect(identical(eng.currentPattern, p0), isFalse);
     });
 
     test('robustesse : aucune action hors bornes sur un long run', () {

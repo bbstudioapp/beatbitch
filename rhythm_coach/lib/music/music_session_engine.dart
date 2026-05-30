@@ -21,6 +21,10 @@ import 'slot_action.dart';
 class MusicSessionEngine {
   final MusicPatternGenerator generator;
 
+  /// Nombre de phrases pendant lesquelles on **garde** la même figure avant
+  /// d'en régénérer une (répétition = on peut la sentir / l'apprendre).
+  final int repeatPhrases;
+
   final StreamController<SlotAction> _ctrl =
       StreamController<SlotAction>.broadcast();
   StreamSubscription<BeatTick>? _sub;
@@ -29,14 +33,18 @@ class MusicSessionEngine {
   int _cursor = 0;
   int _beatsPerSlot = 1;
   int _beatsSinceSlot = 0;
+  int _phrasesSinceGen = 0;
   Position _lastDepth = Position.head;
 
-  MusicSessionEngine({required this.generator});
+  MusicSessionEngine({required this.generator, this.repeatPhrases = 4});
 
   Stream<SlotAction> get actions => _ctrl.stream;
 
-  /// Figure courante — lue par l'UI (courbe de profondeur).
+  /// Figure courante — lue par l'UI (affichage du pattern).
   BeatPattern? get currentPattern => _pattern;
+
+  /// Index du slot en cours de lecture (tête de lecture du pattern).
+  int get cursor => _cursor;
 
   /// Aperçu (lecture seule) des [count] prochains slots, pour l'anticipation
   /// visuelle. Suppose la figure courante répétée — ne régénère pas (la phrase
@@ -73,10 +81,18 @@ class MusicSessionEngine {
   /// Cœur testable. Traduit un battement en [SlotAction], ou `null` sur les
   /// battements intercalaires quand un slot dure plusieurs battements (½×).
   SlotAction? onBeat(BeatTick tick) {
-    final fresh = _pattern == null;
-    if (fresh || tick.isPhraseStart) {
+    if (_pattern == null) {
       _regenerate(tick);
-      return _emit(tick); // 1ʳᵉ frappe de la nouvelle figure, sur le temps
+      return _emit(tick); // 1ʳᵉ frappe de la 1ʳᵉ figure, sur le temps
+    }
+    // Frontière de phrase : on ne régénère qu'une fois toutes [repeatPhrases]
+    // phrases (sinon la même figure boucle, en continu à travers les phrases).
+    if (tick.isPhraseStart) {
+      _phrasesSinceGen++;
+      if (_phrasesSinceGen >= repeatPhrases) {
+        _regenerate(tick);
+        return _emit(tick);
+      }
     }
     // Cadence du slot : n'avance qu'une fois tous les [_beatsPerSlot] battements.
     if (++_beatsSinceSlot < _beatsPerSlot) return null;
@@ -92,6 +108,7 @@ class MusicSessionEngine {
     );
     _cursor = 0;
     _beatsSinceSlot = 0;
+    _phrasesSinceGen = 0;
     final pb = _pattern!.bpm;
     _beatsPerSlot = pb <= 0 ? 1 : max(1, (tick.bpm / pb).round());
   }

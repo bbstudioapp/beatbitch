@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-import '../models/session_step.dart' show Position;
 import '../services/beep_engine.dart';
 import '../services/capability_service.dart';
 import 'beat_pattern.dart';
@@ -39,21 +38,11 @@ class MusicSessionController extends ChangeNotifier {
   bool get isStable => _clock.isStable;
   int get tapCount => _clock.tapCount;
 
-  /// Profondeur cible courante (la plus profonde de la figure jouée) — sert au
-  /// curseur de l'animation. Stable sur une phrase, s'approfondit avec elles.
-  Position get currentTargetDepth {
-    final p = _engine.currentPattern;
-    if (p == null) return Position.mid;
-    var deepest = Position.head;
-    for (final s in p.slots) {
-      if (s.onset == SlotOnset.strike &&
-          s.to != null &&
-          s.to!.index > deepest.index) {
-        deepest = s.to!;
-      }
-    }
-    return deepest.index < Position.mid.index ? Position.mid : deepest;
-  }
+  /// Figure courante (pour l'affichage du pattern).
+  BeatPattern? get currentPattern => _engine.currentPattern;
+
+  /// Slot en cours de lecture (tête de lecture sur le pattern).
+  int get currentSlot => _engine.cursor;
 
   /// Enregistre un tap (la joueuse tape le rythme de sa musique).
   void tap() {
