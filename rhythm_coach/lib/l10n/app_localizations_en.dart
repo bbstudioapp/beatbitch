@@ -1930,6 +1930,31 @@ class AppLocalizationsEn extends AppLocalizations {
       'Tailor-made sessions: duration, mode mix, difficulty, non-stop.';
 
   @override
+  String get modeSelectionMusicTitle => 'MUSIC';
+
+  @override
+  String get modeSelectionMusicSubtitle =>
+      'Lock onto your music: tap the tempo, the steps follow the beat.';
+
+  @override
+  String get musicTapPrompt => 'Tap the beat of your music';
+
+  @override
+  String get musicTapAction => 'TAP';
+
+  @override
+  String get musicStart => 'START';
+
+  @override
+  String get musicStop => 'STOP';
+
+  @override
+  String get musicWaitingTempo => 'A few more taps…';
+
+  @override
+  String get musicDebugTooltip => 'Debug: ignore gating';
+
+  @override
   String get customAppBarTitle => 'Custom sessions';
 
   @override
