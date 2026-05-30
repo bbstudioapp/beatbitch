@@ -71,11 +71,12 @@ class MusicPatternGenerator {
     final pool = onsetFigureBank.where((f) => f.level <= maxLevel).toList();
     final figure = pool[rng.nextInt(pool.length)];
 
-    // Contour de profondeur pour les frappes de la figure.
+    // Déploiement de la figure (grammaire valide par construction) + contour
+    // de profondeur pour ses frappes.
+    final onsets = figure.expand();
     final family =
         ContourFamily.values[rng.nextInt(ContourFamily.values.length)];
-    final strikeCount =
-        figure.onsets.where((o) => o == SlotOnset.strike).length;
+    final strikeCount = onsets.where((o) => o == SlotOnset.strike).length;
     final depths = DepthContour.generate(
       strikeCount: strikeCount,
       anchor: _anchor,
@@ -84,24 +85,14 @@ class MusicPatternGenerator {
       rng: rng,
     );
 
-    // Assemblage des slots + soupape hold (un hold trop long pour l'endurance
-    // prouvée retombe en release).
-    final holdSecPerSlot = 60.0 / bpm;
     final slots = <BeatSlot>[];
     var si = 0;
-    Position? lastTo;
-    for (final o in figure.onsets) {
+    for (final o in onsets) {
       switch (o) {
         case SlotOnset.strike:
-          lastTo = depths[si++];
-          slots.add(BeatSlot.strike(lastTo));
+          slots.add(BeatSlot.strike(depths[si++]));
         case SlotOnset.hold:
-          final hs = lastTo == null ? null : bounds.holdSecondsFor(lastTo);
-          if (lastTo == null || (hs != null && holdSecPerSlot > hs)) {
-            slots.add(const BeatSlot.release());
-          } else {
-            slots.add(const BeatSlot.hold());
-          }
+          slots.add(const BeatSlot.hold());
         case SlotOnset.release:
           slots.add(const BeatSlot.release());
       }

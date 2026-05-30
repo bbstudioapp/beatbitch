@@ -168,48 +168,50 @@ void main() {
       expect(p.bpm, 150); // aucun plafond BPM en debug
     });
 
-    test('soupape hold : full sans endurance prouvée → pas de slot hold', () {
-      final gen = MusicPatternGenerator(
-        rng: Random(11),
-        profile: _profile({
-          CapabilityAxis.rhythmDepthMax: Position.full.index.toDouble(),
-          CapabilityAxis.rhythmBpmCeilShallow: 200,
-          CapabilityAxis.rhythmBpmCeilThroat: 200,
-          CapabilityAxis.rhythmBpmCeilFull: 200,
-          // pas de holdFullStreak / holdThroatStreak → 60/bpm > null ? non,
-          // null = pas de donnée → le hold est conservé. On teste plutôt une
-          // endurance explicitement trop faible ci-dessous.
-        }),
-      );
-      // Avec une endurance throat ridicule (0.1s), tout hold profond retombe.
-      final gen2 = MusicPatternGenerator(
-        rng: Random(11),
-        profile: _profile({
-          CapabilityAxis.rhythmDepthMax: Position.throat.index.toDouble(),
-          CapabilityAxis.rhythmBpmCeilThroat: 200,
-          CapabilityAxis.rhythmBpmCeilShallow: 200,
-          CapabilityAxis.holdThroatStreak: 0.1,
-        }),
-      );
-      for (var ph = 2; ph < 10; ph++) {
-        final p = gen2.next(musicBpm: 120, phraseIndex: ph);
-        for (var i = 0; i < p.slots.length; i++) {
-          if (p.slots[i].onset != SlotOnset.hold) continue;
-          // le hold conservé ne doit tenir qu'une profondeur ≤ mid (sans axe)
-          // ; ici on a au plus throat avec endurance 0.1 → aucun hold throat.
-          // Retrouver la profondeur tenue = dernière frappe avant i.
-          Position? held;
-          for (var j = i; j >= 0; j--) {
-            if (p.slots[j].onset == SlotOnset.strike) {
-              held = p.slots[j].to;
-              break;
-            }
+    test(
+        'grammaire valide : jamais 2 plongées sans ancre, ancre encadrant les holds',
+        () {
+      final gen = MusicPatternGenerator(rng: Random(11), ignoreGating: true);
+      for (var ph = 0; ph < 12; ph++) {
+        final p = gen.next(musicBpm: 120, phraseIndex: ph);
+        final s = p.slots;
+        for (var i = 0; i < s.length; i++) {
+          final prev = s[(i - 1 + s.length) % s.length].onset; // cyclique
+          // Toute frappe est précédée d'une ancre (release) : pas 2 plongées
+          // d'affilée, pas de frappe juste après un hold.
+          if (s[i].onset == SlotOnset.strike) {
+            expect(prev, SlotOnset.release,
+                reason:
+                    'frappe non précédée d\'une ancre (phrase $ph, slot $i)');
           }
-          expect(held != null && held.index <= Position.mid.index, isTrue,
-              reason: 'hold profond conservé malgré endurance 0.1s');
+          // Un hold ne suit qu'une frappe ou un hold (jamais une ancre).
+          if (s[i].onset == SlotOnset.hold) {
+            expect(prev == SlotOnset.strike || prev == SlotOnset.hold, isTrue,
+                reason: 'hold précédé d\'une ancre (phrase $ph, slot $i)');
+          }
         }
       }
-      expect(gen, isNotNull); // gen (sans endurance) instancié sans crash
+    });
+  });
+
+  group('OnsetFigure.expand', () {
+    test('toute la banque est grammaticalement valide', () {
+      for (final f in onsetFigureBank) {
+        final s = f.expand();
+        expect(s.contains(SlotOnset.strike), isTrue,
+            reason: '${f.id} sans frappe');
+        for (var i = 0; i < s.length; i++) {
+          final prev = s[(i - 1 + s.length) % s.length];
+          if (s[i] == SlotOnset.strike) {
+            expect(prev, SlotOnset.release,
+                reason: '${f.id} : frappe sans ancre');
+          }
+          if (s[i] == SlotOnset.hold) {
+            expect(prev == SlotOnset.strike || prev == SlotOnset.hold, isTrue,
+                reason: '${f.id} : hold mal placé');
+          }
+        }
+      }
     });
   });
 }
