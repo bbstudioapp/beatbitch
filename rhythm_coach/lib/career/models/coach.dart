@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import '../../models/posture.dart';
 import '../../models/session.dart';
 import '../../models/session_step.dart';
 import '../../services/random_comments_loader.dart';
@@ -1125,4 +1126,21 @@ class _CoachComposedPhraseBank extends PhraseBank {
     // déclinés par coach.
     return fallback.pickSwallowOrder(rng);
   }
+
+  @override
+  String? pickBreakEntry(Random rng) {
+    // Délégation au pool global : phrases de break (issue #77) non encore
+    // déclinées par coach.
+    return fallback.pickBreakEntry(rng);
+  }
+
+  @override
+  String? pickBreakOrder(Random rng) => fallback.pickBreakOrder(rng);
+
+  @override
+  String? pickBreakResume(Random rng) => fallback.pickBreakResume(rng);
+
+  @override
+  String? pickPostureChange(Posture pose, Random rng) =>
+      fallback.pickPostureChange(pose, rng);
 }

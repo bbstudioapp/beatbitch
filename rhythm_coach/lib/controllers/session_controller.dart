@@ -14,6 +14,7 @@ import '../career/services/specialization_service.dart';
 import '../l10n/app_localizations.dart';
 import '../main.dart' show milestoneService;
 import '../models/punishment.dart';
+import '../models/posture.dart';
 import '../models/session.dart';
 import '../services/ambience_engine.dart';
 import '../services/backgrounds_service.dart';
@@ -35,6 +36,7 @@ import '../services/tts_service.dart';
 part 'session_controller_challenge.dart';
 part 'session_controller_fail_flow.dart';
 part 'session_controller_career_hooks.dart';
+part 'session_controller_break.dart';
 
 enum SessionState { idle, running, paused, finished, failing }
 
@@ -176,6 +178,10 @@ class SessionController extends ChangeNotifier {
   /// Seuil au-dessus duquel on considère qu'un breath de récupération
   /// post-fail est inutile.
   static const double _breathSkipStaminaThreshold = 60.0;
+
+  /// Intervalle minimal (s) entre deux ordres énoncés pendant un break
+  /// scénarisé (issue #77). ~1 ordre toutes les 25 s sur une pause de 60-120 s.
+  static const int _breakOrderIntervalSeconds = 25;
 
   final Stopwatch _stopwatch = Stopwatch();
 
@@ -374,6 +380,38 @@ class SessionController extends ChangeNotifier {
   /// piloter la machine d'états défi (durée du countdown, du step, du
   /// timeout atSeuil) indépendamment du gel du timer session.
   double get _realSec => _stopwatch.elapsedMilliseconds / 1000.0;
+
+  // ─── État du break scénarisé (issue #77) ──────────────────────────────
+  // Pause active de récup sur les sessions longues (cf. spec
+  // `specs/scripted_breaks.md`). Contrairement au flow fail, l'horloge
+  // `elapsed` continue (le générateur a laissé un trou d'effort dans
+  // l'enveloppe) : la machine est pilotée par tick (`_updateBreakPhase`),
+  // pas par un flow async. Les méthodes vivent dans
+  // `session_controller_break.dart` (part of).
+
+  /// True tant qu'on est dans la fenêtre `[break.time, break.endTime)` d'un
+  /// break. Gèle l'accrual d'effort et suspend les commentaires aléatoires.
+  bool _breakActive = false;
+  bool get breakActive => _breakActive;
+
+  /// Break en cours, ou `null` hors fenêtre de break. Exposé pour l'UI
+  /// (overlay PAUSE + décompte — PR5).
+  ScriptedBreak? _activeBreak;
+  ScriptedBreak? get activeBreak => _activeBreak;
+
+  /// Index du prochain break à déclencher dans `session.breaks` (ordonnés
+  /// par `time`). Avancé à chaque entrée de break.
+  int _nextBreakIndex = 0;
+
+  /// `elapsedSeconds` du dernier ordre de break énoncé. Sert à espacer les
+  /// ordres (`_breakOrderIntervalSeconds`).
+  int _breakOrderLastAtSec = 0;
+
+  /// Posture courante imposée (issue #77). Initialisée à
+  /// `session.initialPose` au `start()`, mise à jour à la reprise de chaque
+  /// break qui change de pose. Exposée pour l'indicateur de posture (PR5).
+  Posture _currentPose = Posture.free;
+  Posture get currentPose => _currentPose;
 
   // ─── Commentaires aléatoires ───────────────────────────────────────────
 
@@ -900,6 +938,13 @@ class SessionController extends ChangeNotifier {
         _miniPunishmentTickAccumulator = 0;
         _miniPunishmentsTriggered = 0;
         _announcedProgressMarkers.clear();
+        // Break scénarisé (issue #77) : repart de la posture initiale tirée
+        // par le générateur (`free` hors carrière / flag off).
+        _breakActive = false;
+        _activeBreak = null;
+        _nextBreakIndex = 0;
+        _breakOrderLastAtSec = 0;
+        _currentPose = _session.initialPose;
         _capabilityTracker?.onSessionStart();
         // Seed neutre : remplacé par les valeurs persistées dès que la
         // lecture async (plus bas) revient. `seedHumiliationSession`
@@ -1072,9 +1117,19 @@ class SessionController extends ChangeNotifier {
     // on enchaîne sur autre chose (rythme → hold head…) alors que l'UI
     // attend toujours la décision joueuse au seuil.
     _updateChallengePhase();
+    // Break scénarisé (issue #77) : entrée/sortie + ordres espacés, AVANT
+    // `_checkSteps`. À l'entrée d'un break la machine pause le beep ; à la
+    // sortie elle relâche `_breakActive` → `_checkSteps` (ci-dessous) applique
+    // alors le step d'effort posé par le générateur juste après le trou.
+    _updateBreakPhase();
     _checkSteps();
-    _accrueHoldSecond();
-    _checkProgressMarkers();
+    // Gel de l'effort pendant un break : pas de crédit hold/saliva/stamina/
+    // mini-punition ni de marqueurs de progression (la pause est de la récup
+    // mise en scène, pas de l'effort). L'horloge `elapsed`, elle, continue.
+    if (!_breakActive) {
+      _accrueHoldSecond();
+      _checkProgressMarkers();
+    }
     // Freeze la timeline session pendant TOUTE la durée du défi (breath
     // d'attente joueuse + countdown + step défi + atSeuil + extensions +
     // breath post-défi). Le défi est intégralement hors du décompte de
@@ -1911,6 +1966,16 @@ class SessionController extends ChangeNotifier {
     // que de stopper : la fenêtre se referme d'elle-même quand la milestone
     // se termine, le scheduler reprend naturellement.
     if (_isInMilestoneWindow()) {
+      _randomCommentTimer =
+          Timer(const Duration(seconds: 3), _fireRandomComment);
+      return;
+    }
+
+    // Pas de random pendant un break scénarisé (issue #77) : la dramaturgie
+    // est pilotée par le séquenceur du break (phrase d'entrée + ordres
+    // espacés + reprise). On reporte de 3 s ; la fenêtre se referme d'elle-
+    // même à la fin du break.
+    if (_breakActive) {
       _randomCommentTimer =
           Timer(const Duration(seconds: 3), _fireRandomComment);
       return;

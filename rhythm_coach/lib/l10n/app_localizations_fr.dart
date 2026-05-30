@@ -1263,6 +1263,13 @@ class AppLocalizationsFr extends AppLocalizations {
       'Affiche un bouton dans la séance qui termine immédiatement comme un succès complet (badges, milestones, niveau). Pratique pour itérer sur le contenu sans tout jouer.';
 
   @override
+  String get soundsDebugScriptedBreaks => 'Postures + breaks scénarisés';
+
+  @override
+  String get soundsDebugScriptedBreaksSubtitle =>
+      'Active les postures imposées (à genoux, à quatre pattes…) et les pauses actives de récup sur les sessions longues. Expérimental, en cours de calibration.';
+
+  @override
   String get soundsShowBackgroundMedia => 'Fonds média en séance';
 
   @override

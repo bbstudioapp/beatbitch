@@ -1260,6 +1260,13 @@ class AppLocalizationsEs extends AppLocalizations {
       'Muestra un botón en la sesión que la termina inmediatamente como éxito total (insignias, hitos, nivel). Útil para iterar sobre el contenido sin jugar.';
 
   @override
+  String get soundsDebugScriptedBreaks => 'Posturas + pausas guionizadas';
+
+  @override
+  String get soundsDebugScriptedBreaksSubtitle =>
+      'Activa las posturas impuestas (de rodillas, a cuatro patas…) y las pausas activas de recuperación en sesiones largas. Experimental, en calibración.';
+
+  @override
   String get soundsShowBackgroundMedia => 'Medios de fondo en sesión';
 
   @override
