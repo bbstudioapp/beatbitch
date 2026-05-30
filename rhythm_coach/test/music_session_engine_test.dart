@@ -128,6 +128,28 @@ void main() {
     });
   });
 
+  group('MusicSessionEngine.peek', () {
+    test('prédit ce que onBeat émettra (en milieu de phrase, 1×)', () {
+      final eng = _engine(_fullCaps, 17);
+      const grid = BeatGrid(bpm: 120, anchorMs: 0);
+      for (var i = 0; i < 8; i++) {
+        eng.onBeat(grid.tickFor(i)); // milieu de phrase (16 beats)
+      }
+      final pk = eng.peek(3);
+      expect(pk.length, 3);
+      for (var k = 0; k < 3; k++) {
+        final a = eng.onBeat(grid.tickFor(8 + k))!;
+        expect(pk[k].kind, a.kind, reason: 'kind divergent au slot $k');
+        expect(pk[k].depth, a.depth, reason: 'depth divergent au slot $k');
+      }
+    });
+
+    test('peek sans figure encore générée renvoie vide', () {
+      final eng = _engine(_fullCaps, 1);
+      expect(eng.peek(4), isEmpty);
+    });
+  });
+
   group('MusicSessionEngine.attach', () {
     test('pousse les actions du flux d’horloge dans actions', () async {
       final eng = _engine(_fullCaps, 21);

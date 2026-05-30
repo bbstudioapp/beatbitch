@@ -8,8 +8,8 @@ import '../services/beep_engine.dart';
 import '../services/capability_service.dart';
 import '../theme/app_theme.dart';
 
-/// Écran du mode Music (PR1) : taper le tempo, démarrer, voir la jauge de
-/// profondeur animée en live. Cf. `specs/music_mode.md` §9.
+/// Écran du mode Music (PR1) : taper le tempo, démarrer, voir la timeline de
+/// profondeur défiler (passé · NOW · à venir). Cf. `specs/music_mode.md` §9.
 class MusicModeScreen extends StatefulWidget {
   final BeepEngine beep;
 
@@ -99,7 +99,10 @@ class _MusicModeScreenState extends State<MusicModeScreen> {
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: c.isRunning
-                    ? _MusicDepthGauge(action: c.lastAction)
+                    ? _DepthTimeline(
+                        recent: c.recent,
+                        upcoming: c.upcoming(12),
+                      )
                     : Center(
                         child: Text(
                           t.musicTapAction,
@@ -133,112 +136,150 @@ class _MusicModeScreenState extends State<MusicModeScreen> {
   }
 }
 
-/// Jauge de profondeur live (façon `MovementAnimation` de la session) : une
-/// échelle verticale head→full, un orbe qui **glisse** vers la profondeur de
-/// la dernière [SlotAction] sur ~un battement. `strike` = orbe plein qui
-/// « pope », `hold` = anneau tenu, `release` = orbe atténué (remontée).
-class _MusicDepthGauge extends StatelessWidget {
-  final SlotAction? action;
+/// Timeline de profondeur : passé court (gauche) · **NOW** · slots à venir
+/// (droite, pour anticiper). `y` = profondeur (head haut → full bas), nodes
+/// par nature (frappe pleine, hold anneau, release petit point). La courbe
+/// défile vers la gauche à chaque battement. Cf. `specs/music_mode.md` §9.
+class _DepthTimeline extends StatelessWidget {
+  /// Historique récent (du plus ancien au plus récent ; le dernier = NOW).
+  final List<SlotAction> recent;
 
-  const _MusicDepthGauge({required this.action});
+  /// Slots à venir (du prochain au plus lointain).
+  final List<({SlotActionKind kind, Position depth})> upcoming;
 
-  // Échelle music mode : head(1) en haut → full(4) en bas.
+  const _DepthTimeline({required this.recent, required this.upcoming});
+
+  @override
+  Widget build(BuildContext context) {
+    final r = recent.length <= 5 ? recent : recent.sublist(recent.length - 5);
+    final past = [for (final a in r) (kind: a.kind, depth: a.depth)];
+    return CustomPaint(
+      size: Size.infinite,
+      painter: _TimelinePainter(past: past, upcoming: upcoming),
+    );
+  }
+}
+
+class _TimelinePainter extends CustomPainter {
+  final List<({SlotActionKind kind, Position depth})> past;
+  final List<({SlotActionKind kind, Position depth})> upcoming;
+
+  _TimelinePainter({required this.past, required this.upcoming});
+
   static const _rows = [
     Position.head,
     Position.mid,
     Position.throat,
     Position.full,
   ];
+  static const _leftPad = 52.0;
+  static const _rightPad = 14.0;
+  static const _vPad = 26.0;
 
-  /// Alignement vertical (-0.8 = haut/head, 0.8 = bas/full).
-  static double _alignY(Position p) {
+  double _y(Position p, double h) {
     final frac = (p.index - Position.head.index) /
         (Position.full.index - Position.head.index);
-    return -0.8 + frac.clamp(0.0, 1.0) * 1.6;
+    return _vPad + frac.clamp(0.0, 1.0) * (h - 2 * _vPad);
+  }
+
+  double _x(int i, int n, double w) {
+    if (n <= 1) return _leftPad;
+    return _leftPad + i / (n - 1) * (w - _leftPad - _rightPad);
   }
 
   @override
-  Widget build(BuildContext context) {
-    final a = action;
-    final target = a?.depth ?? Position.head;
-    final beatMs = (a == null || a.bpm <= 0) ? 400 : (60000 / a.bpm).round();
-    final kind = a?.kind ?? SlotActionKind.release;
-
-    return Stack(
-      children: [
-        // Lignes-repères + labels de profondeur.
-        for (final p in _rows)
-          Align(
-            alignment: Alignment(0, _alignY(p)),
-            child: Row(
-              children: [
-                const SizedBox(width: 12),
-                SizedBox(
-                  width: 56,
-                  child: Text(
-                    p.name,
-                    style: const TextStyle(
-                      color: AppTheme.textMuted,
-                      fontSize: 11,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Container(
-                    height: 1,
-                    color: AppTheme.textMuted.withValues(alpha: 0.18),
-                  ),
-                ),
-                const SizedBox(width: 12),
-              ],
-            ),
-          ),
-        // Curseur de profondeur.
-        AnimatedAlign(
-          alignment: Alignment(0, _alignY(target)),
-          duration: Duration(milliseconds: beatMs),
-          curve: Curves.easeInOut,
-          child: _Cursor(kind: kind, beatKey: a?.beatIndex ?? 0),
+  void paint(Canvas canvas, Size size) {
+    // Lignes-repères + labels.
+    final guide = Paint()
+      ..color = AppTheme.textMuted.withValues(alpha: 0.16)
+      ..strokeWidth = 1;
+    for (final p in _rows) {
+      final y = _y(p, size.height);
+      canvas.drawLine(
+          Offset(_leftPad, y), Offset(size.width - _rightPad, y), guide);
+      final tp = TextPainter(
+        text: TextSpan(
+          text: p.name,
+          style: const TextStyle(color: AppTheme.textMuted, fontSize: 11),
         ),
-      ],
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, Offset(8, y - tp.height / 2));
+    }
+
+    final points = [...past, ...upcoming];
+    if (points.isEmpty) return;
+    final n = points.length;
+    final nowIdx = past.isEmpty ? 0 : past.length - 1;
+
+    // Courbe : passé plein, futur atténué.
+    for (var seg = 0; seg < 2; seg++) {
+      final isPast = seg == 0;
+      final paint = Paint()
+        ..color = AppTheme.accent.withValues(alpha: isPast ? 0.85 : 0.30)
+        ..strokeWidth = isPast ? 2.5 : 2
+        ..style = PaintingStyle.stroke;
+      final path = Path();
+      final lo = isPast ? 0 : nowIdx;
+      final hi = isPast ? nowIdx : n - 1;
+      var started = false;
+      for (var i = lo; i <= hi; i++) {
+        final o =
+            Offset(_x(i, n, size.width), _y(points[i].depth, size.height));
+        if (!started) {
+          path.moveTo(o.dx, o.dy);
+          started = true;
+        } else {
+          path.lineTo(o.dx, o.dy);
+        }
+      }
+      canvas.drawPath(path, paint);
+    }
+
+    // Ligne NOW.
+    final nowX = _x(nowIdx, n, size.width);
+    canvas.drawLine(
+      Offset(nowX, _vPad - 8),
+      Offset(nowX, size.height - _vPad + 8),
+      Paint()
+        ..color = AppTheme.accent.withValues(alpha: 0.5)
+        ..strokeWidth = 1.5,
     );
+
+    // Nodes.
+    for (var i = 0; i < n; i++) {
+      final isNow = i == nowIdx;
+      final isFuture = i > nowIdx;
+      final o = Offset(_x(i, n, size.width), _y(points[i].depth, size.height));
+      final a = isFuture ? 0.45 : 1.0;
+      final color = points[i].kind == SlotActionKind.release
+          ? AppTheme.textMuted.withValues(alpha: a)
+          : AppTheme.accent.withValues(alpha: a);
+      switch (points[i].kind) {
+        case SlotActionKind.strike:
+          if (isNow) {
+            canvas.drawCircle(
+              o,
+              11,
+              Paint()..color = AppTheme.accent.withValues(alpha: 0.25),
+            );
+          }
+          canvas.drawCircle(o, isNow ? 7 : 4.5, Paint()..color = color);
+        case SlotActionKind.hold:
+          canvas.drawCircle(
+            o,
+            isNow ? 7 : 4.5,
+            Paint()
+              ..color = color
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 2.5,
+          );
+        case SlotActionKind.release:
+          canvas.drawCircle(o, isNow ? 4 : 2.5, Paint()..color = color);
+      }
+    }
   }
-}
-
-class _Cursor extends StatelessWidget {
-  final SlotActionKind kind;
-  final int beatKey;
-
-  const _Cursor({required this.kind, required this.beatKey});
 
   @override
-  Widget build(BuildContext context) {
-    final isStrike = kind == SlotActionKind.strike;
-    final isHold = kind == SlotActionKind.hold;
-    final color =
-        kind == SlotActionKind.release ? AppTheme.textMuted : AppTheme.accent;
-    final orb = Container(
-      width: 34,
-      height: 34,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: isHold ? Colors.transparent : color,
-        border: isHold ? Border.all(color: color, width: 3) : null,
-        boxShadow: isStrike
-            ? [BoxShadow(color: color.withValues(alpha: 0.6), blurRadius: 16)]
-            : null,
-      ),
-    );
-    // « Pop » à chaque frappe : redémarre l'échelle à chaque nouveau battement.
-    if (!isStrike) return Opacity(opacity: 0.85, child: orb);
-    return TweenAnimationBuilder<double>(
-      key: ValueKey(beatKey),
-      tween: Tween(begin: 1.35, end: 1.0),
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOut,
-      builder: (_, scale, child) => Transform.scale(scale: scale, child: child),
-      child: orb,
-    );
-  }
+  bool shouldRepaint(_TimelinePainter oldDelegate) => true;
 }

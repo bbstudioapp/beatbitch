@@ -38,6 +38,29 @@ class MusicSessionEngine {
   /// Figure courante — lue par l'UI (courbe de profondeur).
   BeatPattern? get currentPattern => _pattern;
 
+  /// Aperçu (lecture seule) des [count] prochains slots, pour l'anticipation
+  /// visuelle. Suppose la figure courante répétée — ne régénère pas (la phrase
+  /// suivante n'est pas encore connue). Vide tant qu'aucune figure n'existe.
+  List<({SlotActionKind kind, Position depth})> peek(int count) {
+    final p = _pattern;
+    if (p == null) return const [];
+    final out = <({SlotActionKind kind, Position depth})>[];
+    var depth = _lastDepth;
+    for (var i = 1; i <= count; i++) {
+      final slot = p.slots[(_cursor + i) % p.slots.length];
+      switch (slot.onset) {
+        case SlotOnset.strike:
+          depth = slot.to!;
+          out.add((kind: SlotActionKind.strike, depth: depth));
+        case SlotOnset.hold:
+          out.add((kind: SlotActionKind.hold, depth: depth));
+        case SlotOnset.release:
+          out.add((kind: SlotActionKind.release, depth: p.anchor));
+      }
+    }
+    return out;
+  }
+
   /// Branche le moteur sur une horloge : chaque battement produit (ou non) une
   /// action poussée dans [actions].
   void attach(BeatClock clock) {

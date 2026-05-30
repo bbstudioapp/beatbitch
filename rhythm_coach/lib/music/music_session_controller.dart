@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../models/session_step.dart' show Position;
 import '../services/beep_engine.dart';
 import '../services/capability_service.dart';
 import 'music_pattern_generator.dart';
@@ -29,6 +30,10 @@ class MusicSessionController extends ChangeNotifier {
 
   /// Dernière action émise — cible courante du curseur de profondeur.
   SlotAction? get lastAction => recent.isEmpty ? null : recent.last;
+
+  /// Slots à venir (anticipation visuelle).
+  List<({SlotActionKind kind, Position depth})> upcoming(int count) =>
+      _engine.peek(count);
 
   MusicSessionController({required this.beep, CapabilityProfile? profile}) {
     _engine = MusicSessionEngine(

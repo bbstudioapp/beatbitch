@@ -685,12 +685,19 @@ class BeepEngine {
   /// (`AndroidAudioFocus.none`), iOS ajoute `mixWithOthers`. Faux = retour au
   /// comportement par défaut (focus exclusif).
   Future<void> setMixWithOthers(bool mix) async {
-    final config = AudioContextConfig(
+    final ctx = AudioContextConfig(
       focus: mix
           ? AudioContextConfigFocus.mixWithOthers
           : AudioContextConfigFocus.gain,
-    );
-    await AudioPlayer.global.setAudioContext(config.build());
+    ).build();
+    // Le contexte global ne suffit pas : chaque player déjà créé garde le sien
+    // (focus exclusif par défaut) et couperait le son en cours à la 1ʳᵉ lecture.
+    // On le pose donc aussi sur tous les players du pool.
+    await AudioPlayer.global.setAudioContext(ctx);
+    await Future.wait([
+      for (final pool in _pools.values)
+        for (final p in pool.players) p.setAudioContext(ctx),
+    ]);
   }
 
   void playPositionOnce(Position p) {
