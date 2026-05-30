@@ -4,6 +4,7 @@ import '../career/models/custom_session_config.dart';
 import '../career/models/session_length_choice.dart';
 import '../career/models/specialization.dart';
 import '../models/badge.dart';
+import '../models/posture.dart';
 import '../models/session.dart';
 import '../models/session_step.dart';
 import '../services/capability_axis.dart';
@@ -38,6 +39,22 @@ extension PositionL10n on Position {
       Position.throat => t.positionThroat,
       Position.full => t.positionFull,
       Position.balls => t.positionBalls,
+    };
+  }
+}
+
+extension PostureL10n on Posture {
+  /// Libellé court de la posture imposée (issue #77), pour l'indicateur de
+  /// posture en séance. [Posture.free] = « libre » (aucune contrainte).
+  String localizedLabel(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return switch (this) {
+      Posture.free => t.postureFree,
+      Posture.sitting => t.postureSitting,
+      Posture.standing => t.postureStanding,
+      Posture.kneeling => t.postureKneeling,
+      Posture.allFours => t.postureAllFours,
+      Posture.onBack => t.postureOnBack,
     };
   }
 }
