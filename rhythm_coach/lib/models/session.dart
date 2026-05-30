@@ -1,5 +1,6 @@
 import '../career/models/challenge.dart';
 import 'final_category.dart';
+import 'posture.dart';
 import 'session_step.dart';
 
 /// Mode global de la session. Peut être surchargé par étape.
@@ -169,6 +170,17 @@ class Session {
   int? get challengeTriggerTime =>
       challengeTriggerTimes.isEmpty ? null : challengeTriggerTimes.first;
 
+  /// Posture imposée au démarrage de la session (annoncée à l'intro). Défaut
+  /// [Posture.free] (« confort, au choix ») = aucune contrainte. Transient :
+  /// non sérialisé (généré par le générateur de carrière). Cf. spec locale
+  /// `specs/scripted_breaks.md`.
+  final Posture initialPose;
+
+  /// Breaks scénarisés (pauses actives) insérés sur les sessions longues.
+  /// Liste ordonnée par temps d'entrée ; vide = aucun break (cas par défaut,
+  /// sessions courtes / hors carrière). Transient comme [challenges].
+  final List<ScriptedBreak> breaks;
+
   const Session({
     required this.id,
     required this.name,
@@ -193,6 +205,8 @@ class Session {
     this.noStats = false,
     this.challenges = const [],
     this.challengeTriggerTimes = const [],
+    this.initialPose = Posture.free,
+    this.breaks = const [],
   });
 
   Duration get duration => Duration(seconds: durationSeconds);
