@@ -102,7 +102,17 @@ enum UnlockKey {
   // et `suckleBalls` (zone humil pure, level 10-11, gating anatomy en
   // plus côté MilestoneService).
   suckleHead,
-  suckleBalls;
+  suckleBalls,
+  // Postures physiques imposées (mise en scène, issue #77). Chacune est
+  // débloquée par sa milestone d'introduction dédiée (`intro_posture_*`) et
+  // consommée par le générateur via `availablePostures(unlockedKeys)`
+  // (`posture_unlock.dart`) pour tirer la posture d'intro / de break.
+  // `Posture.free` (« confort, au choix ») n'a pas de clé — toujours dispo.
+  postureSitting,
+  postureStanding,
+  postureKneeling,
+  postureAllFours,
+  postureOnBack;
 
   String get serialized => switch (this) {
         UnlockKey.basics => 'basics',
@@ -139,6 +149,11 @@ enum UnlockKey {
         UnlockKey.begBalls => 'beg_balls',
         UnlockKey.suckleHead => 'suckle_head',
         UnlockKey.suckleBalls => 'suckle_balls',
+        UnlockKey.postureSitting => 'posture_sitting',
+        UnlockKey.postureStanding => 'posture_standing',
+        UnlockKey.postureKneeling => 'posture_kneeling',
+        UnlockKey.postureAllFours => 'posture_all_fours',
+        UnlockKey.postureOnBack => 'posture_on_back',
       };
 
   static UnlockKey? fromString(String? raw) {

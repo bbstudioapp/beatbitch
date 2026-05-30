@@ -365,6 +365,287 @@
       ]
     },
     {
+      "id": "intro_posture_sitting",
+      "displayLabel": "Assieds-toi et ouvre-toi",
+      "level": 4,
+      "branches": ["obeissance"],
+      "requires": ["basics"],
+      "unlocks": ["posture_sitting"],
+      "sequence": [
+        {
+          "time": 0,
+          "text": "Aujourd'hui tu obéis à une consigne de position. Assieds-toi bien droite, écarte les genoux, et présente-toi.",
+          "mode": "breath",
+          "duration": 8
+        },
+        {
+          "time": 8,
+          "text": "Dans cette position, tu me prends en bouche. Commence doucement.",
+          "mode": "rhythm",
+          "from": "tip",
+          "to": "head",
+          "bpm": 80,
+          "duration": 16
+        },
+        {
+          "time": 24,
+          "text": "Reste assise, dos droit. Continue.",
+          "mode": "lick",
+          "from": "tip",
+          "to": "head",
+          "bpm": 70,
+          "duration": 16
+        },
+        {
+          "time": 40,
+          "text": "Souffle. Garde la position.",
+          "mode": "breath",
+          "duration": 6
+        },
+        {
+          "time": 46,
+          "text": "Encore. Tu restes assise, offerte, et tu bosses.",
+          "mode": "rhythm",
+          "from": "head",
+          "to": "mid",
+          "bpm": 85,
+          "duration": 18
+        },
+        {
+          "time": 64,
+          "text": "Bien. Voilà ta position assise. Tu la connais maintenant.",
+          "mode": "breath",
+          "duration": 8
+        }
+      ]
+    },
+    {
+      "id": "intro_posture_standing",
+      "displayLabel": "Debout, à hauteur",
+      "level": 5,
+      "branches": ["obeissance"],
+      "requires": ["basics"],
+      "unlocks": ["posture_standing"],
+      "sequence": [
+        {
+          "time": 0,
+          "text": "Cette fois tu te mets debout. Jambes écartées, bien stable. Tu vas travailler dans cette position.",
+          "mode": "breath",
+          "duration": 8
+        },
+        {
+          "time": 8,
+          "text": "Debout, tu te penches et tu me prends. Vas-y.",
+          "mode": "rhythm",
+          "from": "tip",
+          "to": "head",
+          "bpm": 85,
+          "duration": 16
+        },
+        {
+          "time": 24,
+          "text": "Reste debout, ne fléchis pas. Continue.",
+          "mode": "rhythm",
+          "from": "head",
+          "to": "mid",
+          "bpm": 90,
+          "duration": 16
+        },
+        {
+          "time": 40,
+          "text": "Souffle. Tu tiens debout.",
+          "mode": "breath",
+          "duration": 6
+        },
+        {
+          "time": 46,
+          "text": "Encore. Jambes stables, et tu donnes tout.",
+          "mode": "lick",
+          "from": "head",
+          "to": "mid",
+          "bpm": 75,
+          "duration": 18
+        },
+        {
+          "time": 64,
+          "text": "Bien. Position debout acquise.",
+          "mode": "breath",
+          "duration": 8
+        }
+      ]
+    },
+    {
+      "id": "intro_posture_kneeling",
+      "displayLabel": "À genoux",
+      "level": 6,
+      "branches": ["obeissance"],
+      "requires": ["basics"],
+      "unlocks": ["posture_kneeling"],
+      "sequence": [
+        {
+          "time": 0,
+          "text": "Mets-toi à genoux. C'est ta place. Genoux au sol, dos droit, bouche prête.",
+          "mode": "breath",
+          "duration": 8
+        },
+        {
+          "time": 8,
+          "text": "À genoux devant moi, tu me prends. Lève les yeux.",
+          "mode": "rhythm",
+          "from": "tip",
+          "to": "mid",
+          "bpm": 90,
+          "duration": 16
+        },
+        {
+          "time": 24,
+          "text": "Reste à genoux. Ne bouge pas de là. Continue.",
+          "mode": "rhythm",
+          "from": "head",
+          "to": "mid",
+          "bpm": 95,
+          "duration": 16
+        },
+        {
+          "time": 40,
+          "text": "Souffle. Toujours à genoux.",
+          "mode": "breath",
+          "duration": 6
+        },
+        {
+          "time": 46,
+          "text": "Encore. Genoux au sol, tu me sers.",
+          "mode": "rhythm",
+          "from": "head",
+          "to": "mid",
+          "bpm": 100,
+          "duration": 18
+        },
+        {
+          "time": 64,
+          "text": "Bien. À genoux, c'est là que tu es le mieux. Tu le sais maintenant.",
+          "mode": "breath",
+          "duration": 8
+        }
+      ]
+    },
+    {
+      "id": "intro_posture_all_fours",
+      "displayLabel": "À quatre pattes",
+      "level": 9,
+      "branches": ["obeissance", "sloppy"],
+      "requires": ["basics"],
+      "unlocks": ["posture_all_fours"],
+      "sequence": [
+        {
+          "time": 0,
+          "text": "À quatre pattes. Maintenant. Mains et genoux au sol, croupe relevée, tête baissée.",
+          "mode": "breath",
+          "duration": 8
+        },
+        {
+          "time": 8,
+          "text": "Dans cette position, tu avances la bouche et tu me prends. Vas-y.",
+          "mode": "rhythm",
+          "from": "head",
+          "to": "mid",
+          "bpm": 95,
+          "duration": 16
+        },
+        {
+          "time": 24,
+          "text": "Reste à quatre pattes. Ne te relève pas. Plus profond.",
+          "mode": "rhythm",
+          "from": "head",
+          "to": "throat",
+          "bpm": 100,
+          "duration": 16
+        },
+        {
+          "time": 40,
+          "text": "Souffle. Garde la position à quatre pattes.",
+          "mode": "breath",
+          "duration": 6
+        },
+        {
+          "time": 46,
+          "text": "Encore. Croupe haute, et tu bosses comme la chienne que tu es.",
+          "mode": "rhythm",
+          "from": "head",
+          "to": "throat",
+          "bpm": 105,
+          "duration": 18
+        },
+        {
+          "time": 64,
+          "text": "Bien. À quatre pattes, soumise. Voilà ta position.",
+          "mode": "breath",
+          "duration": 8
+        }
+      ]
+    },
+    {
+      "id": "intro_posture_on_back",
+      "displayLabel": "Sur le dos, gorge offerte",
+      "level": 12,
+      "branches": ["obeissance", "profondeur"],
+      "requires": ["full_hold"],
+      "unlocks": ["posture_on_back"],
+      "requiresCapability": [{ "axis": "hold.full.streak", "min": 5 }],
+      "sequence": [
+        {
+          "time": 0,
+          "text": "Allonge-toi sur le dos. Tête en arrière, dans le vide. Ta gorge est alignée — tu vas tout prendre.",
+          "mode": "breath",
+          "duration": 8
+        },
+        {
+          "time": 8,
+          "text": "Sur le dos, gorge ouverte, tu me laisses entrer. Doucement.",
+          "mode": "rhythm",
+          "from": "mid",
+          "to": "throat",
+          "bpm": 90,
+          "duration": 16
+        },
+        {
+          "time": 24,
+          "text": "Reste sur le dos. Ne relève pas la tête. Plus loin.",
+          "mode": "hold",
+          "from": "full",
+          "duration": 10
+        },
+        {
+          "time": 34,
+          "text": "Tiens. Ta gorge est faite pour ça dans cette position.",
+          "mode": "hold",
+          "from": "full",
+          "duration": 12
+        },
+        {
+          "time": 46,
+          "text": "Souffle. Reste allongée.",
+          "mode": "breath",
+          "duration": 8
+        },
+        {
+          "time": 54,
+          "text": "Encore. Sur le dos, gorge grande ouverte, tu me prends jusqu'au fond.",
+          "mode": "rhythm",
+          "from": "throat",
+          "to": "full",
+          "bpm": 95,
+          "duration": 16
+        },
+        {
+          "time": 70,
+          "text": "Bien. Sur le dos, tu n'es plus qu'une gorge. Tu connais cette position maintenant.",
+          "mode": "breath",
+          "duration": 8
+        }
+      ]
+    },
+    {
       "id": "intro_final_hold_tip",
       "displayLabel": "Apothéose — sauce sur la langue",
       "placement": "final",
