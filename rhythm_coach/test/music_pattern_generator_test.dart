@@ -168,50 +168,59 @@ void main() {
       expect(p.bpm, 150); // aucun plafond BPM en debug
     });
 
-    test(
-        'grammaire valide : jamais 2 plongées sans ancre, ancre encadrant les holds',
-        () {
+    test('grammaire valide : ancre unique 1/2, plongées impaires', () {
       final gen = MusicPatternGenerator(rng: Random(11), ignoreGating: true);
       for (var ph = 0; ph < 12; ph++) {
-        final p = gen.next(musicBpm: 120, phraseIndex: ph);
-        final s = p.slots;
-        for (var i = 0; i < s.length; i++) {
-          final prev = s[(i - 1 + s.length) % s.length].onset; // cyclique
-          // Toute frappe est précédée d'une ancre (release) : pas 2 plongées
-          // d'affilée, pas de frappe juste après un hold.
-          if (s[i].onset == SlotOnset.strike) {
-            expect(prev, SlotOnset.release,
-                reason:
-                    'frappe non précédée d\'une ancre (phrase $ph, slot $i)');
-          }
-          // Un hold ne suit qu'une frappe ou un hold (jamais une ancre).
-          if (s[i].onset == SlotOnset.hold) {
-            expect(prev == SlotOnset.strike || prev == SlotOnset.hold, isTrue,
-                reason: 'hold précédé d\'une ancre (phrase $ph, slot $i)');
-          }
-        }
+        _expectValidGrammar(
+          gen
+              .next(musicBpm: 120, phraseIndex: ph)
+              .slots
+              .map((s) => s.onset)
+              .toList(),
+        );
       }
     });
   });
 
   group('OnsetFigure.expand', () {
-    test('toute la banque est grammaticalement valide', () {
+    test('toute la banque est grammaticalement valide (plongées impaires)', () {
       for (final f in onsetFigureBank) {
-        final s = f.expand();
-        expect(s.contains(SlotOnset.strike), isTrue,
-            reason: '${f.id} sans frappe');
-        for (var i = 0; i < s.length; i++) {
-          final prev = s[(i - 1 + s.length) % s.length];
-          if (s[i] == SlotOnset.strike) {
-            expect(prev, SlotOnset.release,
-                reason: '${f.id} : frappe sans ancre');
-          }
-          if (s[i] == SlotOnset.hold) {
-            expect(prev == SlotOnset.strike || prev == SlotOnset.hold, isTrue,
-                reason: '${f.id} : hold mal placé');
-          }
-        }
+        expect(f.plunges.every((d) => d.isOdd && d >= 1), isTrue,
+            reason: '${f.id} : plongée paire');
+        _expectValidGrammar(f.expand(), label: f.id);
       }
     });
   });
+}
+
+/// Vérifie la grammaire : toute frappe précédée d'une ancre, toute ancre suivie
+/// d'une frappe (ancre unique = « 1 fois sur 2 »), hold seulement après
+/// frappe/hold, et longueur de plongée impaire (nb de holds pair).
+void _expectValidGrammar(List<SlotOnset> s, {String label = ''}) {
+  expect(s.contains(SlotOnset.strike), isTrue, reason: '$label sans frappe');
+  final n = s.length;
+  for (var i = 0; i < n; i++) {
+    final prev = s[(i - 1 + n) % n];
+    final next = s[(i + 1) % n];
+    if (s[i] == SlotOnset.strike) {
+      expect(prev, SlotOnset.release, reason: '$label frappe sans ancre ($i)');
+    }
+    if (s[i] == SlotOnset.release) {
+      expect(next, SlotOnset.strike, reason: '$label ancre non unique ($i)');
+    }
+    if (s[i] == SlotOnset.hold) {
+      expect(prev == SlotOnset.strike || prev == SlotOnset.hold, isTrue,
+          reason: '$label hold mal placé ($i)');
+    }
+  }
+  for (var i = 0; i < n; i++) {
+    if (s[i] != SlotOnset.strike) continue;
+    var len = 1;
+    var j = (i + 1) % n;
+    while (s[j] == SlotOnset.hold && j != i) {
+      len++;
+      j = (j + 1) % n;
+    }
+    expect(len.isOdd, isTrue, reason: '$label plongée paire à $i (len $len)');
+  }
 }

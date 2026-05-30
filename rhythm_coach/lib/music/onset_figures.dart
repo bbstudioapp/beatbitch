@@ -1,86 +1,49 @@
 import 'beat_pattern.dart';
 
 /// Banque **curée** de figures rythmiques (axe onset, cf. `specs/music_mode.md`
-/// §8). Une figure est une suite de **gestes** `(up, down)` qui garantit la
-/// grammaire du mouvement :
-/// - `up` ≥ 1 battements à l'**ancre** (le 1ᵉʳ = remontée, les suivants = repos
-///   en haut) ;
-/// - `down` ≥ 1 battements **en bas** (le 1ᵉʳ = la **frappe**, les suivants =
-///   des **holds**).
+/// §8).
 ///
-/// Conséquence garantie par construction : jamais deux plongées sans ancre
-/// entre elles, et toute plongée (frappe + holds) est encadrée par des ancres
-/// — une ancre avant la frappe et une ancre après le dernier hold.
+/// Modèle du mouvement : on alterne **ancre** (remontée, 1 battement) et
+/// **plongée** — « une ancre 1 fois sur 2 ». Une plongée fait `d` battements en
+/// bas (1ᵉʳ = la **frappe**, les suivants = des **holds**). `d` est **impair** :
+/// - `1` = simple frappe (ancre avant, ancre après),
+/// - `3, 5, 7…` = la plongée « saute » 1, 2, 3 ancres (chaque saut ajoute 2
+///   battements de hold). Une longueur paire casserait l'alternance ancre/frappe.
 class OnsetFigure {
   final String id;
 
-  /// Niveau de difficulté (densité / holds) — sert au gating par phrase.
+  /// Niveau de difficulté (densité / longueur des holds) — gating par phrase.
   final int level;
 
-  final List<({int up, int down})> gestures;
+  /// Longueurs des plongées successives (battements en bas), chacune **impaire**.
+  final List<int> plunges;
 
-  const OnsetFigure(this.id, this.level, this.gestures);
+  const OnsetFigure(this.id, this.level, this.plunges);
 
-  /// Déploie les gestes en suite de slots (toujours grammaticalement valide).
+  /// Déploie en slots : pour chaque plongée `d`, une ancre (release) puis la
+  /// frappe puis `d-1` holds (toujours pair → alternance préservée).
   List<SlotOnset> expand() => [
-        for (final g in gestures) ...[
-          for (var i = 0; i < g.up; i++) SlotOnset.release,
+        for (final d in plunges) ...[
+          SlotOnset.release,
           SlotOnset.strike,
-          for (var i = 1; i < g.down; i++) SlotOnset.hold,
+          for (var i = 1; i < d; i++) SlotOnset.hold,
         ],
       ];
 }
 
 /// Banque de départ (PR1). Petite et lisible — on l'étoffe au fil des retours.
+/// Toutes les plongées sont impaires (cf. [OnsetFigure]).
 const List<OnsetFigure> onsetFigureBank = [
-  // Niveau 1 — pompe régulière, une ancre entre chaque plongée.
-  OnsetFigure('steady', 1, [
-    (up: 1, down: 1),
-    (up: 1, down: 1),
-    (up: 1, down: 1),
-    (up: 1, down: 1),
-  ]),
-  OnsetFigure('breath', 1, [
-    (up: 2, down: 1),
-    (up: 1, down: 1),
-    (up: 2, down: 1),
-  ]),
-  OnsetFigure('hold_soft', 1, [
-    (up: 1, down: 2),
-    (up: 1, down: 1),
-    (up: 1, down: 2),
-  ]),
-  // Niveau 2 — respirations contrastées, holds courts.
-  OnsetFigure('swing', 2, [
-    (up: 2, down: 1),
-    (up: 1, down: 2),
-    (up: 1, down: 1),
-  ]),
-  OnsetFigure('hold_mid', 2, [
-    (up: 1, down: 3),
-    (up: 1, down: 1),
-    (up: 1, down: 2),
-  ]),
-  OnsetFigure('drive', 2, [
-    (up: 1, down: 1),
-    (up: 1, down: 1),
-    (up: 2, down: 2),
-  ]),
-  // Niveau 3 — holds longs / contrastes marqués.
-  OnsetFigure('deep_hold', 3, [
-    (up: 1, down: 4),
-    (up: 2, down: 1),
-    (up: 1, down: 2),
-  ]),
-  OnsetFigure('stutter', 3, [
-    (up: 1, down: 1),
-    (up: 1, down: 1),
-    (up: 1, down: 1),
-    (up: 1, down: 2),
-  ]),
-  OnsetFigure('build', 3, [
-    (up: 2, down: 1),
-    (up: 1, down: 2),
-    (up: 1, down: 3),
-  ]),
+  // Niveau 1 — pompe régulière, peu ou pas de holds.
+  OnsetFigure('steady', 1, [1, 1, 1, 1]),
+  OnsetFigure('steady_long', 1, [1, 1, 1, 1, 1, 1]),
+  OnsetFigure('one_hold', 1, [1, 1, 3, 1]),
+  // Niveau 2 — des holds courts (saut d'une ancre).
+  OnsetFigure('holds', 2, [3, 1, 3, 1]),
+  OnsetFigure('mixed', 2, [1, 3, 1, 1, 3]),
+  OnsetFigure('hold5', 2, [5, 1, 1]),
+  // Niveau 3 — holds longs (sauts multiples).
+  OnsetFigure('long_hold', 3, [1, 7, 1]),
+  OnsetFigure('deep', 3, [5, 1, 5, 1]),
+  OnsetFigure('climb', 3, [1, 3, 5, 1]),
 ];
