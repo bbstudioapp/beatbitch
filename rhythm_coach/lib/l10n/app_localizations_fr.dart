@@ -1965,6 +1965,21 @@ class AppLocalizationsFr extends AppLocalizations {
   String get musicDebugTooltip => 'Debug : ignorer le gating';
 
   @override
+  String get musicSourceTap => 'Taper';
+
+  @override
+  String get musicSourceMic => 'Micro';
+
+  @override
+  String get musicListening => 'J\'écoute la musique…';
+
+  @override
+  String get musicMicHint => 'Lance ta musique, puis démarre l\'écoute.';
+
+  @override
+  String get musicMicDenied => 'Permission micro refusée.';
+
+  @override
   String get customAppBarTitle => 'Sessions custom';
 
   @override

@@ -1955,6 +1955,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get musicDebugTooltip => 'Debug: ignore gating';
 
   @override
+  String get musicSourceTap => 'Tap';
+
+  @override
+  String get musicSourceMic => 'Mic';
+
+  @override
+  String get musicListening => 'Listening to the music…';
+
+  @override
+  String get musicMicHint => 'Start your music, then start listening.';
+
+  @override
+  String get musicMicDenied => 'Microphone permission denied.';
+
+  @override
   String get customAppBarTitle => 'Custom sessions';
 
   @override

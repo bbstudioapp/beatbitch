@@ -3474,6 +3474,36 @@ abstract class AppLocalizations {
   /// **'Debug : ignorer le gating'**
   String get musicDebugTooltip;
 
+  /// No description provided for @musicSourceTap.
+  ///
+  /// In fr, this message translates to:
+  /// **'Taper'**
+  String get musicSourceTap;
+
+  /// No description provided for @musicSourceMic.
+  ///
+  /// In fr, this message translates to:
+  /// **'Micro'**
+  String get musicSourceMic;
+
+  /// No description provided for @musicListening.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'écoute la musique…'**
+  String get musicListening;
+
+  /// No description provided for @musicMicHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lance ta musique, puis démarre l\'écoute.'**
+  String get musicMicHint;
+
+  /// No description provided for @musicMicDenied.
+  ///
+  /// In fr, this message translates to:
+  /// **'Permission micro refusée.'**
+  String get musicMicDenied;
+
   /// No description provided for @customAppBarTitle.
   ///
   /// In fr, this message translates to:

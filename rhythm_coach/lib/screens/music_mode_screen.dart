@@ -23,6 +23,8 @@ class _MusicModeScreenState extends State<MusicModeScreen> {
   MusicSessionController? _controller;
   CapabilityProfile? _profile;
   bool _debug = false;
+  bool _useMic = false;
+  bool _started = false; // micro : capture lancée (écoute/lecture)
 
   @override
   void initState() {
@@ -46,16 +48,46 @@ class _MusicModeScreenState extends State<MusicModeScreen> {
         beep: widget.beep,
         profile: _profile,
         ignoreGating: _debug,
+        useMic: _useMic,
       );
 
-  /// Bascule le mode debug (ignore le gating) — recrée le contrôleur, il faut
-  /// retaper le tempo.
-  void _toggleDebug() {
+  void _rebuild() {
+    _controller?.dispose();
+    _controller = _make();
+    _started = false;
+  }
+
+  /// Bascule le mode debug (ignore le gating) — recrée le contrôleur.
+  void _toggleDebug() => setState(() {
+        _debug = !_debug;
+        _rebuild();
+      });
+
+  /// Bascule source tap ↔ micro — recrée le contrôleur.
+  void _setMic(bool mic) {
+    if (mic == _useMic) return;
     setState(() {
-      _debug = !_debug;
-      _controller?.dispose();
-      _controller = _make();
+      _useMic = mic;
+      _rebuild();
     });
+  }
+
+  /// Démarre (tap : nécessite un tempo ; micro : lance l'écoute + permission).
+  Future<void> _onStart(MusicSessionController c) async {
+    final ok = await c.start();
+    if (!mounted) return;
+    if (_useMic && !ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).musicMicDenied)),
+      );
+      return;
+    }
+    setState(() => _started = true);
+  }
+
+  void _onStop(MusicSessionController c) {
+    c.stop();
+    setState(() => _started = false);
   }
 
   @override
@@ -98,12 +130,32 @@ class _MusicModeScreenState extends State<MusicModeScreen> {
 
   Widget _body(AppLocalizations t, MusicSessionController c) {
     final bpm = c.bpm;
+    final locked = _started || c.isRunning;
+    final running = _useMic ? _started : c.isRunning;
+    final canStart = _useMic || c.hasTempo;
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
+          SegmentedButton<bool>(
+            segments: [
+              ButtonSegment(
+                value: false,
+                label: Text(t.musicSourceTap),
+                icon: const Icon(Icons.touch_app_outlined),
+              ),
+              ButtonSegment(
+                value: true,
+                label: Text(t.musicSourceMic),
+                icon: const Icon(Icons.mic_none_outlined),
+              ),
+            ],
+            selected: {_useMic},
+            onSelectionChanged: locked ? null : (s) => _setMic(s.first),
+          ),
+          const SizedBox(height: 12),
           Text(
-            t.musicTapPrompt,
+            _useMic ? t.musicMicHint : t.musicTapPrompt,
             style: const TextStyle(color: AppTheme.textSecondary),
             textAlign: TextAlign.center,
           ),
@@ -117,40 +169,9 @@ class _MusicModeScreenState extends State<MusicModeScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          Expanded(
-            child: GestureDetector(
-              onTap: c.isRunning ? null : c.tap,
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: AppTheme.surface,
-                  borderRadius: BorderRadius.circular(16),
-                  border:
-                      Border.all(color: AppTheme.accent.withValues(alpha: 0.4)),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: c.isRunning && c.currentPattern != null
-                    ? _PatternView(
-                        pattern: c.currentPattern!,
-                        cursor: c.currentSlot,
-                        slotInterval:
-                            c.slotInterval ?? const Duration(milliseconds: 400),
-                      )
-                    : Center(
-                        child: Text(
-                          t.musicTapAction,
-                          style: const TextStyle(
-                            color: AppTheme.textMuted,
-                            fontSize: 22,
-                            letterSpacing: 2,
-                          ),
-                        ),
-                      ),
-              ),
-            ),
-          ),
+          Expanded(child: _box(t, c)),
           const SizedBox(height: 16),
-          if (!c.isStable && !c.isRunning)
+          if (!_useMic && !c.isStable && !c.isRunning)
             Text(
               t.musicWaitingTempo,
               style: const TextStyle(color: AppTheme.textMuted),
@@ -159,13 +180,72 @@ class _MusicModeScreenState extends State<MusicModeScreen> {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: !c.hasTempo ? null : (c.isRunning ? c.stop : c.start),
-              child: Text(c.isRunning ? t.musicStop : t.musicStart),
+              onPressed: !canStart
+                  ? null
+                  : (running ? () => _onStop(c) : () => _onStart(c)),
+              child: Text(running ? t.musicStop : t.musicStart),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _box(AppLocalizations t, MusicSessionController c) {
+    final Widget content;
+    if (c.isRunning && c.currentPattern != null) {
+      content = _PatternView(
+        pattern: c.currentPattern!,
+        cursor: c.currentSlot,
+        slotInterval: c.slotInterval ?? const Duration(milliseconds: 400),
+      );
+    } else if (_useMic && _started) {
+      // Intro micro : on écoute jusqu'au verrou du tempo.
+      content = Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.graphic_eq, color: AppTheme.accent, size: 40),
+          const SizedBox(height: 12),
+          Text(t.musicListening,
+              style: const TextStyle(color: AppTheme.textSecondary)),
+          const SizedBox(height: 16),
+          const SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ],
+      );
+    } else if (_useMic) {
+      content = const Icon(Icons.mic_none_outlined,
+          color: AppTheme.textMuted, size: 48);
+    } else {
+      content = Text(
+        t.musicTapAction,
+        style: const TextStyle(
+          color: AppTheme.textMuted,
+          fontSize: 22,
+          letterSpacing: 2,
+        ),
+      );
+    }
+
+    final box = Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.accent.withValues(alpha: 0.4)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Center(child: content),
+    );
+
+    // Mode tap, pas encore lancé : taper dans le cadre pose le tempo.
+    if (!_useMic && !c.isRunning) {
+      return GestureDetector(onTap: c.tap, child: box);
+    }
+    return box;
   }
 }
 
