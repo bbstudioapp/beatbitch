@@ -1092,7 +1092,10 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                   if (_showTimer)
                     TimerDisplay(
                         elapsed: ctrl.elapsed, total: ctrl.session.duration)
-                  else if (ctrl.hasConfig)
+                  // Pendant un break (issue #77), on fige l'animation : l'orbe
+                  // en mouvement = effort, ce qui contredirait la bannière
+                  // PAUSE. Slot de même hauteur → pas de saut de layout.
+                  else if (ctrl.hasConfig && !ctrl.breakActive)
                     MovementAnimation(
                       mode: ctrl.currentMode,
                       from: ctrl.currentFrom,
