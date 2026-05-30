@@ -11,8 +11,10 @@ import '../../../services/capability_axis.dart';
 import '../../../services/capability_service.dart';
 import '../../models/career_generation_inputs.dart';
 import '../../models/challenge.dart';
+import '../../../models/posture.dart';
 import '../../models/level_milestone.dart';
 import '../../models/phrase_bank.dart';
+import '../../models/posture_unlock.dart';
 import '../../models/session_length_choice.dart';
 import '../../models/specialization.dart';
 import '../../models/unlock_key.dart';
@@ -521,6 +523,13 @@ class CareerSessionGenerator {
     /// Quand un défi est passé, un step breath de countdown + un step défi
     /// sont insérés vers 60 % du temps planifié (cf. spec § 4.3).
     ChallengeInputs challenge = ChallengeInputs.none,
+
+    /// Active les postures imposées + breaks scénarisés (issue #77, flag
+    /// debug `debug.scripted_breaks`). `false` = posture `free`, aucun
+    /// break (comportement historique). En PR3 seule la posture initiale
+    /// est tirée ; l'insertion des breaks suit. Cf. spec
+    /// `specs/scripted_breaks.md`.
+    bool scriptedBreaks = false,
   }) {
     // Invariants `milestones` : on ne peut pas les déplacer dans le
     // constructeur de `MilestonePlan` car `.placement` n'est pas
@@ -577,8 +586,10 @@ class CareerSessionGenerator {
       lengthChoice: lengthChoice,
       intense: intense,
       encoreChainIndex: encoreChainIndex,
+      scriptedBreaks: scriptedBreaks,
     );
     _initScratchpad(unlockedKeys: unlockedKeys, clearPatternBuffer: true);
+    _initialPose = _pickInitialPose(unlockedKeys);
     // Mode "Session bâclée" : 6 min par défaut, intense tout du long. Floor
     // d'intensité appliqué au tirage de difficulté + on saute l'intro douce
     // et la pré-finition. Une durée explicite reste prioritaire (cas de la
@@ -1473,6 +1484,23 @@ class CareerSessionGenerator {
     ctx.stamina = s;
   }
 
+  /// Posture imposée au démarrage de la séance courante. Tirée en début de
+  /// `generate()` (où `unlockedKeys` est typé `Set<UnlockKey>`) et lue par
+  /// `_assembleResult`. `free` tant que le flag debug `scriptedBreaks` est
+  /// off.
+  Posture _initialPose = Posture.free;
+
+  /// Tire la posture imposée au démarrage (issue #77). [Posture.free] tant
+  /// que le flag debug `scriptedBreaks` est off ; sinon tirage uniforme
+  /// parmi les postures débloquées (`free` incluse dans le pool). Bas niveau
+  /// / rien de débloqué ⇒ `free` de toute façon. Déterministe sous seed via
+  /// `_rng`.
+  Posture _pickInitialPose(Set<UnlockKey> unlockedKeys) {
+    if (!_config.scriptedBreaks) return Posture.free;
+    final available = availablePostures(unlockedKeys);
+    return available[_rng.nextInt(available.length)];
+  }
+
   /// Construit le [CareerGenerationResult] final à partir des accumulateurs
   /// `ctx.steps` / `ctx.profile` et du curseur `time`. Tronque le profil à la
   /// durée effective (= `time + 2`), assemble la [Session] avec toutes ses
@@ -1534,6 +1562,7 @@ class CareerSessionGenerator {
         noStats: ctx.noStats,
         challenges: challenges,
         challengeTriggerTimes: challengeTriggerTimes,
+        initialPose: _initialPose,
       ),
       staminaProfile: trimmedProfile,
       overloadAxis: _config.overloadAxis,
