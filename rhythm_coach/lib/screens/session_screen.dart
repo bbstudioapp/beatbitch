@@ -651,6 +651,10 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
   void _handleChallengePointerDown(PointerDownEvent e) {
     final ctrl = context.read<SessionController>();
     if (!ctrl.isChallengeActive) return;
+    // Mode tap : l'input passe par les boutons GO/STOP explicites, pas par la
+    // présence du doigt. On ignore la capture globale pour ne pas qu'un tap
+    // n'importe où démarre/arrête le défi.
+    if (!ctrl.challengeUsesHoldInput) return;
     _challengeActivePointers.add(e.pointer);
     // En `breath`, seul le bouton MAINTIENS (via son propre Listener) doit
     // démarrer le countdown. Un tap n'importe où sur l'écran n'arme rien.
@@ -674,6 +678,9 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     }
     final ctrl = context.read<SessionController>();
     if (!ctrl.isChallengeActive) return KeyEventResult.ignored;
+    // Mode tap : pas de geste « doigt présent » au clavier non plus (les
+    // boutons GO/STOP se cliquent à la souris sur desktop).
+    if (!ctrl.challengeUsesHoldInput) return KeyEventResult.ignored;
     if (e is KeyDownEvent) {
       if (_challengeActivePointers.add(_challengeKeyboardPointerId)) {
         // Sur desktop, espace équivaut à un doigt sur l'écran — y compris
@@ -1517,8 +1524,13 @@ class _ChallengeButtons extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final phase = controller.challengePhase;
+    final isTap =
+        controller.activeChallenge?.inputMode == ChallengeInputMode.tapToggle;
     if (phase == ChallengePhase.breath) {
-      // PASSE (tap) à gauche, MAINTIENS (hold-to-start) à droite.
+      // PASSE (tap) à gauche, démarrage à droite : hold-to-start (`MAINTIENS`)
+      // en mode hold, tap simple (`DÉMARRE`) en mode tap. Les deux passent par
+      // `onChallengeHoldStart` (= entrée en countdown) ; en mode tap on ne
+      // recâble jamais `onChallengeHoldEnd` derrière.
       return Row(
         children: [
           Expanded(
@@ -1531,15 +1543,52 @@ class _ChallengeButtons extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             flex: 2,
-            child: _holdButton(
-              color: _goColor,
-              label: t.challengeGoButton,
-              onHoldStart: controller.onChallengeHoldStart,
-              onHoldEnd: controller.onChallengeHoldEnd,
-            ),
+            child: isTap
+                ? _tapButton(
+                    color: _goColor,
+                    label: t.challengeTapGoButton,
+                    onTap: controller.onChallengeHoldStart,
+                  )
+                : _holdButton(
+                    color: _goColor,
+                    label: t.challengeGoButton,
+                    onHoldStart: controller.onChallengeHoldStart,
+                    onHoldEnd: controller.onChallengeHoldEnd,
+                  ),
           ),
         ],
       );
+    }
+    // Mode tap : bouton STOP plein largeur. Désactivé pendant le countdown
+    // (le défi démarre seul), rouge « abandon » en `live`, vert « valider » au
+    // seuil. L'extension bonus est implicite : ne pas taper = continuer (les
+    // extensions s'accumulent comme en tenant plus longtemps en mode hold).
+    if (isTap) {
+      if (phase == ChallengePhase.countdown) {
+        return _tapButton(
+          color: _passColor,
+          label: t.challengeTapCountdownHint,
+          onTap: null,
+        );
+      }
+      if (phase == ChallengePhase.live) {
+        return _tapButton(
+          color: _toleranceColor,
+          label: t.challengeTapStopLive,
+          onTap: controller.onChallengeTapStop,
+        );
+      }
+      if (phase == ChallengePhase.atSeuil) {
+        return AnimatedBuilder(
+          animation: controller,
+          builder: (context, _) => _tapButton(
+            color: _atSeuilColor,
+            label: t.challengeTapStopAtSeuil,
+            onTap: controller.onChallengeTapStop,
+          ),
+        );
+      }
+      return const SizedBox.shrink();
     }
     if (phase == ChallengePhase.countdown || phase == ChallengePhase.live) {
       // Un seul bouton plein-largeur. La couleur de fond suit la

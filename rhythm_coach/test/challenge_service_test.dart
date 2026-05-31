@@ -236,6 +236,42 @@ void main() {
     );
 
     test(
+      'axes franchissement gorge : from/to non-null (régression défi infini)',
+      () async {
+        // Régression : `_toOf`/`_fromOf` n'avaient pas de cas pour
+        // gorgeCrossingsBpm{Throat,Full} → `ch.to == null` → le compteur
+        // `_challengeCrossingsCount` (incrémenté sur `e.to == ch.to`) restait
+        // figé à 0 → le défi ne basculait jamais en `atSeuil` → boucle infinie.
+        final throatCh = await ChallengeService().buildForSession(
+          profile:
+              _profileWithComfort(CapabilityAxis.gorgeCrossingsBpmThroat, 100),
+          ceilings: const {},
+          excludeAxes: const {CapabilityAxis.rhythmDepthMax},
+          rng: Random(0),
+          isTutorial: false,
+        );
+        expect(throatCh?.axis, CapabilityAxis.gorgeCrossingsBpmThroat);
+        expect(throatCh?.to, Position.throat,
+            reason: 'to non-null sinon le compteur de franchissements fige');
+        expect(throatCh?.from, isNotNull);
+        expect(throatCh?.targetCrossings, isNotNull);
+
+        final fullCh = await ChallengeService().buildForSession(
+          profile:
+              _profileWithComfort(CapabilityAxis.gorgeCrossingsBpmFull, 100),
+          ceilings: const {},
+          excludeAxes: const {CapabilityAxis.rhythmDepthMax},
+          rng: Random(0),
+          isTutorial: false,
+        );
+        expect(fullCh?.axis, CapabilityAxis.gorgeCrossingsBpmFull);
+        expect(fullCh?.to, Position.full);
+        expect(fullCh?.from, isNotNull);
+        expect(fullCh?.targetCrossings, isNotNull);
+      },
+    );
+
+    test(
       'tutoriel : targetCrossings null (le tuto est hold, pas franchissement)',
       () async {
         final svc = ChallengeService();
@@ -334,14 +370,23 @@ void main() {
       expect(group, isEmpty);
     });
 
-    test('axesSharingVisualSignature : axes rhythm distincts', () {
-      // rhythmBpmCeilThroat = (rhythm, head→throat) : sa signature ne
-      // matche pas rhythmBpmCeilFull = (rhythm, mid→full) ni shallow.
-      expect(
-        ChallengeService.axesSharingVisualSignature(
-            CapabilityAxis.rhythmBpmCeilThroat),
-        isEmpty,
-      );
+    test('axesSharingVisualSignature : axes rhythm franchissement appariés',
+        () {
+      // rhythmBpmCeilThroat = (rhythm, head→throat, bpm) partage sa signature
+      // avec gorgeCrossingsBpmThroat (même mode/from/to/kind) — les deux sont
+      // des défis franchissement gorge identiques à l'œil ; les dédupliquer
+      // ensemble évite d'enchaîner deux défis perçus comme le même. En
+      // revanche pas de collision avec full (mid→full) ni shallow (head→mid).
+      final throatGroup = ChallengeService.axesSharingVisualSignature(
+          CapabilityAxis.rhythmBpmCeilThroat);
+      expect(throatGroup, contains(CapabilityAxis.gorgeCrossingsBpmThroat));
+      expect(throatGroup, isNot(contains(CapabilityAxis.rhythmBpmCeilFull)));
+      expect(throatGroup, isNot(contains(CapabilityAxis.rhythmBpmCeilShallow)));
+
+      final fullGroup = ChallengeService.axesSharingVisualSignature(
+          CapabilityAxis.rhythmBpmCeilFull);
+      expect(fullGroup, contains(CapabilityAxis.gorgeCrossingsBpmFull));
+      expect(fullGroup, isNot(contains(CapabilityAxis.rhythmBpmCeilThroat)));
     });
   });
 

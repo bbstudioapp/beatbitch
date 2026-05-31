@@ -604,6 +604,18 @@ class AppLocalizationsFr extends AppLocalizations {
   String get challengeHoldHintTolerance => 'Repose ton doigt';
 
   @override
+  String get challengeTapGoButton => 'DÉMARRE';
+
+  @override
+  String get challengeTapStopLive => 'J\'ABANDONNE';
+
+  @override
+  String get challengeTapStopAtSeuil => 'JE M\'ARRÊTE';
+
+  @override
+  String get challengeTapCountdownHint => 'Prépare-toi…';
+
+  @override
   String get challengeCountdownReleaseRetry =>
       'Maintiens bien ton doigt cette fois.';
 
@@ -623,6 +635,14 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get challengeExtensionDefault =>
       'Tu peux rester encore si tu veux, ou relâcher.';
+
+  @override
+  String get challengeAttemptTapDefault =>
+      'Défi : on va pousser ta limite. Tape DÉMARRE quand tu es prête, je compte trois deux un. Ensuite suis le rythme — tape J\'ABANDONNE si tu craques. Au seuil, tape JE M\'ARRÊTE pour valider, ou continue pour aller plus loin.';
+
+  @override
+  String get challengeExtensionTapDefault =>
+      'Tu peux continuer si tu veux, ou tape JE M\'ARRÊTE.';
 
   @override
   String get challengeSuccessDefault =>

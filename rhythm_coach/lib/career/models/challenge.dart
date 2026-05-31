@@ -82,6 +82,27 @@ enum ChallengePhase {
   ended,
 }
 
+/// Mode d'input live d'un défi — détermine le geste qui pilote la machine
+/// d'états pendant `countdown`/`live`/`atSeuil`.
+///
+/// Dérivé du mode du step défi (cf. `Challenge.inputMode`), pas stocké : la
+/// ligne de partage « statique → hold, dynamique → tap » coïncide exactement
+/// avec « mode hold vs autre mode ».
+enum ChallengeInputMode {
+  /// Le doigt reste présent sur l'écran toute la durée — geste congruent aux
+  /// holds statiques (la joueuse est déjà immobile). Le relâchement EST le
+  /// signal d'abandon (fail en `live`) ou de validation (succès en `atSeuil`).
+  /// C'est le mode historique.
+  hold,
+
+  /// Tap `GO` pour démarrer (après le countdown le défi tourne sur sa propre
+  /// horloge, sans présence du doigt), tap `STOP` plein largeur pour abandonner
+  /// en `live` ou valider en `atSeuil`. Pour les défis dynamiques/longs
+  /// (rythme, franchissement, biffle, endurance) où pinner le doigt entre en
+  /// compétition avec l'acte physique.
+  tapToggle,
+}
+
 /// Défi intra-séance immuable, généré par `ChallengeService` à partir du
 /// profil de capacités et figé pour toute la durée de la séance. Le
 /// `CareerSessionGenerator` consomme la calibration (mode, durée, BPM…)
@@ -217,6 +238,14 @@ class Challenge {
   /// Clé d'axe utilisée pour lookup dans `challengePhrases` côté coach
   /// (cf. `Coach.pickChallengePhrase`).
   String get axisStorageKey => axis.storageKey;
+
+  /// Mode d'input live (cf. [ChallengeInputMode]). Dérivé du [mode] : les
+  /// holds statiques gardent la tenue du doigt ; tout le reste (rythme,
+  /// biffle, franchissement, endurance) passe en tap `GO`/`STOP`, où la tenue
+  /// continue serait ergonomiquement coûteuse pendant un acte rapide.
+  ChallengeInputMode get inputMode => mode == SessionMode.hold
+      ? ChallengeInputMode.hold
+      : ChallengeInputMode.tapToggle;
 
   /// Durée d'une prolongation « tient encore » en mode ouvert.
   /// Plancher 10 s, sinon `comfort × 0.30`. En exploratoire (`comfort`
