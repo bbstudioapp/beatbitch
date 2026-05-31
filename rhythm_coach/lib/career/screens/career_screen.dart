@@ -113,6 +113,14 @@ class _CareerScreenState extends State<CareerScreen> {
     // d'une capacité prouvée si la joueuse n'a pas atteint le palier.
     final synthLevel =
         CareerDifficultyResolver.synthLevelFor(completedSessions);
+    // Réparation à froid : consolide les milestones-parents dont un enfant
+    // déjà complété dépend mais qui sont restées « à faire » (acquittement
+    // par défi sur un unlock provisoire non consolidé — cf.
+    // `MilestoneService.consolidatePrerequisites`). Sans ça, le tutoriel
+    // `intro_basics` est ré-inséré tant qu'il n'est pas consolidé alors que
+    // ses enfants sont faits. Avant le reconcile : back-filler `basics`
+    // permet ensuite à `reconcileFromCapability` d'acquitter correctement.
+    await milestoneService.consolidatePrerequisites();
     // Rattrapage à froid : acquitte les milestones que le profil de
     // capacités prouve déjà (cas typique : la cascade transitive du défi
     // a été livrée après que la joueuse l'ait joué — sans rattrapage,
