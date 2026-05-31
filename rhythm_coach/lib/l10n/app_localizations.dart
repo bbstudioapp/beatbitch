@@ -1168,6 +1168,30 @@ abstract class AppLocalizations {
   /// **'Repose ton doigt'**
   String get challengeHoldHintTolerance;
 
+  /// No description provided for @challengeTapGoButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'DÉMARRE'**
+  String get challengeTapGoButton;
+
+  /// No description provided for @challengeTapStopLive.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'ABANDONNE'**
+  String get challengeTapStopLive;
+
+  /// No description provided for @challengeTapStopAtSeuil.
+  ///
+  /// In fr, this message translates to:
+  /// **'JE M\'ARRÊTE'**
+  String get challengeTapStopAtSeuil;
+
+  /// No description provided for @challengeTapCountdownHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prépare-toi…'**
+  String get challengeTapCountdownHint;
+
   /// No description provided for @challengeCountdownReleaseRetry.
   ///
   /// In fr, this message translates to:
@@ -1197,6 +1221,18 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Tu peux rester encore si tu veux, ou relâcher.'**
   String get challengeExtensionDefault;
+
+  /// No description provided for @challengeAttemptTapDefault.
+  ///
+  /// In fr, this message translates to:
+  /// **'Défi : on va pousser ta limite. Tape DÉMARRE quand tu es prête, je compte trois deux un. Ensuite suis le rythme — tape J\'ABANDONNE si tu craques. Au seuil, tape JE M\'ARRÊTE pour valider, ou continue pour aller plus loin.'**
+  String get challengeAttemptTapDefault;
+
+  /// No description provided for @challengeExtensionTapDefault.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu peux continuer si tu veux, ou tape JE M\'ARRÊTE.'**
+  String get challengeExtensionTapDefault;
 
   /// No description provided for @challengeSuccessDefault.
   ///

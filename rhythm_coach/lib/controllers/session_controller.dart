@@ -940,9 +940,32 @@ class SessionController extends ChangeNotifier {
         _stats.getObedienceLevel().then(_obedience.seed);
       }
 
-      await _tts.init();
-      await _beep.init();
-      await WakelockPlus.enable();
+      // Inits best-effort : aucun de ces appels n'est un prérequis du passage
+      // en `running`. Un échec (typiquement iOS Safari/PWA — voir ci-dessous)
+      // ne doit JAMAIS avorter `start()` : sinon `_state` reste `idle` et,
+      // en prod, l'écran de jeu n'a aucun bouton play (gated derrière le
+      // toggle debug `showSessionControls`) → soft-lock total (cf. retour
+      // iOS « pas de bouton pour commencer », v0.4.0).
+      try {
+        await _tts.init();
+      } catch (e) {
+        debugPrint('start(): _tts.init() a échoué (non bloquant) : $e');
+      }
+      try {
+        await _beep.init();
+      } catch (e) {
+        debugPrint('start(): _beep.init() a échoué (non bloquant) : $e');
+      }
+      try {
+        // Wakelock = garder l'écran allumé (confort, non essentiel). Sur iOS
+        // Safari/PWA la Wake Lock API exige un contexte de geste utilisateur ;
+        // appelée depuis le Timer de prep (7 s après « JE SUIS PRÊTE »), elle
+        // peut lever `NotAllowedError`.
+        await WakelockPlus.enable();
+      } catch (e) {
+        debugPrint(
+            'start(): WakelockPlus.enable() a échoué (non bloquant) : $e');
+      }
 
       // Reset du fond média : on repart sur le placeholder animé tant que
       // le premier step de config n'a pas tiré une entrée. Évite qu'une

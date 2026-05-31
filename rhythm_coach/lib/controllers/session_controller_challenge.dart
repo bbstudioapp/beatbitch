@@ -113,6 +113,15 @@ extension ChallengeOrchestrator on SessionController {
       _challengePhase != ChallengePhase.none &&
       _challengePhase != ChallengePhase.ended;
 
+  /// `true` si le défi actif consomme l'input « doigt présent » (mode hold).
+  /// `false` pour un défi en mode tap (`GO`/`STOP` explicites) : l'UI ne doit
+  /// alors PAS router la présence du doigt vers `onChallengeHoldStart/End`
+  /// (sinon un tap accidentel n'importe où démarrerait/arrêterait le défi).
+  bool get challengeUsesHoldInput =>
+      isChallengeActive &&
+      (_activeChallenge?.inputMode ?? ChallengeInputMode.hold) ==
+          ChallengeInputMode.hold;
+
   bool get _inPostChallengeBreath {
     final until = _postChallengeBreathRealEndSec;
     return until != null && _realSec.toInt() < until;
@@ -152,13 +161,19 @@ extension ChallengeOrchestrator on SessionController {
     if (l10n == null) return null;
     switch (tier) {
       case 'attempt':
-        // Tutoriel hold throat = annonce dédiée plus pédagogique.
+        // Tutoriel hold throat = annonce dédiée plus pédagogique (toujours
+        // en mode hold).
         if (ch.isTutorial && ch.axis == CapabilityAxis.holdThroatStreak) {
           return l10n.challengeAttemptTutorialHoldThroat;
         }
-        return l10n.challengeAttemptDefault;
+        // Mode tap : instruction GO/STOP, pas « garde le doigt ».
+        return ch.inputMode == ChallengeInputMode.tapToggle
+            ? l10n.challengeAttemptTapDefault
+            : l10n.challengeAttemptDefault;
       case 'extension':
-        return l10n.challengeExtensionDefault;
+        return ch.inputMode == ChallengeInputMode.tapToggle
+            ? l10n.challengeExtensionTapDefault
+            : l10n.challengeExtensionDefault;
       case 'success':
         return l10n.challengeSuccessDefault;
       case 'stop':
@@ -465,12 +480,33 @@ extension ChallengeOrchestrator on SessionController {
       return true;
     }
     if (phase == ChallengePhase.live) {
-      _capabilityTracker?.onFail();
-      _completeChallenge(ChallengeOutcome.fail);
-      _emitChallengeHaptic(_ChallengeHapticKind.heavy);
+      _failChallengeLive();
       return true;
     }
     return false;
+  }
+
+  /// Abandon d'un défi en cours (phase `live`) : tap-out avant le seuil.
+  /// Partagé entre la perte du doigt (mode hold, via la tolérance de release)
+  /// et le bouton `STOP` (mode tap). Pose un FAIL capability + haptic lourd.
+  void _failChallengeLive() {
+    _capabilityTracker?.onFail();
+    _completeChallenge(ChallengeOutcome.fail);
+    _emitChallengeHaptic(_ChallengeHapticKind.heavy);
+  }
+
+  /// Validation d'un défi au seuil (phase `atSeuil`) : succès net, ou étendu
+  /// selon les extensions accumulées en laissant tourner au-delà du seuil.
+  /// Partagé entre le relâchement du doigt (mode hold) et le bouton `STOP`
+  /// (mode tap) — dans les deux cas, le nombre d'extensions est dérivé de la
+  /// durée tenue depuis l'entrée en `atSeuil` (cf. `_deriveChallengeExtensionsCount`).
+  void _bankChallengeFromAtSeuil() {
+    _challengeReleaseAtRealSec = null;
+    _challengeExtensionsCount = _deriveChallengeExtensionsCount();
+    final outcome = _challengeExtensionsCount > 0
+        ? ChallengeOutcome.extendedSuccess
+        : ChallengeOutcome.netSuccess;
+    _completeChallenge(outcome);
   }
 
   void _emitChallengeHaptic(_ChallengeHapticKind kind) {
@@ -530,17 +566,33 @@ extension ChallengeOrchestrator on SessionController {
     _challengeHoldActive = false;
     final phase = _challengePhase;
     if (phase == ChallengePhase.atSeuil) {
-      _challengeReleaseAtRealSec = null;
-      _challengeExtensionsCount = _deriveChallengeExtensionsCount();
-      final outcome = _challengeExtensionsCount > 0
-          ? ChallengeOutcome.extendedSuccess
-          : ChallengeOutcome.netSuccess;
-      _completeChallenge(outcome);
+      _bankChallengeFromAtSeuil();
       return;
     }
     if (phase == ChallengePhase.countdown || phase == ChallengePhase.live) {
       _challengeReleaseAtRealSec = _realSec.toInt();
       _notify();
+      return;
+    }
+  }
+
+  /// Bouton `STOP` des défis en mode tap (`ChallengeInputMode.tapToggle`).
+  /// Le démarrage (`GO`) passe par `onChallengeHoldStart` comme en mode hold —
+  /// seule la SORTIE diffère : ici un tap explicite remplace le relâchement du
+  /// doigt.
+  /// - `live` : abandon (tap-out avant le seuil) → fail.
+  /// - `atSeuil` : validation → succès net ou étendu selon les extensions
+  ///   accumulées en laissant tourner.
+  /// - autres phases (`breath`/`countdown`/`none`/`ended`) : no-op (le
+  ///   `breath` a `PASSE`, le `countdown` court tout seul en mode tap).
+  void onChallengeTapStop() {
+    final phase = _challengePhase;
+    if (phase == ChallengePhase.atSeuil) {
+      _bankChallengeFromAtSeuil();
+      return;
+    }
+    if (phase == ChallengePhase.live) {
+      _failChallengeLive();
       return;
     }
   }

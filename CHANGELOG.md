@@ -4,6 +4,17 @@
 
 ## [Non publié]
 
+## [0.5.2] — 2026-05-31
+
+Correctifs ciblés sur les **défis intra-séance** (deux retours iOS) plus un nouveau geste d'input pour les défis dynamiques.
+
+### Ajouté
+- **Input « tap GO / STOP » pour les défis dynamiques** — les défis rythmés, de franchissement de gorge, de biffle et d'endurance ne demandent plus de garder le doigt collé à l'écran toute la durée (épuisant quand le geste entre en compétition avec l'acte). On tape **DÉMARRE** pour lancer, le défi tourne seul, et un bouton **STOP** plein écran sert à abandonner (en cours) ou à valider (au seuil). Les holds statiques (gorge, fond, apnée) gardent la tenue du doigt, qui leur reste naturelle.
+
+### Corrigé
+- **Défi de franchissement de gorge qui ne se terminait jamais** — sur les axes « franchissement gorge », le compteur de passages restait figé à 0 (position cible non définie côté contrôleur), donc le seuil de fin n'était jamais atteint et le défi s'enchaînait indéfiniment (deepthroat rapide sans fin visible). Position cible recâblée → le défi se conclut au nombre de franchissements annoncé.
+- **Démarrage bloqué sur iOS** — après le décompte de mise en place, la séance pouvait rester coincée sur l'écran « PRÊT » sans bouton pour commencer (uniquement les sliders de volume). Un init non essentiel (wakelock / audio) qui échouait sur Safari/PWA interrompait `start()` avant le passage en lecture. Ces inits deviennent best-effort : la séance démarre toujours, au pire sans wakelock.
+
 ## [0.5.1] — 2026-05-26
 
 Itération de calibration et de polish autour des **défis intra-séance** introduits en 0.5.0 : refonte mécanique des builders en mode streaming (un builder par axe), banners et verdicts plus lisibles, gating profondeur/amplitude resserré, et plusieurs correctifs de progression (acquittement, anti-répétition, redondances). Plus une montée d'intensité visible sur les Supplier / Encore et un calibrage du `throat_pulse`.
@@ -176,7 +187,8 @@ Grosse mise à jour du mode carrière : nouvelle enveloppe de difficulté, nouve
 ## [0.1.0] — 2026-05-08
 - Premier release public : coach vocal rythmique hors-ligne pour Android, adult gate 18+, onboarding, mode carrière + scénarios, badges, profil/réputation.
 
-[Non publié]: https://github.com/bbstudioapp/beatbitch/compare/v0.5.1...develop
+[Non publié]: https://github.com/bbstudioapp/beatbitch/compare/v0.5.2...develop
+[0.5.2]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.5.2
 [0.5.1]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.5.1
 [0.5.0]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.5.0
 [0.4.2]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.4.2
