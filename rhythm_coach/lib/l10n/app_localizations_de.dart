@@ -591,6 +591,18 @@ class AppLocalizationsDe extends AppLocalizations {
   String get challengeHoldHintTolerance => 'Leg deinen Finger zurück';
 
   @override
+  String get challengeTapGoButton => 'START';
+
+  @override
+  String get challengeTapStopLive => 'AUFGEBEN';
+
+  @override
+  String get challengeTapStopAtSeuil => 'FERTIG';
+
+  @override
+  String get challengeTapCountdownHint => 'Mach dich bereit…';
+
+  @override
   String get challengeCountdownReleaseRetry => 'Halte deinen Finger diesmal.';
 
   @override
@@ -609,6 +621,14 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get challengeExtensionDefault =>
       'Du kannst länger bleiben, wenn du willst, oder loslassen.';
+
+  @override
+  String get challengeAttemptTapDefault =>
+      'Herausforderung: Wir gehen an deine Grenze. Tippe START wenn du bereit bist, ich zähle drei zwei eins. Dann folge dem Rhythmus — tippe AUFGEBEN, wenn du schlappmachst. Am Schwellenwert tippe FERTIG zum Bestätigen, oder mach weiter um weiter zu pushen.';
+
+  @override
+  String get challengeExtensionTapDefault =>
+      'Du kannst weitermachen, wenn du willst, oder tippe FERTIG.';
 
   @override
   String get challengeSuccessDefault =>

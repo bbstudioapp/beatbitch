@@ -591,6 +591,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get challengeHoldHintTolerance => 'Put your finger back';
 
   @override
+  String get challengeTapGoButton => 'START';
+
+  @override
+  String get challengeTapStopLive => 'GIVE UP';
+
+  @override
+  String get challengeTapStopAtSeuil => 'I\'M DONE';
+
+  @override
+  String get challengeTapCountdownHint => 'Get ready…';
+
+  @override
   String get challengeCountdownReleaseRetry => 'Keep your finger this time.';
 
   @override
@@ -609,6 +621,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get challengeExtensionDefault =>
       'You can stay longer if you want, or let go.';
+
+  @override
+  String get challengeAttemptTapDefault =>
+      'Challenge: we\'re pushing your limit. Tap START when you\'re ready, I\'ll count three two one. Then follow the rhythm — tap GIVE UP if you crack. At the threshold, tap I\'M DONE to lock it in, or keep going to push further.';
+
+  @override
+  String get challengeExtensionTapDefault =>
+      'You can keep going if you want, or tap I\'M DONE.';
 
   @override
   String get challengeSuccessDefault => 'You held it all the way. Good girl.';
