@@ -715,6 +715,56 @@ class MilestoneService extends ChangeNotifier {
     }
   }
 
+  /// Consolide les milestones-**parents** dont l'unlock conditionne une
+  /// milestone déjà complétée. Répare l'incohérence « enfant acquitté mais
+  /// parent jamais consolidé » : l'acquittement par défi
+  /// ([markCompletedViaChallenge]) peut valider un enfant
+  /// (ex. `intro_hold_throat`, `requires: [basics]`) en s'appuyant sur un
+  /// unlock **provisoire** de la séance (`basics`, fourni par `intro_basics`
+  /// insérée mais pas encore consolidée — cf. [effectiveUnlockKeysForChallenge]).
+  /// Si le parent n'est jamais consolidé (séance non terminée proprement,
+  /// fail…), il reste candidat et est ré-inséré aux séances suivantes alors
+  /// que ses enfants sont faits — le tutoriel « revient ».
+  ///
+  /// Algorithme : pour chaque milestone complétée, tout `requires` non
+  /// couvert par un unlock déjà acquis lifetime ([acquiredUnlockKeys]) est
+  /// comblé en consolidant la/les milestone(s) du catalogue qui l'accordent
+  /// (invariant 1 milestone → 1 unlock, mais on traite N par robustesse).
+  /// Itère jusqu'à point fixe (un parent peut lui-même avoir des `requires`).
+  /// Idempotent ; persiste + notifie une seule fois si quelque chose a bougé.
+  /// Retourne le nombre de parents consolidés.
+  Future<int> consolidatePrerequisites() async {
+    if (!_loaded) return 0;
+    final added = <String>{};
+    var changed = true;
+    while (changed) {
+      changed = false;
+      final granted = acquiredUnlockKeys();
+      for (final completedId in _completed.toList()) {
+        final m = findById(completedId);
+        if (m == null) continue;
+        for (final req in m.requires) {
+          if (granted.contains(req)) continue;
+          for (final parent in _catalog) {
+            if (_completed.contains(parent.id)) continue;
+            if (!parent.unlocks.contains(req)) continue;
+            _completed.add(parent.id);
+            added.add(parent.id);
+            changed = true;
+          }
+        }
+      }
+    }
+    if (added.isEmpty) return 0;
+    await _persist();
+    for (final id in added) {
+      await resetRetryCount(id);
+      await resetCandidacyAge(id);
+    }
+    notifyListeners();
+    return added.length;
+  }
+
   /// Rattrapage à froid : acquitte les milestones que le [profile] de
   /// capacités prouve **déjà**, indépendamment d'un défi récent. Réutilise
   /// `milestonesAcquittableByChallenge` sur chaque axe du profil qui a une
