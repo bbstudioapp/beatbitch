@@ -743,10 +743,11 @@ class CareerSessionGenerator {
     if (milestoneScheduler.replacesIntro) {
       milestoneScheduler.insertIntroReplacement(ctx);
     } else {
-      final first = _clampToCapability(_stepBuilders.firstStep(
-        quickie: quickie,
-        intense: intense,
-      ));
+      // useMe : pas de clamp capacité sur l'amorce (le `to=full` de
+      // l'intro profonde doit tenir, bypass assumé de l'enveloppe).
+      final firstRaw =
+          _stepBuilders.firstStep(quickie: quickie, intense: intense);
+      final first = _config.useMe ? firstRaw : _clampToCapability(firstRaw);
       // Phase 4 — coach audible : si un axe est surchargé cette séance et qu'on
       // est sur un démarrage de séance normale (pas Supplier/encore = pas
       // d'`openingPhrase` imposée, pas bâclée), une chance ∝ niveau de poser une
@@ -1325,23 +1326,29 @@ class CareerSessionGenerator {
     // session (+1/min en clean, ×3 max avec obed, capée à sessionCap)
     // est intégrée par `_config.humilCapAt`.
     final humilCap = _config.humilCapAt(ctx.time);
-    draft = _enforceHumiliationRequired(draft, humilCap);
+    // « Utilise-moi » bypasse l'enveloppe humil ET capacité : throat/full et
+    // l'escalade BPM doivent tenir quel que soit le profil (« respirer est
+    // inutile », dépassement assumé opt-in). L'escalade est posée plus bas
+    // sur les `emitDrafts`.
+    if (!_config.useMe) draft = _enforceHumiliationRequired(draft, humilCap);
 
     // Variété BPM : évite d'enchaîner des steps au même tempo.
     draft = _applyBpmDiversity(draft);
     // Variété amplitude : évite d'enchaîner deux fois exactement la
     // même paire from/to dans le même mode.
     draft = _diversifyAmplitude(draft);
-    // Rampe BPM intra-step : pour les steps longs (≥ 30 s) sur amplitude
-    // moyenne (≤ mid), pose `bpmEnd` distinct pour raconter une
-    // montée / descente sur la durée. Skip throat/full pour ne pas
-    // violer le cap pulses (cf. `_capRhythmDurationByPulses`).
-    draft = BpmPacing.maybeApplyBpmRamp(draft, progress, _rng, _config.level);
-    // 2ᵉ enveloppe (profil de capacités) : dernier mot après les
-    // diversifications BPM/amplitude qui ont pu remonter au-dessus du
-    // `comfort` prouvé. `_diversifyLongSegment` derrière ne fait que
-    // varier « égal ou plus doux », donc pas besoin de re-clamper.
-    draft = _clampToCapability(draft);
+    if (!_config.useMe) {
+      // Rampe BPM intra-step : pour les steps longs (≥ 30 s) sur amplitude
+      // moyenne (≤ mid), pose `bpmEnd` distinct pour raconter une
+      // montée / descente sur la durée. Skip throat/full pour ne pas
+      // violer le cap pulses (cf. `_capRhythmDurationByPulses`).
+      draft = BpmPacing.maybeApplyBpmRamp(draft, progress, _rng, _config.level);
+      // 2ᵉ enveloppe (profil de capacités) : dernier mot après les
+      // diversifications BPM/amplitude qui ont pu remonter au-dessus du
+      // `comfort` prouvé. `_diversifyLongSegment` derrière ne fait que
+      // varier « égal ou plus doux », donc pas besoin de re-clamper.
+      draft = _clampToCapability(draft);
+    }
 
     // Sas breath conditionnel : on insère un breath UNIQUEMENT si le
     // draft retenu provoquerait un déficit d'endurance (stamina projetée
@@ -1384,7 +1391,9 @@ class CareerSessionGenerator {
     // chacun au profil de capacités.
     final emitDrafts = BpmPacing.diversifyLongSegment(draft, _rng)
         .map(_useMeDepthFloored)
-        .map(_clampToCapability)
+        .map((d) => _config.useMe
+            ? _useMeEscalate(d, ctx.time, ctx.genUntil)
+            : _clampToCapability(d))
         .toList();
 
     final tier = diff < 0.33
@@ -1923,6 +1932,31 @@ class CareerSessionGenerator {
       from: d.from,
       to: Position.throat,
       duration: d.duration,
+      chainNext: d.chainNext,
+    );
+  }
+
+  /// « Utilise-moi » : pose le BPM escaladé (rampe temporelle vers 300, cf.
+  /// [BpmPacing.useMeEscalatedBpm]) sur un step rythmé, et re-borne la durée
+  /// au cap pulses pour ce nouveau BPM (sinon un throat/full hérite d'une
+  /// durée calculée pour un tempo plus lent = trop de passages de gorge).
+  /// No-op sur les holds (sans tempo). Remplace `_clampToCapability` dans la
+  /// chaîne d'émission useMe — l'enveloppe capacité est délibérément bypassée.
+  StepDraft _useMeEscalate(StepDraft d, int time, int genUntil) {
+    if (d.mode != SessionMode.rhythm) return d;
+    final bpm = BpmPacing.useMeEscalatedBpm(time, genUntil);
+    var dur = d.duration;
+    if (dur != null && d.to != null) {
+      dur =
+          BpmPacing.capRhythmDurationByPulses(dur, bpm, d.to, config: _config);
+    }
+    return StepDraft(
+      mode: d.mode,
+      bpm: bpm,
+      bpmEnd: bpm,
+      from: d.from,
+      to: d.to,
+      duration: dur,
       chainNext: d.chainNext,
     );
   }

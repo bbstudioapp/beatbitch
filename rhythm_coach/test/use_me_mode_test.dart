@@ -127,6 +127,63 @@ void main() {
     }
   });
 
+  test('useMe (PR2) — throat/full garanti même à humiliation 0 (bypass)', () {
+    // Sans bypass, `_enforceHumiliationRequired` dégraderait le `to`
+    // throat/full vers mid/head pour une joueuse à humil nulle. Le bypass
+    // useMe garantit la profondeur quel que soit le profil.
+    for (var seed = 0; seed < 20; seed++) {
+      final result = CareerSessionGenerator(seed: seed).generate(
+        level: 1,
+        bank: _bank(),
+        durationSeconds: 12 * 60,
+        intense: true,
+        useMe: true,
+        humiliationCareer: 0.0,
+        obedience: 0.0,
+        unlockedKeys: _allUnlocks,
+      );
+      for (final s in result.session.steps) {
+        if (s.isTextOnly || !_hasToPosition(s.mode)) continue;
+        final to = s.to;
+        if (to == null) continue;
+        expect(to == Position.throat || to == Position.full, isTrue,
+            reason: 'seed=$seed humil=0 : to=${to.name} dégradé sous throat '
+                '(mode=${s.mode} t=${s.time}) — bypass humil KO');
+      }
+    }
+  });
+
+  test('useMe (PR2) — le BPM escalade vers ~300 en fin de suite', () {
+    var sawPeak = false;
+    for (var seed = 0; seed < 20; seed++) {
+      final result = _useMeResult(seed);
+      final finalT = result.session.finalStepTime!;
+      final rhythm = result.session.steps
+          .where((s) =>
+              !s.isTextOnly && s.mode == SessionMode.rhythm && s.bpm != null)
+          .toList();
+      expect(rhythm, isNotEmpty, reason: 'seed=$seed : aucun rhythm');
+      final maxBpm = rhythm.map((s) => s.bpm!).reduce((a, b) => a > b ? a : b);
+      expect(maxBpm, greaterThanOrEqualTo(280),
+          reason: 'seed=$seed : pic BPM $maxBpm < 280 (escalade insuffisante)');
+      if (maxBpm >= 295) sawPeak = true;
+      // Direction : un rhythm de la fin de suite (proche du final) est plus
+      // rapide qu'un rhythm du début.
+      final early = rhythm.where((s) => s.time < finalT / 3).map((s) => s.bpm!);
+      final late =
+          rhythm.where((s) => s.time > finalT * 2 / 3).map((s) => s.bpm!);
+      if (early.isNotEmpty && late.isNotEmpty) {
+        final earlyMax = early.reduce((a, b) => a > b ? a : b);
+        final lateMax = late.reduce((a, b) => a > b ? a : b);
+        expect(lateMax, greaterThan(earlyMax),
+            reason: 'seed=$seed : fin ($lateMax) pas plus rapide que début '
+                '($earlyMax)');
+      }
+    }
+    expect(sawPeak, isTrue,
+        reason: 'sur 20 seeds, le pic n\'a jamais atteint ~300');
+  });
+
   test(
       'contraste — sans useMe, la même config produit d\'autres modes/'
       'profondeurs', () {
