@@ -31,6 +31,24 @@ import 'step_draft.dart';
 /// `level`, `humiliationCareer`, points de spé). Permet à terme une
 /// couverture par tests unitaires dédiés.
 class BpmPacing {
+  /// Plancher de l'escalade « Utilise-moi » : BPM de départ, volontairement
+  /// **au-dessus du confort** (le rythme carrière plafonne à 140).
+  static const int kUseMeBpmStart = 160;
+
+  /// Pic de l'escalade « Utilise-moi » : le garde-fou dur du pacing (cf.
+  /// [maybeApplyBpmRamp]). Atteint en fin de suite, juste avant le final.
+  static const int kUseMeBpmPeak = 300;
+
+  /// BPM escaladé du mode « Utilise-moi » à l'instant [time], rampe linéaire
+  /// `[kUseMeBpmStart → kUseMeBpmPeak]` sur `[0, genUntil]` (fin du corps =
+  /// juste avant le final hold full). Pilote directement le BPM (pas le cap
+  /// confort) : l'escalade doit tenir quel que soit le profil — c'est le
+  /// dépassement assumé de l'enveloppe de sécurité (opt-in par la joueuse).
+  static int useMeEscalatedBpm(int time, int genUntil) {
+    final p = genUntil <= 0 ? 1.0 : (time / genUntil).clamp(0.0, 1.0);
+    return (kUseMeBpmStart + (kUseMeBpmPeak - kUseMeBpmStart) * p).round();
+  }
+
   /// Force une variation de BPM si le proposé est dans ±10 du précédent.
   /// Décale de 18–30 BPM dans la direction opposée (clampé [40, 200]).
   ///

@@ -55,6 +55,7 @@ class SessionConfig {
     this.intense = false,
     this.encoreChainIndex = 0,
     this.scriptedBreaks = false,
+    this.useMe = false,
   });
 
   // Bornes globales
@@ -106,6 +107,14 @@ class SessionConfig {
   /// `free`, aucun break). Cf. spec `specs/scripted_breaks.md`.
   final bool scriptedBreaks;
 
+  /// Mode « Utilise-moi » (remplace Supplier en carrière) : escalade
+  /// non-stop « respirer est inutile ». Restreint le corps à
+  /// `{rhythm, hold}` en throat/full uniquement, supprime tout repos
+  /// (mini-vague, fake breath, sas de récup, ordre d'avaler) et force un
+  /// final `hold full`. Le dépassement du confort BPM (jusqu'à 300) est
+  /// traité côté escalade (`rules_rhythm`). Cumulé avec `intense`.
+  final bool useMe;
+
   // ─── Méthodes dérivées (pures, lisent uniquement les fields ci-dessus) ───
 
   /// True si le mode est exclu :
@@ -121,6 +130,16 @@ class SessionConfig {
     final w = coachModeWeights[m];
     if (w != null && w <= 0) return true;
     if (!includeHand && (m == SessionMode.hand || m == SessionMode.biffle)) {
+      return true;
+    }
+    // « Utilise-moi » : corps restreint à rhythm/hold. `breath` reste
+    // « permis » ici pour ne pas casser `_resolveModeForRole(breath)` ni
+    // les fallbacks de récup — ses points d'insertion sont court-circuités
+    // ailleurs (mini-vague, sas breath, fake breath).
+    if (useMe &&
+        m != SessionMode.rhythm &&
+        m != SessionMode.hold &&
+        m != SessionMode.breath) {
       return true;
     }
     return false;

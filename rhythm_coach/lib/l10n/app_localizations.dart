@@ -276,17 +276,23 @@ abstract class AppLocalizations {
   /// **'Ambiance'**
   String get sessionAmbienceLabel;
 
-  /// No description provided for @sessionBegRequestLabel.
+  /// No description provided for @sessionUseMeLabel.
   ///
   /// In fr, this message translates to:
-  /// **'DEMANDÉ'**
-  String get sessionBegRequestLabel;
+  /// **'UTILISE-MOI'**
+  String get sessionUseMeLabel;
 
-  /// No description provided for @sessionBegSupplicateLabel.
+  /// No description provided for @sessionUseMeUsedLabel.
   ///
   /// In fr, this message translates to:
-  /// **'SUPPLIER'**
-  String get sessionBegSupplicateLabel;
+  /// **'UTILISÉE'**
+  String get sessionUseMeUsedLabel;
+
+  /// No description provided for @careerUseMeBegPhrase.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supplie-moi de t\'utiliser comme le jouet que tu es.'**
+  String get careerUseMeBegPhrase;
 
   /// No description provided for @sessionStateIdle.
   ///

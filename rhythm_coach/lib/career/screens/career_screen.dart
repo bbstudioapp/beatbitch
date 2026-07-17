@@ -748,9 +748,13 @@ class _CareerScreenState extends State<CareerScreen> {
     int currentLevel,
   ) async {
     final t = AppLocalizations.of(context);
-    // Beg insistant allongé (12 → 15s) — la supplique se sent plus longue,
-    // cohérent avec le saut d'intensité de la régen qui suit.
-    const begDuration = 15;
+    // « Utilise-moi » : beg d'engagement fixe (« supplie-moi de t'utiliser… »),
+    // durée ≈ temps d'énoncé + 1 s — à peine le temps de le dire avant que
+    // l'escalade non-stop démarre. Estimée depuis le nombre de mots (TTS lent).
+    final begPhrase = t.careerUseMeBegPhrase;
+    final begWordCount =
+        begPhrase.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
+    final begDuration = (begWordCount * 0.6).ceil() + 1;
     final remaining = ctrl.session.durationSeconds - ctrl.elapsedSeconds;
     if (remaining < begDuration + 30) return;
 
@@ -780,6 +784,7 @@ class _CareerScreenState extends State<CareerScreen> {
       includeHand: bundle.includeHand,
       specialization: activeCoach.effectiveAllocation(bundle.specialization),
       intense: true,
+      useMe: true,
       humiliationCareer: humiliationCareer,
       humiliationSession: humiliationSession,
       obedience: obedienceScore,
@@ -798,15 +803,9 @@ class _CareerScreenState extends State<CareerScreen> {
       ),
     );
 
-    final rng = Random();
-    final insistText = coachBank.pickFor(
-      SessionMode.beg,
-      'insistent',
-      rng,
-    );
     final beg = SessionStep(
       time: 0,
-      text: insistText,
+      text: begPhrase,
       mode: SessionMode.beg,
       from: Position.full,
       duration: begDuration,
