@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../controllers/session_controller.dart';
 import '../../l10n/app_localizations.dart';
 import '../../l10n/format_helpers.dart';
+import '../../models/posture.dart';
 import '../../screens/session_screen.dart';
 import '../../services/ambience_engine.dart';
 import '../../services/beep_engine.dart';
@@ -467,7 +468,22 @@ class _CareerScreenState extends State<CareerScreen> {
       scriptedBreaks: bundle.scriptedBreaks,
     );
 
-    final introText = coachBank.pickIntro(Random());
+    var introText = coachBank.pickIntro(Random());
+    // Break scénarisé (issue #77) : si le générateur a imposé une posture de
+    // départ, l'annoncer dans le briefing d'intro. Sinon la joueuse (yeux
+    // fermés, téléphone posé sur le côté) ne saurait jamais s'y mettre — seuls
+    // les *changements* de posture aux breaks étaient vocalisés jusqu'ici. Si
+    // l'intro est vide (coach sans `intros`), la consigne devient le briefing
+    // à elle seule (le panel « Je suis prête » s'affiche pour la poser).
+    final initialPose = result.session.initialPose;
+    if (initialPose != Posture.free) {
+      final postureLine = coachBank.pickPostureChange(initialPose, Random());
+      if (postureLine != null && postureLine.isNotEmpty) {
+        introText = (introText == null || introText.isEmpty)
+            ? postureLine
+            : '$introText $postureLine';
+      }
+    }
 
     // Unlocks provisoires de la session : chaque milestone insérée
     // débloque visuellement ses compétences pour l'UI (bouton Supplier
