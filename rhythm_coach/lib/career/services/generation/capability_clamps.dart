@@ -189,18 +189,23 @@ class CapabilityClamps implements CapabilityClampSurface {
     final p = config.capProfile;
     if (p == null) return null;
     var comfort = p.comfortOf(axis);
-    if (comfort != null && axis == config.overloadAxis) {
-      if (axis == CapabilityAxis.rhythmDepthMax) {
-        // Profondeur = cran discret : on autorise +1 cran, et seulement si
-        // la confiance au cran courant est là (cf. asymétries §5).
-        // « Humiliation l'autorise » + « milestone d'unlock acquittée »
-        // sont déjà garantis par `_maxDepthIndex` (qui borne `to` en amont).
-        if (p.stateOf(axis).successRate >= CapabilityRegulator.kDepthCranGate) {
-          comfort = comfort + 1;
-        }
-      } else {
-        comfort = comfort * config.overloadFactor;
-      }
+    if (comfort != null && axis == CapabilityAxis.rhythmDepthMax) {
+      // Sonde vers le `best` prouvé : la profondeur vise **un cran** au-dessus
+      // du comfort, borné par la profondeur déjà atteinte — la difficulté
+      // remonte dans le territoire prouvé sans attendre une séance de surcharge,
+      // et rend l'overshoot possible en séance normale (→ le comfort peut
+      // ratcheter). Sur la séance où la profondeur EST l'axe surchargé et la
+      // confiance est là, le même cran est autorisé à DÉPASSER le best : c'est
+      // l'escalade qui fait grandir le best (comportement inchangé). Quand
+      // `best == comfort` (axe consolidé), la sonde retombe sur le comfort.
+      // « Milestone d'unlock acquittée » reste garanti en amont par
+      // `_maxDepthIndex` / `milestoneRhythmCeilingIdx`.
+      final best = p.bestOf(axis) ?? comfort;
+      final escalating = axis == config.overloadAxis &&
+          p.stateOf(axis).successRate >= CapabilityRegulator.kDepthCranGate;
+      comfort = escalating ? comfort + 1 : min(comfort + 1, best);
+    } else if (comfort != null && axis == config.overloadAxis) {
+      comfort = comfort * config.overloadFactor;
     }
     // Boost intense (Supplier / Encore) : cumulatif avec la surcharge
     // de l'axe. Pour `rhythmDepthMax` (cran discret), bonus exprimé en

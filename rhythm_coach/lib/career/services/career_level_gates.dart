@@ -107,7 +107,15 @@ class CareerLevelGates {
     if (profile == null) return defaultMaxDepthIndex();
     final comfort = profile.comfortOf(CapabilityAxis.rhythmDepthMax);
     if (comfort == null) return defaultMaxDepthIndex();
-    final rounded = comfort.round();
-    return rounded.clamp(Position.mid.index, Position.full.index);
+    // Sonde vers le `best` prouvé : le comfort peut viser **un cran** au-dessus,
+    // borné par la profondeur déjà atteinte (`best`). Une compétence rabaissée
+    // (best > comfort après un tap-out imputé ou un decay) se re-propose donc un
+    // cran plus profond au lieu de rester figée au comfort — ce qui rend
+    // l'overshoot (et donc la remontée du comfort côté régulateur) possible en
+    // séance normale. Quand `best == comfort` (axe consolidé), la sonde retombe
+    // sur `round(comfort)` : comportement inchangé.
+    final best = profile.bestOf(CapabilityAxis.rhythmDepthMax) ?? comfort;
+    final probe = min(comfort.round() + 1, best.round());
+    return probe.clamp(Position.mid.index, Position.full.index);
   }
 }
