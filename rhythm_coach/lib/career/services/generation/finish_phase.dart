@@ -15,6 +15,7 @@ import '../../../models/final_category.dart';
 import '../../../models/session.dart';
 import '../../../models/session_step.dart';
 import '../../models/phrase_bank.dart';
+import '../../models/specialization.dart';
 import '../career_level_gates.dart';
 import 'final_picker.dart';
 import 'generation_context.dart';
@@ -304,7 +305,11 @@ class FinishPhase {
           (boostMaxToIdx - 2 + 2 * (boostsAdded / rampDenom).clamp(0.0, 1.0))
               .round()
               .clamp(2, boostMaxToIdx);
-      final toIdx = max(prevBoostToIdx, progressionToIdx);
+      // « Utilise-moi » : le `to` des boosts est planché à throat (jamais
+      // sous la gorge) ; le `from` reste libre en dessous.
+      final toIdx = config.useMe
+          ? max(prevBoostToIdx, max(progressionToIdx, Position.throat.index))
+          : max(prevBoostToIdx, progressionToIdx);
       final boostTo = Position.values[toIdx];
       // `from` : 2 crans au-dessus si possible (amplitude max), sinon
       // 1 cran.
@@ -402,11 +407,39 @@ class FinishPhase {
     // pour rester raisonnable.
     final finishMulBase = config.intense ? 1.10 : 1.0;
     final finishMul = finishMulBase + max(0, ctx.encoreChainIndex) * 0.10;
-    final finisherDraft = finalPicker.pickFinal(
-      humilCap: finalHumilCap,
-      maxDepth: config.maxDepthIndex,
-      finishMul: finishMul,
-    );
+    final StepDraft finisherDraft;
+    if (config.useMe) {
+      // « Utilise-moi » : le final est toujours un hold full (le pic
+      // throat/full à 300 BPM le précède). Durée calquée sur la variante
+      // hold-full de la rule (humil + endurance), mais non clampée par la
+      // capacité — le dépassement de profondeur est assumé (comme le BPM).
+      final humilOver = max(0.0, finalHumilCap - 30.0);
+      final targetDur = (10 +
+              (humilOver / 8).floor() * 3 +
+              config.pts(SpecializationBranch.endurance) * 3)
+          .clamp(10, 80);
+      final dur = FinalPicker.trimHoldFinalDuration(
+        target: targetDur,
+        humilCap: finalHumilCap,
+        baseReq: 49.0,
+        bonusPerSec: 3.0,
+        finishMul: finishMul,
+        maxDur: 80,
+      );
+      finisherDraft = StepDraft(
+        mode: SessionMode.hold,
+        bpm: null,
+        from: null,
+        to: Position.full,
+        duration: dur,
+      );
+    } else {
+      finisherDraft = finalPicker.pickFinal(
+        humilCap: finalHumilCap,
+        maxDepth: config.maxDepthIndex,
+        finishMul: finishMul,
+      );
+    }
     final finalCategory =
         rules[finisherDraft.mode]!.finalCategory(finisherDraft);
     final finalMode = finisherDraft.mode;

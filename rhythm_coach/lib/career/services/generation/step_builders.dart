@@ -349,9 +349,10 @@ class StepBuilders {
     bool quickie = false,
     bool intense = false,
   }) {
-    if (intense) {
-      // Escalade explicite (Supplier ou Encore) : on amorce direct au
-      // plus profond que les milestones autorisent. Cible = `full`
+    if (intense || config.useMe) {
+      // Escalade explicite (Supplier / Encore / « Utilise-moi ») : on
+      // amorce direct au plus profond que les milestones autorisent
+      // (`milestoneRhythmCeilingIdx` = full en useMe). Cible = `full`
       // (idx 4), bornée par `milestoneRhythmCeilingIdx()` (tombe à
       // throat sans `full_pulse`, mid sans `throat_pulse`) et par
       // `maxDepthIndex` (config). BPM adaptatif selon le `to` après
