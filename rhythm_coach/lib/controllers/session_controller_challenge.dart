@@ -1072,6 +1072,15 @@ extension ChallengeOrchestrator on SessionController {
     for (final m in acquittable) {
       await milestoneService.markCompletedViaChallenge(m.id);
     }
+    // L'acquittement ci-dessus a pu s'appuyer sur un unlock **provisoire**
+    // de la séance (cf. `effectiveUnlockKeysForChallenge`) — typiquement
+    // `basics`, fourni par `intro_basics` insérée mais pas encore
+    // consolidée. On consolide donc ses parents pour ne pas laisser des
+    // enfants acquittés sans leur prérequis (sinon le tutoriel est
+    // ré-inséré aux séances suivantes). No-op si rien à combler.
+    if (acquittable.isNotEmpty) {
+      await milestoneService.consolidatePrerequisites();
+    }
   }
 
   /// Phase finale défis — consume la tête de la file showcase si la

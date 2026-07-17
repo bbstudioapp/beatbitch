@@ -11,6 +11,13 @@
 ### Modifié
 - **Loaders robustifiés avec cascade `_<lang>.json → _en.json → _fr.json`** — `PunishmentLoader`, `RandomCommentsLoader` et `PhraseBankLoader` ne crashent plus quand un asset éditorial manque pour une locale donnée. Permet d'ajouter une langue (UI traduite) avant d'avoir traduit le contenu, l'app reste utilisable avec un repli anglais transparent.
 
+## [0.5.3] — 2026-05-31
+
+Correctif de progression carrière : le tutoriel pouvait revenir alors qu'il était déjà fait.
+
+### Corrigé
+- **Le tutoriel d'introduction revenait à la séance suivante** — quand un défi validait une compétence en cours de première séance (ex. tenir la gorge), il consolidait les paliers qui en dépendent mais pas le palier d'introduction lui-même, resté « à faire ». Résultat : la séance d'après reproposait le tutoriel déjà accompli, sans jamais pouvoir s'en débarrasser. Les paliers-prérequis sont désormais consolidés avec leurs enfants, et un rattrapage au démarrage répare les profils déjà touchés (sans remise à zéro).
+
 ## [0.5.2] — 2026-05-31
 
 Correctifs ciblés sur les **défis intra-séance** (deux retours iOS) plus un nouveau geste d'input pour les défis dynamiques.
@@ -194,7 +201,8 @@ Grosse mise à jour du mode carrière : nouvelle enveloppe de difficulté, nouve
 ## [0.1.0] — 2026-05-08
 - Premier release public : coach vocal rythmique hors-ligne pour Android, adult gate 18+, onboarding, mode carrière + scénarios, badges, profil/réputation.
 
-[Non publié]: https://github.com/bbstudioapp/beatbitch/compare/v0.5.2...develop
+[Non publié]: https://github.com/bbstudioapp/beatbitch/compare/v0.5.3...develop
+[0.5.3]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.5.3
 [0.5.2]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.5.2
 [0.5.1]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.5.1
 [0.5.0]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.5.0
