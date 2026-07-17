@@ -606,6 +606,18 @@ class AppLocalizationsEs extends AppLocalizations {
   String get challengeHoldHintTolerance => 'Vuelve a poner el dedo';
 
   @override
+  String get challengeTapGoButton => 'EMPIEZA';
+
+  @override
+  String get challengeTapStopLive => 'ME RINDO';
+
+  @override
+  String get challengeTapStopAtSeuil => 'LO DEJO';
+
+  @override
+  String get challengeTapCountdownHint => 'Prepárate…';
+
+  @override
   String get challengeCountdownReleaseRetry => 'Mantén el dedo esta vez.';
 
   @override
@@ -624,6 +636,14 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get challengeExtensionDefault =>
       'Puedes quedarte más tiempo si quieres, o soltar.';
+
+  @override
+  String get challengeAttemptTapDefault =>
+      'Reto: vamos a empujar tu límite. Pulsa EMPIEZA cuando estés lista, contaré tres dos uno. Luego sigue el ritmo — pulsa ME RINDO si no puedes más. En el umbral, pulsa LO DEJO para validarlo, o sigue para llegar más lejos.';
+
+  @override
+  String get challengeExtensionTapDefault =>
+      'Puedes seguir si quieres, o pulsa LO DEJO.';
 
   @override
   String get challengeSuccessDefault =>
