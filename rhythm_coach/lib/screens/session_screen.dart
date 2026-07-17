@@ -1133,18 +1133,18 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                     ListenableBuilder(
                       listenable: milestoneService,
                       builder: (context, _) {
-                        // Le bouton « Supplier » n'apparaît qu'après que la milestone
-                        // `intro_beg_libre` (niveau 3) ait été acquittée. Avant ça,
-                        // l'utilisatrice n'a pas appris à supplier — afficher le
-                        // bouton serait incohérent. Le ChangeNotifier déclenche un
-                        // rebuild quand le déblocage arrive en cours de séance.
+                        // Le bouton « Utilise-moi » (ex-Supplier) n'apparaît
+                        // qu'après que la milestone `intro_beg_libre` (niveau 3)
+                        // ait été acquittée — avant ça la joueuse n'a pas appris à
+                        // supplier. Le ChangeNotifier déclenche un rebuild quand le
+                        // déblocage arrive en cours de séance.
                         if (!milestoneService.hasUnlock(UnlockKey.begLibre)) {
                           return const SizedBox.shrink();
                         }
                         return Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            _SupplierButton(
+                            _UseMeButton(
                               enabled: ctrl.isRunning &&
                                   !_upgradeRequested &&
                                   !_upgradeInFlight,
@@ -1847,7 +1847,7 @@ class _BreakBanner extends StatelessWidget {
 
 /// Bouton « SUPPLIER » du mode Carrière. Cliqué une seule fois par séance,
 /// déclenche un beg insistant + régénère la suite à un niveau supérieur.
-class _SupplierButton extends StatelessWidget {
+class _UseMeButton extends StatelessWidget {
   static const Color _color = Color(0xFFCE93D8);
   static const Color _colorMuted = Color(0xFF4A2C5C);
 
@@ -1855,7 +1855,7 @@ class _SupplierButton extends StatelessWidget {
   final bool used;
   final VoidCallback onPressed;
 
-  const _SupplierButton({
+  const _UseMeButton({
     required this.enabled,
     required this.used,
     required this.onPressed,
@@ -1864,7 +1864,7 @@ class _SupplierButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final label = used ? t.sessionBegRequestLabel : t.sessionBegSupplicateLabel;
+    final label = used ? t.sessionUseMeUsedLabel : t.sessionUseMeLabel;
     return SizedBox(
       width: double.infinity,
       child: Material(

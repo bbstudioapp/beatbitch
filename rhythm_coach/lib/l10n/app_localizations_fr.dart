@@ -102,10 +102,14 @@ class AppLocalizationsFr extends AppLocalizations {
   String get sessionAmbienceLabel => 'Ambiance';
 
   @override
-  String get sessionBegRequestLabel => 'DEMANDÉ';
+  String get sessionUseMeLabel => 'UTILISE-MOI';
 
   @override
-  String get sessionBegSupplicateLabel => 'SUPPLIER';
+  String get sessionUseMeUsedLabel => 'UTILISÉE';
+
+  @override
+  String get careerUseMeBegPhrase =>
+      'Supplie-moi de t\'utiliser comme le jouet que tu es.';
 
   @override
   String get sessionStateIdle => 'PRÊT';
