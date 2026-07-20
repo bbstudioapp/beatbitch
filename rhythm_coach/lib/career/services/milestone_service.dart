@@ -220,6 +220,17 @@ class MilestoneService extends ChangeNotifier {
     return false;
   }
 
+  /// Unlocks déclarés par la milestone d'id [id] dans le catalogue (vide si
+  /// l'id est inconnu). Sert au gating UI temporisé : savoir quelle
+  /// compétence une milestone insérée dans la séance enseignera une fois sa
+  /// fenêtre écoulée (cf. `SessionController.useMeUnlockActive`).
+  Set<UnlockKey> unlocksForMilestone(String id) {
+    for (final m in _catalog) {
+      if (m.id == id) return m.unlocks.toSet();
+    }
+    return const <UnlockKey>{};
+  }
+
   /// Positionne les unlocks « provisoires » valables pendant la session
   /// courante (à appeler au démarrage de chaque session carrière, en
   /// passant les unlocks de la milestone insérée). À la fin de la

@@ -1134,11 +1134,14 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                       listenable: milestoneService,
                       builder: (context, _) {
                         // Le bouton « Utilise-moi » (ex-Supplier) n'apparaît
-                        // qu'après que la milestone `intro_beg_libre` (niveau 3)
-                        // ait été acquittée — avant ça la joueuse n'a pas appris à
-                        // supplier. Le ChangeNotifier déclenche un rebuild quand le
-                        // déblocage arrive en cours de séance.
-                        if (!milestoneService.hasUnlock(UnlockKey.begLibre)) {
+                        // qu'une fois la supplique apprise : `begLibre` acquise
+                        // en lifetime, OU — si elle est enseignée cette séance —
+                        // seulement après que la fenêtre de la milestone qui
+                        // l'enseigne soit écoulée (cf.
+                        // `SessionController.useMeUnlockActive`). Le bloc parent
+                        // `watch`e le contrôleur → réévalué à chaque tick, donc
+                        // le bouton apparaît pile quand la fenêtre passe.
+                        if (!ctrl.useMeUnlockActive) {
                           return const SizedBox.shrink();
                         }
                         return Column(

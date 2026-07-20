@@ -833,6 +833,37 @@ class SessionController extends ChangeNotifier {
     return null;
   }
 
+  /// Le bouton « Utilise-moi » (mode escalade, ex-Supplier) est gaté par la
+  /// compétence `begLibre` (supplier = supplique bouche libre). Il ne doit
+  /// apparaître qu'une fois la supplique **apprise** :
+  /// - `begLibre` déjà acquise en lifetime → dispo dès le départ ;
+  /// - sinon, si elle est enseignée cette séance par une milestone insérée
+  ///   (body 1 / body 2) → seulement une fois la **fenêtre** de cette
+  ///   milestone écoulée. On ne propose pas de supplier avant d'avoir appris
+  ///   à supplier.
+  ///
+  /// Time-based (`elapsedSeconds`) : un fail qui saute la fenêtre l'ouvre
+  /// quand même — acceptable, le retry milestone gère la ré-insertion et on
+  /// reste sur le flux nominal.
+  bool get useMeUnlockActive {
+    if (milestoneService.acquiredUnlockKeys().contains(UnlockKey.begLibre)) {
+      return true;
+    }
+    final t = elapsedSeconds;
+    bool taughtBy(String? id, int? start, int? dur) {
+      if (id == null || start == null || dur == null) return false;
+      if (t < start + dur) return false; // fenêtre pas encore écoulée
+      return milestoneService
+          .unlocksForMilestone(id)
+          .contains(UnlockKey.begLibre);
+    }
+
+    return taughtBy(_session.milestoneId, _session.milestoneStartTime,
+            _session.milestoneDurationSeconds) ||
+        taughtBy(_session.secondMilestoneId, _session.secondMilestoneStartTime,
+            _session.secondMilestoneDurationSeconds);
+  }
+
   /// Endurance projetée à la seconde courante, ou `null` si pas de
   /// profil disponible (sessions statiques).
   double? _staminaAtNow() {
