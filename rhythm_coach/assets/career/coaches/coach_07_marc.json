@@ -10,7 +10,9 @@
   "isPrincipal": true,
   "tts": {
     "gender": "male",
-    "rate": 0.55,
-    "pitch": 0.85
+    "voice": "fr-fr-x-frb-local",
+    "voiceLocale": "fr-FR",
+    "rate": 0.57,
+    "pitch": 0.76
   }
 }
