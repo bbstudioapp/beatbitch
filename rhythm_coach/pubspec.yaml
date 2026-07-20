@@ -60,6 +60,7 @@ flutter:
     - assets/career/coaches/portraits/
     - assets/career/milestones/
     - assets/coach/
+    - assets/debug/profiles/
     - assets/punishments.json
     - assets/punishments_en.json
     - assets/punishments_de.json

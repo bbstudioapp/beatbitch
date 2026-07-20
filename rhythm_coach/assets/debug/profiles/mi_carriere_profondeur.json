@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "preset": "Mi-carriere profondeur (niv 8, throat/full acquis)",
+  "career": {
+    "maxLevel": 8,
+    "lastLevel": null,
+    "completedSessions": 24,
+    "includeHand": true
+  },
+  "specialization": {
+    "points": {
+      "endurance": 2,
+      "profondeur": 3,
+      "rythmeBiffle": 0,
+      "obeissance": 0,
+      "sloppy": 0
+    },
+    "lastRespecMs": null,
+    "respecCount": 0
+  },
+  "stats": {
+    "totalSeconds": 14400,
+    "throatfucks": 320,
+    "biffles": 80,
+    "holdThroatSeconds": 160,
+    "holdFullSeconds": 64,
+    "sessionsCompleted": 24,
+    "sessionsNoFailStreak": 2,
+    "modesUsedMask": 255,
+    "maxHoldFullAtomic": 6,
+    "lastSessionDay": null,
+    "dailyStreak": 1,
+    "encoresAsked": 2,
+    "quickiesCompleted": 0,
+    "finalsBouchePleine": 0,
+    "finalsRepeinte": 0,
+    "finalsGobeuse": 0,
+    "postFinalsNettoyeuse": 0,
+    "postFinalsSuppliante": 0
+  },
+  "humiliation": {
+    "careerScore": 90.0
+  },
+  "obedience": {
+    "level": 70.0
+  },
+  "capabilities": {
+    "axes": {
+      "rhythm.depth_max": {
+        "best": 4.0,
+        "comfort": 3.0,
+        "successRate": 0.6,
+        "lastSeenSession": 8
+      },
+      "hold.throat.streak": {
+        "best": 16.0,
+        "comfort": 8.0,
+        "successRate": 0.65,
+        "lastSeenSession": 8
+      },
+      "hold.full.streak": {
+        "best": 10.0,
+        "comfort": 6.0,
+        "successRate": 0.6,
+        "lastSeenSession": 8
+      },
+      "gorge.apnee_streak": {
+        "best": 14.0,
+        "comfort": 6.0,
+        "successRate": 0.6,
+        "lastSeenSession": 8
+      },
+      "rhythm.bpm_ceil.shallow": {
+        "best": 180.0,
+        "comfort": 150.0,
+        "successRate": 0.7,
+        "lastSeenSession": 8
+      },
+      "rhythm.motion_streak": {
+        "best": 90.0,
+        "comfort": 40.0,
+        "successRate": 0.6,
+        "lastSeenSession": 8
+      }
+    },
+    "legacyMigrated": true
+  },
+  "milestones": {
+    "completed": [
+      "intro_basics",
+      "intro_deeper_basics",
+      "intro_lick_full",
+      "intro_beg_libre",
+      "intro_hold_mid",
+      "intro_biffle",
+      "intro_encore",
+      "intro_hold_throat",
+      "intro_throat_pulse",
+      "intro_hold_full",
+      "intro_full_pulse",
+      "intro_freestyle"
+    ],
+    "retries": {},
+    "candidacySeen": {}
+  },
+  "badges": {},
+  "coach": {
+    "currentTier": null,
+    "selectedId": null,
+    "unlockedIds": []
+  },
+  "anatomy": {
+    "hasBalls": true
+  },
+  "surprise": {
+    "enabled": false,
+    "windowSeconds": null,
+    "alertCount": null,
+    "durationMinSeconds": null,
+    "durationMaxSeconds": null
+  },
+  "settings": {
+    "showStaminaBar": false,
+    "showTimer": false,
+    "showHumiliationBar": false,
+    "showObedienceBar": false,
+    "showSalivaBar": false,
+    "showSessionControls": false,
+    "showModeBadge": false,
+    "cameraHoldCheck": false,
+    "skipSessionButton": false,
+    "showBackgroundMedia": true,
+    "showSessionRemainingTime": false,
+    "scriptedBreaks": false
+  },
+  "consent": {
+    "adultConsentAccepted": true,
+    "onboardingShown": true
+  }
+}
