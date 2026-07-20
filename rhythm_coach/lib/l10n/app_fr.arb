@@ -60,6 +60,7 @@
   "sessionFailPhasePunishment": "Punition",
   "sessionStartPrompt": "Démarre la séance pour entendre les instructions.",
   "sessionFailButton": "JE PEUX PAS",
+  "sessionPostureReadyButton": "JE SUIS EN PLACE",
   "sessionIntroBriefing": "BRIEFING",
   "sessionIntroReplay": "Réécouter",
   "sessionIntroReady": "JE SUIS PRÊTE",

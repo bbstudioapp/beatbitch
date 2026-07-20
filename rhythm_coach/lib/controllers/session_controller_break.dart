@@ -110,6 +110,13 @@ extension BreakSequencer on SessionController {
             bank?.pickBreakResume(_random))
         : bank?.pickBreakResume(_random);
     if (resume != null) _speakScripted(resume);
+    // Gate posture (issue #77) : si le break impose une nouvelle posture
+    // physique, on gèle la reprise jusqu'à ce que la joueuse s'y mette (comme
+    // le 1er step des milestones posture). `free` = pas de repositionnement,
+    // pas de gate.
+    if (newPose != null && newPose != Posture.free) {
+      _enterAwaitReady();
+    }
     _notify();
   }
 }

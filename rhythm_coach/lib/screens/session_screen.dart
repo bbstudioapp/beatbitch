@@ -1171,6 +1171,10 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                     _BreakBanner(controller: ctrl),
                     SizedBox(height: showBar ? 8 : 12),
                   ],
+                  if (ctrl.awaitingPostureReady) ...[
+                    _PostureReadyButton(controller: ctrl),
+                    SizedBox(height: showBar ? 8 : 12),
+                  ],
                   if (ctrl.isChallengeActive) ...[
                     _ChallengeBanner(controller: ctrl),
                     SizedBox(height: showBar ? 6 : 10),
@@ -1490,6 +1494,47 @@ class _FailButton extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                     letterSpacing: 3,
                     color: enabled ? Colors.white : Colors.white38,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Bouton de validation posture (issue #77) : affiché quand la séance est
+/// gelée en attente que la joueuse confirme être en position. Tap → reprise.
+class _PostureReadyButton extends StatelessWidget {
+  final SessionController controller;
+  const _PostureReadyButton({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: Material(
+        color: AppTheme.accent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: controller.confirmPostureReady,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.check_circle, color: Colors.black, size: 22),
+                const SizedBox(width: 12),
+                Text(
+                  AppLocalizations.of(context).sessionPostureReadyButton,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 2,
+                    color: Colors.black,
                   ),
                 ),
               ],

@@ -146,6 +146,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get sessionFailButton => 'JE PEUX PAS';
 
   @override
+  String get sessionPostureReadyButton => 'JE SUIS EN PLACE';
+
+  @override
   String get sessionIntroBriefing => 'BRIEFING';
 
   @override

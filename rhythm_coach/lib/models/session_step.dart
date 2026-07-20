@@ -91,6 +91,14 @@ class SessionStep {
   /// séance pour un fond.
   final String? background;
 
+  /// Quand `true`, ce step ouvre une **gate de validation posture** : après
+  /// l'avoir appliqué (annonce + éventuel beep), le `SessionController` gèle la
+  /// séance (`awaitingPostureReady`) jusqu'à ce que la joueuse confirme qu'elle
+  /// est en position (bouton « JE SUIS EN PLACE »). Posé sur le 1er step des
+  /// milestones posture (`intro_posture_*`), et déclenché aussi en runtime à la
+  /// sortie d'un break qui change de posture (issue #77).
+  final bool awaitReady;
+
   const SessionStep({
     required this.time,
     this.text = '',
@@ -103,6 +111,7 @@ class SessionStep {
     this.chainAction,
     this.swallowMode,
     this.background,
+    this.awaitReady = false,
   });
 
   /// True quand l'étape ne fait QUE déclencher une phrase TTS et n'apporte
@@ -147,6 +156,7 @@ class SessionStep {
       chainAction: chain,
       swallowMode: _swallowModeFromString(_asString(json['swallow_mode'])),
       background: _asString(json['background']),
+      awaitReady: json['awaitReady'] == true || json['await_ready'] == true,
     );
   }
 
@@ -186,6 +196,7 @@ class SessionStep {
         if (chainAction != null) 'chainAction': chainAction!.toJsonForChain(),
         if (swallowMode != null) 'swallow_mode': swallowMode!.name,
         if (background != null) 'background': background,
+        if (awaitReady) 'awaitReady': true,
       };
 
   /// Sérialisation `chainAction` : on omet `time` (recalculé par le
