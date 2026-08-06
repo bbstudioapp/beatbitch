@@ -375,6 +375,7 @@
         {
           "time": 0,
           "text": "Aujourd'hui tu obéis à une consigne de position. Assieds-toi bien droite, écarte les genoux, et présente-toi.",
+          "awaitReady": true,
           "mode": "breath",
           "duration": 8
         },
@@ -430,6 +431,7 @@
         {
           "time": 0,
           "text": "Cette fois tu te mets debout. Jambes écartées, bien stable. Tu vas travailler dans cette position.",
+          "awaitReady": true,
           "mode": "breath",
           "duration": 8
         },
@@ -485,6 +487,7 @@
         {
           "time": 0,
           "text": "Mets-toi à genoux. C'est ta place. Genoux au sol, dos droit, bouche prête.",
+          "awaitReady": true,
           "mode": "breath",
           "duration": 8
         },
@@ -540,6 +543,7 @@
         {
           "time": 0,
           "text": "À quatre pattes. Maintenant. Mains et genoux au sol, croupe relevée, tête baissée.",
+          "awaitReady": true,
           "mode": "breath",
           "duration": 8
         },
@@ -596,6 +600,7 @@
         {
           "time": 0,
           "text": "Allonge-toi sur le dos. Tête en arrière, dans le vide. Ta gorge est alignée — tu vas tout prendre.",
+          "awaitReady": true,
           "mode": "breath",
           "duration": 8
         },

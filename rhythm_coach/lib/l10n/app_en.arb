@@ -60,6 +60,7 @@
   "sessionFailPhasePunishment": "Punishment",
   "sessionStartPrompt": "Start the session to hear the instructions.",
   "sessionFailButton": "I CAN'T",
+  "sessionPostureReadyButton": "I'M IN POSITION",
   "sessionIntroBriefing": "BRIEFING",
   "sessionIntroReplay": "Replay",
   "sessionIntroReady": "I'M READY",

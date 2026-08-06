@@ -422,6 +422,25 @@ class SessionController extends ChangeNotifier {
   Posture _currentPose = Posture.free;
   Posture get currentPose => _currentPose;
 
+  /// Posture imposée au démarrage (issue #77), lisible **avant** `start()`
+  /// (qui seul initialise `_currentPose`). Sert à l'écran d'intro pour
+  /// afficher la pose à prendre avant validation. `free` si aucune.
+  Posture get initialPose => _session.initialPose;
+
+  /// Gate de validation posture (issue #77) : `true` quand la séance est gelée
+  /// en attente que la joueuse confirme être en position (step `awaitReady`
+  /// d'une milestone posture, ou sortie de break qui change de pose). Gel
+  /// identique au défi (`elapsedSeconds` figé via `_timelineOffset` dans
+  /// `_onTick`, stopwatch/ticker intacts). Levé par [confirmPostureReady] ou le
+  /// timeout de sécurité.
+  bool _awaitingReady = false;
+  bool get awaitingPostureReady => _awaitingReady;
+  Timer? _readyTimeout;
+
+  /// Garde-fou anti-soft-lock : si la joueuse ne valide pas la posture, on
+  /// reprend seul au bout de ce délai (téléphone resté posé).
+  static const Duration _readyTimeoutDuration = Duration(seconds: 90);
+
   // ─── Commentaires aléatoires ───────────────────────────────────────────
 
   Timer? _randomCommentTimer;
@@ -954,6 +973,9 @@ class SessionController extends ChangeNotifier {
         _nextBreakIndex = 0;
         _breakOrderLastAtSec = 0;
         _currentPose = _session.initialPose;
+        _awaitingReady = false;
+        _readyTimeout?.cancel();
+        _readyTimeout = null;
         _capabilityTracker?.onSessionStart();
         // Seed neutre : remplacé par les valeurs persistées dès que la
         // lecture async (plus bas) revient. `seedHumiliationSession`
@@ -1154,11 +1176,15 @@ class SessionController extends ChangeNotifier {
     // sortie elle relâche `_breakActive` → `_checkSteps` (ci-dessous) applique
     // alors le step d'effort posé par le générateur juste après le trou.
     _updateBreakPhase();
+    // Milestone posture (issue #77) : fixe `_currentPose` sur la pose
+    // enseignée pendant sa fenêtre pour que l'indicateur en séance l'affiche,
+    // comme un break. Après `_updateBreakPhase` — fenêtres disjointes.
+    _updateMilestonePose();
     _checkSteps();
     // Gel de l'effort pendant un break : pas de crédit hold/saliva/stamina/
     // mini-punition ni de marqueurs de progression (la pause est de la récup
     // mise en scène, pas de l'effort). L'horloge `elapsed`, elle, continue.
-    if (!_breakActive) {
+    if (!_breakActive && !_awaitingReady) {
       _accrueHoldSecond();
       _checkProgressMarkers();
     }
@@ -1173,7 +1199,7 @@ class SessionController extends ChangeNotifier {
     // brut, jamais freezé) pour rester indépendantes de ce gel — sans
     // cela, `_inPostChallengeBreath` ne se terminerait jamais (son seuil
     // ne serait jamais franchi par un `elapsedSeconds` gelé).
-    if (isChallengeActive || _inPostChallengeBreath) {
+    if (isChallengeActive || _inPostChallengeBreath || _awaitingReady) {
       _timelineOffset -= _tickInterval;
     }
     if (elapsedSeconds >= session.durationSeconds) {
@@ -1318,6 +1344,10 @@ class SessionController extends ChangeNotifier {
     // un breath, le coach fait son rapport, la joueuse souffle. Le step
     // suivant attend.
     if (_inPostChallengeBreath) return;
+    // Gate posture (issue #77) : tant que la joueuse n'a pas validé sa
+    // position, on ne consomme aucun step — l'horloge est gelée dans `_onTick`
+    // et le step d'effort qui suit attend la confirmation.
+    if (_awaitingReady) return;
     final s = elapsedSeconds;
     var modeChanged = false;
     while (_nextStepIndex < session.steps.length &&
@@ -1451,6 +1481,15 @@ class SessionController extends ChangeNotifier {
       }
 
       _nextStepIndex++;
+
+      // Gate posture (issue #77) : ce step vient d'annoncer une position
+      // imposée (`awaitReady`, 1er step d'une milestone posture). On gèle la
+      // séance jusqu'à la validation joueuse et on arrête de consommer les
+      // steps suivants ce tick.
+      if (step.awaitReady) {
+        _enterAwaitReady();
+        break;
+      }
     }
     // Si un step de config a été appliqué, le mode courant a potentiellement
     // changé → on ré-aligne l'ambiance. Le AmbienceEngine no-op si l'asset
@@ -1458,6 +1497,29 @@ class SessionController extends ChangeNotifier {
     if (modeChanged) {
       _syncAmbienceToCurrentMode();
     }
+  }
+
+  /// Entre en gate de validation posture (issue #77) : la séance se fige
+  /// (`elapsedSeconds` gelé dans `_onTick`) et on arme le timeout de sécurité.
+  /// L'annonce de la posture a déjà été prononcée par le step qui déclenche la
+  /// gate ; ici on ne fait qu'attendre.
+  void _enterAwaitReady() {
+    if (_awaitingReady) return;
+    _awaitingReady = true;
+    _readyTimeout?.cancel();
+    _readyTimeout = Timer(_readyTimeoutDuration, confirmPostureReady);
+    notifyListeners();
+  }
+
+  /// Validation joueuse (« JE SUIS EN PLACE ») : lève la gate, la séance
+  /// reprend au tick suivant (l'horloge ré-avance, le step d'effort suivant
+  /// s'applique). Aussi appelée par le timeout de sécurité. No-op hors gate.
+  void confirmPostureReady() {
+    if (!_awaitingReady) return;
+    _awaitingReady = false;
+    _readyTimeout?.cancel();
+    _readyTimeout = null;
+    notifyListeners();
   }
 
   /// Wrapper autour de `_tts.speak` qui marque le dernier instant scripté,
@@ -2102,6 +2164,7 @@ class SessionController extends ChangeNotifier {
     _failActive = false;
     _punishmentTicker?.cancel();
     _randomCommentTimer?.cancel();
+    _readyTimeout?.cancel();
     _ticker?.cancel();
     _stopwatch.stop();
     await _tts.stop();
@@ -2117,6 +2180,7 @@ class SessionController extends ChangeNotifier {
     _failActive = false;
     _punishmentTicker?.cancel();
     _randomCommentTimer?.cancel();
+    _readyTimeout?.cancel();
     _ticker?.cancel();
     _stopwatch.stop();
     if (!wasAlreadyReleased) {

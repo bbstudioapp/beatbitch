@@ -110,6 +110,40 @@ extension BreakSequencer on SessionController {
             bank?.pickBreakResume(_random))
         : bank?.pickBreakResume(_random);
     if (resume != null) _speakScripted(resume);
+    // Gate posture (issue #77) : si le break impose une nouvelle posture
+    // physique, on gèle la reprise jusqu'à ce que la joueuse s'y mette (comme
+    // le 1er step des milestones posture). `free` = pas de repositionnement,
+    // pas de gate.
+    if (newPose != null && newPose != Posture.free) {
+      _enterAwaitReady();
+    }
     _notify();
+  }
+
+  /// Met à jour `_currentPose` quand la fenêtre d'une **milestone posture**
+  /// (issue #77) est active : la séquence enseigne la pose (« mets-toi à
+  /// genoux… ») et l'`unlock` la débloque, mais rien ne posait la pose sur
+  /// l'écran de jeu. On la fixe dès l'entrée dans la fenêtre — et on la
+  /// **garde** ensuite (le script dit « reste à genoux »), comme un break qui
+  /// impose une pose durable. Appelée dans `_onTick` après `_updateBreakPhase`
+  /// (fenêtres disjointes) et avant `_checkSteps`.
+  void _updateMilestonePose() {
+    final id = currentMilestoneIdInWindow;
+    if (id == null) return;
+    final pose = _postureForMilestoneId(id);
+    if (pose != null && pose != _currentPose) {
+      _currentPose = pose;
+    }
+  }
+
+  /// Déduit la posture enseignée d'un id de milestone posture
+  /// (`intro_posture_kneeling` → [Posture.kneeling]). `null` pour toute autre
+  /// milestone. Suit la convention d'id du catalogue
+  /// (`assets/career/milestones.json`), langue-indépendante.
+  Posture? _postureForMilestoneId(String id) {
+    const prefix = 'intro_posture_';
+    if (!id.startsWith(prefix)) return null;
+    final pose = Posture.fromString(id.substring(prefix.length));
+    return pose == Posture.free ? null : pose;
   }
 }

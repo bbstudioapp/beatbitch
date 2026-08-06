@@ -360,6 +360,12 @@ abstract class AppLocalizations {
   /// **'JE PEUX PAS'**
   String get sessionFailButton;
 
+  /// No description provided for @sessionPostureReadyButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'JE SUIS EN PLACE'**
+  String get sessionPostureReadyButton;
+
   /// No description provided for @sessionIntroBriefing.
   ///
   /// In fr, this message translates to:

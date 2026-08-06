@@ -145,6 +145,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionFailButton => 'I CAN\'T';
 
   @override
+  String get sessionPostureReadyButton => 'I\'M IN POSITION';
+
+  @override
   String get sessionIntroBriefing => 'BRIEFING';
 
   @override

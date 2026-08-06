@@ -924,6 +924,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                   child: _introPending
                       ? _IntroPanel(
                           text: _resolvedIntroText!,
+                          pose: ctrl.initialPose,
                           onReady: _onIntroReady,
                           onReplay: _speakIntro,
                         )
@@ -1169,6 +1170,10 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                   ],
                   if (ctrl.breakActive) ...[
                     _BreakBanner(controller: ctrl),
+                    SizedBox(height: showBar ? 8 : 12),
+                  ],
+                  if (ctrl.awaitingPostureReady) ...[
+                    _PostureReadyButton(controller: ctrl),
                     SizedBox(height: showBar ? 8 : 12),
                   ],
                   if (ctrl.isChallengeActive) ...[
@@ -1490,6 +1495,47 @@ class _FailButton extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                     letterSpacing: 3,
                     color: enabled ? Colors.white : Colors.white38,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Bouton de validation posture (issue #77) : affiché quand la séance est
+/// gelée en attente que la joueuse confirme être en position. Tap → reprise.
+class _PostureReadyButton extends StatelessWidget {
+  final SessionController controller;
+  const _PostureReadyButton({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: Material(
+        color: AppTheme.accent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: controller.confirmPostureReady,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.check_circle, color: Colors.black, size: 22),
+                const SizedBox(width: 12),
+                Text(
+                  AppLocalizations.of(context).sessionPostureReadyButton,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 2,
+                    color: Colors.black,
                   ),
                 ),
               ],
@@ -2099,11 +2145,17 @@ class _LabeledSlider extends StatelessWidget {
 /// bouton « JE SUIS PRÊTE » pour enchaîner sur la séance.
 class _IntroPanel extends StatelessWidget {
   final String text;
+
+  /// Posture imposée au démarrage (issue #77), ou `Posture.free` si aucune.
+  /// Affichée sur l'écran d'intro pour que l'utilisatrice se mette en place
+  /// avant de valider « Je suis prête ».
+  final Posture pose;
   final VoidCallback onReady;
   final Future<void> Function() onReplay;
 
   const _IntroPanel({
     required this.text,
+    required this.pose,
     required this.onReady,
     required this.onReplay,
   });
@@ -2130,6 +2182,10 @@ class _IntroPanel extends StatelessWidget {
               ),
             ),
           ),
+          if (pose != Posture.free) ...[
+            const SizedBox(height: 16),
+            Center(child: PostureIndicator(pose: pose)),
+          ],
           const SizedBox(height: 16),
           Align(
             alignment: Alignment.centerRight,

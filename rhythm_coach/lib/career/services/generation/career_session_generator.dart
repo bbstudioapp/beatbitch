@@ -1569,6 +1569,7 @@ class CareerSessionGenerator {
         to: mStep.to,
         duration: mStep.duration,
         swallowMode: mStep.swallowMode,
+        awaitReady: mStep.awaitReady,
       ));
       // Simulation stamina/salive pour chaque step de config de la
       // séquence, pour que la projection reste cohérente. Les steps
