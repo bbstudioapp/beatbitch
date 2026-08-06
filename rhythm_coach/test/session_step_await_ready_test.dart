@@ -35,7 +35,7 @@ void main() {
     final restored = SessionStep.fromJson({'time': 3, ...step.toJson()});
     expect(restored.awaitReady, isTrue);
     // Un step ordinaire n'émet pas la clé (défaut false).
-    expect(const SessionStep(time: 0).toJson().containsKey('awaitReady'),
-        isFalse);
+    expect(
+        const SessionStep(time: 0).toJson().containsKey('awaitReady'), isFalse);
   });
 }

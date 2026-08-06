@@ -272,7 +272,6 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);

@@ -642,8 +642,18 @@ class BeepEngine {
         // peut avoir un hoquet de scheduling), le `resume()` ne redéclenche
         // rien et le bip de gorge/full/hold manque. Cf. doc de
         // [_longSampleAssets].
+        //
+        // `.timeout(250 ms)` : sous forte charge (longues séances), le
+        // `MediaPlayer` natif finit par ne plus répondre au `seek()` et le
+        // Future ne se complète qu'au timeout interne d'audioplayers (30 s).
+        // On n'attend pas : chaque seek pendant 30 s empile des Futures qui
+        // engorgent le heap (GC, rame) et un `seek` bloqué de 30 s fige la
+        // chaîne d'émission. Au pire on rate un seek (bip parfois manqué),
+        // acceptable vs le blocage.
         try {
-          await picked.player.seek(Duration.zero);
+          await picked.player
+              .seek(Duration.zero)
+              .timeout(const Duration(milliseconds: 250));
         } catch (e) {
           if (kDebugMode) debugPrint('[BeepEngine] seek error : $e');
         }
@@ -841,7 +851,10 @@ class BeepEngine {
     for (final pool in _pools.values) {
       for (final p in pool.players) {
         try {
-          await p.stop();
+          // `.timeout(300 ms)` : même garde-fou que le `seek` — sur un backend
+          // audio engorgé (longues séances), `stop()` peut ne jamais rendre la
+          // main. On ne bloque pas la pause/fin de séance pour autant.
+          await p.stop().timeout(const Duration(milliseconds: 300));
         } catch (_) {}
       }
     }
