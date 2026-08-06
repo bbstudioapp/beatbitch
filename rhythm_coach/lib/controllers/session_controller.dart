@@ -422,6 +422,11 @@ class SessionController extends ChangeNotifier {
   Posture _currentPose = Posture.free;
   Posture get currentPose => _currentPose;
 
+  /// Posture imposée au démarrage (issue #77), lisible **avant** `start()`
+  /// (qui seul initialise `_currentPose`). Sert à l'écran d'intro pour
+  /// afficher la pose à prendre avant validation. `free` si aucune.
+  Posture get initialPose => _session.initialPose;
+
   /// Gate de validation posture (issue #77) : `true` quand la séance est gelée
   /// en attente que la joueuse confirme être en position (step `awaitReady`
   /// d'une milestone posture, ou sortie de break qui change de pose). Gel
@@ -1171,6 +1176,10 @@ class SessionController extends ChangeNotifier {
     // sortie elle relâche `_breakActive` → `_checkSteps` (ci-dessous) applique
     // alors le step d'effort posé par le générateur juste après le trou.
     _updateBreakPhase();
+    // Milestone posture (issue #77) : fixe `_currentPose` sur la pose
+    // enseignée pendant sa fenêtre pour que l'indicateur en séance l'affiche,
+    // comme un break. Après `_updateBreakPhase` — fenêtres disjointes.
+    _updateMilestonePose();
     _checkSteps();
     // Gel de l'effort pendant un break : pas de crédit hold/saliva/stamina/
     // mini-punition ni de marqueurs de progression (la pause est de la récup

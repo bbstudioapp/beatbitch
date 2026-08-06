@@ -924,6 +924,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                   child: _introPending
                       ? _IntroPanel(
                           text: _resolvedIntroText!,
+                          pose: ctrl.initialPose,
                           onReady: _onIntroReady,
                           onReplay: _speakIntro,
                         )
@@ -2144,11 +2145,17 @@ class _LabeledSlider extends StatelessWidget {
 /// bouton « JE SUIS PRÊTE » pour enchaîner sur la séance.
 class _IntroPanel extends StatelessWidget {
   final String text;
+
+  /// Posture imposée au démarrage (issue #77), ou `Posture.free` si aucune.
+  /// Affichée sur l'écran d'intro pour que l'utilisatrice se mette en place
+  /// avant de valider « Je suis prête ».
+  final Posture pose;
   final VoidCallback onReady;
   final Future<void> Function() onReplay;
 
   const _IntroPanel({
     required this.text,
+    required this.pose,
     required this.onReady,
     required this.onReplay,
   });
@@ -2175,6 +2182,10 @@ class _IntroPanel extends StatelessWidget {
               ),
             ),
           ),
+          if (pose != Posture.free) ...[
+            const SizedBox(height: 16),
+            Center(child: PostureIndicator(pose: pose)),
+          ],
           const SizedBox(height: 16),
           Align(
             alignment: Alignment.centerRight,

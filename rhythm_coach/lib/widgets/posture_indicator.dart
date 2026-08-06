@@ -4,11 +4,12 @@ import '../l10n/enum_labels.dart';
 import '../models/posture.dart';
 import '../theme/app_theme.dart';
 
-/// Indicateur de posture imposée (issue #77) : silhouette schématique + label
-/// localisé, affiché en permanence pendant la séance dès qu'une posture est
-/// imposée (`pose != Posture.free`). Pas d'asset binaire — la silhouette est
-/// peinte par [_PostureSilhouettePainter] (picto léger in-repo, cohérent avec
-/// la politique « pas de binaires lourds, ceux-là restent dans le repo »).
+/// Indicateur de posture imposée (issue #77) : silhouette + label localisé,
+/// affiché en permanence pendant la séance dès qu'une posture est imposée
+/// (`pose != Posture.free`). La silhouette est un PNG monochrome
+/// (`assets/postures/<pose>.png`, teinté au runtime via `BlendMode.srcIn`) —
+/// asset SFW léger conservé dans le repo (pas d'externalisation R2, contrairement
+/// aux portraits de coach).
 ///
 /// Cf. spec `specs/scripted_breaks.md` § UI. La pose change uniquement à
 /// l'intro et aux breaks ; cet indicateur reflète `SessionController.currentPose`.
@@ -38,12 +39,7 @@ class PostureIndicator extends StatelessWidget {
           SizedBox(
             width: size,
             height: size,
-            child: CustomPaint(
-              painter: _PostureSilhouettePainter(
-                pose: pose,
-                color: AppTheme.textPrimary,
-              ),
-            ),
+            child: _buildSilhouette(),
           ),
           const SizedBox(width: 10),
           Text(
@@ -59,84 +55,19 @@ class PostureIndicator extends StatelessWidget {
       ),
     );
   }
-}
 
-/// Peint une silhouette humaine schématique selon la posture. Traits épais à
-/// bouts ronds (effet silhouette) sur un canvas normalisé. Volontairement
-/// minimal : le label porte le sens, la silhouette donne le repère visuel
-/// immédiat (téléphone posé sur le côté, lecture d'un coup d'œil).
-class _PostureSilhouettePainter extends CustomPainter {
-  final Posture pose;
-  final Color color;
-
-  _PostureSilhouettePainter({required this.pose, required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final stroke = w * 0.11;
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    final headPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-    final headR = w * 0.12;
-
-    // Helpers en coordonnées normalisées (0..1) → pixels.
-    Offset p(double x, double y) => Offset(x * w, y * h);
-    void line(double x1, double y1, double x2, double y2) =>
-        canvas.drawLine(p(x1, y1), p(x2, y2), paint);
-    void head(double x, double y) =>
-        canvas.drawCircle(p(x, y), headR, headPaint);
-
-    switch (pose) {
-      case Posture.standing:
-        head(0.5, 0.16);
-        line(0.5, 0.26, 0.5, 0.62); // tronc
-        line(0.5, 0.36, 0.30, 0.52); // bras g
-        line(0.5, 0.36, 0.70, 0.52); // bras d
-        line(0.5, 0.62, 0.38, 0.92); // jambe g
-        line(0.5, 0.62, 0.62, 0.92); // jambe d
-      case Posture.sitting:
-        head(0.40, 0.18);
-        line(0.40, 0.28, 0.40, 0.58); // tronc
-        line(0.40, 0.58, 0.74, 0.58); // cuisses (horizontales)
-        line(0.74, 0.58, 0.74, 0.90); // tibias (verticaux)
-        line(0.40, 0.40, 0.60, 0.54); // bras posé sur la cuisse
-      case Posture.kneeling:
-        head(0.5, 0.22);
-        line(0.5, 0.31, 0.5, 0.60); // tronc
-        line(0.5, 0.42, 0.32, 0.56); // bras g
-        line(0.5, 0.42, 0.68, 0.56); // bras d
-        line(0.5, 0.60, 0.5, 0.82); // cuisses (verticales)
-        line(0.5, 0.82, 0.78, 0.82); // tibias au sol
-      case Posture.allFours:
-        head(0.18, 0.40);
-        line(0.26, 0.42, 0.78, 0.42); // dos horizontal
-        line(0.34, 0.42, 0.34, 0.84); // bras
-        line(0.72, 0.42, 0.72, 0.84); // jambe
-        line(0.50, 0.42, 0.50, 0.84); // appui central
-      case Posture.onBack:
-        head(0.16, 0.52);
-        line(0.24, 0.56, 0.84, 0.56); // corps allongé
-        line(0.50, 0.56, 0.62, 0.74); // genou replié
-        line(0.62, 0.74, 0.74, 0.74); // pied au sol
-        line(0.84, 0.56, 0.92, 0.62); // jambe tendue
-      case Posture.free:
-        // Pose libre : ligne ondulée neutre (jamais affichée par
-        // PostureIndicator, qui ne se monte que pour pose != free — rendu
-        // défensif au cas où).
-        head(0.5, 0.20);
-        line(0.5, 0.30, 0.5, 0.70);
-    }
+  /// Silhouette PNG teintée à `textPrimary` (blanc → couleur via `srcIn`, qui
+  /// respecte l'alpha détouré). `free` n'a pas d'asset — l'indicateur ne se
+  /// monte de toute façon que pour `pose != free`, rendu défensif au cas où.
+  Widget _buildSilhouette() {
+    if (pose == Posture.free) return const SizedBox.shrink();
+    return Image.asset(
+      'assets/postures/${pose.serialized}.png',
+      width: size,
+      height: size,
+      color: AppTheme.textPrimary,
+      colorBlendMode: BlendMode.srcIn,
+      filterQuality: FilterQuality.medium,
+    );
   }
-
-  @override
-  bool shouldRepaint(_PostureSilhouettePainter old) =>
-      old.pose != pose || old.color != color;
 }
