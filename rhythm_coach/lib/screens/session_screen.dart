@@ -1049,8 +1049,13 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
               ),
               child: Column(
                 children: [
-                  _StateBadge(state: ctrl.state),
-                  SizedBox(height: showBar ? 6 : 12),
+                  // Badge d'état masqué en cours de séance : « EN COURS » est
+                  // du bruit (l'animation suffit). Pause / fail / fin gardent
+                  // leur badge, utile pour signaler l'état hors jeu actif.
+                  if (ctrl.state != SessionState.running) ...[
+                    _StateBadge(state: ctrl.state),
+                    SizedBox(height: showBar ? 6 : 12),
+                  ],
                   if (ctrl.isFailing)
                     _FailPhaseIndicator(controller: ctrl)
                   else if (ctrl.hasConfig)
@@ -1116,13 +1121,19 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                   else
                     SizedBox(height: animHeight),
                   SizedBox(height: showBar ? 12 : 24),
-                  _CurrentInstruction(
-                    // `currentDisplayText` retourne déjà la version résolue
-                    // (`{name}` substitué) du dernier texte parlé / phrase de fail.
-                    // Le contrôleur résout une fois au speak, donc l'affichage reste
-                    // stable entre rebuilds et matche exactement la voix.
-                    text: ctrl.currentDisplayText,
-                  ),
+                  // Pendant un défi, la carte `_ChallengeBanner` (plus bas)
+                  // porte déjà l'objectif + la consigne : afficher aussi
+                  // `currentDisplayText` ici doublonnait le texte et forçait
+                  // à scroller. On masque l'instruction centrale le temps du
+                  // défi.
+                  if (!ctrl.isChallengeActive)
+                    _CurrentInstruction(
+                      // `currentDisplayText` retourne déjà la version résolue
+                      // (`{name}` substitué) du dernier texte parlé / phrase de fail.
+                      // Le contrôleur résout une fois au speak, donc l'affichage reste
+                      // stable entre rebuilds et matche exactement la voix.
+                      text: ctrl.currentDisplayText,
+                    ),
                   const Spacer(),
                   if (_showSessionControls) ...[
                     _ControlsRow(controller: ctrl),
@@ -1130,7 +1141,12 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                   ],
                   // L'état pause est signalé par l'overlay flou plein écran
                   // monté un cran au-dessus (cf. `_PausedOverlay` dans `body`).
-                  if (widget.isCareer && widget.onRequestUpgrade != null)
+                  // Masqué pendant un défi : le bouton tombe pile sous le texte
+                  // du défi, on cliquait dessus par réflexe et l'upgrade en
+                  // plein défi cassait l'enchaînement.
+                  if (widget.isCareer &&
+                      widget.onRequestUpgrade != null &&
+                      !ctrl.isChallengeActive)
                     ListenableBuilder(
                       listenable: milestoneService,
                       builder: (context, _) {
