@@ -1505,6 +1505,12 @@ class SessionController extends ChangeNotifier {
   /// gate ; ici on ne fait qu'attendre.
   void _enterAwaitReady() {
     if (_awaitingReady) return;
+    // Fixe `_currentPose` sur la posture enseignée par la milestone qui arme
+    // ce gate, AVANT de notifier — sinon l'indicateur du gate affiche encore
+    // l'ancienne pose. `_updateMilestonePose` est déjà appelé dans `_onTick`,
+    // mais pas quand le gate s'arme depuis `start()` (`_checkSteps` du premier
+    // step, cas d'une milestone posture qui remplace l'intro).
+    _updateMilestonePose();
     _awaitingReady = true;
     _readyTimeout?.cancel();
     _readyTimeout = Timer(_readyTimeoutDuration, confirmPostureReady);
