@@ -102,10 +102,14 @@ class AppLocalizationsDe extends AppLocalizations {
   String get sessionAmbienceLabel => 'Ambiente';
 
   @override
-  String get sessionBegRequestLabel => 'GEFORDERT';
+  String get sessionUseMeLabel => 'BENUTZ MICH';
 
   @override
-  String get sessionBegSupplicateLabel => 'BETTLE';
+  String get sessionUseMeUsedLabel => 'BENUTZT';
+
+  @override
+  String get careerUseMeBegPhrase =>
+      'Bettle darum, dass ich dich benutze wie das Spielzeug, das du bist.';
 
   @override
   String get sessionStateIdle => 'BEREIT';
@@ -123,6 +127,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get sessionStateFailing => 'FAIL';
 
   @override
+  String get sessionBreakBanner => 'PAUSE';
+
+  @override
   String get sessionFailPhasePhrase => 'Fail-Satz';
 
   @override
@@ -137,6 +144,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get sessionFailButton => 'ICH KANN NICHT';
+
+  @override
+  String get sessionPostureReadyButton => 'ICH BIN IN POSITION';
 
   @override
   String get sessionIntroBriefing => 'BRIEFING';
@@ -568,6 +578,16 @@ class AppLocalizationsDe extends AppLocalizations {
       'Volle Sitzung, mehrere eingeschobene Herausforderungen.';
 
   @override
+  String get sessionLengthAleatoireLabel => 'Zufällig';
+
+  @override
+  String get sessionLengthAleatoireDuration => 'Überraschung';
+
+  @override
+  String get sessionLengthAleatoireDescription =>
+      'Überraschungslänge — gezogen zwischen Kurz, Mittel und Lang. Kein Timer.';
+
+  @override
   String get careerChallengesToggle => 'Herausforderungen in der Sitzung';
 
   @override
@@ -962,6 +982,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsLanguageGerman => 'Deutsch';
 
   @override
+  String get settingsLanguageSpanish => 'Español';
+
+  @override
   String get languagePickerTitle => 'Wähl deine Sprache';
 
   @override
@@ -1267,6 +1290,13 @@ class AppLocalizationsDe extends AppLocalizations {
       'Zeigt einen Knopf in der Session, der sie sofort als vollen Erfolg beendet (Abzeichen, Meilensteine, Stufe). Praktisch, um an Inhalten zu feilen, ohne alles durchzuspielen.';
 
   @override
+  String get soundsDebugScriptedBreaks => 'Vorgegebene Posen + Breaks';
+
+  @override
+  String get soundsDebugScriptedBreaksSubtitle =>
+      'Aktiviert vorgegebene Posen (kniend, auf allen vieren…) und aktive Erholungspausen in langen Sessions. Experimentell, in Kalibrierung.';
+
+  @override
   String get soundsShowBackgroundMedia => 'Hintergrundmedien in der Session';
 
   @override
@@ -1421,6 +1451,24 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get positionBalls => 'Hoden';
+
+  @override
+  String get postureFree => 'Frei';
+
+  @override
+  String get postureSitting => 'Sitzend';
+
+  @override
+  String get postureStanding => 'Stehend';
+
+  @override
+  String get postureKneeling => 'Kniend';
+
+  @override
+  String get postureAllFours => 'Auf allen vieren';
+
+  @override
+  String get postureOnBack => 'Auf dem Rücken';
 
   @override
   String get modeShortRhythm => 'LUTSCH';
@@ -1917,6 +1965,31 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get modeSelectionCustomSubtitle =>
       'Maßgeschneiderte Sessions: Dauer, Modus-Mix, Schwierigkeit, Non-Stop.';
+
+  @override
+  String get modeSelectionMusicTitle => 'MUSIC';
+
+  @override
+  String get modeSelectionMusicSubtitle =>
+      'Im Takt deiner Musik: Tempo antippen, die Steps folgen dem Beat.';
+
+  @override
+  String get musicTapPrompt => 'Tippe den Beat deiner Musik';
+
+  @override
+  String get musicTapAction => 'TIPPEN';
+
+  @override
+  String get musicStart => 'START';
+
+  @override
+  String get musicStop => 'STOPP';
+
+  @override
+  String get musicWaitingTempo => 'Noch ein paar Mal tippen…';
+
+  @override
+  String get musicDebugTooltip => 'Debug: Gating ignorieren';
 
   @override
   String get customAppBarTitle => 'Custom-Sessions';

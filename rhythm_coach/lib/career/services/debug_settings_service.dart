@@ -14,6 +14,7 @@ class DebugSettingsService {
   static const String _kShowBackgroundMedia = 'pref.show_background_media';
   static const String _kShowSessionRemainingTime =
       'pref.show_session_remaining_time';
+  static const String _kScriptedBreaks = 'debug.scripted_breaks';
 
   Future<bool> getShowStaminaBar() async {
     final prefs = await SharedPreferences.getInstance();
@@ -156,5 +157,20 @@ class DebugSettingsService {
   Future<void> setShowSessionRemainingTime(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kShowSessionRemainingTime, value);
+  }
+
+  /// Quand true, active les postures imposées + breaks scénarisés en carrière
+  /// (issue #77) : posture tirée à l'intro et pauses actives de récup sur les
+  /// sessions longues. Off par défaut le temps de calibrer (cf. spec
+  /// `specs/scripted_breaks.md`). Lu par `career_screen` et passé au
+  /// générateur via `generate(scriptedBreaks:)`.
+  Future<bool> getScriptedBreaks() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_kScriptedBreaks) ?? false;
+  }
+
+  Future<void> setScriptedBreaks(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kScriptedBreaks, value);
   }
 }

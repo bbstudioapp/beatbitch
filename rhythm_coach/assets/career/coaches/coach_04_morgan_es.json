@@ -1,0 +1,261 @@
+{
+  "lang": "es",
+  "id": "coach_04_morgan",
+  "title": "Coach implacable",
+  "publicBio": "Directa, frontal, sin rodeos. Trabaja sobre puntas largas y profundidad, sin concesiones.",
+  "phrases": {
+    "rhythm": {
+      "soft": [
+        "Al trabajo, {name}.",
+        "Empieza. Y no finjas, {name}.",
+        "Muévete, {name}. Para eso estás aquí.",
+        "Sigue el ritmo. Sin discusión, {name}.",
+        "Vamos, {name}. Calienta tu garganta, la vas a necesitar."
+      ],
+      "medium": [
+        {"text": "Más profundo, {name}. No estás aquí para quedarte en la superficie.", "min_depth": "mid"},
+        "Más rápido, {name}. Eso lo puedes encajar.",
+        {"text": "Abajo. Más. Así, {name}.", "min_depth": "mid"},
+        "Mantén ese ritmo, {name}. No quiero ver ni un segundo de flojera.",
+        {"text": "Empiezas a ser útil, {name}. Sigue.", "min_depth": "mid"}
+      ],
+      "hard": [
+        {"text": "Destrózate la garganta, {name}.", "min_depth": "throat"},
+        {"text": "Más profundo, agujero para polla.", "min_depth": "mid"},
+        "Trágatelo todo, sin quejarte.",
+        {"text": "Hasta los huevos, {name}. Y te quedas.", "min_depth": "full"},
+        {"text": "Más rápido, más profundo. Querías esto, {name}.", "min_depth": "throat"},
+        "Lo encajas. Punto. Sin pausa, {name}.",
+        {"text": "Atragántate con ello, {name}. Ese es el trato.", "min_depth": "throat"}
+      ]
+    },
+    "lick": {
+      "soft": [
+        "Lame, {name}. Pónlo mojado.",
+        "Fuera la lengua, {name}. Úsala.",
+        "Con la punta de la lengua, y aplícate, {name}."
+      ],
+      "medium": [
+        "Toda la longitud, {name}. Babea encima.",
+        "Más fuerte, {name}. Quiero que se ponga bien guarro.",
+        "Lámelo como si tuvieras algo que demostrar, {name}."
+      ],
+      "hard": [
+        "Cúbrelo de saliva, puta. Entero.",
+        "Lámeme eso como toca, {name}. Sin medias tintas."
+      ]
+    },
+    "biffle": {
+      "soft": [
+        "Date vergazos en la cara, {name}. Vamos.",
+        "Golpes secos en tu mejilla, {name}.",
+        "Que suene, {name}. Sin remilgos."
+      ],
+      "medium": [
+        "Más fuerte, {name}. Que retumbe.",
+        "Destrózate la jeta con eso, puta.",
+        "Sigue, {name}. Más brutal."
+      ],
+      "hard": [
+        "Masácrate la cara, {name}.",
+        "Que suene hasta que arda, agujero para polla.",
+        "¡Más fuerte! Querías jugar con los mayores, {name}."
+      ]
+    },
+    "hold": {
+      "soft": [
+        {"text": "Mantenlo. No te muevas, {name}.", "max_depth": "mid"},
+        "Mantén la posición, {name}. No es negociable.",
+        {"text": "Hasta el fondo y quieta, {name}.", "min_depth": "mid", "max_depth": "throat"}
+      ],
+      "medium": [
+        {"text": "Más profundo. Y mantienes, {name}.", "min_depth": "mid"},
+        {"text": "Quédate clavada ahí abajo, {name}. Respira por la nariz o ahógate.", "min_depth": "mid", "max_depth": "throat"},
+        {"text": "No subes hasta que yo lo diga, {name}.", "min_depth": "throat"}
+      ],
+      "hard": [
+        {"text": "Quédate hasta el fondo. Ahógate con eso, {name}.", "min_depth": "throat"},
+        {"text": "Nariz contra los huevos. Mantén.", "min_depth": "full"},
+        {"text": "¿Arde? Bien. No te mueves, {name}.", "min_depth": "throat"}
+      ],
+      "finale": [
+        {"text": "Quédate clavada hasta el final, {name}.", "min_depth": "mid"},
+        {"text": "Última cosa: aguantas hasta el fondo hasta la señal, {name}.", "min_depth": "throat"},
+        "Ahógate con ello si hace falta, {name}. Pero aguantas."
+      ]
+    },
+    "breath": {
+      "soft": [
+        "Respira. Tienes diez segundos, {name}.",
+        "Coge aire, {name}. Esto no dura.",
+        "Inhala, {name}. Lo que viene es peor.",
+        "Disfrútalo, puta. Después seguimos."
+      ]
+    },
+    "beg": {
+      "soft": [
+        "Pídelo. En voz alta: «quiero más, {coach}».",
+        "Suplica, {name}. Quiero oírlo.",
+        "Dime por qué quieres más, puta.",
+        "Pídeme que siga, {name}. Convénceme."
+      ],
+      "medium": [
+        "Repite: «necesito tu polla, {coach}».",
+        "Di «más profundo, {coach}». Fuerte.",
+        "Suplica como toca, agujero para polla. Si no, paro.",
+        "Di mi nombre mientras suplicas, {coach}."
+      ]
+    },
+    "freestyle": {
+      "soft": [
+        "Vamos, {name}. Enséñame lo que tienes.",
+        "Haz un momento lo que quieras, {name}. Ay de ti si te vuelves floja."
+      ]
+    },
+    "hand": {
+      "soft": [
+        "Con la mano, {name}. Mantén el ritmo.",
+        "Pajéamela. Regular, {name}.",
+        "Movimientos limpios, {name}. No aflojas."
+      ],
+      "medium": [
+        "Más rápido con la mano, {name}. Mantén el tempo.",
+        "No te vas a ralentizar, {name}. Sigue."
+      ]
+    }
+  },
+  "randomComments": [
+    "Lo encajas, {name}. No pido más.",
+    "Nada de flojera, {name}.",
+    "Sigue, {name}. No estás cansada, eres vaga.",
+    "Más profundo. Siempre más profundo, {name}.",
+    "Eres apenas utilizable, {name}.",
+    "Muévete, {name}.",
+    "No quiero ver ni un segundo de pausa.",
+    "Lo encajas, o te rompes, {name}. Elige.",
+    "Correcto de momento, {name}.",
+    "Encájalo, {name}."
+  ],
+  "intros": [
+    "Soy Morgan. No voy a ser amable contigo, {name}.",
+    "Prepara tu garganta. Hoy te rompo.",
+    "Morgan. Aparta el móvil. A partir de ahora encajas, {name}.",
+    "Hoy trabajamos puntas largas y profundidad, {name}. Sin concesiones."
+  ],
+  "congrats": [
+    "Has aguantado. No está mal para un agujero.",
+    "Correcto, {name}. Empiezas a ser útil.",
+    "Lo has encajado sin romperte, {name}. Eso ya es algo.",
+    "No has aflojado ni una vez, {name}. Bien."
+  ],
+  "encore": [
+    "¿Más? Por supuesto. Un agujero como tú siempre suplica más, {name}.",
+    "Quieres más, {name}. Pues tendrás más."
+  ],
+  "progress": {
+    "25": [
+      "Estás calentada, {name}. Ahora empieza el trabajo de verdad.",
+      "Entras en el ritmo, {name}. Mantenlo."
+    ],
+    "50": [
+      "Eres útil, {name}.",
+      "Hasta ahora sin pausa, {name}. Bien."
+    ],
+    "75": [
+      "Te acercas al muro, {name}. No lo cruzas parando.",
+      "¿Duele, {name}? Justo eso es lo que queremos."
+    ],
+    "90": [
+      "Último esfuerzo, {name}. Ahora no te rompes.",
+      "Dalo todo, {name}. No hay después."
+    ]
+  },
+  "branchPhrases": {
+    "profondeur": {
+      "soft": [
+        "Tu garganta está hecha para tragarlo, {name}. Úsala.",
+        "Más profundo, {name}. Ahí abajo vales algo."
+      ],
+      "medium": [
+        "Bajas bien, {name}. Aún más profundo.",
+        "Tu profundidad progresa, {name}. Llévala hasta el tope."
+      ],
+      "hard": [
+        "Hasta los huevos, {name}. Eso es tu valor.",
+        "Una garganta como la tuya se destruye, no se mima, {name}."
+      ]
+    },
+    "endurance": {
+      "soft": [
+        "Lo encajas sin pestañear, {name}. Eso es lo tuyo.",
+        "Sabes sufrir, {name}. Es útil."
+      ],
+      "medium": [
+        "Coges todo lo que te doy, {name}. Bien.",
+        "No te rompes, {name}. Sigue encajándolo."
+      ],
+      "hard": [
+        "Indestructible, {name}. Demuéstralo otra vez.",
+        "Encajas lo que rompería a otras, {name}. Sigue así."
+      ]
+    }
+  },
+  "progressPhrases": {
+    "rhythm.depth_max": {
+      "attempt": [
+        "Hoy bajas más profundo que de costumbre, {name}. Sin discusión.",
+        "Vamos un escalón más adentro de tu garganta, {name}. Estás lista, lo sepas o no."
+      ],
+      "record": [
+        "Has llegado más profundo que nunca, {name}. Ese es el nivel que espero ahora.",
+        "Nuevo suelo de profundidad, {name}. Bien. Sigue cavando."
+      ],
+      "tapout": [
+        "Hoy has ido hasta donde tu cuerpo te ha dejado, {name}. Lo anotamos. El resto, después.",
+        "Demasiado profundo esta vez, {name}. Es un límite — lo empujamos, pero no hoy."
+      ]
+    },
+    "gorge.apnee_streak": {
+      "attempt": [
+        "Hoy mantienes la apnea más tiempo, {name}. Sin aire, y sin pánico.",
+        "Aguantamos hasta el fondo un poco más de lo habitual, {name}. Respira antes, durante no tienes."
+      ],
+      "record": [
+        "Has aguantado más tiempo sin aire que nunca, {name}. Sólido.",
+        "Récord de apnea, {name}. Encajas lo que pocas encajan."
+      ],
+      "tapout": [
+        "Aun así has aguantado un buen rato, {name}. Tus pulmones han dicho basta — lo escuchamos. Por esta vez.",
+        "Anotado, {name}. La próxima vez aguantas más sin aire."
+      ]
+    },
+    "effort.no_breath_streak": {
+      "attempt": [
+        "Hoy encadenamos más tiempo antes de que pares, {name}. Sin regalos.",
+        "Esta noche respiras menos, {name}. Así construimos tu resistencia."
+      ],
+      "record": [
+        "Has encadenado sin pausa más tiempo que nunca, {name}. Eres más dura de lo que crees.",
+        "Récord de esfuerzo sin aire, {name}. Bien. Eso es encajar."
+      ],
+      "tapout": [
+        "Respiras, {name}. Lo necesitabas — no me gusta, pero lo anoto.",
+        "Tranquila, {name}. Paras ahí con la respiración. Has aguantado lejos."
+      ]
+    }
+  },
+  "nicknames": {
+    "pool": [
+      "agujero para polla",
+      "agujero para leche",
+      "puta",
+      "guarra"
+    ],
+    "use_user_prenom": false,
+    "use_user_nicknames": true
+  },
+  "coachNicknames": [
+    "Morgan",
+    "Ama"
+  ]
+}

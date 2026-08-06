@@ -3,6 +3,7 @@ import 'dart:ui' show Locale;
 
 import 'package:flutter/services.dart' show rootBundle;
 
+import '../../models/posture.dart';
 import '../../models/session.dart';
 import '../../services/locale_service.dart';
 import '../models/phrase_bank.dart';
@@ -21,9 +22,7 @@ class PhraseBankLoader {
 
   Future<PhraseBank> load({Locale? locale}) async {
     final lang = (locale ?? LocaleService.instance.current).languageCode;
-    final path =
-        lang == 'fr' ? _assetPathDefault : 'assets/career/phrases_$lang.json';
-    final raw = await rootBundle.loadString(path);
+    final raw = await _loadWithFallback(lang);
     final data = json.decode(raw) as Map<String, dynamic>;
 
     final byMode = <SessionMode, Map<String, List<PhraseEntry>>>{};
@@ -76,6 +75,19 @@ class PhraseBankLoader {
       });
     }
 
+    // Breaks scénarisés (issue #77) : phrases d'entrée / ordres / reprise +
+    // changement de posture par posture (clé = `Posture.serialized`).
+    final breakPostureChange = <Posture, List<PhraseEntry>>{};
+    final breakPostureNode = data['break_posture'];
+    if (breakPostureNode is Map<String, dynamic>) {
+      breakPostureNode.forEach((key, phrases) {
+        final pose = Posture.fromString(key);
+        if (pose == Posture.free) return; // pas d'imposition pour free
+        final list = PhraseEntry.listFromJson(phrases);
+        if (list.isNotEmpty) breakPostureChange[pose] = list;
+      });
+    }
+
     return PhraseBank(
       byMode: byMode,
       congrats: PhraseEntry.listFromJson(data['congrats']),
@@ -90,6 +102,26 @@ class PhraseBankLoader {
       postFinalBeg: PhraseEntry.listFromJson(data['post_final_beg']),
       postFinalLick: PhraseEntry.listFromJson(data['post_final_lick']),
       swallowOrders: PhraseEntry.listFromJson(data['swallow_order']),
+      breakEntry: PhraseEntry.listFromJson(data['break_entry']),
+      breakOrders: PhraseEntry.listFromJson(data['break_orders']),
+      breakResume: PhraseEntry.listFromJson(data['break_resume']),
+      breakPostureChange: breakPostureChange,
     );
+  }
+
+  /// Cascade `_<lang>.json` → `_en.json` → `_fr.json`. Permet d'ajouter une
+  /// locale (UI traduite) avant d'avoir traduit la banque de phrases carrière.
+  Future<String> _loadWithFallback(String lang) async {
+    String pathFor(String l) =>
+        l == 'fr' ? _assetPathDefault : 'assets/career/phrases_$l.json';
+    for (final candidate in <String>{lang, 'en', 'fr'}) {
+      try {
+        return await rootBundle.loadString(pathFor(candidate));
+      } catch (_) {
+        continue;
+      }
+    }
+    throw StateError(
+        'Aucune banque de phrases trouvée (essayé: $lang, en, fr)');
   }
 }

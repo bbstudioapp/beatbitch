@@ -1,0 +1,257 @@
+{
+  "lang": "es",
+  "id": "coach_02_helene",
+  "title": "Entrenadora exigente",
+  "publicBio": "Marco claro, postura recta, técnica ante todo. No grita, pero tampoco deja pasar nada.",
+  "phrases": {
+    "rhythm": {
+      "soft": [
+        "Empieza ordenada {name}.",
+        "Sigue el ritmo con precisión {name}.",
+        "No te entretengas {name}.",
+        "Postura recta, movimiento limpio {name}.",
+        "Nada de improvisaciones {name}. Al compás.",
+        "Mejor {name}. Mantén esa disciplina.",
+        "Te observo {name}. Aplícate.",
+        "Regular. Es lo mínimo {name}.",
+        "Mandíbula en su sitio, ritmo limpio {name}."
+      ],
+      "medium": [
+        {"text": "Más profundo {name}. Quiero trabajo serio.", "min_depth": "mid"},
+        "Mantén ese ritmo, no te debilites {name}.",
+        {"text": "Sigue bajando, puedes hacerlo mejor.", "min_depth": "mid"},
+        "Te estás ralentizando {name}. Vuelve al compás.",
+        {"text": "Más profundo aún {name}. Eso es el trabajo.", "min_depth": "mid"},
+        "Aceptable. Mantén el compás, no aflojes {name}.",
+        "No tengo nada que reprocharte por ahora {name}. Sigue."
+      ],
+      "hard": [
+        {"text": "Baja hasta el fondo {name}. No te contengas.", "min_depth": "throat"},
+        {"text": "Más rápido y más profundo. Ejecuta.", "min_depth": "mid"},
+        "Tienes que mantener este ritmo {name}.",
+        {"text": "Encájalo {name}. Tienes lo que hace falta.", "min_depth": "throat"},
+        "Ni un temblor {name}. Sigue.",
+        {"text": "Hasta el fondo, y no sueltas {name}.", "min_depth": "throat"},
+        "Es exigente, y eso es precisamente lo que queremos {name}."
+      ]
+    },
+    "lick": {
+      "soft": [
+        "Lámelo correctamente {name}, aplícate.",
+        "Lengua precisa {name}, sin movimientos inútiles.",
+        "Cubre bien el glande {name}."
+      ],
+      "medium": [
+        "Toda la longitud, y con cuidado {name}.",
+        "Más saliva {name}. Hazlo como toca.",
+        "Lámelo como un trabajo, no como un hobby {name}."
+      ],
+      "hard": [
+        "Con esmero {name}. Lo quiero impecable.",
+        "Detente {name}. No chapucees."
+      ]
+    },
+    "biffle": {
+      "soft": [
+        "Date vergazos correctamente en la cara {name}.",
+        "Golpes limpios en tu mejilla {name}, sin blandura.",
+        "Que suene de verdad {name}."
+      ]
+    },
+    "hold": {
+      "soft": [
+        "Mantén la posición {name}.",
+        {"text": "Mantenlo ahí, sin temblar {name}.", "max_depth": "mid"},
+        "Quieta {name}. Respira por la nariz.",
+        {"text": "Mantener. Es una cuestión de disciplina {name}.", "max_depth": "throat"}
+      ],
+      "medium": [
+        {"text": "Quédate profunda, sin moverte {name}.", "min_depth": "mid"},
+        {"text": "Más profundo, y mantienes {name}.", "min_depth": "mid"},
+        {"text": "No subas antes de mi señal {name}.", "min_depth": "mid", "max_depth": "throat"},
+        {"text": "Cuenta en tu cabeza {name}. No te mueves.", "min_depth": "mid"}
+      ],
+      "hard": [
+        "No lo saques. Mantén hasta el final {name}.",
+        {"text": "Profunda, quieta, hasta que yo lo diga {name}.", "min_depth": "throat"},
+        {"text": "Es incómodo. Está hecho a propósito. Mantener {name}.", "min_depth": "throat"}
+      ],
+      "finale": [
+        {"text": "Última mantención. Quédate profunda {name}.", "min_depth": "mid"},
+        {"text": "Terminamos hasta el fondo {name}. No sueltes.", "min_depth": "throat"},
+        "Hasta la señal {name}. Ni antes.",
+        "Es lo último que te pido. Hazlo como toca {name}."
+      ]
+    },
+    "breath": {
+      "soft": [
+        "Respira. Recupera una postura correcta {name}.",
+        "Inhala profundo {name}. Retomamos limpiamente.",
+        "Relaja la mandíbula {name}, sin perder la concentración.",
+        "Tienes este tiempo {name}. Aprovéchalo bien."
+      ]
+    },
+    "beg": {
+      "soft": [
+        "Pídemelo correctamente: «quiero más {coach}».",
+        "Dilo claramente {name}, sin balbucear: «sigue, por favor {coach}».",
+        "Articula {name}. Pídeme que siga.",
+        "Quiero oírte formularlo como toca."
+      ],
+      "medium": [
+        "Repite, y como toca: «necesito tu polla {coach}».",
+        "Pide «más profundo {coach}», claramente.",
+        "Dirígete a mí por mi nombre, {coach}.",
+        "Suplica como toca, si no, no escucho."
+      ]
+    },
+    "freestyle": {
+      "soft": [
+        "Este momento es tuyo {name}. No lo desperdicies.",
+        "Muéstrame lo que sabes hacer sola {name}.",
+        "Libre, pero limpia {name}."
+      ]
+    },
+    "hand": {
+      "soft": [
+        "Pajéamela con la mano {name}, movimiento limpio.",
+        "Sube y baja regular {name}, sin blandura.",
+        "Ayúdate correctamente con la mano {name}."
+      ],
+      "medium": [
+        "Más firme con la mano {name}.",
+        "Mantén el tempo con la mano {name}, no te desvíes."
+      ]
+    }
+  },
+  "randomComments": [
+    "Postura. Siempre la postura {name}.",
+    "Es correcto {name}. Ni más, ni menos.",
+    "Mantente concentrada {name}.",
+    "Me fijo en lo que no encaja {name}. Corrígelo.",
+    "Nada de improvisar.",
+    "Puedes hacerlo mejor {name}.",
+    "Al compás {name}.",
+    "Disciplina {name}. Es todo lo que pido.",
+    "Aceptable por ahora.",
+    "No aflojes {name}."
+  ],
+  "intros": [
+    "Soy Hélène. Voy a ser exigente contigo {name}. Prepárate como toca.",
+    "Hoy vamos a trabajar en serio {name}.",
+    "Hélène. Aparta el móvil, siéntate recta y escucha. Empezamos {name}.",
+    "Sin indulgencia hoy {name}. Vas a trabajar, y bien."
+  ],
+  "congrats": [
+    "Correcto {name}. Has hecho lo necesario.",
+    "Aceptable. Aún puedes mejorar.",
+    "Mejor que la última vez {name}. Sigue así.",
+    "Has mantenido el marco {name}. No tengo mucho que reprochar."
+  ],
+  "encore": [
+    "¿Más? Bien. Volvemos a empezar, y te mantienes al nivel {name}.",
+    "Pides más {name}. Bien. No bajes la guardia."
+  ],
+  "progress": {
+    "25": [
+      "Inicio correcto {name}.",
+      "Entras en el ritmo {name}. Mantenlo."
+    ],
+    "50": [
+      "Buen trabajo hasta ahora {name}.",
+      "Aguantas. Eso es lo que espero {name}."
+    ],
+    "75": [
+      "Te acercas a tus límites {name}. No vaciles.",
+      "Es duro, y aguantas {name}. Correcto."
+    ],
+    "90": [
+      "Último esfuerzo {name}. Nada de aflojar.",
+      "Termina limpiamente {name}. Da lo que queda."
+    ]
+  },
+  "branchPhrases": {
+    "profondeur": {
+      "soft": [
+        "Tienes una garganta hecha para esto {name}. Úsala.",
+        "Más profundo {name}. Ahí sí estás trabajando."
+      ],
+      "medium": [
+        "Bajas bien {name}. Más.",
+        "Tu profundidad es correcta {name}. Empújala."
+      ],
+      "hard": [
+        "Hasta el fondo {name}. Eso es tu valor.",
+        "Una garganta como la tuya no se mima {name}."
+      ]
+    },
+    "obeissance": {
+      "soft": [
+        "Haces lo que digo {name}. Es lo mínimo.",
+        "Me obedeces correctamente {name}."
+      ],
+      "medium": [
+        "No has replicado {name}. Bien.",
+        "Ejecutas sin pestañear {name}. Eso es lo que se espera."
+      ],
+      "hard": [
+        "Obediencia impecable {name}. Lo apunto.",
+        "Haces exactamente lo que se te dice {name}. Sigue."
+      ]
+    }
+  },
+  "progressPhrases": {
+    "gorge.engagement_streak": {
+      "attempt": [
+        "Hoy tu garganta trabaja un poco más que de costumbre {name}. Está en tu rango.",
+        "Mantenemos el engagement de garganta un escalón más alto {name}. Sin discusión."
+      ],
+      "record": [
+        "Has mantenido el engagement más tiempo que nunca {name}. Ese es el nivel que espero ahora.",
+        "Nuevo umbral para tu garganta {name}. Aceptable. Muy aceptable."
+      ],
+      "tapout": [
+        "Tu garganta ha alcanzado su límite por hoy {name}. Paramos ahí — limpio, sin drama.",
+        "Anotado {name}. La garganta ha dicho basta. La volvemos a trabajar, más arriba."
+      ]
+    },
+    "hold.throat.streak": {
+      "attempt": [
+        "La mantención en garganta de hoy será más larga {name}. Prepárate para aguantarla.",
+        "Cuando te diga que mantengas profundo {name}, aguantas más que de costumbre. Disciplina."
+      ],
+      "record": [
+        "Lo has mantenido más profundo y más tiempo que nunca {name}. Eso es exactamente el trabajo.",
+        "Récord de mantención en garganta {name}. No tengo nada que reprochar. Es raro."
+      ],
+      "tapout": [
+        "Aun así has aguantado un buen rato {name}. El resto, en otra ocasión.",
+        "La garganta ha cedido {name}. Es un límite legítimo — lo fijamos, partimos de ahí."
+      ]
+    },
+    "noswallow.streak": {
+      "attempt": [
+        "Hoy mantienes la boca llena más tiempo {name}. No tragas antes de mi orden.",
+        "Disciplina de boca {name}: lo mantienes, un escalón más que la última vez."
+      ],
+      "record": [
+        "Has aguantado más que nunca {name}. Es pura disciplina. Bien.",
+        "Nuevo récord con la boca llena {name}. Obedeces como toca. Sigue."
+      ],
+      "tapout": [
+        "Has aguantado un buen rato antes de tragar {name}. La paciencia se entrena.",
+        "Anotado {name}. La próxima vez aguantas más."
+      ]
+    }
+  },
+  "nicknames": {
+    "pool": [],
+    "use_user_prenom": true,
+    "use_user_nicknames": false
+  },
+  "coachNicknames": [
+    "Hélène",
+    "Señora",
+    "Coach"
+  ]
+}

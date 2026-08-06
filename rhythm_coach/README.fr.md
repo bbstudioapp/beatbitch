@@ -1,12 +1,12 @@
 # BeatBitch
 
-![version](https://img.shields.io/badge/version-0.5.3-orange)
+![version](https://img.shields.io/badge/version-0.6.0-orange)
 ![platform](https://img.shields.io/badge/platform-Android%20%7C%20Windows%20%7C%20Linux-blue)
 ![offline](https://img.shields.io/badge/100%25-offline-blue)
 
 > Coach vocal rythmique immersif. Le téléphone est posé sur le côté, tu n'as pas besoin de regarder l'écran : tout passe par la voix et les bips de guidage.
 
-**Langues** : [English](README.md) · Français · [Deutsch](README.de.md)
+**Langues** : [English](README.md) · Français · [Deutsch](README.de.md) · [Español](README.es.md)
 
 ---
 
@@ -25,7 +25,7 @@
 - **Mode Carrière** : 20+ niveaux, 6 branches de spécialisation, milestones d'apprentissage, encore enchaîné, sessions bâclées, badges de progression.
 - **Scénarios libres** : sessions JSON éditables, punitions et commentaires aléatoires extensibles sans toucher au code.
 - **Vérif caméra des holds** (expérimental, opt-in) : détection on-device via Google ML Kit, jamais d'image envoyée nulle part.
-- **Multi-langue** : français, anglais et allemand livrés ; autres langues = simple ajout d'assets.
+- **Multi-langue** : français, anglais, allemand et espagnol livrés ; autres langues = simple ajout d'assets.
 - **Adult gate 18+** non-skippable au premier lancement, onboarding 3 écrans.
 
 ## 100 % offline · pas de télémétrie

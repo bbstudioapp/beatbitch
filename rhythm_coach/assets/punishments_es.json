@@ -1,0 +1,83 @@
+{
+  "lang": "es",
+  "fail_phrases": [
+    "¿Ya te rindes, putita?",
+    "Patético. Puedes hacerlo mejor.",
+    "¿En serio? ¿Tan pronto? Lo corregimos enseguida.",
+    "Esta debilidad te va a costar caro.",
+    "¿Crees que con eso basta? No.",
+    "Una puta de verdad no se rinde así.",
+    "Respira… porque ahora te la voy a meter en serio."
+  ],
+  "fail_phrases_swallow": [
+    "Has tragado. Sin permiso. Sabes lo que te espera.",
+    "Te dije que la guardaras. No pudiste. Lo vas a pagar.",
+    "Cosita desobediente. Has tragado aunque te lo prohibí.",
+    "No puedes ni retener tu saliva cuando te lo pido. Lamentable.",
+    "Has fallado. Has tragado. Te volvemos a enseñar a obedecer.",
+    "Una sola instrucción: no tragar. Y no pudiste. Vergüenza."
+  ],
+  "punishments": [
+    {
+      "id": "extra_throat",
+      "name": "Garganta extra",
+      "duration_seconds": 45,
+      "steps": [
+        {"time": 0, "text": "Castigo. Cuarenta segundos en la garganta, sin piedad.", "mode": "rhythm", "from": "throat", "to": "full", "bpm": 100},
+        {"time": 20, "text": "Más al fondo. Trágatela toda."},
+        {"time": 35, "text": "Último hold.", "mode": "hold", "to": "full", "duration": 8}
+      ]
+    },
+    {
+      "id": "biffle_burst",
+      "name": "Ráfaga de vergazos",
+      "duration_seconds": 30,
+      "steps": [
+        {"time": 0, "text": "Castigo rápido. Treinta segundos de vergazos.", "mode": "biffle", "bpm": 135},
+        {"time": 12, "text": "Babea por todas partes, puta."},
+        {"time": 25, "text": "Más fuerte."}
+      ]
+    },
+    {
+      "id": "deep_hold_chain",
+      "name": "Cadena de holds",
+      "duration_seconds": 55,
+      "steps": [
+        {"time": 0, "text": "Tres holds seguidos. El primero en la garganta.", "mode": "hold", "to": "throat", "duration": 10},
+        {"time": 12, "text": "Respira.", "mode": "breath", "duration": 4},
+        {"time": 17, "text": "El segundo, más profundo.", "mode": "hold", "to": "throat", "duration": 12},
+        {"time": 31, "text": "Respira.", "mode": "breath", "duration": 4},
+        {"time": 36, "text": "El último, hasta el tope.", "mode": "hold", "to": "full", "duration": 15}
+      ]
+    },
+    {
+      "id": "slow_torture",
+      "name": "Tortura lenta",
+      "duration_seconds": 50,
+      "steps": [
+        {"time": 0, "text": "Castigo lento. Muy despacio y muy profundo.", "mode": "rhythm", "from": "throat", "to": "full", "bpm": 40},
+        {"time": 25, "text": "Siente cada centímetro."},
+        {"time": 45, "text": "Hold.", "mode": "hold", "to": "full", "duration": 10}
+      ]
+    },
+    {
+      "id": "lick_humiliation",
+      "name": "Humillación de lengua",
+      "duration_seconds": 40,
+      "steps": [
+        {"time": 0, "text": "Lame como una perra en celo.", "mode": "lick", "from": "tip", "to": "full", "bpm": 70},
+        {"time": 20, "text": "Escupe encima y vuelve a lamer."},
+        {"time": 35, "text": "Di «soy tu agujero»."}
+      ]
+    },
+    {
+      "id": "rapid_full",
+      "name": "Rápido hasta el fondo",
+      "duration_seconds": 35,
+      "steps": [
+        {"time": 0, "text": "Castigo. Baja hasta el fondo y quédate rápido.", "mode": "rhythm", "from": "full", "to": "full", "bpm": 120},
+        {"time": 18, "text": "Más rápido, puta."}
+      ]
+    }
+  ]
+}

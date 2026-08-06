@@ -642,8 +642,18 @@ class BeepEngine {
         // peut avoir un hoquet de scheduling), le `resume()` ne redéclenche
         // rien et le bip de gorge/full/hold manque. Cf. doc de
         // [_longSampleAssets].
+        //
+        // `.timeout(250 ms)` : sous forte charge (longues séances), le
+        // `MediaPlayer` natif finit par ne plus répondre au `seek()` et le
+        // Future ne se complète qu'au timeout interne d'audioplayers (30 s).
+        // On n'attend pas : chaque seek pendant 30 s empile des Futures qui
+        // engorgent le heap (GC, rame) et un `seek` bloqué de 30 s fige la
+        // chaîne d'émission. Au pire on rate un seek (bip parfois manqué),
+        // acceptable vs le blocage.
         try {
-          await picked.player.seek(Duration.zero);
+          await picked.player
+              .seek(Duration.zero)
+              .timeout(const Duration(milliseconds: 250));
         } catch (e) {
           if (kDebugMode) debugPrint('[BeepEngine] seek error : $e');
         }
@@ -678,6 +688,27 @@ class BeepEngine {
   // ─── API publique pour la page démo ─────────────────────────────────────
 
   Future<void> ensureReady() => init();
+
+  /// Configure le contexte audio global. Quand [mix] est vrai, les bips se
+  /// **mélangent** à un autre son en cours (ex. Spotify en mode Music) au lieu
+  /// d'en prendre le focus exclusif : Android ne demande pas le focus
+  /// (`AndroidAudioFocus.none`), iOS ajoute `mixWithOthers`. Faux = retour au
+  /// comportement par défaut (focus exclusif).
+  Future<void> setMixWithOthers(bool mix) async {
+    final ctx = AudioContextConfig(
+      focus: mix
+          ? AudioContextConfigFocus.mixWithOthers
+          : AudioContextConfigFocus.gain,
+    ).build();
+    // Le contexte global ne suffit pas : chaque player déjà créé garde le sien
+    // (focus exclusif par défaut) et couperait le son en cours à la 1ʳᵉ lecture.
+    // On le pose donc aussi sur tous les players du pool.
+    await AudioPlayer.global.setAudioContext(ctx);
+    await Future.wait([
+      for (final pool in _pools.values)
+        for (final p in pool.players) p.setAudioContext(ctx),
+    ]);
+  }
 
   void playPositionOnce(Position p) {
     if (!_initialized) return;
@@ -820,7 +851,10 @@ class BeepEngine {
     for (final pool in _pools.values) {
       for (final p in pool.players) {
         try {
-          await p.stop();
+          // `.timeout(300 ms)` : même garde-fou que le `seek` — sur un backend
+          // audio engorgé (longues séances), `stop()` peut ne jamais rendre la
+          // main. On ne bloque pas la pause/fin de séance pour autant.
+          await p.stop().timeout(const Duration(milliseconds: 300));
         } catch (_) {}
       }
     }

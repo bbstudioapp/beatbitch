@@ -4,6 +4,21 @@
 
 ## [Non publié]
 
+## [0.6.0] — 2026-08-06
+
+Grosse mise à jour de contenu : une quatrième langue, un premier coach masculin, des postures imposées pendant les pauses scénarisées, un mode d'escalade non-stop et des durées de séance surprises.
+
+### Ajouté
+- **Espagnol — 4ᵉ langue livrée** — l'app est désormais traduite en espagnol péninsulaire complet : UI (ARB), phrases coach système, banque carrière, 6 coachs (Lina/Hélène/Jade/Morgan/Victoria/Nyx avec persona respecté), 30 milestones, 4 sessions intégrées, surnoms, punitions, commentaires aléatoires, packs d'ambiance. Sélecteur de langue, repli système→EN et offre « Disponible en español » s'adaptent automatiquement.
+- **Voix TTS espagnoles préférées** — table de fallback `es-es-x-eef-local` / `ana` / `esc` / `es-us-x-sfb-local` dans `TtsService`, avec repli `gender=female` puis première voix dispo.
+- **Marc — premier coach masculin** — un coach dominateur brutal, placé au tier 3 (entre Hélène et Jade), avec son point de vue masculin, sa persona, ses surnoms, punitions et commentaires. Voix masculine best-effort selon les voix TTS disponibles sur l'appareil.
+- **Postures imposées et pauses scénarisées** — les breaks de séance deviennent des moments de mise en scène : le coach impose une posture (icône + libellé à l'écran) et te maintient en place, avec une validation « je suis en place » avant de reprendre. Les postures se débloquent au fil des paliers de carrière.
+- **Mode « Utilise-moi »** — escalade non-stop qui remplace le bouton d'appoint en séance carrière : plus aucun répit, montée continue du rythme jusqu'à un final tenu à fond. Opt-in, réservé aux profils qui l'ont débloqué.
+- **Durée de séance « surprise »** — nouveau palier de durée qui tire une longueur aléatoire, pour ne plus anticiper la fin de la séance.
+
+### Modifié
+- **Loaders robustifiés avec cascade `_<lang>.json → _en.json → _fr.json`** — `PunishmentLoader`, `RandomCommentsLoader` et `PhraseBankLoader` ne crashent plus quand un asset éditorial manque pour une locale donnée. Permet d'ajouter une langue (UI traduite) avant d'avoir traduit le contenu, l'app reste utilisable avec un repli anglais transparent.
+
 ## [0.5.3] — 2026-05-31
 
 Correctif de progression carrière : le tutoriel pouvait revenir alors qu'il était déjà fait.
@@ -194,7 +209,8 @@ Grosse mise à jour du mode carrière : nouvelle enveloppe de difficulté, nouve
 ## [0.1.0] — 2026-05-08
 - Premier release public : coach vocal rythmique hors-ligne pour Android, adult gate 18+, onboarding, mode carrière + scénarios, badges, profil/réputation.
 
-[Non publié]: https://github.com/bbstudioapp/beatbitch/compare/v0.5.3...develop
+[Non publié]: https://github.com/bbstudioapp/beatbitch/compare/v0.6.0...develop
+[0.6.0]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.6.0
 [0.5.3]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.5.3
 [0.5.2]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.5.2
 [0.5.1]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.5.1

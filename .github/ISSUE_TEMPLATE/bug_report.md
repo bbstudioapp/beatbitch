@@ -7,8 +7,10 @@ assignees: ''
 ---
 
 <!--
-🇫🇷 Tu peux écrire en français ou en anglais.
-🇬🇧 You can write in English or French.
+🇫🇷 Tu peux écrire en français, anglais, allemand ou espagnol.
+🇬🇧 You can write in English, French, German or Spanish.
+🇩🇪 Du kannst auf Englisch, Französisch, Deutsch oder Spanisch schreiben.
+🇪🇸 Puedes escribir en español, inglés, francés o alemán.
 -->
 
 ## Que s'est-il passé ? / What happened?
@@ -27,10 +29,10 @@ assignees: ''
 
 ## Environnement / Environment
 
-- **Version BeatBitch** : <!-- ex: 0.5.3 (Profil → bas de page) -->
+- **Version BeatBitch** : <!-- ex: 0.6.0 (Profil → bas de page) -->
 - **Plateforme / Platform** : <!-- coche / check : Android | Windows desktop | Linux desktop | autre / other -->
 - **OS** : <!-- ex: Android 15 / Samsung Galaxy S21 — ou — Windows 11 23H2 — ou — Ubuntu 24.04 -->
-- **Langue dans l'app / App language** : <!-- FR, EN, DE -->
+- **Langue dans l'app / App language** : <!-- FR, EN, DE, ES -->
 
 ## Export diagnostic / Diagnostic export
 

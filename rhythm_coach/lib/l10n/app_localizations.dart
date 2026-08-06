@@ -7,6 +7,7 @@ import 'package:intl/intl.dart' as intl;
 
 import 'app_localizations_de.dart';
 import 'app_localizations_en.dart';
+import 'app_localizations_es.dart';
 import 'app_localizations_fr.dart';
 
 // ignore_for_file: type=lint
@@ -97,6 +98,7 @@ abstract class AppLocalizations {
   static const List<Locale> supportedLocales = <Locale>[
     Locale('de'),
     Locale('en'),
+    Locale('es'),
     Locale('fr')
   ];
 
@@ -274,17 +276,23 @@ abstract class AppLocalizations {
   /// **'Ambiance'**
   String get sessionAmbienceLabel;
 
-  /// No description provided for @sessionBegRequestLabel.
+  /// No description provided for @sessionUseMeLabel.
   ///
   /// In fr, this message translates to:
-  /// **'DEMANDÉ'**
-  String get sessionBegRequestLabel;
+  /// **'UTILISE-MOI'**
+  String get sessionUseMeLabel;
 
-  /// No description provided for @sessionBegSupplicateLabel.
+  /// No description provided for @sessionUseMeUsedLabel.
   ///
   /// In fr, this message translates to:
-  /// **'SUPPLIER'**
-  String get sessionBegSupplicateLabel;
+  /// **'UTILISÉE'**
+  String get sessionUseMeUsedLabel;
+
+  /// No description provided for @careerUseMeBegPhrase.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supplie-moi de t\'utiliser comme le jouet que tu es.'**
+  String get careerUseMeBegPhrase;
 
   /// No description provided for @sessionStateIdle.
   ///
@@ -316,6 +324,12 @@ abstract class AppLocalizations {
   /// **'FAIL'**
   String get sessionStateFailing;
 
+  /// No description provided for @sessionBreakBanner.
+  ///
+  /// In fr, this message translates to:
+  /// **'PAUSE'**
+  String get sessionBreakBanner;
+
   /// No description provided for @sessionFailPhasePhrase.
   ///
   /// In fr, this message translates to:
@@ -345,6 +359,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'JE PEUX PAS'**
   String get sessionFailButton;
+
+  /// No description provided for @sessionPostureReadyButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'JE SUIS EN PLACE'**
+  String get sessionPostureReadyButton;
 
   /// No description provided for @sessionIntroBriefing.
   ///
@@ -1126,6 +1146,24 @@ abstract class AppLocalizations {
   /// **'Séance pleine, plusieurs défis intercalés.'**
   String get sessionLengthLongueDescription;
 
+  /// No description provided for @sessionLengthAleatoireLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aléatoire'**
+  String get sessionLengthAleatoireLabel;
+
+  /// No description provided for @sessionLengthAleatoireDuration.
+  ///
+  /// In fr, this message translates to:
+  /// **'Surprise'**
+  String get sessionLengthAleatoireDuration;
+
+  /// No description provided for @sessionLengthAleatoireDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Durée surprise tirée parmi Courte, Moyenne ou Longue. Pas de minuteur.'**
+  String get sessionLengthAleatoireDescription;
+
   /// No description provided for @careerChallengesToggle.
   ///
   /// In fr, this message translates to:
@@ -1720,6 +1758,12 @@ abstract class AppLocalizations {
   /// **'Deutsch'**
   String get settingsLanguageGerman;
 
+  /// No description provided for @settingsLanguageSpanish.
+  ///
+  /// In fr, this message translates to:
+  /// **'Español'**
+  String get settingsLanguageSpanish;
+
   /// No description provided for @languagePickerTitle.
   ///
   /// In fr, this message translates to:
@@ -2242,6 +2286,18 @@ abstract class AppLocalizations {
   /// **'Affiche un bouton dans la séance qui termine immédiatement comme un succès complet (badges, milestones, niveau). Pratique pour itérer sur le contenu sans tout jouer.'**
   String get soundsDebugSkipSessionSubtitle;
 
+  /// No description provided for @soundsDebugScriptedBreaks.
+  ///
+  /// In fr, this message translates to:
+  /// **'Postures + breaks scénarisés'**
+  String get soundsDebugScriptedBreaks;
+
+  /// No description provided for @soundsDebugScriptedBreaksSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Active les postures imposées (à genoux, à quatre pattes…) et les pauses actives de récup sur les sessions longues. Expérimental, en cours de calibration.'**
+  String get soundsDebugScriptedBreaksSubtitle;
+
   /// No description provided for @soundsShowBackgroundMedia.
   ///
   /// In fr, this message translates to:
@@ -2547,6 +2603,42 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Couilles'**
   String get positionBalls;
+
+  /// No description provided for @postureFree.
+  ///
+  /// In fr, this message translates to:
+  /// **'Libre'**
+  String get postureFree;
+
+  /// No description provided for @postureSitting.
+  ///
+  /// In fr, this message translates to:
+  /// **'Assise'**
+  String get postureSitting;
+
+  /// No description provided for @postureStanding.
+  ///
+  /// In fr, this message translates to:
+  /// **'Debout'**
+  String get postureStanding;
+
+  /// No description provided for @postureKneeling.
+  ///
+  /// In fr, this message translates to:
+  /// **'À genoux'**
+  String get postureKneeling;
+
+  /// No description provided for @postureAllFours.
+  ///
+  /// In fr, this message translates to:
+  /// **'À quatre pattes'**
+  String get postureAllFours;
+
+  /// No description provided for @postureOnBack.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sur le dos'**
+  String get postureOnBack;
 
   /// No description provided for @modeShortRhythm.
   ///
@@ -3382,6 +3474,54 @@ abstract class AppLocalizations {
   /// **'Sessions sur mesure : durée, dosage des modes, difficulté, non-stop.'**
   String get modeSelectionCustomSubtitle;
 
+  /// No description provided for @modeSelectionMusicTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'MUSIC'**
+  String get modeSelectionMusicTitle;
+
+  /// No description provided for @modeSelectionMusicSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cale-toi sur ta musique : tape le tempo, les steps suivent le rythme.'**
+  String get modeSelectionMusicSubtitle;
+
+  /// No description provided for @musicTapPrompt.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tape le rythme de ta musique'**
+  String get musicTapPrompt;
+
+  /// No description provided for @musicTapAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'TAPER'**
+  String get musicTapAction;
+
+  /// No description provided for @musicStart.
+  ///
+  /// In fr, this message translates to:
+  /// **'DÉMARRER'**
+  String get musicStart;
+
+  /// No description provided for @musicStop.
+  ///
+  /// In fr, this message translates to:
+  /// **'STOP'**
+  String get musicStop;
+
+  /// No description provided for @musicWaitingTempo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Encore quelques taps…'**
+  String get musicWaitingTempo;
+
+  /// No description provided for @musicDebugTooltip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Debug : ignorer le gating'**
+  String get musicDebugTooltip;
+
   /// No description provided for @customAppBarTitle.
   ///
   /// In fr, this message translates to:
@@ -3796,7 +3936,7 @@ class _AppLocalizationsDelegate
 
   @override
   bool isSupported(Locale locale) =>
-      <String>['de', 'en', 'fr'].contains(locale.languageCode);
+      <String>['de', 'en', 'es', 'fr'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -3809,6 +3949,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
       return AppLocalizationsDe();
     case 'en':
       return AppLocalizationsEn();
+    case 'es':
+      return AppLocalizationsEs();
     case 'fr':
       return AppLocalizationsFr();
   }

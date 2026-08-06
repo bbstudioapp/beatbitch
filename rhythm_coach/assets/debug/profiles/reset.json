@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "preset": "Profil vierge (reset)",
+  "career": {
+    "maxLevel": 1,
+    "lastLevel": null,
+    "completedSessions": 3,
+    "includeHand": false
+  },
+  "specialization": {
+    "points": {
+      "endurance": 0,
+      "profondeur": 0,
+      "rythmeBiffle": 0,
+      "obeissance": 0,
+      "sloppy": 0
+    },
+    "lastRespecMs": null,
+    "respecCount": 0
+  },
+  "stats": {
+    "totalSeconds": 1800,
+    "throatfucks": 40,
+    "biffles": 10,
+    "holdThroatSeconds": 20,
+    "holdFullSeconds": 8,
+    "sessionsCompleted": 3,
+    "sessionsNoFailStreak": 2,
+    "modesUsedMask": 255,
+    "maxHoldFullAtomic": 0,
+    "lastSessionDay": null,
+    "dailyStreak": 1,
+    "encoresAsked": 0,
+    "quickiesCompleted": 0,
+    "finalsBouchePleine": 0,
+    "finalsRepeinte": 0,
+    "finalsGobeuse": 0,
+    "postFinalsNettoyeuse": 0,
+    "postFinalsSuppliante": 0
+  },
+  "humiliation": {
+    "careerScore": 0.0
+  },
+  "obedience": {
+    "level": 0.0
+  },
+  "capabilities": {
+    "axes": {},
+    "legacyMigrated": true
+  },
+  "milestones": {
+    "completed": [],
+    "retries": {},
+    "candidacySeen": {}
+  },
+  "badges": {},
+  "coach": {
+    "currentTier": null,
+    "selectedId": null,
+    "unlockedIds": []
+  },
+  "anatomy": {
+    "hasBalls": true
+  },
+  "surprise": {
+    "enabled": false,
+    "windowSeconds": null,
+    "alertCount": null,
+    "durationMinSeconds": null,
+    "durationMaxSeconds": null
+  },
+  "settings": {
+    "showStaminaBar": false,
+    "showTimer": false,
+    "showHumiliationBar": false,
+    "showObedienceBar": false,
+    "showSalivaBar": false,
+    "showSessionControls": false,
+    "showModeBadge": false,
+    "cameraHoldCheck": false,
+    "skipSessionButton": false,
+    "showBackgroundMedia": true,
+    "showSessionRemainingTime": false,
+    "scriptedBreaks": false
+  },
+  "consent": {
+    "adultConsentAccepted": true,
+    "onboardingShown": true
+  }
+}

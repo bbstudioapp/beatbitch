@@ -1,0 +1,488 @@
+{
+  "lang": "es",
+  "rhythm": {
+    "soft": [
+      "Empieza despacio, juguetito.",
+      "Acaricia el glande con los labios, buena chica.",
+      "Sigue el ritmo, lo haces muy bien.",
+      "Mójala bien, despacio.",
+      "Lámela de arriba a abajo como un buen perrito.",
+      "Sienta bien lo que haces… sigue.",
+      "Estás bonita cuando mamas suave."
+    ],
+    "medium": [
+      {"text": "Más al fondo ahora. Buena chica.", "min_depth": "mid"},
+      "Empiezas a mamármela en serio.",
+      "Sigue así, me estás poniendo cachondo.",
+      "Babea bien encima, es perfecto.",
+      "Te vuelves cada vez más obediente.",
+      "Siento que me voy a correr si sigues así."
+    ],
+    "hard": [
+      {"text": "Fóllate la garganta, puta.", "min_depth": "throat"},
+      {"text": "Más fuerte. Más al fondo. Me voy a correr.", "min_depth": "mid"},
+      {"text": "Atragántate. Tómalo todo.", "min_depth": "throat"},
+      {"text": "Nariz contra los huevos en cada estocada.", "min_depth": "full"},
+      "¿Quieres mi leche? Pues mama mejor.",
+      {"text": "Atragántate, abre esa garganta. Voy a descargar.", "min_depth": "throat"},
+      "No eres más que un agujero para polla.",
+      {"text": "Te lleno la garganta si sigues así.", "min_depth": "throat"},
+      "Llora, babea, pero no pares."
+    ],
+    "boost": [
+      "Vamos a acelerar, es el sprint final — hazme correr.",
+      "Sprint final, puta. Mama rápido, voy a descargar.",
+      "Dalo todo, quiero correrme ya.",
+      "Más rápido, más fuerte, es el momento.",
+      "Recta final. Fóllatela como debe ser.",
+      "Ya me voy. Mantén este ritmo hasta el final.",
+      "Sigue, me corro.",
+      "No pares, me corro ya.",
+      "Mantén el ritmo, estoy a punto de correrme.",
+      "Así, así, voy a descargar."
+    ],
+    "finale": [
+      "Sigue, me corro en tu boca.",
+      "No sueltes, me corro.",
+      "Trágatela bien, descargo.",
+      "Mantenla al fondo, me corro.",
+      "Ya, eyaculo — no pares."
+    ]
+  },
+  "lick": {
+    "soft": [
+      "Lame suave alrededor del glande, buena chica.",
+      "Acaríciala con la lengua, juguetito.",
+      "Lo haces muy bien.",
+      "Lame despacio, eso me gusta."
+    ],
+    "medium": [
+      "Lame toda la longitud como un buen perrito.",
+      "Cúbrela bien de saliva.",
+      "Me dan ganas de correrme con tu lengua.",
+      "Lámela por todas partes, es perfecto."
+    ],
+    "hard": [
+      "Lame más fuerte, puta.",
+      "Babea encima como una zorra de verdad.",
+      "Me voy a correr si sigues lamiendo así.",
+      "Lame cada centímetro, putita tragaleche."
+    ],
+    "finale": [
+      "Sigue lamiendo, me corro en tu lengua.",
+      "Saca la lengua, descargo.",
+      "Lámela bien, me corro."
+    ]
+  },
+  "biffle": {
+    "soft": [
+      "Date suave en la cara con ella, buena chica.",
+      "Recíbela bien."
+    ],
+    "medium": [
+      "Aguanta más, más fuerte.",
+      "Quédate abierta, juguetito."
+    ],
+    "hard": [
+      "Recibe eso en plena jeta.",
+      "Te pinto la cara si sigues así.",
+      "Quédate bien abierta, me voy a correr.",
+      "No eres más que un agujero de follar."
+    ],
+    "finale": [
+      "Quédate bien abierta, te pinto la cara.",
+      "Recibe los últimos, me corro.",
+      "Sigue recibiéndolos, eyaculo."
+    ]
+  },
+  "hold": {
+    "soft": [
+      "Quédate con ella al fondo. Buena chica.",
+      "Quédate ahí, juguetito."
+    ],
+    "medium": [
+      "Quédate profundo. Lo haces muy bien.",
+      "Mantenla bien al fondo."
+    ],
+    "hard": [
+      {"text": "Quédate al fondo, puta. Me voy a correr.", "min_depth": "throat"},
+      {"text": "Nariz pegada. Ni se te ocurra moverte.", "min_depth": "full"},
+      "Te ganas mi leche si aguantas.",
+      {"text": "Atragántate, estoy cerca.", "min_depth": "throat"}
+    ],
+    "finale": [
+      {"text": "Lo más al fondo posible. Aguanta hasta el final.", "min_depth": "throat"},
+      {"text": "Quédate clavada, me voy a correr.", "min_depth": "throat"},
+      {"text": "Nariz pegada. Último esfuerzo.", "min_depth": "full"},
+      "Mantenla bien, te vas a ganar mi descarga."
+    ]
+  },
+  "breath": {
+    "any": [
+      "Respira, puta. Toma aire.",
+      "Inhala profundo.",
+      "Suelta el aire. Has sido buena.",
+      "Respira bien, te lo has ganado.",
+      "Cálmate… aún no he terminado contigo."
+    ],
+    "fake_breath": [
+      "Un segundo. No más.",
+      "Inhala rápido, seguimos.",
+      "¿Crees que paramos? Vamos.",
+      "Rápido, dos segundos, no más.",
+      "¿Sueñas con un descanso? No.",
+      "Recomponte, no he terminado.",
+      "Una respiración, y volvemos.",
+      "¿Pensabas que te habías ganado un descanso de verdad?"
+    ]
+  },
+  "beg": {
+    "soft": [
+      "Pide mi leche, buena chica.",
+      "Suplícame que te llene."
+    ],
+    "medium": [
+      "Suplícame bien.",
+      "Dime que quieres mi descarga."
+    ],
+    "hard": [
+      "Suplica mi leche como una perra.",
+      "Suplica para que te descargue en la garganta.",
+      "Repite: quiero tu leche, por favor.",
+      "Ruégame que te llene."
+    ],
+    "insistent": [
+      "¿Quieres mi descarga? Pues suplica mejor.",
+      "Suplica como la putita tragaleche que eres."
+    ]
+  },
+  "hand": {
+    "soft": [
+      "Pajéamela suave, buena chica.",
+      "Acaríciala con calma, tómate tu tiempo.",
+      "Desliza la palma a su alrededor, muy suave.",
+      "Sujétala bien en la mano, masajéala muy delicada."
+    ],
+    "medium": [
+      "Sigue pajeándomela así, no sueltes.",
+      "Vamos, aceleramos el ritmo con la mano.",
+      "Pajéame regular, mantén la cadencia.",
+      "Buena mano, así."
+    ],
+    "hard": [
+      "Pajéamela duro, quiero correrme en tu cara.",
+      "Más rápido con la mano, estoy cerca.",
+      "Pajéame en serio, quiero descargar.",
+      "Sientes que me voy a correr si sigues así.",
+      "Aprieta, más rápido, estoy ya muy cerca."
+    ],
+    "boost": [
+      "Pajéamela en serio para el sprint final.",
+      "No pares, me voy a correr.",
+      "Más rápido con la mano, hazme descargar.",
+      "Sigue, me corro.",
+      "Dalo todo lo que te queda, pajéame hasta el final.",
+      "Ya está. Pajéame rápido, me corro ya."
+    ],
+    "finale": [
+      "Sigue así, me corro en tu mano.",
+      "No sueltes, me corro.",
+      "Mantén el ritmo, abre la boca, eyaculo.",
+      "Ya, me corro — pajéame hasta el final.",
+      "Sigue pajeándome — descargo."
+    ]
+  },
+  "freestyle": {
+    "any": [
+      "Te toca. Enséñame de lo que eres capaz.",
+      "Sorpréndeme, puta."
+    ]
+  },
+  "suckle": {
+    "soft": [
+      {"text": "Pon los labios alrededor. Succiona suave.", "max_depth": "head"},
+      {"text": "Mejillas hundidas. Succión blanda.", "max_depth": "head"},
+      {"text": "Como un chupete. Guárdala en la boca.", "max_depth": "head"},
+      {"text": "Mete el huevo en la boca. Succiona suave.", "min_depth": "balls"},
+      {"text": "Chupa el huevo, despacio y suave.", "min_depth": "balls"}
+    ],
+    "medium": [
+      {"text": "Succiona más fuerte. Mejillas dentro.", "max_depth": "head"},
+      {"text": "Mama como un chupete, esfuérzate.", "max_depth": "head"},
+      {"text": "Mantén la succión. Respira por la nariz.", "max_depth": "head"},
+      {"text": "Chupa el huevo — mejillas dentro.", "min_depth": "balls"},
+      {"text": "Succiona el huevo — quiero oírlo.", "min_depth": "balls"},
+      {"text": "Ahora el otro. Igual. Chupa.", "min_depth": "balls"}
+    ],
+    "hard": [
+      {"text": "Succiona duro. No aflojes.", "max_depth": "head"},
+      {"text": "Mama como si quisieras vaciarla.", "max_depth": "head"},
+      {"text": "Mejillas hundidas a tope. Succión dura.", "max_depth": "head"},
+      {"text": "Chupa el huevo como un helado derretido.", "min_depth": "balls"},
+      {"text": "Chupa duro, puta.", "min_depth": "balls"}
+    ]
+  },
+  "encore": [
+    "¿Más? Perrita insaciable. Agárrate, esta vez voy más lejos.",
+    "¿Quieres más? Bien. Lo volvemos a hacer, y esta vez das aún más.",
+    "Realmente nunca tienes bastante. Abre la boca, empezamos de cero — más duro.",
+    "¿No es suficiente para ti? Vale, putita tragaleche. Esta sesión te va a dejar marca.",
+    "Más. Claro. Vamos, lo retomamos, y me suplicarás antes del final.",
+    "¿Quieres más? Perfecto. Esta vez quiero verte romperte."
+  ],
+  "progress": {
+    "25": [
+      "Empiezas bien, juguetito.",
+      "Está bien lo que haces."
+    ],
+    "50": [
+      "Me pones duro como una piedra.",
+      "Sigue así, me vas a hacer correr."
+    ],
+    "75": [
+      "Estoy cerca… no pares.",
+      "Pronto te ganas mi leche."
+    ],
+    "90": [
+      "Me voy a correr, puta.",
+      "Prepara la garganta, voy a descargar.",
+      "Te lo vas a tragar todo, hasta la última gota."
+    ]
+  },
+  "congrats": [
+    "Bien hecho, juguetito.",
+    "Has sido una putita muy obediente.",
+    "Está bien… te ganas mi leche la próxima vez.",
+    "Me has vaciado bien hoy.",
+    "Bravo, putita tragaleche mía.",
+    "Sesión terminada. Te has ganado el descanso."
+  ],
+  "intros": [
+    "De rodillas, putita. Sabes lo que quiero. Confirma cuando estés lista.",
+    "Vas a mamármela hasta que te llene la garganta. ¿Lista?"
+  ],
+  "finish_orgasm": [
+    "Ya, vaciado como una puta obediente.",
+    "Puedes correrte ahora. Te lo has ganado.",
+    "Se acabó. Me lo has dado todo.",
+    "Bien hecho, putita tragaleche.",
+    "Puedes descansar. Por esta vez."
+  ],
+  "final_announce": {
+    "hand_to_lick": [
+      "Saca la lengua, me corro encima.",
+      "Lengua fuera, juguetito, me corro ya.",
+      "Sácame la lengua, descargo ahí."
+    ],
+    "hand_to_biffle": [
+      "Prepara la cara.",
+      "Pon la cara, te la pinto.",
+      "Sácame esa jeta, te lo lanzo encima."
+    ],
+    "hand_to_hold": [
+      "Abre la boca, mantenla donde yo te la ponga.",
+      "Abre, y no te muevas más.",
+      "Labios alrededor, no te muevas, descargo dentro."
+    ],
+    "rhythm_to_hand": [
+      "Baja el ritmo, acábame con la mano.",
+      "Para. Tus manos se ocupan del resto.",
+      "Suelta la boca, pajéame hasta el final."
+    ],
+    "rhythm_to_lick": [
+      "Para. Dame la lengua, me corro ahí.",
+      "Baja el ritmo, lengua fuera, descargo.",
+      "Retírate, saca la lengua, me corro encima."
+    ],
+    "rhythm_to_biffle": [
+      "Sácala, prepara la cara.",
+      "Para. Pon la cara, te lo lanzo.",
+      "Retírate, quiero pintarte la jeta."
+    ],
+    "rhythm_to_hold": [
+      "Para. No te muevas más, mantenla justo donde está.",
+      "Para. Abre, y quédate quieta.",
+      "Retírate, mantenla entre los labios, no te muevas."
+    ]
+  },
+  "final_action": {
+    "hand": [
+      "Prepárate, descargo.",
+      "Ya, me corro, pajéame hasta el final.",
+      "Sigue, más fuerte, eyaculo."
+    ],
+    "lick": [
+      "Saca la lengua.",
+      "Lengua fuera, no te muevas más.",
+      "Lengua fuera, recógela."
+    ],
+    "biffle": [
+      "Pon la cara.",
+      "Pon esa jeta.",
+      "Cara aquí, tómalo todo."
+    ],
+    "hold_tip": [
+      "Mantenla en la lengua.",
+      "Abre, lengua fuera, espera.",
+      "Punta en la lengua, no te muevas."
+    ],
+    "hold_head": [
+      "Labios alrededor del glande, no te muevas más.",
+      "Mantenla entre los labios.",
+      "Abre la boca, mantenla ahí."
+    ],
+    "hold_mid": [
+      "Trágatelo todo.",
+      "Mantenla al fondo, no te muevas.",
+      "Tómalo todo en mitad de la boca, no te muevas más."
+    ],
+    "hold_throat": [
+      "Trágatelo todo, hasta el fondo.",
+      "Mantenla en la garganta, no te muevas más.",
+      "Profundo en la garganta, bébetelo todo."
+    ],
+    "hold_full": [
+      "Bébetelo todo hasta el final, no te muevas más.",
+      "Trágatelo todo, hasta el fondo, hasta la última gota.",
+      "Mantenla muy al fondo, no te muevas."
+    ]
+  },
+  "post_final_beg": [
+    "Ahora dame las gracias en voz alta.",
+    "Dilo, dime gracias por lo que acabo de darte.",
+    "Suplícame más. Ruega.",
+    "Dime cuánto te encanta esto.",
+    "Suplícame que te quede contigo. Fuerte.",
+    "Repite: «gracias por vaciarme».",
+    "Pídeme que vuelva y te folle la boca.",
+    "Dime lo que eres para mí.",
+    "Prométeme que mañana lo volverás a suplicar.",
+    "Pídeme perdón por haberme hecho correr demasiado rápido."
+  ],
+  "swallow_order": [
+    "Trágalo todo. Ya.",
+    "Trágame. De una.",
+    "Traga lo que tienes en la boca. Sin escupir nada.",
+    "Traga, cierra la boca, limpio.",
+    "Demasiada saliva. Trágalo todo, quiero oírlo.",
+    "Trágalo todo, no dejes ni gota.",
+    "Traga. Todo dentro.",
+    "Traga, puta. Sabes por qué.",
+    "Vacía esa boca. Trágalo todo."
+  ],
+  "post_final_lick": [
+    "Lámeme limpio. Ni una gota olvidada.",
+    "Límpiamela con la lengua. Bien hecho.",
+    "Lávamela con la lengua. Despacio.",
+    "Lame para terminar el trabajo, puta.",
+    "Recoge todo. Con la lengua. No hagas trampa.",
+    "Tu lengua, por todas partes. Déjamela limpia.",
+    "Púlemela bien con la lengua. Conoces tu trabajo.",
+    "Lame hasta que esté seca. Ese es tu papel.",
+    "Limpia lo que has hecho salir de mí. Buena chica.",
+    "Lame, y tragá lo que quede. Sin desperdicio."
+  ],
+  "post_final": [
+    "Ya, está bien. Cálmate ahora.",
+    "Muy bien. Quédate ahí, disfrútalo.",
+    "Suave ahora. Me lo has dado todo.",
+    "Bien hecho. Disfruta del final.",
+    "Muy despacio, bajamos juntos.",
+    "Quédate tranquila, déjate recuperar.",
+    "Sigue muy despacio, no sueltes todavía.",
+    "Lámela un poco más, déjala bien limpia.",
+    "Mantenla en la boca, disfruta lo que te he dado.",
+    "Buena chica. Quédate ahí, tranquila.",
+    "Así, despacio. Me has hecho correr bien.",
+    "Respira. Te lo has ganado.",
+    "Así está bien, putita tragaleche. Para con suavidad.",
+    "Acaríciala un poco más, muy delicada. Trátala bien.",
+    "Mantenme dentro un momento más. ¿Sientes lo que has hecho?",
+    "Has sido perfecta. Disfrútalo, tenemos tiempo.",
+    "Despacio, no la dejes enfriar tan rápido.",
+    "Sigue lamiéndomela, disfruta el sabor.",
+    "No tan rápido, quédate pegada a ella. Es tu trofeo.",
+    "Putita obediente. Disfruta tu recompensa.",
+    "Unos segundos más conmigo. Te lo mereces.",
+    "Sigue buena, me la has mamado tan bien.",
+    "Puedes bajar el ritmo, guapa.",
+    "Relájate ahora. Se acabó, te lo has llevado todo."
+  ],
+  "transitions": {
+    "speed_up": [
+      "Más rápido, puta.",
+      "Más rápido.",
+      "¡Vamos, más rápido!",
+      "Más rápido, quiero correrme.",
+      "Mueve la cabeza más rápido."
+    ],
+    "speed_down": [
+      "Baja el ritmo, hagamos que dure.",
+      "Más despacio, quiero saborearte.",
+      "Suave ahora.",
+      "Reduce un poco el ritmo."
+    ],
+    "depth_up": [
+      "Más al fondo.",
+      "Baja más.",
+      "Aún más al fondo.",
+      "Métetela más.",
+      "Hasta el fondo del todo."
+    ],
+    "depth_down": [
+      "Sube un poco.",
+      "Sube un nivel.",
+      "Menos profundo, así.",
+      "Quédate más arriba."
+    ]
+  },
+  "break_entry": [
+    "Respira. Dos minutos para ti.",
+    "Pausa. Te recuperas, pero sigues siendo mía.",
+    "Paramos un momento. Respira.",
+    "Para. Afloja un instante."
+  ],
+  "break_orders": [
+    "Bebe un trago de agua.",
+    "Respira hondo, desde el vientre.",
+    "Mírate en el espejo.",
+    "Relaja la mandíbula.",
+    "Límpiate, recolócate.",
+    "Gira los hombros, suelta el cuello.",
+    "Hidrátate.",
+    "Cierra los ojos, respira tranquila."
+  ],
+  "break_resume": [
+    "Seguimos.",
+    "Ya has respirado. Volvemos.",
+    "Se acabó la pausa, sigue.",
+    "Vamos, de vuelta al trabajo."
+  ],
+  "break_posture": {
+    "sitting": [
+      "Siéntate, bien recta.",
+      "Ponte sentada.",
+      "Siéntate, espalda recta."
+    ],
+    "standing": [
+      "Levántate. De pie.",
+      "Ponte de pie.",
+      "Arriba, bien recta."
+    ],
+    "kneeling": [
+      "De rodillas, ahora.",
+      "Ponte de rodillas.",
+      "De rodillas, tu sitio."
+    ],
+    "all_fours": [
+      "A cuatro patas.",
+      "Ponte a cuatro patas.",
+      "A cuatro patas, como una perra."
+    ],
+    "on_back": [
+      "Túmbate de espaldas.",
+      "De espaldas, ahora.",
+      "Boca arriba, la cabeza hacia atrás."
+    ]
+  }
+}

@@ -21,14 +21,13 @@ class RandomCommentsLoader {
 
   Future<RandomCommentsBundle> load({Locale? locale}) async {
     final lang = (locale ?? LocaleService.instance.current).languageCode;
-    final path = _resolvePath(lang);
-    final raw = await rootBundle.loadString(path);
+    final (raw, resolvedLang) = await _loadWithFallback(lang);
     final data = json.decode(raw) as Map<String, dynamic>;
 
     final declared = (data['lang'] as String?) ?? 'fr';
     if (declared != lang && kDebugMode) {
       debugPrint(
-        '[RandomCommentsLoader] $path déclare lang=$declared mais locale demandée=$lang',
+        '[RandomCommentsLoader] lang=$lang demandée → chargé lang=$resolvedLang (déclaré=$declared)',
       );
     }
 
@@ -49,6 +48,21 @@ class RandomCommentsLoader {
   String _resolvePath(String lang) {
     if (lang == 'fr') return _assetPathDefault;
     return 'assets/random_comments_$lang.json';
+  }
+
+  /// Cascade `_<lang>.json` → `_en.json` → `_fr.json`. Permet d'ajouter une
+  /// locale (UI traduite) avant d'avoir traduit le contenu éditorial.
+  Future<(String raw, String lang)> _loadWithFallback(String lang) async {
+    for (final candidate in <String>{lang, 'en', 'fr'}) {
+      try {
+        final raw = await rootBundle.loadString(_resolvePath(candidate));
+        return (raw, candidate);
+      } catch (_) {
+        continue;
+      }
+    }
+    throw StateError(
+        'Aucun fichier random_comments trouvé (essayé: $lang, en, fr)');
   }
 }
 

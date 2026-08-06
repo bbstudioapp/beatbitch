@@ -158,6 +158,10 @@ class PositionPickers {
   /// du rhythm. La capacité hold est bornée en aval par
   /// `_clampToCapability` sur `hold.X.streak` directement.
   int milestoneHoldCeilingIdx() {
+    // « Utilise-moi » : full ouvert quoi qu'ait débloqué la joueuse (le
+    // fantasme « respirer est inutile » assume le dépassement du gating,
+    // comme le confort BPM). `pickHoldPosition` en tire alors throat/full.
+    if (config.useMe) return Position.full.index;
     if (unlockedKeys.contains(UnlockKey.fullHold)) return Position.full.index;
     if (unlockedKeys.contains(UnlockKey.throatHold)) {
       return Position.throat.index;
@@ -183,6 +187,8 @@ class PositionPickers {
   /// Indépendant du niveau : c'est l'acquittement de la milestone qui
   /// débloque, pas le passage de palier.
   int milestoneRhythmCeilingIdx() {
+    // « Utilise-moi » : full ouvert (même logique que le hold ci-dessus).
+    if (config.useMe) return Position.full.index;
     final int milestoneCap;
     if (unlockedKeys.contains(UnlockKey.fullPulse)) {
       milestoneCap = Position.full.index;
@@ -225,6 +231,7 @@ class PositionPickers {
   /// les boosts, bas niveaux). Le cap suit [milestoneRhythmCeilingIdx]
   /// — gating par milestones acquittées, jamais par niveau seul.
   Position pickFinisherPosition() {
+    if (config.useMe) return Position.full;
     final ceilingIdx = milestoneRhythmCeilingIdx();
     if (ceilingIdx <= Position.mid.index) return Position.mid;
     if (ceilingIdx == Position.throat.index) {
@@ -266,6 +273,15 @@ class PositionPickers {
   /// milestone, ex: `lick_full`). Dans tous les cas, `_clampToCapability`
   /// borne la profondeur en aval selon ce qui a été prouvé sur l'axe.
   (Position, Position) sampleFromTo(double ampScore, {bool capByDepth = true}) {
+    // « Utilise-moi » : le `to` (profondeur atteinte) est toujours
+    // throat ou full ; le `from` reste libre en dessous (tip/head/mid/
+    // throat), pour garder de la variation d'amplitude.
+    if (config.useMe && capByDepth) {
+      final deepestIdx =
+          rng.nextBool() ? Position.throat.index : Position.full.index;
+      final shallowestIdx = rng.nextInt(deepestIdx); // 0..deepestIdx-1
+      return (Position.values[shallowestIdx], Position.values[deepestIdx]);
+    }
     final clamped = ampScore.clamp(0.0, 1.0);
     // Min mid (idx 2) au lieu de head (idx 1) : l'amplitude minimale est
     // head→mid, pas tip→head.

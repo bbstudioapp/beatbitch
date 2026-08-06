@@ -15,7 +15,9 @@ import '../../../models/final_category.dart';
 import '../../../models/session.dart';
 import '../../../models/session_step.dart';
 import '../../models/phrase_bank.dart';
+import '../../models/specialization.dart';
 import '../career_level_gates.dart';
+import 'bpm_pacing.dart';
 import 'final_picker.dart';
 import 'generation_context.dart';
 import 'mode_rules.dart';
@@ -304,26 +306,42 @@ class FinishPhase {
           (boostMaxToIdx - 2 + 2 * (boostsAdded / rampDenom).clamp(0.0, 1.0))
               .round()
               .clamp(2, boostMaxToIdx);
-      final toIdx = max(prevBoostToIdx, progressionToIdx);
+      // « Utilise-moi » : le `to` des boosts est planché à throat (jamais
+      // sous la gorge) ; le `from` reste libre en dessous.
+      final toIdx = config.useMe
+          ? max(prevBoostToIdx, max(progressionToIdx, Position.throat.index))
+          : max(prevBoostToIdx, progressionToIdx);
       final boostTo = Position.values[toIdx];
       // `from` : 2 crans au-dessus si possible (amplitude max), sinon
       // 1 cran.
       final boostFromIdx =
           rng.nextBool() && toIdx >= 2 ? max(0, toIdx - 2) : max(0, toIdx - 1);
       final boostFrom = Position.values[boostFromIdx];
+      // « Utilise-moi » : les boosts sont le pic juste avant le final —
+      // BPM escaladé (≈300, `ctx.time ≥ genUntil`), durée re-bornée au cap
+      // pulses pour ce tempo, et bypass de l'enveloppe humil/capacité.
+      final effBpm = config.useMe
+          ? BpmPacing.useMeEscalatedBpm(ctx.time, ctx.genUntil)
+          : bpm;
+      final effBoostDur = config.useMe
+          ? BpmPacing.capRhythmDurationByPulses(boostDur, effBpm, boostTo,
+              config: config)
+          : boostDur;
       final boostDraftRaw = StepDraft(
         mode: burstMode,
-        bpm: bpm,
+        bpm: effBpm,
         from: boostFrom,
         to: boostTo,
-        duration: boostDur,
+        duration: effBoostDur,
       );
       // Hand : pas de gating humil → on garde amplitude max. Rhythm :
       // cap normal du finish. Dans les deux cas,
       // [clampToCapability] (qui applique aussi les bornes Custom).
-      final boostDraft = useHandBurst
-          ? clampToCapability(boostDraftRaw)
-          : enforceHumiliationRequired(boostDraftRaw, boostHumilCap);
+      final boostDraft = config.useMe
+          ? boostDraftRaw
+          : (useHandBurst
+              ? clampToCapability(boostDraftRaw)
+              : enforceHumiliationRequired(boostDraftRaw, boostHumilCap));
       // Tier dédié `boost` ; fallback `hard` si la bank n'a rien.
       var boostText = pickPhraseForDraft(ctx.bank, boostDraft, 'boost');
       if (boostText.isEmpty) {
@@ -341,9 +359,11 @@ class FinishPhase {
       ctx.stamina = StaminaModel.apply(ctx.stamina, boostDraft, 1.0, ctx.cfg,
           rules: rules);
       advanceSalivaSim(boostDraft);
-      StaminaModel.fillProfile(ctx.profile, ctx.time, boostDur, ctx.stamina,
+      final emittedBoostDur = boostDraft.duration ?? boostDur;
+      StaminaModel.fillProfile(
+          ctx.profile, ctx.time, emittedBoostDur, ctx.stamina,
           valueStart: staminaBeforeBoost);
-      ctx.time += boostDur;
+      ctx.time += emittedBoostDur;
       // Mémorise BPM/profondeur retenus (post-dégradation humil) pour
       // que le boost suivant ne puisse pas redescendre sous ce palier.
       prevBoostBpm = boostDraft.bpm ?? prevBoostBpm;
@@ -402,11 +422,39 @@ class FinishPhase {
     // pour rester raisonnable.
     final finishMulBase = config.intense ? 1.10 : 1.0;
     final finishMul = finishMulBase + max(0, ctx.encoreChainIndex) * 0.10;
-    final finisherDraft = finalPicker.pickFinal(
-      humilCap: finalHumilCap,
-      maxDepth: config.maxDepthIndex,
-      finishMul: finishMul,
-    );
+    final StepDraft finisherDraft;
+    if (config.useMe) {
+      // « Utilise-moi » : le final est toujours un hold full (le pic
+      // throat/full à 300 BPM le précède). Durée calquée sur la variante
+      // hold-full de la rule (humil + endurance), mais non clampée par la
+      // capacité — le dépassement de profondeur est assumé (comme le BPM).
+      final humilOver = max(0.0, finalHumilCap - 30.0);
+      final targetDur = (10 +
+              (humilOver / 8).floor() * 3 +
+              config.pts(SpecializationBranch.endurance) * 3)
+          .clamp(10, 80);
+      final dur = FinalPicker.trimHoldFinalDuration(
+        target: targetDur,
+        humilCap: finalHumilCap,
+        baseReq: 49.0,
+        bonusPerSec: 3.0,
+        finishMul: finishMul,
+        maxDur: 80,
+      );
+      finisherDraft = StepDraft(
+        mode: SessionMode.hold,
+        bpm: null,
+        from: null,
+        to: Position.full,
+        duration: dur,
+      );
+    } else {
+      finisherDraft = finalPicker.pickFinal(
+        humilCap: finalHumilCap,
+        maxDepth: config.maxDepthIndex,
+        finishMul: finishMul,
+      );
+    }
     final finalCategory =
         rules[finisherDraft.mode]!.finalCategory(finisherDraft);
     final finalMode = finisherDraft.mode;

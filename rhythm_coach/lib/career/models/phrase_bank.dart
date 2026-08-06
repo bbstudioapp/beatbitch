@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import '../../models/posture.dart';
 import '../../models/session.dart';
 import '../../models/session_step.dart';
 import 'phrase_entry.dart';
@@ -99,6 +100,25 @@ class PhraseBank {
   /// varier le ton (impératif sec) sans polluer les autres pools beg.
   final List<PhraseEntry> _swallowOrders;
 
+  /// Phrase d'entrée d'un break scénarisé (issue #77) — « on souffle deux
+  /// minutes ». Jouée à l'entrée de la fenêtre de break.
+  final List<PhraseEntry> _breakEntry;
+
+  /// Ordres intercalés pendant un break (hors changement de posture) — « bois
+  /// une gorgée », « respire à fond ». Tirés espacés par le runtime. Ne
+  /// doivent jamais contenir « tiens/hold/halten » (réservés au pool hold).
+  final List<PhraseEntry> _breakOrders;
+
+  /// Phrase de reprise d'un break qui ne change PAS de posture (récup pure) —
+  /// « on reprend ». Quand le break change de posture, le runtime préfère
+  /// `_breakPostureChange[newPose]`.
+  final List<PhraseEntry> _breakResume;
+
+  /// Ordre de changement de posture à la reprise d'un break, par posture
+  /// imposée (« mets-toi à quatre pattes », « à genoux maintenant »). Jamais
+  /// de clé pour [Posture.free] (aucune imposition).
+  final Map<Posture, List<PhraseEntry>> _breakPostureChange;
+
   const PhraseBank({
     required Map<SessionMode, Map<String, List<PhraseEntry>>> byMode,
     required List<PhraseEntry> congrats,
@@ -113,6 +133,10 @@ class PhraseBank {
     List<PhraseEntry> postFinalBeg = const [],
     List<PhraseEntry> postFinalLick = const [],
     List<PhraseEntry> swallowOrders = const [],
+    List<PhraseEntry> breakEntry = const [],
+    List<PhraseEntry> breakOrders = const [],
+    List<PhraseEntry> breakResume = const [],
+    Map<Posture, List<PhraseEntry>> breakPostureChange = const {},
   })  : _byMode = byMode,
         _congrats = congrats,
         _intros = intros,
@@ -125,7 +149,11 @@ class PhraseBank {
         _postFinal = postFinal,
         _postFinalBeg = postFinalBeg,
         _postFinalLick = postFinalLick,
-        _swallowOrders = swallowOrders;
+        _swallowOrders = swallowOrders,
+        _breakEntry = breakEntry,
+        _breakOrders = breakOrders,
+        _breakResume = breakResume,
+        _breakPostureChange = breakPostureChange;
 
   /// Tire une phrase pour [mode] dans le tier demandé. Si le tier est absent,
   /// fallback sur 'medium' puis 'any' puis première liste non vide.
@@ -279,4 +307,27 @@ class PhraseBank {
   /// Retourne `null` si le pool est vide — l'appelant peut alors
   /// retomber sur le tier `hard` du mode beg comme fallback.
   String? pickSwallowOrder(Random rng) => pickPhraseEntry(_swallowOrders, rng);
+
+  /// Tire la phrase d'entrée d'un break scénarisé (issue #77). Retourne `null`
+  /// si la banque n'a pas de pool `break_entry` — le runtime reste alors
+  /// silencieux à l'entrée.
+  String? pickBreakEntry(Random rng) => pickPhraseEntry(_breakEntry, rng);
+
+  /// Tire un ordre intercalé pendant un break (hors posture). Retourne `null`
+  /// si le pool `break_orders` est vide.
+  String? pickBreakOrder(Random rng) => pickPhraseEntry(_breakOrders, rng);
+
+  /// Tire la phrase de reprise d'un break sans changement de posture. Retourne
+  /// `null` si le pool `break_resume` est vide.
+  String? pickBreakResume(Random rng) => pickPhraseEntry(_breakResume, rng);
+
+  /// Tire l'ordre de changement de posture à la reprise d'un break, pour la
+  /// [pose] imposée. Retourne `null` pour [Posture.free] ou si aucun pool
+  /// n'existe pour cette posture — le runtime retombe alors sur
+  /// [pickBreakResume].
+  String? pickPostureChange(Posture pose, Random rng) {
+    final list = _breakPostureChange[pose];
+    if (list == null) return null;
+    return pickPhraseEntry(list, rng);
+  }
 }

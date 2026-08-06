@@ -40,8 +40,10 @@ import '../services/stats_service.dart';
 import '../services/tts_service.dart';
 import 'camera_test_screen.dart';
 import '../theme/app_theme.dart';
+import '../models/posture.dart';
 import '../widgets/mode_badge_row.dart';
 import '../widgets/movement_animation.dart';
+import '../widgets/posture_indicator.dart';
 import '../widgets/session_background.dart';
 import '../widgets/session_finale_overlay.dart';
 import '../widgets/timer_display.dart';
@@ -218,6 +220,13 @@ class SessionScreen extends StatefulWidget {
   /// mais la zone reste masquée tant que l'unlock n'a pas été acquis).
   final AnatomyProfile? anatomy;
 
+  /// Si true, masque inconditionnellement le timer pendant la séance même
+  /// quand le toggle debug `DebugSettingsService.getShowTimer` est activé.
+  /// Utilisé par le palier de durée « aléatoire » (carrière) : la joueuse
+  /// a sciemment choisi la surprise — connaître la durée tirée casserait
+  /// l'effet recherché. Default false → comportement historique inchangé.
+  final bool hideTimerOverride;
+
   const SessionScreen({
     super.key,
     required this.session,
@@ -255,6 +264,7 @@ class SessionScreen extends StatefulWidget {
     this.seedHumiliationSession = 0.0,
     this.closeAppOnEnd = false,
     this.anatomy,
+    this.hideTimerOverride = false,
   });
 
   @override
@@ -454,6 +464,7 @@ class _SessionScreenState extends State<SessionScreen>
         canSave: widget.canSave,
         closeAppOnEnd: widget.closeAppOnEnd,
         positionRowCount: _positionRowCount,
+        hideTimerOverride: widget.hideTimerOverride,
       ),
     );
   }
@@ -473,6 +484,7 @@ class _SessionScreenContent extends StatefulWidget {
   final bool canSave;
   final bool closeAppOnEnd;
   final int positionRowCount;
+  final bool hideTimerOverride;
 
   final BeepEngine beep;
 
@@ -491,6 +503,7 @@ class _SessionScreenContent extends StatefulWidget {
     required this.canSave,
     required this.closeAppOnEnd,
     required this.positionRowCount,
+    required this.hideTimerOverride,
   });
 
   @override
@@ -574,7 +587,10 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     }
     debug.getShowTimer().then((value) {
       if (!mounted) return;
-      setState(() => _showTimer = value);
+      // `hideTimerOverride` force le masquage du timer (mode aléatoire en
+      // carrière : la joueuse a choisi la surprise sur la durée, on ne
+      // dévoile pas le tirage via un timer qui countdown).
+      setState(() => _showTimer = value && !widget.hideTimerOverride);
     });
     debug.getShowHumiliationBar().then((value) {
       if (!mounted) return;
@@ -606,7 +622,9 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     });
     debug.getShowSessionRemainingTime().then((value) {
       if (!mounted) return;
-      setState(() => _showRemainingTime = value);
+      // Même rationale que `_showTimer` plus haut : on n'affiche pas le
+      // chip « temps restant » quand l'écran cache volontairement la durée.
+      setState(() => _showRemainingTime = value && !widget.hideTimerOverride);
     });
     if (widget.introText != null && widget.introText!.trim().isNotEmpty) {
       _introPending = true;
@@ -906,6 +924,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                   child: _introPending
                       ? _IntroPanel(
                           text: _resolvedIntroText!,
+                          pose: ctrl.initialPose,
                           onReady: _onIntroReady,
                           onReplay: _speakIntro,
                         )
@@ -1030,8 +1049,13 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
               ),
               child: Column(
                 children: [
-                  _StateBadge(state: ctrl.state),
-                  SizedBox(height: showBar ? 6 : 12),
+                  // Badge d'état masqué en cours de séance : « EN COURS » est
+                  // du bruit (l'animation suffit). Pause / fail / fin gardent
+                  // leur badge, utile pour signaler l'état hors jeu actif.
+                  if (ctrl.state != SessionState.running) ...[
+                    _StateBadge(state: ctrl.state),
+                    SizedBox(height: showBar ? 6 : 12),
+                  ],
                   if (ctrl.isFailing)
                     _FailPhaseIndicator(controller: ctrl)
                   else if (ctrl.hasConfig)
@@ -1044,6 +1068,13 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                     )
                   else
                     const SizedBox(height: 30),
+                  // Indicateur de posture imposée (issue #77) : permanent dès
+                  // qu'une pose est imposée (hors `free`). Reflète
+                  // `currentPose`, qui ne change qu'à l'intro et aux breaks.
+                  if (ctrl.currentPose != Posture.free) ...[
+                    SizedBox(height: showBar ? 4 : 8),
+                    PostureIndicator(pose: ctrl.currentPose),
+                  ],
                   if (showBar) ...[
                     const SizedBox(height: 4),
                     StaminaBar(
@@ -1074,7 +1105,10 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                   if (_showTimer)
                     TimerDisplay(
                         elapsed: ctrl.elapsed, total: ctrl.session.duration)
-                  else if (ctrl.hasConfig)
+                  // Pendant un break (issue #77), on fige l'animation : l'orbe
+                  // en mouvement = effort, ce qui contredirait la bannière
+                  // PAUSE. Slot de même hauteur → pas de saut de layout.
+                  else if (ctrl.hasConfig && !ctrl.breakActive)
                     MovementAnimation(
                       mode: ctrl.currentMode,
                       from: ctrl.currentFrom,
@@ -1087,13 +1121,19 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                   else
                     SizedBox(height: animHeight),
                   SizedBox(height: showBar ? 12 : 24),
-                  _CurrentInstruction(
-                    // `currentDisplayText` retourne déjà la version résolue
-                    // (`{name}` substitué) du dernier texte parlé / phrase de fail.
-                    // Le contrôleur résout une fois au speak, donc l'affichage reste
-                    // stable entre rebuilds et matche exactement la voix.
-                    text: ctrl.currentDisplayText,
-                  ),
+                  // Pendant un défi, la carte `_ChallengeBanner` (plus bas)
+                  // porte déjà l'objectif + la consigne : afficher aussi
+                  // `currentDisplayText` ici doublonnait le texte et forçait
+                  // à scroller. On masque l'instruction centrale le temps du
+                  // défi.
+                  if (!ctrl.isChallengeActive)
+                    _CurrentInstruction(
+                      // `currentDisplayText` retourne déjà la version résolue
+                      // (`{name}` substitué) du dernier texte parlé / phrase de fail.
+                      // Le contrôleur résout une fois au speak, donc l'affichage reste
+                      // stable entre rebuilds et matche exactement la voix.
+                      text: ctrl.currentDisplayText,
+                    ),
                   const Spacer(),
                   if (_showSessionControls) ...[
                     _ControlsRow(controller: ctrl),
@@ -1101,22 +1141,27 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                   ],
                   // L'état pause est signalé par l'overlay flou plein écran
                   // monté un cran au-dessus (cf. `_PausedOverlay` dans `body`).
-                  if (widget.isCareer && widget.onRequestUpgrade != null)
+                  // Masqué pendant un défi : le bouton tombe pile sous le texte
+                  // du défi, on cliquait dessus par réflexe et l'upgrade en
+                  // plein défi cassait l'enchaînement.
+                  if (widget.isCareer &&
+                      widget.onRequestUpgrade != null &&
+                      !ctrl.isChallengeActive)
                     ListenableBuilder(
                       listenable: milestoneService,
                       builder: (context, _) {
-                        // Le bouton « Supplier » n'apparaît qu'après que la milestone
-                        // `intro_beg_libre` (niveau 3) ait été acquittée. Avant ça,
-                        // l'utilisatrice n'a pas appris à supplier — afficher le
-                        // bouton serait incohérent. Le ChangeNotifier déclenche un
-                        // rebuild quand le déblocage arrive en cours de séance.
+                        // Le bouton « Utilise-moi » (ex-Supplier) n'apparaît
+                        // qu'après que la milestone `intro_beg_libre` (niveau 3)
+                        // ait été acquittée — avant ça la joueuse n'a pas appris à
+                        // supplier. Le ChangeNotifier déclenche un rebuild quand le
+                        // déblocage arrive en cours de séance.
                         if (!milestoneService.hasUnlock(UnlockKey.begLibre)) {
                           return const SizedBox.shrink();
                         }
                         return Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            _SupplierButton(
+                            _UseMeButton(
                               enabled: ctrl.isRunning &&
                                   !_upgradeRequested &&
                                   !_upgradeInFlight,
@@ -1137,6 +1182,14 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                               _finishNowMinRemainingSeconds,
                       onPressed: _onFinishNow,
                     ),
+                    SizedBox(height: showBar ? 8 : 12),
+                  ],
+                  if (ctrl.breakActive) ...[
+                    _BreakBanner(controller: ctrl),
+                    SizedBox(height: showBar ? 8 : 12),
+                  ],
+                  if (ctrl.awaitingPostureReady) ...[
+                    _PostureReadyButton(controller: ctrl),
                     SizedBox(height: showBar ? 8 : 12),
                   ],
                   if (ctrl.isChallengeActive) ...[
@@ -1469,6 +1522,47 @@ class _FailButton extends StatelessWidget {
   }
 }
 
+/// Bouton de validation posture (issue #77) : affiché quand la séance est
+/// gelée en attente que la joueuse confirme être en position. Tap → reprise.
+class _PostureReadyButton extends StatelessWidget {
+  final SessionController controller;
+  const _PostureReadyButton({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: Material(
+        color: AppTheme.accent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: controller.confirmPostureReady,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.check_circle, color: Colors.black, size: 22),
+                const SizedBox(width: 12),
+                Text(
+                  AppLocalizations.of(context).sessionPostureReadyButton,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 2,
+                    color: Colors.black,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Boutons du système de défis intra-séance (gameplay hold-to-keep).
 /// Le widget choisit son rendu selon la phase courante du défi :
 /// - `breath` : `PASSE` (tap, gris) + `MAINTIENS` (hold-to-start, ambre) —
@@ -1748,9 +1842,74 @@ class _ChallengeBanner extends StatelessWidget {
   }
 }
 
+/// Bannière de break scénarisé (issue #77) : « PAUSE » + décompte mm:ss +
+/// posture à venir. Affichée pendant `controller.breakActive` pour signaler
+/// que le gel de l'effort est **voulu** (≠ freeze/bug). Pattern visuel calqué
+/// sur `_ChallengeBanner` (cadre sombre, accent ambre). L'ordre courant
+/// (« bois une gorgée »…) reste affiché par `_CurrentInstruction`.
+class _BreakBanner extends StatelessWidget {
+  static const Color _bg = Color(0xFF14201A);
+  static const Color _border = Color(0xFF66BB6A);
+
+  final SessionController controller;
+  const _BreakBanner({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final b = controller.activeBreak;
+    final remaining = b == null
+        ? 0
+        : (b.endTime - controller.elapsedSeconds).clamp(0, b.durationSeconds);
+    final mm = (remaining ~/ 60).toString();
+    final ss = (remaining % 60).toString().padLeft(2, '0');
+    final newPose = b?.newPose;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: _bg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _border, width: 2),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                t.sessionBreakBanner,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 3,
+                  color: _border,
+                ),
+              ),
+              Text(
+                '$mm:$ss',
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  color: AppTheme.textPrimary,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+          if (newPose != null && newPose != Posture.free) ...[
+            const SizedBox(height: 10),
+            PostureIndicator(pose: newPose),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 /// Bouton « SUPPLIER » du mode Carrière. Cliqué une seule fois par séance,
 /// déclenche un beg insistant + régénère la suite à un niveau supérieur.
-class _SupplierButton extends StatelessWidget {
+class _UseMeButton extends StatelessWidget {
   static const Color _color = Color(0xFFCE93D8);
   static const Color _colorMuted = Color(0xFF4A2C5C);
 
@@ -1758,7 +1917,7 @@ class _SupplierButton extends StatelessWidget {
   final bool used;
   final VoidCallback onPressed;
 
-  const _SupplierButton({
+  const _UseMeButton({
     required this.enabled,
     required this.used,
     required this.onPressed,
@@ -1767,7 +1926,7 @@ class _SupplierButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final label = used ? t.sessionBegRequestLabel : t.sessionBegSupplicateLabel;
+    final label = used ? t.sessionUseMeUsedLabel : t.sessionUseMeLabel;
     return SizedBox(
       width: double.infinity,
       child: Material(
@@ -2002,11 +2161,17 @@ class _LabeledSlider extends StatelessWidget {
 /// bouton « JE SUIS PRÊTE » pour enchaîner sur la séance.
 class _IntroPanel extends StatelessWidget {
   final String text;
+
+  /// Posture imposée au démarrage (issue #77), ou `Posture.free` si aucune.
+  /// Affichée sur l'écran d'intro pour que l'utilisatrice se mette en place
+  /// avant de valider « Je suis prête ».
+  final Posture pose;
   final VoidCallback onReady;
   final Future<void> Function() onReplay;
 
   const _IntroPanel({
     required this.text,
+    required this.pose,
     required this.onReady,
     required this.onReplay,
   });
@@ -2033,6 +2198,10 @@ class _IntroPanel extends StatelessWidget {
               ),
             ),
           ),
+          if (pose != Posture.free) ...[
+            const SizedBox(height: 16),
+            Center(child: PostureIndicator(pose: pose)),
+          ],
           const SizedBox(height: 16),
           Align(
             alignment: Alignment.centerRight,

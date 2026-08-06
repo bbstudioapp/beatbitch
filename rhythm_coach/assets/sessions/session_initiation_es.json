@@ -1,0 +1,30 @@
+{
+  "lang": "es",
+  "id": "initiation",
+  "name": "Sesión de iniciación",
+  "description": "Inicio suave, subida progresiva durante 8 minutos.",
+  "duration_seconds": 480,
+  "mode": "rhythm",
+  "intro": "Bienvenida. Este es tu primer paso, vamos a ir despacio. Apoya el móvil de lado, ya no tienes que mirarlo. Durante ocho minutos sigues mi voz y el ritmo de los bips — lento al principio, luego aceleramos y ampliamos la amplitud. Respira tranquila, no te tenses. Cuando estés lista, confirma.",
+  "steps": [
+    {"time": 0,   "text": "Empezamos. Ponte cómoda, respira hondo. Encuentra un ritmo lento y regular.",
+                  "mode": "rhythm", "from": "tip", "to": "head", "bpm": 50},
+    {"time": 30,  "text": "Bien. Mantén este ritmo. Concéntrate en la respiración."},
+    {"time": 60,  "text": "Acelera un poco. Sé precisa en cada movimiento.",
+                  "mode": "rhythm", "from": "head", "to": "mid", "bpm": 75},
+    {"time": 120, "text": "Mantén este ritmo. Tienes el control."},
+    {"time": 180, "text": "Un poco más rápido. Mantén la amplitud.",
+                  "mode": "rhythm", "from": "head", "to": "mid", "bpm": 95},
+    {"time": 240, "text": "Excelente. Mantén este nivel durante un minuto entero.",
+                  "mode": "rhythm", "from": "head", "to": "throat", "bpm": 105},
+    {"time": 300, "text": "Baja el ritmo poco a poco. Recupera sin parar.",
+                  "mode": "lick", "from": "tip", "to": "head", "bpm": 55},
+    {"time": 360, "text": "Acelera otra vez. Llega un último empujón.",
+                  "mode": "rhythm", "from": "head", "to": "throat", "bpm": 120},
+    {"time": 420, "text": "Dalo todo lo que te queda. No sueltes.",
+                  "mode": "rhythm", "from": "head", "to": "full", "bpm": 135},
+    {"time": 465, "text": "Baja suave. La sesión termina.",
+                  "mode": "rhythm", "from": "tip", "to": "head", "bpm": 65},
+    {"time": 478, "text": "Terminado. Bien hecho."}
+  ]
+}

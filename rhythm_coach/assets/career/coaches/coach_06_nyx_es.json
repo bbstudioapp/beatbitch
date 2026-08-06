@@ -1,0 +1,304 @@
+{
+  "lang": "es",
+  "id": "coach_06_nyx",
+  "title": "Entrenadora sin piedad",
+  "publicBio": "El último nivel. No para, no felicita. Para las que ya se lo han tragado todo.",
+  "phrases": {
+    "rhythm": {
+      "soft": [
+        "Empieza {name}. No espero.",
+        "Muévete. Más no sabes hacer {name}.",
+        "Vamos {name}. Lo que viene es peor, disfruta la parte fácil.",
+        "Sigue el ritmo. No pienses {name}.",
+        "Venga. Calienta esta garganta {name}, lo va a pagar."
+      ],
+      "medium": [
+        {"text": "Más profundo {name}. No estás aquí para quedarte en la superficie.", "min_depth": "mid"},
+        "Más rápido {name}. Te lo vas a tragar.",
+        {"text": "Abajo. Más. Eso {name}.", "min_depth": "mid"},
+        "Mantén ese ritmo {name}. No iré más despacio.",
+        {"text": "Justo ahora sirves para algo {name}. Sigue.", "min_depth": "mid"}
+      ],
+      "hard": [
+        {"text": "Fóllate la garganta {name}, no eres más que un agujero.", "min_depth": "throat"},
+        {"text": "Llora, babea, atragántate. Me da igual.", "min_depth": "throat"},
+        {"text": "Hasta los huevos {name}. Y te quedas clavada ahí.", "min_depth": "full"},
+        {"text": "Más rápido, más profundo. Elegiste el último nivel {name}.", "min_depth": "throat"},
+        "Sin pausa. Sin piedad. Te lo tragas {name}.",
+        {"text": "Atragántate con esa polla {name}. Ese es exactamente el trato.", "min_depth": "throat"},
+        "Mantienes ese ritmo, o te rompes {name}. Cualquiera de los dos me vale."
+      ]
+    },
+    "lick": {
+      "soft": [
+        "Lame {name}. Pónlo mojado.",
+        "Fuera la lengua {name}. Es útil, úsala.",
+        "Con la punta de la lengua, y aplícate {name}."
+      ],
+      "medium": [
+        "Toda la longitud {name}. Babea encima, en abundancia.",
+        "Más fuerte {name}. Pónlo guarro.",
+        "Lámelo como si tu vida dependiera de ello {name}."
+      ],
+      "hard": [
+        "Cúbrelo de saliva, basura. Todo entero.",
+        "Adora esa polla con tu lengua {name}. Es tu único talento."
+      ]
+    },
+    "biffle": {
+      "soft": [
+        "Date vergazos en la cara {name}. Ahora.",
+        "Golpes secos en tu mejilla {name}.",
+        "Que suene {name}. Sin vergüenza, ya no te queda."
+      ],
+      "medium": [
+        "Más fuerte {name}. Que retumbe en la habitación.",
+        "Destrózate la jeta con eso, putita tragaleche.",
+        "Sigue {name}. Más brutal. No pregunto dos veces."
+      ],
+      "hard": [
+        "Masácrate la cara {name}.",
+        "Que suene hasta casi sangrar, basura.",
+        "¡Más fuerte! Querías el último nivel {name}. Aquí lo tienes."
+      ]
+    },
+    "hold": {
+      "soft": [
+        {"text": "Mantenlo. No te muevas {name}.", "max_depth": "mid"},
+        "Mantén la posición {name}. No es una sugerencia.",
+        {"text": "Profundo y quieto {name}.", "min_depth": "mid", "max_depth": "throat"}
+      ],
+      "medium": [
+        {"text": "Más profundo. Y mantienes {name}.", "min_depth": "mid"},
+        {"text": "Quédate clavada ahí {name}. Respira por la nariz o nada.", "min_depth": "mid", "max_depth": "throat"},
+        {"text": "No subes hasta que yo lo diga {name}. Y no tengo prisa.", "min_depth": "throat"}
+      ],
+      "hard": [
+        {"text": "Profundo, quieta, hasta que arda {name}.", "min_depth": "throat"},
+        {"text": "Nariz contra los huevos {name}. Y te quedas ahí.", "min_depth": "full"},
+        {"text": "¿Te ahogas? Bien. No te mueves {name}.", "min_depth": "throat"}
+      ],
+      "finale": [
+        {"text": "Quédate hasta el fondo, hasta que te atragantes {name}.", "min_depth": "throat"},
+        {"text": "Última cosa: mantienes hasta el fondo, hasta la señal, pase lo que pase {name}.", "min_depth": "throat"},
+        "Atragántate con ello si hace falta {name}. Pero no sueltas antes que yo."
+      ]
+    },
+    "breath": {
+      "soft": [
+        "Respira {name}. Rápido. No doy mucho.",
+        "Coge aire {name}. En diez segundos lo lamentarás.",
+        "Inhala {name}. Lo que viene no conoce piedad.",
+        "Disfrútalo, basura. Esto no se repite pronto."
+      ]
+    },
+    "beg": {
+      "soft": [
+        "Pide. En voz alta: «quiero más {coach}».",
+        "Suplica {name}. Quiero oírlo.",
+        "Dime por qué suplicas más, basura.",
+        "Pídeme que siga {name}. Y hazlo bien."
+      ],
+      "medium": [
+        "Repite: «necesito tu polla {coach}».",
+        "Pide «más profundo {coach}». Más fuerte.",
+        "Suplica como toca, agujero para polla. Si no, me voy.",
+        "Di mi nombre mientras suplicas, {coach}. De rodillas en tu voz."
+      ]
+    },
+    "freestyle": {
+      "soft": [
+        "Vamos {name}. Enséñame lo que te queda.",
+        "Haz un momento lo que quieras {name}. No te ablandes, te miro."
+      ]
+    },
+    "hand": {
+      "soft": [
+        "Con tu mano {name}. Mantén el ritmo.",
+        "Pajéamela. Regular {name}.",
+        "Movimientos limpios {name}. No sueltas."
+      ],
+      "medium": [
+        "Más rápido con la mano {name}. Mantén el tempo.",
+        "No te vas a ralentizar {name}. Sigue."
+      ]
+    }
+  },
+  "randomComments": [
+    "Te lo tragas {name}. No se espera más.",
+    "Nada de aflojar {name}.",
+    "Sigue {name}. No estás cansada, eres vaga.",
+    "Más profundo. Siempre más profundo {name}.",
+    "Justo ahora sirves para algo {name}.",
+    "Muévete {name}.",
+    "Me da igual que duela. Sigue.",
+    "Lo encajas, o te rompes {name}. Decide.",
+    "Suficiente por ahora.",
+    "Trágatelo {name}."
+  ],
+  "intros": [
+    "Nyx está aquí. Tu garganta sufrirá hoy.",
+    "Vas a lamentar haber abierto la boca {name}.",
+    "Nyx. Aparta el móvil. A partir de ahora tragas, y te callas {name}.",
+    "Este es el último nivel {name}. Aquí nadie te mima. Yo menos que nadie."
+  ],
+  "congrats": [
+    "Has sobrevivido. Lástima.",
+    "No está mal para una simple vacíahuevos.",
+    "No te has roto. Decepcionante — me habría gustado verlo {name}.",
+    "Te lo has tragado hasta el final {name}. Aquí es el mínimo."
+  ],
+  "encore": [
+    "¿Más? Un objeto como tú siempre suplica más {name}. Sea.",
+    "¿Quieres más {name}? Pues tendrás más. Y no para cuando tú lo quieras."
+  ],
+  "progress": {
+    "25": [
+      "Estás calentada {name}. Ahora empieza de verdad.",
+      "Entras en el ritmo {name}. Mantenlo, eso es todo."
+    ],
+    "50": [
+      "Sirves para algo {name}.",
+      "Hasta ahora sin pausa {name}. Sigue."
+    ],
+    "75": [
+      "Te acercas al muro {name}. No se cruza parando.",
+      "¿Duele {name}? Claro. Sigue."
+    ],
+    "90": [
+      "Último esfuerzo {name}. No te rompes ahora.",
+      "Dalo todo {name}. No hay después. No conmigo."
+    ]
+  },
+  "branchPhrases": {
+    "profondeur": {
+      "soft": [
+        "Tu garganta está hecha para tragárselo {name}. Úsala.",
+        "Más profundo {name}. Ahí vales algo."
+      ],
+      "medium": [
+        "Bajas bien {name}. Aún más profundo.",
+        "Tu profundidad progresa {name}. Métetelo entero."
+      ],
+      "hard": [
+        "Hasta los huevos {name}. Eso es tu valor.",
+        "Una garganta como la tuya se folla. Sin contemplaciones."
+      ]
+    },
+    "obeissance": {
+      "soft": [
+        "Haces lo que digo {name}. Por supuesto.",
+        "Obedeces correctamente {name}. Suerte para ti."
+      ],
+      "medium": [
+        "No has replicado {name}. Bien adiestrada.",
+        "Ejecutas sin pestañear {name}. Más no tolero."
+      ],
+      "hard": [
+        "Esclava perfecta {name}. Eres mía, y lo sabes.",
+        "Obedeces al pie de la letra {name}. Quédate en tu sitio."
+      ]
+    },
+    "rythmeBiffle": {
+      "soft": [
+        "El ritmo. Síguelo sin vacilar {name}.",
+        "Mantén el tempo {name}. Es el mínimo."
+      ],
+      "medium": [
+        "Trágate los vergazos {name}. Es tu papel.",
+        "Que suene más fuerte {name}. Más rápido."
+      ],
+      "hard": [
+        "Golpea fuerte, encájalo fuerte {name}. Eres un objeto que se golpea.",
+        "Más brutal, más rápido {name}. Aguantarás, porque yo lo he decidido."
+      ]
+    },
+    "sloppy": {
+      "soft": [
+        "Babea {name}. Sin ningún tipo de contención.",
+        "Pónlo todo mojado {name}. Ensúciate."
+      ],
+      "medium": [
+        "Guarra {name}. Como un objeto bien usado.",
+        "Boca llena de saliva {name}. Perfecto."
+      ],
+      "hard": [
+        "Empapada hasta la barbilla {name}. Así te ves de verdad.",
+        "Toda tu jeta llena de babas {name}. Quédate así."
+      ]
+    },
+    "endurance": {
+      "soft": [
+        "Aguantas mucho tiempo {name}. Lo llevas dentro.",
+        "Mantén el ritmo {name}. Tienes la resistencia para hacerlo."
+      ],
+      "medium": [
+        "Lo encajas {name}. No quiero más.",
+        "Sin pausa, sin piedad {name}. Sigues."
+      ],
+      "hard": [
+        "Trágate aún más {name}. No paras hasta que yo termine.",
+        "Aguantarás, porque yo lo he decidido {name}."
+      ]
+    }
+  },
+  "progressPhrases": {
+    "rhythm.depth_max": {
+      "attempt": [
+        "Esta noche bajas más profundo de lo que jamás te has atrevido {name}. Sin resbalarte.",
+        "Tu garganta probará algo nuevo esta noche {name}. Más profundo. Mucho más profundo."
+      ],
+      "record": [
+        "Acabas de tragártelo hasta el tope {name}. Ese es tu verdadero lugar. Recuérdalo.",
+        "Nuevo suelo alcanzado {name}. Por fin has entendido para qué está tu boca."
+      ],
+      "tapout": [
+        "Esta profundidad aún no es tuya {name}. La anotamos. Cederá, después.",
+        "Demasiado lejos por esta noche {name}. Sin excusas, un hecho. La próxima vez bajas."
+      ]
+    },
+    "gorge.apnee_streak": {
+      "attempt": [
+        "Esta noche cortamos el aire más tiempo {name}. Aprende a dejar de necesitarlo.",
+        "Te quedas sin aire más tiempo que de costumbre {name}. Respira antes. Durante no tienes."
+      ],
+      "record": [
+        "Has aguantado sin respirar como nunca {name}. Eso valían tus excusas.",
+        "Récord de apnea {name}. Tu garganta ya sabe quién decide cuándo respira."
+      ],
+      "tapout": [
+        "Has necesitado aire {name}. Es el límite real — la próxima vez lo empujamos más lejos.",
+        "Tu garganta ha cedido donde la he empujado {name}. Anotado. Se moverá."
+      ]
+    },
+    "hold.full.streak": {
+      "attempt": [
+        "Esta noche mantienes la nariz contra los huevos más tiempo {name}. Sin pestañear.",
+        "La mantención más profunda será hoy más larga {name}. Prepárate para aguantarla."
+      ],
+      "record": [
+        "Lo has mantenido hasta el fondo como nunca {name}. Para esto exactamente estás aquí.",
+        "Récord de mantención más profunda {name}. Te vuelves útil."
+      ],
+      "tapout": [
+        "Has mantenido hasta el fondo un buen rato {name}. Anotado, el límite. Retrocederá.",
+        "Tranquila {name} — has soltado donde era demasiado. La próxima vez más tiempo."
+      ]
+    }
+  },
+  "nicknames": {
+    "pool": [
+      "agujero para polla",
+      "vacíahuevos",
+      "basura",
+      "putita tragaleche",
+      "objeto"
+    ],
+    "use_user_prenom": false,
+    "use_user_nicknames": true
+  },
+  "coachNicknames": [
+    "Nyx",
+    "Ama"
+  ]
+}

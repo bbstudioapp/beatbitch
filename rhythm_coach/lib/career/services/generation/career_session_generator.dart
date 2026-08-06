@@ -11,8 +11,10 @@ import '../../../services/capability_axis.dart';
 import '../../../services/capability_service.dart';
 import '../../models/career_generation_inputs.dart';
 import '../../models/challenge.dart';
+import '../../../models/posture.dart';
 import '../../models/level_milestone.dart';
 import '../../models/phrase_bank.dart';
+import '../../models/posture_unlock.dart';
 import '../../models/session_length_choice.dart';
 import '../../models/specialization.dart';
 import '../../models/unlock_key.dart';
@@ -207,6 +209,39 @@ class CareerSessionGenerator {
       final frac = start + (end - start) * i / (count - 1);
       return (genUntil * frac).round();
     });
+  }
+
+  /// Bornes de durée d'un break scénarisé (issue #77). Tirées uniformément
+  /// par `_pickBreakDuration`. Le break consomme cette durée comme *trou
+  /// d'effort* dans l'enveloppe (cf. réservation dans `generate`).
+  static const int _breakMinDurationSeconds = 60;
+  static const int _breakMaxDurationSeconds = 120;
+
+  /// Seuils de durée totale (s) d'apparition des breaks : 1 break dès
+  /// ~28 min, 2 breaks dès ~45 min (cf. spec `specs/scripted_breaks.md`).
+  static const int _oneBreakThresholdSeconds = 28 * 60;
+  static const int _twoBreakThresholdSeconds = 45 * 60;
+
+  /// Nombre de breaks scénarisés à insérer selon la durée totale.
+  static int _computeBreakCount(int effectiveDuration) {
+    if (effectiveDuration >= _twoBreakThresholdSeconds) return 2;
+    if (effectiveDuration >= _oneBreakThresholdSeconds) return 1;
+    return 0;
+  }
+
+  /// `triggerTime` d'insertion des breaks dans la fenêtre de génération
+  /// `genUntil` (≈ durée hors phase finish). 1 break → vers la moitié ;
+  /// 2 breaks → vers le tiers et les deux tiers. Le placement aux frontières
+  /// de blocs (insertion dans la boucle main) et `genUntil < effectiveDuration`
+  /// garantissent structurellement « jamais dans les 5 premières min ni dans
+  /// la phase finish » pour les durées éligibles (≥ 28 min).
+  static List<int> _computeBreakTriggerTimes({
+    required int count,
+    required int genUntil,
+  }) {
+    if (count == 0) return const [];
+    if (count == 1) return [(genUntil * 0.5).round()];
+    return [(genUntil * 0.34).round(), (genUntil * 0.67).round()];
   }
 
   /// Enveloppe temporelle conservative réservée par le générateur après
@@ -486,6 +521,11 @@ class CareerSessionGenerator {
     bool quickie = false,
     SpecializationAllocation? specialization,
     bool intense = false,
+
+    /// Mode « Utilise-moi » (remplace Supplier en carrière) : escalade
+    /// non-stop. Corps `{rhythm, hold}` en throat/full, aucun repos, final
+    /// `hold full`. Cumulé avec `intense`. Cf. `SessionConfig.useMe`.
+    bool useMe = false,
     double obedience = 100.0,
     double humiliationCareer = 0.0,
     double humiliationSession = 0.0,
@@ -521,6 +561,13 @@ class CareerSessionGenerator {
     /// Quand un défi est passé, un step breath de countdown + un step défi
     /// sont insérés vers 60 % du temps planifié (cf. spec § 4.3).
     ChallengeInputs challenge = ChallengeInputs.none,
+
+    /// Active les postures imposées + breaks scénarisés (issue #77, flag
+    /// debug `debug.scripted_breaks`). `false` = posture `free`, aucun
+    /// break (comportement historique). En PR3 seule la posture initiale
+    /// est tirée ; l'insertion des breaks suit. Cf. spec
+    /// `specs/scripted_breaks.md`.
+    bool scriptedBreaks = false,
   }) {
     // Invariants `milestones` : on ne peut pas les déplacer dans le
     // constructeur de `MilestonePlan` car `.placement` n'est pas
@@ -560,8 +607,14 @@ class CareerSessionGenerator {
       // (`rhythm.depth_max.comfort` arrondi, plancher `head`). Custom
       // garde son override explicite. Profil absent (test, surprise) →
       // fallback full ouvert via `defaultMaxDepthIndex`.
-      maxDepthIndex: custom.maxDepthIndex ??
-          CareerLevelGates.maxDepthIndexForProfile(capability.profile),
+      // « Utilise-moi » force full ouvert : le plancher throat (cf.
+      // `PositionPickers`) exige un ceiling ≥ throat, et le fantasme est
+      // « que du profond ». Le clamp capability de profondeur reste géré
+      // en aval (bypass BPM/profondeur = escalade, PR2).
+      maxDepthIndex: useMe
+          ? Position.full.index
+          : (custom.maxDepthIndex ??
+              CareerLevelGates.maxDepthIndexForProfile(capability.profile)),
       spec: specialization ?? SpecializationAllocation.empty(),
       anatomy: anatomy,
       coachModeWeights: coachModeWeights,
@@ -577,8 +630,11 @@ class CareerSessionGenerator {
       lengthChoice: lengthChoice,
       intense: intense,
       encoreChainIndex: encoreChainIndex,
+      scriptedBreaks: scriptedBreaks,
+      useMe: useMe,
     );
     _initScratchpad(unlockedKeys: unlockedKeys, clearPatternBuffer: true);
+    _initialPose = _pickInitialPose(unlockedKeys);
     // Mode "Session bâclée" : 6 min par défaut, intense tout du long. Floor
     // d'intensité appliqué au tirage de difficulté + on saute l'intro douce
     // et la pré-finition. Une durée explicite reste prioritaire (cas de la
@@ -687,10 +743,11 @@ class CareerSessionGenerator {
     if (milestoneScheduler.replacesIntro) {
       milestoneScheduler.insertIntroReplacement(ctx);
     } else {
-      final first = _clampToCapability(_stepBuilders.firstStep(
-        quickie: quickie,
-        intense: intense,
-      ));
+      // useMe : pas de clamp capacité sur l'amorce (le `to=full` de
+      // l'intro profonde doit tenir, bypass assumé de l'enveloppe).
+      final firstRaw =
+          _stepBuilders.firstStep(quickie: quickie, intense: intense);
+      final first = _config.useMe ? firstRaw : _clampToCapability(firstRaw);
       // Phase 4 — coach audible : si un axe est surchargé cette séance et qu'on
       // est sur un démarrage de séance normale (pas Supplier/encore = pas
       // d'`openingPhrase` imposée, pas bâclée), une chance ∝ niveau de poser une
@@ -746,6 +803,23 @@ class CareerSessionGenerator {
     );
     final challengeTriggerTimes = <int>[];
     var nextChallengeIndex = 0;
+
+    // Breaks scénarisés (issue #77) — pauses actives de récup sur sessions
+    // longues. Comme les défis : trigger times planifiés, insertion aux
+    // frontières de blocs dans la boucle main, réservation de l'enveloppe
+    // (trou d'effort = `durationSeconds`, le runtime gèle le moteur — cf.
+    // PR4). Gaté par le flag debug `scriptedBreaks` ; 0 break si off.
+    // `currentPose` suit la posture en cours (départ = posture initiale) pour
+    // que le 1ᵉʳ break impose une pose *différente* ; le 2ᵉ tend vers récup
+    // pure (`newPose == null`, continuité de pose).
+    final plannedBreakTimes = _computeBreakTriggerTimes(
+      count: _config.scriptedBreaks ? _computeBreakCount(effectiveDuration) : 0,
+      genUntil: genUntil,
+    );
+    final sessionBreaks = <ScriptedBreak>[];
+    var nextBreakIndex = 0;
+    var currentPose = _initialPose;
+
     while (ctx.time < genUntil) {
       // Phase 1 — Insertion milestone : on traite les pending dans
       // l'ordre, dès que `time` atteint la target (`>= targetTime`),
@@ -756,14 +830,46 @@ class CareerSessionGenerator {
         if (ctx.time >= genUntil) break;
         continue;
       }
+      // Phase 1.5 — Break scénarisé (issue #77) : pause active de récup,
+      // frontière de bloc majeure (priorité juste après la milestone). Inséré
+      // dès que `time` atteint le trigger planifié : on pose le `ScriptedBreak`
+      // et on réserve l'enveloppe (`time += durationSeconds`) sans émettre de
+      // step d'effort — le trou laissé est honoré en runtime par le gel du
+      // moteur (PR4). Le profil stamina y reste à `cap` (récup = plein), ce
+      // qui est sémantiquement correct.
+      if (nextBreakIndex < plannedBreakTimes.length &&
+          ctx.time >= plannedBreakTimes[nextBreakIndex]) {
+        final dur = _pickBreakDuration();
+        if (genUntil - ctx.time >= dur) {
+          final newPose = _pickBreakPose(
+            unlockedKeys,
+            currentPose,
+            pureRecovery: nextBreakIndex >= 1,
+          );
+          sessionBreaks.add(ScriptedBreak(
+            time: ctx.time,
+            durationSeconds: dur,
+            newPose: newPose,
+          ));
+          if (newPose != null) currentPose = newPose;
+          ctx.time += dur;
+          nextBreakIndex++;
+          continue;
+        }
+        // Pas la place avant la phase finish → on saute ce break (sinon le
+        // test resterait vrai à chaque itération et bloquerait la boucle).
+        nextBreakIndex++;
+      }
       // Phase 2 — Mini-vague (+ breath long post-vague) : 2-3 steps à
       // BPM montant qui cassent la diagonale d'intensité, suivis d'un
       // breath long de récup. Inséré toutes les ~4-5 min sur sessions
       // longues ≥ 12 min à partir du niveau 5.
-      if (_tryEmitMiniWaveCycle(ctx)) continue;
+      // « Utilise-moi » supprime tout repos scénarisé (mini-vague + breath
+      // post-vague, ordre d'avaler) : la séance est non-stop.
+      if (!_config.useMe && _tryEmitMiniWaveCycle(ctx)) continue;
       // Phase 3 — Ordre de déglutition forcé : beg libre court quand la
       // simulation salive sature.
-      if (_tryEmitSwallowOrder(ctx)) continue;
+      if (!_config.useMe && _tryEmitSwallowOrder(ctx)) continue;
       // Phase 3.5 — Défi(s) intra-séance (Phase B — streaming).
       // Pour chaque défi à insérer, on attend `ctx.time >= planned[i]`,
       // puis on émet **uniquement** le step trigger (breath de countdown).
@@ -881,6 +987,7 @@ class CareerSessionGenerator {
         finalMilestoneDurationSeconds: finalMilestone.durationSeconds,
         challenges: challengeQueue.sublist(0, nextChallengeIndex),
         challengeTriggerTimes: challengeTriggerTimes,
+        breaks: sessionBreaks,
       );
     }
 
@@ -948,8 +1055,12 @@ class CareerSessionGenerator {
     final finalMode = finalResult.finalMode;
     final finalStepStartTime = finalResult.finalStepStartTime;
 
-    _finishPhase.emitPostFinal(ctx,
-        finalMode: finalMode, holdCeilingIdx: _milestoneHoldCeilingIdx());
+    // « Utilise-moi » : pas d'aftercare doux post-orgasme — la séance
+    // climaxe sur le hold full et s'arrête là.
+    if (!_config.useMe) {
+      _finishPhase.emitPostFinal(ctx,
+          finalMode: finalMode, holdCeilingIdx: _milestoneHoldCeilingIdx());
+    }
 
     return _assembleResult(
       ctx,
@@ -963,6 +1074,7 @@ class CareerSessionGenerator {
       finalStepStartTime: finalStepStartTime,
       challenges: challengeQueue.sublist(0, nextChallengeIndex),
       challengeTriggerTimes: challengeTriggerTimes,
+      breaks: sessionBreaks,
     );
   }
 
@@ -1181,15 +1293,18 @@ class CareerSessionGenerator {
     // plus on respecte l'endurance (recovery déclenché plus tôt). Sur la
     // dernière minute, on les coupe entièrement — la fin de séance ignore
     // l'endurance par contrat.
+    // « Utilise-moi » désactive toute récup (comme la dernière minute) :
+    // « respirer est inutile », la seule pause possible est un fail.
     final inLastMinute = (ctx.effectiveDuration - ctx.time) <= 60;
+    final noRecovery = inLastMinute || _config.useMe;
     // Bonus obédiance sur le seuil de recovery : capé +25 pour pas
     // qu'une obédiance lifetime extrême (200+) pousse le seuil à 80
     // (= recovery quasi-permanente). À obed=100, +25 ; à obed=0, +0.
     final obedienceBonus = (_config.obedience / 100.0).clamp(0.0, 1.0) * 25.0;
     final recoveryThreshold =
-        inLastMinute ? -1 : (ctx.quickie ? 15 : 30) + obedienceBonus;
+        noRecovery ? -1 : (ctx.quickie ? 15 : 30) + obedienceBonus;
     final recoveryRandomThreshold =
-        inLastMinute ? -1 : (ctx.quickie ? 25 : 50) + obedienceBonus;
+        noRecovery ? -1 : (ctx.quickie ? 25 : 50) + obedienceBonus;
     if (ctx.stamina < recoveryThreshold ||
         (ctx.stamina < recoveryRandomThreshold && _rng.nextBool())) {
       initialDraft = _stepBuilders.buildRecoveryStep();
@@ -1211,23 +1326,29 @@ class CareerSessionGenerator {
     // session (+1/min en clean, ×3 max avec obed, capée à sessionCap)
     // est intégrée par `_config.humilCapAt`.
     final humilCap = _config.humilCapAt(ctx.time);
-    draft = _enforceHumiliationRequired(draft, humilCap);
+    // « Utilise-moi » bypasse l'enveloppe humil ET capacité : throat/full et
+    // l'escalade BPM doivent tenir quel que soit le profil (« respirer est
+    // inutile », dépassement assumé opt-in). L'escalade est posée plus bas
+    // sur les `emitDrafts`.
+    if (!_config.useMe) draft = _enforceHumiliationRequired(draft, humilCap);
 
     // Variété BPM : évite d'enchaîner des steps au même tempo.
     draft = _applyBpmDiversity(draft);
     // Variété amplitude : évite d'enchaîner deux fois exactement la
     // même paire from/to dans le même mode.
     draft = _diversifyAmplitude(draft);
-    // Rampe BPM intra-step : pour les steps longs (≥ 30 s) sur amplitude
-    // moyenne (≤ mid), pose `bpmEnd` distinct pour raconter une
-    // montée / descente sur la durée. Skip throat/full pour ne pas
-    // violer le cap pulses (cf. `_capRhythmDurationByPulses`).
-    draft = BpmPacing.maybeApplyBpmRamp(draft, progress, _rng, _config.level);
-    // 2ᵉ enveloppe (profil de capacités) : dernier mot après les
-    // diversifications BPM/amplitude qui ont pu remonter au-dessus du
-    // `comfort` prouvé. `_diversifyLongSegment` derrière ne fait que
-    // varier « égal ou plus doux », donc pas besoin de re-clamper.
-    draft = _clampToCapability(draft);
+    if (!_config.useMe) {
+      // Rampe BPM intra-step : pour les steps longs (≥ 30 s) sur amplitude
+      // moyenne (≤ mid), pose `bpmEnd` distinct pour raconter une
+      // montée / descente sur la durée. Skip throat/full pour ne pas
+      // violer le cap pulses (cf. `_capRhythmDurationByPulses`).
+      draft = BpmPacing.maybeApplyBpmRamp(draft, progress, _rng, _config.level);
+      // 2ᵉ enveloppe (profil de capacités) : dernier mot après les
+      // diversifications BPM/amplitude qui ont pu remonter au-dessus du
+      // `comfort` prouvé. `_diversifyLongSegment` derrière ne fait que
+      // varier « égal ou plus doux », donc pas besoin de re-clamper.
+      draft = _clampToCapability(draft);
+    }
 
     // Sas breath conditionnel : on insère un breath UNIQUEMENT si le
     // draft retenu provoquerait un déficit d'endurance (stamina projetée
@@ -1239,7 +1360,7 @@ class CareerSessionGenerator {
     // au pré-finisher / boost).
     final draftIsBreath =
         _rules[draft.mode]!.roles.contains(ModeSemanticRole.breath);
-    if (!draftIsBreath && ctx.genUntil - ctx.time > 8) {
+    if (!_config.useMe && !draftIsBreath && ctx.genUntil - ctx.time > 8) {
       final delta = StaminaModel.delta(draft, progress, ctx.cfg, rules: _rules);
       final projected = ctx.stamina + delta;
       if (projected < 0) {
@@ -1269,7 +1390,10 @@ class CareerSessionGenerator {
     // s'autorisent un léger dépassement BPM (≤ +10) — on re-borne donc
     // chacun au profil de capacités.
     final emitDrafts = BpmPacing.diversifyLongSegment(draft, _rng)
-        .map(_clampToCapability)
+        .map(_useMeDepthFloored)
+        .map((d) => _config.useMe
+            ? _useMeEscalate(d, ctx.time, ctx.genUntil)
+            : _clampToCapability(d))
         .toList();
 
     final tier = diff < 0.33
@@ -1305,14 +1429,18 @@ class CareerSessionGenerator {
     // d'être trompeuse. Pas en dernière minute (on respecte le finish
     // scriptée), pas si on est déjà en déficit (un vrai breath était
     // déjà inséré plus haut).
-    final fakeBreath = _stepBuilders.maybeBuildFakeBreath(
-      lastEmitted: emitDrafts.isNotEmpty ? emitDrafts.last : draft,
-      currentStamina: ctx.stamina,
-      time: ctx.time,
-      genUntil: ctx.genUntil,
-      bank: ctx.bank,
-      pickPhrase: _pickPhrase,
-    );
+    // « Utilise-moi » : pas de fake breath non plus (aucune pause, même
+    // simulée).
+    final fakeBreath = _config.useMe
+        ? null
+        : _stepBuilders.maybeBuildFakeBreath(
+            lastEmitted: emitDrafts.isNotEmpty ? emitDrafts.last : draft,
+            currentStamina: ctx.stamina,
+            time: ctx.time,
+            genUntil: ctx.genUntil,
+            bank: ctx.bank,
+            pickPhrase: _pickPhrase,
+          );
     if (fakeBreath != null) {
       _emitStep(
         ctx,
@@ -1441,6 +1569,7 @@ class CareerSessionGenerator {
         to: mStep.to,
         duration: mStep.duration,
         swallowMode: mStep.swallowMode,
+        awaitReady: mStep.awaitReady,
       ));
       // Simulation stamina/salive pour chaque step de config de la
       // séquence, pour que la projection reste cohérente. Les steps
@@ -1473,6 +1602,49 @@ class CareerSessionGenerator {
     ctx.stamina = s;
   }
 
+  /// Posture imposée au démarrage de la séance courante. Tirée en début de
+  /// `generate()` (où `unlockedKeys` est typé `Set<UnlockKey>`) et lue par
+  /// `_assembleResult`. `free` tant que le flag debug `scriptedBreaks` est
+  /// off.
+  Posture _initialPose = Posture.free;
+
+  /// Tire la posture imposée au démarrage (issue #77). [Posture.free] tant
+  /// que le flag debug `scriptedBreaks` est off ; sinon tirage uniforme
+  /// parmi les postures débloquées (`free` incluse dans le pool). Bas niveau
+  /// / rien de débloqué ⇒ `free` de toute façon. Déterministe sous seed via
+  /// `_rng`.
+  Posture _pickInitialPose(Set<UnlockKey> unlockedKeys) {
+    if (!_config.scriptedBreaks) return Posture.free;
+    final available = availablePostures(unlockedKeys);
+    return available[_rng.nextInt(available.length)];
+  }
+
+  /// Durée d'un break, tirée uniformément dans
+  /// [`_breakMinDurationSeconds`, `_breakMaxDurationSeconds`] (60–120 s).
+  /// Déterministe sous seed via `_rng`.
+  int _pickBreakDuration() =>
+      _breakMinDurationSeconds +
+      _rng.nextInt(_breakMaxDurationSeconds - _breakMinDurationSeconds + 1);
+
+  /// Posture appliquée à la reprise d'un break (issue #77), ou `null` pour une
+  /// récup pure (aucun changement de posture). `null` si [pureRecovery] (2ᵉ
+  /// break d'une session très longue, par continuité de pose) ou si aucune
+  /// posture débloquée n'est différente de [current] (tirage hors `free` et
+  /// hors posture courante). Déterministe sous seed via `_rng`.
+  Posture? _pickBreakPose(
+    Set<UnlockKey> unlockedKeys,
+    Posture current, {
+    required bool pureRecovery,
+  }) {
+    if (pureRecovery) return null;
+    final candidates = [
+      for (final p in availablePostures(unlockedKeys))
+        if (p != Posture.free && p != current) p,
+    ];
+    if (candidates.isEmpty) return null;
+    return candidates[_rng.nextInt(candidates.length)];
+  }
+
   /// Construit le [CareerGenerationResult] final à partir des accumulateurs
   /// `ctx.steps` / `ctx.profile` et du curseur `time`. Tronque le profil à la
   /// durée effective (= `time + 2`), assemble la [Session] avec toutes ses
@@ -1494,6 +1666,7 @@ class CareerSessionGenerator {
     int? finalMilestoneDurationSeconds,
     List<Challenge> challenges = const [],
     List<int> challengeTriggerTimes = const [],
+    List<ScriptedBreak> breaks = const [],
   }) {
     final finalDuration = ctx.time + 2;
     final trimmedProfile = List<double>.generate(
@@ -1534,6 +1707,8 @@ class CareerSessionGenerator {
         noStats: ctx.noStats,
         challenges: challenges,
         challengeTriggerTimes: challengeTriggerTimes,
+        initialPose: _initialPose,
+        breaks: breaks,
       ),
       staminaProfile: trimmedProfile,
       overloadAxis: _config.overloadAxis,
@@ -1738,6 +1913,52 @@ class CareerSessionGenerator {
       from: d.from,
       to: Position.values[newToIdx],
       duration: d.duration,
+    );
+  }
+
+  /// « Utilise-moi » : garantit que le `to` (profondeur atteinte) d'un
+  /// step rythmé reste ≥ throat après les diversifications d'amplitude
+  /// (`_diversifyAmplitude` / `BpmPacing.diversifyLongSegment` peuvent
+  /// abaisser `to` d'un cran pour varier). Le `from` reste libre — il
+  /// était déjà strictement sous l'ancien `to`, donc sous throat, pas de
+  /// collision `from ≥ to`. No-op hors useMe / hors rhythm.
+  StepDraft _useMeDepthFloored(StepDraft d) {
+    if (!_config.useMe || d.mode != SessionMode.rhythm) return d;
+    final toIdx = d.to?.index;
+    if (toIdx == null || toIdx >= Position.throat.index) return d;
+    return StepDraft(
+      mode: d.mode,
+      bpm: d.bpm,
+      bpmEnd: d.bpmEnd,
+      from: d.from,
+      to: Position.throat,
+      duration: d.duration,
+      chainNext: d.chainNext,
+    );
+  }
+
+  /// « Utilise-moi » : pose le BPM escaladé (rampe temporelle vers 300, cf.
+  /// [BpmPacing.useMeEscalatedBpm]) sur un step rythmé, et re-borne la durée
+  /// au cap pulses pour ce nouveau BPM (sinon un throat/full hérite d'une
+  /// durée calculée pour un tempo plus lent = trop de passages de gorge).
+  /// No-op sur les holds (sans tempo). Remplace `_clampToCapability` dans la
+  /// chaîne d'émission useMe — l'enveloppe capacité est délibérément bypassée.
+  StepDraft _useMeEscalate(StepDraft d, int time, int genUntil) {
+    if (d.mode != SessionMode.rhythm) return d;
+    final bpm = BpmPacing.useMeEscalatedBpm(time, genUntil);
+    var dur = d.duration;
+    if (dur != null && d.to != null) {
+      dur =
+          BpmPacing.capRhythmDurationByPulses(dur, bpm, d.to, config: _config);
+    }
+    return StepDraft(
+      mode: d.mode,
+      bpm: bpm,
+      bpmEnd: bpm,
+      from: d.from,
+      to: d.to,
+      duration: dur,
+      chainNext: d.chainNext,
     );
   }
 

@@ -351,29 +351,33 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
               ),
               const SizedBox(height: 32),
               Expanded(
-                child: _ModeCard(
-                  title: t.modeSelectionCareerTitle,
-                  subtitle: t.modeSelectionCareerSubtitle,
-                  icon: Icons.military_tech_outlined,
-                  onTap: _openCareer,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: _ModeCard(
-                  title: t.modeSelectionScenarioTitle,
-                  subtitle: t.modeSelectionScenarioSubtitle,
-                  icon: Icons.menu_book_outlined,
-                  onTap: _openScenario,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: _ModeCard(
-                  title: t.modeSelectionCustomTitle,
-                  subtitle: t.modeSelectionCustomSubtitle,
-                  icon: Icons.tune,
-                  onTap: _openCustom,
+                child: ListView(
+                  children: [
+                    _ModeCard(
+                      title: t.modeSelectionCareerTitle,
+                      subtitle: t.modeSelectionCareerSubtitle,
+                      icon: Icons.military_tech_outlined,
+                      onTap: _openCareer,
+                    ),
+                    const SizedBox(height: 16),
+                    _ModeCard(
+                      title: t.modeSelectionScenarioTitle,
+                      subtitle: t.modeSelectionScenarioSubtitle,
+                      icon: Icons.menu_book_outlined,
+                      onTap: _openScenario,
+                    ),
+                    const SizedBox(height: 16),
+                    _ModeCard(
+                      title: t.modeSelectionCustomTitle,
+                      subtitle: t.modeSelectionCustomSubtitle,
+                      icon: Icons.tune,
+                      onTap: _openCustom,
+                    ),
+                    // Mode Music retiré de l'accueil : encore trop instable
+                    // pour être exposé. Le mode lui-même (`music_mode_screen`,
+                    // écran SONS) reste en place — pour réactiver, remettre une
+                    // `_ModeCard` ici + un push vers `MusicModeScreen`.
+                  ],
                 ),
               ),
             ],

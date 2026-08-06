@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../controllers/session_controller.dart';
 import '../../l10n/app_localizations.dart';
 import '../../l10n/format_helpers.dart';
+import '../../models/posture.dart';
 import '../../screens/session_screen.dart';
 import '../../services/ambience_engine.dart';
 import '../../services/beep_engine.dart';
@@ -29,6 +30,7 @@ import '../services/career_difficulty_resolver.dart';
 import '../services/career_encore_gate.dart';
 import '../services/career_progress_service.dart';
 import '../services/challenge_service.dart';
+import '../services/debug_settings_service.dart';
 import '../services/generation/career_session_generator.dart';
 import '../services/phrase_bank_loader.dart';
 import '../services/specialization_service.dart';
@@ -102,6 +104,7 @@ class _CareerScreenState extends State<CareerScreen> {
       _challengeService.tutorialSeen(),
       _progress.getLastLengthChoice(),
       _stats.getTotalSeconds(),
+      DebugSettingsService().getScriptedBreaks(),
     ]);
     final capabilityProfile = results[8] as CapabilityProfile;
     final totalSeconds = results[12] as int;
@@ -149,6 +152,7 @@ class _CareerScreenState extends State<CareerScreen> {
       lastLengthChoice: results[11] as SessionLengthChoice,
       totalSeconds: totalSeconds,
       synthLevel: CareerDifficultyResolver.synthLevelFor(completedSessions),
+      scriptedBreaks: results[13] as bool,
     );
   }
 
@@ -193,6 +197,7 @@ class _CareerScreenState extends State<CareerScreen> {
         completedSessions: bundle.completedSessions,
       ),
       longueUnlocked: isSessionLengthLongueUnlocked(bundle.totalSeconds),
+      aleatoireUnlocked: isSessionLengthAleatoireUnlocked(bundle.totalSeconds),
     );
     // Ne persister que sur action utilisateur explicite (= elle a tap une
     // carte). Sans ce garde, le fallback à courte écraserait silencieusement
@@ -201,6 +206,15 @@ class _CareerScreenState extends State<CareerScreen> {
     if (_selectedLengthChoice != null) {
       await _progress.setLastLengthChoice(lengthChoice);
     }
+    // Tirage du palier effectif quand le choix utilisatrice est `aleatoire`
+    // (sinon `effectiveLengthChoice == lengthChoice`, identité). C'est
+    // `effectiveLengthChoice` qui pilote toute la suite (durée, body
+    // milestones, défis…) ; `lengthChoice` n'est conservé que pour la
+    // persistance (la joueuse a choisi « surprise ») et pour décider de
+    // masquer le timer côté SessionScreen.
+    final isAleatoire = lengthChoice == SessionLengthChoice.aleatoire;
+    final effectiveLengthChoice =
+        lengthChoice.resolveAleatoireIfNeeded(Random());
 
     // Phase 19.12 : la règle `requiresHands` des milestones reste, mais
     // plus de gate par niveau — le toggle hand respecte simplement le
@@ -232,7 +246,11 @@ class _CareerScreenState extends State<CareerScreen> {
     // Phase 19.12 : la bâclée est toujours accessible — plus de gate
     // par niveau. Le palier « bachee » du picker active automatiquement
     // `quickie:true` côté générateur (intensityFloor 0.65 + 6 min).
-    final isBachee = lengthChoice == SessionLengthChoice.bachee;
+    //
+    // Le palier `aleatoire` n'inclut pas `bachee` dans son pool de tirage
+    // (cf. `SessionLengthChoice.aleatoireDrawPool`), donc en mode aléatoire
+    // `isBachee == false` par construction.
+    final isBachee = effectiveLengthChoice == SessionLengthChoice.bachee;
     final quickie = isBachee;
     final humiliationScore = await _stats.getHumiliationLevel();
     final obedienceScore = await _stats.getObedienceLevel();
@@ -250,7 +268,7 @@ class _CareerScreenState extends State<CareerScreen> {
     // durée (cf. `SessionLengthChoice.maxBodyMilestones`). Bâclée = 0 body
     // (pas de pédagogie sur 6 min), courte = 1, moyenne/longue = 2. La
     // disponibilité réelle dépend du catalogue pending.
-    final bodyCount = lengthChoice.maxBodyMilestones;
+    final bodyCount = effectiveLengthChoice.maxBodyMilestones;
     final anatomy = widget.userProfile.anatomy;
     // Tête de la file showcase : la prochaine séance honore le dernier
     // point spé dépensé (cf. `SpecializationService.invest`). Lue ici
@@ -356,7 +374,7 @@ class _CareerScreenState extends State<CareerScreen> {
     final challenges = <Challenge>[];
     if (_challengesEnabled) {
       final targetCount =
-          lengthChoice.targetChallengesFor(insertedBodies.length);
+          effectiveLengthChoice.targetChallengesFor(insertedBodies.length);
       final excludedAxes = <CapabilityAxis>{};
       // Anti-répétition inter-sessions : exclure d'abord les axes pickés à
       // la session précédente. Sur un profil jeune (3 axes prouvés) sans
@@ -429,7 +447,7 @@ class _CareerScreenState extends State<CareerScreen> {
     final result = CareerSessionGenerator().generate(
       level: clamped,
       bank: coachBank,
-      lengthChoice: lengthChoice,
+      lengthChoice: effectiveLengthChoice,
       // Phase 19.6 : déclenche resolveForCareer côté générateur (cap /
       // regen / boosts dérivés des sessions au lieu du level).
       sessionsCompleted: bundle.completedSessions,
@@ -455,9 +473,25 @@ class _CareerScreenState extends State<CareerScreen> {
       // figé de plafond.
       capability: CapabilityInputs(profile: bundle.capabilityProfile),
       challenge: ChallengeInputs(challenges: challenges),
+      scriptedBreaks: bundle.scriptedBreaks,
     );
 
-    final introText = coachBank.pickIntro(Random());
+    var introText = coachBank.pickIntro(Random());
+    // Break scénarisé (issue #77) : si le générateur a imposé une posture de
+    // départ, l'annoncer dans le briefing d'intro. Sinon la joueuse (yeux
+    // fermés, téléphone posé sur le côté) ne saurait jamais s'y mettre — seuls
+    // les *changements* de posture aux breaks étaient vocalisés jusqu'ici. Si
+    // l'intro est vide (coach sans `intros`), la consigne devient le briefing
+    // à elle seule (le panel « Je suis prête » s'affiche pour la poser).
+    final initialPose = result.session.initialPose;
+    if (initialPose != Posture.free) {
+      final postureLine = coachBank.pickPostureChange(initialPose, Random());
+      if (postureLine != null && postureLine.isNotEmpty) {
+        introText = (introText == null || introText.isEmpty)
+            ? postureLine
+            : '$introText $postureLine';
+      }
+    }
 
     // Unlocks provisoires de la session : chaque milestone insérée
     // débloque visuellement ses compétences pour l'UI (bouton Supplier
@@ -517,6 +551,7 @@ class _CareerScreenState extends State<CareerScreen> {
                     encoreChainIndex: 1,
                     includeHand: includeHand,
                     quickie: quickie,
+                    hideTimer: isAleatoire,
                   ),
           onMilestoneRetry: (ctrl) => _handleMilestoneRetry(
             ctrl,
@@ -537,6 +572,7 @@ class _CareerScreenState extends State<CareerScreen> {
             unawaited(_challengeService.incrementAttempts(ch.axis));
           },
           anatomy: anatomy,
+          hideTimerOverride: isAleatoire,
         ),
       ),
     );
@@ -673,6 +709,7 @@ class _CareerScreenState extends State<CareerScreen> {
       voiceLocale: preset.voiceLocale,
       rate: preset.rate,
       pitch: preset.pitch,
+      preferredGender: preset.preferredGender,
     );
   }
 
@@ -719,9 +756,13 @@ class _CareerScreenState extends State<CareerScreen> {
     int currentLevel,
   ) async {
     final t = AppLocalizations.of(context);
-    // Beg insistant allongé (12 → 15s) — la supplique se sent plus longue,
-    // cohérent avec le saut d'intensité de la régen qui suit.
-    const begDuration = 15;
+    // « Utilise-moi » : beg d'engagement fixe (« supplie-moi de t'utiliser… »),
+    // durée ≈ temps d'énoncé + 1 s — à peine le temps de le dire avant que
+    // l'escalade non-stop démarre. Estimée depuis le nombre de mots (TTS lent).
+    final begPhrase = t.careerUseMeBegPhrase;
+    final begWordCount =
+        begPhrase.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
+    final begDuration = (begWordCount * 0.6).ceil() + 1;
     final remaining = ctrl.session.durationSeconds - ctrl.elapsedSeconds;
     if (remaining < begDuration + 30) return;
 
@@ -751,6 +792,7 @@ class _CareerScreenState extends State<CareerScreen> {
       includeHand: bundle.includeHand,
       specialization: activeCoach.effectiveAllocation(bundle.specialization),
       intense: true,
+      useMe: true,
       humiliationCareer: humiliationCareer,
       humiliationSession: humiliationSession,
       obedience: obedienceScore,
@@ -769,15 +811,9 @@ class _CareerScreenState extends State<CareerScreen> {
       ),
     );
 
-    final rng = Random();
-    final insistText = coachBank.pickFor(
-      SessionMode.beg,
-      'insistent',
-      rng,
-    );
     final beg = SessionStep(
       time: 0,
-      text: insistText,
+      text: begPhrase,
       mode: SessionMode.beg,
       from: Position.full,
       duration: begDuration,
@@ -965,6 +1001,7 @@ class _CareerScreenState extends State<CareerScreen> {
     required int encoreChainIndex,
     required bool includeHand,
     required bool quickie,
+    required bool hideTimer,
   }) async {
     final t = AppLocalizations.of(context);
     // Capture la chauffe (`sessionScore` d'humiliation) ET les plafonds de
@@ -1049,6 +1086,7 @@ class _CareerScreenState extends State<CareerScreen> {
         profile: bundle.capabilityProfile,
         sessionCeilings: previousSessionCeilings,
       ),
+      scriptedBreaks: bundle.scriptedBreaks,
     );
 
     final camService = CameraMotionService();
@@ -1099,6 +1137,7 @@ class _CareerScreenState extends State<CareerScreen> {
                     encoreChainIndex: encoreChainIndex + 1,
                     includeHand: includeHand,
                     quickie: quickie,
+                    hideTimer: hideTimer,
                   ),
           onPostChallengeRegen: (ctrl) => _handlePostChallengeRegen(
             ctrl,
@@ -1110,6 +1149,7 @@ class _CareerScreenState extends State<CareerScreen> {
             unawaited(_challengeService.incrementAttempts(ch.axis));
           },
           anatomy: widget.userProfile.anatomy,
+          hideTimerOverride: hideTimer,
         ),
       ),
     );
@@ -1185,6 +1225,8 @@ class _CareerScreenState extends State<CareerScreen> {
           );
           final isLongueUnlocked =
               isSessionLengthLongueUnlocked(bundle.totalSeconds);
+          final isAleatoireUnlocked =
+              isSessionLengthAleatoireUnlocked(bundle.totalSeconds);
           final persistedChoice =
               _selectedLengthChoice ?? bundle.lastLengthChoice;
           // Fallback sur courte si la choice persistée n'est plus
@@ -1198,13 +1240,23 @@ class _CareerScreenState extends State<CareerScreen> {
             bacheeUnlocked: isBacheeUnlocked,
             moyenneUnlocked: isMoyenneUnlocked,
             longueUnlocked: isLongueUnlocked,
+            aleatoireUnlocked: isAleatoireUnlocked,
           );
+          // `aleatoire` est un méta-choix : son `durationSeconds = 0` casse
+          // `resolveForCareer` (palier sans correspondance) et le label de
+          // durée. Pour le rendu du picker on retombe sur le palier de tirage
+          // moyen (la moyenne) — ça donne une difficulté affichée
+          // représentative ; la valeur effective sera tirée dans `_start`.
+          final lengthForDisplay = lengthChoice == SessionLengthChoice.aleatoire
+              ? SessionLengthChoice.moyenne
+              : lengthChoice;
           final cfg = CareerDifficultyResolver.resolveForCareer(
             sessionsCompleted: bundle.completedSessions,
-            lengthChoice: lengthChoice,
+            lengthChoice: lengthForDisplay,
           );
-          final durationLabel =
-              formatDurationCompact(context, lengthChoice.durationSeconds);
+          final durationLabel = lengthChoice == SessionLengthChoice.aleatoire
+              ? lengthChoice.localizedDuration(context)
+              : formatDurationCompact(context, lengthChoice.durationSeconds);
           final activeCoach = _resolveCoach(bundle);
           final principal = coachService.currentTierPrincipal;
           final isFreeTraining = !coachService.advancesTier(activeCoach);
@@ -1283,6 +1335,7 @@ class _CareerScreenState extends State<CareerScreen> {
                 isBacheeUnlocked: isBacheeUnlocked,
                 isMoyenneUnlocked: isMoyenneUnlocked,
                 isLongueUnlocked: isLongueUnlocked,
+                isAleatoireUnlocked: isAleatoireUnlocked,
                 onChanged: (v) => setState(() => _selectedLengthChoice = v),
               ),
               const SizedBox(height: 8),
@@ -1444,13 +1497,14 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-/// Picker de durée de séance — 4 paliers (bâclée/courte/moyenne/longue).
+/// Picker de durée de séance — 5 paliers (bâclée/courte/moyenne/longue/
+/// aléatoire).
 ///
 /// Remplace `_LevelPicker` (Phase 19.4). Depuis le retour playtest 0.6,
 /// les paliers sont gatés par investissement (totalSeconds + sessions),
 /// et les paliers non débloqués sont **cachés** plutôt que grisés
 /// (révélation progressive par surprise, pas de carrot dangling). Les
-/// 3 flags `is*Unlocked` sont donc load-bearing — ne pas les supposer
+/// 4 flags `is*Unlocked` sont donc load-bearing — ne pas les supposer
 /// constants.
 ///
 /// Seuils de déverrouillage des paliers :
@@ -1464,9 +1518,16 @@ class _SectionLabel extends StatelessWidget {
 /// - Longue : 1 h de jeu cumulé (≈ avoir tenu au moins une Moyenne
 ///   entière ou plusieurs Courtes ; pas de bypass session pour éviter
 ///   qu'une Bâclée de 6 min ne déverrouille un format 45 min).
+/// - Aléatoire : 3 h de jeu cumulé. Le palier tire au sort la durée
+///   effective parmi courte/moyenne/longue à chaque démarrage (timer
+///   masqué pendant la séance). On veut que la joueuse ait *vécu* les
+///   trois formats au moins une fois statistiquement — pas juste les
+///   avoir débloqués sur le papier — avant de pouvoir tomber sur 45 min
+///   surprise.
 const int kSessionLengthBacheeUnlockTotalSeconds = 1800;
 const int kSessionLengthMoyenneUnlockTotalSeconds = 600;
 const int kSessionLengthLongueUnlockTotalSeconds = 3600;
+const int kSessionLengthAleatoireUnlockTotalSeconds = 10800;
 
 /// Vrai si la palier « Bâclée » est sélectionnable pour la joueuse.
 @visibleForTesting
@@ -1495,6 +1556,13 @@ bool isSessionLengthLongueUnlocked(int totalSeconds) {
   return totalSeconds >= kSessionLengthLongueUnlockTotalSeconds;
 }
 
+/// Vrai si le palier « Aléatoire » est sélectionnable. Cf. le bloc de
+/// commentaire au-dessus pour le pourquoi du seuil (3 h cumulées).
+@visibleForTesting
+bool isSessionLengthAleatoireUnlocked(int totalSeconds) {
+  return totalSeconds >= kSessionLengthAleatoireUnlockTotalSeconds;
+}
+
 /// Résout le choix de durée effectif en clamp ant à `courte` quand le
 /// palier persisté n'est plus déverrouillé. Helper partagé entre `build`
 /// (pour le rendu du picker) et `_start` (pour la génération + persistance),
@@ -1510,6 +1578,7 @@ SessionLengthChoice resolveSessionLengthChoice({
   required bool bacheeUnlocked,
   required bool moyenneUnlocked,
   required bool longueUnlocked,
+  required bool aleatoireUnlocked,
 }) {
   return switch (persisted) {
     SessionLengthChoice.bachee =>
@@ -1518,6 +1587,8 @@ SessionLengthChoice resolveSessionLengthChoice({
       moyenneUnlocked ? persisted : SessionLengthChoice.courte,
     SessionLengthChoice.longue =>
       longueUnlocked ? persisted : SessionLengthChoice.courte,
+    SessionLengthChoice.aleatoire =>
+      aleatoireUnlocked ? persisted : SessionLengthChoice.courte,
     SessionLengthChoice.courte => persisted,
   };
 }
@@ -1527,6 +1598,7 @@ class _DurationPicker extends StatelessWidget {
   final bool isBacheeUnlocked;
   final bool isMoyenneUnlocked;
   final bool isLongueUnlocked;
+  final bool isAleatoireUnlocked;
   final ValueChanged<SessionLengthChoice> onChanged;
 
   const _DurationPicker({
@@ -1534,6 +1606,7 @@ class _DurationPicker extends StatelessWidget {
     required this.isBacheeUnlocked,
     required this.isMoyenneUnlocked,
     required this.isLongueUnlocked,
+    required this.isAleatoireUnlocked,
     required this.onChanged,
   });
 
@@ -1545,6 +1618,8 @@ class _DurationPicker extends StatelessWidget {
         return isMoyenneUnlocked;
       case SessionLengthChoice.longue:
         return isLongueUnlocked;
+      case SessionLengthChoice.aleatoire:
+        return isAleatoireUnlocked;
       case SessionLengthChoice.courte:
         return true;
     }
@@ -2000,6 +2075,11 @@ class _CareerBundle {
   /// Sert au déblocage des coachs par investissement (Phase 19.10).
   final int totalSeconds;
 
+  /// Flag debug `debug.scripted_breaks` (issue #77). Quand `true`, les
+  /// postures imposées + breaks scénarisés sont activés : passé à
+  /// `generate(scriptedBreaks:)` à tous les call sites.
+  final bool scriptedBreaks;
+
   const _CareerBundle({
     required this.bank,
     required this.punishments,
@@ -2015,5 +2095,6 @@ class _CareerBundle {
     required this.lastLengthChoice,
     required this.totalSeconds,
     required this.synthLevel,
+    required this.scriptedBreaks,
   });
 }

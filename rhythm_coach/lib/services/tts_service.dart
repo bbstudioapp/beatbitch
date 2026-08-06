@@ -68,6 +68,12 @@ class TtsService {
       'de-de-x-nfh-local',
       'de-de-x-deb-local',
     ],
+    'es': [
+      'es-es-x-eef-local',
+      'es-es-x-ana-local',
+      'es-es-x-esc-local',
+      'es-us-x-sfb-local',
+    ],
   };
 
   final FlutterTts _tts = FlutterTts();
@@ -270,7 +276,15 @@ class TtsService {
   /// hash du `seed`. Permet à plusieurs presets coach (qui partagent la même
   /// locale fallback) d'avoir chacun une voix distincte. Avec `seed == null`,
   /// se comporte comme avant (1ère voix de la liste).
-  Future<void> _selectVoiceWithSeed(String? seed) async {
+  ///
+  /// `preferredGender` (`'male'` ou `'female'`) influence le fallback : si
+  /// `'male'`, on **skip** la liste `_preferredVoiceNamesByLanguage` (qui
+  /// est calibrée femelle) et on attaque direct `_fallbackPick` filtré
+  /// mâle. Sinon, comportement historique.
+  Future<void> _selectVoiceWithSeed(
+    String? seed, {
+    String? preferredGender,
+  }) async {
     // Linux : pas de sélection de voix programmatique (ni spd-say CLI ni
     // notre pipeline piper n'exposent une API « setVoice »). Le label
     // reflète juste quel backend a été détecté pour l'écran Profil.
@@ -296,20 +310,25 @@ class TtsService {
       }
 
       if (pick == null) {
-        final basePreferred =
-            _preferredVoiceNamesByLanguage[_locale.languageCode] ??
-                const <String>[];
-        final preferred = (seed != null && basePreferred.isNotEmpty)
-            ? _rotateForSeed(basePreferred, seed)
-            : basePreferred;
+        // Coach masculin : la liste `_preferredVoiceNamesByLanguage` est
+        // calibrée femelle, on la saute pour aller direct au fallback
+        // filtré par gender.
+        if (preferredGender != 'male') {
+          final basePreferred =
+              _preferredVoiceNamesByLanguage[_locale.languageCode] ??
+                  const <String>[];
+          final preferred = (seed != null && basePreferred.isNotEmpty)
+              ? _rotateForSeed(basePreferred, seed)
+              : basePreferred;
 
-        for (final name in preferred) {
-          pick = voices.firstWhereOrNull(
-            (v) => (v['name'] ?? '') == name,
-          );
-          if (pick != null) break;
+          for (final name in preferred) {
+            pick = voices.firstWhereOrNull(
+              (v) => (v['name'] ?? '') == name,
+            );
+            if (pick != null) break;
+          }
         }
-        pick ??= _fallbackPick(voices);
+        pick ??= _fallbackPick(voices, preferredGender: preferredGender);
       }
       if (pick == null) return;
 
@@ -333,7 +352,25 @@ class TtsService {
     return [...list.sublist(idx), ...list.sublist(0, idx)];
   }
 
-  Map<String, String>? _fallbackPick(List<Map<String, String>> voices) {
+  Map<String, String>? _fallbackPick(
+    List<Map<String, String>> voices, {
+    String? preferredGender,
+  }) {
+    if (preferredGender == 'male') {
+      // Coach masculin : on cherche une voix mâle ; si rien ne matche
+      // (utilisatrice sans voix mâle locale installée), on retombe sur
+      // n'importe quelle voix dispo plutôt que de laisser le moteur muet
+      // — la dissonance vaut mieux qu'un coach silencieux.
+      return voices.firstWhereOrNull((v) {
+            final gender = (v['gender'] ?? '').toLowerCase();
+            return gender == 'male';
+          }) ??
+          voices.firstWhereOrNull((v) {
+            final name = (v['name'] ?? '').toLowerCase();
+            return name.contains('male') || name.contains('homme');
+          }) ??
+          voices.first;
+    }
     return voices.firstWhereOrNull((v) {
           final gender = (v['gender'] ?? '').toLowerCase();
           return gender == 'female';
@@ -646,13 +683,17 @@ class TtsService {
     String? voiceLocale,
     double? rate,
     double? pitch,
+    String? preferredGender,
   }) async {
     if (!_initialized) await init();
     // Override Windows : tous les coachs utilisent Julie + rate/pitch
     // Windows par defaut. Les voix Android-specifiques (`fr-fr-x-*-local`)
     // n'existent pas sous SAPI, et on n'a typiquement qu'une voix FR
     // locale correcte (Julie) — donc pas de variation de voix possible.
-    // Les coachs gardent leur identite via leurs phrases.
+    // Les coachs gardent leur identite via leurs phrases. Un coach
+    // masculin (preferredGender='male') reste donc avec une voix Julie
+    // féminine sur Windows — dissonance assumée pour cette plateforme
+    // tant qu'on n'a pas de seconde voix locale fiable.
     if (_isWindows) {
       await _selectVoice();
       await setRate(_windowsDefaultRate);
@@ -694,7 +735,7 @@ class TtsService {
             debugPrint('[TTS] preset coach : voix « $voiceName » introuvable, '
                 'fallback auto');
           }
-          await _selectVoice();
+          await _selectVoiceWithSeed(null, preferredGender: preferredGender);
         }
       } catch (e) {
         if (kDebugMode) debugPrint('[TTS] applyCoachVoicePreset KO : $e');
@@ -710,7 +751,11 @@ class TtsService {
             '(locale=$voiceLocale) ne matche pas la locale active '
             '${_locale.languageCode} — fallback rotated');
       }
-      await _selectVoiceWithSeed(voiceName);
+      await _selectVoiceWithSeed(voiceName, preferredGender: preferredGender);
+    } else if (preferredGender != null) {
+      // Pas de voix nommée mais une préférence de genre (coach masculin
+      // typiquement) : on relance la sélection auto en propageant le filtre.
+      await _selectVoiceWithSeed(null, preferredGender: preferredGender);
     }
     if (rate != null) await setRate(rate);
     if (pitch != null) await setPitch(pitch);

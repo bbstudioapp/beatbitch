@@ -1,6 +1,6 @@
 # BeatBitch
 
-![version](https://img.shields.io/badge/version-0.5.3-orange)
+![version](https://img.shields.io/badge/version-0.6.0-orange)
 ![platform](https://img.shields.io/badge/platform-Android%20%7C%20Windows%20%7C%20Linux%20%7C%20iOS%20%7C%20Web-blue)
 ![offline](https://img.shields.io/badge/100%25-offline-blue)
 ![no tracking](https://img.shields.io/badge/no-tracking-success)
@@ -8,7 +8,7 @@
 
 > **Immersive rhythmic voice coach for Android, Windows, Linux, iOS (PWA) & web.** Drop your phone flat on its side, start the session, close your eyes. A voice guides you, beeps mark the rhythm — no screen-watching needed.
 
-**Languages**: English · [Français](README.fr.md) · [Deutsch](README.de.md)
+**Languages**: English · [Français](README.fr.md) · [Deutsch](README.de.md) · [Español](README.es.md)
 
 ---
 

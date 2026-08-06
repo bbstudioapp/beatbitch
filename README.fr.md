@@ -1,6 +1,6 @@
 # BeatBitch
 
-![version](https://img.shields.io/badge/version-0.5.3-orange)
+![version](https://img.shields.io/badge/version-0.6.0-orange)
 ![platform](https://img.shields.io/badge/platform-Android%20%7C%20Windows%20%7C%20Linux%20%7C%20iOS%20%7C%20Web-blue)
 ![offline](https://img.shields.io/badge/100%25-offline-blue)
 ![no tracking](https://img.shields.io/badge/no-tracking-success)
@@ -8,7 +8,7 @@
 
 > **Coach vocal rythmique immersif pour Android, Windows, Linux, iOS (PWA) & web.** Tu poses ton téléphone à plat sur le côté, tu lances la séance, tu fermes les yeux. Une voix te guide, des bips marquent le rythme, tu n'as plus besoin de regarder l'écran.
 
-**Langues** : [English](README.md) · Français · [Deutsch](README.de.md)
+**Langues** : [English](README.md) · Français · [Deutsch](README.de.md) · [Español](README.es.md)
 
 ---
 

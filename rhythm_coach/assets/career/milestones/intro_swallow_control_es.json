@@ -1,0 +1,13 @@
+{
+  "displayLabel": "Guarda tu saliva",
+  "stepTexts": {
+    "0": "Hoy aprendes a contenerte. A partir de ahora te prohíbo tragar. Te guardas la saliva en la boca hasta que yo lo permita.",
+    "14": "Si te derrumbas y tragas sin permiso, es un fallo. Pulsas el botón rojo grande — quiero enterarme. ¿Entendido?",
+    "26": "Empezamos. Desde ya: no más tragar. Guárdalo todo en la boca.",
+    "40": "Sigue. Deja que se derrame si se desborda, pero no tragues.",
+    "54": "Boca bien abierta. Aguántala en la punta. Guárdalo todo.",
+    "60": "Empieza otra vez, despacio. Babea encima. Sigue sin nada en la garganta.",
+    "74": "Ahora — traga. De golpe. Vacíate la boca.",
+    "78": "Bien. Sabes contenerte. A partir de ahora, cuando te lo diga, te lo guardas todo en la boca."
+  }
+}

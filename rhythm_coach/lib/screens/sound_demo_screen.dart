@@ -13,6 +13,7 @@ import '../services/platform_capabilities.dart';
 import '../services/tts_service.dart';
 import '../services/user_profile_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/debug_profiles_section.dart';
 
 /// Écran d'apprentissage des sons + réglages voix/ambiance partagés
 /// avec l'écran de jeu (vitesse TTS, choix de voix, sélection du pack
@@ -57,6 +58,7 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
   bool _showBackgroundMedia = true;
   bool _cameraHoldCheck = false;
   bool _skipSessionButton = false;
+  bool _scriptedBreaks = false;
 
   @override
   void initState() {
@@ -79,6 +81,7 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
       final showBgMedia = await _debug.getShowBackgroundMedia();
       final camCheck = await _debug.getCameraHoldCheck();
       final skipSession = await _debug.getSkipSessionButton();
+      final scriptedBreaks = await _debug.getScriptedBreaks();
       if (!mounted) return;
       setState(() {
         _ready = true;
@@ -92,6 +95,7 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
         _showBackgroundMedia = showBgMedia;
         _cameraHoldCheck = camCheck;
         _skipSessionButton = skipSession;
+        _scriptedBreaks = scriptedBreaks;
       });
     });
   }
@@ -558,6 +562,29 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
                           setState(() => _skipSessionButton = v);
                         },
                       ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          t.soundsDebugScriptedBreaks,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                        subtitle: Text(
+                          t.soundsDebugScriptedBreaksSubtitle,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.textMuted,
+                          ),
+                        ),
+                        value: _scriptedBreaks,
+                        onChanged: (v) async {
+                          await _debug.setScriptedBreaks(v);
+                          if (!mounted) return;
+                          setState(() => _scriptedBreaks = v);
+                        },
+                      ),
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: const Icon(
@@ -590,6 +617,7 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
                           );
                         },
                       ),
+                      if (kDebugMode) const DebugProfilesSection(),
                     ],
                   ),
               ],
