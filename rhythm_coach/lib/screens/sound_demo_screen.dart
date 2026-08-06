@@ -13,6 +13,7 @@ import '../services/platform_capabilities.dart';
 import '../services/tts_service.dart';
 import '../services/user_profile_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/debug_profiles_section.dart';
 
 /// Écran d'apprentissage des sons + réglages voix/ambiance partagés
 /// avec l'écran de jeu (vitesse TTS, choix de voix, sélection du pack
@@ -616,6 +617,7 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
                           );
                         },
                       ),
+                      if (kDebugMode) const DebugProfilesSection(),
                     ],
                   ),
               ],

@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 1,
+  "preset": "Pro (niv 18, tout debloque)",
+  "career": {
+    "maxLevel": 18,
+    "lastLevel": null,
+    "completedSessions": 54,
+    "includeHand": true
+  },
+  "specialization": {
+    "points": {
+      "endurance": 2,
+      "profondeur": 3,
+      "rythmeBiffle": 2,
+      "obeissance": 2,
+      "sloppy": 1
+    },
+    "lastRespecMs": null,
+    "respecCount": 0
+  },
+  "stats": {
+    "totalSeconds": 32400,
+    "throatfucks": 720,
+    "biffles": 180,
+    "holdThroatSeconds": 360,
+    "holdFullSeconds": 144,
+    "sessionsCompleted": 54,
+    "sessionsNoFailStreak": 2,
+    "modesUsedMask": 255,
+    "maxHoldFullAtomic": 6,
+    "lastSessionDay": null,
+    "dailyStreak": 1,
+    "encoresAsked": 4,
+    "quickiesCompleted": 0,
+    "finalsBouchePleine": 0,
+    "finalsRepeinte": 0,
+    "finalsGobeuse": 0,
+    "postFinalsNettoyeuse": 0,
+    "postFinalsSuppliante": 0
+  },
+  "humiliation": {
+    "careerScore": 250.0
+  },
+  "obedience": {
+    "level": 200.0
+  },
+  "capabilities": {
+    "axes": {
+      "rhythm.depth_max": {
+        "best": 4.0,
+        "comfort": 4.0,
+        "successRate": 0.85,
+        "lastSeenSession": 40
+      },
+      "hold.throat.streak": {
+        "best": 30.0,
+        "comfort": 20.0,
+        "successRate": 0.8,
+        "lastSeenSession": 40
+      },
+      "hold.full.streak": {
+        "best": 25.0,
+        "comfort": 18.0,
+        "successRate": 0.8,
+        "lastSeenSession": 40
+      },
+      "gorge.apnee_streak": {
+        "best": 24.0,
+        "comfort": 16.0,
+        "successRate": 0.75,
+        "lastSeenSession": 40
+      },
+      "gorge.engagement_streak": {
+        "best": 35.0,
+        "comfort": 22.0,
+        "successRate": 0.7,
+        "lastSeenSession": 40
+      },
+      "rhythm.bpm_ceil.shallow": {
+        "best": 220.0,
+        "comfort": 180.0,
+        "successRate": 0.85,
+        "lastSeenSession": 40
+      },
+      "rhythm.motion_streak": {
+        "best": 150.0,
+        "comfort": 90.0,
+        "successRate": 0.8,
+        "lastSeenSession": 40
+      },
+      "biffle.streak": {
+        "best": 40.0,
+        "comfort": 28.0,
+        "successRate": 0.7,
+        "lastSeenSession": 40
+      }
+    },
+    "legacyMigrated": true
+  },
+  "milestones": {
+    "completed": [
+      "intro_basics",
+      "intro_deeper_basics",
+      "intro_lick_full",
+      "intro_beg_libre",
+      "intro_sloppy_drool",
+      "intro_sloppy_loud_suck",
+      "intro_hold_mid",
+      "intro_biffle",
+      "intro_encore",
+      "intro_sloppy_overflow",
+      "intro_hold_throat",
+      "intro_sloppy_biffle_slow",
+      "intro_freestyle",
+      "intro_throat_pulse",
+      "intro_hold_full",
+      "intro_full_pulse",
+      "intro_balls_lick",
+      "balls_hold_short",
+      "balls_beg",
+      "intro_suckle_head",
+      "intro_suckle_balls",
+      "intro_posture_sitting",
+      "intro_posture_standing",
+      "intro_posture_kneeling",
+      "intro_posture_all_fours",
+      "intro_posture_on_back",
+      "intro_final_hold_tip",
+      "intro_final_lick_tip_head",
+      "intro_final_hold_head",
+      "intro_final_hold_mid",
+      "intro_final_biffle",
+      "intro_final_hold_throat",
+      "intro_final_hold_full",
+      "intro_fake_breath",
+      "intro_surprise_notifs",
+      "intro_swallow_control",
+      "intro_sloppy_spit"
+    ],
+    "retries": {},
+    "candidacySeen": {}
+  },
+  "badges": {},
+  "coach": {
+    "currentTier": null,
+    "selectedId": null,
+    "unlockedIds": []
+  },
+  "anatomy": {
+    "hasBalls": true
+  },
+  "surprise": {
+    "enabled": false,
+    "windowSeconds": null,
+    "alertCount": null,
+    "durationMinSeconds": null,
+    "durationMaxSeconds": null
+  },
+  "settings": {
+    "showStaminaBar": false,
+    "showTimer": false,
+    "showHumiliationBar": false,
+    "showObedienceBar": false,
+    "showSalivaBar": false,
+    "showSessionControls": false,
+    "showModeBadge": false,
+    "cameraHoldCheck": false,
+    "skipSessionButton": false,
+    "showBackgroundMedia": true,
+    "showSessionRemainingTime": false,
+    "scriptedBreaks": true
+  },
+  "consent": {
+    "adultConsentAccepted": true,
+    "onboardingShown": true
+  }
+}
