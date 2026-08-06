@@ -1599,7 +1599,11 @@ class SessionController extends ChangeNotifier {
     _stopwatch.stop();
     _ticker?.cancel();
     _ticker = null;
-    await _beep.stop();
+    // Garde-fou : sur un backend audio engorgé (seek/stop qui ne rendent plus
+    // la main sur les longues séances), `_beep.stop()` pouvait bloquer ici et
+    // la session ne passait jamais en `finished` (écran de fin absent). On
+    // borne l'attente — au pire quelques players se coupent en arrière-plan.
+    await _beep.stop().timeout(const Duration(seconds: 2), onTimeout: () {});
     await WakelockPlus.disable();
     _flushHoldFull();
     _disarmHoldVerifier();
