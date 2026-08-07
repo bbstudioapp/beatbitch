@@ -20,6 +20,12 @@ class AmbienceEngine {
   static const double maxVolume = 0.5;
   static const double defaultVolume = 0.15;
 
+  /// Borne des appels de coupure au backend audio. Même valeur que le
+  /// `player.stop()` de [BeepEngine] : c'est le même plugin `audioplayers` et
+  /// le même type d'appel, sur un seul player au lieu de 4 par sample — il n'y
+  /// a pas de raison qu'une réponse légitime y soit plus lente.
+  static const Duration _callTimeout = Duration(milliseconds: 300);
+
   final AudioPlayer _player = AudioPlayer(playerId: 'ambience_loop');
 
   String? _currentAsset;
@@ -69,11 +75,17 @@ class AmbienceEngine {
   Future<void> pause() async {
     if (!_initialized || !_isPlaying) return;
     try {
-      await _player.pause();
-      _isPlaying = false;
+      // `.timeout(300 ms)` : même garde-fou que `BeepEngine` (cf. 6ebdb84).
+      // Sur un backend audio engorgé, `pause()` peut ne jamais rendre la main,
+      // et `SessionController.pause()` l'attend avant de basculer en `paused`.
+      await _player.pause().timeout(_callTimeout);
     } catch (e) {
       if (kDebugMode) debugPrint('[AmbienceEngine] pause error : $e');
     }
+    // Hors du `try` : l'état doit refléter l'intention même si le backend n'a
+    // pas répondu. Un `_isPlaying` resté à `true` ferait sortir [resume] tôt
+    // et l'ambiance ne repartirait jamais de la séance.
+    _isPlaying = false;
   }
 
   Future<void> resume() async {
@@ -89,7 +101,7 @@ class AmbienceEngine {
   Future<void> stop() async {
     if (!_initialized) return;
     try {
-      await _player.stop();
+      await _player.stop().timeout(_callTimeout);
     } catch (_) {}
     _isPlaying = false;
   }
