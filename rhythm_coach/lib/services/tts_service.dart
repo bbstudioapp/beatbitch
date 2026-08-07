@@ -1,4 +1,4 @@
-import 'dart:async' show unawaited;
+import 'dart:async' show Timer, unawaited;
 import 'dart:convert' show json, utf8;
 import 'dart:io'
     show Directory, File, Platform, Process, ProcessException, ProcessResult;
@@ -81,6 +81,20 @@ class TtsService {
   bool _speaking = false;
   Locale _locale;
 
+  /// Durée au-delà de laquelle un énoncé est considéré comme terminé même
+  /// sans callback du moteur. Le contenu le plus long de l'app (le briefing
+  /// du tutoriel, ~380 caractères) tient en une trentaine de secondes au débit
+  /// configuré : la marge ×2 garantit qu'aucune phrase réelle n'est écourtée.
+  static const Duration _maxUtteranceDuration = Duration(seconds: 60);
+
+  /// Filet de sécurité de [_speaking]. Le drapeau ne redescend normalement que
+  /// sur un callback du moteur (`onDone` / `onCancel` / `onError`) ; quand le
+  /// moteur signale le début d'un énoncé et ne signale jamais rien d'autre
+  /// (service TTS Android déconnecté, `onend` avalé par Safari/PWA), il
+  /// resterait à `true` pour le reste de la vie du service — plus aucun
+  /// commentaire aléatoire ne serait prononcé de la séance.
+  Timer? _speakingWatchdog;
+
   /// Processus aplay en cours (backend piper) ou null. Tenu pour pouvoir
   /// l'interrompre depuis [stop] — `Process.run('spd-say', ['-S'])` ne
   /// peut pas couper un pipeline piper→aplay externe.
@@ -141,6 +155,20 @@ class TtsService {
   /// par défaut de flutter_tts est QUEUE_FLUSH : un nouveau speak() coupe
   /// le précédent).
   bool get isSpeaking => _speaking;
+
+  /// Marque le début d'un énoncé et (ré)arme le watchdog de [_speakingWatchdog].
+  void _markSpeaking() {
+    _speaking = true;
+    _speakingWatchdog?.cancel();
+    _speakingWatchdog = Timer(_maxUtteranceDuration, () => _speaking = false);
+  }
+
+  /// Marque la fin d'un énoncé et désarme le watchdog.
+  void _markNotSpeaking() {
+    _speakingWatchdog?.cancel();
+    _speakingWatchdog = null;
+    _speaking = false;
+  }
 
   double get currentRate => _rate;
   double get currentPitch => _pitch;
@@ -203,10 +231,10 @@ class TtsService {
     }
     await _selectVoice();
 
-    _tts.setStartHandler(() => _speaking = true);
-    _tts.setCompletionHandler(() => _speaking = false);
-    _tts.setCancelHandler(() => _speaking = false);
-    _tts.setErrorHandler((msg) => _speaking = false);
+    _tts.setStartHandler(_markSpeaking);
+    _tts.setCompletionHandler(_markNotSpeaking);
+    _tts.setCancelHandler(_markNotSpeaking);
+    _tts.setErrorHandler((msg) => _markNotSpeaking());
 
     _initialized = true;
   }
@@ -393,7 +421,7 @@ class TtsService {
       }
       await _tts.speak(resolved);
     } catch (e) {
-      _speaking = false;
+      _markNotSpeaking();
       if (kDebugMode) debugPrint('[TTS] speak KO : $e');
     }
   }
@@ -531,7 +559,7 @@ class TtsService {
   }
 
   Future<void> stop() async {
-    _speaking = false;
+    _markNotSpeaking();
     try {
       if (_isLinux) {
         // Signale au speak en cours (s'il y en a un) que la coupure est
@@ -772,6 +800,8 @@ class TtsService {
   }
 
   Future<void> dispose() async {
+    _speakingWatchdog?.cancel();
+    _speakingWatchdog = null;
     if (_isLinux) {
       _linuxPiperProcess?.kill();
       _linuxAplayProcess?.kill();
