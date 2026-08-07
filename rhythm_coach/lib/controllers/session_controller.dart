@@ -1076,7 +1076,12 @@ class SessionController extends ChangeNotifier {
         // Safari/PWA la Wake Lock API exige un contexte de geste utilisateur ;
         // appelée depuis le Timer de prep (7 s après « JE SUIS PRÊTE »), elle
         // peut lever `NotAllowedError`.
-        await WakelockPlus.enable();
+        // Borné pour la même raison que `_tts.init()` juste au-dessus : le
+        // `try/catch` n'attrape que les exceptions. Un canal pigeon qui ne
+        // répond plus laisserait `start()` bloquée avant `_state = running`,
+        // avec `_starting` collé à `true` — la séance ne démarre jamais et
+        // le bouton play est masqué en prod (`showSessionControls`).
+        await WakelockPlus.enable().timeout(_wakelockTimeout);
       } catch (e) {
         debugPrint(
             'start(): WakelockPlus.enable() a échoué (non bloquant) : $e');
@@ -1103,6 +1108,13 @@ class SessionController extends ChangeNotifier {
   /// même intention que le bornage audio de 0.6.0 (`6ebdb84`) : le canal reste
   /// best-effort, il ne doit jamais retarder une bascule d'état.
   static const Duration _ttsStopTimeout = Duration(milliseconds: 300);
+
+  /// Borne des appels au canal `wakelock_plus`. Même valeur que le canal de
+  /// synthèse : c'est un simple toggle d'un flag natif, sans I/O ni
+  /// chargement — une réponse légitime est immédiate. Le wakelock est du
+  /// confort (garder l'écran allumé) ; il n'a jamais à retarder le passage en
+  /// `running`, en `idle` ou en `finished`.
+  static const Duration _wakelockTimeout = Duration(milliseconds: 300);
 
   /// Coupe le canal de synthèse sans jamais bloquer l'appelant.
   ///
@@ -1163,7 +1175,10 @@ class SessionController extends ChangeNotifier {
     await _stopTtsBounded();
     await _beep.stop();
     await _ambience.stop();
-    await WakelockPlus.disable();
+    // Borné comme le canal de synthèse : `_state` ne bascule qu'après, et le
+    // ticker est déjà annulé. Un canal pigeon muet laissait la séance morte
+    // sans jamais revenir à `idle` — même signature que l'issue #317.
+    await WakelockPlus.disable().timeout(_wakelockTimeout, onTimeout: () {});
 
     _state = SessionState.idle;
     _nextStepIndex = 0;
@@ -1676,7 +1691,10 @@ class SessionController extends ChangeNotifier {
     // la session ne passait jamais en `finished` (écran de fin absent). On
     // borne l'attente — au pire quelques players se coupent en arrière-plan.
     await _beep.stop().timeout(const Duration(seconds: 2), onTimeout: () {});
-    await WakelockPlus.disable();
+    // Même garde-fou : toute la clôture de séance (stats, badges, apothéose,
+    // `_state = finished`) est en aval de cet appel. Un wakelock muet
+    // laisserait la séance sans écran de fin, ticker déjà arrêté.
+    await WakelockPlus.disable().timeout(_wakelockTimeout, onTimeout: () {});
     _flushHoldFull();
     _disarmHoldVerifier();
     // Profil de capacités : on clôt les streaks dès maintenant (la session
