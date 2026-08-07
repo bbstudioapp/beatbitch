@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:beat_bitch/controllers/session_controller.dart';
+import 'package:beat_bitch/models/ambience_pack.dart';
 import 'package:beat_bitch/models/punishment.dart';
 import 'package:beat_bitch/models/session.dart';
 import 'package:beat_bitch/models/session_step.dart';
@@ -29,9 +30,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 ///  - le report d'un step est borné à `_maxTtsDeferTicks` (5 s), après quoi le
 ///    step est consommé quoi qu'il arrive (au pire une phrase est coupée) ;
 ///  - tous les chemins qui coupent le TTS avant de basculer d'état passent par
-///    `_stopTtsBounded()` — `pause()`, `stop()`, `start()`, `triggerFail()`,
+///    `_stopTtsBounded()` — `pause()`, `stop()`, `triggerFail()`,
 ///    `_runMiniPunishmentFlow()` et `requestUpgrade()` — pour que la séance
-///    reste pilotable canal muet.
+///    reste pilotable canal muet. (`start()` ne fait pas partie de ces
+///    chemins : elle ne coupe rien, elle borne `_tts.init()`, un mécanisme
+///    distinct.)
+///
+/// Le dernier test couvre le même mode de panne sur l'autre canal attendu
+/// avant une bascule d'état : le moteur d'ambiance.
 ///
 /// Le premier test est calibré sur la valeur de `_maxTtsDeferTicks` : le faire
 /// évoluer demande de recalculer les instants commentés dans son corps.
@@ -264,6 +270,46 @@ void main() {
     await ctrl.stop();
   }, timeout: const Timeout(Duration(seconds: 30)));
 
+  // ─── Même mode de panne, canal d'ambiance ─────────────────────────────
+  //
+  // `_syncAmbienceToCurrentMode()` (→ `playForMode` → `play`) est attendue à
+  // trois endroits du flow FAIL, tous en amont de `_state = running` : la
+  // phase breath de `triggerFail`, et `_restorePreviousLoop` (appelée depuis
+  // `triggerFail` et depuis le flow mini-punition). Un backend audio engorgé
+  // y laissait la séance en `failing` pour toujours — ticker mort,
+  // chronomètre mort, aucun recours : le symptôme d'origine sur un autre
+  // canal.
+
+  test(
+      "un moteur d'ambiance qui ne répond plus n'empêche pas le flow FAIL de "
+      'revenir en running', () async {
+    installFakeTtsEngine(completesUtterances: true);
+    final ambience = _StuckAmbienceEngine()..setPack(_stuckAmbiencePack);
+    final ctrl = _buildController(
+      punishments: _shortPunishmentBundle,
+      ambience: ambience,
+      // Stamina pleine → le flow fail prend la branche courte de sa phase
+      // breath (3-5 s au lieu de 8-15 s). Ne change rien au chemin testé,
+      // raccourcit juste le test.
+      staminaProfile: List<double>.filled(600, 100),
+    );
+
+    await ctrl.start();
+    await Future<void>.delayed(const Duration(seconds: 1));
+
+    // Awaité volontairement : sans borne côté `AmbienceEngine.play`, le flow
+    // ne rend jamais la main et le test tombe sur son timeout.
+    await ctrl.triggerFail();
+
+    expect(ctrl.isRunning, isTrue,
+        reason: 'le flow FAIL repose bien la séance en running');
+    expect(ctrl.isFailing, isFalse);
+    expect(ambience.startAttempts, greaterThan(0),
+        reason: 'le chemin bloquant a bien été emprunté');
+
+    await ctrl.stop();
+  }, timeout: const Timeout(Duration(seconds: 60)));
+
   test('le même scénario progresse normalement dès que le moteur complète',
       () async {
     installFakeTtsEngine(completesUtterances: true);
@@ -293,8 +339,37 @@ const _punishmentBundle = PunishmentBundle(
   ],
 );
 
-SessionController _buildController({PunishmentBundle? punishments}) {
+/// Punition d'une seconde : le test d'ambiance traverse tout le flow FAIL,
+/// on ne veut pas y ajouter la durée nominale de la punition partagée.
+const _shortPunishmentBundle = PunishmentBundle(
+  failPhrases: ['tu craques'],
+  punishments: [
+    Punishment(
+      id: 'court',
+      name: 'court',
+      durationSeconds: 1,
+      steps: [SessionStep(time: 0, mode: SessionMode.breath, duration: 1)],
+    ),
+  ],
+);
+
+/// Pack qui déclare un asset pour tous les modes : sans ça, `playForMode`
+/// résout `null` (pack `none`) et n'atteint jamais la séquence bloquante.
+final _stuckAmbiencePack = AmbiencePack(
+  id: 'stuck',
+  name: 'stuck',
+  tracksByMode: {
+    for (final m in SessionMode.values) m: 'audio/ambience/stuck.mp3',
+  },
+);
+
+SessionController _buildController({
+  PunishmentBundle? punishments,
+  AmbienceEngine? ambience,
+  List<double>? staminaProfile,
+}) {
   return SessionController(
+    staminaProfile: staminaProfile,
     session: const Session(
       id: 'freeze',
       name: 'freeze',
@@ -309,7 +384,7 @@ SessionController _buildController({PunishmentBundle? punishments}) {
     ),
     tts: TtsService(),
     beep: _SilentBeepEngine(),
-    ambience: _SilentAmbienceEngine(),
+    ambience: ambience ?? _SilentAmbienceEngine(),
     punishmentBundle:
         punishments ?? const PunishmentBundle(failPhrases: [], punishments: []),
     randomComments: const RandomCommentsBundle(
@@ -356,6 +431,33 @@ class _SilentAmbienceEngine extends AmbienceEngine {
 
   @override
   Future<void> resume() async {}
+
+  @override
+  Future<void> stop() async {}
+
+  @override
+  Future<void> dispose() async {}
+}
+
+/// Moteur d'ambiance dont le **backend** ne répond plus : la séquence de
+/// démarrage (`stop` / `setSource` / `setVolume` / `resume` sur
+/// `audioplayers`) ne se résout jamais.
+///
+/// Contrairement à [_SilentAmbienceEngine], `play` / `playForMode` ne sont
+/// PAS surchargées — c'est `play` qui porte la borne, donc c'est elle qu'on
+/// doit exercer. Un double qui remplace `play` par un no-op est exactement ce
+/// qui a rendu ce trou invisible aux passes précédentes.
+class _StuckAmbienceEngine extends AmbienceEngine {
+  int startAttempts = 0;
+
+  @override
+  Future<void> startPlayback(String assetPath) {
+    startAttempts++;
+    return Completer<void>().future;
+  }
+
+  @override
+  Future<void> pause() async {}
 
   @override
   Future<void> stop() async {}
