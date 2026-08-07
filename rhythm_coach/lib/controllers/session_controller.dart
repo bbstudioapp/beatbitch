@@ -1116,6 +1116,28 @@ class SessionController extends ChangeNotifier {
   /// `running`, en `idle` ou en `finished`.
   static const Duration _wakelockTimeout = Duration(milliseconds: 300);
 
+  /// Borne des deux `speak` **attendus avant une bascule d'état** : la phrase
+  /// de fail (`triggerFail`) et la phrase finale (`_finish`). Contrairement aux
+  /// coupures, ces appels attendent une durée d'énoncé — la borne se calibre
+  /// donc sur le contenu, pas sur le temps de réponse d'un canal.
+  ///
+  /// Pire cas mesuré sur les seuls pools que ces deux sites atteignent
+  /// (`fail_phrases`, `fail_phrases_swallow`, `progressPhrases.*.tapout`, pool
+  /// `finale` global et coach, 4 langues, `{name}` résolu par le plus long
+  /// surnom) : 133 caractères ≈ 10,4 s au débit de référence du projet (le
+  /// briefing du tutoriel, 384 caractères, tient en ~30 s — même repère que le
+  /// watchdog de `TtsService`). Le facteur 2 restant absorbe l'écart entre ce
+  /// débit estimé et le débit réel d'un moteur ; l'allongement du contenu, lui,
+  /// est surveillé à part par `session_freeze_tts_speaking_test.dart`.
+  ///
+  /// Pas alignée sur le watchdog de 60 s : ces deux sites sont sur des chemins
+  /// où l'utilisatrice vient d'agir (bouton « je peux pas », fin de séance), et
+  /// une minute d'écran figé ne se lit plus comme une longue phrase. Dépasser
+  /// coûte peu en regard : `timeout` libère l'appelant sans couper la synthèse
+  /// — la phrase finit de se dire par-dessus ce qui suit.
+  @visibleForTesting
+  static const Duration ttsSpeakTimeout = Duration(seconds: 20);
+
   /// Coupe le canal de synthèse sans jamais bloquer l'appelant.
   ///
   /// Tout chemin qui arrête la séance (pause, stop, fail, mini-punition,
@@ -1126,6 +1148,13 @@ class SessionController extends ChangeNotifier {
   /// morte, sans recours. Un seul point de passage pour ne plus en oublier un.
   Future<void> _stopTtsBounded() =>
       _tts.stop().timeout(_ttsStopTimeout, onTimeout: () {});
+
+  /// Prononce [text] sans jamais bloquer l'appelant au-delà de
+  /// [ttsSpeakTimeout]. Réservé aux deux `speak` qui précèdent une bascule
+  /// d'état : les autres sont soit fire-and-forget, soit post-bascule, et un
+  /// moteur muet n'y coûte qu'une phrase silencieuse.
+  Future<void> _speakBounded(String text) =>
+      _tts.speak(text).timeout(ttsSpeakTimeout, onTimeout: () {});
 
   Future<void> pause() async {
     if (_state != SessionState.running) return;
@@ -1859,7 +1888,10 @@ class SessionController extends ChangeNotifier {
       if (mode != null && bank != null) {
         final phrase = bank.pickFor(mode, 'finale', _random);
         if (phrase.isNotEmpty) {
-          await _tts.speak(phrase);
+          // Borné : tout ce qui reste de la clôture — le chime, `_state =
+          // finished`, le panel de fin — est en aval de cet `await`. Un moteur
+          // qui ne rappelle jamais privait la joueuse de son écran de fin.
+          await _speakBounded(phrase);
         }
       }
       if (!_released) {

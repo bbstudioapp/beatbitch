@@ -153,9 +153,13 @@ extension FailFlowOrchestrator on SessionController {
       _notify();
       if (_currentFailPhrase != null) {
         // awaitSpeakCompletion(true) → ce await retourne quand la phrase
-        // est entièrement prononcée.
+        // est entièrement prononcée. Borné : `_stopTtsBounded()` plus haut a
+        // déjà arrêté ticker et chronomètre, et toute la suite du flow — la
+        // respiration, la punition, le retour en `running` — est en aval. Un
+        // moteur qui ne rappelle jamais figeait la séance en `failing`, sur le
+        // seul contrôle visible en production.
         _lastScriptedSpeakAt = DateTime.now();
-        await _tts.speak(_currentFailPhrase!);
+        await _speakBounded(_currentFailPhrase!);
       }
       if (!_isFailFlowAlive(myGen)) return;
 

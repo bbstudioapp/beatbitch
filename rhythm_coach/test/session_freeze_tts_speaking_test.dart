@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
+import 'package:beat_bitch/career/models/phrase_bank.dart';
 import 'package:beat_bitch/controllers/session_controller.dart';
 import 'package:beat_bitch/models/ambience_pack.dart';
 import 'package:beat_bitch/models/punishment.dart';
@@ -26,7 +29,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// jamais — service TTS Android déconnecté, `onend` avalé par Safari/PWA — le
 /// flag reste collé à `true`.
 ///
-/// Deux gardes couvrent ce cas depuis `fix/session-freeze-tts-guard` :
+/// Trois gardes couvrent ce cas depuis `fix/session-freeze-tts-guard` :
 ///  - le report d'un step est borné à `_maxTtsDeferTicks` (5 s), après quoi le
 ///    step est consommé quoi qu'il arrive (au pire une phrase est coupée) ;
 ///  - tous les chemins qui coupent le TTS avant de basculer d'état passent par
@@ -34,7 +37,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 ///    `_runMiniPunishmentFlow()` et `requestUpgrade()` — pour que la séance
 ///    reste pilotable canal muet. (`start()` ne fait pas partie de ces
 ///    chemins : elle ne coupe rien, elle borne `_tts.init()`, un mécanisme
-///    distinct.)
+///    distinct.) ;
+///  - les deux `speak` **attendus avant** une bascule d'état (phrase de fail,
+///    phrase finale) passent par `_speakBounded()` — `SessionController
+///    .ttsSpeakTimeout`, 20 s. C'est le Future de `speak()` lui-même qui ne se
+///    résout jamais sur un moteur en panne : le watchdog de `TtsService` repose
+///    `isSpeaking` mais ne le débloque pas.
 ///
 /// Le dernier test couvre le même mode de panne sur l'autre canal attendu
 /// avant une bascule d'état : le moteur d'ambiance.
@@ -93,6 +101,25 @@ void main() {
         .setMockMethodCallHandler(channel, (call) async {
       if (call.method == 'getVoices') return <dynamic>[];
       if (call.method == 'stop') return Completer<Object?>().future;
+      return 1;
+    });
+  }
+
+  /// Même plugin en panne, côté `speak` cette fois : l'appel part, l'énoncé
+  /// est annoncé (`speak.onStart`) et la réponse ne vient jamais. Avec
+  /// `awaitSpeakCompletion(true)` (actif sur Android/iOS), c'est ce Future-là
+  /// que les deux sites de bascule attendent — le watchdog de `TtsService` ne
+  /// le débloque pas, il ne repose que le flag `isSpeaking`. `stop` répond
+  /// normalement : c'est bien `speak` qu'on veut exercer ici, pas les gardes
+  /// de coupure déjà couvertes plus haut.
+  void installMuteSpeakTtsEngine() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'getVoices') return <dynamic>[];
+      if (call.method == 'speak') {
+        unawaited(pushFromEngine('speak.onStart', true));
+        return Completer<Object?>().future;
+      }
       return 1;
     });
   }
@@ -310,6 +337,92 @@ void main() {
     await ctrl.stop();
   }, timeout: const Timeout(Duration(seconds: 60)));
 
+  // ─── Même mode de panne, sur `speak` cette fois ───────────────────────
+  //
+  // Deux `speak` sont attendus AVANT une bascule d'état — les seuls du
+  // contrôleur dans ce cas, les autres sont fire-and-forget ou post-bascule.
+  // Le canal n'a pas besoin d'être muet sur `stop` pour ça : il suffit que
+  // l'énoncé démarre et ne se termine jamais.
+
+  test(
+      'un moteur qui ne rend jamais la main sur speak() ne fige plus le flow '
+      'FAIL', () async {
+    installMuteSpeakTtsEngine();
+    final ctrl = _buildController(
+      punishments: _shortPunishmentBundle,
+      // Stamina pleine → branche courte de la phase breath, comme pour le
+      // test d'ambiance. Ne change rien au chemin testé.
+      staminaProfile: List<double>.filled(600, 100),
+    );
+    await ctrl.start();
+    await Future<void>.delayed(const Duration(seconds: 1));
+
+    // Awaité volontairement : sans borne sur la phrase de fail, `triggerFail`
+    // ne rend jamais la main et le test tombe sur son timeout — la séance
+    // resterait en `failing`, ticker et chronomètre déjà arrêtés.
+    await ctrl.triggerFail();
+
+    expect(ctrl.isRunning, isTrue,
+        reason: 'le flow FAIL repose bien la séance en running');
+    expect(ctrl.isFailing, isFalse);
+
+    await ctrl.stop();
+  }, timeout: const Timeout(Duration(seconds: 90)));
+
+  test(
+      'un moteur qui ne rend jamais la main sur speak() ne prive plus de '
+      "l'écran de fin", () async {
+    installMuteSpeakTtsEngine();
+    // Une banque avec un pool `finale` pour le mode du dernier step de config
+    // (rhythm) : sans elle, `_finish` ne prononce rien et ne traverse pas le
+    // chemin testé.
+    final ctrl = _buildController(phraseBank: _finalePhraseBank);
+    await ctrl.start();
+    await Future<void>.delayed(const Duration(seconds: 1));
+
+    // Awaité volontairement, même raison : la phrase finale précède le chime
+    // et `_state = finished` de dix lignes.
+    await ctrl.debugFinishSuccess();
+
+    expect(ctrl.isFinished, isTrue,
+        reason: "l'écran de fin s'affiche malgré la phrase finale sans retour");
+    expect(ctrl.isRunning, isFalse);
+  }, timeout: const Timeout(Duration(seconds: 90)));
+
+  // ─── Garde-fou de la valeur de la borne ───────────────────────────────
+  //
+  // `ttsSpeakTimeout` est serrée volontairement (20 s, pas les 60 s du
+  // watchdog) : sur ces deux chemins l'utilisatrice vient d'agir. Ce qui rend
+  // ce choix tenable, c'est que le contenu réellement atteignable par ces deux
+  // sites en reste loin. Ce test échoue le jour où une phrase ajoutée s'en
+  // approche — c'est alors un arbitrage à reprendre, pas une coupure à subir.
+
+  test(
+      "le contenu prononcé avant une bascule d'état reste loin sous la borne "
+      'de speak', () {
+    // Débit de référence du projet : le briefing du tutoriel (384 caractères)
+    // tient en une trentaine de secondes au débit configuré. Même repère que
+    // le watchdog de `TtsService`.
+    const charsPerSecond = 384 / 30;
+    // `{name}` est résolu AVANT le speak (`_tts.resolveText`). Le plus long
+    // surnom livré fait 18 caractères ; on budgète large.
+    const nameBudget = 24;
+    // 70 % de la borne : les 30 % restants absorbent l'écart entre ce débit
+    // estimé et le débit réel d'un moteur, qu'aucun test ne peut mesurer ici.
+    final budget = SessionController.ttsSpeakTimeout * 0.7;
+    final maxChars = (budget.inMilliseconds / 1000 * charsPerSecond).floor();
+
+    final worst = _longestSpokenBeforeStateSwitch(nameBudget: nameBudget);
+
+    expect(worst.length, lessThanOrEqualTo(maxChars),
+        reason:
+            'cette phrase demande ~${(worst.length / charsPerSecond).toStringAsFixed(1)} s '
+            'à énoncer, pour une borne de '
+            '${SessionController.ttsSpeakTimeout.inSeconds} s : la raccourcir, '
+            'ou relever `SessionController.ttsSpeakTimeout` en connaissance de '
+            'cause.\n${worst.origin} → « ${worst.text} »');
+  });
+
   test('le même scénario progresse normalement dès que le moteur complète',
       () async {
     installFakeTtsEngine(completesUtterances: true);
@@ -363,13 +476,101 @@ final _stuckAmbiencePack = AmbiencePack(
   },
 );
 
+/// Banque minimale portant un pool `finale` pour `rhythm` — le mode du dernier
+/// step de config de la session de test, celui que `_findFinalStep` retient.
+/// Sans elle, `_finish` ne prononce pas de phrase finale.
+const _finalePhraseBank = PhraseBank(
+  byMode: {
+    SessionMode.rhythm: {
+      'finale': [PhraseEntry(text: 'je jouis')],
+    },
+  },
+  congrats: [],
+  intros: [],
+);
+
+/// Parcourt les pools que les deux `speak` bornés peuvent atteindre et retourne
+/// l'énoncé le plus long, mesuré **après** résolution de `{name}` (c'est le
+/// texte résolu qui part au moteur). Trois familles, et rien d'autre — c'est ce
+/// qui rend la borne calibrable sur le contenu :
+///  - `fail_phrases` / `fail_phrases_swallow` et les variantes
+///    `progressPhrases.*.tapout` des coachs, pour la phrase de `triggerFail` ;
+///  - le pool `finale`, global et surchargé par coach, pour `_finish`.
+({String text, String origin, int length}) _longestSpokenBeforeStateSwitch({
+  required int nameBudget,
+}) {
+  final root = Directory.current.path;
+  final namePattern = RegExp(r'\{\s*name\s*\}', caseSensitive: false);
+  ({String text, String origin, int length})? worst;
+
+  void consider(Object? node, String origin) {
+    if (node is! List) return;
+    for (final raw in node) {
+      final text = raw is String
+          ? raw
+          : (raw is Map && raw['text'] is String
+              ? raw['text'] as String
+              : null);
+      if (text == null) continue;
+      final grown =
+          namePattern.allMatches(text).length * (nameBudget - '{name}'.length);
+      final length = text.length + grown;
+      if (worst == null || length > worst!.length) {
+        worst = (text: text, origin: origin, length: length);
+      }
+    }
+  }
+
+  Map<String, dynamic> read(String path) =>
+      jsonDecode(File('$root/$path').readAsStringSync())
+          as Map<String, dynamic>;
+
+  for (final suffix in const ['', '_de', '_en', '_es']) {
+    final punishments = read('assets/punishments$suffix.json');
+    consider(
+        punishments['fail_phrases'], 'punishments$suffix.json fail_phrases');
+    consider(punishments['fail_phrases_swallow'],
+        'punishments$suffix.json fail_phrases_swallow');
+
+    read('assets/career/phrases$suffix.json').forEach((mode, tiers) {
+      if (tiers is Map) {
+        consider(tiers['finale'], 'phrases$suffix.json $mode.finale');
+      }
+    });
+  }
+
+  for (final file in Directory('$root/assets/career/coaches')
+      .listSync()
+      .whereType<File>()) {
+    if (!file.path.endsWith('.json')) continue;
+    final name = file.uri.pathSegments.last;
+    final coach = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+    final progress = coach['progressPhrases'];
+    if (progress is Map) {
+      progress.forEach((axis, tiers) {
+        if (tiers is Map) consider(tiers['tapout'], '$name $axis.tapout');
+      });
+    }
+    final byMode = coach['phrases'];
+    if (byMode is Map) {
+      byMode.forEach((mode, tiers) {
+        if (tiers is Map) consider(tiers['finale'], '$name $mode.finale');
+      });
+    }
+  }
+
+  return worst!;
+}
+
 SessionController _buildController({
   PunishmentBundle? punishments,
   AmbienceEngine? ambience,
   List<double>? staminaProfile,
+  PhraseBank? phraseBank,
 }) {
   return SessionController(
     staminaProfile: staminaProfile,
+    phraseBank: phraseBank,
     session: const Session(
       id: 'freeze',
       name: 'freeze',
