@@ -20,6 +20,18 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove"/>
     <uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove"/>
 
+    <!-- Stockage externe : déclaré par camera_android_camerax et file_saver,
+         inutile ici. L'export diagnostic passe par share_plus, qui écrit dans
+         File(context.cacheDir, "share_plus") et publie via un FileProvider —
+         rien ne sort du sandbox de l'app, à aucun niveau d'API. file_saver
+         n'est appelé que derrière kIsWeb, file_selector que sur desktop.
+         READ_EXTERNAL_STORAGE n'est déclarée par aucun plugin : le merger la
+         déduit de WRITE_EXTERNAL_STORAGE, et cette déduction est calculée
+         avant l'application des tools:node="remove" — il faut donc la retirer
+         explicitement elle aussi, sinon elle survit au retrait de WRITE. -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove"/>
+
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
     <application
