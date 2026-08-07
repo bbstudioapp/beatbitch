@@ -128,11 +128,11 @@ void main() {
     await ctrl.start();
     // Déroulé attendu, `isSpeaking` restant collé à `true` après le premier
     // énoncé : step `un` consommé à t=0 ; step `deux` (time=1) atteint à
-    // t≈1 s puis différé 3 s (borne) → consommé à t≈4 s ; step `trois`
-    // (time=2) atteint à t≈5 s (l'horloge logique a pris 3 s de retard) puis
-    // différé jusqu'à t≈8 s. À 6 s on est donc sur `deux`, avec 2 s de marge
-    // de chaque côté.
-    await Future<void>.delayed(const Duration(seconds: 6));
+    // t≈1 s puis différé 5 s (borne) → consommé à t≈6 s ; step `trois`
+    // (time=2) atteint à t≈7 s (l'horloge logique a pris 5 s de retard) puis
+    // différé jusqu'à t≈12 s. À 8,5 s on est donc sur `deux`, avec ~2,5 s de
+    // marge avant et ~3,5 s après.
+    await Future<void>.delayed(const Duration(milliseconds: 8500));
 
     expect(ctrl.currentDisplayText, 'deux',
         reason: 'la séance progresse malgré un moteur TTS muet');

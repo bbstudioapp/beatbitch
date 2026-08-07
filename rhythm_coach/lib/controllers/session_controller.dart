@@ -49,15 +49,23 @@ class SessionController extends ChangeNotifier {
 
   /// Nombre maximal de ticks pendant lesquels `_checkSteps` diffère un step
   /// porteur de texte au motif qu'une phrase est en cours (`_tts.isSpeaking`).
-  /// 15 × 200 ms = 3 s. Au-delà, le step est consommé quoi qu'il arrive.
+  /// 25 × 200 ms = 5 s. Au-delà, le step est consommé quoi qu'il arrive.
   ///
   /// Sans cette borne, un moteur de synthèse qui démarre un énoncé sans jamais
   /// signaler sa fin (service TTS Android déconnecté, `onend` avalé par
   /// Safari/PWA) colle `isSpeaking` à `true` : l'horloge logique recule alors
   /// autant qu'elle avance et la séance est gelée **définitivement** sur sa
-  /// consigne courante. Au pire, dépasser la borne coupe une phrase en cours —
-  /// c'est déjà le comportement nominal de `QUEUE_FLUSH`.
-  static const int _maxTtsDeferTicks = 15;
+  /// consigne courante.
+  ///
+  /// Valeur calibrée sur le contenu réel, pas sur le cas de panne : les 560
+  /// commentaires aléatoires du projet (4 langues + overrides coachs) durent
+  /// 2,7 s en moyenne, p99 = 4,8 s, max = 5,7 s au débit configuré. Un step à
+  /// texte tombe à un instant quelconque de la phrase en cours, donc la marge
+  /// utile est la durée *restante* : à 5 s, l'espérance de coupure est de
+  /// 0,1 % des phrases (9,1 % à 3 s). Monter à 6 s ne gagnerait que 0,1 point
+  /// de plus en doublant le retard perçu quand le moteur est réellement en
+  /// panne.
+  static const int _maxTtsDeferTicks = 25;
 
   /// Référence mutable de la session : peut être remplacée à chaud par
   /// [requestUpgrade] (action « Supplier » du mode Carrière) sans détruire
@@ -1395,8 +1403,9 @@ class SessionController extends ChangeNotifier {
       // tick suivant en reculant l'horloge logique de l'épaisseur d'un
       // tick. Le step s'enclenchera dès que `_tts.isSpeaking` repasse à
       // false. Acceptable pour quelques centaines de ms (la phrase random
-      // fait typiquement 2-4 s) ; au-delà la session se prolonge un peu,
-      // ce que l'utilisatrice a explicitement validé.
+      // fait typiquement 2-4 s, 5,7 s au maximum du contenu) ; au-delà la
+      // session se prolonge un peu, ce que l'utilisatrice a explicitement
+      // validé.
       //
       // On défère pour TOUT step ayant du texte (incluant text-only) :
       // sinon le seul cas effectivement utile (un text-only random qui
@@ -1404,7 +1413,7 @@ class SessionController extends ChangeNotifier {
       // Steps sans texte → on ne diffère jamais : la bascule de mode/bip
       // doit suivre le tempo logique, pas un commentaire vocal.
       //
-      // Le report est borné à [_maxTtsDeferTicks] (~3 s) : passé ce délai on
+      // Le report est borné à [_maxTtsDeferTicks] (5 s) : passé ce délai on
       // consomme le step même si le moteur se dit encore en train de parler.
       // Sans borne, un `isSpeaking` collé à `true` gèle la séance pour
       // toujours (cf. la doc de la constante).
