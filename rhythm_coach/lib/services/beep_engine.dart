@@ -211,8 +211,35 @@ class BeepEngine {
       StreamController<BeatEvent>.broadcast();
   Stream<BeatEvent> get beatStream => _beatController.stream;
 
+  /// Borne du chargement des pools. ~60 players (15 samples × [_poolSize])
+  /// enchaînent chacun un `setReleaseMode` + un `setSource`, plus la lecture
+  /// du catalogue de finales — aucun de ces appels n'a de garde côté
+  /// `audioplayers`, et les `try/catch` par player n'attrapent que les
+  /// exceptions. Or `start()` attend cet init avant `_state = running` et
+  /// avant d'armer le ticker, et le flow FAIL l'attend indirectement via
+  /// `applyStep` : un `setSource` qui ne rend jamais la main fige la séance
+  /// avant qu'elle démarre.
+  ///
+  /// 5 s laisse largement la place à un chargement légitime, même lent (les
+  /// samples sont de petits MP3 déjà dans le bundle) ; au-delà, on démarre
+  /// avec les pools chargés jusque-là plutôt que pas du tout — au pire une
+  /// séance sans bips.
+  static const Duration _initTimeout = Duration(seconds: 5);
+
   Future<void> init() async {
     if (_initialized) return;
+    try {
+      await _loadPools().timeout(_initTimeout);
+    } catch (e) {
+      if (kDebugMode) debugPrint('[BeepEngine] init interrompu : $e');
+    }
+    // Posé quoi qu'il arrive — c'est déjà la sémantique actuelle (les échecs
+    // par player sont avalés un par un et l'init se termine quand même), et
+    // ça évite qu'`applyStep` relance un chargement non borné à chaque step.
+    _initialized = true;
+  }
+
+  Future<void> _loadPools() async {
     final assetsToLoad = <String>{..._allAssets};
     _finaleVariants = await _loadFinaleVariants();
     // Inclure dans les chargements toutes les variantes déclarées qui ne
@@ -250,7 +277,6 @@ class BeepEngine {
         _pools[name] = _PlayerPool(players);
       }
     }
-    _initialized = true;
   }
 
   Future<Map<FinalCategory, List<String>>> _loadFinaleVariants() async {
@@ -833,8 +859,15 @@ class BeepEngine {
     if (pool == null) return;
     final player = pool.next().player;
     try {
-      await player.setVolume(volume.clamp(0.0, 1.0));
-      await player.resume();
+      // `.timeout(300 ms)` sur les deux commandes de transport : le `_finish`
+      // de session attend ce chime avant `_state = finished`, donc un backend
+      // muet y laisserait la séance sans écran de fin. Borne gratuite côté
+      // dramaturgie — elle ne raccourcit pas le sample, seulement l'attente
+      // d'un canal qui ne répond pas.
+      await player
+          .setVolume(volume.clamp(0.0, 1.0))
+          .timeout(const Duration(milliseconds: 300));
+      await player.resume().timeout(const Duration(milliseconds: 300));
       await player.onPlayerComplete.first
           .timeout(const Duration(seconds: 5), onTimeout: () {});
     } catch (e) {
