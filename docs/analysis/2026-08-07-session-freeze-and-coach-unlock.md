@@ -15,6 +15,12 @@ Symptômes rapportés, tels que décrits :
 2. **Le nouveau coach (Marc) n'apparaît pas**, alors qu'il estime être « quelques
    niveaux » au-dessus du seuil annoncé.
 
+> **Troisième problème, rapporté ensuite** — la cible d'un défi de montée en
+> vitesse affiche un nombre absurde (« ramp up to 956 BPM ») qui grossit à chaque
+> rencontre. Analysé à part :
+> [`2026-08-07-challenge-bpm-target-runaway.md`](2026-08-07-challenge-bpm-target-runaway.md).
+> Le projet de réponse en bas de page couvre les **trois** points.
+
 ---
 
 ## Problème 1 — la séance ne passe jamais à la consigne suivante
@@ -343,40 +349,41 @@ données) confirmerait le diagnostic en une lecture : il suffit d'y regarder
 
 ## Résumé
 
-| | Problème 1 — séance figée | Problème 2 — coach absent |
-|---|---|---|
-| Cause | report de step sans borne quand `isSpeaking` reste vrai (`session_controller.dart:1370`) + `await` TTS non bornés dans `pause()`/`stop()` | déblocage limité aux tiers > tier courant (`coach_service.dart:171-179`) |
-| Reproduit | oui, en test | oui, en test |
-| Déclencheur tranché | **non** — dépend de la plateforme et du moteur TTS, info manquante | oui, complet |
-| Régression 0.6.0 | non, défaut préexistant | oui, introduite par l'ajout de Marc au tier 3 |
+| | Problème 1 — séance figée | Problème 2 — coach absent | Problème 3 — cible BPM |
+|---|---|---|---|
+| Cause | report de step sans borne quand `isSpeaking` reste vrai (`session_controller.dart:1370`) + `await` TTS non bornés dans `pause()`/`stop()` | déblocage limité aux tiers > tier courant (`coach_service.dart:171-179`) | le succès d'un défi BPM crédite la vitesse **demandée** et non celle jouée → boucle `comfort × 1,30` sans borne (`session_controller_challenge.dart:714`) |
+| Reproduit | oui, en test | oui, en test | oui, en test |
+| Déclencheur tranché | **non** — dépend de la plateforme et du moteur TTS, info manquante | oui, complet | oui, complet |
+| Régression 0.6.0 | non, défaut préexistant | oui, introduite par l'ajout de Marc au tier 3 | non, actif depuis v0.5.0 |
+
+Détail du problème 3 :
+[`2026-08-07-challenge-bpm-target-runaway.md`](2026-08-07-challenge-bpm-target-runaway.md).
 
 ---
 
 ## Projet de réponse à l'utilisateur (à relire avant envoi)
 
-> Thanks a lot for taking the time to write this — both points turned out to be
-> real bugs, and the second one is fully explained.
+> Thanks a lot for taking the time to write all this. All three points are real
+> bugs, and two of them are now fully explained.
 >
-> **The stuck session.** We found how it happens. A session moves from one
+> **1. The stuck session.** We found how it happens. A session moves from one
 > instruction to the next on an internal timer, and that timer holds back the
 > next instruction while the coach's voice is still speaking, so a line never
-> gets cut off mid-sentence. The problem is that this wait has no time limit: if
-> the phone's text-to-speech engine starts a sentence and never reports that it
-> finished, the session waits forever. That matches everything you describe —
-> first instruction stuck on screen, no second one, and the "use me" button
-> doing nothing (the button works, but the session behind it is frozen). Pause
-> and resume don't help for the same reason: the pause command also waits on the
-> speech engine, so the session ends up stopped without ever entering the
-> "paused" state, which is why nothing responds.
+> gets cut off mid-sentence. That wait has no time limit: if the phone's
+> text-to-speech engine starts a sentence and never reports that it finished,
+> the session waits forever. That matches everything you describe — first
+> instruction stuck on screen, no second one, and the "use me" button doing
+> nothing (the button works, the session behind it is frozen). Pause and resume
+> don't help for the same reason: the pause command also waits on the speech
+> engine, so the session ends up stopped without ever entering the "paused"
+> state.
 >
-> You're right that this isn't entirely new. That waiting logic has been there
-> since the beginning, and a related freeze was reported at the *end* of
-> sessions in 0.5.3. So this is not something 0.6.0 broke — but it clearly hits
-> you far more often now, and we don't yet know why.
->
-> That's the part we can't answer from the code alone: we can reproduce the
-> freeze when the speech engine goes silent, but not *why* it goes silent on
-> your device. A few questions would help a lot:
+> You're right that it isn't entirely new — that waiting logic has been there
+> from the start, and a related freeze was reported at the *end* of sessions in
+> 0.5.3. So 0.6.0 didn't break it, but it clearly hits you far more often now,
+> and we don't know why yet. That's the part we can't answer from the code
+> alone: we can reproduce the freeze when the speech engine goes silent, but not
+> *why* it goes silent on your device. A few answers would help a lot:
 >
 > - Are you using the Android APK, the iOS PWA (installed from Safari), or the
 >   Windows/Linux build?
@@ -389,17 +396,39 @@ données) confirmerait le diagnostic en une lecture : il suffit d'y regarder
 > - On Android: which text-to-speech engine is selected in your system settings,
 >   and is the offline voice for your language installed?
 >
-> **The missing coach.** This one is confirmed and it's on us. Marc was added at
-> tier 3, between Hélène and Jade. Coach tiers unlock from your *total time
-> played*, not from your career level — and the unlock only ever looks at tiers
-> above the one you've already reached. Since you were already past tier 3
-> before updating, that tier is never re-checked, so Marc can never unlock. It
-> has nothing to do with your progress being too low: it's the opposite, you're
-> too far ahead for the current unlock logic to catch up. There's nothing you
-> can do on your side to work around it, and it needs a fix in the app.
+> **2. The missing coach.** Confirmed, and it's on us. Marc was added at tier 3,
+> between Hélène and Jade. Coach tiers unlock from your *total time played*, not
+> from your career level — and the unlock only ever looks at tiers above the one
+> you've already reached. Since you were already past tier 3 before updating,
+> that tier is never re-checked, so Marc can never unlock. It has nothing to do
+> with your progress being too low: it's the opposite — you're too far ahead for
+> the current unlock logic to catch up. There's no workaround on your side; it
+> needs a fix in the app.
+>
+> **3. The 956 BPM speed ramp.** You read it exactly right on both counts: that
+> number is a *target*, not a measurement, and the actual speed is already
+> maxed out (the audio engine caps at 300 BPM, so anything above that is just a
+> number on screen).
+>
+> Here's why it grows. The target is computed from what the app believes your
+> comfortable tempo is on that axis, times 1.3. When you complete the challenge,
+> the app records the *requested* speed as if you had held it — instead of the
+> speed it was actually able to play. So every completed run pushes your stored
+> comfort up, and the next target is ~30 % higher again. Ten or so runs is
+> enough to get from a normal tempo to the four-digit range. It also inflates an
+> internal progression score the same way, which is the part we'll have to be
+> careful about: fixing the calculation won't un-inflate a profile that already
+> drifted, and we haven't settled how to repair that yet. For the record this
+> isn't new in 0.6.0 either — it's been doing this since 0.5.0.
+>
+> One reassuring bit: **the challenge is not impossible to pass.** The BPM number
+> isn't a win condition — the run is won by staying with it for its duration
+> (25 s for that one), and GIVE UP is simply the only button shown while it's
+> running. You were never stuck on it.
 >
 > If you can send a diagnostic export (Profile → DIAGNOSTIC → Export my data),
-> it would let us confirm the exact state of your profile.
+> it would let us confirm the exact state of your profile — useful for both the
+> coach and the BPM issue.
 >
-> Sorry you couldn't try the new features — thanks again for the detailed
-> report, it's genuinely useful.
+> Sorry you couldn't properly try the new features — thanks again for the
+> detailed report, it's genuinely useful.
