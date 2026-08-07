@@ -13,7 +13,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Reproduction du gel de séance signalé en 0.6.0 : « la première consigne
+/// Non-régression du gel de séance signalé en 0.6.0 : « la première consigne
 /// reste affichée pour toujours, la seconde n'arrive jamais ».
 ///
 /// La progression d'une séance est portée par `_onTick` → `_checkSteps`. Ce
@@ -22,11 +22,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// n'est remis à `false` que par un callback du moteur TTS
 /// (`speak.onComplete` / `onCancel` / `onError`). Si le moteur ne rappelle
 /// jamais — service TTS Android déconnecté, `onend` avalé par Safari/PWA — le
-/// flag reste collé à `true` et la séance ne progresse plus jamais : il n'y a
-/// aucune borne temporelle sur ce report.
+/// flag reste collé à `true`.
 ///
-/// Les deux tests ci-dessous ne diffèrent QUE par l'émission (ou non) de
-/// `speak.onComplete` par le faux moteur.
+/// Deux gardes couvrent ce cas depuis `fix/session-freeze-tts-guard` :
+///  - le report d'un step est borné à `_maxTtsDeferTicks` (~3 s), après quoi le
+///    step est consommé quoi qu'il arrive (au pire une phrase est coupée) ;
+///  - les appels au canal de synthèse dans `pause()` / `stop()` / `start()`
+///    sont bornés, pour que la séance reste pilotable même canal muet.
+///
+/// Les deux premiers tests ci-dessous ne diffèrent QUE par l'émission (ou non)
+/// de `speak.onComplete` par le faux moteur.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -115,28 +120,31 @@ void main() {
   });
 
   test(
-      'un moteur TTS qui ne signale jamais la fin de son énoncé fige la séance',
-      () async {
+      'un moteur TTS qui ne signale jamais la fin de son énoncé ne fige plus '
+      'la séance', () async {
     installFakeTtsEngine(completesUtterances: false);
     final ctrl = _buildController();
 
     await ctrl.start();
-    // 3 s réelles = 15 ticks du ticker 200 ms : largement de quoi consommer
-    // les steps t=1 et t=2.
-    await Future<void>.delayed(const Duration(seconds: 3));
+    // Déroulé attendu, `isSpeaking` restant collé à `true` après le premier
+    // énoncé : step `un` consommé à t=0 ; step `deux` (time=1) atteint à
+    // t≈1 s puis différé 3 s (borne) → consommé à t≈4 s ; step `trois`
+    // (time=2) atteint à t≈5 s (l'horloge logique a pris 3 s de retard) puis
+    // différé jusqu'à t≈8 s. À 6 s on est donc sur `deux`, avec 2 s de marge
+    // de chaque côté.
+    await Future<void>.delayed(const Duration(seconds: 6));
 
-    expect(ctrl.currentDisplayText, 'un',
-        reason: 'la séance reste scotchée sur la première consigne');
-    expect(ctrl.elapsedSeconds, 0,
-        reason: "l'horloge logique est reculée d'un tick à chaque tick");
-    expect(ctrl.isRunning, isTrue,
-        reason: 'aucun état d\'erreur : ça tourne '
-            'dans le vide');
+    expect(ctrl.currentDisplayText, 'deux',
+        reason: 'la séance progresse malgré un moteur TTS muet');
+    expect(ctrl.elapsedSeconds, greaterThanOrEqualTo(1),
+        reason: "l'horloge logique avance : le report est borné");
+    expect(ctrl.isRunning, isTrue);
 
     await ctrl.stop();
   }, timeout: const Timeout(Duration(seconds: 30)));
 
-  test('un canal TTS qui ne répond plus empêche la bascule en pause', () async {
+  test('un canal TTS qui ne répond plus n\'empêche plus la bascule en pause',
+      () async {
     // Reproduit le plugin Android quand il a perdu sa connexion au service
     // TTS : il remet `ttsStatus = null` et met TOUS les appels suivants en
     // file d'attente sans jamais renvoyer de réponse.
@@ -148,22 +156,24 @@ void main() {
     });
     final ctrl = _buildController();
     await ctrl.start();
-
-    // `pause()` ne rend jamais la main : on ne peut pas l'attendre.
-    unawaited(ctrl.pause());
     await Future<void>.delayed(const Duration(seconds: 1));
 
-    expect(ctrl.isPaused, isFalse,
-        reason: 'l\'état reste `running` : l\'overlay « reprendre » '
-            'ne s\'affiche jamais');
-    expect(ctrl.isRunning, isTrue);
-    // Le ticker a pourtant déjà été annulé par `pause()` → la séance est
-    // arrêtée sans être en pause, et `resume()` refuse d'agir.
+    // `pause()` rend la main sur le timeout du canal (300 ms).
+    await ctrl.pause();
+
+    expect(ctrl.isPaused, isTrue,
+        reason: 'l\'état bascule quand même : l\'overlay « reprendre » '
+            's\'affiche');
+    expect(ctrl.isRunning, isFalse);
+
+    // Et la séance repart : `resume()` agit puisque l'état est bien `paused`.
     final before = ctrl.elapsedSeconds;
     await ctrl.resume();
-    await Future<void>.delayed(const Duration(milliseconds: 600));
-    expect(ctrl.elapsedSeconds, before,
-        reason: 'resume() sort immédiatement (state != paused)');
+    await Future<void>.delayed(const Duration(milliseconds: 1500));
+    expect(ctrl.elapsedSeconds, greaterThan(before),
+        reason: 'resume() relance le ticker');
+
+    await ctrl.stop();
   }, timeout: const Timeout(Duration(seconds: 30)));
 
   test('le même scénario progresse normalement dès que le moteur complète',

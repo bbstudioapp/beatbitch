@@ -47,6 +47,18 @@ enum FailPhase { phrase, breath, punishment }
 class SessionController extends ChangeNotifier {
   static const Duration _tickInterval = Duration(milliseconds: 200);
 
+  /// Nombre maximal de ticks pendant lesquels `_checkSteps` diffère un step
+  /// porteur de texte au motif qu'une phrase est en cours (`_tts.isSpeaking`).
+  /// 15 × 200 ms = 3 s. Au-delà, le step est consommé quoi qu'il arrive.
+  ///
+  /// Sans cette borne, un moteur de synthèse qui démarre un énoncé sans jamais
+  /// signaler sa fin (service TTS Android déconnecté, `onend` avalé par
+  /// Safari/PWA) colle `isSpeaking` à `true` : l'horloge logique recule alors
+  /// autant qu'elle avance et la séance est gelée **définitivement** sur sa
+  /// consigne courante. Au pire, dépasser la borne coupe une phrase en cours —
+  /// c'est déjà le comportement nominal de `QUEUE_FLUSH`.
+  static const int _maxTtsDeferTicks = 15;
+
   /// Référence mutable de la session : peut être remplacée à chaud par
   /// [requestUpgrade] (action « Supplier » du mode Carrière) sans détruire
   /// le controller. Lue via le getter [session].
@@ -194,6 +206,11 @@ class SessionController extends ChangeNotifier {
   /// reprendre à la section suivante après un fail) sans avoir à recréer
   /// la Stopwatch (qui ne peut pas être avancée arbitrairement).
   Duration _timelineOffset = Duration.zero;
+
+  /// Nombre de ticks consécutifs pendant lesquels le step courant a été
+  /// différé par la garde `isSpeaking` de `_checkSteps`. Remis à zéro dès
+  /// qu'un step est consommé. Borné par [_maxTtsDeferTicks].
+  int _ttsDeferredTicks = 0;
 
   final Random _random = Random();
   Timer? _ticker;
@@ -951,6 +968,7 @@ class SessionController extends ChangeNotifier {
       if (_state == SessionState.idle || _state == SessionState.finished) {
         _stopwatch.reset();
         _timelineOffset = Duration.zero;
+        _ttsDeferredTicks = 0;
         _nextStepIndex = 0;
         _lastSpoken = null;
         _lastSpokenResolvedText = null;
@@ -1023,7 +1041,13 @@ class SessionController extends ChangeNotifier {
       // toggle debug `showSessionControls`) → soft-lock total (cf. retour
       // iOS « pas de bouton pour commencer », v0.4.0).
       try {
-        await _tts.init();
+        // Le `try/catch` n'attrape que les exceptions : un canal de synthèse
+        // qui ne répond plus (plugin Android en file d'attente après une perte
+        // de connexion au service TTS) rend un Future qui ne se complète
+        // jamais, et `start()` resterait bloqué avant le passage en `running`.
+        // Même garde-fou que l'audio en 0.6.0 : on borne l'attente, la voix
+        // reste best-effort.
+        await _tts.init().timeout(const Duration(seconds: 2), onTimeout: () {});
       } catch (e) {
         debugPrint('start(): _tts.init() a échoué (non bloquant) : $e');
       }
@@ -1067,7 +1091,14 @@ class SessionController extends ChangeNotifier {
     _ticker = null;
     _stopRandomComments();
     _disarmHoldVerifier();
-    await _tts.stop();
+    // Borné : quand le canal de synthèse ne rend plus la main, `_state` restait
+    // `running` alors que le ticker et le chronomètre étaient déjà arrêtés —
+    // l'overlay « reprendre » ne s'affichait jamais et `resume()` sortait
+    // immédiatement (`_state != paused`). La séance était arrêtée sans être en
+    // pause. Même garde-fou que l'audio en 0.6.0 (commit 6ebdb84).
+    await _tts
+        .stop()
+        .timeout(const Duration(milliseconds: 300), onTimeout: () {});
     await _beep.pause();
     await _ambience.pause();
     _state = SessionState.paused;
@@ -1098,7 +1129,12 @@ class SessionController extends ChangeNotifier {
     _timelineOffset = Duration.zero;
     _ticker?.cancel();
     _ticker = null;
-    await _tts.stop();
+    // Borné, comme dans `pause()` : un canal de synthèse muet ne doit pas
+    // empêcher la séance de revenir à `idle` (bouton STOP sans effet, cf.
+    // issue #317).
+    await _tts
+        .stop()
+        .timeout(const Duration(milliseconds: 300), onTimeout: () {});
     await _beep.stop();
     await _ambience.stop();
     await WakelockPlus.disable();
@@ -1367,10 +1403,19 @@ class SessionController extends ChangeNotifier {
       // arrive sur une phrase coach random) ne serait pas couvert.
       // Steps sans texte → on ne diffère jamais : la bascule de mode/bip
       // doit suivre le tempo logique, pas un commentaire vocal.
-      if (step.text.isNotEmpty && _tts.isSpeaking) {
+      //
+      // Le report est borné à [_maxTtsDeferTicks] (~3 s) : passé ce délai on
+      // consomme le step même si le moteur se dit encore en train de parler.
+      // Sans borne, un `isSpeaking` collé à `true` gèle la séance pour
+      // toujours (cf. la doc de la constante).
+      if (step.text.isNotEmpty &&
+          _tts.isSpeaking &&
+          _ttsDeferredTicks < _maxTtsDeferTicks) {
+        _ttsDeferredTicks++;
         _timelineOffset -= _tickInterval;
         break;
       }
+      _ttsDeferredTicks = 0;
 
       // Toggle déglutition (sticky). Appliqué AVANT l'éventuelle config de
       // bip pour que le mode soit déjà à jour quand le tick suivant
