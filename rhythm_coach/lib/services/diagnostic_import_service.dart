@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../career/models/specialization.dart';
 import '../models/badge.dart';
 import 'capability_axis.dart';
+import 'profile_reconciliation.dart';
 
 /// Inverse de [DiagnosticExportService] : réécrit l'état persisté
 /// (`SharedPreferences`) à partir d'un payload au **format d'export**.
@@ -237,6 +238,13 @@ class DiagnosticImportService {
       'pref.show_session_remaining_time',
       'app.adult_consent_accepted',
       'onboarding.shown',
+      // Le profil importé remplace l'existant : il doit être réconcilié
+      // comme n'importe quel profil chargé, donc au redémarrage qui suit
+      // l'import. Garder le drapeau posé ferait entrer un profil dérivé
+      // sans jamais le rattraper.
+      ProfileReconciliation.flagKey,
+      ProfileReconciliation.reportKey,
+      ProfileReconciliation.ranAtKey,
     };
     for (final k in keys) {
       await _prefs.remove(k);

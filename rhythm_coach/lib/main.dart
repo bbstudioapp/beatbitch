@@ -14,6 +14,7 @@ import 'services/coach_phrases_loader.dart';
 import 'services/locale_service.dart';
 import 'services/onboarding_service.dart';
 import 'services/platform_capabilities.dart';
+import 'services/profile_reconciliation.dart';
 import 'services/surprise_alert_service.dart';
 import 'services/surprise_lifecycle_observer.dart';
 import 'services/surprise_notifications_bootstrap.dart';
@@ -36,6 +37,11 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await LocaleService.instance.init();
+  // Ramène dans le jouable les profils dérivés par la boucle des défis BPM
+  // (cf. docs/analysis/2026-08-07-challenge-bpm-target-runaway.md). Passe
+  // unique et idempotente : sur un profil sain comme aux lancements
+  // suivants, c'est une lecture de booléen.
+  await ProfileReconciliation.runIfNeeded();
   await AdultConsentService.instance.init();
   await OnboardingService.instance.init();
   await CoachPhrasesService.instance.ensureLoaded();

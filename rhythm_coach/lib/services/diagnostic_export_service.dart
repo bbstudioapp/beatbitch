@@ -9,6 +9,7 @@ import '../models/badge.dart';
 import 'capability_axis.dart';
 import 'diagnostic_export_integrity.dart';
 import 'locale_service.dart';
+import 'profile_reconciliation.dart';
 
 /// Options de l'export diagnostic. Seul levier exposé à la joueuse pour
 /// l'instant : inclure ou non les surnoms personnalisés (off par défaut —
@@ -116,6 +117,7 @@ class DiagnosticExportService {
       'savedSessions': _savedSessions(),
       'customConfigs': _customConfigs(),
       'consent': _consent(),
+      'reconciliation': _reconciliation(),
     };
     payload['integrity'] = <String, dynamic>{
       'algorithm': DiagnosticExportIntegrity.algorithm,
@@ -309,6 +311,21 @@ class DiagnosticExportService {
             _prefs.getBool('app.adult_consent_accepted') ?? false,
         'onboardingShown': _prefs.getBool('onboarding.shown') ?? false,
       };
+
+  /// Passes de réconciliation appliquées au profil. Sans ça, un profil
+  /// corrigé au démarrage serait indiscernable d'un profil qui n'a jamais
+  /// dérivé — donc indiagnosticable après coup. `changes` est absent quand
+  /// la passe a tourné sans rien modifier (le cas d'un profil sain).
+  Map<String, dynamic> _reconciliation() {
+    final report = ProfileReconciliation.storedReport(_prefs);
+    return <String, dynamic>{
+      'bpmRunawayV1': <String, dynamic>{
+        'ran': _prefs.getBool(ProfileReconciliation.flagKey) ?? false,
+        'ranAt': _prefs.getString(ProfileReconciliation.ranAtKey),
+        if (report != null) 'changes': report.toJson(),
+      },
+    };
+  }
 
   // ── helpers ────────────────────────────────────────────────────────────
 

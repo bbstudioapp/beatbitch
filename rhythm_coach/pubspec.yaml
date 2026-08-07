@@ -36,6 +36,10 @@ dev_dependencies:
   flutter_launcher_icons: ^0.14.4
   flutter_test:
     sdk: flutter
+  # Déjà tirée transitivement par `shared_preferences` ; déclarée ici pour
+  # que les tests puissent substituer le store persisté (simulation d'un
+  # canal de plateforme figé, cf. `profile_reconciliation_test.dart`).
+  shared_preferences_platform_interface: ^2.4.2
 
 flutter_launcher_icons:
   android: true
