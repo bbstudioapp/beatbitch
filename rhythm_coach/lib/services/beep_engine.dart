@@ -80,6 +80,19 @@ class BeepEngine {
   /// Cf. doc de [SessionMode.suckle].
   static const Duration _sucklePulse = Duration(milliseconds: 1200);
 
+  /// Bornes du BPM **effectivement joué**. Tout ce qui entre dans le moteur
+  /// est clampé ici : au-delà de [kMaxBpm] la boucle tourne à sa cadence
+  /// maximale et une rampe devient plate.
+  ///
+  /// Publiques parce que ces bornes définissent le domaine du jouable et
+  /// que d'autres étages doivent s'y aligner — notamment la cible et le
+  /// crédit des défis BPM (`ChallengeService.thresholdFor`,
+  /// `SessionController._completeChallenge`). Sans référence partagée,
+  /// une bannière peut annoncer un nombre que le moteur ne produira jamais
+  /// (cf. `docs/analysis/2026-08-07-challenge-bpm-target-runaway.md`).
+  static const int kMinBpm = 20;
+  static const int kMaxBpm = 300;
+
   /// 4 players par sample. Round-robin : un bip ne réutilise jamais un player
   /// avant ses 3 voisins, donc le décay du précédent n'est jamais coupé même
   /// si le sample n'a pas fini — c'est la « superposition de canaux ». 4 (vs 3
@@ -337,7 +350,7 @@ class BeepEngine {
     final mode = step.mode ?? sessionMode;
     final previousMode = _mode;
     _mode = mode;
-    if (step.bpm != null) _bpm = step.bpm!.clamp(20, 300);
+    if (step.bpm != null) _bpm = step.bpm!.clamp(kMinBpm, kMaxBpm);
     // Rampe BPM intra-step : on n'arme `_bpmEnd` / `_loopDurationMs` que
     // si la valeur cible est explicitement différente du BPM de départ ET
     // qu'on a une durée connue. Sinon on retombe en mode constant — un
@@ -347,7 +360,7 @@ class BeepEngine {
         step.bpmEnd != step.bpm &&
         step.duration != null &&
         step.duration! > 0) {
-      _bpmEnd = step.bpmEnd!.clamp(20, 300);
+      _bpmEnd = step.bpmEnd!.clamp(kMinBpm, kMaxBpm);
       _loopDurationMs = step.duration! * 1000;
     } else {
       _bpmEnd = null;
@@ -777,7 +790,7 @@ class BeepEngine {
     _mode = SessionMode.rhythm;
     _from = from;
     _to = to;
-    _bpm = bpm.clamp(20, 300);
+    _bpm = bpm.clamp(kMinBpm, kMaxBpm);
     if (_to != null && _to == _from) {
       _from = _pickShallowerThan(_from);
     }
@@ -795,7 +808,7 @@ class BeepEngine {
     _mode = SessionMode.lick;
     _from = from;
     _to = to;
-    _bpm = bpm.clamp(20, 300);
+    _bpm = bpm.clamp(kMinBpm, kMaxBpm);
     if (_to != null && _to == _from) {
       _from = _pickShallowerThan(_from);
     }
@@ -807,7 +820,7 @@ class BeepEngine {
   void startBiffleDemo({required int bpm}) {
     if (!_initialized) return;
     _mode = SessionMode.biffle;
-    _bpm = bpm.clamp(20, 300);
+    _bpm = bpm.clamp(kMinBpm, kMaxBpm);
     _stopLoop();
     _startBiffleLoop();
   }

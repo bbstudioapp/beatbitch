@@ -22,6 +22,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/session.dart';
 import '../../models/session_step.dart';
+import '../../services/beep_engine.dart';
 import '../../services/capability_axis.dart';
 import '../../services/capability_service.dart';
 import '../models/challenge.dart';
@@ -624,7 +625,9 @@ class ChallengeService {
   /// Calibrage du seuil cible selon [kind] et le sens de l'axe.
   ///
   /// - Axe `maximize` (la plupart) : `comfort × kChallengeOverloadFactor`
-  ///   pour durée et BPM ; `comfort + 1` cran pour profondeur.
+  ///   pour durée et BPM ; `comfort + 1` cran pour profondeur. Le seuil BPM
+  ///   est plafonné à [BeepEngine.kMaxBpm] — au-delà, le moteur joue plat
+  ///   et le nombre annoncé n'est plus qu'un décor.
   /// - Axe `minimize` (planchers BPM, dose mini breath) : surcharge =
   ///   atteindre une valeur **plus basse** → on divise par le facteur (BPM)
   ///   et on retire un cran (profondeur — théorique : aucun axe minimize
@@ -656,7 +659,12 @@ class ChallengeService {
             ? comfort / kChallengeOverloadFactor
             : comfort * kChallengeOverloadFactor;
         final rounded = raw.round();
-        return isMinimize ? (rounded < 18 ? 18 : rounded) : rounded;
+        // Plafond `maximize` symétrique du plancher `minimize` : une
+        // bannière ne doit jamais annoncer un BPM que le moteur ne peut
+        // pas produire, même si le `comfort` en base est déjà dérivé.
+        return isMinimize
+            ? (rounded < 18 ? 18 : rounded)
+            : (rounded > BeepEngine.kMaxBpm ? BeepEngine.kMaxBpm : rounded);
       case ChallengeAxisKind.depthCran:
         // ±1 cran (cf. spec § 3.1, profondeur = cran discret).
         final delta = isMinimize ? -1 : 1;
