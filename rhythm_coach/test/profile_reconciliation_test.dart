@@ -436,4 +436,135 @@ void main() {
           ProfileReconciliation.careerHumiliationCeiling);
     });
   });
+
+  group('Le plafond domine tout le contenu atteignable', () {
+    // L'argument de non-régression du rattrapage est que ramener un profil
+    // dérivé au plafond ne **reverrouille** rien. Ça ne tient que si le
+    // plafond domine toute exigence que le contenu peut produire — ce que
+    // rien ne garantit dans le code : `rhythm tip→balls` au BPM maximum
+    // passe à 0,5 point près, par coïncidence de constantes. Une
+    // recalibration d'un seul chiffre ou un 7ᵉ cran de profondeur ferait
+    // basculer l'invariant en silence, et la passe se remettrait à
+    // reverrouiller du contenu légitime.
+    //
+    // D'où un balayage exhaustif, calculé — jamais recopié.
+
+    // Bornes dures du contenu. Le BPM vient des constantes de prod ; la
+    // durée est le cap des holds finaux (`maxDur: 80` dans
+    // `FinalPicker.trimHoldFinalDuration`, repris tel quel par le final du
+    // mode « Utilise-moi »), le plus long que le générateur puisse émettre.
+    const maxContentSeconds = 80;
+    const reachableBpm = <int?>[
+      null,
+      BeepEngine.kMaxBpm,
+      BpmPacing.kUseMeBpmPeak,
+    ];
+
+    Iterable<({String label, double required})> reachable() sync* {
+      const positions = <Position?>[null, ...Position.values];
+      const durations = <int?>[null, 1, maxContentSeconds];
+      const tiers = <PhraseTier?>[null, ...PhraseTier.values];
+      for (final mode in SessionMode.values) {
+        for (final from in positions) {
+          for (final to in positions) {
+            for (final bpm in reachableBpm) {
+              for (final duration in durations) {
+                for (final tier in tiers) {
+                  yield (
+                    label: '$mode from=$from to=$to bpm=$bpm '
+                        'dur=$duration tier=$tier',
+                    required: HumiliationScale.requiredFor(
+                      mode: mode,
+                      from: from,
+                      to: to,
+                      bpm: bpm,
+                      duration: duration,
+                      phraseTier: tier,
+                    ),
+                  );
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    test('aucune action jouable n\'exige plus que le plafond', () {
+      final ceiling = ProfileReconciliation.careerHumiliationCeiling;
+      final worst =
+          reachable().reduce((a, b) => b.required > a.required ? b : a);
+      expect(worst.required, lessThanOrEqualTo(ceiling),
+          reason: 'Le plafond de réconciliation ne domine plus le contenu : '
+              '${worst.label} exige ${worst.required} pour un plafond de '
+              '$ceiling. Un profil rattrapé perdrait l\'accès à du contenu '
+              'légitimement débloqué — relever `careerHumiliationCeiling` '
+              'ou revoir la recalibration qui a fait basculer ça.');
+    });
+
+    test('les amplitudes de rythme, `balls` comprise, tiennent sous le plafond',
+        () {
+      final ceiling = ProfileReconciliation.careerHumiliationCeiling;
+      for (final from in Position.values) {
+        for (final to in Position.values) {
+          final req = HumiliationScale.requiredFor(
+            mode: SessionMode.rhythm,
+            from: from,
+            to: to,
+            bpm: BeepEngine.kMaxBpm,
+          );
+          expect(req, lessThanOrEqualTo(ceiling), reason: '$from→$to');
+        }
+      }
+      // `tip→balls` est le cas serré : il passe uniquement parce que le
+      // score de profondeur de `balls` est sous celui de `full`, ce qui
+      // compense le cran d'amplitude en plus. Rien ne le garantit.
+      final tipToBalls = HumiliationScale.requiredFor(
+        mode: SessionMode.rhythm,
+        from: Position.tip,
+        to: Position.balls,
+        bpm: BeepEngine.kMaxBpm,
+      );
+      expect(ceiling - tipToBalls, lessThan(1.0),
+          reason: 'La marge de `tip→balls` s\'est élargie : le tuning des '
+              'scores de profondeur a bougé, ce test mérite d\'être relu.');
+    });
+
+    test('le biffle au BPM maximum tient sous le plafond', () {
+      expect(
+        HumiliationScale.requiredFor(
+          mode: SessionMode.biffle,
+          bpm: BeepEngine.kMaxBpm,
+        ),
+        lessThanOrEqualTo(ProfileReconciliation.careerHumiliationCeiling),
+      );
+    });
+
+    test('les bornes dures du mode « Utilise-moi » tiennent sous le plafond',
+        () {
+      // Le mode le plus agressif du jeu : il court-circuite volontairement
+      // l'enveloppe de capacité (profondeur et BPM assumés). Ce qui le
+      // borne, ce sont ces trois constantes.
+      final ceiling = ProfileReconciliation.careerHumiliationCeiling;
+      expect(BpmPacing.kUseMeBpmPeak, lessThanOrEqualTo(BeepEngine.kMaxBpm),
+          reason: 'Le pic « Utilise-moi » est sorti de la plage moteur.');
+      expect(
+        HumiliationScale.requiredFor(
+          mode: SessionMode.rhythm,
+          from: Position.throat,
+          to: Position.full,
+          bpm: BpmPacing.kUseMeBpmPeak,
+        ),
+        lessThanOrEqualTo(ceiling),
+      );
+      expect(
+        HumiliationScale.requiredFor(
+          mode: SessionMode.hold,
+          to: Position.full,
+          duration: maxContentSeconds,
+        ),
+        lessThanOrEqualTo(ceiling),
+      );
+    });
+  });
 }
