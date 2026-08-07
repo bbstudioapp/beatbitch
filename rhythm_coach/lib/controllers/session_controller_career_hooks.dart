@@ -132,7 +132,13 @@ extension CareerHooksOrchestrator on SessionController {
 
     // Coupe le TTS en cours pour ne pas garder une phrase orpheline
     // de l'ancien step. Le beg insistant va parler tout de suite.
-    await _tts.stop();
+    //
+    // Borné : ici le ticker n'est pas arrêté, donc un canal muet ne gèle pas
+    // la timeline — il laisse `_onTick` tourner sur la nouvelle `_session`
+    // avec l'ancien `_nextStepIndex` jamais remis à 0 (steps consommés
+    // désynchronisés du texte attendu), et l'écran garde `_upgradeInFlight`
+    // à `true`, donc le bouton « Utilise-moi » durablement désactivé.
+    await _stopTtsBounded();
 
     _nextStepIndex = 0;
     _lastConfigStep = null;

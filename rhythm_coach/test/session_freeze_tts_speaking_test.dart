@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:beat_bitch/controllers/session_controller.dart';
+import 'package:beat_bitch/models/punishment.dart';
 import 'package:beat_bitch/models/session.dart';
 import 'package:beat_bitch/models/session_step.dart';
 import 'package:beat_bitch/services/ambience_engine.dart';
@@ -25,13 +26,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// flag reste collé à `true`.
 ///
 /// Deux gardes couvrent ce cas depuis `fix/session-freeze-tts-guard` :
-///  - le report d'un step est borné à `_maxTtsDeferTicks` (~3 s), après quoi le
+///  - le report d'un step est borné à `_maxTtsDeferTicks` (5 s), après quoi le
 ///    step est consommé quoi qu'il arrive (au pire une phrase est coupée) ;
-///  - les appels au canal de synthèse dans `pause()` / `stop()` / `start()`
-///    sont bornés, pour que la séance reste pilotable même canal muet.
+///  - tous les chemins qui coupent le TTS avant de basculer d'état passent par
+///    `_stopTtsBounded()` — `pause()`, `stop()`, `start()`, `triggerFail()`,
+///    `_runMiniPunishmentFlow()` et `requestUpgrade()` — pour que la séance
+///    reste pilotable canal muet.
 ///
-/// Les deux premiers tests ci-dessous ne diffèrent QUE par l'émission (ou non)
-/// de `speak.onComplete` par le faux moteur.
+/// Le premier test est calibré sur la valeur de `_maxTtsDeferTicks` : le faire
+/// évoluer demande de recalculer les instants commentés dans son corps.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -71,6 +74,20 @@ void main() {
         default:
           return 1;
       }
+    });
+  }
+
+  /// Reproduit le plugin Android quand il a perdu sa connexion au service
+  /// TTS : il remet `ttsStatus = null` et met TOUS les appels suivants en
+  /// file d'attente sans jamais renvoyer de réponse. Ici seul `stop` est
+  /// muet — c'est l'appel que tous les chemins de contrôle de séance
+  /// attendent avant de basculer d'état.
+  void installMuteStopTtsEngine() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'getVoices') return <dynamic>[];
+      if (call.method == 'stop') return Completer<Object?>().future;
+      return 1;
     });
   }
 
@@ -145,15 +162,7 @@ void main() {
 
   test('un canal TTS qui ne répond plus n\'empêche plus la bascule en pause',
       () async {
-    // Reproduit le plugin Android quand il a perdu sa connexion au service
-    // TTS : il remet `ttsStatus = null` et met TOUS les appels suivants en
-    // file d'attente sans jamais renvoyer de réponse.
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(channel, (call) async {
-      if (call.method == 'getVoices') return <dynamic>[];
-      if (call.method == 'stop') return Completer<Object?>().future;
-      return 1;
-    });
+    installMuteStopTtsEngine();
     final ctrl = _buildController();
     await ctrl.start();
     await Future<void>.delayed(const Duration(seconds: 1));
@@ -176,6 +185,85 @@ void main() {
     await ctrl.stop();
   }, timeout: const Timeout(Duration(seconds: 30)));
 
+  // ─── Les autres chemins qui coupent le TTS avant de basculer d'état ────
+  //
+  // Même schéma que l'ancien `pause()` : chronomètre et ticker arrêtés,
+  // `await _tts.stop()`, puis seulement `_state = ...`. Tous passent
+  // désormais par `_stopTtsBounded()`.
+
+  test('un canal TTS muet n\'empêche pas le déclenchement du FAIL', () async {
+    installMuteStopTtsEngine();
+    // C'est le seul contrôle de séance visible en production : play/pause/stop
+    // vivent derrière le toggle debug `showSessionControls`, off par défaut.
+    final ctrl = _buildController(punishments: _punishmentBundle);
+    await ctrl.start();
+    await Future<void>.delayed(const Duration(seconds: 1));
+
+    // Non awaité : le flow fail enchaîne phrase + respiration + punition,
+    // bien au-delà de la bascule d'état qui nous intéresse ici.
+    unawaited(ctrl.triggerFail());
+    await Future<void>.delayed(const Duration(seconds: 1));
+
+    expect(ctrl.isFailing, isTrue,
+        reason: 'l\'état bascule malgré le canal muet');
+    expect(ctrl.isRunning, isFalse);
+
+    await ctrl.stop();
+  }, timeout: const Timeout(Duration(seconds: 30)));
+
+  test('un canal TTS muet n\'empêche pas une mini-punition de basculer',
+      () async {
+    installMuteStopTtsEngine();
+    // Déclenchée automatiquement (~1 fois par minute en carrière), sans
+    // aucune action de l'utilisatrice : une séance qui progresse bien peut
+    // se figer spontanément au premier tirage.
+    final ctrl = _buildController(punishments: _punishmentBundle);
+    await ctrl.start();
+    await Future<void>.delayed(const Duration(seconds: 1));
+
+    unawaited(ctrl.debugRunMiniPunishment(_punishmentBundle.punishments.first));
+    await Future<void>.delayed(const Duration(seconds: 1));
+
+    expect(ctrl.isFailing, isTrue);
+    expect(ctrl.failPhase, FailPhase.punishment);
+
+    await ctrl.stop();
+  }, timeout: const Timeout(Duration(seconds: 30)));
+
+  test('un canal TTS muet n\'empêche pas la régénération « Utilise-moi »',
+      () async {
+    installMuteStopTtsEngine();
+    final ctrl = _buildController();
+    await ctrl.start();
+    await Future<void>.delayed(const Duration(seconds: 1));
+
+    // Awaité volontairement : sans borne, `requestUpgrade` ne rend jamais la
+    // main et le test tombe sur son timeout.
+    await ctrl.requestUpgrade(
+      insistentBeg: const SessionStep(
+        time: 0,
+        text: 'supplie',
+        mode: SessionMode.beg,
+        duration: 12,
+      ),
+      upcomingSession: const Session(
+        id: 'up',
+        name: 'up',
+        description: '',
+        durationSeconds: 600,
+        defaultMode: SessionMode.rhythm,
+        steps: [SessionStep(time: 0, text: 'apres', mode: SessionMode.rhythm)],
+      ),
+    );
+
+    // `_nextStepIndex = 0` a bien été atteint, et le `_checkSteps()` de fin
+    // de méthode a consommé le beg insistant posé à `elapsedSeconds`.
+    expect(ctrl.currentDisplayText, 'supplie');
+    expect(ctrl.isRunning, isTrue);
+
+    await ctrl.stop();
+  }, timeout: const Timeout(Duration(seconds: 30)));
+
   test('le même scénario progresse normalement dès que le moteur complète',
       () async {
     installFakeTtsEngine(completesUtterances: true);
@@ -191,7 +279,21 @@ void main() {
   }, timeout: const Timeout(Duration(seconds: 30)));
 }
 
-SessionController _buildController() {
+/// Bundle minimal mais non vide : `triggerFail` a besoin d'une phrase de fail
+/// et d'une punition à jouer, `debugRunMiniPunishment` d'une punition courte.
+const _punishmentBundle = PunishmentBundle(
+  failPhrases: ['tu craques'],
+  punishments: [
+    Punishment(
+      id: 'p',
+      name: 'p',
+      durationSeconds: 6,
+      steps: [SessionStep(time: 0, text: 'punition', mode: SessionMode.breath)],
+    ),
+  ],
+);
+
+SessionController _buildController({PunishmentBundle? punishments}) {
   return SessionController(
     session: const Session(
       id: 'freeze',
@@ -208,7 +310,8 @@ SessionController _buildController() {
     tts: TtsService(),
     beep: _SilentBeepEngine(),
     ambience: _SilentAmbienceEngine(),
-    punishmentBundle: const PunishmentBundle(failPhrases: [], punishments: []),
+    punishmentBundle:
+        punishments ?? const PunishmentBundle(failPhrases: [], punishments: []),
     randomComments: const RandomCommentsBundle(
       comments: [],
       minIntervalSeconds: 999,

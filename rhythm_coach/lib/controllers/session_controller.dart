@@ -576,6 +576,13 @@ class SessionController extends ChangeNotifier {
     _miniPunishmentRng = rng;
   }
 
+  /// Déclenche immédiatement le flow de mini-punition. Exposé parce que le
+  /// tick coach ne le tire qu'après 60 s de séance réelle
+  /// (`_accrueMiniPunishmentTick`), ce qui n'est pas testable autrement.
+  @visibleForTesting
+  Future<void> debugRunMiniPunishment(Punishment p) =>
+      _runMiniPunishmentFlow(p);
+
   /// Décide si le tick courant doit déclencher une mini-punition cette
   /// minute. Pure : pas de side-effect, pas de lecture d'état controller.
   /// Exposée pour le test unitaire.
@@ -1092,6 +1099,22 @@ class SessionController extends ChangeNotifier {
     }
   }
 
+  /// Borne de tous les appels de coupure du canal de synthèse. Même valeur et
+  /// même intention que le bornage audio de 0.6.0 (`6ebdb84`) : le canal reste
+  /// best-effort, il ne doit jamais retarder une bascule d'état.
+  static const Duration _ttsStopTimeout = Duration(milliseconds: 300);
+
+  /// Coupe le canal de synthèse sans jamais bloquer l'appelant.
+  ///
+  /// Tout chemin qui arrête la séance (pause, stop, fail, mini-punition,
+  /// Supplier) coupe d'abord le TTS, et bascule son état **après**. Quand le
+  /// plugin met ses appels en file d'attente (perte de connexion au service
+  /// TTS Android), ce Future ne se complète jamais : sans borne, le ticker et
+  /// le chronomètre sont déjà arrêtés mais `_state` ne change plus — séance
+  /// morte, sans recours. Un seul point de passage pour ne plus en oublier un.
+  Future<void> _stopTtsBounded() =>
+      _tts.stop().timeout(_ttsStopTimeout, onTimeout: () {});
+
   Future<void> pause() async {
     if (_state != SessionState.running) return;
     _stopwatch.stop();
@@ -1099,14 +1122,11 @@ class SessionController extends ChangeNotifier {
     _ticker = null;
     _stopRandomComments();
     _disarmHoldVerifier();
-    // Borné : quand le canal de synthèse ne rend plus la main, `_state` restait
-    // `running` alors que le ticker et le chronomètre étaient déjà arrêtés —
-    // l'overlay « reprendre » ne s'affichait jamais et `resume()` sortait
-    // immédiatement (`_state != paused`). La séance était arrêtée sans être en
-    // pause. Même garde-fou que l'audio en 0.6.0 (commit 6ebdb84).
-    await _tts
-        .stop()
-        .timeout(const Duration(milliseconds: 300), onTimeout: () {});
+    // Borné : sans ça, `_state` restait `running` alors que le ticker et le
+    // chronomètre étaient déjà arrêtés — l'overlay « reprendre » ne s'affichait
+    // jamais et `resume()` sortait immédiatement (`_state != paused`). La
+    // séance était arrêtée sans être en pause.
+    await _stopTtsBounded();
     await _beep.pause();
     await _ambience.pause();
     _state = SessionState.paused;
@@ -1140,9 +1160,7 @@ class SessionController extends ChangeNotifier {
     // Borné, comme dans `pause()` : un canal de synthèse muet ne doit pas
     // empêcher la séance de revenir à `idle` (bouton STOP sans effet, cf.
     // issue #317).
-    await _tts
-        .stop()
-        .timeout(const Duration(milliseconds: 300), onTimeout: () {});
+    await _stopTtsBounded();
     await _beep.stop();
     await _ambience.stop();
     await WakelockPlus.disable();
