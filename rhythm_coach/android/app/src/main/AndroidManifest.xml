@@ -1,9 +1,37 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
+
+    <!-- Permissions injectées par la fusion des manifests de plugins, qu'aucun
+         code de l'app n'utilise. On les retire explicitement : l'écran À propos
+         promet « 100 % hors ligne, aucune télémétrie », et l'APK doit le tenir.
+         - INTERNET : déclarée en dur par file_saver, qui n'est appelé que
+           derrière kIsWeb ; aussi tirée par le datatransport de ML Kit.
+         - ACCESS_NETWORK_STATE : androidx.media3, tiré par
+           androidx.camera:camera-video (donc par camera_android_camerax).
+         - RECORD_AUDIO : camera_android_camerax, qui sait filmer avec le son.
+           CameraMotionDetector passe enableAudio: false, et le plugin ne
+           demande la permission que si enableAudio est vrai. -->
+    <uses-permission android:name="android.permission.INTERNET" tools:node="remove"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove"/>
+    <uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove"/>
+
+    <!-- Stockage externe : déclaré par camera_android_camerax et file_saver,
+         inutile ici. L'export diagnostic passe par share_plus, qui écrit dans
+         File(context.cacheDir, "share_plus") et publie via un FileProvider —
+         rien ne sort du sandbox de l'app, à aucun niveau d'API. file_saver
+         n'est appelé que derrière kIsWeb, file_selector que sur desktop.
+         READ_EXTERNAL_STORAGE n'est déclarée par aucun plugin : le merger la
+         déduit de WRITE_EXTERNAL_STORAGE, et cette déduction est calculée
+         avant l'application des tools:node="remove" — il faut donc la retirer
+         explicitement elle aussi, sinon elle survit au retrait de WRITE. -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove"/>
+
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
     <application
