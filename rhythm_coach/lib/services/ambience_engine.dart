@@ -20,6 +20,30 @@ class AmbienceEngine {
   static const double maxVolume = 0.5;
   static const double defaultVolume = 0.15;
 
+  /// Borne des appels de coupure au backend audio. Même valeur que le
+  /// `player.stop()` de [BeepEngine] : c'est le même plugin `audioplayers` et
+  /// le même type d'appel, sur un seul player au lieu de 4 par sample — il n'y
+  /// a pas de raison qu'une réponse légitime y soit plus lente.
+  static const Duration _callTimeout = Duration(milliseconds: 300);
+
+  /// Borne du démarrage de lecture ([play]). Volontairement bien plus large
+  /// que [_callTimeout] : la séquence enchaîne l'init du player et un
+  /// `setSource` qui, sur Android, copie l'asset du bundle vers le cache puis
+  /// prépare le décodeur natif. C'est de l'I/O disque sur les plus gros
+  /// samples audio du projet (boucles d'ambiance), pas une commande de
+  /// transport — 300 ms couperait l'ambiance sur un appareil lent.
+  ///
+  /// 3 s se place au-dessus des bornes « init / chargement » déjà en place
+  /// (2 s pour `_tts.init()` et pour le `_beep.stop()` de `_finish`, qui
+  /// n'ont pas d'I/O d'asset) et très en dessous du timeout de préparation
+  /// interne d'`audioplayers` (30 s) — c'est précisément celui-là qu'on
+  /// refuse de subir : le flow FAIL attend `playForMode` avant de reposer
+  /// `_state = running`. Si la borne coupe à tort, l'ambiance de ce mode
+  /// reste muette jusqu'au prochain step de config (`_currentAsset` n'est
+  /// posé qu'en cas de succès, donc le no-op de tête ne bloque pas la
+  /// retentative).
+  static const Duration _startTimeout = Duration(seconds: 3);
+
   final AudioPlayer _player = AudioPlayer(playerId: 'ambience_loop');
 
   String? _currentAsset;
@@ -50,36 +74,58 @@ class AmbienceEngine {
       await stop();
       return;
     }
-    await _ensureInit();
-    if (_currentAsset == assetPath && _isPlaying) return;
-
     try {
-      await _player.stop();
-      await _player.setSource(AssetSource(assetPath));
-      await _player.setVolume(_volume);
-      await _player.resume();
-      _currentAsset = assetPath;
-      _isPlaying = true;
+      await startPlayback(assetPath).timeout(_startTimeout);
     } catch (e) {
       if (kDebugMode) debugPrint('[AmbienceEngine] play error : $e');
       _isPlaying = false;
     }
   }
 
+  /// Séquence de démarrage, bornée en bloc par [play] — aucun de ces appels
+  /// n'a de garde côté `audioplayers`, et un `try/catch` n'attrape que les
+  /// exceptions, pas un appel qui ne rend jamais la main.
+  ///
+  /// Méthode séparée (et non privée) pour que les tests puissent simuler un
+  /// backend audio muet en la surchargeant, sans avoir à émuler tout le
+  /// protocole `audioplayers` : c'est [play] — donc la borne — qui reste
+  /// exercée. Ne pas appeler directement en production.
+  @visibleForTesting
+  Future<void> startPlayback(String assetPath) async {
+    await _ensureInit();
+    if (_currentAsset == assetPath && _isPlaying) return;
+    await _player.stop();
+    await _player.setSource(AssetSource(assetPath));
+    await _player.setVolume(_volume);
+    await _player.resume();
+    _currentAsset = assetPath;
+    _isPlaying = true;
+  }
+
   Future<void> pause() async {
     if (!_initialized || !_isPlaying) return;
     try {
-      await _player.pause();
-      _isPlaying = false;
+      // `.timeout(300 ms)` : même garde-fou que `BeepEngine` (cf. 6ebdb84).
+      // Sur un backend audio engorgé, `pause()` peut ne jamais rendre la main,
+      // et `SessionController.pause()` l'attend avant de basculer en `paused`.
+      await _player.pause().timeout(_callTimeout);
     } catch (e) {
       if (kDebugMode) debugPrint('[AmbienceEngine] pause error : $e');
     }
+    // Hors du `try` : l'état doit refléter l'intention même si le backend n'a
+    // pas répondu. Un `_isPlaying` resté à `true` ferait sortir [resume] tôt
+    // et l'ambiance ne repartirait jamais de la séance.
+    _isPlaying = false;
   }
 
   Future<void> resume() async {
     if (!_initialized || _currentAsset == null || _isPlaying) return;
     try {
-      await _player.resume();
+      // Borné comme [pause] / [stop] : commande de transport sur un player
+      // déjà préparé, rien à charger. Sans la borne, `SessionController.resume`
+      // ne rend jamais la main sur un backend engorgé — la séance repart quand
+      // même (l'état bascule avant), mais tout appelant chaîné reste en attente.
+      await _player.resume().timeout(_callTimeout);
       _isPlaying = true;
     } catch (e) {
       if (kDebugMode) debugPrint('[AmbienceEngine] resume error : $e');
@@ -89,7 +135,7 @@ class AmbienceEngine {
   Future<void> stop() async {
     if (!_initialized) return;
     try {
-      await _player.stop();
+      await _player.stop().timeout(_callTimeout);
     } catch (_) {}
     _isPlaying = false;
   }
