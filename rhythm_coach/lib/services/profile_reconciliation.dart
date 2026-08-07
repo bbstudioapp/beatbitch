@@ -65,6 +65,13 @@ import 'capability_axis.dart';
 import 'capability_service.dart';
 import 'humiliation_engine.dart';
 
+/// Rend une valeur sérialisable en JSON. `NaN` et `Infinity` sont des
+/// `double` valides mais n'ont pas de représentation JSON : `jsonEncode`
+/// jette dessus. Un profil dégénéré doit produire une trace incomplète,
+/// jamais une exception sur le chemin de démarrage — la valeur d'origine
+/// est de toute façon remplacée dans le profil au moment où on la trace.
+Object? _jsonSafe(double? v) => v != null && v.isFinite ? v : null;
+
 /// Ce qu'une réconciliation a effectivement modifié. Sérialisé dans
 /// [ProfileReconciliation.reportKey] et exposé par l'export diagnostic — un
 /// profil modifié en silence est un profil qu'on ne peut pas diagnostiquer.
@@ -91,8 +98,8 @@ class ProfileReconciliationReport {
         },
         if (humiliationAfter != null)
           'humiliationCareer': <String, dynamic>{
-            'before': humiliationBefore,
-            'after': humiliationAfter,
+            'before': _jsonSafe(humiliationBefore),
+            'after': _jsonSafe(humiliationAfter),
           },
       };
 
@@ -139,14 +146,17 @@ class ReconciledAxis {
   });
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'best': <String, dynamic>{'before': bestBefore, 'after': bestAfter},
+        'best': <String, dynamic>{
+          'before': _jsonSafe(bestBefore),
+          'after': _jsonSafe(bestAfter),
+        },
         'comfort': <String, dynamic>{
-          'before': comfortBefore,
-          'after': comfortAfter,
+          'before': _jsonSafe(comfortBefore),
+          'after': _jsonSafe(comfortAfter),
         },
         'successRate': <String, dynamic>{
-          'before': successRateBefore,
-          'after': successRateAfter,
+          'before': _jsonSafe(successRateBefore),
+          'after': _jsonSafe(successRateAfter),
         },
       };
 
@@ -262,7 +272,7 @@ class ProfileReconciliation {
     if (fixes.isNotEmpty) {
       final ceiling = careerHumiliationCeiling;
       final current = _readDouble(prefs, _humiliationKey);
-      if (current != null && current > ceiling) {
+      if (_isOutOfPlayable(current, ceiling)) {
         humiliationBefore = current;
         humiliationAfter = ceiling;
       }
@@ -323,8 +333,8 @@ class ProfileReconciliation {
     final comfort = _readDouble(prefs, '$base$_suffixComfort');
     final ceiling = BeepEngine.kMaxBpm.toDouble();
 
-    final bestOver = best != null && best > ceiling;
-    final comfortOver = comfort != null && comfort > ceiling;
+    final bestOver = _isOutOfPlayable(best, ceiling);
+    final comfortOver = _isOutOfPlayable(comfort, ceiling);
     if (!bestOver && !comfortOver) return null;
 
     return (
@@ -361,6 +371,14 @@ class ProfileReconciliation {
       await prefs.setDouble('$base$_suffixComfort', fix.comfort!);
     }
   }
+
+  /// Une valeur est hors du jouable si elle dépasse la borne moteur **ou**
+  /// si elle n'est pas finie. Le second cas n'est pas de la coquetterie :
+  /// `NaN > ceiling` vaut `false` en IEEE754, donc la seule comparaison
+  /// laisserait un `NaN` en place *et* ferait conclure « aucune dérive »
+  /// sur cet axe.
+  static bool _isOutOfPlayable(double? v, double ceiling) =>
+      v != null && (!v.isFinite || v > ceiling);
 
   /// Lecture tolérante d'un réel persisté.
   ///

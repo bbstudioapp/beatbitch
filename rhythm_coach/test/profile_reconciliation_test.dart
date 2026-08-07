@@ -374,4 +374,66 @@ void main() {
       expect(prefs.getBool(ProfileReconciliation.flagKey), isTrue);
     });
   });
+
+  group('Valeurs numériques dégénérées', () {
+    test('un `best` NaN est corrigé, pas ignoré', () async {
+      // `NaN > ceiling` vaut `false` en IEEE754 : la seule comparaison
+      // laisserait la valeur en place *et* conclurait « aucune dérive ».
+      final prefs = await _prefsWith(<String, Object>{
+        'cap.rhythm.bpm_ceil.shallow.best': double.nan,
+        'stats.humiliation_level': 4166.4,
+      });
+      final report = await ProfileReconciliation.applyTo(prefs);
+
+      expect(prefs.getDouble('cap.rhythm.bpm_ceil.shallow.best'),
+          BeepEngine.kMaxBpm.toDouble());
+      expect(report!.axes.keys, contains('rhythm.bpm_ceil.shallow'));
+      // La dérive est prouvée, donc le thermomètre est rattrapé aussi.
+      expect(prefs.getDouble('stats.humiliation_level'),
+          ProfileReconciliation.careerHumiliationCeiling);
+    });
+
+    test('un `comfort` infini est ramené à la borne moteur', () async {
+      final prefs = await _prefsWith(<String, Object>{
+        'cap.rhythm.bpm_ceil.shallow.comfort': double.infinity,
+      });
+      await ProfileReconciliation.applyTo(prefs);
+      expect(prefs.getDouble('cap.rhythm.bpm_ceil.shallow.comfort'),
+          BeepEngine.kMaxBpm.toDouble());
+    });
+
+    test('un score d\'humiliation NaN est ramené sous le plafond', () async {
+      final prefs = await _prefsWith(<String, Object>{
+        ..._corruptedProfile(),
+        'stats.humiliation_level': double.nan,
+      });
+      await ProfileReconciliation.applyTo(prefs);
+      expect(prefs.getDouble('stats.humiliation_level'),
+          ProfileReconciliation.careerHumiliationCeiling);
+    });
+
+    test('la trace se sérialise et se relit malgré des valeurs non finies',
+        () async {
+      // `jsonEncode` jette sur NaN/Infinity — au démarrage, ça vaut un
+      // crash. La trace doit rester écrivable, quitte à être incomplète.
+      final prefs = await _prefsWith(<String, Object>{
+        'cap.rhythm.bpm_ceil.shallow.best': double.nan,
+        'cap.rhythm.bpm_ceil.shallow.comfort': double.infinity,
+        'cap.rhythm.bpm_ceil.shallow.sr': double.negativeInfinity,
+        'stats.humiliation_level': double.nan,
+      });
+      await ProfileReconciliation.applyTo(prefs);
+
+      final stored = ProfileReconciliation.storedReport(prefs);
+      final axis = stored!.axes['rhythm.bpm_ceil.shallow']!;
+      // Le « avant » n'est pas représentable en JSON, le « après » l'est —
+      // et c'est lui qui dit ce que vaut le profil maintenant.
+      expect(axis.bestBefore, isNull);
+      expect(axis.bestAfter, BeepEngine.kMaxBpm.toDouble());
+      expect(axis.comfortAfter, BeepEngine.kMaxBpm.toDouble());
+      expect(axis.successRateAfter, CapabilityService.defaultSuccessRate);
+      expect(stored.humiliationAfter,
+          ProfileReconciliation.careerHumiliationCeiling);
+    });
+  });
 }
