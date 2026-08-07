@@ -41,6 +41,16 @@
 /// [flagKey] : le second lancement sort immédiatement. Un profil sain paie
 /// une lecture de booléen puis, au premier lancement seulement, un scan des
 /// axes — sans écriture.
+///
+/// ## Ce qu'elle ne peut pas faire
+///
+/// **Empêcher l'app de démarrer.** Elle est le deuxième appel de `main()` :
+/// une exception y remonterait hors de `main()` et une attente qui ne se
+/// résout jamais figerait le lancement avant le premier `runApp`. Les deux
+/// seraient pires que le défaut corrigé. D'où trois garde-fous :
+/// lectures tolérantes au type persisté ([_readDouble]), écritures ordonnées
+/// pour qu'une passe interrompue reste rattrapable, et un [startupBudget]
+/// doublé d'un `catch` total dans [runIfNeeded].
 library;
 
 import 'dart:convert';
@@ -195,52 +205,94 @@ class ProfileReconciliation {
         duration: 0,
       );
 
+  /// Temps accordé à la passe au démarrage. Elle enchaîne une vingtaine de
+  /// lectures et d'écritures sur des préférences persistées, dont chaque
+  /// écriture repasse par le canal de plateforme natif : si le canal se
+  /// fige, l'attente ne se résout jamais et un `try`/`catch` n'y peut rien.
+  /// Passé ce budget on rend la main **sans poser [flagKey]** — l'app
+  /// démarre sur un profil non réconcilié et la passe se rejouera au
+  /// prochain lancement.
+  static const Duration startupBudget = Duration(seconds: 2);
+
   /// Point d'entrée applicatif — à appeler une fois au démarrage.
-  /// Renvoie `null` si la passe a déjà tourné, sinon le rapport (qui peut
-  /// être vide sur un profil sain).
+  /// Renvoie `null` si la passe a déjà tourné, a échoué ou a dépassé son
+  /// budget ; sinon le rapport (qui peut être vide sur un profil sain).
+  ///
+  /// Ne propage **rien** : un profil non réconcilié est un désagrément
+  /// (une bannière absurde de plus jusqu'au prochain lancement), une
+  /// exception ici est une app qui ne démarre pas.
   static Future<ProfileReconciliationReport?> runIfNeeded() async {
+    try {
+      return await _resolveAndApply().timeout(startupBudget);
+    } on Object catch (e) {
+      debugPrint('ProfileReconciliation: passe abandonnée ($e)');
+      return null;
+    }
+  }
+
+  static Future<ProfileReconciliationReport?> _resolveAndApply() async {
     final prefs = await SharedPreferences.getInstance();
     return applyTo(prefs);
   }
 
   /// Idem, sur une instance de prefs fournie (tests).
+  ///
+  /// Non protégée, volontairement : c'est ici qu'on veut voir échouer un
+  /// profil pathologique en test, pendant que [runIfNeeded] garantit qu'un
+  /// échec ne coûte que la réconciliation.
   @visibleForTesting
   static Future<ProfileReconciliationReport?> applyTo(
     SharedPreferences prefs,
   ) async {
-    if (prefs.getBool(flagKey) ?? false) return null;
+    if (_readBool(prefs, flagKey)) return null;
 
-    final axes = <String, ReconciledAxis>{};
+    // 1. Diagnostic — aucune écriture : on décide de tout avant de toucher
+    //    quoi que ce soit.
+    final fixes = <_AxisFix>[];
     for (final axis in CapabilityAxis.values) {
       if (axis.unit != CapabilityUnit.bpm) continue;
-      final adjusted = await _reconcileAxis(prefs, axis);
-      if (adjusted != null) axes[axis.storageKey] = adjusted;
+      final fix = _diagnoseAxis(prefs, axis);
+      if (fix != null) fixes.add(fix);
     }
 
     double? humiliationBefore;
     double? humiliationAfter;
     // Le thermomètre n'est touché que sur les profils dont un axe BPM prouve
     // la dérive. Un profil sain garde son score, aussi haut soit-il.
-    if (axes.isNotEmpty) {
+    if (fixes.isNotEmpty) {
       final ceiling = careerHumiliationCeiling;
-      final current = prefs.getDouble(_humiliationKey);
+      final current = _readDouble(prefs, _humiliationKey);
       if (current != null && current > ceiling) {
         humiliationBefore = current;
         humiliationAfter = ceiling;
-        await prefs.setDouble(_humiliationKey, ceiling);
       }
     }
 
+    // 2. Écritures — l'humiliation d'abord, les axes ensuite, [flagKey] en
+    //    tout dernier. Chaque écriture peut être la dernière (canal figé,
+    //    processus tué) : tant qu'un axe reste hors du jouable, la preuve
+    //    matérielle de la dérive subsiste et la passe se rejouera. L'ordre
+    //    inverse laisserait un profil dont plus rien ne prouve la dérive,
+    //    avec un thermomètre jamais rattrapé.
+    if (humiliationAfter != null) {
+      await prefs.setDouble(_humiliationKey, humiliationAfter);
+    }
+    for (final fix in fixes) {
+      await _applyAxisFix(prefs, fix);
+    }
+
     final report = ProfileReconciliationReport(
-      axes: axes,
+      axes: <String, ReconciledAxis>{
+        for (final fix in fixes) fix.axis.storageKey: fix.report,
+      },
       humiliationBefore: humiliationBefore,
       humiliationAfter: humiliationAfter,
     );
-    await prefs.setBool(flagKey, true);
-    await prefs.setString(ranAtKey, DateTime.now().toUtc().toIso8601String());
     if (!report.isEmpty) {
       await prefs.setString(reportKey, jsonEncode(report.toJson()));
     }
+    await prefs.setString(ranAtKey, DateTime.now().toUtc().toIso8601String());
+    await prefs.setBool(flagKey, true);
     return report;
   }
 
@@ -260,37 +312,80 @@ class ProfileReconciliation {
     }
   }
 
-  /// Clamp par le haut de `best` / `comfort`, et remise à neutre du
-  /// `successRate` si l'un des deux a bougé. Renvoie `null` si l'axe était
-  /// déjà dans le jouable (cas de tout profil sain).
-  static Future<ReconciledAxis?> _reconcileAxis(
+  /// Ce qu'un axe hors du jouable exige : les valeurs à écrire (`null` =
+  /// rien à écrire pour ce champ) et la ligne de rapport correspondante.
+  static _AxisFix? _diagnoseAxis(
     SharedPreferences prefs,
     CapabilityAxis axis,
-  ) async {
+  ) {
     final base = '$_prefix${axis.storageKey}';
-    final best = prefs.getDouble('$base$_suffixBest');
-    final comfort = prefs.getDouble('$base$_suffixComfort');
+    final best = _readDouble(prefs, '$base$_suffixBest');
+    final comfort = _readDouble(prefs, '$base$_suffixComfort');
     final ceiling = BeepEngine.kMaxBpm.toDouble();
 
     final bestOver = best != null && best > ceiling;
     final comfortOver = comfort != null && comfort > ceiling;
     if (!bestOver && !comfortOver) return null;
 
-    final sr = prefs.getDouble('$base$_suffixSuccessRate');
-    if (bestOver) await prefs.setDouble('$base$_suffixBest', ceiling);
-    if (comfortOver) await prefs.setDouble('$base$_suffixComfort', ceiling);
+    return (
+      axis: axis,
+      best: bestOver ? ceiling : null,
+      comfort: comfortOver ? ceiling : null,
+      report: ReconciledAxis(
+        bestBefore: best,
+        bestAfter: bestOver ? ceiling : best,
+        comfortBefore: comfort,
+        comfortAfter: comfortOver ? ceiling : comfort,
+        successRateBefore: _readDouble(prefs, '$base$_suffixSuccessRate'),
+        successRateAfter: CapabilityService.defaultSuccessRate,
+      ),
+    );
+  }
+
+  /// Écrit le diagnostic. `successRate` en premier, puis les valeurs hors
+  /// du jouable : ce sont elles qui prouvent la dérive, donc les dernières
+  /// à disparaître (cf. l'ordre d'écriture de [applyTo]).
+  static Future<void> _applyAxisFix(
+    SharedPreferences prefs,
+    _AxisFix fix,
+  ) async {
+    final base = '$_prefix${fix.axis.storageKey}';
     await prefs.setDouble(
       '$base$_suffixSuccessRate',
       CapabilityService.defaultSuccessRate,
     );
-
-    return ReconciledAxis(
-      bestBefore: best,
-      bestAfter: bestOver ? ceiling : best,
-      comfortBefore: comfort,
-      comfortAfter: comfortOver ? ceiling : comfort,
-      successRateBefore: sr,
-      successRateAfter: CapabilityService.defaultSuccessRate,
-    );
+    if (fix.best != null) {
+      await prefs.setDouble('$base$_suffixBest', fix.best!);
+    }
+    if (fix.comfort != null) {
+      await prefs.setDouble('$base$_suffixComfort', fix.comfort!);
+    }
   }
+
+  /// Lecture tolérante d'un réel persisté.
+  ///
+  /// [SharedPreferences.getDouble] fait un **cast direct** sur la valeur en
+  /// cache : une clé écrite avec un autre type (migration ratée, payload
+  /// d'import fabriqué, préférences corrompues) y jette un `TypeError`. Au
+  /// deuxième appel de `main()`, c'est un crash au lancement. Une valeur
+  /// illisible vaut donc « absente » : l'axe est laissé tel quel et le
+  /// reste du profil est réconcilié quand même. Un entier est accepté —
+  /// c'est bien un nombre, seul son type de stockage diffère.
+  static double? _readDouble(SharedPreferences prefs, String key) {
+    final raw = prefs.get(key);
+    return raw is num ? raw.toDouble() : null;
+  }
+
+  /// Idem pour le drapeau : un type inattendu vaut « la passe n'a pas
+  /// tourné », donc elle tourne et réécrit la clé proprement.
+  static bool _readBool(SharedPreferences prefs, String key) =>
+      prefs.get(key) == true;
 }
+
+/// Le diagnostic d'un axe : quoi écrire, et quoi en dire.
+typedef _AxisFix = ({
+  CapabilityAxis axis,
+  double? best,
+  double? comfort,
+  ReconciledAxis report,
+});

@@ -9,8 +9,11 @@
 /// `challenge_bpm_target_runaway_test.dart` (les trois bornes du calcul).
 library;
 
+import 'dart:async';
+
 import 'package:beat_bitch/career/models/challenge.dart';
 import 'package:beat_bitch/career/services/challenge_service.dart';
+import 'package:beat_bitch/career/services/generation/bpm_pacing.dart';
 import 'package:beat_bitch/models/session.dart';
 import 'package:beat_bitch/models/session_step.dart';
 import 'package:beat_bitch/services/beep_engine.dart';
@@ -20,6 +23,7 @@ import 'package:beat_bitch/services/humiliation_engine.dart';
 import 'package:beat_bitch/services/profile_reconciliation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
 /// Le profil de la capture utilisateur : `rhythm.bpm_ceil.shallow` emballé
 /// (cible affichée 956 ⇒ `comfort ≈ 735`), plancher d'humiliation carrière
@@ -56,6 +60,39 @@ Future<SharedPreferences> _prefsWith(Map<String, Object> values) async {
   SharedPreferences.setMockInitialValues(values);
   return SharedPreferences.getInstance();
 }
+
+/// Store persisté dont le canal se **fige** : les [stallAfter] premières
+/// écritures aboutissent, la suivante retourne un `Future` qui ne se résout
+/// jamais — exactement ce que fait un canal de plateforme bloqué, et ce
+/// qu'aucun `try`/`catch` n'attrape.
+class _StallingStore extends InMemorySharedPreferencesStore {
+  _StallingStore.withData(super.data, {required this.stallAfter})
+      : super.withData();
+
+  final int stallAfter;
+  int writes = 0;
+
+  /// Rétablit le canal — pour rejouer la passe comme au lancement suivant.
+  bool healed = false;
+
+  @override
+  Future<bool> setValue(String valueType, String key, Object value) {
+    if (!healed && writes++ >= stallAfter) return Completer<bool>().future;
+    return super.setValue(valueType, key, value);
+  }
+}
+
+/// Installe [store] comme persistance et vide le cache statique de
+/// `SharedPreferences` pour que la prochaine résolution le relise.
+Future<SharedPreferences> _prefsOn(SharedPreferencesStorePlatform store) async {
+  SharedPreferencesStorePlatform.instance = store;
+  SharedPreferences.resetStatic();
+  return SharedPreferences.getInstance();
+}
+
+Map<String, Object> _persisted(Map<String, Object> values) => <String, Object>{
+      for (final e in values.entries) 'flutter.${e.key}': e.value,
+    };
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -239,6 +276,102 @@ void main() {
         ProfileReconciliation.reportKey: 'pas du json',
       });
       expect(ProfileReconciliation.storedReport(prefs), isNull);
+    });
+  });
+
+  group('Démarrage — rien ne doit empêcher l\'app de se lancer', () {
+    // La passe est le deuxième appel de `main()`, avant le premier
+    // `runApp`. Une exception ou une attente sans fin y coûterait le
+    // lancement complet — strictement pire que le défaut qu'elle corrige.
+
+    test('une clé d\'un type inattendu ne fait pas remonter d\'exception',
+        () async {
+      // `getDouble`/`getBool` castent directement la valeur en cache : sur
+      // un type inattendu, ils jettent un `TypeError`.
+      for (final corrupted in <Map<String, Object>>[
+        <String, Object>{'cap.rhythm.bpm_ceil.shallow.best': 'pas un double'},
+        <String, Object>{'stats.humiliation_level': 'pas un double'},
+        <String, Object>{ProfileReconciliation.flagKey: 'pas un booléen'},
+      ]) {
+        final prefs = await _prefsWith(<String, Object>{
+          ..._corruptedProfile(),
+          ...corrupted,
+        });
+        await expectLater(ProfileReconciliation.applyTo(prefs), completes,
+            reason: corrupted.keys.first);
+      }
+    });
+
+    test('un axe illisible n\'empêche pas les autres d\'être réconciliés',
+        () async {
+      // Le filet de `runIfNeeded` avalerait l'exception, mais la passe
+      // n'aurait rien fait : la tolérance doit être dans la lecture.
+      final prefs = await _prefsWith(<String, Object>{
+        'cap.rhythm.bpm_ceil.shallow.best': 'pas un double',
+        'cap.rhythm.bpm_ceil.full.best': 3182.0,
+        'cap.rhythm.bpm_ceil.full.comfort': 3298.7,
+        'stats.humiliation_level': 4166.4,
+      });
+      final report = await ProfileReconciliation.applyTo(prefs);
+
+      expect(report!.axes.keys, contains('rhythm.bpm_ceil.full'));
+      expect(prefs.getDouble('cap.rhythm.bpm_ceil.full.comfort'),
+          BeepEngine.kMaxBpm.toDouble());
+      expect(prefs.getDouble('stats.humiliation_level'),
+          ProfileReconciliation.careerHumiliationCeiling);
+    });
+
+    test('un `comfort` stocké en entier est lu et corrigé', () async {
+      // Un entier reste un nombre : le refuser laisserait la dérive en
+      // place alors qu'on sait la lire.
+      final prefs = await _prefsWith(<String, Object>{
+        'cap.rhythm.bpm_ceil.shallow.comfort': 735,
+      });
+      await ProfileReconciliation.applyTo(prefs);
+      expect(prefs.getDouble('cap.rhythm.bpm_ceil.shallow.comfort'),
+          BeepEngine.kMaxBpm.toDouble());
+    });
+
+    test('un drapeau de version illisible vaut « pas encore tourné »',
+        () async {
+      final prefs = await _prefsWith(<String, Object>{
+        ..._corruptedProfile(),
+        ProfileReconciliation.flagKey: 'pas un booléen',
+      });
+      expect(await ProfileReconciliation.applyTo(prefs), isNotNull);
+      expect(prefs.getBool(ProfileReconciliation.flagKey), isTrue);
+    });
+
+    test('un canal figé rend la main, sans marquer la passe comme faite',
+        () async {
+      // On fige à la 4ᵉ écriture, en plein milieu de la correction d'axe.
+      final store = _StallingStore.withData(
+        _persisted(_corruptedProfile()),
+        stallAfter: 3,
+      );
+      await _prefsOn(store);
+
+      final elapsed = Stopwatch()..start();
+      expect(await ProfileReconciliation.runIfNeeded(), isNull);
+      expect(
+          elapsed.elapsed, lessThan(ProfileReconciliation.startupBudget * 2));
+
+      // Le drapeau n'a pas été posé : la passe se rejouera. Et la reprise
+      // doit finir le travail — d'où l'ordre d'écriture, le thermomètre
+      // avant les axes : ce sont les axes hors du jouable qui prouvent la
+      // dérive, ils doivent être les derniers à disparaître.
+      store.healed = true;
+      final prefs = await _prefsOn(store);
+      expect(prefs.getBool(ProfileReconciliation.flagKey), isNot(isTrue));
+
+      await ProfileReconciliation.applyTo(prefs);
+      expect(prefs.getDouble('cap.rhythm.bpm_ceil.shallow.comfort'),
+          BeepEngine.kMaxBpm.toDouble());
+      expect(prefs.getDouble('cap.rhythm.bpm_ceil.shallow.best'),
+          BeepEngine.kMaxBpm.toDouble());
+      expect(prefs.getDouble('stats.humiliation_level'),
+          ProfileReconciliation.careerHumiliationCeiling);
+      expect(prefs.getBool(ProfileReconciliation.flagKey), isTrue);
     });
   });
 }
