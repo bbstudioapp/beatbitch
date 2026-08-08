@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:beat_bitch/career/models/coach.dart';
 import 'package:beat_bitch/career/models/coach_catalog.dart';
@@ -23,10 +24,26 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// jamais le recevoir. Un fichier qui ne contient que les voix est anodin —
 /// **à condition qu'il le reste**.
 ///
-/// C'est tout l'objet du premier groupe de tests : un garde-fou qui échoue
-/// bruyamment si quoi que ce soit du profil s'invite dans ce fichier, que ce
-/// soit par une section ajoutée ou par une valeur qui fuiterait à
-/// l'intérieur de la section voix.
+/// C'est tout l'objet du premier groupe de tests, qui prend le fichier par
+/// trois angles :
+///
+/// 1. **Sentinelles** — aucune valeur connue du profil n'en ressort.
+/// 2. **Structure** — aucun champ n'apparaît, à aucun niveau.
+/// 3. **Provenance** — chaque valeur du fichier est traçable à une source
+///    autorisée (réglages de voix, catalogue de coachs, plateforme, langue
+///    active, version de l'app).
+///
+/// Les deux premiers énumèrent ce qui ne doit **pas** sortir : c'est une
+/// liste ouverte, en retard d'une clé à l'instant où quelqu'un en ajoute une
+/// au profil. Le troisième énumère ce qui a le **droit** de sortir : liste
+/// fermée, courte, et qu'on ne peut pas étendre par distraction. C'est lui
+/// qui porte la garantie ; les deux autres restent parce qu'ils nomment la
+/// fuite en clair quand elle se produit.
+///
+/// Limite résiduelle, assumée : une valeur du profil qui coïnciderait
+/// exactement avec une valeur déjà autorisée (le nom d'un coach, la
+/// plateforme) passerait — elle n'apprendrait alors rien que le fichier ne
+/// dise déjà.
 PackageInfo _info() => PackageInfo(
       appName: 'BeatBitch',
       packageName: 'app.bbstudio.beatbitch',
@@ -99,6 +116,24 @@ Map<String, Object> _seedWithProfile() => <String, Object>{
       ..._profileSentinels,
       ..._voiceSettings,
     };
+
+/// Aplatit un payload JSON en ses feuilles : `chemin → valeur`, l'indice de
+/// liste écrasé en `[]` (`voice.coaches[].voice`). C'est la **forme** du
+/// champ qu'on veut contraindre, pas la position d'une entrée dans sa liste.
+Iterable<MapEntry<String, Object?>> _leaves(Object? node,
+    [String path = '']) sync* {
+  if (node is Map) {
+    for (final e in node.entries) {
+      yield* _leaves(e.value, path.isEmpty ? '${e.key}' : '$path.${e.key}');
+    }
+  } else if (node is List) {
+    for (final v in node) {
+      yield* _leaves(v, '$path[]');
+    }
+  } else {
+    yield MapEntry(path, node);
+  }
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -196,6 +231,80 @@ void main() {
               ? <String>{'language', 'voice', 'source'}
               : <String>{'language', 'voice', 'source', 'platform'},
           reason: 'Une entrée de voix par défaut porte un champ inattendu.',
+        );
+      }
+    });
+
+    test('chaque valeur du fichier vient d\'une source autorisée', () async {
+      // Les deux tests précédents cherchent ce qui ne doit pas sortir.
+      // Celui-ci prend le problème par l'autre bout et n'admet que ce qui a
+      // le droit de sortir — c'est ce qui attrape l'**enrichissement d'un
+      // champ déjà permis**, le vecteur qu'une sentinelle ne voit pas : un
+      // `platform` qui deviendrait `"android:<palier de carrière>"` ne crée
+      // aucune clé nouvelle et ne porte aucune valeur sentinelle.
+      const platform = 'android';
+      const locale = 'en';
+      final svc = await _build(
+        seed: _seedWithProfile(),
+        locale: locale,
+        platform: platform,
+      );
+      final prefs = await SharedPreferences.getInstance();
+      final languages = kSupportedLocales.map((l) => l.languageCode).toSet();
+
+      // Provenance des identifiants de voix : ce qui est rangé sous une clé
+      // de voix, et rien d'autre. Les clés sont composées via `TtsService`,
+      // comme le service lui-même — une divergence de préfixe rétrécirait
+      // l'ensemble autorisé, donc ferait échouer ce test, jamais l'inverse.
+      final storedVoices = <String>{
+        for (final lang in languages)
+          ...<String?>[
+            prefs.getString(TtsService.userVoiceKey(lang)),
+            for (final c in CoachCatalog.defaults)
+              prefs.getString(TtsService.coachVoiceKey(c.id, lang)),
+          ].whereType<String>(),
+      };
+
+      // La liste fermée. Chaque entrée dit d'où la valeur vient ; aucune ne
+      // se contente de décrire son type.
+      final sources = <String, bool Function(Object?)>{
+        'kind': (v) => v == DiagnosticExportService.voiceShareKind,
+        'appVersion': (v) => v == '${_info().version}+${_info().buildNumber}',
+        'platform': (v) => v == platform,
+        'voice.activeLanguage': (v) => v == locale,
+        'voice.selectionSupported': (v) => v is bool,
+        'voice.default[].language': languages.contains,
+        'voice.default[].voice': (v) => v == null || storedVoices.contains(v),
+        'voice.default[].source': (v) => v == 'chosen' || v == 'automatic',
+        'voice.default[].platform': (v) => v == platform,
+        'voice.coaches[].coachId': (v) =>
+            CoachCatalog.defaults.any((c) => c.id == v),
+        'voice.coaches[].coachName': (v) =>
+            CoachCatalog.defaults.any((c) => c.name == v),
+        'voice.coaches[].language': languages.contains,
+        'voice.coaches[].voice': (v) => v == null || storedVoices.contains(v),
+        'voice.coaches[].source': (v) => v == 'chosen' || v == 'automatic',
+        'voice.coaches[].platform': (v) => v == platform,
+      };
+
+      for (final leaf in _leaves(svc.buildVoiceSharePayload())) {
+        final fromAnAllowedSource = sources[leaf.key];
+        expect(
+          fromAnAllowedSource,
+          isNotNull,
+          reason: 'Le champ `${leaf.key}` n\'existait pas quand la garantie '
+              'de non-fuite a été écrite. L\'ajouter ici est une décision à '
+              'prendre : dire de quelle source la valeur vient, pas la '
+              'laisser passer parce qu\'elle a l\'air inoffensive.',
+        );
+        expect(
+          fromAnAllowedSource!(leaf.value),
+          isTrue,
+          reason: '`${leaf.key}` vaut `${leaf.value}`, qui ne vient d\'aucune '
+              'source autorisée (réglages de voix, catalogue de coachs, '
+              'plateforme, langue active, version de l\'app). Ce fichier est '
+              'proposé comme anodin : tout ce qu\'il porte doit être '
+              'traçable jusqu\'à l\'une de ces cinq sources.',
         );
       }
     });
@@ -450,6 +559,64 @@ void main() {
       expect(send.onPressed, isNull);
 
       await tester.pumpAndSettle();
+    });
+  });
+
+  group('le texte provisoire ne part pas en production', () {
+    /// Version du `pubspec.yaml` sous laquelle le provisoire a été introduit.
+    /// Ce n'est pas un réglage : c'est la borne de tolérance du verrou
+    /// ci-dessous. La déplacer reconduirait le provisoire d'une release à la
+    /// suivante — c'est exactement ce que ce test existe pour empêcher.
+    const versionQuiTolereLeProvisoire = '0.6.0';
+
+    /// Verrou de publication.
+    ///
+    /// La feuille de partage s'ouvre sur `coachVoiceSharePurpose`, qui porte
+    /// encore `[PLACEHOLDER]` dans les quatre langues : ce texte dit pourquoi
+    /// ces réglages sont demandés et ce qui en sera fait — il se rédige, il
+    /// ne se code pas. Jusqu'ici rien n'empêchait **mécaniquement** ce
+    /// provisoire de partir dans une version publiée. Sur un écran qui
+    /// demande à quelqu'un de partager un fichier, un texte de remplacement
+    /// visible serait pire qu'un bug : il dirait que personne n'a relu.
+    ///
+    /// Le marqueur est donc toléré tant que le pubspec porte la version sous
+    /// laquelle il est né, et interdit dès qu'elle bouge — le bump de version
+    /// ouvre la checklist de release, c'est le dernier moment où corriger ne
+    /// coûte encore rien.
+    ///
+    /// **Quand ce test tombe**, la seule sortie est :
+    ///   1. écrire le vrai texte dans les quatre `lib/l10n/app_*.arb` ;
+    ///   2. `flutter gen-l10n` ;
+    ///   3. supprimer ce test, devenu sans objet.
+    ///
+    /// Élargir [versionQuiTolereLeProvisoire] ou retirer l'assertion revient
+    /// à publier le provisoire en connaissance de cause.
+    test('`[PLACEHOLDER]` ne survit pas au bump de version', () {
+      final root = Directory.current.path;
+      final version = RegExp(r'^version:\s*([^\s+]+)', multiLine: true)
+          .firstMatch(File('$root/pubspec.yaml').readAsStringSync())
+          ?.group(1);
+      expect(version, isNotNull,
+          reason: 'Version illisible dans pubspec.yaml.');
+
+      final languesAvecProvisoire = <String>[
+        for (final lang in kSupportedLocales.map((l) => l.languageCode))
+          if (File('$root/lib/l10n/app_$lang.arb')
+              .readAsStringSync()
+              .contains('[PLACEHOLDER]'))
+            lang,
+      ];
+
+      expect(
+        languesAvecProvisoire,
+        version == versionQuiTolereLeProvisoire ? anything : isEmpty,
+        reason: 'La version est passée à $version : une publication se '
+            'prépare, et $languesAvecProvisoire portent encore un texte de '
+            'remplacement visible à l\'écran. Écris le vrai texte dans les '
+            'fichiers `lib/l10n/app_<langue>.arb` concernés, lance '
+            '`flutter gen-l10n`, puis supprime ce test — ne déplace pas la '
+            'version tolérée, ce serait reconduire le provisoire.',
+      );
     });
   });
 }
