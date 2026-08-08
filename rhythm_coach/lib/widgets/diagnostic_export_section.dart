@@ -1,14 +1,12 @@
 import 'dart:convert';
 
-import 'package:file_saver/file_saver.dart';
-import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../l10n/app_localizations.dart';
 import '../services/diagnostic_export_service.dart';
 import '../theme/app_theme.dart';
+import 'export_delivery.dart';
 
 /// Section DIAGNOSTIC de l'écran Profil : bouton qui ouvre une bottom sheet
 /// de confirmation, à partir de laquelle la joueuse peut partager ou
@@ -107,13 +105,13 @@ class _ExportConfirmSheetState extends State<_ExportConfirmSheet> {
       final filename = svc.defaultFilename();
       final bytes = Uint8List.fromList(utf8.encode(raw));
 
-      final outcome = await _deliver(
+      final outcome = await deliverExportFile(
         bytes: bytes,
         filename: filename,
         subject: t.profileDiagnosticShareSubject,
       );
       if (!mounted) return;
-      if (outcome == _DeliverOutcome.cancelled) {
+      if (outcome == ExportDeliveryOutcome.cancelled) {
         // L'utilisatrice a fermé la save dialog desktop : on rétablit l'état
         // de la sheet pour qu'elle puisse réessayer ou annuler proprement,
         // sans snackbar trompeuse.
@@ -123,7 +121,7 @@ class _ExportConfirmSheetState extends State<_ExportConfirmSheet> {
       navigator.pop();
       messenger.showSnackBar(
         SnackBar(
-          content: Text(outcome == _DeliverOutcome.saved
+          content: Text(outcome == ExportDeliveryOutcome.saved
               ? t.profileDiagnosticSavedSnackbar
               : t.profileDiagnosticShareSnackbar),
         ),
@@ -142,7 +140,7 @@ class _ExportConfirmSheetState extends State<_ExportConfirmSheet> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final shareLabel = _shareButtonLabelFor(context);
+    final shareLabel = exportDeliveryButtonLabel(context);
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
@@ -236,86 +234,6 @@ class _ExportConfirmSheetState extends State<_ExportConfirmSheet> {
         ),
       ),
     );
-  }
-
-  String _shareButtonLabelFor(BuildContext context) {
-    final t = AppLocalizations.of(context);
-    if (kIsWeb) return t.profileDiagnosticDownloadButton;
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.android:
-      case TargetPlatform.iOS:
-        return t.profileDiagnosticShareButton;
-      case TargetPlatform.linux:
-      case TargetPlatform.windows:
-      case TargetPlatform.macOS:
-      case TargetPlatform.fuchsia:
-        return t.profileDiagnosticSaveButton;
-    }
-  }
-}
-
-enum _DeliverOutcome { shared, saved, cancelled }
-
-/// Achemine le fichier selon la plateforme :
-/// - **Web** : `file_saver.saveFile` (download blob via navigateur — la seule
-///   API qui marche sans accès au filesystem).
-/// - **Android / iOS** : `share_plus` (intent système → mail, messagerie, etc.).
-/// - **Desktop (Linux / Windows / macOS / Fuchsia)** : `file_selector` pour
-///   ouvrir un save dialog GTK/Win/AppKit, puis `XFile.saveTo` pour écrire.
-///   Volontairement **pas** `file_saver.saveAs` : son implémentation Linux
-///   throw `UnimplementedError` (la méthode n'est livrée que sur Android).
-Future<_DeliverOutcome> _deliver({
-  required Uint8List bytes,
-  required String filename,
-  required String subject,
-}) async {
-  if (kIsWeb) {
-    await FileSaver.instance.saveFile(
-      name: filename.replaceAll('.json', ''),
-      bytes: bytes,
-      fileExtension: 'json',
-      mimeType: MimeType.json,
-    );
-    return _DeliverOutcome.saved;
-  }
-  switch (defaultTargetPlatform) {
-    case TargetPlatform.android:
-    case TargetPlatform.iOS:
-      await SharePlus.instance.share(
-        ShareParams(
-          files: [
-            XFile.fromData(
-              bytes,
-              mimeType: 'application/json',
-              name: filename,
-            ),
-          ],
-          subject: subject,
-          fileNameOverrides: [filename],
-        ),
-      );
-      return _DeliverOutcome.shared;
-    case TargetPlatform.linux:
-    case TargetPlatform.windows:
-    case TargetPlatform.macOS:
-    case TargetPlatform.fuchsia:
-      final location = await getSaveLocation(
-        suggestedName: filename,
-        acceptedTypeGroups: const [
-          XTypeGroup(
-            label: 'JSON',
-            extensions: <String>['json'],
-            mimeTypes: <String>['application/json'],
-          ),
-        ],
-      );
-      if (location == null) return _DeliverOutcome.cancelled;
-      await XFile.fromData(
-        bytes,
-        mimeType: 'application/json',
-        name: filename,
-      ).saveTo(location.path);
-      return _DeliverOutcome.saved;
   }
 }
 
