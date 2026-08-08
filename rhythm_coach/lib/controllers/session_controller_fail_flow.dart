@@ -116,7 +116,12 @@ extension FailFlowOrchestrator on SessionController {
     _ticker?.cancel();
     _ticker = null;
     _stopRandomComments();
-    await _tts.stop();
+    // Borné : le ticker et le chronomètre sont déjà arrêtés, et `_state` ne
+    // bascule qu'après. Sur un canal de synthèse muet, la séance resterait
+    // `running` sans horloge ni ticker — un gel sans recours, sur le seul
+    // contrôle de séance visible en production (play/pause/stop sont derrière
+    // le toggle debug `showSessionControls`, off par défaut).
+    await _stopTtsBounded();
     await _beep.pause();
 
     _state = SessionState.failing;
@@ -148,9 +153,13 @@ extension FailFlowOrchestrator on SessionController {
       _notify();
       if (_currentFailPhrase != null) {
         // awaitSpeakCompletion(true) → ce await retourne quand la phrase
-        // est entièrement prononcée.
+        // est entièrement prononcée. Borné : `_stopTtsBounded()` plus haut a
+        // déjà arrêté ticker et chronomètre, et toute la suite du flow — la
+        // respiration, la punition, le retour en `running` — est en aval. Un
+        // moteur qui ne rappelle jamais figeait la séance en `failing`, sur le
+        // seul contrôle visible en production.
         _lastScriptedSpeakAt = DateTime.now();
-        await _tts.speak(_currentFailPhrase!);
+        await _speakBounded(_currentFailPhrase!);
       }
       if (!_isFailFlowAlive(myGen)) return;
 
@@ -362,7 +371,11 @@ extension FailFlowOrchestrator on SessionController {
     _ticker?.cancel();
     _ticker = null;
     _stopRandomComments();
-    await _tts.stop();
+    // Borné, même schéma que `triggerFail` — et plus insidieux ici : ce flow
+    // est tiré automatiquement (~1 fois par minute en carrière selon
+    // `Coach.miniPunishmentRate`), donc la séance pourrait progresser
+    // normalement puis se figer sans aucune action de l'utilisatrice.
+    await _stopTtsBounded();
     await _beep.pause();
 
     _state = SessionState.failing;

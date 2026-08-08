@@ -61,6 +61,68 @@ enum ChallengeHapticKind {
 // `part of` y réfèrent sans avoir à exposer publiquement).
 typedef _ChallengeHapticKind = ChallengeHapticKind;
 
+/// Valeur créditée au profil de capacités à la clôture d'un défi réussi.
+///
+/// Fonction pure, extraite de `_completeChallenge` pour être testable
+/// isolément — c'est ici que se joue la différence entre ce qui a été
+/// **demandé** et ce qui était **produisible**.
+///
+/// Les axes BPM sont bornés à la plage du [BeepEngine] : la cible affichée
+/// (`bpmEnd`) n'est jamais vérifiée contre ce que le moteur a joué, et la
+/// créditer telle quelle referme une boucle divergente (cf.
+/// `docs/analysis/2026-08-07-challenge-bpm-target-runaway.md`).
+@visibleForTesting
+double challengeReachedValue(Challenge ch, {required int extensionsCount}) {
+  switch (ch.kind) {
+    case ChallengeAxisKind.duration:
+      return (ch.targetThreshold + extensionsCount * ch.extensionSeconds)
+          .toDouble();
+    case ChallengeAxisKind.bpm:
+      return (ch.bpmEnd ?? ch.bpm ?? ch.targetThreshold)
+          .clamp(BeepEngine.kMinBpm, BeepEngine.kMaxBpm)
+          .toDouble();
+    case ChallengeAxisKind.depthCran:
+      return ch.targetThreshold.toDouble();
+  }
+}
+
+/// Plancher d'humiliation carrière posé par un défi réussi — « tu viens de
+/// prouver que tu peux faire X, ton humiliation doit refléter le palier
+/// qu'exigeait X ».
+///
+/// Fonction pure, extraite de [_raiseHumiliationFloorFromRecord] pour être
+/// testable isolément. Le BPM est borné comme dans [challengeReachedValue] :
+/// `HumiliationScale` est **quadratique** en BPM, une cible non bornée y
+/// pose un plancher à quatre chiffres.
+@visibleForTesting
+double challengeHumiliationFloor(Challenge ch, {required int extensionsCount}) {
+  final int durationReached;
+  final int? bpmReached;
+  switch (ch.kind) {
+    case ChallengeAxisKind.duration:
+      durationReached =
+          ch.targetThreshold + extensionsCount * ch.extensionSeconds;
+      bpmReached = ch.bpm;
+      break;
+    case ChallengeAxisKind.bpm:
+      durationReached = ch.nominalDurationSeconds;
+      bpmReached =
+          (ch.bpmEnd ?? ch.bpm)?.clamp(BeepEngine.kMinBpm, BeepEngine.kMaxBpm);
+      break;
+    case ChallengeAxisKind.depthCran:
+      durationReached = ch.nominalDurationSeconds;
+      bpmReached = ch.bpm;
+      break;
+  }
+  return HumiliationScale.requiredFor(
+    mode: ch.mode,
+    from: ch.from,
+    to: ch.to,
+    bpm: bpmReached,
+    duration: durationReached,
+  );
+}
+
 /// Snapshot d'un défi complété — sert à appliquer les bumps humil/obed
 /// au `_finish` quand plusieurs défis ont tourné dans la même séance
 /// (Phase 19.5.b multi-défi).
@@ -704,20 +766,10 @@ extension ChallengeOrchestrator on SessionController {
       // session 2/3 alors qu'elle a tenu gorge.
       if (outcome == ChallengeOutcome.netSuccess ||
           outcome == ChallengeOutcome.extendedSuccess) {
-        final reachedDuration = ch.targetThreshold +
-            _challengeExtensionsCount * ch.extensionSeconds;
-        final double reached;
-        switch (ch.kind) {
-          case ChallengeAxisKind.duration:
-            reached = reachedDuration.toDouble();
-            break;
-          case ChallengeAxisKind.bpm:
-            reached = (ch.bpmEnd ?? ch.bpm ?? ch.targetThreshold).toDouble();
-            break;
-          case ChallengeAxisKind.depthCran:
-            reached = ch.targetThreshold.toDouble();
-            break;
-        }
+        final reached = challengeReachedValue(
+          ch,
+          extensionsCount: _challengeExtensionsCount,
+        );
         _capabilityTracker?.recordChallengeReached(ch.axis, reached);
       }
     }
@@ -1162,34 +1214,13 @@ extension ChallengeOrchestrator on SessionController {
   ///
   /// Pour les axes durée, on prend la durée effectivement tenue (seuil
   /// cible + N × extensionSeconds par extension acquise). Pour les axes
-  /// BPM en rampe, on prend `bpmEnd` (vitesse finale atteinte). Pour les
-  /// axes profondeur, c'est `ch.to` qui porte déjà l'info.
+  /// BPM en rampe, on prend `bpmEnd` **borné au jouable** (vitesse finale
+  /// atteignable). Pour les axes profondeur, c'est `ch.to` qui porte déjà
+  /// l'info. Le calcul vit dans [challengeHumiliationFloor].
   void _raiseHumiliationFloorFromRecord(_CompletedChallengeRecord record) {
-    final ch = record.challenge;
-    final int durationReached;
-    final int? bpmReached;
-    switch (ch.kind) {
-      case ChallengeAxisKind.duration:
-        durationReached =
-            ch.targetThreshold + record.extensionsCount * ch.extensionSeconds;
-        bpmReached = ch.bpm;
-        break;
-      case ChallengeAxisKind.bpm:
-        durationReached = ch.nominalDurationSeconds;
-        bpmReached = ch.bpmEnd ?? ch.bpm;
-        break;
-      case ChallengeAxisKind.depthCran:
-        durationReached = ch.nominalDurationSeconds;
-        bpmReached = ch.bpm;
-        break;
-    }
-    final floor = HumiliationScale.requiredFor(
-      mode: ch.mode,
-      from: ch.from,
-      to: ch.to,
-      bpm: bpmReached,
-      duration: durationReached,
-    );
-    _humiliation.raiseCareerFloor(floor);
+    _humiliation.raiseCareerFloor(challengeHumiliationFloor(
+      record.challenge,
+      extensionsCount: record.extensionsCount,
+    ));
   }
 }

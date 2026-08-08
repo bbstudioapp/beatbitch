@@ -135,18 +135,25 @@ class _CustomModeScreenState extends State<CustomModeScreen> {
     );
   }
 
-  Future<void> _applyCoachVoicePreset(Coach? coach) async {
+  /// Sous `takeVoiceLead`, comme en carrière : le sélecteur de coach du
+  /// mode Custom porte lui aussi le réglage de voix, et son écriture peut
+  /// être encore en vol quand la séance démarre.
+  Future<void> _applyCoachVoicePreset(Coach? coach) {
     final preset = coach?.voicePreset;
-    if (preset == null || preset.isEmpty) {
-      await widget.tts.restoreDefaultVoicePreset();
-      return;
+    // `coach == null` est déjà impliqué par `preset == null` ; explicite ici
+    // pour que Dart promeuve `coach` en non-nullable jusqu'à son `id`.
+    if (coach == null || preset == null || preset.isEmpty) {
+      return widget.tts.takeVoiceLead(widget.tts.restoreDefaultVoicePreset);
     }
-    await widget.tts.applyCoachVoicePreset(
-      voiceName: preset.voiceName,
-      voiceLocale: preset.voiceLocale,
-      rate: preset.rate,
-      pitch: preset.pitch,
-      preferredGender: preset.preferredGender,
+    return widget.tts.takeVoiceLead(
+      () => widget.tts.applyCoachVoicePreset(
+        coachId: coach.id,
+        voiceName: preset.voiceName,
+        voiceLocale: preset.voiceLocale,
+        rate: preset.rate,
+        pitch: preset.pitch,
+        skipPreferredVoices: preset.skipPreferredVoices,
+      ),
     );
   }
 
@@ -161,7 +168,7 @@ class _CustomModeScreenState extends State<CustomModeScreen> {
     final isCurrent = ModalRoute.of(context)?.isCurrent ?? false;
     if (!isCurrent) return;
     widget.tts.setNameResolver(null);
-    await widget.tts.restoreDefaultVoicePreset();
+    await widget.tts.takeVoiceLead(widget.tts.restoreDefaultVoicePreset);
   }
 
   // ─── Génération ────────────────────────────────────────────────────────
@@ -406,6 +413,8 @@ class _CustomModeScreenState extends State<CustomModeScreen> {
           initial: initial,
           isNew: isNew,
           hasBalls: widget.userProfile.anatomy.hasBalls,
+          tts: widget.tts,
+          userProfile: widget.userProfile,
         ),
       ),
     );

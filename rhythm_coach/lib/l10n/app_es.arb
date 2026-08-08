@@ -523,6 +523,33 @@
   "soundsPitchLabel": "Tono",
   "soundsTestVoice": "Probar la voz",
   "soundsNoVoiceDetected": "Ninguna voz compatible detectada en este dispositivo.",
+  "profileCoachVoiceSection": "VOCES DE LOS COACHES",
+  "profileCoachVoiceSubtitle": "Cada coach puede tener su propia voz. Toca un coach para elegir una y escucharla.",
+  "coachVoicePickerTitle": "Voz de {name}",
+  "@coachVoicePickerTitle": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "coachVoiceAutomatic": "Automática",
+  "coachVoiceUnavailable": "La voz guardada no está en este dispositivo",
+  "coachVoicePreview": "Escuchar",
+  "coachVoicePlatformNoSelection": "En esta plataforma la voz depende del motor instalado.",
+  "coachVoiceLine": "Voz: {value}",
+  "@coachVoiceLine": {
+    "description": "Línea de descubrimiento en una tarjeta de coach. {value} es un nombre de voz o «Automática».",
+    "placeholders": {
+      "value": { "type": "String" }
+    }
+  },
+  "coachVoiceShareButton": "Compartir mis ajustes de voz",
+  "coachVoiceShareSheetTitle": "Compartir mis ajustes de voz",
+  "coachVoiceSharePurpose": "Las voces predeterminadas de BeatBitch están ajustadas para el francés, y bastante peor para los demás idiomas. Si has encontrado una combinación que suena bien, compartirla ayuda a corregirlo para todo el mundo.\n\nEl archivo de abajo solo contiene tus elecciones de voz: nada de tu progreso, tu perfil ni tus sesiones. No se envía a ninguna parte por su cuenta: tú eliges a quién y con qué aplicación.",
+  "@coachVoiceSharePurpose": {
+    "description": "Encabezado de la hoja de compartir los ajustes de voz: por qué estos ajustes interesan al proyecto, qué contiene el archivo y quién decide el envío."
+  },
+  "coachVoiceShareContentLabel": "Este es el archivo completo — no se envía nada más:",
+  "coachVoiceShareSubject": "Ajustes de voz de BeatBitch",
   "soundsAmbienceSection": "Ambiente",
   "soundsAmbienceSubtitle": "Pack de fondo reproducido durante las sesiones. La selección se comparte con la pantalla de juego. Toca un modo para escuchar.",
   "soundsPackLabel": "Pack",

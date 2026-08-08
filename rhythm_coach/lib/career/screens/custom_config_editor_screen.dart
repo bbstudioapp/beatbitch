@@ -6,6 +6,8 @@ import '../../l10n/format_helpers.dart';
 import '../../main.dart' show coachService;
 import '../../models/session.dart';
 import '../../models/session_step.dart';
+import '../../services/tts_service.dart';
+import '../../services/user_profile_service.dart';
 import '../../theme/app_theme.dart';
 import '../models/custom_session_config.dart';
 import 'custom_coach_picker_screen.dart';
@@ -29,11 +31,17 @@ class CustomConfigEditorScreen extends StatefulWidget {
   /// `maxDepthIndex` legacy à `balls` est clampé à `full` au load.
   final bool hasBalls;
 
+  /// Transmis au sélecteur de coach, qui y expose le réglage de voix.
+  final TtsService tts;
+  final UserProfileService userProfile;
+
   const CustomConfigEditorScreen({
     super.key,
     required this.initial,
     required this.isNew,
     required this.hasBalls,
+    required this.tts,
+    required this.userProfile,
   });
 
   @override
@@ -159,6 +167,8 @@ class _CustomConfigEditorScreenState extends State<CustomConfigEditorScreen> {
       context,
       service: coachService,
       selectedCoachId: _coachId,
+      tts: widget.tts,
+      userProfile: widget.userProfile,
     );
     if (picked == null || !mounted) return;
     setState(() => _coachId = picked.coachId);

@@ -523,6 +523,33 @@
   "soundsPitchLabel": "Hauteur",
   "soundsTestVoice": "Tester la voix",
   "soundsNoVoiceDetected": "Aucune voix française détectée sur cet appareil.",
+  "profileCoachVoiceSection": "VOIX DES COACHS",
+  "profileCoachVoiceSubtitle": "Chaque coach peut avoir sa propre voix. Touche un coach pour en choisir une et l'écouter.",
+  "coachVoicePickerTitle": "Voix de {name}",
+  "@coachVoicePickerTitle": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "coachVoiceAutomatic": "Automatique",
+  "coachVoiceUnavailable": "Voix enregistrée absente de cet appareil",
+  "coachVoicePreview": "Écouter",
+  "coachVoicePlatformNoSelection": "Sur cette plateforme, la voix dépend du moteur installé.",
+  "coachVoiceLine": "Voix : {value}",
+  "@coachVoiceLine": {
+    "description": "Ligne de découvrabilité sur une carte de coach. {value} est un nom de voix ou « Automatique ».",
+    "placeholders": {
+      "value": { "type": "String" }
+    }
+  },
+  "coachVoiceShareButton": "Partager mes réglages de voix",
+  "coachVoiceShareSheetTitle": "Partager mes réglages de voix",
+  "coachVoiceSharePurpose": "Les voix par défaut de BeatBitch sont réglées pour le français, et beaucoup moins bien pour les autres langues. Si tu as trouvé une combinaison qui sonne juste, la partager aide à corriger ça pour tout le monde.\n\nLe fichier ci-dessous ne contient que tes choix de voix : rien de ta progression, de ton profil ni de tes séances. Il n'est envoyé nulle part tout seul — tu choisis à qui, et par quelle application.",
+  "@coachVoiceSharePurpose": {
+    "description": "En-tête de la feuille de partage des réglages de voix : pourquoi ces réglages intéressent le projet, ce que le fichier contient, et qui décide de l'envoi."
+  },
+  "coachVoiceShareContentLabel": "Voici le fichier en entier — rien d'autre n'est envoyé :",
+  "coachVoiceShareSubject": "Réglages de voix BeatBitch",
   "soundsAmbienceSection": "Ambiance",
   "soundsAmbienceSubtitle": "Pack d'arrière-plan appliqué pendant les séances. Sélection partagée avec l'écran de jeu. Touche un mode pour écouter.",
   "soundsPackLabel": "Pack",

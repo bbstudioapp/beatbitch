@@ -1069,6 +1069,54 @@ class AppLocalizationsDe extends AppLocalizations {
       'Keine passende Stimme auf diesem Gerät gefunden.';
 
   @override
+  String get profileCoachVoiceSection => 'STIMMEN DER COACHES';
+
+  @override
+  String get profileCoachVoiceSubtitle =>
+      'Jeder Coach kann eine eigene Stimme haben. Tippe einen Coach an, um eine auszuwählen und anzuhören.';
+
+  @override
+  String coachVoicePickerTitle(String name) {
+    return 'Stimme von $name';
+  }
+
+  @override
+  String get coachVoiceAutomatic => 'Automatisch';
+
+  @override
+  String get coachVoiceUnavailable =>
+      'Gespeicherte Stimme auf diesem Gerät nicht vorhanden';
+
+  @override
+  String get coachVoicePreview => 'Anhören';
+
+  @override
+  String get coachVoicePlatformNoSelection =>
+      'Auf dieser Plattform hängt die Stimme von der installierten Engine ab.';
+
+  @override
+  String coachVoiceLine(String value) {
+    return 'Stimme: $value';
+  }
+
+  @override
+  String get coachVoiceShareButton => 'Meine Stimmeinstellungen teilen';
+
+  @override
+  String get coachVoiceShareSheetTitle => 'Meine Stimmeinstellungen teilen';
+
+  @override
+  String get coachVoiceSharePurpose =>
+      'Die Standardstimmen von BeatBitch sind auf Französisch abgestimmt und für andere Sprachen deutlich schlechter. Wenn du eine Kombination gefunden hast, die stimmig klingt, hilft es allen, sie zu teilen.\n\nDie Datei unten enthält ausschließlich deine Stimmauswahl: nichts von deinem Fortschritt, deinem Profil oder deinen Sessions. Sie wird von allein nirgendwohin geschickt — du entscheidest, an wen und über welche App.';
+
+  @override
+  String get coachVoiceShareContentLabel =>
+      'Hier ist die vollständige Datei — mehr wird nicht gesendet:';
+
+  @override
+  String get coachVoiceShareSubject => 'BeatBitch-Stimmeinstellungen';
+
+  @override
   String get soundsAmbienceSection => 'Ambiente';
 
   @override

@@ -2,9 +2,13 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../career/models/coach_catalog.dart';
 import '../career/models/specialization.dart';
 import '../models/badge.dart';
 import 'capability_axis.dart';
+import 'locale_service.dart';
+import 'profile_reconciliation.dart';
+import 'tts_service.dart';
 
 /// Inverse de [DiagnosticExportService] : réécrit l'état persisté
 /// (`SharedPreferences`) à partir d'un payload au **format d'export**.
@@ -48,6 +52,11 @@ class DiagnosticImportService {
     _bool('profile.anatomy.has_balls', _map(payload['anatomy'])['hasBalls']);
     if (payload['nicknames'] != null) {
       _nicknames(_map(payload['nicknames']));
+    }
+    final voice = payload['voice'];
+    if (_carriesVoiceSettings(voice)) {
+      await _clearVoiceKeys();
+      _voice(_map(voice));
     }
     _surprise(_map(payload['surprise']));
     _settings(_map(payload['settings']));
@@ -136,6 +145,37 @@ class DiagnosticImportService {
     _stringList('user_profile_custom_nicknames', j['custom']);
     _stringList(
         'user_profile_disabled_default_nicknames', j['disabledDefaults']);
+  }
+
+  /// Repose les réglages de voix **tels quels** : une voix absente du nouvel
+  /// appareil retombe sur le repli silencieux de la séance, et la préférence
+  /// reste en base pour reprendre effet si la voix réapparaît. Rien à valider
+  /// ici, donc.
+  ///
+  /// `source` n'est jamais lu : il n'existe que pour le lecteur humain. Ni
+  /// `platform`, qui dit de quel moteur vient l'identifiant mais ne change
+  /// rien à ce qu'on écrit : reposer sur un autre moteur une voix qui n'y
+  /// existe pas tombe sur le même repli silencieux qu'une voix désinstallée,
+  /// et filtrer ferait disparaître les réglages d'un export chargé pour
+  /// diagnostic depuis une autre machine. Une entrée « automatique » porte
+  /// `voice: null`, que [_string] ignore — et une clé absente *est* le mode
+  /// automatique.
+  ///
+  /// Les clés sont composées via [TtsService] à partir du `coachId` et de la
+  /// langue portés par l'entrée : un id inconnu du catalogue (export d'une
+  /// version plus récente) se repose donc sans traitement particulier.
+  void _voice(Map<String, dynamic> j) {
+    for (final e in _entries(j['default'])) {
+      final lang = e['language'];
+      if (lang is String) _string(TtsService.userVoiceKey(lang), e['voice']);
+    }
+    for (final e in _entries(j['coaches'])) {
+      final id = e['coachId'];
+      final lang = e['language'];
+      if (id is String && lang is String) {
+        _string(TtsService.coachVoiceKey(id, lang), e['voice']);
+      }
+    }
   }
 
   void _surprise(Map<String, dynamic> j) {
@@ -237,9 +277,48 @@ class DiagnosticImportService {
       'pref.show_session_remaining_time',
       'app.adult_consent_accepted',
       'onboarding.shown',
+      // Le profil importé remplace l'existant : il doit être réconcilié
+      // comme n'importe quel profil chargé, donc au redémarrage qui suit
+      // l'import. Garder le drapeau posé ferait entrer un profil dérivé
+      // sans jamais le rattraper.
+      ProfileReconciliation.flagKey,
+      ProfileReconciliation.reportKey,
+      ProfileReconciliation.ranAtKey,
     };
     for (final k in keys) {
       await _prefs.remove(k);
+    }
+  }
+
+  /// Une section `voice` **exploitable** : une Map portant au moins une des
+  /// deux listes d'entrées. C'est ce qui conditionne l'effacement préalable
+  /// (cf. [_clearVoiceKeys]) — effacer sans rien pouvoir reposer derrière
+  /// viderait les réglages en silence, alors que le payload n'a rien dit sur
+  /// la voix. Écarte donc `{}`, une chaîne, un nombre, une liste, `null`.
+  static bool _carriesVoiceSettings(dynamic v) =>
+      v is Map && (v['default'] is List || v['coaches'] is List);
+
+  /// Efface les réglages de voix, **seulement** quand le payload en porte
+  /// (cf. [apply]) — à la différence des autres sections, effacées sans
+  /// condition.
+  ///
+  /// Pourquoi cette exception : tout export produit depuis la Phase 3 porte
+  /// une section `voice`, donc charger l'export d'une utilisatrice repose
+  /// bien son état vocal exact — sans quoi on diagnostiquerait un problème
+  /// de voix en entendant ses propres réglages. Un payload qui n'en parle
+  /// pas (preset debug d'`assets/debug/profiles/`, export d'avant la Phase 3)
+  /// ne gère pas les voix : les effacer changerait silencieusement la voix
+  /// de la machine, et le repli est justement muet en séance.
+  ///
+  /// Énumération par **composition** (catalogue × langues supportées), jamais
+  /// par filtrage-parsing des clés : un `coachId` peut contenir un point.
+  Future<void> _clearVoiceKeys() async {
+    for (final locale in kSupportedLocales) {
+      final lang = locale.languageCode;
+      await _prefs.remove(TtsService.userVoiceKey(lang));
+      for (final coach in CoachCatalog.defaults) {
+        await _prefs.remove(TtsService.coachVoiceKey(coach.id, lang));
+      }
     }
   }
 
@@ -267,4 +346,11 @@ class DiagnosticImportService {
 
   static Map<String, dynamic> _map(dynamic v) =>
       v is Map ? Map<String, dynamic>.from(v) : const <String, dynamic>{};
+
+  static List<Map<String, dynamic>> _entries(dynamic v) => v is List
+      ? <Map<String, dynamic>>[
+          for (final e in v)
+            if (e is Map) Map<String, dynamic>.from(e),
+        ]
+      : const <Map<String, dynamic>>[];
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../career/models/coach.dart';
 import '../career/services/career_difficulty_resolver.dart';
 import '../career/services/career_progress_service.dart';
 import '../career/services/challenge_service.dart';
@@ -19,6 +20,7 @@ import '../services/stats_service.dart';
 import '../services/tts_service.dart';
 import '../services/user_profile_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/coach_voice_section.dart';
 import '../widgets/diagnostic_export_section.dart';
 import '../widgets/identity_section.dart';
 import '../widgets/language_picker_row.dart';
@@ -80,6 +82,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       badges: badges,
       capabilities: capabilities,
       packageInfo: packageInfo,
+      unlockedCoaches:
+          coachService.coaches.where(coachService.isUnlocked).toList(),
     );
   }
 
@@ -202,6 +206,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   tts: widget.tts!,
                   userProfile: widget.userProfile,
                 ),
+                if (bundle.unlockedCoaches.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  _SectionLabel(t.profileCoachVoiceSection),
+                  const SizedBox(height: 8),
+                  CoachVoiceSection(
+                    tts: widget.tts!,
+                    coaches: bundle.unlockedCoaches,
+                    userProfile: widget.userProfile,
+                  ),
+                ],
               ],
               const SizedBox(height: 24),
               _SectionLabel(t.profileSessionDisplaySection),
@@ -877,10 +891,16 @@ class _ProfileBundle {
   final CapabilityProfile capabilities;
   final PackageInfo packageInfo;
 
+  /// Coachs dont la voix est réglable ici : les **débloqués** seulement. Le
+  /// picker de carrière masque volontairement les tiers à venir, lister tout
+  /// le catalogue dans le Profil éventerait leur existence et leur nom.
+  final List<Coach> unlockedCoaches;
+
   const _ProfileBundle({
     required this.reputation,
     required this.badges,
     required this.capabilities,
     required this.packageInfo,
+    required this.unlockedCoaches,
   });
 }

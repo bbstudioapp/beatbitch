@@ -1065,6 +1065,54 @@ class AppLocalizationsEn extends AppLocalizations {
       'No matching voice detected on this device.';
 
   @override
+  String get profileCoachVoiceSection => 'COACH VOICES';
+
+  @override
+  String get profileCoachVoiceSubtitle =>
+      'Each coach can have their own voice. Tap a coach to pick one and hear it.';
+
+  @override
+  String coachVoicePickerTitle(String name) {
+    return '$name\'s voice';
+  }
+
+  @override
+  String get coachVoiceAutomatic => 'Automatic';
+
+  @override
+  String get coachVoiceUnavailable =>
+      'Saved voice not available on this device';
+
+  @override
+  String get coachVoicePreview => 'Play';
+
+  @override
+  String get coachVoicePlatformNoSelection =>
+      'On this platform the voice depends on the installed engine.';
+
+  @override
+  String coachVoiceLine(String value) {
+    return 'Voice: $value';
+  }
+
+  @override
+  String get coachVoiceShareButton => 'Share my voice settings';
+
+  @override
+  String get coachVoiceShareSheetTitle => 'Share my voice settings';
+
+  @override
+  String get coachVoiceSharePurpose =>
+      'BeatBitch\'s default voices are tuned for French, and much less so for other languages. If you\'ve found a combination that sounds right, sharing it helps fix this for everyone.\n\nThe file below contains nothing but your voice choices: none of your progress, your profile or your sessions. It isn\'t sent anywhere on its own — you choose who gets it, and through which app.';
+
+  @override
+  String get coachVoiceShareContentLabel =>
+      'Here is the whole file — nothing else is sent:';
+
+  @override
+  String get coachVoiceShareSubject => 'BeatBitch voice settings';
+
+  @override
   String get soundsAmbienceSection => 'Ambience';
 
   @override

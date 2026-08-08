@@ -20,8 +20,34 @@ import '../theme/app_theme.dart';
 ///
 /// Charge la liste des voix à l'init (après `tts.init()`, idempotent) et
 /// reflète l'état courant du [TtsService] partagé : changer la voix /
-/// vitesse / hauteur ici s'applique immédiatement et persiste tant que
-/// le service vit.
+/// vitesse / hauteur ici s'applique immédiatement.
+///
+/// Seule la **voix** est mémorisée (par langue, cf. `TtsService.setUserVoice`) :
+/// elle survit à la fermeture de l'app et est restituée en sortie de session
+/// carrière. Vitesse et hauteur ne le sont pas encore — elles retombent aux
+/// défauts plateforme dès qu'un coach a posé son preset.
+final RegExp _namePlaceholder =
+    RegExp(r'\s?\{\s*name\s*\}', caseSensitive: false);
+
+/// Construit la phrase de test de voix telle qu'elle sera **exactement**
+/// prononcée : `{name}` substitué par le prénom (l'espace capturé devant est
+/// préservé), ou retiré proprement s'il est vide. Pas de tirage aléatoire
+/// dans le pool de surnoms — l'audio rendu correspond mot pour mot au
+/// sous-titre affiché.
+///
+/// Partagée avec le réglage de voix par coach (`CoachVoiceSection`), qui
+/// réutilise cette même phrase pour son aperçu sonore plutôt que d'en
+/// introduire une seconde.
+String resolveVoiceTestPhrase(UserProfileService userProfile) {
+  final raw = CoachPhrasesService.instance.current.testVoicePhrase;
+  final prenom = userProfile.prenom?.trim();
+  return raw.replaceAllMapped(_namePlaceholder, (m) {
+    if (prenom == null || prenom.isEmpty) return '';
+    final hadSpace = m.group(0)?.startsWith(' ') ?? false;
+    return hadSpace ? ' $prenom' : prenom;
+  });
+}
+
 class VoiceSettingsSection extends StatefulWidget {
   final TtsService tts;
   final UserProfileService userProfile;
@@ -37,9 +63,6 @@ class VoiceSettingsSection extends StatefulWidget {
 }
 
 class _VoiceSettingsSectionState extends State<VoiceSettingsSection> {
-  static final RegExp _namePlaceholder =
-      RegExp(r'\s?\{\s*name\s*\}', caseSensitive: false);
-
   bool _ready = false;
   List<Map<String, String>> _voices = const [];
   String? _selectedVoiceName;
@@ -110,19 +133,7 @@ class _VoiceSettingsSectionState extends State<VoiceSettingsSection> {
     });
   }
 
-  /// Construit la phrase exacte qui sera lue : substitue `{name}` par le
-  /// prénom (préserve l'espace capturé devant), ou retire le placeholder
-  /// proprement si le prénom est vide. Pas de tirage aléatoire — l'audio
-  /// rendu correspond mot pour mot au sous-titre affiché.
-  String _resolveTestPhrase() {
-    final raw = CoachPhrasesService.instance.current.testVoicePhrase;
-    final prenom = widget.userProfile.prenom?.trim();
-    return raw.replaceAllMapped(_namePlaceholder, (m) {
-      if (prenom == null || prenom.isEmpty) return '';
-      final hadSpace = m.group(0)?.startsWith(' ') ?? false;
-      return hadSpace ? ' $prenom' : prenom;
-    });
-  }
+  String _resolveTestPhrase() => resolveVoiceTestPhrase(widget.userProfile);
 
   Future<void> _testVoice() async {
     await widget.tts.stop();
@@ -147,7 +158,10 @@ class _VoiceSettingsSectionState extends State<VoiceSettingsSection> {
           onChanged: (name) async {
             if (name == null) return;
             final voice = _voices.firstWhere((v) => v['name'] == name);
-            await widget.tts.setVoiceByName(name, voice['locale'] ?? 'fr-FR');
+            // `setUserVoice` et non `setVoiceByName` : c'est LE choix
+            // explicite de l'utilisateur, le seul qui soit mémorisé et qui
+            // prime ensuite sur l'auto-sélection.
+            await widget.tts.setUserVoice(name, voice['locale'] ?? 'fr-FR');
             if (!mounted) return;
             setState(() => _selectedVoiceName = name);
           },

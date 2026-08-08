@@ -1908,6 +1908,84 @@ abstract class AppLocalizations {
   /// **'Aucune voix française détectée sur cet appareil.'**
   String get soundsNoVoiceDetected;
 
+  /// No description provided for @profileCoachVoiceSection.
+  ///
+  /// In fr, this message translates to:
+  /// **'VOIX DES COACHS'**
+  String get profileCoachVoiceSection;
+
+  /// No description provided for @profileCoachVoiceSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Chaque coach peut avoir sa propre voix. Touche un coach pour en choisir une et l\'écouter.'**
+  String get profileCoachVoiceSubtitle;
+
+  /// No description provided for @coachVoicePickerTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voix de {name}'**
+  String coachVoicePickerTitle(String name);
+
+  /// No description provided for @coachVoiceAutomatic.
+  ///
+  /// In fr, this message translates to:
+  /// **'Automatique'**
+  String get coachVoiceAutomatic;
+
+  /// No description provided for @coachVoiceUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voix enregistrée absente de cet appareil'**
+  String get coachVoiceUnavailable;
+
+  /// No description provided for @coachVoicePreview.
+  ///
+  /// In fr, this message translates to:
+  /// **'Écouter'**
+  String get coachVoicePreview;
+
+  /// No description provided for @coachVoicePlatformNoSelection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sur cette plateforme, la voix dépend du moteur installé.'**
+  String get coachVoicePlatformNoSelection;
+
+  /// Ligne de découvrabilité sur une carte de coach. {value} est un nom de voix ou « Automatique ».
+  ///
+  /// In fr, this message translates to:
+  /// **'Voix : {value}'**
+  String coachVoiceLine(String value);
+
+  /// No description provided for @coachVoiceShareButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partager mes réglages de voix'**
+  String get coachVoiceShareButton;
+
+  /// No description provided for @coachVoiceShareSheetTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partager mes réglages de voix'**
+  String get coachVoiceShareSheetTitle;
+
+  /// En-tête de la feuille de partage des réglages de voix : pourquoi ces réglages intéressent le projet, ce que le fichier contient, et qui décide de l'envoi.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les voix par défaut de BeatBitch sont réglées pour le français, et beaucoup moins bien pour les autres langues. Si tu as trouvé une combinaison qui sonne juste, la partager aide à corriger ça pour tout le monde.\n\nLe fichier ci-dessous ne contient que tes choix de voix : rien de ta progression, de ton profil ni de tes séances. Il n\'est envoyé nulle part tout seul — tu choisis à qui, et par quelle application.'**
+  String get coachVoiceSharePurpose;
+
+  /// No description provided for @coachVoiceShareContentLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voici le fichier en entier — rien d\'autre n\'est envoyé :'**
+  String get coachVoiceShareContentLabel;
+
+  /// No description provided for @coachVoiceShareSubject.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réglages de voix BeatBitch'**
+  String get coachVoiceShareSubject;
+
   /// No description provided for @soundsAmbienceSection.
   ///
   /// In fr, this message translates to:

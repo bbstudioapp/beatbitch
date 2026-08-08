@@ -523,6 +523,33 @@
   "soundsPitchLabel": "Tonhöhe",
   "soundsTestVoice": "Stimme testen",
   "soundsNoVoiceDetected": "Keine passende Stimme auf diesem Gerät gefunden.",
+  "profileCoachVoiceSection": "STIMMEN DER COACHES",
+  "profileCoachVoiceSubtitle": "Jeder Coach kann eine eigene Stimme haben. Tippe einen Coach an, um eine auszuwählen und anzuhören.",
+  "coachVoicePickerTitle": "Stimme von {name}",
+  "@coachVoicePickerTitle": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "coachVoiceAutomatic": "Automatisch",
+  "coachVoiceUnavailable": "Gespeicherte Stimme auf diesem Gerät nicht vorhanden",
+  "coachVoicePreview": "Anhören",
+  "coachVoicePlatformNoSelection": "Auf dieser Plattform hängt die Stimme von der installierten Engine ab.",
+  "coachVoiceLine": "Stimme: {value}",
+  "@coachVoiceLine": {
+    "description": "Hinweiszeile auf einer Coach-Karte. {value} ist ein Stimmname oder „Automatisch“.",
+    "placeholders": {
+      "value": { "type": "String" }
+    }
+  },
+  "coachVoiceShareButton": "Meine Stimmeinstellungen teilen",
+  "coachVoiceShareSheetTitle": "Meine Stimmeinstellungen teilen",
+  "coachVoiceSharePurpose": "Die Standardstimmen von BeatBitch sind auf Französisch abgestimmt und für andere Sprachen deutlich schlechter. Wenn du eine Kombination gefunden hast, die stimmig klingt, hilft es allen, sie zu teilen.\n\nDie Datei unten enthält ausschließlich deine Stimmauswahl: nichts von deinem Fortschritt, deinem Profil oder deinen Sessions. Sie wird von allein nirgendwohin geschickt — du entscheidest, an wen und über welche App.",
+  "@coachVoiceSharePurpose": {
+    "description": "Kopftext des Teilen-Fensters für die Stimmeinstellungen: warum diese Einstellungen für das Projekt interessant sind, was die Datei enthält und wer über das Verschicken entscheidet."
+  },
+  "coachVoiceShareContentLabel": "Hier ist die vollständige Datei — mehr wird nicht gesendet:",
+  "coachVoiceShareSubject": "BeatBitch-Stimmeinstellungen",
   "soundsAmbienceSection": "Ambiente",
   "soundsAmbienceSubtitle": "Hintergrund-Pack, das während der Sessions läuft. Auswahl wird mit dem Spielbildschirm geteilt. Tippe einen Modus an, um ihn anzuhören.",
   "soundsPackLabel": "Pack",
