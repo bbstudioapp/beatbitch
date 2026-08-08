@@ -96,15 +96,27 @@ void main() {
   final voicesPushed = <String>[];
   var engineVoices = <Map<String, String>>[...enVoices];
 
+  /// Temps que met le moteur à répondre aux appels de voix. Zéro partout
+  /// sauf là où on veut observer ce qui se passe *pendant* un aperçu : un
+  /// moteur qui répond dans la foulée referme la fenêtre de course, et un
+  /// test de concurrence passerait alors avant comme après un correctif.
+  var voiceCallLatency = Duration.zero;
+
   void installFakeEngine() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
       switch (call.method) {
         case 'getVoices':
+          if (voiceCallLatency > Duration.zero) {
+            await Future<void>.delayed(voiceCallLatency);
+          }
           return engineVoices
               .map(Map<String, String>.from)
               .toList(growable: false);
         case 'setVoice':
+          if (voiceCallLatency > Duration.zero) {
+            await Future<void>.delayed(voiceCallLatency);
+          }
           final args = (call.arguments as Map).cast<String, Object?>();
           voicesPushed.add(args['name']! as String);
           return 1;
@@ -118,6 +130,7 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     voicesPushed.clear();
     engineVoices = <Map<String, String>>[...enVoices];
+    voiceCallLatency = Duration.zero;
     installFakeEngine();
     await LocaleService.instance.setLocale(const Locale('en'));
     await CoachPhrasesService.instance.ensureLoaded(locale: const Locale('en'));
@@ -397,6 +410,49 @@ void main() {
       expect(tts.currentVoiceName, 'en-us-x-tpd-local',
           reason: 'le coach n\'a pas le droit de détruire le réglage '
               'hors-carrière en repartant');
+    });
+
+    testWidgets('fermer la feuille en plein aperçu ne laisse rien du coach',
+        (tester) async {
+      // Une feuille modale se ferme par le bouton retour, un tap hors zone
+      // ou un glissement vers le bas, et rend la main **sans attendre**
+      // l'aperçu qu'un `onTap` a lancé. Les deux chaînes écrivent alors sur
+      // le même service : si la restauration finit la première, l'aperçu
+      // repose le preset du coach derrière elle et la section VOIX du
+      // dessus présente la voix de Marc comme celle de l'utilisateur.
+      final tts = TtsService(locale: const Locale('en'));
+      await tts.init();
+      await tts.setUserVoice('en-us-x-tpd-local', 'en-US');
+      await pumpSection(tester, tts);
+
+      // Le moteur devient lent : sur appareil, chaque appel de voix
+      // traverse le canal de plateforme puis le moteur TTS. Sans cette
+      // latence, la fenêtre de course s'effondre à zéro.
+      voiceCallLatency = const Duration(milliseconds: 200);
+
+      await tester.tap(find.text('Marc'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('en-gb-x-gbd-local  ·  en-GB'));
+      // Surtout pas de `pumpAndSettle` ici : l'aperçu doit être encore en
+      // vol au moment où la feuille se ferme.
+      await tester.pump();
+
+      Navigator.of(tester.element(find.byType(Scaffold))).pop();
+      await tester.pumpAndSettle();
+      // Les réponses du moteur lent sont des timers, pas des animations :
+      // `pumpAndSettle` rend la main avant qu'elles soient toutes tombées.
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+
+      expect(tts.currentPitch, closeTo(TtsService.defaultPitch, 0.001),
+          reason: 'la hauteur de Marc (0.85) survit à la fermeture et '
+              'devient celle que le Profil affiche comme réglage par '
+              'défaut');
+      expect(tts.currentRate, closeTo(TtsService.defaultRate, 0.001),
+          reason: 'même chose pour le débit du coach');
+      expect(tts.currentVoiceName, 'en-us-x-tpd-local',
+          reason: 'et la voix rendue reste celle que l\'utilisateur a '
+              'choisie');
     });
   });
 }

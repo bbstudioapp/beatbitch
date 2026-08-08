@@ -54,6 +54,28 @@ class _CoachVoiceSectionState extends State<CoachVoiceSection> {
   /// `coachId` → voix choisie pour la langue active, absent si « automatique ».
   Map<String, String> _overrides = const {};
 
+  /// Chaîne des écritures de l'état vocal partagé du service : pose du
+  /// preset par l'aperçu, restauration à la fermeture de la feuille.
+  ///
+  /// La feuille se ferme par n'importe quel geste — bouton retour, tap hors
+  /// zone, glissement vers le bas — et rend la main **sans attendre**
+  /// l'aperçu qu'un `onTap` a lancé. Les deux chaînes écrivent alors sur le
+  /// même service : si la restauration finit la première, l'aperçu repose
+  /// le timbre, le débit et la hauteur du coach derrière elle, et la
+  /// section VOIX juste au-dessus les présente comme le réglage par défaut
+  /// de l'utilisateur — la confusion même que ce bloc existe pour dissiper.
+  /// La restauration étant toujours la dernière enfilée, c'est elle qui a
+  /// le dernier mot, quel que soit le moment de la fermeture.
+  Future<void> _voiceOps = Future<void>.value();
+
+  Future<void> _enqueueVoiceOp(Future<void> Function() op) {
+    final next = _voiceOps.then((_) => op());
+    // Une opération en échec ne doit pas condamner celles d'après : c'est
+    // la restauration qui compte, et elle passe en dernier.
+    _voiceOps = next.catchError((Object _) {});
+    return next;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -111,9 +133,13 @@ class _CoachVoiceSectionState extends State<CoachVoiceSection> {
         voices: _voices,
         userProfile: widget.userProfile,
         initialSelection: _overrides[coach.id],
+        enqueueVoiceOp: _enqueueVoiceOp,
       ),
     );
-    await widget.tts.restoreDefaultVoicePreset();
+    // Couper l'aperçu encore audible : hors file, puisque c'est justement
+    // l'opération en cours qu'il s'agit d'interrompre.
+    await widget.tts.stop();
+    await _enqueueVoiceOp(widget.tts.restoreDefaultVoicePreset);
     await _load(markReady: false);
   }
 
@@ -245,12 +271,17 @@ class _CoachVoiceSheet extends StatefulWidget {
   final UserProfileService userProfile;
   final String? initialSelection;
 
+  /// Enchaîne une écriture de l'état vocal partagé derrière celles déjà en
+  /// vol (cf. [_CoachVoiceSectionState._enqueueVoiceOp]).
+  final Future<void> Function(Future<void> Function()) enqueueVoiceOp;
+
   const _CoachVoiceSheet({
     required this.tts,
     required this.coach,
     required this.voices,
     required this.userProfile,
     required this.initialSelection,
+    required this.enqueueVoiceOp,
   });
 
   @override
@@ -284,15 +315,20 @@ class _CoachVoiceSheetState extends State<_CoachVoiceSheet> {
   /// la hauteur du personnage : on juge un timbre *dans* sa couleur vocale.
   Future<void> _preview() async {
     final preset = widget.coach.voicePreset;
-    await widget.tts.stop();
-    await widget.tts.applyCoachVoicePreset(
-      coachId: widget.coach.id,
-      voiceName: preset.voiceName,
-      voiceLocale: preset.voiceLocale,
-      rate: preset.rate,
-      pitch: preset.pitch,
-      preferredGender: preset.preferredGender,
-    );
+    await widget.enqueueVoiceOp(() async {
+      await widget.tts.stop();
+      await widget.tts.applyCoachVoicePreset(
+        coachId: widget.coach.id,
+        voiceName: preset.voiceName,
+        voiceLocale: preset.voiceLocale,
+        rate: preset.rate,
+        pitch: preset.pitch,
+        preferredGender: preset.preferredGender,
+      );
+    });
+    // Feuille fermée pendant la pose du preset : la restauration est déjà
+    // enfilée derrière, on ne parle pas par-dessus avec la voix du coach.
+    if (!mounted) return;
     await widget.tts.speak(resolveVoiceTestPhrase(widget.userProfile));
   }
 
