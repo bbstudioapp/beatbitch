@@ -705,6 +705,7 @@ class _CareerScreenState extends State<CareerScreen> {
       return;
     }
     await widget.tts.applyCoachVoicePreset(
+      coachId: coach.id,
       voiceName: preset.voiceName,
       voiceLocale: preset.voiceLocale,
       rate: preset.rate,
