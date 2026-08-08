@@ -166,18 +166,27 @@ class CoachService extends ChangeNotifier {
   ///
   /// Renvoie la liste des coachs nouvellement débloqués lors de cet appel
   /// (utile pour afficher un toast / lire une annonce TTS).
+  ///
+  /// Réconciliation complète, pas incrémentale : on parcourt **tout** le
+  /// catalogue plutôt que les seuls paliers franchis depuis le dernier
+  /// appel. Sinon un Principal inséré à un palier intermédiaire par une
+  /// mise à jour (Marc, palier 3, 0.6.0) reste inaccessible à vie pour
+  /// qui avait déjà dépassé ce palier — ce palier n'étant plus jamais
+  /// revisité, et ce d'autant plus sûrement qu'on a joué longtemps.
+  /// Idempotent : sans coach à rattraper, rien n'est écrit ni notifié.
   Future<List<Coach>> syncFromTotalSeconds(int totalSeconds) async {
-    final reachedTier = _maxReachableTier(totalSeconds);
-    if (reachedTier <= _currentTier) return const [];
-
     final newlyUnlocked = <Coach>[];
-    for (var t = _currentTier + 1; t <= reachedTier; t++) {
-      final p = principalOfTier(t);
-      if (p != null && _unlockedIds.add(p.id)) {
-        newlyUnlocked.add(p);
-      }
+    for (final c in _coaches) {
+      if (!c.isPrincipal) continue;
+      if (c.requirements.minPlayerSeconds > totalSeconds) continue;
+      if (_unlockedIds.add(c.id)) newlyUnlocked.add(c);
     }
-    _currentTier = reachedTier;
+
+    final reachedTier = _maxReachableTier(totalSeconds);
+    final advances = reachedTier > _currentTier;
+    if (newlyUnlocked.isEmpty && !advances) return const [];
+
+    if (advances) _currentTier = reachedTier;
     await _persist();
     notifyListeners();
     return newlyUnlocked;
