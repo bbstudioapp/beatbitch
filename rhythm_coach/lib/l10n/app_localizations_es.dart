@@ -1101,6 +1101,23 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get coachVoiceShareButton => 'Compartir mis ajustes de voz';
+
+  @override
+  String get coachVoiceShareSheetTitle => 'Compartir mis ajustes de voz';
+
+  @override
+  String get coachVoiceSharePurpose =>
+      '[PLACEHOLDER] Texto que se debe escribir antes de la publicación: por qué se piden estos ajustes, qué contiene el archivo y qué se hará con él.';
+
+  @override
+  String get coachVoiceShareContentLabel =>
+      'Este es el archivo completo — no se envía nada más:';
+
+  @override
+  String get coachVoiceShareSubject => 'Ajustes de voz de BeatBitch';
+
+  @override
   String get soundsAmbienceSection => 'Ambiente';
 
   @override

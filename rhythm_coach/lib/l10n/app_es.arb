@@ -542,6 +542,14 @@
       "value": { "type": "String" }
     }
   },
+  "coachVoiceShareButton": "Compartir mis ajustes de voz",
+  "coachVoiceShareSheetTitle": "Compartir mis ajustes de voz",
+  "coachVoiceSharePurpose": "[PLACEHOLDER] Texto que se debe escribir antes de la publicación: por qué se piden estos ajustes, qué contiene el archivo y qué se hará con él.",
+  "@coachVoiceSharePurpose": {
+    "description": "TEXTO PROVISIONAL — a reemplazar por la mantenedora antes de la publicación. El marcador [PLACEHOLDER] es deliberadamente idéntico en los cuatro idiomas para que siga siendo localizable con grep."
+  },
+  "coachVoiceShareContentLabel": "Este es el archivo completo — no se envía nada más:",
+  "coachVoiceShareSubject": "Ajustes de voz de BeatBitch",
   "soundsAmbienceSection": "Ambiente",
   "soundsAmbienceSubtitle": "Pack de fondo reproducido durante las sesiones. La selección se comparte con la pantalla de juego. Toca un modo para escuchar.",
   "soundsPackLabel": "Pack",

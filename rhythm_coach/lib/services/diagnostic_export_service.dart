@@ -148,6 +148,71 @@ class DiagnosticExportService {
     return const JsonEncoder.withIndent('  ').convert(buildPayload(options));
   }
 
+  // ── Partage des seuls réglages de voix ─────────────────────────────────
+
+  /// Nature du fichier, en tête pour que quiconque l'ouvre sache ce qu'il
+  /// tient à la première ligne — et qu'un script d'agrégation le distingue
+  /// d'un export complet autrement que par l'absence de sections.
+  static const String voiceShareKind = 'beatbitch-voice-settings';
+
+  /// Payload d'un export **dédié aux réglages de voix**, sans rien du reste
+  /// du profil.
+  ///
+  /// **Pourquoi il existe.** L'export diagnostic complet porte le temps de
+  /// jeu, les scores d'humiliation et d'obéissance, les capacités mesurées
+  /// axe par axe, les paliers, l'anatomie, les surnoms, le consentement.
+  /// Le demander pour connaître une voix est disproportionné : la plupart
+  /// refuseront, et à juste titre — c'est-à-dire que la donnée qui doit
+  /// servir à calibrer les voix par défaut des langues non maîtrisées
+  /// n'arriverait jamais. Un fichier qui ne contient que les voix est
+  /// anodin, et suffit exactement au besoin.
+  ///
+  /// **Ce qu'on met autour des voix, et pourquoi si peu :**
+  /// - [voiceShareKind] : ce que le fichier est, en clair.
+  /// - `appVersion` : date le fichier — savoir de quelle version vient un
+  ///   réglage suffit à l'interpréter, sans horodater personne.
+  /// - `platform` : indispensable ici et **irrécupérable autrement**. Les
+  ///   entrées ne portent le moteur que là où elles portent une voix ; un
+  ///   fichier entièrement automatique ne dirait donc plus d'où il vient,
+  ///   alors que « personne ne règle rien sur telle plateforme » est
+  ///   précisément une conclusion qu'on veut pouvoir tirer.
+  ///
+  /// Volontairement **absents** : l'horodatage précis et tout identifiant,
+  /// même anonyme — ils n'apportent rien à l'analyse et permettraient de
+  /// recouper deux envois d'une même personne. Le pays aussi : la langue
+  /// active est ce qui compte, et elle est déjà dans la section.
+  ///
+  /// Pas de champ `integrity` non plus : ce fichier n'est pas réimporté par
+  /// l'app, il est lu par un humain. Un checksum y serait un bloc opaque au
+  /// milieu d'un fichier dont tout l'argument est qu'on peut le lire en
+  /// entier — et il n'authentifie rien (cf. [buildPayload]).
+  ///
+  /// La section est **la même** que celle de l'export complet, produite par
+  /// le même code : un lot mêlant les deux formats s'agrège d'un seul
+  /// chemin (`.voice.coaches[]`).
+  Map<String, dynamic> buildVoiceSharePayload() => <String, dynamic>{
+        'kind': voiceShareKind,
+        'appVersion': '${_packageInfo.version}+${_packageInfo.buildNumber}',
+        'platform': _platform,
+        'voice': _voice(),
+      };
+
+  /// Construit le JSON indenté (UTF-8) des seuls réglages de voix. Court
+  /// par construction : il est fait pour être affiché en entier avant
+  /// d'être partagé.
+  String buildVoiceShareJson() {
+    return const JsonEncoder.withIndent('  ').convert(buildVoiceSharePayload());
+  }
+
+  /// Nom de fichier proposé pour le partage des voix. Il dit ce qu'il est —
+  /// aucune confusion possible avec `beatbitch-export-<horodatage>.json`,
+  /// qui, lui, contient tout le profil.
+  ///
+  /// La langue y figure parce que c'est l'axe de tri à la réception ; elle
+  /// n'ajoute rien qui ne soit déjà dans le fichier. Pas d'horodatage : le
+  /// nom est le même vecteur de recoupement que le contenu.
+  String voiceShareFilename() => 'beatbitch-voices-$_locale.json';
+
   /// Recalcule le checksum sur un payload importé et le compare au champ
   /// `integrity.value`. Renvoie `true` si tout colle. Permet à un outil
   /// standalone (`tools/verify_export.dart`) de valider un export reçu.

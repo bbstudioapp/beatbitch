@@ -542,6 +542,14 @@
       "value": { "type": "String" }
     }
   },
+  "coachVoiceShareButton": "Meine Stimmeinstellungen teilen",
+  "coachVoiceShareSheetTitle": "Meine Stimmeinstellungen teilen",
+  "coachVoiceSharePurpose": "[PLACEHOLDER] Text, der vor der Veröffentlichung zu schreiben ist: warum diese Einstellungen erfragt werden, was die Datei enthält und was damit geschieht.",
+  "@coachVoiceSharePurpose": {
+    "description": "PLATZHALTERTEXT — vor der Veröffentlichung von der Betreuerin zu ersetzen. Die Markierung [PLACEHOLDER] ist in allen vier Sprachen absichtlich identisch, damit sie per grep auffindbar bleibt."
+  },
+  "coachVoiceShareContentLabel": "Hier ist die vollständige Datei — mehr wird nicht gesendet:",
+  "coachVoiceShareSubject": "BeatBitch-Stimmeinstellungen",
   "soundsAmbienceSection": "Ambiente",
   "soundsAmbienceSubtitle": "Hintergrund-Pack, das während der Sessions läuft. Auswahl wird mit dem Spielbildschirm geteilt. Tippe einen Modus an, um ihn anzuhören.",
   "soundsPackLabel": "Pack",
