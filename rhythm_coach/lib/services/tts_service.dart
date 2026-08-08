@@ -804,10 +804,14 @@ class TtsService {
   /// L'UI s'en sert pour **expliquer** plutôt que masquer : un réglage
   /// introuvable relance la même incompréhension qu'un réglage sans effet.
   ///
-  /// Le garde `kIsWeb` est nécessaire : sur Flutter Web, `defaultTargetPlatform`
-  /// est dérivé du navigateur, donc une PWA ouverte sous Linux se déclarerait
-  /// « Linux » alors que `speechSynthesis` expose bien des voix.
-  static bool get supportsVoiceSelection => kIsWeb || !_isLinux;
+  /// Volontairement le **même** prédicat que le court-circuit de
+  /// [applyCoachVoicePreset], sans garde `kIsWeb` : sur Flutter Web,
+  /// `defaultTargetPlatform` est dérivé du navigateur, donc une PWA ouverte
+  /// sous Linux se déclare « Linux » des deux côtés. Elle n'y proposera donc
+  /// pas un réglage que la séance ignorerait. Neutraliser ce faux positif
+  /// relève d'un chantier séparé — il concerne aussi `_isWindows`, et donc le
+  /// comportement actuel bien au-delà de ce réglage.
+  static bool get supportsVoiceSelection => !_isLinux;
 
   /// Voix choisie par l'utilisateur pour [coachId] dans la langue courante,
   /// ou `null` si aucune — auquel cas le coach garde sa cascade d'origine.
