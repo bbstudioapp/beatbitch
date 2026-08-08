@@ -20,8 +20,12 @@ import '../theme/app_theme.dart';
 ///
 /// Charge la liste des voix à l'init (après `tts.init()`, idempotent) et
 /// reflète l'état courant du [TtsService] partagé : changer la voix /
-/// vitesse / hauteur ici s'applique immédiatement et persiste tant que
-/// le service vit.
+/// vitesse / hauteur ici s'applique immédiatement.
+///
+/// Seule la **voix** est mémorisée (par langue, cf. `TtsService.setUserVoice`) :
+/// elle survit à la fermeture de l'app et est restituée en sortie de session
+/// carrière. Vitesse et hauteur ne le sont pas encore — elles retombent aux
+/// défauts plateforme dès qu'un coach a posé son preset.
 class VoiceSettingsSection extends StatefulWidget {
   final TtsService tts;
   final UserProfileService userProfile;
@@ -147,7 +151,10 @@ class _VoiceSettingsSectionState extends State<VoiceSettingsSection> {
           onChanged: (name) async {
             if (name == null) return;
             final voice = _voices.firstWhere((v) => v['name'] == name);
-            await widget.tts.setVoiceByName(name, voice['locale'] ?? 'fr-FR');
+            // `setUserVoice` et non `setVoiceByName` : c'est LE choix
+            // explicite de l'utilisateur, le seul qui soit mémorisé et qui
+            // prime ensuite sur l'auto-sélection.
+            await widget.tts.setUserVoice(name, voice['locale'] ?? 'fr-FR');
             if (!mounted) return;
             setState(() => _selectedVoiceName = name);
           },
