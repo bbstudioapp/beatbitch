@@ -16,6 +16,17 @@ class TtsService {
   /// Cf. [setUserVoice] pour le pourquoi du découpage par langue.
   static const String _userVoicePrefsPrefix = 'tts.voice.';
 
+  /// Préfixe de la clé qui mémorise la voix choisie **pour un coach donné**,
+  /// une entrée par coach et par langue
+  /// (`tts.voice.coach.coach_07_marc.en`). Miroir strict de
+  /// [_userVoicePrefsPrefix] : même découpage par langue, mêmes règles de
+  /// repli. Cf. [setCoachVoice].
+  ///
+  /// Le `coachId` est une chaîne **opaque** : la clé se compose, elle ne se
+  /// parse jamais (un id pourrait contenir un point). Pour énumérer, itérer
+  /// sur le catalogue de coachs et recomposer.
+  static const String _coachVoicePrefsPrefix = 'tts.voice.coach.';
+
   static const double _defaultPitch = 1.13;
   static const double _defaultRate = 0.56;
   static const double _defaultVolume = 1.0;
@@ -318,25 +329,26 @@ class TtsService {
     return _selectVoiceWithSeed(null);
   }
 
-  /// Nom de voix choisi par l'utilisateur pour la langue courante, ou `null`.
-  Future<String?> _storedUserVoiceName() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('$_userVoicePrefsPrefix${_locale.languageCode}');
-  }
-
   /// Réapplique le choix de voix de l'utilisateur pour la langue courante.
   /// Retourne `true` si la voix a bien été poussée au moteur.
+  Future<bool> _applyStoredUserVoice() async {
+    // Linux : pas de sélection de voix programmatique, `_currentVoiceName`
+    // n'est qu'un label de backend (cf. [_selectVoiceWithSeed]).
+    if (_isLinux) return false;
+    return _applyStoredVoice('$_userVoicePrefsPrefix${_locale.languageCode}');
+  }
+
+  /// Applique la voix mémorisée sous [prefsKey], si elle existe encore sur
+  /// l'appareil. Retourne `true` si la voix a bien été poussée au moteur.
   ///
   /// Repli **silencieux** sur l'auto-sélection si la voix a disparu (pack de
   /// langue désinstallé, moteur TTS changé) — et la préférence est
   /// **conservée** : une voix peut être temporairement absente (moteur en
   /// cours de mise à jour), l'effacer sur un seul constat serait destructif.
   /// Elle reprendra d'elle-même dès que la voix réapparaît.
-  Future<bool> _applyStoredUserVoice() async {
-    // Linux : pas de sélection de voix programmatique, `_currentVoiceName`
-    // n'est qu'un label de backend (cf. [_selectVoiceWithSeed]).
-    if (_isLinux) return false;
-    final stored = await _storedUserVoiceName();
+  Future<bool> _applyStoredVoice(String prefsKey) async {
+    final prefs = await SharedPreferences.getInstance();
+    final stored = prefs.getString(prefsKey);
     if (stored == null) return false;
     try {
       final voices = await listVoicesForLocale(_locale);
@@ -344,7 +356,7 @@ class TtsService {
       if (match == null) {
         if (kDebugMode) {
           debugPrint('[TTS] voix choisie « $stored » absente de l\'appareil '
-              '— auto-sélection, préférence conservée');
+              '— auto-sélection, préférence conservée ($prefsKey)');
         }
         return false;
       }
@@ -781,6 +793,51 @@ class TtsService {
     );
   }
 
+  /// Clé de persistance de la voix choisie pour [coachId] en [languageCode].
+  /// Composée, jamais parsée (cf. [_coachVoicePrefsPrefix]).
+  static String _coachVoiceKey(String coachId, String languageCode) =>
+      '$_coachVoicePrefsPrefix$coachId.$languageCode';
+
+  /// `false` là où choisir une voix n'a aucune prise : sur Linux, ni
+  /// `spd-say` ni le pipeline piper n'exposent d'API « choisir une voix »
+  /// — le timbre y dépend des paquets installés (cf. `docs/LINUX_TTS.md`).
+  /// L'UI s'en sert pour **expliquer** plutôt que masquer : un réglage
+  /// introuvable relance la même incompréhension qu'un réglage sans effet.
+  ///
+  /// Le garde `kIsWeb` est nécessaire : sur Flutter Web, `defaultTargetPlatform`
+  /// est dérivé du navigateur, donc une PWA ouverte sous Linux se déclarerait
+  /// « Linux » alors que `speechSynthesis` expose bien des voix.
+  static bool get supportsVoiceSelection => kIsWeb || !_isLinux;
+
+  /// Voix choisie par l'utilisateur pour [coachId] dans la langue courante,
+  /// ou `null` si aucune — auquel cas le coach garde sa cascade d'origine.
+  Future<String?> coachVoiceName(String coachId) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_coachVoiceKey(coachId, _locale.languageCode));
+  }
+
+  /// Mémorise la voix [name] pour [coachId] dans la langue courante.
+  ///
+  /// **N'applique rien tout de suite** : hors séance, la voix du moteur est
+  /// celle de l'utilisateur (cf. [setUserVoice]), pas celle d'un coach. Le
+  /// réglage prend effet au prochain [applyCoachVoicePreset] de ce coach.
+  ///
+  /// Par langue, pour les mêmes raisons que [setUserVoice] : une voix
+  /// anglaise choisie pour un coach n'existe pas en allemand.
+  Future<void> setCoachVoice(String coachId, String name) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_coachVoiceKey(coachId, _locale.languageCode), name);
+  }
+
+  /// Rend [coachId] à sa cascade d'origine (« Automatique ») en **supprimant**
+  /// la clé — on ne stocke jamais une chaîne magique qu'il faudrait ensuite
+  /// distinguer d'un vrai nom de voix. Absence de clé = comportement d'origine,
+  /// un seul état à raisonner.
+  Future<void> clearCoachVoice(String coachId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_coachVoiceKey(coachId, _locale.languageCode));
+  }
+
   /// Applique un preset vocal coach : voix nommée + rate + pitch. Toute
   /// valeur null laisse le réglage courant intact. Utilisé au start d'une
   /// session carrière pour donner sa « couleur vocale » à chaque coach
@@ -789,7 +846,14 @@ class TtsService {
   /// Si la voix demandée n'existe pas sur l'appareil, on tombe sur
   /// `_selectVoice()` (auto-sélection préférée locale) plutôt que
   /// d'échouer silencieusement avec une voix exotique.
+  ///
+  /// [coachId] active le réglage manuel de voix : si l'utilisateur a choisi
+  /// une voix pour ce coach dans la langue active, elle prime sur toute la
+  /// cascade. C'est le seul moyen de donner une voix masculine à un coach
+  /// masculin — aucune plateforme cible n'expose le genre d'une voix, donc
+  /// seule une oreille humaine peut trancher.
   Future<void> applyCoachVoicePreset({
+    String? coachId,
     String? voiceName,
     String? voiceLocale,
     double? rate,
@@ -797,6 +861,32 @@ class TtsService {
     String? preferredGender,
   }) async {
     if (!_initialized) await init();
+    // Linux : pas de sélection de voix, mais on garde le rate/pitch du
+    // coach — c'est ce qui distingue les coachs entre eux. Ni lecture ni
+    // écriture d'un réglage manuel : il n'aurait aucune prise (cf.
+    // [supportsVoiceSelection]).
+    if (_isLinux) {
+      if (rate != null) await setRate(rate);
+      if (pitch != null) await setPitch(pitch);
+      return;
+    }
+    // Réglage manuel de l'utilisateur pour ce coach : il prime sur tout le
+    // reste, **y compris** le forçage Windows de Julie. Ce forçage est un
+    // défaut raisonnable (« une seule voix FR locale correcte »), pas une
+    // contrainte technique — et un choix explicite prime sur un défaut,
+    // exactement comme `setUserVoice` prime sur l'auto-sélection.
+    //
+    // Voix disparue de l'appareil : repli silencieux sur la cascade
+    // ci-dessous, et la préférence reste en base (cf. [_applyStoredVoice]).
+    if (coachId != null &&
+        await _applyStoredVoice(
+            _coachVoiceKey(coachId, _locale.languageCode))) {
+      // Rate et pitch restent ceux du coach : l'utilisateur a choisi un
+      // timbre, pas un rythme.
+      if (rate != null) await setRate(rate);
+      if (pitch != null) await setPitch(pitch);
+      return;
+    }
     // Override Windows : tous les coachs utilisent Julie + rate/pitch
     // Windows par defaut. Les voix Android-specifiques (`fr-fr-x-*-local`)
     // n'existent pas sous SAPI, et on n'a typiquement qu'une voix FR
@@ -812,13 +902,6 @@ class TtsService {
       await _selectVoiceWithSeed(null);
       await setRate(_windowsDefaultRate);
       await setPitch(_windowsDefaultPitch);
-      return;
-    }
-    // Linux : pas de sélection de voix, mais on garde le rate/pitch du
-    // coach — c'est ce qui distingue les coachs entre eux.
-    if (_isLinux) {
-      if (rate != null) await setRate(rate);
-      if (pitch != null) await setPitch(pitch);
       return;
     }
     // Le preset coach est défini en dur dans le JSON meta (lang-indépendant)
