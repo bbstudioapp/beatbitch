@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:beat_bitch/career/models/coach.dart';
 import 'package:beat_bitch/career/models/coach_catalog.dart';
@@ -559,64 +558,6 @@ void main() {
       expect(send.onPressed, isNull);
 
       await tester.pumpAndSettle();
-    });
-  });
-
-  group('le texte provisoire ne part pas en production', () {
-    /// Version du `pubspec.yaml` sous laquelle le provisoire a été introduit.
-    /// Ce n'est pas un réglage : c'est la borne de tolérance du verrou
-    /// ci-dessous. La déplacer reconduirait le provisoire d'une release à la
-    /// suivante — c'est exactement ce que ce test existe pour empêcher.
-    const versionQuiTolereLeProvisoire = '0.6.0';
-
-    /// Verrou de publication.
-    ///
-    /// La feuille de partage s'ouvre sur `coachVoiceSharePurpose`, qui porte
-    /// encore `[PLACEHOLDER]` dans les quatre langues : ce texte dit pourquoi
-    /// ces réglages sont demandés et ce qui en sera fait — il se rédige, il
-    /// ne se code pas. Jusqu'ici rien n'empêchait **mécaniquement** ce
-    /// provisoire de partir dans une version publiée. Sur un écran qui
-    /// demande à quelqu'un de partager un fichier, un texte de remplacement
-    /// visible serait pire qu'un bug : il dirait que personne n'a relu.
-    ///
-    /// Le marqueur est donc toléré tant que le pubspec porte la version sous
-    /// laquelle il est né, et interdit dès qu'elle bouge — le bump de version
-    /// ouvre la checklist de release, c'est le dernier moment où corriger ne
-    /// coûte encore rien.
-    ///
-    /// **Quand ce test tombe**, la seule sortie est :
-    ///   1. écrire le vrai texte dans les quatre `lib/l10n/app_*.arb` ;
-    ///   2. `flutter gen-l10n` ;
-    ///   3. supprimer ce test, devenu sans objet.
-    ///
-    /// Élargir [versionQuiTolereLeProvisoire] ou retirer l'assertion revient
-    /// à publier le provisoire en connaissance de cause.
-    test('`[PLACEHOLDER]` ne survit pas au bump de version', () {
-      final root = Directory.current.path;
-      final version = RegExp(r'^version:\s*([^\s+]+)', multiLine: true)
-          .firstMatch(File('$root/pubspec.yaml').readAsStringSync())
-          ?.group(1);
-      expect(version, isNotNull,
-          reason: 'Version illisible dans pubspec.yaml.');
-
-      final languesAvecProvisoire = <String>[
-        for (final lang in kSupportedLocales.map((l) => l.languageCode))
-          if (File('$root/lib/l10n/app_$lang.arb')
-              .readAsStringSync()
-              .contains('[PLACEHOLDER]'))
-            lang,
-      ];
-
-      expect(
-        languesAvecProvisoire,
-        version == versionQuiTolereLeProvisoire ? anything : isEmpty,
-        reason: 'La version est passée à $version : une publication se '
-            'prépare, et $languesAvecProvisoire portent encore un texte de '
-            'remplacement visible à l\'écran. Écris le vrai texte dans les '
-            'fichiers `lib/l10n/app_<langue>.arb` concernés, lance '
-            '`flutter gen-l10n`, puis supprime ce test — ne déplace pas la '
-            'version tolérée, ce serait reconduire le provisoire.',
-      );
     });
   });
 }

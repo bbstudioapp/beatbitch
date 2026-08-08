@@ -544,9 +544,9 @@
   },
   "coachVoiceShareButton": "Meine Stimmeinstellungen teilen",
   "coachVoiceShareSheetTitle": "Meine Stimmeinstellungen teilen",
-  "coachVoiceSharePurpose": "[PLACEHOLDER] Text, der vor der Veröffentlichung zu schreiben ist: warum diese Einstellungen erfragt werden, was die Datei enthält und was damit geschieht.",
+  "coachVoiceSharePurpose": "Die Standardstimmen von BeatBitch sind auf Französisch abgestimmt und für andere Sprachen deutlich schlechter. Wenn du eine Kombination gefunden hast, die stimmig klingt, hilft es allen, sie zu teilen.\n\nDie Datei unten enthält ausschließlich deine Stimmauswahl: nichts von deinem Fortschritt, deinem Profil oder deinen Sessions. Sie wird von allein nirgendwohin geschickt — du entscheidest, an wen und über welche App.",
   "@coachVoiceSharePurpose": {
-    "description": "PLATZHALTERTEXT — vor der Veröffentlichung von der Betreuerin zu ersetzen. Die Markierung [PLACEHOLDER] ist in allen vier Sprachen absichtlich identisch, damit sie per grep auffindbar bleibt."
+    "description": "Kopftext des Teilen-Fensters für die Stimmeinstellungen: warum diese Einstellungen für das Projekt interessant sind, was die Datei enthält und wer über das Verschicken entscheidet."
   },
   "coachVoiceShareContentLabel": "Hier ist die vollständige Datei — mehr wird nicht gesendet:",
   "coachVoiceShareSubject": "BeatBitch-Stimmeinstellungen",

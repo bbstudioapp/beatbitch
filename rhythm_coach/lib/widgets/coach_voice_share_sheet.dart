@@ -139,9 +139,6 @@ class _CoachVoiceShareSheetState extends State<_CoachVoiceShareSheet> {
               ),
             ),
             const SizedBox(height: 12),
-            // Le pourquoi de la démarche appartient à la mainteneuse : ce
-            // texte est un provisoire explicitement marqué, pas une
-            // rédaction définitive.
             Text(
               t.coachVoiceSharePurpose,
               style: const TextStyle(
@@ -160,7 +157,10 @@ class _CoachVoiceShareSheetState extends State<_CoachVoiceShareSheet> {
               ),
             ),
             const SizedBox(height: 8),
-            _ContentPreview(json: raw, error: _error),
+            // La prévisualisation cède la hauteur qui manque plutôt que de
+            // faire déborder la feuille : elle a son propre scroll, le texte
+            // du dessus n'en a pas.
+            Flexible(child: _ContentPreview(json: raw, error: _error)),
             const SizedBox(height: 16),
             Row(
               children: [

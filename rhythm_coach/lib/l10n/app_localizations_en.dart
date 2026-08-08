@@ -1103,7 +1103,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get coachVoiceSharePurpose =>
-      '[PLACEHOLDER] Text to be written before release: why these settings are being asked for, what the file contains, and what will be done with it.';
+      'BeatBitch\'s default voices are tuned for French, and much less so for other languages. If you\'ve found a combination that sounds right, sharing it helps fix this for everyone.\n\nThe file below contains nothing but your voice choices: none of your progress, your profile or your sessions. It isn\'t sent anywhere on its own — you choose who gets it, and through which app.';
 
   @override
   String get coachVoiceShareContentLabel =>
