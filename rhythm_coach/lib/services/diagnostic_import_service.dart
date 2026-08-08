@@ -53,9 +53,10 @@ class DiagnosticImportService {
     if (payload['nicknames'] != null) {
       _nicknames(_map(payload['nicknames']));
     }
-    if (payload['voice'] != null) {
+    final voice = payload['voice'];
+    if (_carriesVoiceSettings(voice)) {
       await _clearVoiceKeys();
-      _voice(_map(payload['voice']));
+      _voice(_map(voice));
     }
     _surprise(_map(payload['surprise']));
     _settings(_map(payload['settings']));
@@ -151,9 +152,14 @@ class DiagnosticImportService {
   /// reste en base pour reprendre effet si la voix réapparaît. Rien à valider
   /// ici, donc.
   ///
-  /// `source` n'est jamais lu : il n'existe que pour le lecteur humain. Une
-  /// entrée « automatique » porte `voice: null`, que [_string] ignore — et
-  /// une clé absente *est* le mode automatique.
+  /// `source` n'est jamais lu : il n'existe que pour le lecteur humain. Ni
+  /// `platform`, qui dit de quel moteur vient l'identifiant mais ne change
+  /// rien à ce qu'on écrit : reposer sur un autre moteur une voix qui n'y
+  /// existe pas tombe sur le même repli silencieux qu'une voix désinstallée,
+  /// et filtrer ferait disparaître les réglages d'un export chargé pour
+  /// diagnostic depuis une autre machine. Une entrée « automatique » porte
+  /// `voice: null`, que [_string] ignore — et une clé absente *est* le mode
+  /// automatique.
   ///
   /// Les clés sont composées via [TtsService] à partir du `coachId` et de la
   /// langue portés par l'entrée : un id inconnu du catalogue (export d'une
@@ -283,6 +289,14 @@ class DiagnosticImportService {
       await _prefs.remove(k);
     }
   }
+
+  /// Une section `voice` **exploitable** : une Map portant au moins une des
+  /// deux listes d'entrées. C'est ce qui conditionne l'effacement préalable
+  /// (cf. [_clearVoiceKeys]) — effacer sans rien pouvoir reposer derrière
+  /// viderait les réglages en silence, alors que le payload n'a rien dit sur
+  /// la voix. Écarte donc `{}`, une chaîne, un nombre, une liste, `null`.
+  static bool _carriesVoiceSettings(dynamic v) =>
+      v is Map && (v['default'] is List || v['coaches'] is List);
 
   /// Efface les réglages de voix, **seulement** quand le payload en porte
   /// (cf. [apply]) — à la différence des autres sections, effacées sans

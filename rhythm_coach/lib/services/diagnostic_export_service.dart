@@ -323,12 +323,33 @@ class DiagnosticExportService {
 
   /// Entrée de voix lisible seule : `voice` porte l'identifiant technique
   /// (`null` quand rien n'est réglé), `source` dit en clair si l'appareil
-  /// choisit ou si l'utilisateur a tranché.
-  static Map<String, dynamic> _voiceEntry(String language, String? voice) =>
+  /// choisit ou si l'utilisateur a tranché, et `platform` **le moteur qui a
+  /// produit cet identifiant**.
+  ///
+  /// Le moteur est porté par l'entrée et non par la section parce que
+  /// l'unité qu'on agrège est l'entrée : concaténer les `coaches` de
+  /// plusieurs exports perd tout ce qui vivait au-dessus, et
+  /// `en-gb-x-gbd-local` (voix Android) se retrouverait dans la même liste
+  /// plate que `Microsoft David Desktop` (voix SAPI) — deux espaces de noms
+  /// disjoints, aucun moyen de savoir lequel est réutilisable où. Même
+  /// raison que la [language] répétée sur chaque entrée.
+  ///
+  /// Il vaut la valeur du champ `platform` de tête, volontairement : c'est
+  /// tout ce qu'on sait du moteur (`flutter_tts` délègue à l'OS, sans
+  /// exposer quel moteur Android est installé), et réutiliser le nom évite
+  /// d'inventer un vocabulaire qui promettrait plus de précision.
+  ///
+  /// **Absent quand `voice` est `null`** : il n'y a alors aucune valeur à
+  /// interpréter, et une colonne constante sur tout le catalogue coûterait
+  /// en lisibilité sans rien apprendre. `selectionSupported` couvre déjà le
+  /// seul cas où une absence de réglage demande à être interprétée (Linux
+  /// n'a pas prise, ce n'est pas un désintérêt).
+  Map<String, dynamic> _voiceEntry(String language, String? voice) =>
       <String, dynamic>{
         'language': language,
         'voice': voice,
         'source': voice == null ? 'automatic' : 'chosen',
+        if (voice != null) 'platform': _platform,
       };
 
   Map<String, dynamic> _nicknames() => <String, dynamic>{

@@ -176,6 +176,71 @@ void main() {
     });
   });
 
+  group('export — attribution d\'une voix à son moteur', () {
+    test(
+        'un lot mélangeant les plateformes reste attribuable entrée par entrée',
+        () async {
+      // Même coach, même langue, deux moteurs : les identifiants viennent
+      // d'espaces de noms disjoints (voix Android vs voix SAPI Windows), et
+      // ne sont pas interchangeables.
+      final android = await _build(seed: <String, Object>{
+        TtsService.userVoiceKey('en'): 'en-gb-x-gba-local',
+        TtsService.coachVoiceKey('coach_07_marc', 'en'): 'en-gb-x-gbd-local',
+      });
+      final windows = await _build(
+        seed: <String, Object>{
+          TtsService.userVoiceKey('en'): 'Microsoft Zira Desktop',
+          TtsService.coachVoiceKey('coach_07_marc', 'en'):
+              'Microsoft David Desktop',
+        },
+        platform: 'windows',
+      );
+
+      // Agrégation type : on concatène les entrées des deux fichiers. Le
+      // contexte parent disparaît — c'est l'entrée seule qui doit rester
+      // interprétable.
+      Iterable<Map<String, dynamic>> lot(String key) => <Map<String, dynamic>>[
+            ..._entries(_voiceOf(android), key),
+            ..._entries(_voiceOf(windows), key),
+          ].where((e) => e['voice'] != null);
+
+      expect(
+        lot('coaches')
+            .where((e) => e['coachId'] == 'coach_07_marc')
+            .map((e) => '${e['platform']}:${e['voice']}')
+            .toSet(),
+        {'android:en-gb-x-gbd-local', 'windows:Microsoft David Desktop'},
+        reason: 'Sans le moteur sur l\'entrée, le lot agrégé est une liste '
+            'plate de chaînes hétérogènes : impossible de savoir laquelle '
+            'est réutilisable sur quelle plateforme.',
+      );
+      expect(
+        lot('default').map((e) => '${e['platform']}:${e['voice']}').toSet(),
+        {'android:en-gb-x-gba-local', 'windows:Microsoft Zira Desktop'},
+      );
+    });
+
+    test('le moteur n\'est porté que par les entrées qui ont une voix',
+        () async {
+      final svc = await _build(seed: <String, Object>{
+        TtsService.coachVoiceKey('coach_07_marc', 'en'): 'en-gb-x-gbd-local',
+      });
+      final voice = _voiceOf(svc);
+
+      expect(_coachEntry(voice, 'coach_07_marc', 'en')!['platform'], 'android');
+      // Une entrée automatique n'a aucune valeur à interpréter : lui coller
+      // le moteur ajouterait une colonne constante sur tout le catalogue.
+      expect(
+        _coachEntry(voice, 'coach_01_lina', 'en')!.containsKey('platform'),
+        isFalse,
+      );
+      expect(
+        _entries(voice, 'default').single.containsKey('platform'),
+        isFalse,
+      );
+    });
+  });
+
   group('export — intégrité', () {
     test('un export sans aucun réglage reste vérifiable', () async {
       final svc = await _build(seed: const <String, Object>{});
@@ -316,6 +381,33 @@ void main() {
       expect(prefs.getString(TtsService.userVoiceKey('en')), isNull);
       expect(prefs.getString(TtsService.coachVoiceKey('coach_07_marc', 'en')),
           'en-gb-x-gbd-local');
+    });
+
+    test('une section voice inexploitable n\'efface pas les réglages',
+        () async {
+      // L'effacement préalable n'a de sens que si le payload a de quoi
+      // reposer derrière. Une valeur tronquée / d'une autre forme ne doit
+      // pas vider les réglages sans rien réécrire.
+      for (final malformed in <dynamic>[
+        <String, dynamic>{},
+        'en-gb-x-gbd-local',
+        42,
+        <dynamic>[],
+      ]) {
+        SharedPreferences.setMockInitialValues(<String, Object>{
+          TtsService.coachVoiceKey('coach_07_marc', 'en'): 'reglage-machine',
+          TtsService.userVoiceKey('en'): 'defaut-machine',
+        });
+        final prefs = await SharedPreferences.getInstance();
+        await DiagnosticImportService(prefs)
+            .apply(<String, dynamic>{'voice': malformed});
+
+        expect(prefs.getString(TtsService.coachVoiceKey('coach_07_marc', 'en')),
+            'reglage-machine',
+            reason: 'voice=$malformed : rien à reposer, donc rien à effacer.');
+        expect(
+            prefs.getString(TtsService.userVoiceKey('en')), 'defaut-machine');
+      }
     });
 
     test('un ancien export sans section voice n\'y touche pas', () async {
