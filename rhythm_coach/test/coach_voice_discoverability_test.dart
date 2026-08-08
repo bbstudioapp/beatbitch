@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:beat_bitch/career/models/coach.dart';
 import 'package:beat_bitch/career/screens/coach_picker_screen.dart';
 import 'package:beat_bitch/career/screens/custom_coach_picker_screen.dart';
@@ -81,21 +83,39 @@ void main() {
   /// moteur qui répond dans la foulée referme la fenêtre de course.
   var voiceCallLatency = Duration.zero;
 
+  /// Temps de réponse **par énumération de voix**, servis dans l'ordre des
+  /// appels puis épuisés (au-delà, [voiceCallLatency] reprend).
+  ///
+  /// Une latence uniforme est un cas particulier, pas la règle : elle fait
+  /// toujours finir en dernier la chaîne démarrée en dernier, ce qui cache
+  /// les entrelacements. Rien ne garantit qu'un moteur réel réponde aussi
+  /// vite au premier cycle qu'au second — c'est cette asymétrie-là qu'on
+  /// veut pouvoir provoquer.
+  final voiceLookupLatencies = <Duration>[];
+
+  /// Nombre d'énumérations de voix **entrées** dans le moteur — comptées
+  /// avant la latence, donc y compris celles encore en vol. Sert à vérifier
+  /// qu'un scénario de course a bien lancé ce qu'il croit avoir lancé.
+  var voiceLookups = 0;
+
   void installFakeEngine() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
+      Future<void> respondIn(Duration latency) async {
+        if (latency > Duration.zero) await Future<void>.delayed(latency);
+      }
+
       switch (call.method) {
         case 'getVoices':
-          if (voiceCallLatency > Duration.zero) {
-            await Future<void>.delayed(voiceCallLatency);
-          }
+          voiceLookups++;
+          await respondIn(voiceLookupLatencies.isNotEmpty
+              ? voiceLookupLatencies.removeAt(0)
+              : voiceCallLatency);
           return engineVoices
               .map(Map<String, String>.from)
               .toList(growable: false);
         case 'setVoice':
-          if (voiceCallLatency > Duration.zero) {
-            await Future<void>.delayed(voiceCallLatency);
-          }
+          await respondIn(voiceCallLatency);
           final args = (call.arguments as Map).cast<String, Object?>();
           voicesPushed.add(args['name']! as String);
           return 1;
@@ -120,6 +140,8 @@ void main() {
     voicesPushed.clear();
     engineVoices = <Map<String, String>>[...enVoices];
     voiceCallLatency = Duration.zero;
+    voiceLookupLatencies.clear();
+    voiceLookups = 0;
     installFakeEngine();
     await LocaleService.instance.setLocale(const Locale('en'));
     await CoachPhrasesService.instance.ensureLoaded(locale: const Locale('en'));
@@ -185,16 +207,19 @@ void main() {
       .at(index);
 
   /// Ce que fait `career_screen._applyCoachVoicePreset` au démarrage d'une
-  /// séance : pousser le preset du coach au moteur.
+  /// séance : prendre la main sur l'état vocal, puis pousser le preset du
+  /// coach au moteur.
   Future<void> startSessionWith(TtsService tts, Coach coach) {
     final preset = coach.voicePreset;
-    return tts.applyCoachVoicePreset(
-      coachId: coach.id,
-      voiceName: preset.voiceName,
-      voiceLocale: preset.voiceLocale,
-      rate: preset.rate,
-      pitch: preset.pitch,
-      preferredGender: preset.preferredGender,
+    return tts.takeVoiceLead(
+      () => tts.applyCoachVoicePreset(
+        coachId: coach.id,
+        voiceName: preset.voiceName,
+        voiceLocale: preset.voiceLocale,
+        rate: preset.rate,
+        pitch: preset.pitch,
+        preferredGender: preset.preferredGender,
+      ),
     );
   }
 
@@ -345,6 +370,98 @@ void main() {
       expect(tts.currentVoiceName, 'en-us-x-tpd-local',
           reason: 'et la voix rendue reste celle que l\'utilisateur a '
               'choisie');
+    });
+  });
+
+  group('Le preset de séance passe devant le réglage', () {
+    /// Voix, débit et hauteur ne font pas trois états indépendants : ils
+    /// font l'état vocal de la séance qui démarre. Deux écritures qui
+    /// s'entrelacent en produisent un quatrième — le timbre de l'un sur le
+    /// débit de l'autre — que ni le réglage ni la séance n'a voulu.
+    ///
+    /// Le trajet est court depuis que la ligne « Voix » vit sur le
+    /// sélecteur de coach : fermer la feuille, quitter le sélecteur, taper
+    /// « Commencer ». Deux à trois gestes, sans quitter l'écran carrière.
+    void expectMarcVoiceIntact(TtsService tts) {
+      expect(tts.currentVoiceName, 'en-gb-x-gbd-local',
+          reason: 'la voix réglée pour Marc, pas celle de l\'utilisateur');
+      expect(tts.currentRate, closeTo(0.55, 0.001),
+          reason: 'et son débit, pas le défaut de la plateforme');
+      expect(tts.currentPitch, closeTo(0.85, 0.001),
+          reason: 'et sa hauteur — l\'état vocal de la séance vient d\'une '
+              'seule opération, pas d\'un mélange de deux');
+    }
+
+    /// Règle la voix de Marc depuis le sélecteur de carrière et laisse
+    /// l'aperçu se terminer : ce sont les gestes *suivants* qu'on observe.
+    Future<void> setMarcVoice(WidgetTester tester, TtsService tts) async {
+      await tts.init();
+      await tts.setUserVoice('en-us-x-tpd-local', 'en-US');
+      await pumpCareerPicker(tester, tts);
+      await tester.tap(voiceLineButton());
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('en-gb-x-gbd-local  ·  en-GB'));
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('une restauration encore en vol ne déteint pas sur la séance',
+        (tester) async {
+      final tts = TtsService(locale: const Locale('en'));
+      await setMarcVoice(tester, tts);
+
+      // Le moteur répond en 2 s au cycle de la restauration et en 5 ms à
+      // celui du preset. Rien ne garantit qu'un appareil réel réponde plus
+      // vite au premier cycle démarré qu'au second : c'est l'hypothèse de
+      // latence uniforme qui est le cas particulier.
+      voiceLookupLatencies
+        ..add(const Duration(seconds: 2))
+        ..add(const Duration(milliseconds: 5));
+
+      // Fermer la feuille enfile une restauration — inconditionnellement,
+      // que la voix ait changé ou non — et rend la main sans l'attendre.
+      final lookupsBeforeClose = voiceLookups;
+      Navigator.of(tester.element(find.byType(CoachPickerScreen))).pop();
+      await tester.pumpAndSettle();
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 1));
+      }
+      expect(voiceLookups, lookupsBeforeClose + 1,
+          reason: 'la restauration est bien partie sur le moteur — sinon le '
+              'test observerait un enchaînement qu\'il n\'a pas provoqué');
+
+      // Deux gestes plus loin : quitter le sélecteur, taper « Commencer ».
+      // Personne n'attend la restauration, le framework non plus.
+      unawaited(startSessionWith(tts, marc));
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+
+      expectMarcVoiceIntact(tts);
+      expect(voicesPushed.last, 'en-gb-x-gbd-local',
+          reason: 'la dernière voix réellement poussée au moteur, pas '
+              'seulement celle que le service croit avoir posée');
+    });
+
+    testWidgets('une restauration encore en file ne passe pas derrière',
+        (tester) async {
+      final tts = TtsService(locale: const Locale('en'));
+      await setMarcVoice(tester, tts);
+
+      // Feuille refermée en plein aperçu : la restauration est alors *en
+      // attente* derrière lui, pas en vol. Sa durée de vie est celle du
+      // service, pas celle de l'écran — elle survit au sélecteur.
+      voiceCallLatency = const Duration(milliseconds: 400);
+      await tester.tap(find.text('en-gb-x-gbd-local  ·  en-GB'));
+      await tester.pump();
+      Navigator.of(tester.element(find.byType(CoachPickerScreen))).pop();
+      await tester.pumpAndSettle();
+
+      voiceCallLatency = Duration.zero;
+      unawaited(startSessionWith(tts, marc));
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+
+      expectMarcVoiceIntact(tts);
     });
   });
 }

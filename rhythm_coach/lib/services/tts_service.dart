@@ -324,18 +324,22 @@ class TtsService {
   ///
   /// Les presets coach passent par [_selectVoiceWithSeed], qui reste de
   /// l'auto-sélection pure : pendant sa séance, un coach garde sa voix.
-  Future<void> _selectVoice() async {
-    if (await _applyStoredUserVoice()) return;
-    return _selectVoiceWithSeed(null);
+  ///
+  /// [lead] : passe d'écriture appelante, quand il y en a une (cf.
+  /// [_voiceLead]) — la sélection s'interrompt si elle perd la main.
+  Future<void> _selectVoice({int? lead}) async {
+    if (await _applyStoredUserVoice(lead: lead)) return;
+    return _selectVoiceWithSeed(null, lead: lead);
   }
 
   /// Réapplique le choix de voix de l'utilisateur pour la langue courante.
   /// Retourne `true` si la voix a bien été poussée au moteur.
-  Future<bool> _applyStoredUserVoice() async {
+  Future<bool> _applyStoredUserVoice({int? lead}) async {
     // Linux : pas de sélection de voix programmatique, `_currentVoiceName`
     // n'est qu'un label de backend (cf. [_selectVoiceWithSeed]).
     if (_isLinux) return false;
-    return _applyStoredVoice('$_userVoicePrefsPrefix${_locale.languageCode}');
+    return _applyStoredVoice('$_userVoicePrefsPrefix${_locale.languageCode}',
+        lead: lead);
   }
 
   /// Applique la voix mémorisée sous [prefsKey], si elle existe encore sur
@@ -346,12 +350,13 @@ class TtsService {
   /// **conservée** : une voix peut être temporairement absente (moteur en
   /// cours de mise à jour), l'effacer sur un seul constat serait destructif.
   /// Elle reprendra d'elle-même dès que la voix réapparaît.
-  Future<bool> _applyStoredVoice(String prefsKey) async {
+  Future<bool> _applyStoredVoice(String prefsKey, {int? lead}) async {
     final prefs = await SharedPreferences.getInstance();
     final stored = prefs.getString(prefsKey);
     if (stored == null) return false;
     try {
       final voices = await listVoicesForLocale(_locale);
+      if (_voiceLeadLost(lead)) return false;
       final match = voices.firstWhereOrNull((v) => (v['name'] ?? '') == stored);
       if (match == null) {
         if (kDebugMode) {
@@ -383,6 +388,7 @@ class TtsService {
   Future<void> _selectVoiceWithSeed(
     String? seed, {
     String? preferredGender,
+    int? lead,
   }) async {
     // Linux : pas de sélection de voix programmatique (ni spd-say CLI ni
     // notre pipeline piper n'exposent une API « setVoice »). Le label
@@ -394,7 +400,7 @@ class TtsService {
     }
     try {
       final voices = await listVoicesForLocale(_locale);
-      if (voices.isEmpty) return;
+      if (_voiceLeadLost(lead) || voices.isEmpty) return;
 
       Map<String, String>? pick;
 
@@ -864,14 +870,14 @@ class TtsService {
     double? pitch,
     String? preferredGender,
   }) async {
+    final lead = _voiceLead;
     if (!_initialized) await init();
     // Linux : pas de sélection de voix, mais on garde le rate/pitch du
     // coach — c'est ce qui distingue les coachs entre eux. Ni lecture ni
     // écriture d'un réglage manuel : il n'aurait aucune prise (cf.
     // [supportsVoiceSelection]).
     if (_isLinux) {
-      if (rate != null) await setRate(rate);
-      if (pitch != null) await setPitch(pitch);
+      await _applyRateAndPitch(lead, rate, pitch);
       return;
     }
     // Réglage manuel de l'utilisateur pour ce coach : il prime sur tout le
@@ -883,12 +889,11 @@ class TtsService {
     // Voix disparue de l'appareil : repli silencieux sur la cascade
     // ci-dessous, et la préférence reste en base (cf. [_applyStoredVoice]).
     if (coachId != null &&
-        await _applyStoredVoice(
-            _coachVoiceKey(coachId, _locale.languageCode))) {
+        await _applyStoredVoice(_coachVoiceKey(coachId, _locale.languageCode),
+            lead: lead)) {
       // Rate et pitch restent ceux du coach : l'utilisateur a choisi un
       // timbre, pas un rythme.
-      if (rate != null) await setRate(rate);
-      if (pitch != null) await setPitch(pitch);
+      await _applyRateAndPitch(lead, rate, pitch);
       return;
     }
     // Override Windows : tous les coachs utilisent Julie + rate/pitch
@@ -903,9 +908,8 @@ class TtsService {
       // `_selectVoiceWithSeed` et non `_selectVoice` : pendant sa séance, le
       // coach garde la voix imposée par la plateforme (Julie), pas celle que
       // l'utilisateur a réglée par ailleurs.
-      await _selectVoiceWithSeed(null);
-      await setRate(_windowsDefaultRate);
-      await setPitch(_windowsDefaultPitch);
+      await _selectVoiceWithSeed(null, lead: lead);
+      await _applyRateAndPitch(lead, _windowsDefaultRate, _windowsDefaultPitch);
       return;
     }
     // Le preset coach est défini en dur dans le JSON meta (lang-indépendant)
@@ -923,6 +927,7 @@ class TtsService {
     if (voiceName != null && localeMatchesVoice) {
       try {
         final voices = await listVoicesForLocale();
+        if (_voiceLeadLost(lead)) return;
         final match = voices.firstWhereOrNull(
           (v) => (v['name'] ?? '') == voiceName,
         );
@@ -936,7 +941,8 @@ class TtsService {
             debugPrint('[TTS] preset coach : voix « $voiceName » introuvable, '
                 'fallback auto');
           }
-          await _selectVoiceWithSeed(null, preferredGender: preferredGender);
+          await _selectVoiceWithSeed(null,
+              preferredGender: preferredGender, lead: lead);
         }
       } catch (e) {
         if (kDebugMode) debugPrint('[TTS] applyCoachVoicePreset KO : $e');
@@ -952,20 +958,66 @@ class TtsService {
             '(locale=$voiceLocale) ne matche pas la locale active '
             '${_locale.languageCode} — fallback rotated');
       }
-      await _selectVoiceWithSeed(voiceName, preferredGender: preferredGender);
+      await _selectVoiceWithSeed(voiceName,
+          preferredGender: preferredGender, lead: lead);
     } else if (preferredGender != null) {
       // Pas de voix nommée mais une préférence de genre (coach masculin
       // typiquement) : on relance la sélection auto en propageant le filtre.
-      await _selectVoiceWithSeed(null, preferredGender: preferredGender);
+      await _selectVoiceWithSeed(null,
+          preferredGender: preferredGender, lead: lead);
     }
-    if (rate != null) await setRate(rate);
-    if (pitch != null) await setPitch(pitch);
+    await _applyRateAndPitch(lead, rate, pitch);
   }
 
   /// Chaîne des écritures de l'état vocal faites par le **réglage de voix**
   /// (aperçu d'une voix de coach, puis restauration à la fermeture de la
   /// feuille). Cf. [enqueueVoiceOp].
   Future<void> _voiceOps = Future<void>.value();
+
+  /// Numéro de la passe d'écriture qui a la **main** sur l'état vocal.
+  ///
+  /// Voix, débit et hauteur ne sont pas trois réglages indépendants : ils
+  /// font un état composite. Deux écritures qui s'entrelacent en produisent
+  /// donc un troisième — le timbre de l'une sur le débit de l'autre — que ni
+  /// l'une ni l'autre n'a voulu. Une file ne suffit pas à l'empêcher : elle
+  /// ordonne ce qu'on lui confie, elle n'empêche personne d'écrire à côté.
+  ///
+  /// Chaque écriture composite ([applyCoachVoicePreset],
+  /// [restoreDefaultVoicePreset]) capture ce numéro à son démarrage et
+  /// cesse d'envoyer quoi que ce soit au moteur dès qu'il a changé. Comme
+  /// les invocations déjà parties gardent leur ordre d'émission, l'état
+  /// final est intégralement celui de la dernière passe. Seul
+  /// [takeVoiceLead] incrémente ce numéro.
+  int _voiceLead = 0;
+
+  /// `true` quand la passe [lead] s'est fait reprendre la main. `null` =
+  /// écriture hors passe (init, changement de langue), jamais interrompue.
+  bool _voiceLeadLost(int? lead) => lead != null && lead != _voiceLead;
+
+  /// Pousse [rate] et [pitch] au moteur tant que la passe [lead] a la main.
+  Future<void> _applyRateAndPitch(int lead, double? rate, double? pitch) async {
+    if (rate != null && !_voiceLeadLost(lead)) await setRate(rate);
+    if (pitch != null && !_voiceLeadLost(lead)) await setPitch(pitch);
+  }
+
+  /// Reprend la main sur l'état vocal, puis exécute [op] **tout de suite**.
+  ///
+  /// Point d'entrée des presets posés par une **séance**. Ce qu'un réglage a
+  /// laissé en vol s'arrête à son prochain point de reprise, ce qu'il a
+  /// laissé en attente dans [enqueueVoiceOp] ne démarrera pas, et [op] part
+  /// sans rien attendre : une séance qui démarre ne fait jamais la queue
+  /// derrière une opération d'interface — un moteur qui tarde à répondre au
+  /// réglage ne peut donc pas retenir la séance.
+  ///
+  /// Le prix est qu'un aperçu ou une restauration en cours est abandonné en
+  /// chemin. C'est le bon arbitrage : l'utilisateur vient de demander une
+  /// séance, l'état qu'il attend est celui du coach, et une passe
+  /// abandonnée ne laisse rien à réparer — la suivante repose voix, débit
+  /// et hauteur ensemble.
+  Future<void> takeVoiceLead(Future<void> Function() op) {
+    _voiceLead++;
+    return op();
+  }
 
   /// Enchaîne [op] derrière les écritures de voix déjà en vol, et renvoie
   /// son achèvement.
@@ -986,10 +1038,16 @@ class TtsService {
   /// ouvrent la même feuille, et quitter l'écran pendant une opération en
   /// vol ne doit pas repartir d'une file neuve.
   ///
-  /// Ne concerne pas les presets posés par une séance : ils sont séquentiels
-  /// par construction et ne coexistent jamais avec la feuille.
+  /// Sa portée s'arrête là : elle ordonne les écritures **du réglage** entre
+  /// elles. Elle ne dit rien de celles qu'une séance pose de son côté — et
+  /// justement, la durée de vie qui lui permet de survivre à l'écran lui
+  /// permet aussi de croiser un démarrage de séance. C'est [takeVoiceLead]
+  /// qui tranche ce croisement-là, et une opération enfilée avant qu'une
+  /// séance ait pris la main ne démarre plus : elle reposerait l'état
+  /// d'avant par-dessus celui du coach.
   Future<void> enqueueVoiceOp(Future<void> Function() op) {
-    final next = _voiceOps.then((_) => op());
+    final lead = _voiceLead;
+    final next = _voiceOps.then((_) => _voiceLeadLost(lead) ? null : op());
     // Une opération en échec ne doit pas condamner celles d'après : c'est
     // la restauration qui compte, et elle passe en dernier.
     _voiceOps = next.catchError((Object _) {});
@@ -1007,10 +1065,11 @@ class TtsService {
   /// l'auto-sélection. Rate et pitch, eux, retournent aux défauts plateforme
   /// — ils ne sont pas mémorisés à ce jour.
   Future<void> restoreDefaultVoicePreset() async {
+    final lead = _voiceLead;
     if (!_initialized) await init();
-    await setRate(_platformDefaultRate);
-    await setPitch(_platformDefaultPitch);
-    await _selectVoice();
+    await _applyRateAndPitch(lead, _platformDefaultRate, _platformDefaultPitch);
+    if (_voiceLeadLost(lead)) return;
+    await _selectVoice(lead: lead);
   }
 
   Future<void> dispose() async {
