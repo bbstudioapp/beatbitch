@@ -72,12 +72,15 @@ class CoachCatalog {
       // 1h30 cumulées — pile entre Hélène (1h) et Jade (3h).
       requirements: CoachRequirement(minPlayerSeconds: 5400),
       portraitAsset: '$_portraitDir/coach_07_marc.png',
-      // Voix masculine obligatoire — `CoachService.evaluate` consulte le
-      // probe `TtsService.hasVoiceMatchingSync` pour gater la sélection.
-      // Si aucune voix mâle locale n'est dispo (Windows : Julie forcée ;
-      // Linux : pas d'API listVoices ; Android sans voix mâle installée),
-      // Marc apparaît verrouillé avec le badge `coachBadgeNoVoice`.
-      voicePreset: CoachVoicePreset(preferredGender: 'male'),
+      // Seul coach masculin : la table de voix préférées de la langue est
+      // calibrée féminine, il n'y a rien à y prendre pour lui — d'où le saut
+      // vers la première voix de la locale. Aucun blocage n'y est attaché :
+      // `CoachService.evaluate` ne teste que le déblocage et le temps de jeu,
+      // et un gating sur la disponibilité d'une voix a été livré puis retiré
+      // (décision de Manu, ne pas y revenir). Une voix masculine se choisit à
+      // la main, dans la section VOIX DES COACHS du Profil : aucune plateforme
+      // n'expose le genre d'une voix (cf. `TtsService._fallbackPick`).
+      voicePreset: CoachVoicePreset(skipPreferredVoices: true),
     ),
     Coach(
       id: 'coach_03_jade',

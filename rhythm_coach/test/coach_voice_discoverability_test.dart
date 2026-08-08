@@ -37,8 +37,8 @@ void main() {
     {'name': 'en-us-x-tpd-local', 'locale': 'en-US'},
   ];
 
-  /// Marc : le coach masculin, aucune voix nommée, juste un genre que rien
-  /// ne sait honorer.
+  /// Marc : le coach masculin, aucune voix nommée, juste le saut d'une liste
+  /// de voix calibrées féminines.
   const marc = Coach(
     id: 'coach_07_marc',
     name: 'Marc',
@@ -49,7 +49,7 @@ void main() {
     tier: 3,
     isPrincipal: true,
     voicePreset: CoachVoicePreset(
-      preferredGender: 'male',
+      skipPreferredVoices: true,
       rate: 0.55,
       pitch: 0.85,
     ),
@@ -218,7 +218,7 @@ void main() {
         voiceLocale: preset.voiceLocale,
         rate: preset.rate,
         pitch: preset.pitch,
-        preferredGender: preset.preferredGender,
+        skipPreferredVoices: preset.skipPreferredVoices,
       ),
     );
   }

@@ -44,15 +44,20 @@ void main() {
   /// Voix telles que les retourne le moteur Google Android en anglais.
   /// `en-gb-x-gba-local` est la voix de l'auto-sélection (1ʳᵉ préférée),
   /// `en-gb-x-gbd-local` est celle que l'utilisateur choisit dans les tests.
+  ///
+  /// **Aucune entrée ne porte de `gender`** : le composant Android ne remonte
+  /// que nom, langue, qualité, latence, réseau et fonctionnalités. Ce champ y
+  /// figurait, inventé — il faisait passer ces tests par un chemin qui
+  /// n'existe sur aucun appareil Android.
   const enVoices = <Map<String, String>>[
-    {'name': 'en-gb-x-gba-local', 'locale': 'en-GB', 'gender': 'female'},
-    {'name': 'en-gb-x-gbd-local', 'locale': 'en-GB', 'gender': 'male'},
-    {'name': 'en-us-x-tpd-local', 'locale': 'en-US', 'gender': 'male'},
+    {'name': 'en-gb-x-gba-local', 'locale': 'en-GB'},
+    {'name': 'en-gb-x-gbd-local', 'locale': 'en-GB'},
+    {'name': 'en-us-x-tpd-local', 'locale': 'en-US'},
   ];
 
   const deVoices = <Map<String, String>>[
-    {'name': 'de-de-x-deg-local', 'locale': 'de-DE', 'gender': 'female'},
-    {'name': 'de-de-x-deb-local', 'locale': 'de-DE', 'gender': 'male'},
+    {'name': 'de-de-x-deg-local', 'locale': 'de-DE'},
+    {'name': 'de-de-x-deb-local', 'locale': 'de-DE'},
   ];
 
   /// Faux moteur TTS qui enregistre ce qui lui est **réellement poussé** —
@@ -173,7 +178,7 @@ void main() {
       await tts.applyCoachVoicePreset(
         voiceName: 'fr-fr-x-fra-local',
         voiceLocale: 'fr-FR',
-        preferredGender: 'male',
+        skipPreferredVoices: true,
       );
 
       // Redémarrage sans passer par `restoreDefaultVoicePreset` : si le
