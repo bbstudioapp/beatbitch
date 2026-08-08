@@ -383,8 +383,8 @@ class TtsService {
   ///
   /// `skipPreferredVoices` saute la liste `_preferredVoiceNamesByLanguage` :
   /// elle est calibrée féminine, un coach masculin n'y a rien à prendre. On
-  /// attaque alors directement `_fallbackPick`. Ce n'est **pas** un filtre par
-  /// genre — il n'en existe aucun, cf. [_fallbackPick].
+  /// attaque alors directement `_fallbackPick`. Ce n'est **pas** une demande
+  /// de voix masculine : rien ici ne sait en formuler une, cf. [_fallbackPick].
   Future<void> _selectVoiceWithSeed(
     String? seed, {
     bool skipPreferredVoices = false,
@@ -472,9 +472,10 @@ class TtsService {
   ///
   /// Le pendant masculin de cette fonction a été **retiré** pour cette
   /// raison : il n'était atteignable que hors Windows et hors Linux — donc
-  /// exactement là où le genre n'est jamais déclaré. Il n'y a aucun moyen de
-  /// demander une voix masculine ; un coach masculin se règle à la main (cf.
-  /// [setCoachVoice]), seule une oreille humaine peut trancher.
+  /// sur Android et le web, exactement là où le genre n'est jamais déclaré.
+  /// Sur ces deux canaux, rien ne permet de demander une voix masculine ; un
+  /// coach masculin se règle à la main (cf. [setCoachVoice]), seule une
+  /// oreille humaine peut trancher.
   Map<String, String>? _fallbackPick(List<Map<String, String>> voices) {
     return voices.firstWhereOrNull((v) {
           final gender = (v['gender'] ?? '').toLowerCase();
@@ -867,8 +868,9 @@ class TtsService {
   /// [coachId] active le réglage manuel de voix : si l'utilisateur a choisi
   /// une voix pour ce coach dans la langue active, elle prime sur toute la
   /// cascade. C'est le seul moyen de donner une voix masculine à un coach
-  /// masculin — aucune plateforme cible n'expose le genre d'une voix, donc
-  /// seule une oreille humaine peut trancher.
+  /// masculin — aucun des canaux que la cascade atteint (Android, web) ne
+  /// déclare le genre d'une voix (cf. [_fallbackPick]), donc seule une
+  /// oreille humaine peut trancher.
   Future<void> applyCoachVoicePreset({
     String? coachId,
     String? voiceName,

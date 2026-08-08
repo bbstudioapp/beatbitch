@@ -14,8 +14,9 @@ import 'coach_voice_share_sheet.dart';
 /// la voix qu'il utilisera en séance, et une feuille de sélection pour en
 /// choisir une autre.
 ///
-/// **Pourquoi ce réglage est manuel.** Aucune plateforme cible n'expose le
-/// genre d'une voix — ni le plugin, ni Android lui-même. Un coach masculin ne
+/// **Pourquoi ce réglage est manuel.** Aucun des canaux que la sélection
+/// automatique atteint (Android, web) ne déclare le genre d'une voix — ni le
+/// plugin, ni `android.speech.tts.Voice` lui-même. Un coach masculin ne
 /// peut donc pas obtenir une voix masculine automatiquement, et un coach dont
 /// la voix est déclarée en `fr-FR` retombe sur une rotation arbitraire dès
 /// que la langue active n'est pas le français. Seule une oreille humaine peut

@@ -78,8 +78,9 @@ class CoachCatalog {
       // `CoachService.evaluate` ne teste que le déblocage et le temps de jeu,
       // et un gating sur la disponibilité d'une voix a été livré puis retiré
       // (décision de Manu, ne pas y revenir). Une voix masculine se choisit à
-      // la main, dans la section VOIX DES COACHS du Profil : aucune plateforme
-      // n'expose le genre d'une voix (cf. `TtsService._fallbackPick`).
+      // la main, dans la section VOIX DES COACHS du Profil : aucun des canaux
+      // que la sélection automatique atteint (Android, web) ne déclare le
+      // genre d'une voix (cf. `TtsService._fallbackPick`).
       voicePreset: CoachVoicePreset(skipPreferredVoices: true),
     ),
     Coach(

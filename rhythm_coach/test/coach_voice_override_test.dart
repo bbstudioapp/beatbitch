@@ -13,12 +13,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Réglage de voix **par coach** — la seule réponse possible au défaut
 /// « Marc parle avec une voix de femme ».
 ///
-/// Aucune plateforme cible n'expose le genre d'une voix : ni le plugin côté
-/// Android ou web, ni `android.speech.tts.Voice`, et les noms Google
-/// (`en-gb-x-gbd-local`) ne portent aucun indice exploitable. Le filtre par
-/// genre de `_fallbackPick` ne pouvait donc jamais réussir — il a été retiré
-/// depuis, seule une oreille humaine peut choisir. Ces tests vérifient que ce
-/// choix humain, une fois fait, est bien celui que le moteur reçoit en séance.
+/// Aucun des canaux que la sélection automatique atteint (Android, web) ne
+/// déclare le genre d'une voix : ni le plugin, ni `android.speech.tts.Voice`,
+/// et les noms Google (`en-gb-x-gbd-local`) ne portent aucun indice
+/// exploitable. Le pendant masculin de `_fallbackPick` ne pouvait donc jamais
+/// réussir — il a été retiré depuis, seule une oreille humaine peut choisir.
+/// Ces tests vérifient que ce choix humain, une fois fait, est bien celui que
+/// le moteur reçoit en séance.
 ///
 /// Le problème dépasse Marc : six coachs sur sept déclarent une voix `fr-FR`
 /// en dur, donc tout utilisateur non-francophone entend une rotation
