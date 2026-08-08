@@ -962,6 +962,40 @@ class TtsService {
     if (pitch != null) await setPitch(pitch);
   }
 
+  /// Chaîne des écritures de l'état vocal faites par le **réglage de voix**
+  /// (aperçu d'une voix de coach, puis restauration à la fermeture de la
+  /// feuille). Cf. [enqueueVoiceOp].
+  Future<void> _voiceOps = Future<void>.value();
+
+  /// Enchaîne [op] derrière les écritures de voix déjà en vol, et renvoie
+  /// son achèvement.
+  ///
+  /// **Pourquoi une file plutôt qu'un rattrapage.** La feuille de sélection
+  /// se ferme par n'importe quel geste — bouton retour, tap hors zone,
+  /// glissement vers le bas — et rend la main **sans attendre** l'aperçu
+  /// qu'un `onTap` a lancé. Les deux chaînes écrivent alors le même état :
+  /// si la restauration finit la première, l'aperçu repose derrière elle le
+  /// timbre, le débit et la hauteur du coach, que le Profil présente ensuite
+  /// comme le réglage par défaut de l'utilisateur — la confusion même que ce
+  /// réglage existe pour dissiper. La restauration étant toujours la
+  /// dernière enfilée, c'est elle qui a le dernier mot, quel que soit le
+  /// moment de la fermeture.
+  ///
+  /// La file est portée par le **service** et non par l'écran qui ouvre la
+  /// feuille : c'est l'état du service qu'elle protège, plusieurs écrans
+  /// ouvrent la même feuille, et quitter l'écran pendant une opération en
+  /// vol ne doit pas repartir d'une file neuve.
+  ///
+  /// Ne concerne pas les presets posés par une séance : ils sont séquentiels
+  /// par construction et ne coexistent jamais avec la feuille.
+  Future<void> enqueueVoiceOp(Future<void> Function() op) {
+    final next = _voiceOps.then((_) => op());
+    // Une opération en échec ne doit pas condamner celles d'après : c'est
+    // la restauration qui compte, et elle passe en dernier.
+    _voiceOps = next.catchError((Object _) {});
+    return next;
+  }
+
   /// Rend la main au réglage hors-carrière. Appelé en sortie de session
   /// carrière pour ne pas qu'un preset coach contamine les autres écrans
   /// (SONS, autre coach, scénario hors carrière).
