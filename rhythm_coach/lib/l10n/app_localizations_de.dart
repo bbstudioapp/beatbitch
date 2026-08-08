@@ -1095,6 +1095,11 @@ class AppLocalizationsDe extends AppLocalizations {
       'Auf dieser Plattform hängt die Stimme von der installierten Engine ab.';
 
   @override
+  String coachVoiceLine(String value) {
+    return 'Stimme: $value';
+  }
+
+  @override
   String get soundsAmbienceSection => 'Ambiente';
 
   @override

@@ -171,6 +171,8 @@ class _CareerScreenState extends State<CareerScreen> {
           service: coachService,
           playerTotalSeconds: bundle.totalSeconds,
           handsEnabled: _includeHandOverride ?? bundle.includeHand,
+          tts: widget.tts,
+          userProfile: widget.userProfile,
         ),
       ),
     );
@@ -579,7 +581,7 @@ class _CareerScreenState extends State<CareerScreen> {
 
     if (verifier != null) camService.stopSessionDetection();
     widget.tts.setNameResolver(null);
-    await widget.tts.restoreDefaultVoicePreset();
+    await widget.tts.takeVoiceLead(widget.tts.restoreDefaultVoicePreset);
     // Reset des unlocks provisoires : la session est terminée. Si la
     // milestone a été acquittée, son unlock est déjà persisté dans
     // `_completed` via `markCompleted` ; sinon, on retire l'illusion.
@@ -695,22 +697,28 @@ class _CareerScreenState extends State<CareerScreen> {
   /// No-op si le coach n'a pas de preset déclaré dans son JSON. La sortie
   /// de session restaure les valeurs par défaut via
   /// `TtsService.restoreDefaultVoicePreset`.
-  Future<void> _applyCoachVoicePreset(Coach coach) async {
+  ///
+  /// Sous `takeVoiceLead` : le sélecteur de coach s'ouvre depuis cet écran,
+  /// et le réglage de voix qu'il porte peut avoir laissé une écriture en
+  /// vol quand « Commencer » est tapé deux gestes plus loin. La séance
+  /// prend la main plutôt que d'attendre son tour.
+  Future<void> _applyCoachVoicePreset(Coach coach) {
     final preset = coach.voicePreset;
     if (preset.isEmpty) {
       // Pas de preset : on s'assure quand même que les défauts sont en
       // place — au cas où un coach précédent en aurait posé un et qu'on
       // soit revenu sur ce coach sans passer par un restoreDefaults.
-      await widget.tts.restoreDefaultVoicePreset();
-      return;
+      return widget.tts.takeVoiceLead(widget.tts.restoreDefaultVoicePreset);
     }
-    await widget.tts.applyCoachVoicePreset(
-      coachId: coach.id,
-      voiceName: preset.voiceName,
-      voiceLocale: preset.voiceLocale,
-      rate: preset.rate,
-      pitch: preset.pitch,
-      preferredGender: preset.preferredGender,
+    return widget.tts.takeVoiceLead(
+      () => widget.tts.applyCoachVoicePreset(
+        coachId: coach.id,
+        voiceName: preset.voiceName,
+        voiceLocale: preset.voiceLocale,
+        rate: preset.rate,
+        pitch: preset.pitch,
+        preferredGender: preset.preferredGender,
+      ),
     );
   }
 
@@ -1157,7 +1165,7 @@ class _CareerScreenState extends State<CareerScreen> {
 
     if (verifier != null) camService.stopSessionDetection();
     widget.tts.setNameResolver(null);
-    await widget.tts.restoreDefaultVoicePreset();
+    await widget.tts.takeVoiceLead(widget.tts.restoreDefaultVoicePreset);
 
     // Reload du bundle après le retour de la séance encore : le `_start`
     // initial avait déjà reloadé au moment du pushReplacement, mais à ce

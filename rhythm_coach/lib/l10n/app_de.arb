@@ -535,6 +535,13 @@
   "coachVoiceUnavailable": "Gespeicherte Stimme auf diesem Gerät nicht vorhanden",
   "coachVoicePreview": "Anhören",
   "coachVoicePlatformNoSelection": "Auf dieser Plattform hängt die Stimme von der installierten Engine ab.",
+  "coachVoiceLine": "Stimme: {value}",
+  "@coachVoiceLine": {
+    "description": "Hinweiszeile auf einer Coach-Karte. {value} ist ein Stimmname oder „Automatisch“.",
+    "placeholders": {
+      "value": { "type": "String" }
+    }
+  },
   "soundsAmbienceSection": "Ambiente",
   "soundsAmbienceSubtitle": "Hintergrund-Pack, das während der Sessions läuft. Auswahl wird mit dem Spielbildschirm geteilt. Tippe einen Modus an, um ihn anzuhören.",
   "soundsPackLabel": "Pack",

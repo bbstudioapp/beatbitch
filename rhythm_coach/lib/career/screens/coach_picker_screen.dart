@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../l10n/format_helpers.dart';
+import '../../services/tts_service.dart';
+import '../../services/user_profile_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/coach_voice_picker.dart';
 import '../models/coach.dart';
 import '../services/coach_service.dart';
 import '../widgets/coach_portrait.dart';
@@ -14,23 +17,71 @@ import '../widgets/coach_portrait.dart';
 /// verrouillés grisés. Le Principal du palier courant est mis en avant
 /// par un badge dédié. La sélection d'un non-Principal passe par un dialog
 /// de confirmation expliquant que la session ne fera pas progresser le palier.
-class CoachPickerScreen extends StatelessWidget {
+///
+/// Porte aussi la ligne « Voix : … » de chaque coach débloqué : c'est ici
+/// qu'on regarde un coach, donc ici que la question de sa voix se pose.
+class CoachPickerScreen extends StatefulWidget {
   final CoachService service;
   final int playerTotalSeconds;
   final bool handsEnabled;
+
+  /// Sert au réglage de voix par coach (lecture, aperçu, restauration).
+  final TtsService tts;
+
+  /// Résout `{name}` dans la phrase d'aperçu, comme au Profil.
+  final UserProfileService userProfile;
 
   const CoachPickerScreen({
     super.key,
     required this.service,
     required this.playerTotalSeconds,
     required this.handsEnabled,
+    required this.tts,
+    required this.userProfile,
   });
 
+  @override
+  State<CoachPickerScreen> createState() => _CoachPickerScreenState();
+}
+
+class _CoachPickerScreenState extends State<CoachPickerScreen> {
+  /// `null` tant que les voix du moteur n'ont pas répondu : la ligne
+  /// n'apparaît qu'une fois qu'elle a quelque chose de vrai à dire.
+  CoachVoiceLabels? _voiceLabels;
+
+  @override
+  void initState() {
+    super.initState();
+    if (TtsService.supportsVoiceSelection) _loadVoiceLabels();
+  }
+
+  Future<void> _loadVoiceLabels() async {
+    final labels =
+        await CoachVoiceLabels.load(widget.tts, widget.service.coaches);
+    if (!mounted) return;
+    setState(() => _voiceLabels = labels);
+  }
+
+  /// Ouvre **la** feuille de réglage de voix — celle du Profil, avec sa
+  /// restauration de sortie et sa file d'écritures.
+  Future<void> _openVoicePicker(Coach coach) async {
+    final labels = _voiceLabels;
+    if (labels == null) return;
+    await showCoachVoicePicker(
+      context,
+      tts: widget.tts,
+      coach: coach,
+      userProfile: widget.userProfile,
+      labels: labels,
+    );
+    await _loadVoiceLabels();
+  }
+
   Future<void> _handleTap(BuildContext context, Coach coach) async {
-    final status = service.evaluate(
+    final status = widget.service.evaluate(
       coach,
-      playerTotalSeconds: playerTotalSeconds,
-      handsEnabled: handsEnabled,
+      playerTotalSeconds: widget.playerTotalSeconds,
+      handsEnabled: widget.handsEnabled,
     );
 
     final t = AppLocalizations.of(context);
@@ -51,20 +102,20 @@ class CoachPickerScreen extends StatelessWidget {
         );
         return;
       case CoachSelectionStatus.selectedAdvancing:
-        await service.selectCoach(coach);
+        await widget.service.selectCoach(coach);
         if (context.mounted) Navigator.of(context).pop(coach);
         return;
       case CoachSelectionStatus.selectedFreeTraining:
         final confirmed = await _confirmFreeTraining(context, coach);
         if (!confirmed) return;
-        await service.selectCoach(coach);
+        await widget.service.selectCoach(coach);
         if (context.mounted) Navigator.of(context).pop(coach);
         return;
     }
   }
 
   Future<bool> _confirmFreeTraining(BuildContext context, Coach coach) async {
-    final principal = service.currentTierPrincipal;
+    final principal = widget.service.currentTierPrincipal;
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) {
@@ -136,16 +187,16 @@ class CoachPickerScreen extends StatelessWidget {
         title: Text(t.coachPickerTitle),
       ),
       body: AnimatedBuilder(
-        animation: service,
+        animation: widget.service,
         builder: (context, _) {
           // Révélation progressive : on ne dévoile que le palier en cours
           // + le palier juste suivant (= prochain coach à débloquer). Les
           // tiers supérieurs restent cachés — leur existence et identité
           // se révèlent à mesure que la joueuse progresse, pas en flash dès
           // la 1ʳᵉ ouverture du picker.
-          final coaches = [...service.coaches]
+          final coaches = [...widget.service.coaches]
             ..sort((a, b) => a.tier.compareTo(b.tier))
-            ..removeWhere((c) => c.tier > service.currentTier + 1);
+            ..removeWhere((c) => c.tier > widget.service.currentTier + 1);
 
           return ListView.separated(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
@@ -153,16 +204,24 @@ class CoachPickerScreen extends StatelessWidget {
             separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final c = coaches[index];
-              final unlocked = service.isUnlocked(c);
+              final unlocked = widget.service.isUnlocked(c);
               final isCurrentPrincipal =
-                  c.isPrincipal && c.tier == service.currentTier;
-              final isSelected = service.selectedCoachId == c.id;
+                  c.isPrincipal && c.tier == widget.service.currentTier;
+              final isSelected = widget.service.selectedCoachId == c.id;
+              final labels = _voiceLabels;
               return _CoachCard(
                 coach: c,
                 unlocked: unlocked,
                 isCurrentPrincipal: isCurrentPrincipal,
                 isSelected: isSelected,
                 onTap: () => _handleTap(context, c),
+                // Réservé aux coachs débloqués : régler la voix d'un coach
+                // qu'on ne joue pas encore n'a pas d'objet ici, et le picker
+                // Custom — qui les propose tous — porte déjà leur accroche.
+                voiceLabel: unlocked && labels != null
+                    ? labels.labelFor(t, c.id)
+                    : null,
+                onTapVoice: () => _openVoicePicker(c),
               );
             },
           );
@@ -179,12 +238,19 @@ class _CoachCard extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
 
+  /// Voix effective du coach. `null` = pas de ligne (coach verrouillé,
+  /// plateforme sans sélection, ou voix pas encore lues).
+  final String? voiceLabel;
+  final VoidCallback onTapVoice;
+
   const _CoachCard({
     required this.coach,
     required this.unlocked,
     required this.isCurrentPrincipal,
     required this.isSelected,
     required this.onTap,
+    required this.voiceLabel,
+    required this.onTapVoice,
   });
 
   @override
@@ -301,6 +367,13 @@ class _CoachCard extends StatelessWidget {
                           height: 1.35,
                         ),
                       ),
+                      if (voiceLabel != null) ...[
+                        const SizedBox(height: 10),
+                        CoachVoiceLine(
+                          label: voiceLabel!,
+                          onTap: onTapVoice,
+                        ),
+                      ],
                     ],
                   ),
                 ),

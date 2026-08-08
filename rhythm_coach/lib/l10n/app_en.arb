@@ -535,6 +535,13 @@
   "coachVoiceUnavailable": "Saved voice not available on this device",
   "coachVoicePreview": "Play",
   "coachVoicePlatformNoSelection": "On this platform the voice depends on the installed engine.",
+  "coachVoiceLine": "Voice: {value}",
+  "@coachVoiceLine": {
+    "description": "Discoverability line on a coach card. {value} is a voice name or \"Automatic\".",
+    "placeholders": {
+      "value": { "type": "String" }
+    }
+  },
   "soundsAmbienceSection": "Ambience",
   "soundsAmbienceSubtitle": "Background pack played during sessions. Selection shared with the play screen. Tap a mode to listen.",
   "soundsPackLabel": "Pack",

@@ -191,16 +191,19 @@ void main() {
   }
 
   /// Ce que fait `career_screen._applyCoachVoicePreset` au démarrage d'une
-  /// séance : pousser le preset du coach au moteur.
+  /// séance : prendre la main sur l'état vocal, puis pousser le preset du
+  /// coach au moteur.
   Future<void> startSessionWith(TtsService tts, Coach coach) {
     final preset = coach.voicePreset;
-    return tts.applyCoachVoicePreset(
-      coachId: coach.id,
-      voiceName: preset.voiceName,
-      voiceLocale: preset.voiceLocale,
-      rate: preset.rate,
-      pitch: preset.pitch,
-      preferredGender: preset.preferredGender,
+    return tts.takeVoiceLead(
+      () => tts.applyCoachVoicePreset(
+        coachId: coach.id,
+        voiceName: preset.voiceName,
+        voiceLocale: preset.voiceLocale,
+        rate: preset.rate,
+        pitch: preset.pitch,
+        preferredGender: preset.preferredGender,
+      ),
     );
   }
 

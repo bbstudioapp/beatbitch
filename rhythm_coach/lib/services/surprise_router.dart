@@ -211,7 +211,7 @@ class SurpriseRouter {
 
     if (verifier != null) camService.stopSessionDetection();
     tts.setNameResolver(null);
-    await tts.restoreDefaultVoicePreset();
+    await tts.takeVoiceLead(tts.restoreDefaultVoicePreset);
   }
 
   static Future<void> _handleEncore({

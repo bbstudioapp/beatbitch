@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../services/tts_service.dart';
+import '../../services/user_profile_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/coach_voice_picker.dart';
+import '../models/coach.dart';
 import '../services/coach_service.dart';
 import '../widgets/coach_portrait.dart';
 
@@ -17,23 +21,97 @@ import '../widgets/coach_portrait.dart';
 ///
 /// Ne touche pas à `CoachService.selectCoach` : le coach de carrière reste
 /// celui choisi côté CARRIÈRE.
-class CustomCoachPickerScreen extends StatelessWidget {
+///
+/// Comme il propose **tout** le catalogue, c'est aussi le seul endroit d'où
+/// se règle la voix d'un coach pas encore débloqué en carrière — que le
+/// Profil ne liste volontairement pas.
+class CustomCoachPickerScreen extends StatefulWidget {
   final CoachService service;
 
   /// Sélection courante (`null` = voix par défaut). Sert juste à mettre en
   /// avant la ligne active à l'ouverture.
   final String? selectedCoachId;
 
+  /// Sert au réglage de voix par coach (lecture, aperçu, restauration).
+  final TtsService tts;
+
+  /// Résout `{name}` dans la phrase d'aperçu, comme au Profil.
+  final UserProfileService userProfile;
+
   const CustomCoachPickerScreen({
     super.key,
     required this.service,
     required this.selectedCoachId,
+    required this.tts,
+    required this.userProfile,
   });
+
+  @override
+  State<CustomCoachPickerScreen> createState() =>
+      _CustomCoachPickerScreenState();
+
+  /// Helper : pousse l'écran et renvoie la sélection. `null` = l'utilisateur
+  /// est revenu en arrière sans choisir → pas de changement.
+  static Future<({bool changed, String? coachId})?> pick(
+    BuildContext context, {
+    required CoachService service,
+    required String? selectedCoachId,
+    required TtsService tts,
+    required UserProfileService userProfile,
+  }) async {
+    final result = await Navigator.of(context).push<_CoachPickerResult>(
+      MaterialPageRoute(
+        builder: (_) => CustomCoachPickerScreen(
+          service: service,
+          selectedCoachId: selectedCoachId,
+          tts: tts,
+          userProfile: userProfile,
+        ),
+      ),
+    );
+    if (result == null) return null;
+    return (changed: true, coachId: result.coachId);
+  }
+}
+
+class _CustomCoachPickerScreenState extends State<CustomCoachPickerScreen> {
+  /// `null` tant que les voix du moteur n'ont pas répondu : la ligne
+  /// n'apparaît qu'une fois qu'elle a quelque chose de vrai à dire.
+  CoachVoiceLabels? _voiceLabels;
+
+  @override
+  void initState() {
+    super.initState();
+    if (TtsService.supportsVoiceSelection) _loadVoiceLabels();
+  }
+
+  Future<void> _loadVoiceLabels() async {
+    final labels =
+        await CoachVoiceLabels.load(widget.tts, widget.service.coaches);
+    if (!mounted) return;
+    setState(() => _voiceLabels = labels);
+  }
+
+  /// Ouvre **la** feuille de réglage de voix — celle du Profil, avec sa
+  /// restauration de sortie et sa file d'écritures.
+  Future<void> _openVoicePicker(Coach coach) async {
+    final labels = _voiceLabels;
+    if (labels == null) return;
+    await showCoachVoicePicker(
+      context,
+      tts: widget.tts,
+      coach: coach,
+      userProfile: widget.userProfile,
+      labels: labels,
+    );
+    await _loadVoiceLabels();
+  }
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final coaches = service.coaches;
+    final coaches = widget.service.coaches;
+    final labels = _voiceLabels;
     return Scaffold(
       appBar: AppBar(title: Text(t.customCoachPickerTitle)),
       body: ListView(
@@ -43,7 +121,7 @@ class CustomCoachPickerScreen extends StatelessWidget {
             title: t.customCoachDefaultVoice,
             subtitle: t.customCoachPickerDefaultSubtitle,
             icon: Icons.record_voice_over_outlined,
-            selected: selectedCoachId == null,
+            selected: widget.selectedCoachId == null,
             onTap: () =>
                 Navigator.of(context).pop(const _CoachPickerResult(null)),
           ),
@@ -58,37 +136,20 @@ class CustomCoachPickerScreen extends StatelessWidget {
                 height: 56,
                 width: 40,
                 borderRadius: BorderRadius.circular(9),
-                accent: selectedCoachId == c.id
+                accent: widget.selectedCoachId == c.id
                     ? AppTheme.accent
                     : AppTheme.textMuted,
               ),
-              selected: selectedCoachId == c.id,
+              selected: widget.selectedCoachId == c.id,
               onTap: () => Navigator.of(context).pop(_CoachPickerResult(c.id)),
+              voiceLabel: labels?.labelFor(t, c.id),
+              onTapVoice: () => _openVoicePicker(c),
             ),
             const SizedBox(height: 12),
           ],
         ],
       ),
     );
-  }
-
-  /// Helper : pousse l'écran et renvoie la sélection. `null` = l'utilisateur
-  /// est revenu en arrière sans choisir → pas de changement.
-  static Future<({bool changed, String? coachId})?> pick(
-    BuildContext context, {
-    required CoachService service,
-    required String? selectedCoachId,
-  }) async {
-    final result = await Navigator.of(context).push<_CoachPickerResult>(
-      MaterialPageRoute(
-        builder: (_) => CustomCoachPickerScreen(
-          service: service,
-          selectedCoachId: selectedCoachId,
-        ),
-      ),
-    );
-    if (result == null) return null;
-    return (changed: true, coachId: result.coachId);
   }
 }
 
@@ -108,6 +169,11 @@ class _PickerCard extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
+  /// Voix effective du coach. `null` = pas de ligne (ligne « voix par
+  /// défaut », plateforme sans sélection, ou voix pas encore lues).
+  final String? voiceLabel;
+  final VoidCallback? onTapVoice;
+
   const _PickerCard({
     required this.title,
     required this.subtitle,
@@ -115,6 +181,8 @@ class _PickerCard extends StatelessWidget {
     this.leading,
     required this.selected,
     required this.onTap,
+    this.voiceLabel,
+    this.onTapVoice,
   });
 
   @override
@@ -165,6 +233,13 @@ class _PickerCard extends StatelessWidget {
                         color: AppTheme.textMuted,
                       ),
                     ),
+                    if (voiceLabel != null && onTapVoice != null) ...[
+                      const SizedBox(height: 6),
+                      CoachVoiceLine(
+                        label: voiceLabel!,
+                        onTap: onTapVoice!,
+                      ),
+                    ],
                   ],
                 ),
               ),
