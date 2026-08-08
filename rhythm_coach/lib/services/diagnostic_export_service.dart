@@ -4,12 +4,14 @@ import 'package:flutter/foundation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../career/models/coach_catalog.dart';
 import '../career/models/specialization.dart';
 import '../models/badge.dart';
 import 'capability_axis.dart';
 import 'diagnostic_export_integrity.dart';
 import 'locale_service.dart';
 import 'profile_reconciliation.dart';
+import 'tts_service.dart';
 
 /// Options de l'export diagnostic. Seul levier exposé à la joueuse pour
 /// l'instant : inclure ou non les surnoms personnalisés (off par défaut —
@@ -34,9 +36,21 @@ class DiagnosticExportOptions {
 ///   contenir un prénom réel ;
 /// - la calibration caméra (axes, min/max) — donnée personnelle qui n'apporte
 ///   rien au diagnostic d'un bug de carrière.
+///
+/// Les réglages de voix (section `voice`), eux, sortent **sans option** : un
+/// identifiant de voix est choisi dans une liste imposée par le moteur, pas
+/// saisi, et ne désigne personne — contrairement à un surnom. Les mettre
+/// derrière un toggle éteint par défaut reviendrait à ne jamais les recevoir,
+/// c'est-à-dire à manquer la seule donnée qui permette de calibrer les voix
+/// par défaut des langues non maîtrisées.
 class DiagnosticExportService {
   /// Version du schéma d'export. À bumper si la forme du JSON change de
   /// façon incompatible.
+  ///
+  /// **Ajouter une section n'est pas incompatible** et ne la bumpe donc pas :
+  /// l'import ignore ce qu'il ne connaît pas, et le checksum se recalcule sur
+  /// le fichier tel qu'il est — un export produit avant l'ajout reste
+  /// vérifiable. `appVersion` suffit à dater un fichier reçu.
   static const int schemaVersion = 1;
 
   final SharedPreferences _prefs;
@@ -111,6 +125,7 @@ class DiagnosticExportService {
       'badges': _badges(),
       'coach': _coach(),
       'anatomy': _anatomy(),
+      'voice': _voice(),
       if (options.includeNicknames) 'nicknames': _nicknames(),
       'surprise': _surprise(),
       'settings': _settings(),
@@ -245,6 +260,96 @@ class DiagnosticExportService {
 
   Map<String, dynamic> _anatomy() => <String, dynamic>{
         'hasBalls': _prefs.getBool('profile.anatomy.has_balls') ?? true,
+      };
+
+  /// Réglages de voix : la voix par défaut hors carrière (`tts.voice.<lang>`)
+  /// et celle choisie pour chaque coach (`tts.voice.coach.<coachId>.<lang>`).
+  ///
+  /// Section conçue pour être lue par un **humain** autant que réimportée :
+  /// six coachs sur sept déclarent une voix française en dur, donc hors
+  /// français personne ne sait quelle voix mettre par défaut. Ces exports
+  /// sont le seul moyen de le déduire des choix réels des utilisateurs —
+  /// d'où le nom du coach à côté de son id opaque, la langue sur chaque
+  /// entrée, et un `source` explicite plutôt qu'une clé absente muette.
+  ///
+  /// **Ce qui est listé** : la langue active l'est en entier (tout le
+  /// catalogue de coachs, réglés ou non — « laissé en automatique » est une
+  /// donnée) ; les autres langues n'apparaissent que là où un choix a été
+  /// fait, pour qu'un réglage devenu inactif ne soit pas perdu sans que
+  /// quatre langues vides encombrent l'export.
+  ///
+  /// Les clés sont **composées** via [TtsService], jamais parsées ni
+  /// recopiées en littéral : un `coachId` peut contenir un point, et une
+  /// divergence de préfixe exporterait un réglage que la séance ne lit pas.
+  Map<String, dynamic> _voice() {
+    // Langue active en tête : c'est la ligne qui porte l'information quand
+    // un humain lit l'export, les autres ne sont que des vestiges. L'ordre
+    // reste déterministe — le checksum ne trie pas les listes.
+    final languages = <String>[
+      _locale,
+      for (final l in kSupportedLocales)
+        if (l.languageCode != _locale) l.languageCode,
+    ];
+    final defaults = <Map<String, dynamic>>[];
+    for (final lang in languages) {
+      final stored = _prefs.getString(TtsService.userVoiceKey(lang));
+      if (stored == null && lang != _locale) continue;
+      defaults.add(_voiceEntry(lang, stored));
+    }
+    final coaches = <Map<String, dynamic>>[];
+    for (final coach in CoachCatalog.defaults) {
+      for (final lang in languages) {
+        final stored =
+            _prefs.getString(TtsService.coachVoiceKey(coach.id, lang));
+        if (stored == null && lang != _locale) continue;
+        coaches.add(<String, dynamic>{
+          'coachId': coach.id,
+          'coachName': coach.name,
+          ..._voiceEntry(lang, stored),
+        });
+      }
+    }
+    return <String, dynamic>{
+      'activeLanguage': _locale,
+      // Linux n'expose aucune API « choisir une voix » (cf.
+      // `TtsService.supportsVoiceSelection`) : sans ce drapeau, un export
+      // Linux entièrement `automatic` se lirait comme un désintérêt alors
+      // que le réglage n'a simplement aucune prise.
+      'selectionSupported': _platform != 'linux',
+      'default': defaults,
+      'coaches': coaches,
+    };
+  }
+
+  /// Entrée de voix lisible seule : `voice` porte l'identifiant technique
+  /// (`null` quand rien n'est réglé), `source` dit en clair si l'appareil
+  /// choisit ou si l'utilisateur a tranché, et `platform` **le moteur qui a
+  /// produit cet identifiant**.
+  ///
+  /// Le moteur est porté par l'entrée et non par la section parce que
+  /// l'unité qu'on agrège est l'entrée : concaténer les `coaches` de
+  /// plusieurs exports perd tout ce qui vivait au-dessus, et
+  /// `en-gb-x-gbd-local` (voix Android) se retrouverait dans la même liste
+  /// plate que `Microsoft David Desktop` (voix SAPI) — deux espaces de noms
+  /// disjoints, aucun moyen de savoir lequel est réutilisable où. Même
+  /// raison que la [language] répétée sur chaque entrée.
+  ///
+  /// Il vaut la valeur du champ `platform` de tête, volontairement : c'est
+  /// tout ce qu'on sait du moteur (`flutter_tts` délègue à l'OS, sans
+  /// exposer quel moteur Android est installé), et réutiliser le nom évite
+  /// d'inventer un vocabulaire qui promettrait plus de précision.
+  ///
+  /// **Absent quand `voice` est `null`** : il n'y a alors aucune valeur à
+  /// interpréter, et une colonne constante sur tout le catalogue coûterait
+  /// en lisibilité sans rien apprendre. `selectionSupported` couvre déjà le
+  /// seul cas où une absence de réglage demande à être interprétée (Linux
+  /// n'a pas prise, ce n'est pas un désintérêt).
+  Map<String, dynamic> _voiceEntry(String language, String? voice) =>
+      <String, dynamic>{
+        'language': language,
+        'voice': voice,
+        'source': voice == null ? 'automatic' : 'chosen',
+        if (voice != null) 'platform': _platform,
       };
 
   Map<String, dynamic> _nicknames() => <String, dynamic>{

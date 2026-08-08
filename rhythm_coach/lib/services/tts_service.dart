@@ -338,8 +338,7 @@ class TtsService {
     // Linux : pas de sélection de voix programmatique, `_currentVoiceName`
     // n'est qu'un label de backend (cf. [_selectVoiceWithSeed]).
     if (_isLinux) return false;
-    return _applyStoredVoice('$_userVoicePrefsPrefix${_locale.languageCode}',
-        lead: lead);
+    return _applyStoredVoice(userVoiceKey(_locale.languageCode), lead: lead);
   }
 
   /// Applique la voix mémorisée sous [prefsKey], si elle existe encore sur
@@ -793,15 +792,22 @@ class TtsService {
     // (neuronal) »), pas une voix sélectionnable — rien à mémoriser.
     if (_isLinux) return;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      '$_userVoicePrefsPrefix${_locale.languageCode}',
-      name,
-    );
+    await prefs.setString(userVoiceKey(_locale.languageCode), name);
   }
 
+  /// Clé de persistance de la voix par défaut choisie en [languageCode].
+  ///
+  /// Publique pour que l'export / import diagnostic compose les mêmes clés
+  /// que ce service, au lieu d'en dupliquer les littéraux — une divergence
+  /// y serait silencieuse (un réglage exporté sous une clé que la séance ne
+  /// lit pas).
+  static String userVoiceKey(String languageCode) =>
+      '$_userVoicePrefsPrefix$languageCode';
+
   /// Clé de persistance de la voix choisie pour [coachId] en [languageCode].
-  /// Composée, jamais parsée (cf. [_coachVoicePrefsPrefix]).
-  static String _coachVoiceKey(String coachId, String languageCode) =>
+  /// Composée, jamais parsée (cf. [_coachVoicePrefsPrefix]). Publique pour
+  /// les mêmes raisons que [userVoiceKey].
+  static String coachVoiceKey(String coachId, String languageCode) =>
       '$_coachVoicePrefsPrefix$coachId.$languageCode';
 
   /// `false` là où choisir une voix n'a aucune prise : sur Linux, ni
@@ -823,7 +829,7 @@ class TtsService {
   /// ou `null` si aucune — auquel cas le coach garde sa cascade d'origine.
   Future<String?> coachVoiceName(String coachId) async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_coachVoiceKey(coachId, _locale.languageCode));
+    return prefs.getString(coachVoiceKey(coachId, _locale.languageCode));
   }
 
   /// Mémorise la voix [name] pour [coachId] dans la langue courante.
@@ -836,7 +842,7 @@ class TtsService {
   /// anglaise choisie pour un coach n'existe pas en allemand.
   Future<void> setCoachVoice(String coachId, String name) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_coachVoiceKey(coachId, _locale.languageCode), name);
+    await prefs.setString(coachVoiceKey(coachId, _locale.languageCode), name);
   }
 
   /// Rend [coachId] à sa cascade d'origine (« Automatique ») en **supprimant**
@@ -845,7 +851,7 @@ class TtsService {
   /// un seul état à raisonner.
   Future<void> clearCoachVoice(String coachId) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_coachVoiceKey(coachId, _locale.languageCode));
+    await prefs.remove(coachVoiceKey(coachId, _locale.languageCode));
   }
 
   /// Applique un preset vocal coach : voix nommée + rate + pitch. Toute
@@ -889,7 +895,7 @@ class TtsService {
     // Voix disparue de l'appareil : repli silencieux sur la cascade
     // ci-dessous, et la préférence reste en base (cf. [_applyStoredVoice]).
     if (coachId != null &&
-        await _applyStoredVoice(_coachVoiceKey(coachId, _locale.languageCode),
+        await _applyStoredVoice(coachVoiceKey(coachId, _locale.languageCode),
             lead: lead)) {
       // Rate et pitch restent ceux du coach : l'utilisateur a choisi un
       // timbre, pas un rythme.

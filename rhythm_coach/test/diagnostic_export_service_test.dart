@@ -137,6 +137,7 @@ void main() {
         'badges',
         'coach',
         'anatomy',
+        'voice',
         'surprise',
         'settings',
         'savedSessions',
