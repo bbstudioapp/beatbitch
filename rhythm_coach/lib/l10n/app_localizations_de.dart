@@ -1069,6 +1069,32 @@ class AppLocalizationsDe extends AppLocalizations {
       'Keine passende Stimme auf diesem Gerät gefunden.';
 
   @override
+  String get profileCoachVoiceSection => 'STIMMEN DER COACHES';
+
+  @override
+  String get profileCoachVoiceSubtitle =>
+      'Jeder Coach kann eine eigene Stimme haben. Tippe einen Coach an, um eine auszuwählen und anzuhören.';
+
+  @override
+  String coachVoicePickerTitle(String name) {
+    return 'Stimme von $name';
+  }
+
+  @override
+  String get coachVoiceAutomatic => 'Automatisch';
+
+  @override
+  String get coachVoiceUnavailable =>
+      'Gespeicherte Stimme auf diesem Gerät nicht vorhanden';
+
+  @override
+  String get coachVoicePreview => 'Anhören';
+
+  @override
+  String get coachVoicePlatformNoSelection =>
+      'Auf dieser Plattform hängt die Stimme von der installierten Engine ab.';
+
+  @override
   String get soundsAmbienceSection => 'Ambiente';
 
   @override

@@ -1065,6 +1065,32 @@ class AppLocalizationsEn extends AppLocalizations {
       'No matching voice detected on this device.';
 
   @override
+  String get profileCoachVoiceSection => 'COACH VOICES';
+
+  @override
+  String get profileCoachVoiceSubtitle =>
+      'Each coach can have their own voice. Tap a coach to pick one and hear it.';
+
+  @override
+  String coachVoicePickerTitle(String name) {
+    return '$name\'s voice';
+  }
+
+  @override
+  String get coachVoiceAutomatic => 'Automatic';
+
+  @override
+  String get coachVoiceUnavailable =>
+      'Saved voice not available on this device';
+
+  @override
+  String get coachVoicePreview => 'Play';
+
+  @override
+  String get coachVoicePlatformNoSelection =>
+      'On this platform the voice depends on the installed engine.';
+
+  @override
   String get soundsAmbienceSection => 'Ambience';
 
   @override

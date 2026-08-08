@@ -1071,6 +1071,32 @@ class AppLocalizationsFr extends AppLocalizations {
       'Aucune voix française détectée sur cet appareil.';
 
   @override
+  String get profileCoachVoiceSection => 'VOIX DES COACHS';
+
+  @override
+  String get profileCoachVoiceSubtitle =>
+      'Chaque coach peut avoir sa propre voix. Touche un coach pour en choisir une et l\'écouter.';
+
+  @override
+  String coachVoicePickerTitle(String name) {
+    return 'Voix de $name';
+  }
+
+  @override
+  String get coachVoiceAutomatic => 'Automatique';
+
+  @override
+  String get coachVoiceUnavailable =>
+      'Voix enregistrée absente de cet appareil';
+
+  @override
+  String get coachVoicePreview => 'Écouter';
+
+  @override
+  String get coachVoicePlatformNoSelection =>
+      'Sur cette plateforme, la voix dépend du moteur installé.';
+
+  @override
   String get soundsAmbienceSection => 'Ambiance';
 
   @override
