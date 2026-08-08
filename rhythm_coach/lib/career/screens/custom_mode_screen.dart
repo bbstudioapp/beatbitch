@@ -137,11 +137,14 @@ class _CustomModeScreenState extends State<CustomModeScreen> {
 
   Future<void> _applyCoachVoicePreset(Coach? coach) async {
     final preset = coach?.voicePreset;
-    if (preset == null || preset.isEmpty) {
+    // `coach == null` est déjà impliqué par `preset == null` ; explicite ici
+    // pour que Dart promeuve `coach` en non-nullable jusqu'à son `id`.
+    if (coach == null || preset == null || preset.isEmpty) {
       await widget.tts.restoreDefaultVoicePreset();
       return;
     }
     await widget.tts.applyCoachVoicePreset(
+      coachId: coach.id,
       voiceName: preset.voiceName,
       voiceLocale: preset.voiceLocale,
       rate: preset.rate,

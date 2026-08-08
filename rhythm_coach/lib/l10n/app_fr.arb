@@ -523,6 +523,18 @@
   "soundsPitchLabel": "Hauteur",
   "soundsTestVoice": "Tester la voix",
   "soundsNoVoiceDetected": "Aucune voix française détectée sur cet appareil.",
+  "profileCoachVoiceSection": "VOIX DES COACHS",
+  "profileCoachVoiceSubtitle": "Chaque coach peut avoir sa propre voix. Touche un coach pour en choisir une et l'écouter.",
+  "coachVoicePickerTitle": "Voix de {name}",
+  "@coachVoicePickerTitle": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "coachVoiceAutomatic": "Automatique",
+  "coachVoiceUnavailable": "Voix enregistrée absente de cet appareil",
+  "coachVoicePreview": "Écouter",
+  "coachVoicePlatformNoSelection": "Sur cette plateforme, la voix dépend du moteur installé.",
   "soundsAmbienceSection": "Ambiance",
   "soundsAmbienceSubtitle": "Pack d'arrière-plan appliqué pendant les séances. Sélection partagée avec l'écran de jeu. Touche un mode pour écouter.",
   "soundsPackLabel": "Pack",

@@ -1908,6 +1908,48 @@ abstract class AppLocalizations {
   /// **'Aucune voix française détectée sur cet appareil.'**
   String get soundsNoVoiceDetected;
 
+  /// No description provided for @profileCoachVoiceSection.
+  ///
+  /// In fr, this message translates to:
+  /// **'VOIX DES COACHS'**
+  String get profileCoachVoiceSection;
+
+  /// No description provided for @profileCoachVoiceSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Chaque coach peut avoir sa propre voix. Touche un coach pour en choisir une et l\'écouter.'**
+  String get profileCoachVoiceSubtitle;
+
+  /// No description provided for @coachVoicePickerTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voix de {name}'**
+  String coachVoicePickerTitle(String name);
+
+  /// No description provided for @coachVoiceAutomatic.
+  ///
+  /// In fr, this message translates to:
+  /// **'Automatique'**
+  String get coachVoiceAutomatic;
+
+  /// No description provided for @coachVoiceUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voix enregistrée absente de cet appareil'**
+  String get coachVoiceUnavailable;
+
+  /// No description provided for @coachVoicePreview.
+  ///
+  /// In fr, this message translates to:
+  /// **'Écouter'**
+  String get coachVoicePreview;
+
+  /// No description provided for @coachVoicePlatformNoSelection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sur cette plateforme, la voix dépend du moteur installé.'**
+  String get coachVoicePlatformNoSelection;
+
   /// No description provided for @soundsAmbienceSection.
   ///
   /// In fr, this message translates to:

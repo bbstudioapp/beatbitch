@@ -523,6 +523,18 @@
   "soundsPitchLabel": "Tonhöhe",
   "soundsTestVoice": "Stimme testen",
   "soundsNoVoiceDetected": "Keine passende Stimme auf diesem Gerät gefunden.",
+  "profileCoachVoiceSection": "STIMMEN DER COACHES",
+  "profileCoachVoiceSubtitle": "Jeder Coach kann eine eigene Stimme haben. Tippe einen Coach an, um eine auszuwählen und anzuhören.",
+  "coachVoicePickerTitle": "Stimme von {name}",
+  "@coachVoicePickerTitle": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "coachVoiceAutomatic": "Automatisch",
+  "coachVoiceUnavailable": "Gespeicherte Stimme auf diesem Gerät nicht vorhanden",
+  "coachVoicePreview": "Anhören",
+  "coachVoicePlatformNoSelection": "Auf dieser Plattform hängt die Stimme von der installierten Engine ab.",
   "soundsAmbienceSection": "Ambiente",
   "soundsAmbienceSubtitle": "Hintergrund-Pack, das während der Sessions läuft. Auswahl wird mit dem Spielbildschirm geteilt. Tippe einen Modus an, um ihn anzuhören.",
   "soundsPackLabel": "Pack",

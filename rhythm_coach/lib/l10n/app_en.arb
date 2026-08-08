@@ -523,6 +523,18 @@
   "soundsPitchLabel": "Pitch",
   "soundsTestVoice": "Test the voice",
   "soundsNoVoiceDetected": "No matching voice detected on this device.",
+  "profileCoachVoiceSection": "COACH VOICES",
+  "profileCoachVoiceSubtitle": "Each coach can have their own voice. Tap a coach to pick one and hear it.",
+  "coachVoicePickerTitle": "{name}'s voice",
+  "@coachVoicePickerTitle": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "coachVoiceAutomatic": "Automatic",
+  "coachVoiceUnavailable": "Saved voice not available on this device",
+  "coachVoicePreview": "Play",
+  "coachVoicePlatformNoSelection": "On this platform the voice depends on the installed engine.",
   "soundsAmbienceSection": "Ambience",
   "soundsAmbienceSubtitle": "Background pack played during sessions. Selection shared with the play screen. Tap a mode to listen.",
   "soundsPackLabel": "Pack",

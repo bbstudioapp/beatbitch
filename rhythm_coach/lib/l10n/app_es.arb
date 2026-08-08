@@ -523,6 +523,18 @@
   "soundsPitchLabel": "Tono",
   "soundsTestVoice": "Probar la voz",
   "soundsNoVoiceDetected": "Ninguna voz compatible detectada en este dispositivo.",
+  "profileCoachVoiceSection": "VOCES DE LOS COACHES",
+  "profileCoachVoiceSubtitle": "Cada coach puede tener su propia voz. Toca un coach para elegir una y escucharla.",
+  "coachVoicePickerTitle": "Voz de {name}",
+  "@coachVoicePickerTitle": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "coachVoiceAutomatic": "Automática",
+  "coachVoiceUnavailable": "La voz guardada no está en este dispositivo",
+  "coachVoicePreview": "Escuchar",
+  "coachVoicePlatformNoSelection": "En esta plataforma la voz depende del motor instalado.",
   "soundsAmbienceSection": "Ambiente",
   "soundsAmbienceSubtitle": "Pack de fondo reproducido durante las sesiones. La selección se comparte con la pantalla de juego. Toca un modo para escuchar.",
   "soundsPackLabel": "Pack",
