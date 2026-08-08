@@ -1108,7 +1108,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get coachVoiceSharePurpose =>
-      '[PLACEHOLDER] Texto que se debe escribir antes de la publicación: por qué se piden estos ajustes, qué contiene el archivo y qué se hará con él.';
+      'Las voces predeterminadas de BeatBitch están ajustadas para el francés, y bastante peor para los demás idiomas. Si has encontrado una combinación que suena bien, compartirla ayuda a corregirlo para todo el mundo.\n\nEl archivo de abajo solo contiene tus elecciones de voz: nada de tu progreso, tu perfil ni tus sesiones. No se envía a ninguna parte por su cuenta: tú eliges a quién y con qué aplicación.';
 
   @override
   String get coachVoiceShareContentLabel =>

@@ -4,6 +4,24 @@
 
 ## [Non publié]
 
+## [0.6.1] — 2026-08-08
+
+Version de correction, née d'un retour d'utilisation de la 0.6.0 : des séances qui se figeaient sur la première consigne, des autorisations demandées pour rien, un défi de vitesse devenu injouable. Plus une nouveauté : choisir soi-même la voix de chaque coach.
+
+### Ajouté
+- **Une voix au choix pour chaque coach** — les répliques des coachs sont écrites pour le français. Sur un téléphone configuré dans une autre langue, l'app piochait une voix au hasard parmi celles installées, et plus aucun coach ne sonnait comme il devrait. Chaque coach peut désormais recevoir la voix que tu lui choisis, avec un aperçu pour l'écouter avant de valider. Le réglage est retenu langue par langue : une voix pour Marc quand tu joues en français, une autre quand tu joues en anglais.
+- **Partager ses réglages de voix** — les voix choisies partent avec l'export de tes données, et peuvent aussi être exportées seules, dans un fichier qui ne contient rien d'autre : ni ta progression, ni le reste de ton profil. De quoi transmettre une combinaison qui sonne bien sans rien dévoiler de plus.
+
+### Modifié
+- **Le réglage de voix se trouve là où tu choisis ton coach** — la voix de chaque coach s'affiche sur sa carte, et se change directement de là. Le Profil reste un chemin possible, ce n'est plus le seul.
+
+### Corrigé
+- **Des séances qui restaient bloquées sur la première consigne** — la séance avait l'air de tourner, mais le temps n'avançait plus et rien ne la débloquait ; le bouton stop lui-même pouvait rester sans effet. L'app attendait une réponse de la synthèse vocale ou du son du téléphone, réponse qui ne venait jamais. Neuf endroits ont été repris pour que cette attente ait toujours une fin — dont un qui pouvait empêcher une séance de démarrer du tout, écran figé sans bouton pour lancer. Au pire, désormais, une phrase est coupée ou l'ambiance reste muette ; la séance, elle, continue.
+- **Cinq autorisations demandées sans raison** — l'app réclamait l'accès au réseau, au micro et au stockage du téléphone. BeatBitch est bien 100 % hors ligne : ces autorisations ne correspondaient à aucun usage réel, elles étaient déclarées par des composants tiers embarqués dans l'app (les briques toutes faites qui servent à l'appareil photo et à l'enregistrement de fichiers), pour leur propre compte. Elles ont été retirées et n'apparaissent plus à l'installation.
+- **La cible du défi de vitesse montait sans fin** — au fil des défis réussis, l'objectif affiché grimpait au-delà de tout ce qui est jouable — des centaines, puis des milliers de battements par minute — et tirait le reste de la séance avec lui. La progression est de nouveau bornée au domaine jouable, et les profils déjà partis en vrille sont réparés automatiquement au premier démarrage, sans remise à zéro ni perte de progression.
+- **Marc introuvable chez les joueuses et joueurs les plus avancés** — le coach masculin arrivé en 0.6.0 se débloque à un palier de temps de jeu. Qui avait déjà dépassé ce palier avant sa sortie ne repassait jamais par là, et Marc restait verrouillé définitivement. Le catalogue des coachs est désormais revu en entier au démarrage : Marc apparaît chez tous ceux qui y ont droit.
+- **Le choix de la voix par défaut n'était pas retenu** — la voix sélectionnée dans les réglages s'appliquait sur le moment, mais n'était jamais enregistrée : à la fermeture de l'app, elle laissait la place au choix automatique. Elle est maintenant conservée.
+
 ## [0.6.0] — 2026-08-06
 
 Grosse mise à jour de contenu : une quatrième langue, un premier coach masculin, des postures imposées pendant les pauses scénarisées, un mode d'escalade non-stop et des durées de séance surprises.
@@ -209,7 +227,8 @@ Grosse mise à jour du mode carrière : nouvelle enveloppe de difficulté, nouve
 ## [0.1.0] — 2026-05-08
 - Premier release public : coach vocal rythmique hors-ligne pour Android, adult gate 18+, onboarding, mode carrière + scénarios, badges, profil/réputation.
 
-[Non publié]: https://github.com/bbstudioapp/beatbitch/compare/v0.6.0...develop
+[Non publié]: https://github.com/bbstudioapp/beatbitch/compare/v0.6.1...develop
+[0.6.1]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.6.1
 [0.6.0]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.6.0
 [0.5.3]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.5.3
 [0.5.2]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.5.2

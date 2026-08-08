@@ -544,9 +544,9 @@
   },
   "coachVoiceShareButton": "Compartir mis ajustes de voz",
   "coachVoiceShareSheetTitle": "Compartir mis ajustes de voz",
-  "coachVoiceSharePurpose": "[PLACEHOLDER] Texto que se debe escribir antes de la publicación: por qué se piden estos ajustes, qué contiene el archivo y qué se hará con él.",
+  "coachVoiceSharePurpose": "Las voces predeterminadas de BeatBitch están ajustadas para el francés, y bastante peor para los demás idiomas. Si has encontrado una combinación que suena bien, compartirla ayuda a corregirlo para todo el mundo.\n\nEl archivo de abajo solo contiene tus elecciones de voz: nada de tu progreso, tu perfil ni tus sesiones. No se envía a ninguna parte por su cuenta: tú eliges a quién y con qué aplicación.",
   "@coachVoiceSharePurpose": {
-    "description": "TEXTO PROVISIONAL — a reemplazar por la mantenedora antes de la publicación. El marcador [PLACEHOLDER] es deliberadamente idéntico en los cuatro idiomas para que siga siendo localizable con grep."
+    "description": "Encabezado de la hoja de compartir los ajustes de voz: por qué estos ajustes interesan al proyecto, qué contiene el archivo y quién decide el envío."
   },
   "coachVoiceShareContentLabel": "Este es el archivo completo — no se envía nada más:",
   "coachVoiceShareSubject": "Ajustes de voz de BeatBitch",

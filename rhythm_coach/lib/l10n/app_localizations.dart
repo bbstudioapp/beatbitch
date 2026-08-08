@@ -1968,10 +1968,10 @@ abstract class AppLocalizations {
   /// **'Partager mes réglages de voix'**
   String get coachVoiceShareSheetTitle;
 
-  /// TEXTE PROVISOIRE — à remplacer par la mainteneuse avant publication. Le marqueur [PLACEHOLDER] est volontairement identique dans les quatre langues pour rester repérable d'un grep.
+  /// En-tête de la feuille de partage des réglages de voix : pourquoi ces réglages intéressent le projet, ce que le fichier contient, et qui décide de l'envoi.
   ///
   /// In fr, this message translates to:
-  /// **'[PLACEHOLDER] Texte à écrire avant publication : pourquoi ces réglages sont demandés, ce que le fichier contient, et ce qui en sera fait.'**
+  /// **'Les voix par défaut de BeatBitch sont réglées pour le français, et beaucoup moins bien pour les autres langues. Si tu as trouvé une combinaison qui sonne juste, la partager aide à corriger ça pour tout le monde.\n\nLe fichier ci-dessous ne contient que tes choix de voix : rien de ta progression, de ton profil ni de tes séances. Il n\'est envoyé nulle part tout seul — tu choisis à qui, et par quelle application.'**
   String get coachVoiceSharePurpose;
 
   /// No description provided for @coachVoiceShareContentLabel.
