@@ -8,6 +8,7 @@ import '../services/tts_service.dart';
 import '../services/user_profile_service.dart';
 import '../theme/app_theme.dart';
 import 'coach_voice_picker.dart';
+import 'coach_voice_share_sheet.dart';
 
 /// Bloc « VOIX DES COACHS » du Profil : une ligne par coach débloqué, avec
 /// la voix qu'il utilisera en séance, et une feuille de sélection pour en
@@ -123,6 +124,21 @@ class _CoachVoiceSectionState extends State<CoachVoiceSection> {
             subtitle: _labels.labelFor(t, coach.id),
             onTap: selectable ? () => _openPicker(coach) : null,
           ),
+        const SizedBox(height: 4),
+        // Proposé partout, y compris là où la sélection n'a pas prise : un
+        // export sans aucun réglage n'est pas vide de sens — il dit que
+        // cette plateforme ne permet pas de choisir. Et de toute façon la
+        // feuille montre le fichier, donc personne n'envoie à l'aveugle.
+        OutlinedButton.icon(
+          onPressed: () => showCoachVoiceShareSheet(context),
+          icon: const Icon(Icons.ios_share, size: 18),
+          label: Text(t.coachVoiceShareButton, textAlign: TextAlign.center),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppTheme.accent,
+            side: BorderSide(color: AppTheme.accent.withValues(alpha: 0.6)),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          ),
+        ),
       ],
     );
   }

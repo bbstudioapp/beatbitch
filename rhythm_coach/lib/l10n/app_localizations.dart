@@ -1956,6 +1956,36 @@ abstract class AppLocalizations {
   /// **'Voix : {value}'**
   String coachVoiceLine(String value);
 
+  /// No description provided for @coachVoiceShareButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partager mes réglages de voix'**
+  String get coachVoiceShareButton;
+
+  /// No description provided for @coachVoiceShareSheetTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partager mes réglages de voix'**
+  String get coachVoiceShareSheetTitle;
+
+  /// TEXTE PROVISOIRE — à remplacer par la mainteneuse avant publication. Le marqueur [PLACEHOLDER] est volontairement identique dans les quatre langues pour rester repérable d'un grep.
+  ///
+  /// In fr, this message translates to:
+  /// **'[PLACEHOLDER] Texte à écrire avant publication : pourquoi ces réglages sont demandés, ce que le fichier contient, et ce qui en sera fait.'**
+  String get coachVoiceSharePurpose;
+
+  /// No description provided for @coachVoiceShareContentLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voici le fichier en entier — rien d\'autre n\'est envoyé :'**
+  String get coachVoiceShareContentLabel;
+
+  /// No description provided for @coachVoiceShareSubject.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réglages de voix BeatBitch'**
+  String get coachVoiceShareSubject;
+
   /// No description provided for @soundsAmbienceSection.
   ///
   /// In fr, this message translates to:
