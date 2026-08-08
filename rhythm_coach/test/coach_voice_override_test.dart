@@ -277,6 +277,45 @@ void main() {
     });
   });
 
+  group('La cascade d\'origine ne doit rien à un filtre par genre', () {
+    /// Moteur dont la **première voix n'est pas la première voix préférée**
+    /// de la langue : sans cet écart, les deux chemins de la cascade
+    /// donneraient le même résultat et le test ne prouverait rien.
+    /// `en-gb-x-gba-local` est en tête de la table calibrée féminine,
+    /// `en-gb-x-gbd-local` n'y figure pas.
+    const shuffled = <Map<String, String>>[
+      {'name': 'en-gb-x-gbd-local', 'locale': 'en-GB'},
+      {'name': 'en-gb-x-gba-local', 'locale': 'en-GB'},
+      {'name': 'en-us-x-tpd-local', 'locale': 'en-US'},
+    ];
+
+    test('un coach sans voix nommée prend la première voix venue', () async {
+      engineVoices = shuffled.map(Map<String, String>.from).toList();
+      final tts = TtsService(locale: const Locale('en'));
+
+      await startSessionWith(tts, marc);
+
+      // C'est déjà là que le filtre par genre atterrissait : ni le champ
+      // `gender` (qu'Android et le web ne remontent jamais) ni le nom de la
+      // voix ne pouvaient trancher, et la cascade retombait sur
+      // `voices.first`. Le retrait de ce filtre ne change donc rien ici.
+      expect(voicesPushed.last, 'en-gb-x-gbd-local');
+    });
+
+    test('un coach qui ne saute pas la table y trouve sa voix', () async {
+      engineVoices = shuffled.map(Map<String, String>.from).toList();
+      final tts = TtsService(locale: const Locale('en'));
+
+      await startSessionWith(tts, lina);
+
+      // Contraste : Lina consulte `_preferredVoiceNamesByLanguage`, qui la
+      // mène ailleurs que sur la première voix du moteur. C'est ce que le
+      // saut préserve pour Marc, et c'est le seul effet réel qu'avait
+      // l'ancien `preferredGender`.
+      expect(voicesPushed.last, 'en-gb-x-gba-local');
+    });
+  });
+
   group('Débit et hauteur restent ceux du coach', () {
     testWidgets('l\'utilisateur choisit un timbre, pas un rythme',
         (tester) async {
