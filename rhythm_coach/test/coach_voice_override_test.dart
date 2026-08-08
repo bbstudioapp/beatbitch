@@ -13,12 +13,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Réglage de voix **par coach** — la seule réponse possible au défaut
 /// « Marc parle avec une voix de femme ».
 ///
-/// Aucune plateforme cible n'expose le genre d'une voix : ni le plugin, ni
-/// `android.speech.tts.Voice`, et les noms Google (`en-gb-x-gbd-local`) ne
-/// portent aucun indice exploitable. Le filtre par genre de `_fallbackPick`
-/// ne peut donc jamais réussir — seule une oreille humaine peut choisir. Ces
-/// tests vérifient que ce choix humain, une fois fait, est bien celui que le
-/// moteur reçoit en séance.
+/// Aucun des canaux que la sélection automatique atteint (Android, web) ne
+/// déclare le genre d'une voix : ni le plugin, ni `android.speech.tts.Voice`,
+/// et les noms Google (`en-gb-x-gbd-local`) ne portent aucun indice
+/// exploitable. Le pendant masculin de `_fallbackPick` ne pouvait donc jamais
+/// réussir — il a été retiré depuis, seule une oreille humaine peut choisir.
+/// Ces tests vérifient que ce choix humain, une fois fait, est bien celui que
+/// le moteur reçoit en séance.
 ///
 /// Le problème dépasse Marc : six coachs sur sept déclarent une voix `fr-FR`
 /// en dur, donc tout utilisateur non-francophone entend une rotation
@@ -54,8 +55,8 @@ void main() {
   ];
 
   /// Marc, tel qu'il est déclaré dans `coach_07_marc.json` : aucune voix
-  /// nommée, juste un genre que rien ne sait honorer, et un rate/pitch
-  /// masculins qui portent aujourd'hui seuls son identité.
+  /// nommée, juste le saut d'une liste de voix calibrées féminines, et un
+  /// rate/pitch masculins qui portent aujourd'hui seuls son identité.
   const marc = Coach(
     id: 'coach_07_marc',
     name: 'Marc',
@@ -66,7 +67,7 @@ void main() {
     tier: 3,
     isPrincipal: true,
     voicePreset: CoachVoicePreset(
-      preferredGender: 'male',
+      skipPreferredVoices: true,
       rate: 0.55,
       pitch: 0.85,
     ),
@@ -202,7 +203,7 @@ void main() {
         voiceLocale: preset.voiceLocale,
         rate: preset.rate,
         pitch: preset.pitch,
-        preferredGender: preset.preferredGender,
+        skipPreferredVoices: preset.skipPreferredVoices,
       ),
     );
   }
@@ -274,6 +275,45 @@ void main() {
 
       expect(voicesPushed.last, isNot('en-gb-x-gbd-local'),
           reason: 'le réglage de Marc ne doit pas fuiter sur Lina');
+    });
+  });
+
+  group('La cascade d\'origine ne doit rien à un filtre par genre', () {
+    /// Moteur dont la **première voix n'est pas la première voix préférée**
+    /// de la langue : sans cet écart, les deux chemins de la cascade
+    /// donneraient le même résultat et le test ne prouverait rien.
+    /// `en-gb-x-gba-local` est en tête de la table calibrée féminine,
+    /// `en-gb-x-gbd-local` n'y figure pas.
+    const shuffled = <Map<String, String>>[
+      {'name': 'en-gb-x-gbd-local', 'locale': 'en-GB'},
+      {'name': 'en-gb-x-gba-local', 'locale': 'en-GB'},
+      {'name': 'en-us-x-tpd-local', 'locale': 'en-US'},
+    ];
+
+    test('un coach sans voix nommée prend la première voix venue', () async {
+      engineVoices = shuffled.map(Map<String, String>.from).toList();
+      final tts = TtsService(locale: const Locale('en'));
+
+      await startSessionWith(tts, marc);
+
+      // C'est déjà là que le filtre par genre atterrissait : ni le champ
+      // `gender` (qu'Android et le web ne remontent jamais) ni le nom de la
+      // voix ne pouvaient trancher, et la cascade retombait sur
+      // `voices.first`. Le retrait de ce filtre ne change donc rien ici.
+      expect(voicesPushed.last, 'en-gb-x-gbd-local');
+    });
+
+    test('un coach qui ne saute pas la table y trouve sa voix', () async {
+      engineVoices = shuffled.map(Map<String, String>.from).toList();
+      final tts = TtsService(locale: const Locale('en'));
+
+      await startSessionWith(tts, lina);
+
+      // Contraste : Lina consulte `_preferredVoiceNamesByLanguage`, qui la
+      // mène ailleurs que sur la première voix du moteur. C'est ce que le
+      // saut préserve pour Marc, et c'est le seul effet réel qu'avait
+      // l'ancien `preferredGender`.
+      expect(voicesPushed.last, 'en-gb-x-gba-local');
     });
   });
 

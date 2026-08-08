@@ -217,7 +217,7 @@ class _CoachVoiceSheetState extends State<_CoachVoiceSheet> {
         voiceLocale: preset.voiceLocale,
         rate: preset.rate,
         pitch: preset.pitch,
-        preferredGender: preset.preferredGender,
+        skipPreferredVoices: preset.skipPreferredVoices,
       );
     });
     // Feuille fermée pendant la pose du preset : la restauration est déjà

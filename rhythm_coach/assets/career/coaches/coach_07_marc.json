@@ -9,7 +9,7 @@
   "tier": 3,
   "isPrincipal": true,
   "tts": {
-    "gender": "male",
+    "skipPreferredVoices": true,
     "rate": 0.55,
     "pitch": 0.85
   }

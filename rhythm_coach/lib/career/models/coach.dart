@@ -82,24 +82,32 @@ class CoachVoicePreset {
   /// Hauteur de voix. Plage usuelle 0.5..2.0. Null = `TtsService.defaultPitch`.
   final double? pitch;
 
-  /// Genre préféré de la voix TTS (`'male'` / `'female'`). Sert au
-  /// fallback de sélection automatique quand `voiceName` est absent ou
-  /// que la voix nommée n'existe pas sur l'appareil. Null = pas de
-  /// préférence (sélection par défaut, biais femelle historique).
+  /// Écarte la table de voix préférées de la langue (calibrée féminine) au
+  /// profit de la première voix de la locale. Sert au coach masculin (Marc,
+  /// tier 3), pour qui aucune de ces voix ne convient. Sans effet quand
+  /// `voiceName` est présent et disponible.
   ///
-  /// Note Phase masculin (Marc, tier 3) : sur Android, `_fallbackPick`
-  /// filtre `gender == preferredGender` ; sur Windows, Julie est forcée
-  /// peu importe la préférence (cf. CLAUDE.md, contrat SAPI) ; sur Linux,
-  /// la sélection de voix programmatique n'existe pas — le coach garde
-  /// son rate/pitch propre mais la voix reste celle de la plateforme.
-  final String? preferredGender;
+  /// **Remplace un ancien `preferredGender` (`'male'` / `'female'`), retiré :**
+  /// il promettait un filtre par genre qui ne pouvait aboutir nulle part —
+  /// aucun des canaux atteints (Android, web) ne déclare le genre d'une voix
+  /// et les noms Google (`en-gb-x-gbd-local`) n'en portent pas l'indice (cf.
+  /// `TtsService._fallbackPick`). Seul le saut de la liste préférée avait un
+  /// effet réel ; c'est donc lui, et lui seul, que ce champ nomme. Une voix
+  /// masculine se choisit à la main, coach par coach (section VOIX DES COACHS
+  /// du Profil).
+  ///
+  /// Sur Windows, Julie reste forcée tant qu'aucune voix n'a été choisie pour
+  /// le coach (cf. CLAUDE.md, contrat SAPI) ; sur Linux, la sélection de voix
+  /// programmatique n'existe pas — le coach garde son rate/pitch propre mais
+  /// la voix reste celle de la plateforme.
+  final bool skipPreferredVoices;
 
   const CoachVoicePreset({
     this.voiceName,
     this.voiceLocale,
     this.rate,
     this.pitch,
-    this.preferredGender,
+    this.skipPreferredVoices = false,
   });
 
   static const CoachVoicePreset empty = CoachVoicePreset();
@@ -109,7 +117,7 @@ class CoachVoicePreset {
       voiceLocale == null &&
       rate == null &&
       pitch == null &&
-      preferredGender == null;
+      !skipPreferredVoices;
 
   /// Désérialise depuis un objet JSON :
   /// ```jsonc
@@ -123,19 +131,12 @@ class CoachVoicePreset {
       return t.isEmpty ? null : t;
     }
 
-    final rawGender = asString(json['gender']);
-    final normalizedGender = rawGender?.toLowerCase();
-    final preferredGender =
-        (normalizedGender == 'male' || normalizedGender == 'female')
-            ? normalizedGender
-            : null;
-
     return CoachVoicePreset(
       voiceName: asString(json['voice'] ?? json['voiceName']),
       voiceLocale: asString(json['voiceLocale'] ?? json['locale']),
       rate: asDouble(json['rate']),
       pitch: asDouble(json['pitch']),
-      preferredGender: preferredGender,
+      skipPreferredVoices: json['skipPreferredVoices'] == true,
     );
   }
 }
