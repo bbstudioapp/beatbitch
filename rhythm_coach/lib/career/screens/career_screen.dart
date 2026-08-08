@@ -171,6 +171,8 @@ class _CareerScreenState extends State<CareerScreen> {
           service: coachService,
           playerTotalSeconds: bundle.totalSeconds,
           handsEnabled: _includeHandOverride ?? bundle.includeHand,
+          tts: widget.tts,
+          userProfile: widget.userProfile,
         ),
       ),
     );

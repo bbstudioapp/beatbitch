@@ -98,6 +98,64 @@ Future<void> showCoachVoicePicker(
   await tts.enqueueVoiceOp(tts.restoreDefaultVoicePreset);
 }
 
+/// Ligne « Voix : … » posée sur une carte de coach, cliquable.
+///
+/// L'utilisateur qui entend une voix qui ne colle pas au personnage n'a
+/// aucune raison de soupçonner qu'un réglage existe : il conclut que l'app
+/// est mal faite. Cette ligne ne dit pas qu'il y a un problème — elle dit
+/// qu'il y a un réglage, au moment exact où l'on regarde le coach.
+class CoachVoiceLine extends StatelessWidget {
+  /// Voix effective (cf. [CoachVoiceLabels.labelFor]).
+  final String label;
+  final VoidCallback onTap;
+
+  const CoachVoiceLine({
+    super.key,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Material(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.record_voice_over_outlined,
+                    size: 13, color: AppTheme.textMuted),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    t.coachVoiceLine(label),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.textMuted,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 2),
+                const Icon(Icons.chevron_right,
+                    size: 14, color: AppTheme.textMuted),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Feuille de sélection de la voix d'un coach : « Automatique » en tête (=
 /// suppression de la clé, cf. [TtsService.clearCoachVoice]), puis les voix du
 /// moteur pour la langue active.

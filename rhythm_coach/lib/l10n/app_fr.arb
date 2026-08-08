@@ -535,6 +535,13 @@
   "coachVoiceUnavailable": "Voix enregistrée absente de cet appareil",
   "coachVoicePreview": "Écouter",
   "coachVoicePlatformNoSelection": "Sur cette plateforme, la voix dépend du moteur installé.",
+  "coachVoiceLine": "Voix : {value}",
+  "@coachVoiceLine": {
+    "description": "Ligne de découvrabilité sur une carte de coach. {value} est un nom de voix ou « Automatique ».",
+    "placeholders": {
+      "value": { "type": "String" }
+    }
+  },
   "soundsAmbienceSection": "Ambiance",
   "soundsAmbienceSubtitle": "Pack d'arrière-plan appliqué pendant les séances. Sélection partagée avec l'écran de jeu. Touche un mode pour écouter.",
   "soundsPackLabel": "Pack",

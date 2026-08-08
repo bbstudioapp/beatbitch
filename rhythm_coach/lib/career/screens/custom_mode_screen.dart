@@ -409,6 +409,8 @@ class _CustomModeScreenState extends State<CustomModeScreen> {
           initial: initial,
           isNew: isNew,
           hasBalls: widget.userProfile.anatomy.hasBalls,
+          tts: widget.tts,
+          userProfile: widget.userProfile,
         ),
       ),
     );

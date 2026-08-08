@@ -1950,6 +1950,12 @@ abstract class AppLocalizations {
   /// **'Sur cette plateforme, la voix dépend du moteur installé.'**
   String get coachVoicePlatformNoSelection;
 
+  /// Ligne de découvrabilité sur une carte de coach. {value} est un nom de voix ou « Automatique ».
+  ///
+  /// In fr, this message translates to:
+  /// **'Voix : {value}'**
+  String coachVoiceLine(String value);
+
   /// No description provided for @soundsAmbienceSection.
   ///
   /// In fr, this message translates to:

@@ -1091,6 +1091,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'On this platform the voice depends on the installed engine.';
 
   @override
+  String coachVoiceLine(String value) {
+    return 'Voice: $value';
+  }
+
+  @override
   String get soundsAmbienceSection => 'Ambience';
 
   @override
