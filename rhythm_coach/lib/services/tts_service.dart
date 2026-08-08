@@ -6,10 +6,16 @@ import 'dart:ui' show Locale;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'user_profile_service.dart';
 
 class TtsService {
+  /// Préfixe de la clé qui mémorise le choix de voix **explicite** de
+  /// l'utilisateur, une entrée par langue (`tts.voice.en`, `tts.voice.de`…).
+  /// Cf. [setUserVoice] pour le pourquoi du découpage par langue.
+  static const String _userVoicePrefsPrefix = 'tts.voice.';
+
   static const double _defaultPitch = 1.13;
   static const double _defaultRate = 0.56;
   static const double _defaultVolume = 1.0;
@@ -296,8 +302,61 @@ class TtsService {
     }
   }
 
+  /// Sélection de la voix « par défaut » (hors coach) : celle qui vaut au
+  /// démarrage, après un changement de langue, et en sortie de session
+  /// carrière.
+  ///
+  /// **Un choix explicite de l'utilisateur prime sur l'auto-sélection.** La
+  /// liste [_preferredVoiceNamesByLanguage] n'est qu'un défaut : elle ne
+  /// s'applique que si l'utilisateur n'a jamais choisi pour cette langue (ou
+  /// si la voix qu'il avait choisie n'est plus installée).
+  ///
+  /// Les presets coach passent par [_selectVoiceWithSeed], qui reste de
+  /// l'auto-sélection pure : pendant sa séance, un coach garde sa voix.
   Future<void> _selectVoice() async {
+    if (await _applyStoredUserVoice()) return;
     return _selectVoiceWithSeed(null);
+  }
+
+  /// Nom de voix choisi par l'utilisateur pour la langue courante, ou `null`.
+  Future<String?> _storedUserVoiceName() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('$_userVoicePrefsPrefix${_locale.languageCode}');
+  }
+
+  /// Réapplique le choix de voix de l'utilisateur pour la langue courante.
+  /// Retourne `true` si la voix a bien été poussée au moteur.
+  ///
+  /// Repli **silencieux** sur l'auto-sélection si la voix a disparu (pack de
+  /// langue désinstallé, moteur TTS changé) — et la préférence est
+  /// **conservée** : une voix peut être temporairement absente (moteur en
+  /// cours de mise à jour), l'effacer sur un seul constat serait destructif.
+  /// Elle reprendra d'elle-même dès que la voix réapparaît.
+  Future<bool> _applyStoredUserVoice() async {
+    // Linux : pas de sélection de voix programmatique, `_currentVoiceName`
+    // n'est qu'un label de backend (cf. [_selectVoiceWithSeed]).
+    if (_isLinux) return false;
+    final stored = await _storedUserVoiceName();
+    if (stored == null) return false;
+    try {
+      final voices = await listVoicesForLocale(_locale);
+      final match = voices.firstWhereOrNull((v) => (v['name'] ?? '') == stored);
+      if (match == null) {
+        if (kDebugMode) {
+          debugPrint('[TTS] voix choisie « $stored » absente de l\'appareil '
+              '— auto-sélection, préférence conservée');
+        }
+        return false;
+      }
+      await setVoiceByName(
+        stored,
+        match['locale'] ?? _ttsLanguageTag(_locale),
+      );
+      return _currentVoiceName == stored;
+    } catch (e) {
+      if (kDebugMode) debugPrint('[TTS] restauration voix choisie KO : $e');
+      return false;
+    }
   }
 
   /// Comme [_selectVoice], mais rotate la liste de voix préférées selon un
@@ -698,6 +757,30 @@ class TtsService {
     }
   }
 
+  /// Enregistre un choix de voix **explicite** de l'utilisateur pour la
+  /// langue courante, et l'applique immédiatement.
+  ///
+  /// À distinguer de [setVoiceByName], qui se contente de pousser une voix
+  /// au moteur sans rien mémoriser : les presets coach et les rattrapages
+  /// d'affichage passent par là, et ne doivent jamais se substituer au choix
+  /// de l'utilisateur. Seule cette méthode-ci fait autorité.
+  ///
+  /// La préférence est **par langue** : une voix anglaise n'aurait pas de
+  /// sens quand l'interface passe en allemand. Chaque langue garde donc son
+  /// propre choix, et une langue jamais réglée reste en auto-sélection.
+  /// Repasser dans une langue déjà réglée y retrouve la voix choisie.
+  Future<void> setUserVoice(String name, String locale) async {
+    await setVoiceByName(name, locale);
+    // Linux : `_currentVoiceName` n'est qu'un label de backend (« piper
+    // (neuronal) »), pas une voix sélectionnable — rien à mémoriser.
+    if (_isLinux) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      '$_userVoicePrefsPrefix${_locale.languageCode}',
+      name,
+    );
+  }
+
   /// Applique un preset vocal coach : voix nommée + rate + pitch. Toute
   /// valeur null laisse le réglage courant intact. Utilisé au start d'une
   /// session carrière pour donner sa « couleur vocale » à chaque coach
@@ -723,7 +806,10 @@ class TtsService {
     // féminine sur Windows — dissonance assumée pour cette plateforme
     // tant qu'on n'a pas de seconde voix locale fiable.
     if (_isWindows) {
-      await _selectVoice();
+      // `_selectVoiceWithSeed` et non `_selectVoice` : pendant sa séance, le
+      // coach garde la voix imposée par la plateforme (Julie), pas celle que
+      // l'utilisateur a réglée par ailleurs.
+      await _selectVoiceWithSeed(null);
       await setRate(_windowsDefaultRate);
       await setPitch(_windowsDefaultPitch);
       return;
@@ -789,9 +875,16 @@ class TtsService {
     if (pitch != null) await setPitch(pitch);
   }
 
-  /// Réinitialise voix/rate/pitch aux valeurs par défaut. Appelé en sortie
-  /// de session carrière pour ne pas qu'un preset coach contamine les
-  /// autres écrans (SONS, autre coach, scénario hors carrière).
+  /// Rend la main au réglage hors-carrière. Appelé en sortie de session
+  /// carrière pour ne pas qu'un preset coach contamine les autres écrans
+  /// (SONS, autre coach, scénario hors carrière).
+  ///
+  /// Le coach a le droit d'imposer **sa** voix pendant sa séance ; il n'a pas
+  /// le droit de détruire le réglage de l'utilisateur en repartant. La voix
+  /// restituée est donc celle qu'il a choisie s'il en a une (cf.
+  /// [setUserVoice] via [_selectVoice]), et seulement à défaut
+  /// l'auto-sélection. Rate et pitch, eux, retournent aux défauts plateforme
+  /// — ils ne sont pas mémorisés à ce jour.
   Future<void> restoreDefaultVoicePreset() async {
     if (!_initialized) await init();
     await setRate(_platformDefaultRate);
