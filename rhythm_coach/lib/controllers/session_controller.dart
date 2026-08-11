@@ -1245,6 +1245,13 @@ class SessionController extends ChangeNotifier {
     _hadFailThisSession = false;
     _currentHoldFullDuration = 0;
     _lastHoldTickAtSecond = -1;
+    // Remise à zéro du gel de posture, comme dans `start()` : il ne tient
+    // déjà plus (la timeline vient d'être remise à zéro), mais son `Timer` de
+    // sécurité survivait à l'arrêt et réveillait ~90 s plus tard un
+    // contrôleur devenu inactif.
+    _postureGate = null;
+    _readyTimeout?.cancel();
+    _readyTimeout = null;
     // Phase 1 défis — reset complet de la machine d'états.
     _challengePhase = ChallengePhase.none;
     _challengeStepStartedAtSec = null;
@@ -1766,6 +1773,14 @@ class SessionController extends ChangeNotifier {
     _stopwatch.stop();
     _ticker?.cancel();
     _ticker = null;
+    // Le `Timer` de sécurité du gel de posture est libéré aux trois bornes de
+    // vie d'une séance (`start`, `stop`, ici) : entre elles, c'est la garde du
+    // battement qui s'en charge, et elle ne tourne plus sans ticker. Il n'y a
+    // pas de gel à lever — il est tombé de lui-même — juste une ressource qui
+    // réveillerait l'écran de fin 90 s plus tard.
+    _postureGate = null;
+    _readyTimeout?.cancel();
+    _readyTimeout = null;
     // Garde-fou : sur un backend audio engorgé (seek/stop qui ne rendent plus
     // la main sur les longues séances), `_beep.stop()` pouvait bloquer ici et
     // la session ne passait jamais en `finished` (écran de fin absent). On
