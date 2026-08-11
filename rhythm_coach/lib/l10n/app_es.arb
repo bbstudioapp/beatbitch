@@ -228,6 +228,10 @@
       "error": { "type": "String" }
     }
   },
+  "careerDurationPlusChallenges": "{duration} + tiempo de retos",
+  "@careerDurationPlusChallenges": {
+    "placeholders": { "duration": { "type": "String" } }
+  },
   "careerDurationSection": "Duración",
   "careerQuickieToggle": "Rapidito",
   "careerQuickieSubtitle": "6 min — intenso",
@@ -248,7 +252,7 @@
   "sessionLengthAleatoireDuration": "Sorpresa",
   "sessionLengthAleatoireDescription": "Duración sorpresa elegida entre Corta, Media y Larga. Sin temporizador.",
   "careerChallengesToggle": "Retos intra-sesión",
-  "careerChallengesDescription": "Un reto opcional alrededor del 60% de la sesión. Se calibra rápido, puede acelerar tu progresión de nivel.",
+  "careerChallengesDescription": "De uno a cuatro retos opcionales repartidos por la sesión, según el formato elegido. Se calibran rápido, pueden acelerar tu progresión de nivel. Su tiempo se suma a la duración indicada.",
   "challengePassButton": "PASAR",
   "challengeGoButton": "AGUANTAR",
   "challengeTapGoButton": "EMPIEZA",

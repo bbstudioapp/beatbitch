@@ -475,12 +475,22 @@ extension FailFlowOrchestrator on SessionController {
   /// sont sautés silencieusement.
   ///
   /// Retourne true si un saut a eu lieu, false si on est déjà dans la
-  /// dernière section (pas de saut effectué).
+  /// dernière section (pas de saut effectué) **ou** si le saut aurait
+  /// enjambé la fenêtre d'armement d'un défi encore à jouer.
   bool _skipToNextSection() {
     final currentSec = elapsedSeconds;
+    // Un défi ne s'arme que si l'horloge traverse `[trigger, trigger + 13)`
+    // pendant qu'un tick tourne (`_updateChallengePhase`). Un fail qui tombe
+    // dans cette fenêtre, ou pile dessus, laissait le saut passer par-dessus :
+    // le défi n'était jamais proposé et disparaissait sans un mot. On borne
+    // donc le saut à l'ouverture de la fenêtre — quitte à ne pas sauter du
+    // tout quand elle est déjà ouverte (le défi s'arme alors au tick suivant
+    // et gèle l'horloge lui-même).
+    final pendingTrigger = _nextPendingChallengeTrigger(currentSec);
     for (var i = _nextStepIndex; i < session.steps.length; i++) {
       final step = session.steps[i];
       if (!step.isTextOnly && step.time > currentSec) {
+        if (pendingTrigger != null && step.time > pendingTrigger) break;
         final delta = step.time - currentSec;
         _timelineOffset += Duration(seconds: delta);
         _nextStepIndex = i;
@@ -488,6 +498,21 @@ extension FailFlowOrchestrator on SessionController {
       }
     }
     return false;
+  }
+
+  /// Trigger time du premier défi encore armable à [fromSec] ou après (sa
+  /// fenêtre est ouverte ou à venir), ou null s'il n'en reste aucun.
+  int? _nextPendingChallengeTrigger(int fromSec) {
+    final armable =
+        min(session.challenges.length, session.challengeTriggerTimes.length);
+    int? earliest;
+    for (var i = 0; i < armable; i++) {
+      if (_completedChallengeIndices.contains(i)) continue;
+      final trigger = session.challengeTriggerTimes[i];
+      if (trigger + kChallengeBreathDurationSeconds <= fromSec) continue;
+      if (earliest == null || trigger < earliest) earliest = trigger;
+    }
+    return earliest;
   }
 
   /// Délai annulable : si [_failActive] passe à false pendant l'attente

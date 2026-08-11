@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:beat_bitch/career/models/challenge.dart';
@@ -96,6 +98,17 @@ void main() {
     test('targetChallengesFor : plancher à 0 (jamais négatif)', () {
       // Plus de body insérés que prévu (cas dégénéré) : 0 défi.
       expect(SessionLengthChoice.bachee.targetChallengesFor(5), 0);
+    });
+
+    test('le sous-titre du réglage annonce le bon nombre de défis', () {
+      // `careerChallengesDescription` dit « de un à quatre défis » dans les
+      // 4 langues. Ce sont ces deux bornes-là — un palier qui planifierait
+      // 5 événements ferait mentir 4 traductions sans que rien ne le dise.
+      final planifies = SessionLengthChoice.values
+          .where((c) => c != SessionLengthChoice.aleatoire)
+          .map((c) => c.totalEvents);
+      expect(planifies.reduce(min), 1);
+      expect(planifies.reduce(max), 4);
     });
   });
 

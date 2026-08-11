@@ -526,6 +526,11 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String careerDurationPlusChallenges(String duration) {
+    return '$duration + Challenge-Zeit';
+  }
+
+  @override
   String get careerDurationSection => 'Dauer';
 
   @override
@@ -592,7 +597,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get careerChallengesDescription =>
-      'Eine optionale Herausforderung etwa bei 60 % der Sitzung. Kalibriert schnell, kann das Level-Up beschleunigen.';
+      'Ein bis vier optionale Herausforderungen, über die Sitzung verteilt, je nach gewähltem Format. Kalibrieren schnell, können das Level-Up beschleunigen. Ihre Zeit kommt zur angezeigten Dauer hinzu.';
 
   @override
   String get challengePassButton => 'ÜBERSPR.';

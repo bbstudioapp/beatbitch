@@ -228,6 +228,10 @@
       "error": { "type": "String" }
     }
   },
+  "careerDurationPlusChallenges": "{duration} + challenge time",
+  "@careerDurationPlusChallenges": {
+    "placeholders": { "duration": { "type": "String" } }
+  },
   "careerDurationSection": "Duration",
   "careerQuickieToggle": "Quickie",
   "careerQuickieSubtitle": "6 min — intense",
@@ -248,7 +252,7 @@
   "sessionLengthAleatoireDuration": "Surprise",
   "sessionLengthAleatoireDescription": "Surprise length drawn between Short, Medium and Long. No timer.",
   "careerChallengesToggle": "In-session challenges",
-  "careerChallengesDescription": "An opt-in challenge around 60% of the session. Calibrates fast, can speed up your level progression.",
+  "careerChallengesDescription": "One to four opt-in challenges spread through the session, depending on the format you pick. They calibrate fast, can speed up your level progression. Their time adds to the length shown.",
   "challengePassButton": "SKIP",
   "challengeGoButton": "HOLD",
   "challengeHoldHintLive": "Keep your finger on the screen",

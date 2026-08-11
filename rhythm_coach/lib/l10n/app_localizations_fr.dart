@@ -527,6 +527,11 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String careerDurationPlusChallenges(String duration) {
+    return '$duration + le temps des défis';
+  }
+
+  @override
   String get careerDurationSection => 'Durée';
 
   @override
@@ -593,7 +598,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get careerChallengesDescription =>
-      'Un défi opt-in vers 60 % de la séance. Calibre vite, peut faire monter le niveau plus rapidement.';
+      'De un à quatre défis opt-in répartis dans la séance, selon le format choisi. Calibrent vite, peuvent faire monter le niveau plus rapidement. Leur temps s\'ajoute à la durée annoncée.';
 
   @override
   String get challengePassButton => 'PASSE';
