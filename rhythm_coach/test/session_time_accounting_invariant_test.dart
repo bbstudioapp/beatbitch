@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:beat_bitch/career/models/challenge.dart';
 import 'package:beat_bitch/controllers/session_controller.dart';
 import 'package:beat_bitch/models/session.dart';
@@ -31,6 +29,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// la joueuse pour le temps qu'elle vient de jouer (retour utilisateur
 /// 0.6.1). `session_played_time_test.dart` prouve le correctif d'origine ;
 /// ce test-ci protège la décision.
+///
+/// La clause 2 se lit sur le chiffre effectivement rendu par l'écran, dans
+/// `session_finished_duration_render_test.dart` — celui-ci s'arrête à ce
+/// que le contrôleur expose.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -83,7 +85,7 @@ void main() {
   });
 
   test(
-      "la fin de séance ignore le temps de défi, le chiffre rendu et le crédit "
+      'la fin de séance ignore le temps de défi, le temps exposé et le crédit '
       'le comptent', () async {
     final ctrl = _buildController();
     await ctrl.start();
@@ -120,7 +122,8 @@ void main() {
         reason: 'la séance se termine sur le contenu, pas sur la montre : '
             'sinon le défi rognerait la durée choisie');
 
-    // 2 + 3. Ce qui est rendu et crédité compte le temps de défi. La marge
+    // 2 + 3. Ce qui alimente l'affichage et ce qui est crédité comptent le
+    // temps de défi. La marge
     // (4 s d'attente + 10 s de breath de récup, joués horloge gelée) est le
     // minimum structurel : c'est elle qui disparaîtrait si l'un des deux
     // repassait sur l'horloge de contenu.
@@ -132,21 +135,6 @@ void main() {
         reason: 'les statistiques du joueur créditent le temps réellement '
             'joué — points de spécialisation, déblocages de coach, badges');
   }, timeout: const Timeout(Duration(seconds: 120)));
-
-  test("l'écran de fin affiche le temps joué, pas l'horloge de contenu", () {
-    // Le panneau de fin est privé à `session_screen.dart` et une séance ne
-    // peut pas tourner sous horloge simulée (`Stopwatch` n'est pas faké par
-    // `flutter_test`) : à défaut de pouvoir lire le chiffre rendu, on
-    // verrouille la ligne qui l'alimente.
-    final source = File('lib/screens/session_screen.dart').readAsStringSync();
-    expect(
-      RegExp(r'elapsedSeconds:\s*ctrl\.playedSeconds').hasMatch(source),
-      isTrue,
-      reason: "le panneau de fin doit recevoir `ctrl.playedSeconds` : sur "
-          "`ctrl.elapsedSeconds` il annoncerait une séance plus courte que "
-          'celle que la joueuse vient de jouer',
-    );
-  });
 }
 
 /// Défi de test : enveloppe de 18 s (13 s de breath de countdown + 5 s de
