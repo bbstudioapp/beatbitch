@@ -246,11 +246,9 @@ class CareerSessionGenerator {
 
   /// Enveloppe temporelle conservative réservée par le générateur après
   /// le trigger d'un défi, pour ne pas chevaucher les blocs en aval
-  /// (milestone, mini-vague, finish). Pour les builders monolithiques
-  /// (PR-B.1.a) on prend exactement la durée nominale du défi — identique
-  /// à l'ancien comportement où le step défi était matérialisé tel quel.
-  /// Quand les builders streaming arriveront (PR-B.1.c+), on ajoutera ici
-  /// une marge (≈ × 1.5 à × 2.0, cf. spec § 9.4).
+  /// (milestone, mini-vague, finish). Vaut exactement la durée nominale du
+  /// défi — pas de marge sur les prolongations : le gel de l'horloge pendant
+  /// le défi les absorbe déjà côté runtime.
   ///
   /// À l'exécution, `_excisChallengeFromSession` retire la fenêtre
   /// effective `[trigger, trigger + breath + estimate]` de la timeline :
@@ -816,6 +814,12 @@ class CareerSessionGenerator {
       genUntil: ctx.genUntil,
     );
     final challengeTriggerTimes = <int>[];
+    // Défis réellement insérés. `nextChallengeIndex` est un curseur sur la
+    // file : il avance aussi quand un défi est écarté faute de place, donc
+    // il ne peut pas servir à découper la file livrée à la session. Les
+    // deux listes doivent rester indexables par la même position — le
+    // contrôleur lit `challengeTriggerTimes[i]` pour `challenges[i]`.
+    final insertedChallenges = <Challenge>[];
     var nextChallengeIndex = 0;
 
     // Breaks scénarisés (issue #77) — pauses actives de récup sur sessions
@@ -917,6 +921,7 @@ class CareerSessionGenerator {
           // dite et affichée par le `SessionController._updateChallengePhase`
           // (banner + TTS) à l'entrée en phase `breath`.
           challengeTriggerTimes.add(ctx.time);
+          insertedChallenges.add(nextChallenge);
           steps.add(SessionStep(
             time: ctx.time,
             mode: SessionMode.breath,
@@ -1006,7 +1011,7 @@ class CareerSessionGenerator {
         finalMilestoneId: finalMilestone.id,
         finalMilestoneStartTime: finalMilestoneStartTime,
         finalMilestoneDurationSeconds: finalMilestone.durationSeconds,
-        challenges: challengeQueue.sublist(0, nextChallengeIndex),
+        challenges: insertedChallenges,
         challengeTriggerTimes: challengeTriggerTimes,
         breaks: sessionBreaks,
       );
@@ -1093,7 +1098,7 @@ class CareerSessionGenerator {
       finalCategory: finalCategory,
       silentFinishStartTime: silentFinishStartTime,
       finalStepStartTime: finalStepStartTime,
-      challenges: challengeQueue.sublist(0, nextChallengeIndex),
+      challenges: insertedChallenges,
       challengeTriggerTimes: challengeTriggerTimes,
       breaks: sessionBreaks,
     );
