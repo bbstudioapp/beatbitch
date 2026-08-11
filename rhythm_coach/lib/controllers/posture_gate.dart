@@ -19,6 +19,14 @@ import '../models/session.dart';
 /// toucher aucune est impossible. La quatrième couvre le flow d'échec, qui
 /// n'a pas besoin de rebattre la timeline pour annuler la mise en scène de la
 /// pause (cf. `triggerFail`).
+///
+/// **Cette impossibilité repose sur une hypothèse** : une [Session] et ses
+/// listes (`steps`, `breaks`, `challenges`) ne sont jamais modifiées après
+/// construction — toute réécriture de la timeline en vol produit une nouvelle
+/// instance (cf. `_excisChallengeFromSession`). La clause d'identité ne voit
+/// pas une mutation en place : un `session.steps[i] = …` sur une séance déjà
+/// démarrée rebattrait la timeline sans faire tomber le gel, et rien ne le
+/// signalerait.
 @immutable
 class PostureGate {
   const PostureGate({
