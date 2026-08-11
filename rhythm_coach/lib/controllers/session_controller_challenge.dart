@@ -1021,6 +1021,21 @@ extension ChallengeOrchestrator on SessionController {
       silentFinishStartTime: shiftLate(_session.silentFinishStartTime),
       finalStepTime: shiftLate(_session.finalStepTime),
       noStats: _session.noStats,
+      initialPose: _session.initialPose,
+      // Les pauses scénarisées survivent au défi (issue #77) : sans ce report
+      // explicite, `Session.breaks` retombe à `const []` et toute la mise en
+      // scène restante disparaît dès qu'un défi a eu lieu. La liste garde sa
+      // longueur et son ordre — `_nextBreakIndex` pointe dedans — et ses
+      // horaires suivent le même shift que les steps.
+      breaks: [
+        for (final b in _session.breaks)
+          ScriptedBreak(
+            time: shiftLate(b.time)!,
+            durationSeconds: b.durationSeconds,
+            newPose: b.newPose,
+            orders: b.orders,
+          ),
+      ],
       // L'excise du défi en cours retire ses 2 steps (breath + défi) de
       // la timeline et shifte tout ce qui est après. On préserve la liste
       // complète des défis, mais on shifte les trigger times des défis
