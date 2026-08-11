@@ -95,6 +95,40 @@ void main() {
               '${without.session.durationSeconds} s');
     });
   }
+
+  // Aucun défi n'est écarté faute de place, quel que soit son ordre de tirage
+  // ou le palier. Le contrôle de place qui existait ici mesurait le budget
+  // **non étendu** alors que l'insertion étend ce budget : un défi de 530 s
+  // tiré en dernier n'entrait donc jamais (une séance sur trois y perdait son
+  // plus gros défi). Contrepartie assumée : la séance dure la durée choisie
+  // **plus** le temps des défis, ce que l'écran de sélection annonce.
+  final bigLast = [challenges[1], challenges[2], challenges[0]];
+  for (final length in [
+    SessionLengthChoice.bachee,
+    SessionLengthChoice.moyenne,
+  ]) {
+    for (final seed in [1, 7, 42]) {
+      test(
+          'seed $seed : le gros défi tiré en dernier entre quand même sur '
+          'une « ${length.name} »', () {
+        final result = CareerSessionGenerator(seed: seed).generate(
+          level: 8,
+          bank: _bank(),
+          unlockedKeys: _allUnlocks,
+          lengthChoice: length,
+          sessionsCompleted: 40,
+          challenge: ChallengeInputs(challenges: bigLast),
+        );
+
+        expect(result.session.challenges, hasLength(bigLast.length),
+            reason: 'les défis tirés sont tous joués : un défi écarté ne se '
+                'voit nulle part côté joueuse');
+        expect(result.session.challengeTriggerTimes,
+            hasLength(result.session.challenges.length),
+            reason: 'les deux listes s\'indexent par la même position');
+      });
+    }
+  }
 }
 
 List<PhraseEntry> _p(List<String> texts) =>

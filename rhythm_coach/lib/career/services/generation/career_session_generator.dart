@@ -805,20 +805,19 @@ class CareerSessionGenerator {
     // Défis intra-séance (Phase 1 + 19.5.b multi-défi) — insertion d'un
     // step breath countdown + step défi par défi, à des trigger times
     // distribués sur la fenêtre de génération (cf. spec § 4.3). 1 défi =
-    // ~60 % du temps planifié (legacy) ; 2+ défis = répartis. Skip si
-    // l'enveloppe restante ne couvre pas breath + défi + marge pour la
-    // phase finish (on préfère ne pas insérer un défi tronqué).
+    // ~60 % du temps planifié (legacy) ; 2+ défis = répartis. Tous les défis
+    // tirés sont insérés : leur enveloppe étend la fenêtre de génération au
+    // lieu de la consommer.
     final challengeQueue = List<Challenge>.from(challenge.challenges);
     final plannedTriggerTimes = _computeChallengeTriggerTimes(
       count: challengeQueue.length,
       genUntil: ctx.genUntil,
     );
     final challengeTriggerTimes = <int>[];
-    // Défis réellement insérés. `nextChallengeIndex` est un curseur sur la
-    // file : il avance aussi quand un défi est écarté faute de place, donc
-    // il ne peut pas servir à découper la file livrée à la session. Les
-    // deux listes doivent rester indexables par la même position — le
-    // contrôleur lit `challengeTriggerTimes[i]` pour `challenges[i]`.
+    // Défis réellement insérés. Les deux listes doivent rester indexables
+    // par la même position — le contrôleur lit `challengeTriggerTimes[i]`
+    // pour `challenges[i]` — donc on livre ce qu'on a inséré, pas un
+    // découpage du curseur de file.
     final insertedChallenges = <Challenge>[];
     var nextChallengeIndex = 0;
 
@@ -907,37 +906,34 @@ class CareerSessionGenerator {
       // deux fois — l'enveloppe rognait le contenu généré, puis l'excision
       // la retirait de la durée jouée.
       //
-      // Skip un défi si l'enveloppe restante ne couvre pas breath +
-      // estimate (= défi perdu silencieusement, on préfère pas de défi à
-      // un défi tronqué).
+      // Aucun défi n'est écarté faute de place : puisque l'enveloppe est
+      // reportée sur `genUntil`, insérer un défi ne coûte plus de contenu,
+      // et un test de place mesurerait un budget que l'insertion étend
+      // elle-même. Contrepartie assumée : la séance dure la durée choisie
+      // **plus** le temps des défis — c'est ce que l'écran de sélection
+      // annonce (`careerDurationPlusChallenges`).
       if (nextChallengeIndex < challengeQueue.length &&
           ctx.time >= plannedTriggerTimes[nextChallengeIndex]) {
         final nextChallenge = challengeQueue[nextChallengeIndex];
         const breathDur = kChallengeBreathDurationSeconds;
         final reservedStepDur = _estimatedChallengeDuration(nextChallenge);
-        final remaining = ctx.genUntil - ctx.time;
-        if (remaining >= breathDur + reservedStepDur) {
-          // Step trigger : breath sans texte. La phrase `attempt` est
-          // dite et affichée par le `SessionController._updateChallengePhase`
-          // (banner + TTS) à l'entrée en phase `breath`.
-          challengeTriggerTimes.add(ctx.time);
-          insertedChallenges.add(nextChallenge);
-          steps.add(SessionStep(
-            time: ctx.time,
-            mode: SessionMode.breath,
-            duration: breathDur,
-          ));
-          ctx.time += breathDur;
-          // Pas de step défi matérialisé ici — on réserve juste l'enveloppe
-          // pour la planification aval.
-          ctx.time += reservedStepDur;
-          ctx.challengeReserveSeconds += breathDur + reservedStepDur;
-          nextChallengeIndex++;
-          continue;
-        }
-        // Pas la place pour ce défi → on saute son trigger time (sinon
-        // le test resterait vrai à chaque itération et bloquerait la boucle).
+        // Step trigger : breath sans texte. La phrase `attempt` est
+        // dite et affichée par le `SessionController._updateChallengePhase`
+        // (banner + TTS) à l'entrée en phase `breath`.
+        challengeTriggerTimes.add(ctx.time);
+        insertedChallenges.add(nextChallenge);
+        steps.add(SessionStep(
+          time: ctx.time,
+          mode: SessionMode.breath,
+          duration: breathDur,
+        ));
+        ctx.time += breathDur;
+        // Pas de step défi matérialisé ici — on réserve juste l'enveloppe
+        // pour la planification aval.
+        ctx.time += reservedStepDur;
+        ctx.challengeReserveSeconds += breathDur + reservedStepDur;
         nextChallengeIndex++;
+        continue;
       }
       // Phase 4 — Main step : tirage de difficulté → mode → cascade de
       // diversification (BPM / amplitude / capacités) → sas breath
