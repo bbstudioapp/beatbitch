@@ -228,6 +228,10 @@
       "error": { "type": "String" }
     }
   },
+  "careerDurationPlusChallenges": "{duration} + Zeit für Herausforderungen",
+  "@careerDurationPlusChallenges": {
+    "placeholders": { "duration": { "type": "String" } }
+  },
   "careerDurationSection": "Dauer",
   "careerQuickieToggle": "Quickie",
   "careerQuickieSubtitle": "6 Min. — intensiv",

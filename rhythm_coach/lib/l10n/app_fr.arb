@@ -228,6 +228,10 @@
       "error": { "type": "String" }
     }
   },
+  "careerDurationPlusChallenges": "{duration} + le temps des défis",
+  "@careerDurationPlusChallenges": {
+    "placeholders": { "duration": { "type": "String" } }
+  },
   "careerDurationSection": "Durée",
   "careerQuickieToggle": "Session bâclée",
   "careerQuickieSubtitle": "6 min — intense",

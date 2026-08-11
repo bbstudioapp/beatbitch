@@ -1263,9 +1263,17 @@ class _CareerScreenState extends State<CareerScreen> {
             sessionsCompleted: bundle.completedSessions,
             lengthChoice: lengthForDisplay,
           );
-          final durationLabel = lengthChoice == SessionLengthChoice.aleatoire
+          final baseDurationLabel = lengthChoice ==
+                  SessionLengthChoice.aleatoire
               ? lengthChoice.localizedDuration(context)
               : formatDurationCompact(context, lengthChoice.durationSeconds);
+          // Un défi ne prend rien à la séance, il s'y ajoute : la durée du
+          // palier est celle du contenu, pas celle de la montre. Tous les
+          // paliers reçoivent au moins un défi quand le toggle est actif
+          // (`targetChallengesFor`), donc la mention vaut pour tous.
+          final durationLabel = _challengesEnabled
+              ? t.careerDurationPlusChallenges(baseDurationLabel)
+              : baseDurationLabel;
           final activeCoach = _resolveCoach(bundle);
           final principal = coachService.currentTierPrincipal;
           final isFreeTraining = !coachService.advancesTier(activeCoach);

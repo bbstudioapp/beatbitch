@@ -1050,6 +1050,12 @@ abstract class AppLocalizations {
   /// **'Erreur de chargement :\n{error}'**
   String careerLoadError(String error);
 
+  /// No description provided for @careerDurationPlusChallenges.
+  ///
+  /// In fr, this message translates to:
+  /// **'{duration} + le temps des défis'**
+  String careerDurationPlusChallenges(String duration);
+
   /// No description provided for @careerDurationSection.
   ///
   /// In fr, this message translates to:
