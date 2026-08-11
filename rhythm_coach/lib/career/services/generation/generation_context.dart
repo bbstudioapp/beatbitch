@@ -33,8 +33,9 @@ class GenerationContext {
   /// etc. y appendent leurs steps.
   final List<SessionStep> steps;
 
-  /// Profil stamina pré-rempli (taille `effectiveDuration + 60`),
-  /// muté par `StaminaModel.fillProfile` à chaque emission.
+  /// Profil stamina pré-rempli, indexé sur la timeline générée (fenêtres
+  /// de défi réservées comprises), muté par `StaminaModel.fillProfile` à
+  /// chaque emission.
   final List<double> profile;
 
   final int encoreChainIndex;
