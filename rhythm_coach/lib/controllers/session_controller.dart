@@ -215,6 +215,12 @@ class SessionController extends ChangeNotifier {
   /// la Stopwatch (qui ne peut pas être avancée arbitrairement).
   Duration _timelineOffset = Duration.zero;
 
+  /// Offset ajouté au **temps réellement joué** ([playedElapsed]). Seul
+  /// `debugFinishSuccess` s'en sert, pour créditer une séance qu'on n'a pas
+  /// jouée. Distinct de [_timelineOffset] : les sauts de timeline (défis
+  /// gelés, saut de section post-fail) ne doivent pas bouger le temps joué.
+  Duration _playedOffset = Duration.zero;
+
   /// Nombre de ticks consécutifs pendant lesquels le step courant a été
   /// différé par la garde `isSpeaking` de `_checkSteps`. Remis à zéro dès
   /// qu'un step est consommé. Borné par [_maxTtsDeferTicks].
@@ -899,6 +905,16 @@ class SessionController extends ChangeNotifier {
   SessionState get state => _state;
   Duration get elapsed => _stopwatch.elapsed + _timelineOffset;
   int get elapsedSeconds => elapsed.inSeconds;
+
+  /// Temps réellement passé en séance, pauses exclues. Contrairement à
+  /// [elapsed] (horloge de **timeline**, gelée pendant les défis et sautée
+  /// après un fail), il compte tout ce que la joueuse a joué — défis
+  /// compris. C'est cette valeur que l'écran de fin affiche et que `_finish`
+  /// crédite au temps de jeu cumulé : sans elle, un défi de dix minutes ne
+  /// rapportait ni point de spécialisation, ni déblocage de coach, ni badge
+  /// d'endurance (retour utilisateur 0.6.1).
+  Duration get playedElapsed => _stopwatch.elapsed + _playedOffset;
+  int get playedSeconds => playedElapsed.inSeconds;
   Duration get remaining {
     final r = session.duration - elapsed;
     return r.isNegative ? Duration.zero : r;
@@ -983,6 +999,7 @@ class SessionController extends ChangeNotifier {
       if (_state == SessionState.idle || _state == SessionState.finished) {
         _stopwatch.reset();
         _timelineOffset = Duration.zero;
+        _playedOffset = Duration.zero;
         _ttsDeferredTicks = 0;
         _nextStepIndex = 0;
         _lastSpoken = null;
@@ -1196,6 +1213,7 @@ class SessionController extends ChangeNotifier {
     _stopwatch.stop();
     _stopwatch.reset();
     _timelineOffset = Duration.zero;
+    _playedOffset = Duration.zero;
     _ticker?.cancel();
     _ticker = null;
     // Borné, comme dans `pause()` : un canal de synthèse muet ne doit pas
@@ -1249,9 +1267,10 @@ class SessionController extends ChangeNotifier {
   /// up) sans rejouer une session entière. Réservé au flag de debug
   /// `DebugSettingsService.getSkipSessionButton`.
   ///
-  /// Avance la timeline jusqu'à la durée de la session pour que les compteurs
-  /// (`_stats.addElapsedSeconds`, etc.) reflètent une session complète, puis
-  /// délègue à `_finish` qui fait le travail standard de clôture.
+  /// Avance la timeline **et** le temps joué jusqu'à la durée de la session
+  /// pour que les compteurs (`_stats.addElapsedSeconds`, etc.) reflètent une
+  /// session complète, puis délègue à `_finish` qui fait le travail standard
+  /// de clôture.
   Future<void> debugFinishSuccess() async {
     if (_state != SessionState.running && _state != SessionState.paused) {
       return;
@@ -1262,10 +1281,14 @@ class SessionController extends ChangeNotifier {
     _stopRandomComments();
     await _tts.stop();
     await _beep.stop();
-    // Cale l'horloge logique sur la durée totale (les badges qui regardent
-    // `totalSeconds` créditent la session entière).
+    // Cale les deux horloges sur la durée totale : la logique pour que les
+    // steps de fin soient considérés joués, celle du temps joué pour que les
+    // compteurs cumulés (badges, points de spé) créditent la session entière.
     final missing = Duration(seconds: session.durationSeconds) - elapsed;
     if (missing > Duration.zero) _timelineOffset += missing;
+    final missingPlayed =
+        Duration(seconds: session.durationSeconds) - playedElapsed;
+    if (missingPlayed > Duration.zero) _playedOffset += missingPlayed;
     _hadFailThisSession = false;
     await _finish();
   }
@@ -1737,7 +1760,7 @@ class SessionController extends ChangeNotifier {
         (capTracker != null && !_released) ? capTracker.finalizeReport() : null;
     final CapabilityAxis? recordAxis = _detectCapabilityRecord(capReport);
     if (!_session.noStats) {
-      await _stats.addElapsedSeconds(elapsedSeconds);
+      await _stats.addElapsedSeconds(playedSeconds);
       await _stats.recordSessionCompleted(hadFail: _hadFailThisSession);
       // Recalcul intégré du score career d'humiliation : delta = α × sessionScore
       // + β_encore × encoresAsked − β_fail × failsCount + γ × clean. Remplace
