@@ -403,6 +403,8 @@ class _CareerScreenState extends State<CareerScreen> {
           excludeAxes: strictExcluded,
           rng: Random(),
           isTutorial: isTuto,
+          maxChallengeDurationSeconds:
+              effectiveLengthChoice.maxChallengeDurationSeconds,
           // Cascade showcase (spec § 5.1) : si la file showcase a une
           // tête non-encore-consommée par une milestone insérée, le défi
           // tente de l'honorer en priorité (axe pilotant de la branche).
@@ -422,6 +424,8 @@ class _CareerScreenState extends State<CareerScreen> {
             excludeAxes: excludedAxes,
             rng: Random(),
             isTutorial: false,
+            maxChallengeDurationSeconds:
+                effectiveLengthChoice.maxChallengeDurationSeconds,
             showcaseBranch: isFirst ? showcaseBranch : null,
             unlocks: unlockedKeys,
           );

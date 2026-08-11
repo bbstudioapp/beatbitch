@@ -18,6 +18,7 @@
 library;
 
 import 'package:beat_bitch/career/models/challenge.dart';
+import 'package:beat_bitch/career/models/session_length_choice.dart';
 import 'package:beat_bitch/career/services/challenge_service.dart';
 import 'package:beat_bitch/controllers/session_controller.dart';
 import 'package:beat_bitch/models/session.dart';
@@ -70,6 +71,7 @@ Challenge _bpmChallenge(CapabilityAxis axis, {required int target}) =>
     ChallengeAxisKind.bpm,
     prev.comfort!,
     axis,
+    maxDurationSeconds: _noTruncationCap,
   );
   final credited = challengeReachedValue(
     _bpmChallenge(axis, target: target),
@@ -139,6 +141,7 @@ void main() {
         ChallengeAxisKind.bpm,
         735.0,
         _axis,
+        maxDurationSeconds: _noTruncationCap,
       );
       expect(target, BeepEngine.kMaxBpm);
     });
@@ -151,6 +154,7 @@ void main() {
           ChallengeAxisKind.bpm,
           20.0,
           CapabilityAxis.rhythmBpmFloorShallow,
+          maxDurationSeconds: _noTruncationCap,
         ),
         18,
       );
@@ -160,11 +164,13 @@ void main() {
       // Garde-fou anti-sur-correction : tant qu'on reste dans le jouable,
       // le défi doit continuer de surcharger à × 1.30.
       expect(
-        ChallengeService.thresholdFor(ChallengeAxisKind.bpm, 120.0, _axis),
+        ChallengeService.thresholdFor(ChallengeAxisKind.bpm, 120.0, _axis,
+            maxDurationSeconds: _noTruncationCap),
         156,
       );
       expect(
-        ChallengeService.thresholdFor(ChallengeAxisKind.bpm, 100.0, _axis),
+        ChallengeService.thresholdFor(ChallengeAxisKind.bpm, 100.0, _axis,
+            maxDurationSeconds: _noTruncationCap),
         130,
       );
     });
@@ -267,3 +273,7 @@ void main() {
     });
   });
 }
+
+/// Ces tests ne portent pas sur le plafond de durée par palier : celui du
+/// plus long des formats ne tronque aucun de leurs seuils.
+final _noTruncationCap = SessionLengthChoice.longue.maxChallengeDurationSeconds;
