@@ -23,10 +23,10 @@ import '../../models/phrase_bank.dart';
 /// émis.
 ///
 /// Distinguer immutable vs mutable :
-/// - `final` (params figés) : `effectiveDuration`, `genUntil`, `cfg`,
-///   `bank`, etc. — ne changent jamais en cours de génération.
-/// - mutables : [time], [stamina], et les listes [steps] / [profile]
-///   (référence stable, contenu accumulé).
+/// - `final` (params figés) : `effectiveDuration`, `cfg`, `bank`, etc. —
+///   ne changent jamais en cours de génération.
+/// - mutables : [time], [stamina], [challengeReserveSeconds], et les listes
+///   [steps] / [profile] (référence stable, contenu accumulé).
 class GenerationContext {
   /// Steps déjà émis (mutable). La même liste est passée à tous les
   /// helpers ; les méthodes `_emitStep` / `_pushMilestoneSequence` /
@@ -40,7 +40,7 @@ class GenerationContext {
   final int encoreChainIndex;
   final int effectiveDuration;
   final int boostsCount;
-  final int genUntil;
+  final int _genUntilBase;
   final double intensityFloor;
   final bool quickie;
   final bool noStats;
@@ -64,12 +64,26 @@ class GenerationContext {
   /// `StaminaModel.apply`.
   double stamina = 100.0;
 
+  /// Secondes de timeline réservées aux fenêtres de défi déjà insérées
+  /// (breath de countdown + enveloppe du défi). Ce temps n'est pas du
+  /// contenu de séance : le runtime le gèle puis l'excise de la timeline
+  /// (`SessionController._excisChallengeFromSession`). Il est donc retranché
+  /// de [progress] et ajouté à [genUntil] — sans quoi chaque défi mangeait
+  /// sa propre enveloppe de contenu et la séance rendue était plus courte
+  /// que la durée demandée (retour utilisateur 0.6.1 : 25 min demandées,
+  /// 16 min rendues avec 3 défis).
+  int challengeReserveSeconds = 0;
+
+  /// Instant de fin de la boucle main (= début de la phase finish), décalé
+  /// des fenêtres de défi déjà réservées.
+  int get genUntil => _genUntilBase + challengeReserveSeconds;
+
   /// Progression normalisée de la séance ∈ [0, 1] dérivée du curseur
-  /// temporel. Consommée par les rules pour moduler regen/cost
-  /// stamina, par le main loop pour resserrer la fenêtre de
+  /// temporel, hors fenêtres de défi. Consommée par les rules pour moduler
+  /// regen/cost stamina, par le main loop pour resserrer la fenêtre de
   /// difficulté, etc. Recalculée à la volée (pas de cache, le coût
   /// est négligeable).
-  double get progress => time / effectiveDuration;
+  double get progress => (time - challengeReserveSeconds) / effectiveDuration;
 
   GenerationContext({
     required this.steps,
@@ -77,7 +91,7 @@ class GenerationContext {
     required this.encoreChainIndex,
     required this.effectiveDuration,
     required this.boostsCount,
-    required this.genUntil,
+    required int genUntil,
     required this.intensityFloor,
     required this.quickie,
     required this.noStats,
@@ -87,5 +101,5 @@ class GenerationContext {
     required this.sessionNameQuickie,
     required this.milestoneTextResolver,
     required this.insertedBodies,
-  });
+  }) : _genUntilBase = genUntil;
 }

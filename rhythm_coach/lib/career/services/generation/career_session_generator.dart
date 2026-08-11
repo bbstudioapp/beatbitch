@@ -678,15 +678,29 @@ class CareerSessionGenerator {
     final finalBudget = useFinalMilestone
         ? finalMilestone.durationSeconds
         : _finisherBudgetSeconds;
-    final genUntil = effectiveDuration -
+    // Base de la fenêtre de génération : `ctx.genUntil` y ajoute ensuite les
+    // fenêtres de défi réservées, qui ne sont pas du contenu de séance.
+    final genUntilBase = effectiveDuration -
         finalBudget -
         (isLowLevel && !useFinalMilestone ? _preFinisherBudgetSeconds : 0);
 
     // `_state.salivaSim` et `_state.salivaSimSecond` sont posés par
     // `SessionRuntimeState.fresh()` plus haut.
     final steps = <SessionStep>[];
-    final profile =
-        List<double>.filled(effectiveDuration + 60, StaminaModel.cap);
+    // Le profil est indexé sur la timeline générée, qui inclut les fenêtres
+    // de défi réservées (cf. `GenerationContext.challengeReserveSeconds`) :
+    // dimensionner sur `effectiveDuration` seul le laisserait tronqué sur
+    // toute la fin d'une séance à défis, et le contrôleur y lirait une
+    // endurance figée.
+    final maxChallengeReserve = challenge.challenges.fold<int>(
+      0,
+      (sum, ch) =>
+          sum +
+          kChallengeBreathDurationSeconds +
+          _estimatedChallengeDuration(ch),
+    );
+    final profile = List<double>.filled(
+        effectiveDuration + maxChallengeReserve + 60, StaminaModel.cap);
 
     // Ctx partagé par tous les helpers de phase : DTO des paramètres
     // figés + curseur courant (`time`, `stamina`, `progress` getter)
@@ -699,7 +713,7 @@ class CareerSessionGenerator {
       encoreChainIndex: encoreChainIndex,
       effectiveDuration: effectiveDuration,
       boostsCount: boostsCount,
-      genUntil: genUntil,
+      genUntil: genUntilBase,
       intensityFloor: intensityFloor,
       quickie: quickie,
       noStats: custom.noStats,
@@ -799,7 +813,7 @@ class CareerSessionGenerator {
     final challengeQueue = List<Challenge>.from(challenge.challenges);
     final plannedTriggerTimes = _computeChallengeTriggerTimes(
       count: challengeQueue.length,
-      genUntil: genUntil,
+      genUntil: ctx.genUntil,
     );
     final challengeTriggerTimes = <int>[];
     var nextChallengeIndex = 0;
@@ -814,20 +828,20 @@ class CareerSessionGenerator {
     // pure (`newPose == null`, continuité de pose).
     final plannedBreakTimes = _computeBreakTriggerTimes(
       count: _config.scriptedBreaks ? _computeBreakCount(effectiveDuration) : 0,
-      genUntil: genUntil,
+      genUntil: ctx.genUntil,
     );
     final sessionBreaks = <ScriptedBreak>[];
     var nextBreakIndex = 0;
     var currentPose = _initialPose;
 
-    while (ctx.time < genUntil) {
+    while (ctx.time < ctx.genUntil) {
       // Phase 1 — Insertion milestone : on traite les pending dans
       // l'ordre, dès que `time` atteint la target (`>= targetTime`),
       // OU dès qu'on dépasse la borne max (insertion en urgence pour
       // ne pas la louper). Le cas time < target continue à empiler des
       // steps de chauffe normalement.
       if (milestoneScheduler.tryInsertAt(ctx)) {
-        if (ctx.time >= genUntil) break;
+        if (ctx.time >= ctx.genUntil) break;
         continue;
       }
       // Phase 1.5 — Break scénarisé (issue #77) : pause active de récup,
@@ -840,7 +854,7 @@ class CareerSessionGenerator {
       if (nextBreakIndex < plannedBreakTimes.length &&
           ctx.time >= plannedBreakTimes[nextBreakIndex]) {
         final dur = _pickBreakDuration();
-        if (genUntil - ctx.time >= dur) {
+        if (ctx.genUntil - ctx.time >= dur) {
           final newPose = _pickBreakPose(
             unlockedKeys,
             currentPose,
@@ -883,6 +897,12 @@ class CareerSessionGenerator {
       // À l'exécution, `_excisChallengeFromSession` retire la fenêtre
       // effective (`breathDur + estimate`) et shift les steps suivants.
       //
+      // Cette enveloppe est reportée sur `ctx.challengeReserveSeconds` :
+      // elle décale d'autant la fin de la boucle main, donc elle n'est pas
+      // prise sur le contenu de la séance. Sans ce report, la joueuse payait
+      // deux fois — l'enveloppe rognait le contenu généré, puis l'excision
+      // la retirait de la durée jouée.
+      //
       // Skip un défi si l'enveloppe restante ne couvre pas breath +
       // estimate (= défi perdu silencieusement, on préfère pas de défi à
       // un défi tronqué).
@@ -891,7 +911,7 @@ class CareerSessionGenerator {
         final nextChallenge = challengeQueue[nextChallengeIndex];
         const breathDur = kChallengeBreathDurationSeconds;
         final reservedStepDur = _estimatedChallengeDuration(nextChallenge);
-        final remaining = genUntil - ctx.time;
+        final remaining = ctx.genUntil - ctx.time;
         if (remaining >= breathDur + reservedStepDur) {
           // Step trigger : breath sans texte. La phrase `attempt` est
           // dite et affichée par le `SessionController._updateChallengePhase`
@@ -906,6 +926,7 @@ class CareerSessionGenerator {
           // Pas de step défi matérialisé ici — on réserve juste l'enveloppe
           // pour la planification aval.
           ctx.time += reservedStepDur;
+          ctx.challengeReserveSeconds += breathDur + reservedStepDur;
           nextChallengeIndex++;
           continue;
         }
