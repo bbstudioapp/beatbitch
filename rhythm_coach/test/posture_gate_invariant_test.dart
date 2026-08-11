@@ -311,31 +311,61 @@ void main() {
     }, timeout: const Timeout(Duration(seconds: 40)));
   });
 
-  test('aucun chemin ne lève le gel de posture à la main', () {
+  test('rien d\'autre que la scène qui l\'ordonne ne touche au gel de posture',
+      () {
     // Le motif qui a produit les quatre gels orphelins : un chemin qui rebat
-    // la timeline et qu'on corrige en lui faisant lever le gate. Il n'y a plus
-    // rien à lever — si cette liste se remplit, c'est que le motif est revenu
-    // et que quelqu'un compte à nouveau sur une énumération de chemins.
-    final offenders = <String>[];
-    final sources = Directory('lib/controllers')
-        .listSync()
-        .whereType<File>()
-        .where((f) => f.path.endsWith('.dart'));
-    for (final file in sources) {
-      final lines = file.readAsLinesSync();
+    // la timeline et qu'on corrige en lui faisant lever le gate. La garde
+    // porte sur le **champ**, pas sur le nom d'une méthode : `_postureGate`
+    // est privé à la library de `session_controller.dart`, donc chacun de ses
+    // `part` peut y écrire sans jamais taper `confirmPostureReady`.
+    const owner = 'lib/controllers/session_controller.dart';
+    final library = <String>[owner];
+    for (final line in File(owner).readAsLinesSync()) {
+      final part = RegExp(r"^part '([^']+)';").firstMatch(line);
+      if (part != null) library.add('lib/controllers/${part.group(1)}');
+    }
+
+    // Naissance de l'ancre, validation joueuse, ramasse-miettes du battement,
+    // et les trois bornes de vie d'une séance. Ailleurs, il n'y a rien à
+    // lever : le gel tombe seul quand sa justification tombe.
+    const authorized = {
+      '_enterAwaitReady',
+      'confirmPostureReady',
+      '_burySpentPostureGate',
+      'start',
+      'stop',
+      '_finish',
+    };
+
+    final touchedBy = <String, List<String>>{};
+    final write = RegExp(r'_postureGate\s*=(?!=)');
+    // Une déclaration de membre, et rien du corps qui la suit : `dart format`
+    // pose les membres à exactement deux espaces et tout leur contenu plus
+    // loin — d'où le « pas d'espace de plus » qui distingue les deux.
+    final member = RegExp(r'^  (?=\S)[\w<>?,\s\[\]]*\b(\w+)\s*\(');
+    for (final path in library) {
+      final lines = File(path).readAsLinesSync();
+      var current = '<hors membre>';
       for (var i = 0; i < lines.length; i++) {
         final line = lines[i];
-        if (!line.contains('confirmPostureReady')) continue;
-        // Sa définition et l'armement du timeout de sécurité sont les deux
-        // seuls usages côté contrôleur ; la validation joueuse vient de l'UI.
-        if (line.contains('void confirmPostureReady()')) continue;
-        if (line.contains('_readyTimeoutDuration')) continue;
-        offenders.add('${file.path}:${i + 1} — ${line.trim()}');
+        final signature = member.firstMatch(line);
+        if (signature != null) current = signature.group(1)!;
+        if (!write.hasMatch(line) && !line.contains('confirmPostureReady')) {
+          continue;
+        }
+        touchedBy
+            .putIfAbsent(current, () => <String>[])
+            .add('$path:${i + 1} — ${line.trim()}');
       }
     }
-    expect(offenders, isEmpty,
+
+    final detail = touchedBy.entries
+        .map((e) => '  ${e.key}\n    ${e.value.join('\n    ')}')
+        .join('\n');
+    expect(touchedBy.keys.toSet(), authorized,
         reason: 'le gel de posture est dérivé de la scène qui l\'a ordonné : '
-            'un chemin qui rebat la timeline n\'a rien à lever');
+            'un chemin qui rebat la timeline n\'a rien à lever, et aucun '
+            'autre n\'a à y toucher.\nSites trouvés :\n$detail');
   });
 }
 
