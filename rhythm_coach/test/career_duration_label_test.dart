@@ -24,7 +24,10 @@ import 'package:flutter_test/flutter_test.dart';
 /// exemple : « Surprise » n'est pas un nombre, et « Überraschung » fait le
 /// double de « ~6 Min. ».
 void main() {
-  const narrowest = 320.0;
+  // La carte est élastique : c'est la plus étroite qui contraint le plus,
+  // mais un texte allemand recomposé se relit sur toute la gamme de
+  // téléphones visée.
+  const widths = [320.0, 360.0, 400.0, 480.0];
 
   /// Le libellé de base tel que le calcule `career_screen.dart`.
   String baseLabel(BuildContext context, SessionLengthChoice choice) =>
@@ -74,48 +77,51 @@ void main() {
 
   for (final lang in const ['fr', 'en', 'de', 'es']) {
     for (final choice in SessionLengthChoice.values) {
-      testWidgets(
-          '$lang / ${choice.name} : la mention défis compose la durée sans '
-          'déborder', (tester) async {
-        tester.view.physicalSize = const Size(narrowest, 800);
-        tester.view.devicePixelRatio = 1.0;
-        addTearDown(tester.view.reset);
+      for (final width in widths) {
+        testWidgets(
+            '$lang / ${choice.name} / ${width.toInt()} dp : la mention défis '
+            'compose la durée sans déborder', (tester) async {
+          tester.view.physicalSize = Size(width, 800);
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.reset);
 
-        // Référence une ligne : le libellé nu du palier, tel qu'affiché
-        // quand les défis sont désactivés.
-        await tester
-            .pumpWidget(host(Locale(lang), (ctx) => baseLabel(ctx, choice)));
-        final base = tester
-            .widgetList<Text>(find.byType(Text))
-            .map((w) => w.data)
-            .whereType<String>()
-            .last;
-        final oneLine = tester.getSize(find.text(base)).height;
+          // Référence une ligne : le libellé nu du palier, tel qu'affiché
+          // quand les défis sont désactivés.
+          await tester
+              .pumpWidget(host(Locale(lang), (ctx) => baseLabel(ctx, choice)));
+          final base = tester
+              .widgetList<Text>(find.byType(Text))
+              .map((w) => w.data)
+              .whereType<String>()
+              .last;
+          final oneLine = tester.getSize(find.text(base)).height;
 
-        await tester.pumpWidget(host(
-          Locale(lang),
-          (ctx) => AppLocalizations.of(ctx)
-              .careerDurationPlusChallenges(baseLabel(ctx, choice)),
-        ));
-        expect(tester.takeException(), isNull);
+          await tester.pumpWidget(host(
+            Locale(lang),
+            (ctx) => AppLocalizations.of(ctx)
+                .careerDurationPlusChallenges(baseLabel(ctx, choice)),
+          ));
+          expect(tester.takeException(), isNull);
 
-        final rendered = tester
-            .widgetList<Text>(find.byType(Text))
-            .map((w) => w.data)
-            .whereType<String>()
-            .firstWhere((s) => s.contains(base));
-        expect(rendered, isNot(base),
-            reason: 'la mention doit compléter la durée, pas la remplacer');
-        // La carte reste dans l'écran : le texte enveloppe au lieu de pousser.
-        expect(tester.getSize(find.byType(Row).first).width,
-            lessThanOrEqualTo(narrowest - 40 - 32));
-        // Budget : 2 lignes en Ahem, soit environ une seule en Roboto. Au-delà,
-        // la mention n'est plus « courte » et pousse le reste de l'écran.
-        expect(tester.getSize(find.text(rendered)).height,
-            lessThanOrEqualTo(2 * oneLine),
-            reason: 'mention trop longue en $lang sur ${choice.name} : '
-                '« $rendered »');
-      });
+          final rendered = tester
+              .widgetList<Text>(find.byType(Text))
+              .map((w) => w.data)
+              .whereType<String>()
+              .firstWhere((s) => s.contains(base));
+          expect(rendered, isNot(base),
+              reason: 'la mention doit compléter la durée, pas la remplacer');
+          // La carte reste dans l'écran : le texte enveloppe au lieu de pousser.
+          expect(tester.getSize(find.byType(Row).first).width,
+              lessThanOrEqualTo(width - 40 - 32));
+          // Budget : 2 lignes en Ahem, soit environ une seule en Roboto.
+          // Au-delà, la mention n'est plus « courte » et pousse le reste de
+          // l'écran.
+          expect(tester.getSize(find.text(rendered)).height,
+              lessThanOrEqualTo(2 * oneLine),
+              reason: 'mention trop longue en $lang sur ${choice.name} à '
+                  '${width.toInt()} dp : « $rendered »');
+        });
+      }
     }
   }
 

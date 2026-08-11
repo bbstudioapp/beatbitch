@@ -1179,7 +1179,7 @@ abstract class AppLocalizations {
   /// No description provided for @careerChallengesDescription.
   ///
   /// In fr, this message translates to:
-  /// **'Un défi opt-in vers 60 % de la séance. Calibre vite, peut faire monter le niveau plus rapidement. Son temps s\'ajoute à la durée choisie.'**
+  /// **'De un à quatre défis opt-in répartis dans la séance, selon le format choisi. Calibrent vite, peuvent faire monter le niveau plus rapidement. Leur temps s\'ajoute à la durée annoncée.'**
   String get careerChallengesDescription;
 
   /// No description provided for @challengePassButton.
