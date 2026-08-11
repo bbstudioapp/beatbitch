@@ -229,19 +229,80 @@ class CareerSessionGenerator {
     return 0;
   }
 
+  /// Marge (s) laissée entre une pause scénarisée et le créneau d'un défi.
+  /// Absorbe l'écart entre l'horaire *planifié* d'un bloc et son émission
+  /// réelle : la boucle main pose la pause à la première frontière de bloc qui
+  /// suit son trigger, jamais pile dessus.
+  static const int _breakChallengeGapSeconds = 60;
+
+  /// Plancher de décalage d'une pause, en fraction de `genUntil`. Les
+  /// fractions nominales (0.34 / 0.5) garantissaient seules « jamais dans les
+  /// 5 premières minutes » ; dès qu'on décale, il faut le dire.
+  static const double _breakEarliestFraction = 0.25;
+
   /// `triggerTime` d'insertion des breaks dans la fenêtre de génération
   /// `genUntil` (≈ durée hors phase finish). 1 break → vers la moitié ;
   /// 2 breaks → vers le tiers et les deux tiers. Le placement aux frontières
   /// de blocs (insertion dans la boucle main) et `genUntil < effectiveDuration`
   /// garantissent structurellement « jamais dans les 5 premières min ni dans
   /// la phase finish » pour les durées éligibles (≥ 28 min).
+  ///
+  /// [challengeWindows] : créneaux `(début, fin)` déjà réservés par les défis
+  /// planifiés. Sans eux, les deux plannings visent le même milieu de séance —
+  /// une pause et un défi médian tombent alors au même endroit, le trou
+  /// d'effort de la pause avale le trigger du défi et la boucle main le
+  /// réémet à `break.endTime` : la joueuse reçoit l'ordre de se mettre à
+  /// quatre pattes et l'annonce du défi au même instant. Les horaires de défi
+  /// ne bougent pas (ils portent la dramaturgie du défi et se coordonnent
+  /// avec la durée de séance) — c'est la pause qui cède le passage.
   static List<int> _computeBreakTriggerTimes({
     required int count,
     required int genUntil,
+    List<(int, int)> challengeWindows = const [],
   }) {
     if (count == 0) return const [];
-    if (count == 1) return [(genUntil * 0.5).round()];
-    return [(genUntil * 0.34).round(), (genUntil * 0.67).round()];
+    final ideals = count == 1
+        ? [(genUntil * 0.5).round()]
+        : [(genUntil * 0.34).round(), (genUntil * 0.67).round()];
+    // Une pause déjà placée devient elle-même un créneau occupé : deux pauses
+    // décalées vers le même trou libre se recouvriraient.
+    final busy = [...challengeWindows];
+    final times = <int>[];
+    for (final ideal in ideals) {
+      final t = _breakSlotClearOf(ideal, genUntil: genUntil, busy: busy);
+      times.add(t);
+      busy.add((t, t + _breakMaxDurationSeconds));
+    }
+    return times;
+  }
+
+  /// Renvoie l'horaire de pause le plus proche de [ideal] dont la fenêtre
+  /// (`[t, t + durée max]`, marge comprise) ne touche aucun créneau de [busy].
+  /// Retourne [ideal] tel quel s'il est déjà libre, ou si aucun créneau
+  /// acceptable n'existe — mieux vaut une collision que perdre la pause ou la
+  /// jeter au début de la séance.
+  static int _breakSlotClearOf(
+    int ideal, {
+    required int genUntil,
+    required List<(int, int)> busy,
+  }) {
+    const span = _breakMaxDurationSeconds + _breakChallengeGapSeconds;
+    bool collides(int t) => busy
+        .any((w) => t < w.$2 + _breakChallengeGapSeconds && t + span > w.$1);
+    if (!collides(ideal)) return ideal;
+    final lowest = (genUntil * _breakEarliestFraction).round();
+    final highest = genUntil - span;
+    int? best;
+    for (final w in busy) {
+      for (final candidate in [w.$2 + _breakChallengeGapSeconds, w.$1 - span]) {
+        if (candidate < lowest || candidate > highest) continue;
+        if (collides(candidate)) continue;
+        if (best == null || (candidate - ideal).abs() < (best - ideal).abs()) {
+          best = candidate;
+        }
+      }
+    }
+    return best ?? ideal;
   }
 
   /// Enveloppe temporelle conservative réservée par le générateur après
@@ -813,6 +874,15 @@ class CareerSessionGenerator {
     final plannedBreakTimes = _computeBreakTriggerTimes(
       count: _config.scriptedBreaks ? _computeBreakCount(effectiveDuration) : 0,
       genUntil: genUntil,
+      challengeWindows: [
+        for (var i = 0; i < plannedTriggerTimes.length; i++)
+          (
+            plannedTriggerTimes[i],
+            plannedTriggerTimes[i] +
+                kChallengeBreathDurationSeconds +
+                _estimatedChallengeDuration(challengeQueue[i]),
+          ),
+      ],
     );
     final sessionBreaks = <ScriptedBreak>[];
     var nextBreakIndex = 0;
