@@ -1180,7 +1180,15 @@ class SessionController extends ChangeNotifier {
     _state = SessionState.running;
     _startTicker();
     _startRandomComments();
-    await _beep.resume();
+    // Pendant une pause scénarisée ou l'attente de mise en place (issue #77),
+    // le loop d'effort a été coupé et c'est le step posé après le trou qui le
+    // reconfigure : le reprendre ici ferait repartir l'effort en pleine pause.
+    // Chemin atteignable par tout le monde — `didChangeAppLifecycleState`
+    // appelle `pause()`/`resume()` sur une notification ou un écran verrouillé,
+    // sans passer par les contrôles de séance de debug. Même paire de gardes
+    // que le gel d'accrual dans `_onTick`. L'ambiance, elle, n'est pas coupée
+    // par le break : elle reprend inconditionnellement.
+    if (!_breakActive && !_awaitingReady) await _beep.resume();
     await _ambience.resume();
     notifyListeners();
   }
