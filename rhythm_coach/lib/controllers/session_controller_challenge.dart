@@ -382,6 +382,15 @@ extension ChallengeOrchestrator on SessionController {
       // paires ; ceci est la ceinture.
       final armable = min(
           _session.challenges.length, _session.challengeTriggerTimes.length);
+      if (kDebugMode &&
+          !_challengeListMismatchLogged &&
+          _session.challenges.length != _session.challengeTriggerTimes.length) {
+        _challengeListMismatchLogged = true;
+        debugPrint('[SessionController] défis désalignés : '
+            '${_session.challenges.length} défis pour '
+            '${_session.challengeTriggerTimes.length} trigger times — '
+            'les défis au-delà du rang $armable ne seront jamais armés');
+      }
       for (var i = 0; i < armable; i++) {
         if (_completedChallengeIndices.contains(i)) continue;
         final triggerStart = _session.challengeTriggerTimes[i];

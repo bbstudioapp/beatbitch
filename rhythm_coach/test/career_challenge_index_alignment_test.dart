@@ -136,6 +136,58 @@ void main() {
             'exception dans `Timer.periodic` ne s\'auto-annule pas, la '
             'séance gèle ou plante');
   }, timeout: const Timeout(Duration(seconds: 60)));
+
+  test('un désalignement laisse une trace en debug', () async {
+    // État impossible à produire par le générateur actuel : c'est la ceinture
+    // qu'on teste, pas le générateur. Sans trace, un défi orphelin est
+    // abandonné en silence — le désalignement d'origine n'a été découvert
+    // qu'après le signalement d'une joueuse.
+    final ctrl = SessionController(
+      session: const Session(
+        id: 'desaligne',
+        name: 'desaligne',
+        description: '',
+        durationSeconds: 60,
+        defaultMode: SessionMode.rhythm,
+        steps: [
+          SessionStep(time: 0, mode: SessionMode.rhythm, bpm: 40, duration: 60),
+        ],
+        challenges: _bigLast,
+        challengeTriggerTimes: [5, 30],
+      ),
+      tts: TtsService(),
+      beep: _SilentBeepEngine(),
+      ambience: _SilentAmbienceEngine(),
+      punishmentBundle:
+          const PunishmentBundle(failPhrases: [], punishments: []),
+      randomComments: const RandomCommentsBundle(
+        comments: [],
+        minIntervalSeconds: 999,
+        maxIntervalSeconds: 999,
+        scriptedCooldownSeconds: 4,
+      ),
+    );
+
+    final logged = <String>[];
+    final previousPrint = debugPrint;
+    debugPrint = (String? message, {int? wrapWidth}) {
+      if (message != null) logged.add(message);
+    };
+    addTearDown(() => debugPrint = previousPrint);
+
+    await ctrl.start();
+    await Future<void>.delayed(const Duration(milliseconds: 800));
+    await ctrl.stop();
+
+    final mismatchLines =
+        logged.where((l) => l.contains('3 défis pour 2 trigger times'));
+    expect(mismatchLines, isNotEmpty,
+        reason: 'un défi sans trigger time ne sera jamais armé : le '
+            'développement doit le voir passer');
+    expect(mismatchLines, hasLength(1),
+        reason: 'la boucle d\'armement tourne à chaque tick — une trace par '
+            'tick noierait le log');
+  }, timeout: const Timeout(Duration(seconds: 60)));
 }
 
 /// Le trio du retour utilisateur, gros défi **en dernier** : le tirage de

@@ -358,6 +358,11 @@ class SessionController extends ChangeNotifier {
   /// rebase de timeline. Persiste sur toute la session.
   final Set<int> _completedChallengeIndices = <int>{};
 
+  /// Vrai dès qu'un désalignement `challenges` / `challengeTriggerTimes` a
+  /// été tracé. La boucle d'armement tourne à chaque tick : sans ce verrou,
+  /// la trace noierait le log au lieu de le signaler.
+  bool _challengeListMismatchLogged = false;
+
   /// Historique des défis complétés (outcome + extensions) pour appliquer
   /// les bumps humil/obed multi-défi au `_finish`. Push à chaque
   /// `_completeChallenge`. Une entrée par défi armé qui a abouti
