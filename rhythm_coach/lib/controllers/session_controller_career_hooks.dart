@@ -151,10 +151,6 @@ extension CareerHooksOrchestrator on SessionController {
     _breakActive = false;
     _activeBreak = null;
     _nextBreakIndex = 0;
-    // Le gate de posture posé à la sortie de ce break tombe avec lui : sans
-    // ça il survit à la régénération et fige la nouvelle suite (`_checkSteps`
-    // ne consomme plus rien, `_onTick` gèle l'horloge). No-op hors gate.
-    confirmPostureReady();
     // Reset du flag chime : la régen apporte son propre step final +
     // apothéose. Si l'ancienne session avait déjà tiré son chime (cas
     // rare où Supplier est cliqué pile entre final et fin), on doit
@@ -209,12 +205,10 @@ extension CareerHooksOrchestrator on SessionController {
     // suite régénérée serait plus courte que prévu.
     _ttsDeferredTicks = 0;
     // Reset de l'état break (issue #77), même raison que `requestUpgrade` :
-    // la suite régénérée n'a pas de break, on évite un `_breakActive` coincé
-    // et un gate de posture qui figerait la nouvelle suite.
+    // la suite régénérée n'a pas de break, on évite un `_breakActive` coincé.
     _breakActive = false;
     _activeBreak = null;
     _nextBreakIndex = 0;
-    confirmPostureReady();
     // Reset du flag chime : la régen apporte son propre step final + apothéose.
     _finalChimePlayed = false;
     _finaleChimeStarted = false;

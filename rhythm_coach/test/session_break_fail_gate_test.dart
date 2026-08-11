@@ -18,19 +18,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Runtime de la machine de break scénarisé (issue #77), sur les chemins qui
 /// rebattent la timeline **sans** passer par `_exitBreak`.
 ///
-/// La sortie d'un break qui impose une nouvelle posture arme un gate
-/// (`_awaitingReady`) : la séance se fige jusqu'au « JE SUIS EN PLACE » ou au
-/// timeout de sécurité de 90 s. Ce gel est délibéré — tant qu'il est armé,
-/// `_checkSteps()` retourne tôt et `_onTick` décrémente `_timelineOffset`,
-/// donc plus aucun step n'est consommé et l'horloge logique n'avance plus.
+/// La sortie d'un break qui impose une nouvelle posture arme un gel de
+/// posture : la séance se fige jusqu'au « JE SUIS EN PLACE » ou au timeout de
+/// sécurité de 90 s. Ce gel est délibéré — tant qu'il tient, `_checkSteps()`
+/// retourne tôt et `_onTick` décrémente `_timelineOffset`, donc plus aucun
+/// step n'est consommé et l'horloge logique n'avance plus.
 ///
-/// Trois chemins peuvent traverser cette fenêtre : le bouton « je peux pas »
-/// (le seul contrôle de séance visible en production, jamais masqué par le
-/// break ni par le gate), le bouton « Utilise-moi » et la régénération de
-/// retry milestone (toutes deux via `requestUpgrade`). Aucun ne passe par
-/// `_exitBreak` : sans nettoyage explicite, le gate survit intact au saut de
-/// timeline et le gel délibéré devient un gel définitif — ticker actif, plus
-/// rien qui avance, jusqu'au timeout.
+/// Trois chemins traversent cette fenêtre : le bouton « je peux pas » (le seul
+/// contrôle de séance visible en production, jamais masqué par le break ni par
+/// le gel), le bouton « Utilise-moi » et la régénération de retry milestone
+/// (toutes deux via `requestUpgrade`). Aucun ne passe par `_exitBreak`, et
+/// aucun ne lève le gel : il est dérivé de la scène qui l'a ordonné
+/// (`PostureGate`) et tombe de lui-même quand cette scène disparaît.
+/// L'invariant lui-même est testé dans `posture_gate_invariant_test.dart` ;
+/// ce fichier vérifie qu'il tient sur ces trois chemins réels.
 ///
 /// Le dernier test couvre l'autre versant : le retour d'arrière-plan
 /// (notification, appel, écran verrouillé) relançait le loop d'effort en
@@ -193,9 +194,9 @@ void main() {
 
     expect(ctrl.isRunning, isTrue, reason: 'le flow fail est allé à son terme');
     expect(ctrl.awaitingPostureReady, isFalse,
-        reason: 'le flow fail rebat la timeline sans passer par `_exitBreak` : '
-            'il doit lever le gate lui-même, sinon `_checkSteps` ne consomme '
-            'plus jamais de step');
+        reason: 'le flow fail a pris la main et sauté la timeline : la scène '
+            'qui ordonnait la mise en place n\'existe plus, le gel tombe avec '
+            'elle — sinon `_checkSteps` ne consomme plus jamais de step');
 
     // L'horloge logique doit repartir. Sans le nettoyage, `_onTick` décrémente
     // `_timelineOffset` à chaque tick et `elapsedSeconds` reste figé à la
@@ -227,12 +228,13 @@ void main() {
         reason: 'le flow fail a sauté la timeline hors du trou d\'effort : le '
             'break ne peut pas rester actif derrière lui');
 
-    // Sans nettoyage, `_exitBreak` rattrapait son retard au tick suivant et
-    // armait un gate pour un step déjà consommé par le saut de section.
+    // Sans le nettoyage de `triggerFail`, `_exitBreak` rattrapait son retard
+    // au tick suivant et ordonnait une posture pour un step déjà consommé par
+    // le saut de section.
     await Future<void>.delayed(const Duration(milliseconds: 600));
     expect(ctrl.awaitingPostureReady, isFalse,
-        reason: 'aucun gate ne doit s\'armer après coup pour un break que le '
-            'flow fail a déjà annulé');
+        reason: 'aucune mise en place ne doit être ordonnée après coup pour un '
+            'break que le flow fail a déjà annulé');
 
     final resumedAt = ctrl.elapsedSeconds;
     await Future<void>.delayed(const Duration(milliseconds: 1600));
@@ -271,8 +273,8 @@ void main() {
     );
 
     expect(ctrl.awaitingPostureReady, isFalse,
-        reason: 'la régénération remet l\'état de break à zéro : le gate posé '
-            'par ce break doit tomber avec lui');
+        reason: 'la régénération remplace la timeline : le gel posé par un '
+            'break de l\'ancienne tombe avec elle');
 
     final resumedAt = ctrl.elapsedSeconds;
     await Future<void>.delayed(const Duration(milliseconds: 1600));
