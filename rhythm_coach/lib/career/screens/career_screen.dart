@@ -2084,9 +2084,12 @@ class _CareerBundle {
   /// Sert au déblocage des coachs par investissement (Phase 19.10).
   final int totalSeconds;
 
-  /// Flag debug `debug.scripted_breaks` (issue #77). Quand `true`, les
-  /// postures imposées + breaks scénarisés sont activés : passé à
-  /// `generate(scriptedBreaks:)` à tous les call sites.
+  /// Préférence utilisateur `pref.scripted_breaks` (issue #77), on par défaut.
+  /// Quand `true`, les postures imposées + breaks scénarisés sont activés.
+  /// Passé à `generate(scriptedBreaks:)` sur les deux entrées qui construisent
+  /// un contrôleur frais (`_start`, `_handleEncore`) — pas aux régens
+  /// mi-séance, qui swappent `_session` en vol et repartent sans break (cf.
+  /// reset d'état dans `requestUpgrade`).
   final bool scriptedBreaks;
 
   const _CareerBundle({

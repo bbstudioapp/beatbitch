@@ -68,6 +68,6 @@ void main() {
     // BadgeTier = {none, bronze, silver, ...} → silver = idx 2.
     expect(prefs.getInt('badge.tier.throatQueen'), 2);
 
-    expect(prefs.getBool('debug.scripted_breaks'), true);
+    expect(prefs.getBool('pref.scripted_breaks'), true);
   });
 }

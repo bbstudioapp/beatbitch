@@ -102,9 +102,13 @@ class SessionConfig {
   /// `intense` est actif sur l'encore (cf. `generate()`).
   final int encoreChainIndex;
 
-  /// Active les postures imposées + breaks scénarisés (issue #77, flag debug
-  /// `debug.scripted_breaks`). `false` = comportement historique (posture
-  /// `free`, aucun break). Cf. spec `specs/scripted_breaks.md`.
+  /// Active les postures imposées + breaks scénarisés (issue #77, préférence
+  /// utilisateur `pref.scripted_breaks`). `false` = posture `free` et aucun
+  /// break. Cf. spec `specs/scripted_breaks.md`.
+  ///
+  /// Défaut `false` ici (et non `true` comme la préférence) : les appelants
+  /// hors carrière — Custom, Music, tests de génération — n'ont pas de
+  /// postures à imposer et ne passent pas l'argument.
   final bool scriptedBreaks;
 
   /// Mode « Utilise-moi » (remplace Supplier en carrière) : escalade

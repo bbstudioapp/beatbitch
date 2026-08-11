@@ -131,7 +131,7 @@
     "skipSessionButton": false,
     "showBackgroundMedia": true,
     "showSessionRemainingTime": false,
-    "scriptedBreaks": false
+    "scriptedBreaks": true
   },
   "consent": {
     "adultConsentAccepted": true,

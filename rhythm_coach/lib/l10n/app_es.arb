@@ -648,8 +648,6 @@
   "soundsDebugCameraHoldCheckSubtitle": "Durante los holds, la cámara frontal comprueba que se mantiene la posición. El coach te avisa breve si te desvías. Requiere calibrar la cámara antes (icono cámara en la pantalla ESCENARIO).",
   "soundsDebugSkipSession": "Botón «Terminar como éxito»",
   "soundsDebugSkipSessionSubtitle": "Muestra un botón en la sesión que la termina inmediatamente como éxito total (insignias, hitos, nivel). Útil para iterar sobre el contenido sin jugar.",
-  "soundsDebugScriptedBreaks": "Posturas + pausas guionizadas",
-  "soundsDebugScriptedBreaksSubtitle": "Activa las posturas impuestas (de rodillas, a cuatro patas…) y las pausas activas de recuperación en sesiones largas. Experimental, en calibración.",
   "soundsShowBackgroundMedia": "Medios de fondo en sesión",
   "soundsShowBackgroundMediaSubtitle": "Muestra imágenes/GIFs de assets/backgrounds/ en el fondo, rotando con cada paso. Desactívalo para ver solo el degradado de ambiente.",
   "sessionDebugFinishButton": "DEBUG: terminar como éxito",
@@ -1102,6 +1100,9 @@
   "profileSessionDisplaySection": "Visualización de sesión",
   "profileShowRemainingTime": "Mostrar tiempo restante",
   "profileShowRemainingTimeSubtitle": "Reloj mm:ss pequeño en la parte alta de la pantalla durante la sesión.",
+  "profileSessionFlowSection": "Desarrollo de la sesión",
+  "profileScriptedBreaks": "Posturas impuestas y pausas",
+  "profileScriptedBreaksSubtitle": "La coach impone una postura (de rodillas, a cuatro patas…) e inserta pausas activas en las sesiones largas. Las posturas se desbloquean a medida que avanzas por los hitos de carrera.",
   "sessionRemainingTimeLabel": "Quedan: {time}",
   "@sessionRemainingTimeLabel": {
     "placeholders": {

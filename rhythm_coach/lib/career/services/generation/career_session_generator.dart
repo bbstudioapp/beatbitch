@@ -562,11 +562,9 @@ class CareerSessionGenerator {
     /// sont insérés vers 60 % du temps planifié (cf. spec § 4.3).
     ChallengeInputs challenge = ChallengeInputs.none,
 
-    /// Active les postures imposées + breaks scénarisés (issue #77, flag
-    /// debug `debug.scripted_breaks`). `false` = posture `free`, aucun
-    /// break (comportement historique). En PR3 seule la posture initiale
-    /// est tirée ; l'insertion des breaks suit. Cf. spec
-    /// `specs/scripted_breaks.md`.
+    /// Active les postures imposées + breaks scénarisés (issue #77, préférence
+    /// utilisateur `pref.scripted_breaks`). `false` = posture `free`, aucun
+    /// break. Cf. spec `specs/scripted_breaks.md`.
     bool scriptedBreaks = false,
   }) {
     // Invariants `milestones` : on ne peut pas les déplacer dans le
@@ -808,7 +806,7 @@ class CareerSessionGenerator {
     // longues. Comme les défis : trigger times planifiés, insertion aux
     // frontières de blocs dans la boucle main, réservation de l'enveloppe
     // (trou d'effort = `durationSeconds`, le runtime gèle le moteur — cf.
-    // PR4). Gaté par le flag debug `scriptedBreaks` ; 0 break si off.
+    // PR4). Gaté par `_config.scriptedBreaks` ; 0 break si off.
     // `currentPose` suit la posture en cours (départ = posture initiale) pour
     // que le 1ᵉʳ break impose une pose *différente* ; le 2ᵉ tend vers récup
     // pure (`newPose == null`, continuité de pose).
@@ -1604,12 +1602,11 @@ class CareerSessionGenerator {
 
   /// Posture imposée au démarrage de la séance courante. Tirée en début de
   /// `generate()` (où `unlockedKeys` est typé `Set<UnlockKey>`) et lue par
-  /// `_assembleResult`. `free` tant que le flag debug `scriptedBreaks` est
-  /// off.
+  /// `_assembleResult`. `free` tant que `_config.scriptedBreaks` est off.
   Posture _initialPose = Posture.free;
 
   /// Tire la posture imposée au démarrage (issue #77). [Posture.free] tant
-  /// que le flag debug `scriptedBreaks` est off ; sinon tirage uniforme
+  /// que `_config.scriptedBreaks` est off ; sinon tirage uniforme
   /// parmi les postures débloquées (`free` incluse dans le pool). Bas niveau
   /// / rien de débloqué ⇒ `free` de toute façon. Déterministe sous seed via
   /// `_rng`.

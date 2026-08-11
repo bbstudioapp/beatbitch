@@ -648,8 +648,6 @@
   "soundsDebugCameraHoldCheckSubtitle": "Während der Holds prüft die Frontkamera, ob die Position gehalten wird. Der Coach gibt einen kurzen Hinweis, wenn du abdriftest. Erfordert eine kalibrierte Kamera (Kamera-Symbol im SZENARIO-Bildschirm).",
   "soundsDebugSkipSession": "Knopf „als Erfolg beenden“",
   "soundsDebugSkipSessionSubtitle": "Zeigt einen Knopf in der Session, der sie sofort als vollen Erfolg beendet (Abzeichen, Meilensteine, Stufe). Praktisch, um an Inhalten zu feilen, ohne alles durchzuspielen.",
-  "soundsDebugScriptedBreaks": "Vorgegebene Posen + Breaks",
-  "soundsDebugScriptedBreaksSubtitle": "Aktiviert vorgegebene Posen (kniend, auf allen vieren…) und aktive Erholungspausen in langen Sessions. Experimentell, in Kalibrierung.",
   "soundsShowBackgroundMedia": "Hintergrundmedien in der Session",
   "soundsShowBackgroundMediaSubtitle": "Zeigt die Bilder/GIFs aus assets/backgrounds/ im Hintergrund, mit Wechsel bei jedem Step. Deaktivieren, um nur den Ambiente-Verlauf zu sehen.",
   "sessionDebugFinishButton": "DEBUG: als Erfolg beenden",
@@ -1102,6 +1100,9 @@
   "profileSessionDisplaySection": "Sitzungsanzeige",
   "profileShowRemainingTime": "Restzeit anzeigen",
   "profileShowRemainingTimeSubtitle": "Kleine mm:ss-Uhr oben auf dem Bildschirm während der Sitzung.",
+  "profileSessionFlowSection": "Sitzungsablauf",
+  "profileScriptedBreaks": "Vorgegebene Posen und Pausen",
+  "profileScriptedBreaksSubtitle": "Die Domina gibt eine Pose vor (kniend, auf allen vieren …) und baut in langen Sitzungen aktive Pausen ein. Die Posen werden nach und nach über die Karriere-Meilensteine freigeschaltet.",
   "sessionRemainingTimeLabel": "Rest: {time}",
   "@sessionRemainingTimeLabel": {
     "placeholders": {

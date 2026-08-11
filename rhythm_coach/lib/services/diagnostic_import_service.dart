@@ -198,9 +198,9 @@ class DiagnosticImportService {
     _bool('debug.skip_session_button', j['skipSessionButton']);
     _bool('pref.show_background_media', j['showBackgroundMedia']);
     _bool('pref.show_session_remaining_time', j['showSessionRemainingTime']);
-    // Champ hors-export : les presets debug peuvent piloter le toggle
-    // « Postures + breaks scénarisés » directement (`debug.scripted_breaks`).
-    _bool('debug.scripted_breaks', j['scriptedBreaks']);
+    // Champ hors-export : les presets debug peuvent piloter le réglage
+    // « Postures imposées et pauses » directement (`pref.scripted_breaks`).
+    _bool('pref.scripted_breaks', j['scriptedBreaks']);
   }
 
   void _consent(Map<String, dynamic> j) {
@@ -272,7 +272,7 @@ class DiagnosticImportService {
       'debug.show_mode_badge',
       'debug.camera_hold_check',
       'debug.skip_session_button',
-      'debug.scripted_breaks',
+      'pref.scripted_breaks',
       'pref.show_background_media',
       'pref.show_session_remaining_time',
       'app.adult_consent_accepted',

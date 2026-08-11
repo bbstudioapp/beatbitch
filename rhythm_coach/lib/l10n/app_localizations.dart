@@ -2364,18 +2364,6 @@ abstract class AppLocalizations {
   /// **'Affiche un bouton dans la séance qui termine immédiatement comme un succès complet (badges, milestones, niveau). Pratique pour itérer sur le contenu sans tout jouer.'**
   String get soundsDebugSkipSessionSubtitle;
 
-  /// No description provided for @soundsDebugScriptedBreaks.
-  ///
-  /// In fr, this message translates to:
-  /// **'Postures + breaks scénarisés'**
-  String get soundsDebugScriptedBreaks;
-
-  /// No description provided for @soundsDebugScriptedBreaksSubtitle.
-  ///
-  /// In fr, this message translates to:
-  /// **'Active les postures imposées (à genoux, à quatre pattes…) et les pauses actives de récup sur les sessions longues. Expérimental, en cours de calibration.'**
-  String get soundsDebugScriptedBreaksSubtitle;
-
   /// No description provided for @soundsShowBackgroundMedia.
   ///
   /// In fr, this message translates to:
@@ -3995,6 +3983,24 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Petite horloge mm:ss en haut de l\'écran pendant la séance.'**
   String get profileShowRemainingTimeSubtitle;
+
+  /// No description provided for @profileSessionFlowSection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déroulé de séance'**
+  String get profileSessionFlowSection;
+
+  /// No description provided for @profileScriptedBreaks.
+  ///
+  /// In fr, this message translates to:
+  /// **'Postures imposées et pauses'**
+  String get profileScriptedBreaks;
+
+  /// No description provided for @profileScriptedBreaksSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'La coach impose une posture (à genoux, à quatre pattes…) et insère des pauses actives sur les séances longues. Les postures se débloquent au fil des paliers de carrière.'**
+  String get profileScriptedBreaksSubtitle;
 
   /// No description provided for @sessionRemainingTimeLabel.
   ///

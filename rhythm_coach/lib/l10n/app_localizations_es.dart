@@ -1338,13 +1338,6 @@ class AppLocalizationsEs extends AppLocalizations {
       'Muestra un botón en la sesión que la termina inmediatamente como éxito total (insignias, hitos, nivel). Útil para iterar sobre el contenido sin jugar.';
 
   @override
-  String get soundsDebugScriptedBreaks => 'Posturas + pausas guionizadas';
-
-  @override
-  String get soundsDebugScriptedBreaksSubtitle =>
-      'Activa las posturas impuestas (de rodillas, a cuatro patas…) y las pausas activas de recuperación en sesiones largas. Experimental, en calibración.';
-
-  @override
   String get soundsShowBackgroundMedia => 'Medios de fondo en sesión';
 
   @override
@@ -2263,6 +2256,16 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get profileShowRemainingTimeSubtitle =>
       'Reloj mm:ss pequeño en la parte alta de la pantalla durante la sesión.';
+
+  @override
+  String get profileSessionFlowSection => 'Desarrollo de la sesión';
+
+  @override
+  String get profileScriptedBreaks => 'Posturas impuestas y pausas';
+
+  @override
+  String get profileScriptedBreaksSubtitle =>
+      'La coach impone una postura (de rodillas, a cuatro patas…) e inserta pausas activas en las sesiones largas. Las posturas se desbloquean a medida que avanzas por los hitos de carrera.';
 
   @override
   String sessionRemainingTimeLabel(String time) {
