@@ -598,7 +598,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get careerChallengesDescription =>
-      'Un défi opt-in vers 60 % de la séance. Calibre vite, peut faire monter le niveau plus rapidement.';
+      'Un défi opt-in vers 60 % de la séance. Calibre vite, peut faire monter le niveau plus rapidement. Son temps s\'ajoute à la durée choisie.';
 
   @override
   String get challengePassButton => 'PASSE';

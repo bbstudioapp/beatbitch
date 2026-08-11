@@ -599,7 +599,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get careerChallengesDescription =>
-      'Un reto opcional alrededor del 60% de la sesión. Se calibra rápido, puede acelerar tu progresión de nivel.';
+      'Un reto opcional alrededor del 60% de la sesión. Se calibra rápido, puede acelerar tu progresión de nivel. Su tiempo se suma a la duración elegida.';
 
   @override
   String get challengePassButton => 'PASAR';

@@ -597,7 +597,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get careerChallengesDescription =>
-      'An opt-in challenge around 60% of the session. Calibrates fast, can speed up your level progression.';
+      'An opt-in challenge around 60% of the session. Calibrates fast, can speed up your level progression. Its time adds to the length you picked.';
 
   @override
   String get challengePassButton => 'SKIP';

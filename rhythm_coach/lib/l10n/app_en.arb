@@ -252,7 +252,7 @@
   "sessionLengthAleatoireDuration": "Surprise",
   "sessionLengthAleatoireDescription": "Surprise length drawn between Short, Medium and Long. No timer.",
   "careerChallengesToggle": "In-session challenges",
-  "careerChallengesDescription": "An opt-in challenge around 60% of the session. Calibrates fast, can speed up your level progression.",
+  "careerChallengesDescription": "An opt-in challenge around 60% of the session. Calibrates fast, can speed up your level progression. Its time adds to the length you picked.",
   "challengePassButton": "SKIP",
   "challengeGoButton": "HOLD",
   "challengeHoldHintLive": "Keep your finger on the screen",

@@ -1,4 +1,7 @@
+import 'package:beat_bitch/career/models/session_length_choice.dart';
 import 'package:beat_bitch/l10n/app_localizations.dart';
+import 'package:beat_bitch/l10n/enum_labels.dart';
+import 'package:beat_bitch/l10n/format_helpers.dart';
 import 'package:beat_bitch/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,11 +19,20 @@ import 'package:flutter_test/flutter_test.dart';
 /// privée à `career_screen.dart`. La police de test (Ahem) rend chaque
 /// glyphe carré, soit environ deux fois plus large que Roboto : ce qui
 /// tient ici tient a fortiori en vrai.
+///
+/// Les libellés testés sont les **vrais** libellés de paliers, pas un
+/// exemple : « Surprise » n'est pas un nombre, et « Überraschung » fait le
+/// double de « ~6 Min. ».
 void main() {
   const narrowest = 320.0;
 
-  Widget host(Locale locale, String Function(AppLocalizations) label) =>
-      MaterialApp(
+  /// Le libellé de base tel que le calcule `career_screen.dart`.
+  String baseLabel(BuildContext context, SessionLengthChoice choice) =>
+      choice == SessionLengthChoice.aleatoire
+          ? choice.localizedDuration(context)
+          : formatDurationCompact(context, choice.durationSeconds);
+
+  Widget host(Locale locale, String Function(BuildContext) f) => MaterialApp(
         locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -29,7 +41,6 @@ void main() {
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
             children: [
               Builder(builder: (context) {
-                final t = AppLocalizations.of(context);
                 return Container(
                   width: double.infinity,
                   padding:
@@ -46,7 +57,7 @@ void main() {
                                 style: TextStyle(
                                     fontSize: 16, fontWeight: FontWeight.w700)),
                             const SizedBox(height: 2),
-                            Text(label(t),
+                            Text(f(context),
                                 style: const TextStyle(
                                     fontSize: 12, color: AppTheme.textMuted)),
                           ],
@@ -62,42 +73,56 @@ void main() {
       );
 
   for (final lang in const ['fr', 'en', 'de', 'es']) {
-    testWidgets('$lang : la mention défis compose la durée sans déborder',
-        (tester) async {
-      tester.view.physicalSize = const Size(narrowest, 800);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
+    for (final choice in SessionLengthChoice.values) {
+      testWidgets(
+          '$lang / ${choice.name} : la mention défis compose la durée sans '
+          'déborder', (tester) async {
+        tester.view.physicalSize = const Size(narrowest, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
 
-      // Référence une ligne : le chiffre nu, tel qu'affiché aujourd'hui.
-      await tester.pumpWidget(host(Locale(lang), (_) => '25 min'));
-      final oneLine = tester.getSize(find.text('25 min')).height;
+        // Référence une ligne : le libellé nu du palier, tel qu'affiché
+        // quand les défis sont désactivés.
+        await tester
+            .pumpWidget(host(Locale(lang), (ctx) => baseLabel(ctx, choice)));
+        final base = tester
+            .widgetList<Text>(find.byType(Text))
+            .map((w) => w.data)
+            .whereType<String>()
+            .last;
+        final oneLine = tester.getSize(find.text(base)).height;
 
-      await tester.pumpWidget(host(
-        Locale(lang),
-        (t) => t.careerDurationPlusChallenges('25 min'),
-      ));
-      expect(tester.takeException(), isNull);
+        await tester.pumpWidget(host(
+          Locale(lang),
+          (ctx) => AppLocalizations.of(ctx)
+              .careerDurationPlusChallenges(baseLabel(ctx, choice)),
+        ));
+        expect(tester.takeException(), isNull);
 
-      final rendered = tester
-          .widgetList<Text>(find.byType(Text))
-          .map((w) => w.data)
-          .whereType<String>()
-          .firstWhere((s) => s.contains('25 min'));
-      expect(rendered, isNot('25 min'),
-          reason: 'la mention doit compléter la durée, pas la remplacer');
-      // La carte reste dans l'écran : le texte enveloppe au lieu de pousser.
-      expect(tester.getSize(find.byType(Row).first).width,
-          lessThanOrEqualTo(narrowest - 40 - 32));
-      // Budget : 2 lignes en Ahem, soit environ une seule en Roboto. Au-delà,
-      // la mention n'est plus « courte » et pousse le reste de l'écran.
-      expect(tester.getSize(find.text(rendered)).height,
-          lessThanOrEqualTo(2 * oneLine),
-          reason: 'mention trop longue en $lang : « $rendered »');
-    });
+        final rendered = tester
+            .widgetList<Text>(find.byType(Text))
+            .map((w) => w.data)
+            .whereType<String>()
+            .firstWhere((s) => s.contains(base));
+        expect(rendered, isNot(base),
+            reason: 'la mention doit compléter la durée, pas la remplacer');
+        // La carte reste dans l'écran : le texte enveloppe au lieu de pousser.
+        expect(tester.getSize(find.byType(Row).first).width,
+            lessThanOrEqualTo(narrowest - 40 - 32));
+        // Budget : 2 lignes en Ahem, soit environ une seule en Roboto. Au-delà,
+        // la mention n'est plus « courte » et pousse le reste de l'écran.
+        expect(tester.getSize(find.text(rendered)).height,
+            lessThanOrEqualTo(2 * oneLine),
+            reason: 'mention trop longue en $lang sur ${choice.name} : '
+                '« $rendered »');
+      });
+    }
   }
 
-  testWidgets('sans défis, la durée reste le chiffre nu', (tester) async {
-    await tester.pumpWidget(host(const Locale('fr'), (_) => '25 min'));
+  testWidgets('sans défis, la durée reste le libellé nu du palier',
+      (tester) async {
+    await tester.pumpWidget(host(const Locale('fr'),
+        (ctx) => baseLabel(ctx, SessionLengthChoice.moyenne)));
     expect(find.text('25 min'), findsOneWidget);
   });
 }
