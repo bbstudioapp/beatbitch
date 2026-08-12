@@ -32,6 +32,7 @@ import '../services/saliva_engine.dart';
 import '../services/stamina_engine.dart';
 import '../services/stats_service.dart';
 import '../services/tts_service.dart';
+import 'posture_gate.dart';
 
 part 'session_controller_challenge.dart';
 part 'session_controller_fail_flow.dart';
@@ -463,14 +464,29 @@ class SessionController extends ChangeNotifier {
   /// afficher la pose à prendre avant validation. `free` si aucune.
   Posture get initialPose => _session.initialPose;
 
-  /// Gate de validation posture (issue #77) : `true` quand la séance est gelée
-  /// en attente que la joueuse confirme être en position (step `awaitReady`
-  /// d'une milestone posture, ou sortie de break qui change de pose). Gel
-  /// identique au défi (`elapsedSeconds` figé via `_timelineOffset` dans
-  /// `_onTick`, stopwatch/ticker intacts). Levé par [confirmPostureReady] ou le
-  /// timeout de sécurité.
-  bool _awaitingReady = false;
-  bool get awaitingPostureReady => _awaitingReady;
+  /// Gate de validation posture (issue #77) : ce qui justifie le gel courant,
+  /// `null` s'il n'y en a pas. Armé par un step `awaitReady` (milestone
+  /// posture) ou une sortie de break qui change de pose. Gel identique au défi
+  /// (`elapsedSeconds` figé via `_timelineOffset` dans `_onTick`,
+  /// stopwatch/ticker intacts).
+  ///
+  /// Ce n'est **pas** un drapeau à baisser : [awaitingPostureReady] rejoue la
+  /// justification à chaque lecture (cf. [PostureGate]), donc un chemin qui
+  /// rebat la timeline n'a rien à lever — le gel tombe parce que la scène qui
+  /// l'a ordonné n'est plus la scène courante.
+  PostureGate? _postureGate;
+
+  /// `true` tant que la séance est gelée en attente que la joueuse confirme
+  /// être en position. Dérivé : pas d'état à maintenir, pas de levée à oublier.
+  bool get awaitingPostureReady =>
+      _postureGate?.stillHolds(
+        session: _session,
+        nextStepIndex: _nextStepIndex,
+        timelineOffset: _timelineOffset,
+        failGeneration: _failGen,
+        otherSceneActive: isChallengeActive || _inPostChallengeBreath,
+      ) ??
+      false;
   Timer? _readyTimeout;
 
   /// Garde-fou anti-soft-lock : si la joueuse ne valide pas la posture, on
@@ -1028,7 +1044,7 @@ class SessionController extends ChangeNotifier {
         _nextBreakIndex = 0;
         _breakOrderLastAtSec = 0;
         _currentPose = _session.initialPose;
-        _awaitingReady = false;
+        _postureGate = null;
         _readyTimeout?.cancel();
         _readyTimeout = null;
         _capabilityTracker?.onSessionStart();
@@ -1202,7 +1218,15 @@ class SessionController extends ChangeNotifier {
     _state = SessionState.running;
     _startTicker();
     _startRandomComments();
-    await _beep.resume();
+    // Pendant une pause scénarisée ou l'attente de mise en place (issue #77),
+    // le loop d'effort a été coupé et c'est le step posé après le trou qui le
+    // reconfigure : le reprendre ici ferait repartir l'effort en pleine pause.
+    // Chemin atteignable par tout le monde — `didChangeAppLifecycleState`
+    // appelle `pause()`/`resume()` sur une notification ou un écran verrouillé,
+    // sans passer par les contrôles de séance de debug. Même paire de gardes
+    // que le gel d'accrual dans `_onTick`. L'ambiance, elle, n'est pas coupée
+    // par le break : elle reprend inconditionnellement.
+    if (!_breakActive && !awaitingPostureReady) await _beep.resume();
     await _ambience.resume();
     notifyListeners();
   }
@@ -1244,6 +1268,13 @@ class SessionController extends ChangeNotifier {
     _hadFailThisSession = false;
     _currentHoldFullDuration = 0;
     _lastHoldTickAtSecond = -1;
+    // Remise à zéro du gel de posture, comme dans `start()` : il ne tient
+    // déjà plus (la timeline vient d'être remise à zéro), mais son `Timer` de
+    // sécurité survivait à l'arrêt et réveillait ~90 s plus tard un
+    // contrôleur devenu inactif.
+    _postureGate = null;
+    _readyTimeout?.cancel();
+    _readyTimeout = null;
     // Phase 1 défis — reset complet de la machine d'états.
     _challengePhase = ChallengePhase.none;
     _challengeStepStartedAtSec = null;
@@ -1299,6 +1330,10 @@ class SessionController extends ChangeNotifier {
   }
 
   void _onTick() {
+    // Gel de posture : enterre une ancre dont la justification est tombée
+    // (cf. `_burySpentPostureGate`). Rien à décider ici — le gel lui-même est
+    // dérivé, cette passe ne fait que libérer ce qui traîne derrière lui.
+    _burySpentPostureGate();
     // `_updateChallengePhase` AVANT `_checkSteps` : si on franchit la fin
     // nominale du step défi à ce tick, la phase doit basculer en `atSeuil`
     // avant que `_checkSteps` ne consomme le step suivant naturel — sinon
@@ -1318,7 +1353,7 @@ class SessionController extends ChangeNotifier {
     // Gel de l'effort pendant un break : pas de crédit hold/saliva/stamina/
     // mini-punition ni de marqueurs de progression (la pause est de la récup
     // mise en scène, pas de l'effort). L'horloge `elapsed`, elle, continue.
-    if (!_breakActive && !_awaitingReady) {
+    if (!_breakActive && !awaitingPostureReady) {
       _accrueHoldSecond();
       _checkProgressMarkers();
     }
@@ -1333,7 +1368,7 @@ class SessionController extends ChangeNotifier {
     // brut, jamais freezé) pour rester indépendantes de ce gel — sans
     // cela, `_inPostChallengeBreath` ne se terminerait jamais (son seuil
     // ne serait jamais franchi par un `elapsedSeconds` gelé).
-    if (isChallengeActive || _inPostChallengeBreath || _awaitingReady) {
+    if (isChallengeActive || _inPostChallengeBreath || awaitingPostureReady) {
       _timelineOffset -= _tickInterval;
     }
     if (elapsedSeconds >= session.durationSeconds) {
@@ -1481,7 +1516,7 @@ class SessionController extends ChangeNotifier {
     // Gate posture (issue #77) : tant que la joueuse n'a pas validé sa
     // position, on ne consomme aucun step — l'horloge est gelée dans `_onTick`
     // et le step d'effort qui suit attend la confirmation.
-    if (_awaitingReady) return;
+    if (awaitingPostureReady) return;
     final s = elapsedSeconds;
     var modeChanged = false;
     while (_nextStepIndex < session.steps.length &&
@@ -1648,14 +1683,19 @@ class SessionController extends ChangeNotifier {
   /// L'annonce de la posture a déjà été prononcée par le step qui déclenche la
   /// gate ; ici on ne fait qu'attendre.
   void _enterAwaitReady() {
-    if (_awaitingReady) return;
+    if (awaitingPostureReady) return;
     // Fixe `_currentPose` sur la posture enseignée par la milestone qui arme
     // ce gate, AVANT de notifier — sinon l'indicateur du gate affiche encore
     // l'ancienne pose. `_updateMilestonePose` est déjà appelé dans `_onTick`,
     // mais pas quand le gate s'arme depuis `start()` (`_checkSteps` du premier
     // step, cas d'une milestone posture qui remplace l'intro).
     _updateMilestonePose();
-    _awaitingReady = true;
+    _postureGate = PostureGate(
+      session: _session,
+      nextStepIndex: _nextStepIndex,
+      timelineOffset: _timelineOffset,
+      failGeneration: _failGen,
+    );
     _readyTimeout?.cancel();
     _readyTimeout = Timer(_readyTimeoutDuration, confirmPostureReady);
     notifyListeners();
@@ -1665,11 +1705,29 @@ class SessionController extends ChangeNotifier {
   /// reprend au tick suivant (l'horloge ré-avance, le step d'effort suivant
   /// s'applique). Aussi appelée par le timeout de sécurité. No-op hors gate.
   void confirmPostureReady() {
-    if (!_awaitingReady) return;
-    _awaitingReady = false;
+    if (_postureGate == null) return;
+    _postureGate = null;
     _readyTimeout?.cancel();
     _readyTimeout = null;
     notifyListeners();
+  }
+
+  /// Garde centrale du gel de posture, jouée à chaque battement : une ancre
+  /// dont la justification est tombée est enterrée ici, timeout de sécurité
+  /// compris. [awaitingPostureReady] vaut déjà `false` à cet instant — la
+  /// purge sert à ce qu'un gel enterré ne **ressuscite** pas si sa
+  /// justification redevenait vraie (une scène concurrente qui se termine),
+  /// et à ne pas laisser un `Timer` de 90 s courir derrière une séance qui a
+  /// repris.
+  void _burySpentPostureGate() {
+    if (_postureGate == null || awaitingPostureReady) return;
+    if (kDebugMode) {
+      debugPrint('[SessionController] gel de posture levé : la scène qui '
+          "l'a ordonné n'est plus la scène courante");
+    }
+    _postureGate = null;
+    _readyTimeout?.cancel();
+    _readyTimeout = null;
   }
 
   /// Wrapper autour de `_tts.speak` qui marque le dernier instant scripté,
@@ -1743,6 +1801,14 @@ class SessionController extends ChangeNotifier {
     _stopwatch.stop();
     _ticker?.cancel();
     _ticker = null;
+    // Le `Timer` de sécurité du gel de posture est libéré aux trois bornes de
+    // vie d'une séance (`start`, `stop`, ici) : entre elles, c'est la garde du
+    // battement qui s'en charge, et elle ne tourne plus sans ticker. Il n'y a
+    // pas de gel à lever — il est tombé de lui-même — juste une ressource qui
+    // réveillerait l'écran de fin 90 s plus tard.
+    _postureGate = null;
+    _readyTimeout?.cancel();
+    _readyTimeout = null;
     // Garde-fou : sur un backend audio engorgé (seek/stop qui ne rendent plus
     // la main sur les longues séances), `_beep.stop()` pouvait bloquer ici et
     // la session ne passait jamais en `finished` (écran de fin absent). On

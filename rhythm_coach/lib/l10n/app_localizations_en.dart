@@ -1337,13 +1337,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Shows a button in the session that ends it immediately as a full success (badges, milestones, level). Useful to iterate on content without playing through.';
 
   @override
-  String get soundsDebugScriptedBreaks => 'Scripted postures + breaks';
-
-  @override
-  String get soundsDebugScriptedBreaksSubtitle =>
-      'Enables imposed postures (kneeling, on all fours…) and active recovery breaks on long sessions. Experimental, being calibrated.';
-
-  @override
   String get soundsShowBackgroundMedia => 'Background media in session';
 
   @override
@@ -2259,6 +2252,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get profileShowRemainingTimeSubtitle =>
       'Small mm:ss clock at the top of the screen during the session.';
+
+  @override
+  String get profileSessionFlowSection => 'Session flow';
+
+  @override
+  String get profileScriptedBreaks => 'Enforced postures and breaks';
+
+  @override
+  String get profileScriptedBreaksSubtitle =>
+      'The coach enforces a posture (kneeling, on all fours…) and inserts active breaks on long sessions. Postures unlock as you progress through career milestones.';
 
   @override
   String sessionRemainingTimeLabel(String time) {

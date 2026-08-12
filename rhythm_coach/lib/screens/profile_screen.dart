@@ -222,6 +222,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 8),
               const _SessionDisplaySection(),
               const SizedBox(height: 24),
+              _SectionLabel(t.profileSessionFlowSection),
+              const SizedBox(height: 8),
+              const _SessionFlowSection(),
+              const SizedBox(height: 24),
               _SectionLabel(t.profileDiagnosticSection),
               const SizedBox(height: 8),
               const DiagnosticExportSection(),
@@ -421,6 +425,55 @@ class _SessionDisplaySectionState extends State<_SessionDisplaySection> {
         await _debug.setShowSessionRemainingTime(v);
         if (!mounted) return;
         setState(() => _showRemainingTime = v);
+      },
+    );
+  }
+}
+
+class _SessionFlowSection extends StatefulWidget {
+  const _SessionFlowSection();
+
+  @override
+  State<_SessionFlowSection> createState() => _SessionFlowSectionState();
+}
+
+class _SessionFlowSectionState extends State<_SessionFlowSection> {
+  final DebugSettingsService _debug = DebugSettingsService();
+  bool _scriptedBreaks = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _debug.getScriptedBreaks().then((value) {
+      if (!mounted) return;
+      setState(() => _scriptedBreaks = value);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return SwitchListTile(
+      contentPadding: EdgeInsets.zero,
+      title: Text(
+        t.profileScriptedBreaks,
+        style: const TextStyle(
+          fontSize: 14,
+          color: AppTheme.textPrimary,
+        ),
+      ),
+      subtitle: Text(
+        t.profileScriptedBreaksSubtitle,
+        style: const TextStyle(
+          fontSize: 11,
+          color: AppTheme.textMuted,
+        ),
+      ),
+      value: _scriptedBreaks,
+      onChanged: (v) async {
+        await _debug.setScriptedBreaks(v);
+        if (!mounted) return;
+        setState(() => _scriptedBreaks = v);
       },
     );
   }

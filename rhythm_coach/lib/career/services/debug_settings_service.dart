@@ -14,7 +14,7 @@ class DebugSettingsService {
   static const String _kShowBackgroundMedia = 'pref.show_background_media';
   static const String _kShowSessionRemainingTime =
       'pref.show_session_remaining_time';
-  static const String _kScriptedBreaks = 'debug.scripted_breaks';
+  static const String _kScriptedBreaks = 'pref.scripted_breaks';
 
   Future<bool> getShowStaminaBar() async {
     final prefs = await SharedPreferences.getInstance();
@@ -159,14 +159,19 @@ class DebugSettingsService {
     await prefs.setBool(_kShowSessionRemainingTime, value);
   }
 
-  /// Quand true, active les postures imposées + breaks scénarisés en carrière
-  /// (issue #77) : posture tirée à l'intro et pauses actives de récup sur les
-  /// sessions longues. Off par défaut le temps de calibrer (cf. spec
-  /// `specs/scripted_breaks.md`). Lu par `career_screen` et passé au
-  /// générateur via `generate(scriptedBreaks:)`.
+  /// Quand true (défaut), active les postures imposées + breaks scénarisés en
+  /// carrière (issue #77) : posture tirée à l'intro et pauses actives de récup
+  /// sur les sessions longues. Lu par `career_screen` et passé au générateur
+  /// via `generate(scriptedBreaks:)`.
+  ///
+  /// Préférence utilisateur assumée (clé `pref.`, réglage dans le Profil) et
+  /// non plus flag debug : le gate métier de la fonctionnalité, ce sont les
+  /// milestones `intro_posture_*` qui débloquent chaque posture. L'ancienne
+  /// clé `debug.scripted_breaks` est délibérément abandonnée — la reprendre
+  /// rendrait le off historique (= le défaut d'avant) collant.
   Future<bool> getScriptedBreaks() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_kScriptedBreaks) ?? false;
+    return prefs.getBool(_kScriptedBreaks) ?? true;
   }
 
   Future<void> setScriptedBreaks(bool value) async {

@@ -652,8 +652,6 @@
   "soundsDebugCameraHoldCheckSubtitle": "During holds, the front camera checks that the position is being held. The coach gives a short cue if you drift. Requires the camera to be calibrated (camera icon in the SCENARIO screen).",
   "soundsDebugSkipSession": "“Finish as success” button",
   "soundsDebugSkipSessionSubtitle": "Shows a button in the session that ends it immediately as a full success (badges, milestones, level). Useful to iterate on content without playing through.",
-  "soundsDebugScriptedBreaks": "Scripted postures + breaks",
-  "soundsDebugScriptedBreaksSubtitle": "Enables imposed postures (kneeling, on all fours…) and active recovery breaks on long sessions. Experimental, being calibrated.",
   "soundsShowBackgroundMedia": "Background media in session",
   "soundsShowBackgroundMediaSubtitle": "Shows images/GIFs from assets/backgrounds/ in the background, rotating each step. Disable to see only the ambience gradient.",
   "sessionDebugFinishButton": "DEBUG: finish as success",
@@ -1106,6 +1104,9 @@
   "profileSessionDisplaySection": "Session display",
   "profileShowRemainingTime": "Show remaining time",
   "profileShowRemainingTimeSubtitle": "Small mm:ss clock at the top of the screen during the session.",
+  "profileSessionFlowSection": "Session flow",
+  "profileScriptedBreaks": "Enforced postures and breaks",
+  "profileScriptedBreaksSubtitle": "The coach enforces a posture (kneeling, on all fours…) and inserts active breaks on long sessions. Postures unlock as you progress through career milestones.",
   "sessionRemainingTimeLabel": "Left: {time}",
   "@sessionRemainingTimeLabel": {
     "placeholders": {

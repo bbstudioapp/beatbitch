@@ -1343,13 +1343,6 @@ class AppLocalizationsDe extends AppLocalizations {
       'Zeigt einen Knopf in der Session, der sie sofort als vollen Erfolg beendet (Abzeichen, Meilensteine, Stufe). Praktisch, um an Inhalten zu feilen, ohne alles durchzuspielen.';
 
   @override
-  String get soundsDebugScriptedBreaks => 'Vorgegebene Posen + Breaks';
-
-  @override
-  String get soundsDebugScriptedBreaksSubtitle =>
-      'Aktiviert vorgegebene Posen (kniend, auf allen vieren…) und aktive Erholungspausen in langen Sessions. Experimentell, in Kalibrierung.';
-
-  @override
   String get soundsShowBackgroundMedia => 'Hintergrundmedien in der Session';
 
   @override
@@ -2270,6 +2263,16 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get profileShowRemainingTimeSubtitle =>
       'Kleine mm:ss-Uhr oben auf dem Bildschirm während der Sitzung.';
+
+  @override
+  String get profileSessionFlowSection => 'Sitzungsablauf';
+
+  @override
+  String get profileScriptedBreaks => 'Vorgegebene Posen und Pausen';
+
+  @override
+  String get profileScriptedBreaksSubtitle =>
+      'Die Domina gibt eine Pose vor (kniend, auf allen vieren …) und baut in langen Sitzungen aktive Pausen ein. Die Posen werden nach und nach über die Karriere-Meilensteine freigeschaltet.';
 
   @override
   String sessionRemainingTimeLabel(String time) {

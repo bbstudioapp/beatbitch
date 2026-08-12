@@ -52,6 +52,19 @@ extension FailFlowOrchestrator on SessionController {
       return;
     }
 
+    // Break scénarisé (issue #77) : tout ce qui suit rebat la timeline (saut
+    // de section, ou régénération de retry) sans jamais passer par
+    // `_exitBreak`, qui resterait sinon coincé à `true` sur une timeline qui
+    // n'a plus de trou d'effort.
+    //
+    // La pose du break n'est pas appliquée : sa phrase de changement ne sera
+    // pas prononcée, imposer une position sans l'ordonner serait un ordre
+    // muet. Le break est annulé, sa mise en scène avec. Le gel de posture,
+    // lui, n'a rien à lever ici : il est dérivé de la scène qui l'a ordonné
+    // (`PostureGate`) et tombe de lui-même dès que ce flow prend la main.
+    _breakActive = false;
+    _activeBreak = null;
+
     // Retry milestone : si on rate dans la fenêtre pédagogique, on tente
     // d'abord de proposer une nouvelle tentative via le callback (qui
     // regénère + appelle requestUpgrade). Si le callback prend la main,
