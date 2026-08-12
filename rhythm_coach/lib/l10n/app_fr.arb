@@ -228,6 +228,10 @@
       "error": { "type": "String" }
     }
   },
+  "careerDurationPlusChallenges": "{duration} + le temps des défis",
+  "@careerDurationPlusChallenges": {
+    "placeholders": { "duration": { "type": "String" } }
+  },
   "careerDurationSection": "Durée",
   "careerQuickieToggle": "Session bâclée",
   "careerQuickieSubtitle": "6 min — intense",
@@ -248,7 +252,7 @@
   "sessionLengthAleatoireDuration": "Surprise",
   "sessionLengthAleatoireDescription": "Durée surprise tirée parmi Courte, Moyenne ou Longue. Pas de minuteur.",
   "careerChallengesToggle": "Défis intra-séance",
-  "careerChallengesDescription": "Un défi opt-in vers 60 % de la séance. Calibre vite, peut faire monter le niveau plus rapidement.",
+  "careerChallengesDescription": "De un à quatre défis opt-in répartis dans la séance, selon le format choisi. Calibrent vite, peuvent faire monter le niveau plus rapidement. Leur temps s'ajoute à la durée annoncée.",
   "challengePassButton": "PASSE",
   "challengeGoButton": "MAINTIENS",
   "challengeHoldHintLive": "Garde le doigt sur l'écran",

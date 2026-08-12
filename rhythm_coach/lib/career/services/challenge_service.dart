@@ -204,12 +204,18 @@ class ChallengeService {
   /// séance — exclus pour éviter l'empilement (cf. spec § 5.5).
   /// [isTutorial] : `true` au premier défi de la joueuse, force un défi
   /// scripté sur axe robuste (`holdThroatStreak` 5 s).
+  /// [maxChallengeDurationSeconds] : plafond de durée du défi, dérivé du
+  /// palier choisi (`SessionLengthChoice.maxChallengeDurationSeconds`) — un
+  /// défi reste proportionné au format annoncé. Ne mord que sur les axes
+  /// « durée » d'un profil entraîné : le tutoriel (5 s) et les défis
+  /// exploratoires (5-30 s) sont très en dessous du plus petit plafond.
   Future<Challenge?> buildForSession({
     required CapabilityProfile? profile,
     required Map<CapabilityAxis, double> ceilings,
     required Set<CapabilityAxis> excludeAxes,
     required Random rng,
     required bool isTutorial,
+    required int maxChallengeDurationSeconds,
     SpecializationBranch? showcaseBranch,
     Set<UnlockKey> unlocks = const {},
   }) async {
@@ -256,6 +262,7 @@ class ChallengeService {
         return _buildChallenge(
             axis: axis,
             comfort: comfort,
+            maxDurationSeconds: maxChallengeDurationSeconds,
             targetCrossings: crossings,
             profile: profile);
       }
@@ -273,6 +280,7 @@ class ChallengeService {
         return _buildChallenge(
             axis: axis,
             comfort: comfort,
+            maxDurationSeconds: maxChallengeDurationSeconds,
             targetCrossings: crossings,
             profile: profile);
       }
@@ -439,11 +447,13 @@ class ChallengeService {
   Challenge _buildChallenge({
     required CapabilityAxis axis,
     required double comfort,
+    required int maxDurationSeconds,
     int? targetCrossings,
     CapabilityProfile? profile,
   }) {
     final kind = _kindOf(axis);
-    final threshold = thresholdFor(kind, comfort, axis);
+    final threshold = thresholdFor(kind, comfort, axis,
+        maxDurationSeconds: maxDurationSeconds);
     final mode = _modeOf(axis);
     final (from, to) = _resolveAmplitude(axis: axis, profile: profile);
     final isBpm = kind == ChallengeAxisKind.bpm;
@@ -627,7 +637,11 @@ class ChallengeService {
   /// - Axe `maximize` (la plupart) : `comfort × kChallengeOverloadFactor`
   ///   pour durée et BPM ; `comfort + 1` cran pour profondeur. Le seuil BPM
   ///   est plafonné à [BeepEngine.kMaxBpm] — au-delà, le moteur joue plat
-  ///   et le nombre annoncé n'est plus qu'un décor.
+  ///   et le nombre annoncé n'est plus qu'un décor. Le seuil de durée est
+  ///   plafonné à [maxDurationSeconds] (dérivé du palier choisi, cf.
+  ///   `SessionLengthChoice.maxChallengeDurationSeconds`) : sans lui c'était
+  ///   le seul des trois à n'avoir aucune borne, et `comfort` ne fait que
+  ///   monter.
   /// - Axe `minimize` (planchers BPM, dose mini breath) : surcharge =
   ///   atteindre une valeur **plus basse** → on divise par le facteur (BPM)
   ///   et on retire un cran (profondeur — théorique : aucun axe minimize
@@ -645,15 +659,17 @@ class ChallengeService {
   static int thresholdFor(
     ChallengeAxisKind kind,
     double comfort,
-    CapabilityAxis axis,
-  ) {
+    CapabilityAxis axis, {
+    required int maxDurationSeconds,
+  }) {
     final isMinimize = axis.recordKind == CapabilityRecordKind.minimize;
     switch (kind) {
       case ChallengeAxisKind.duration:
         final raw = isMinimize
             ? comfort / kChallengeOverloadFactor
             : comfort * kChallengeOverloadFactor;
-        return raw.round();
+        final rounded = raw.round();
+        return rounded > maxDurationSeconds ? maxDurationSeconds : rounded;
       case ChallengeAxisKind.bpm:
         final raw = isMinimize
             ? comfort / kChallengeOverloadFactor

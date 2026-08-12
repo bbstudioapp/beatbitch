@@ -228,6 +228,10 @@
       "error": { "type": "String" }
     }
   },
+  "careerDurationPlusChallenges": "{duration} + Challenge-Zeit",
+  "@careerDurationPlusChallenges": {
+    "placeholders": { "duration": { "type": "String" } }
+  },
   "careerDurationSection": "Dauer",
   "careerQuickieToggle": "Quickie",
   "careerQuickieSubtitle": "6 Min. — intensiv",
@@ -248,7 +252,7 @@
   "sessionLengthAleatoireDuration": "Überraschung",
   "sessionLengthAleatoireDescription": "Überraschungslänge — gezogen zwischen Kurz, Mittel und Lang. Kein Timer.",
   "careerChallengesToggle": "Herausforderungen in der Sitzung",
-  "careerChallengesDescription": "Eine optionale Herausforderung etwa bei 60 % der Sitzung. Kalibriert schnell, kann das Level-Up beschleunigen.",
+  "careerChallengesDescription": "Ein bis vier optionale Herausforderungen, über die Sitzung verteilt, je nach gewähltem Format. Kalibrieren schnell, können das Level-Up beschleunigen. Ihre Zeit kommt zur angezeigten Dauer hinzu.",
   "challengePassButton": "ÜBERSPR.",
   "challengeGoButton": "HALTEN",
   "challengeHoldHintLive": "Lass deinen Finger auf dem Bildschirm",

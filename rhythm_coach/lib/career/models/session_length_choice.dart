@@ -29,6 +29,21 @@ import 'dart:math';
 /// les champs en aval (la bâclée est volontairement exclue du tirage :
 /// l'esprit du palier est « surprise sur la longueur », pas « surprise
 /// sur le format intensité maximale »).
+/// Part de la durée annoncée que les défis d'une séance peuvent au plus
+/// **ajouter**, tous défis confondus. Le temps des défis s'ajoute au format
+/// choisi (c'est ce que l'écran de sélection annonce), mais sans borne un
+/// seul défi d'endurance dépassait le format entier : l'ampleur d'un défi
+/// « durée » vaut `comfort × kChallengeOverloadFactor` et `comfort` ne fait
+/// que monter avec la pratique — contrairement aux défis de vitesse (bornés
+/// par le BPM max du moteur) et de profondeur (bornés par le nombre de
+/// crans). Une Bâclée annoncée 6 min en durait 58 sur un profil très
+/// entraîné.
+///
+/// `0.5` : assez haut pour qu'un défi reste un vrai effort sur les formats
+/// longs (5 min 37 sur une Longue), assez bas pour qu'une séance ne double
+/// jamais la durée qu'elle annonce.
+const double kChallengesShareOfFormat = 0.5;
+
 enum SessionLengthChoice {
   bachee(durationSeconds: 360, maxBodyMilestones: 0, totalEvents: 1),
   courte(durationSeconds: 720, maxBodyMilestones: 1, totalEvents: 2),
@@ -57,6 +72,18 @@ enum SessionLengthChoice {
   /// Le nombre de défis effectivement insérés = `totalEvents - body
   /// insérés` (compensation : un défi remplace une milestone absente).
   final int totalEvents;
+
+  /// Durée maximale d'un défi sur ce palier : la part [kChallengesShareOfFormat]
+  /// de la durée annoncée, divisée par le nombre d'événements que le palier
+  /// planifie. Comme `targetChallengesFor(...) <= totalEvents`, la somme des
+  /// défis d'une séance ne peut jamais dépasser cette part — quel que soit
+  /// l'état du catalogue de milestones.
+  ///
+  /// Sentinelle `aleatoire` : `totalEvents` y vaut 0, la lecture lève. Comme
+  /// les autres champs du palier, à résoudre via [resolveAleatoireIfNeeded]
+  /// avant usage.
+  int get maxChallengeDurationSeconds =>
+      (durationSeconds * kChallengesShareOfFormat).round() ~/ totalEvents;
 
   /// Calcule le nombre de défis à insérer en fonction du nombre de body
   /// milestones effectivement disponibles. Plancher à 0.

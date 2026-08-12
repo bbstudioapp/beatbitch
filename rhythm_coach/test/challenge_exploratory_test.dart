@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:beat_bitch/career/models/challenge.dart';
+import 'package:beat_bitch/career/models/session_length_choice.dart';
 import 'package:beat_bitch/career/services/challenge_service.dart';
 import 'package:beat_bitch/models/session.dart';
 import 'package:beat_bitch/services/capability_axis.dart';
@@ -53,6 +54,7 @@ void main() {
         excludeAxes: const {},
         rng: Random(0),
         isTutorial: false,
+        maxChallengeDurationSeconds: _noTruncationCap,
       );
       expect(challenge, isNotNull);
       expect(challenge!.isExploratory, isTrue);
@@ -72,6 +74,7 @@ void main() {
         excludeAxes: {CapabilityAxis.holdThroatStreak},
         rng: Random(0),
         isTutorial: false,
+        maxChallengeDurationSeconds: _noTruncationCap,
       );
       expect(challenge, isNotNull);
       expect(challenge!.axis, isNot(CapabilityAxis.holdThroatStreak));
@@ -102,6 +105,7 @@ void main() {
         excludeAxes: const {},
         rng: Random(0),
         isTutorial: false,
+        maxChallengeDurationSeconds: _noTruncationCap,
       );
       expect(challenge, isNotNull);
       expect(challenge!.isExploratory, isFalse);
@@ -133,6 +137,7 @@ void main() {
         excludeAxes: allOverloadable,
         rng: Random(0),
         isTutorial: false,
+        maxChallengeDurationSeconds: _noTruncationCap,
       );
       expect(challenge, isNull);
     });
@@ -172,3 +177,7 @@ void main() {
     });
   });
 }
+
+/// Ces tests ne portent pas sur le plafond de durée par palier : celui du
+/// plus long des formats ne tronque aucun de leurs seuils.
+final _noTruncationCap = SessionLengthChoice.longue.maxChallengeDurationSeconds;
