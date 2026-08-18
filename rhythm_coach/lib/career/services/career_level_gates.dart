@@ -86,8 +86,9 @@ class CareerLevelGates {
   static int defaultMaxDepthIndex() => Position.full.index;
 
   /// Plafond de profondeur dérivé du `CapabilityProfile` (Phase 19.7).
-  /// Lit `rhythm.depth_max.comfort` (en cran, double), l'arrondit et le
-  /// borne dans `[mid, full]`.
+  /// Lit `rhythm.depth_max.comfort` (en cran, double), l'arrondit, ajoute
+  /// **un cran de sonde** tant que le `best` prouvé est plus profond, et
+  /// borne le tout dans `[mid, full]`.
   ///
   /// Plancher à `mid` (= idx 2) : les basics enseignent déjà la
   /// progression jusqu'à `mid` (cf. `intro_deeper_basics`, `intro_hold_mid`,
@@ -107,7 +108,16 @@ class CareerLevelGates {
     if (profile == null) return defaultMaxDepthIndex();
     final comfort = profile.comfortOf(CapabilityAxis.rhythmDepthMax);
     if (comfort == null) return defaultMaxDepthIndex();
+    // Sonde vers le `best` prouvé : quand la profondeur déjà atteinte est plus
+    // profonde que la cible courante (compétence rabaissée par un tap-out
+    // imputé ou par le decay), on repropose **un cran** au-dessus du comfort.
+    // Sans ça le tirage reste borné au comfort, donc `reached` ne dépasse
+    // jamais `comfort`, donc le régulateur n'a jamais l'overshoot qui le ferait
+    // remonter : descente facile, remontée verrouillée. Jamais au-delà du
+    // `best` — on ne sonde que du territoire déjà prouvé.
     final rounded = comfort.round();
-    return rounded.clamp(Position.mid.index, Position.full.index);
+    final best = profile.bestOf(CapabilityAxis.rhythmDepthMax) ?? comfort;
+    final probe = best.round() > rounded ? rounded + 1 : rounded;
+    return probe.clamp(Position.mid.index, Position.full.index);
   }
 }
