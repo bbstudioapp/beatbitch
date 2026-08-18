@@ -115,6 +115,15 @@ class CareerLevelGates {
     // jamais `comfort`, donc le régulateur n'a jamais l'overshoot qui le ferait
     // remonter : descente facile, remontée verrouillée. Jamais au-delà du
     // `best` — on ne sonde que du territoire déjà prouvé.
+    //
+    // Écrit en ternaire, et **pas** `min(rounded + 1, best.round())` : les
+    // deux formules ne coïncident que tant que `best >= comfort`. Sur un
+    // profil incohérent (`best < comfort`, atteignable par un import de
+    // profil, qui écrit les deux clés sans passer par le régulateur), le
+    // `min` rabaisserait le cap SOUS le comfort — l'inverse de ce qu'on
+    // corrige. C'est le pendant du `max(comfort, …)` explicite de
+    // `capability_clamps.dart`, ici porté par la forme. Le test `cap(3, 2)`
+    // de `capability_depth_comfort_vs_best_test.dart` sépare les deux.
     final rounded = comfort.round();
     final best = profile.bestOf(CapabilityAxis.rhythmDepthMax) ?? comfort;
     final probe = best.round() > rounded ? rounded + 1 : rounded;
