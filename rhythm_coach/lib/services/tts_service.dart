@@ -27,6 +27,16 @@ class TtsService {
   /// sur le catalogue de coachs et recomposer.
   static const String _coachVoicePrefsPrefix = 'tts.voice.coach.';
 
+  /// Clés du débit et de la hauteur choisis par l'utilisateur pour la voix
+  /// par défaut.
+  ///
+  /// **Pas de découpage par langue**, contrairement à
+  /// [_userVoicePrefsPrefix] : une voix est un objet de sa langue — celle
+  /// d'un moteur anglais n'existe pas en allemand — alors qu'un débit est un
+  /// confort d'écoute, et le même nombre y a le même sens partout.
+  static const String _userRatePrefsKey = 'tts.rate';
+  static const String _userPitchPrefsKey = 'tts.pitch';
+
   static const double _defaultPitch = 1.13;
   static const double _defaultRate = 0.56;
   static const double _defaultVolume = 1.0;
@@ -231,13 +241,16 @@ class TtsService {
       await _ensurePiperResolved();
       _currentVoiceName =
           _piperConfig != null ? _linuxPiperVoiceLabel : _linuxVoiceLabel;
+      // Avant le retour : le backend `spd-say` lit `_rate` et `_pitch` à
+      // chaque énoncé (cf. [_speakViaSpd]), le réglage y a donc prise même
+      // là où choisir une voix n'en a aucune.
+      await _applyStoredUserRateAndPitch();
       _initialized = true;
       return;
     }
 
     await _tts.setLanguage(_ttsLanguageTag(_locale));
-    await _tts.setPitch(_platformDefaultPitch);
-    await _tts.setSpeechRate(_effectiveRate(_platformDefaultRate));
+    await _applyStoredUserRateAndPitch();
     await _tts.setVolume(_defaultVolume);
     // `awaitSpeakCompletion(true)` est défaillant sur Windows (SAPI) :
     // SAPI n'émet pas toujours l'event de complétion attendu, ce qui
@@ -678,6 +691,54 @@ class TtsService {
     await _tts.setPitch(_pitch);
   }
 
+  /// Enregistre le débit **choisi** par l'utilisateur pour la voix par
+  /// défaut, et l'applique immédiatement.
+  ///
+  /// À distinguer de [setRate], qui pousse une valeur au moteur sans rien
+  /// mémoriser : les presets coach et les restaurations passent par là et ne
+  /// doivent jamais se substituer au choix de l'utilisateur. Même partage
+  /// des rôles que [setUserVoice] face à [setVoiceByName] — seule
+  /// cette méthode-ci fait autorité.
+  ///
+  /// C'est la valeur **retenue** qui est mémorisée, pas celle demandée : une
+  /// valeur hors plage serait sinon relue puis reclampée à chaque
+  /// démarrage, et le réglage rendu ne serait pas celui écrit.
+  Future<void> setUserRate(double rate) async {
+    await setRate(rate);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_userRatePrefsKey, _rate);
+  }
+
+  /// Pendant de [setUserRate] pour la hauteur.
+  Future<void> setUserPitch(double pitch) async {
+    await setPitch(pitch);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_userPitchPrefsKey, _pitch);
+  }
+
+  /// Repose le débit et la hauteur choisis par l'utilisateur. Chaque valeur
+  /// jamais réglée retombe sur son défaut plateforme — les deux sont
+  /// indépendantes, régler l'une n'impose pas l'autre.
+  ///
+  /// Écrit **toujours** les deux, y compris quand rien n'est mémorisé : c'est
+  /// aussi le chemin qui rend l'état vocal après une séance, où le débit posé
+  /// par le coach doit repartir quoi qu'il arrive.
+  Future<void> _applyStoredUserRateAndPitch({int? lead}) async {
+    final prefs = await SharedPreferences.getInstance();
+    await _applyRateAndPitch(
+      lead,
+      prefs.getDouble(_userRatePrefsKey) ?? _platformDefaultRate,
+      prefs.getDouble(_userPitchPrefsKey) ?? _platformDefaultPitch,
+    );
+  }
+
+  /// Clés de persistance du débit et de la hauteur par défaut. Publiques
+  /// pour les mêmes raisons que [userVoiceKey] : l'export / import
+  /// diagnostic compose les mêmes clés que ce service au lieu d'en dupliquer
+  /// les littéraux.
+  static String get userRateKey => _userRatePrefsKey;
+  static String get userPitchKey => _userPitchPrefsKey;
+
   Future<void> setVolume(double volume) {
     if (_isLinux) return Future.value(); // spd-say n'a pas d'option volume
     return _tts.setVolume(volume.clamp(0.0, 1.0));
@@ -1006,7 +1067,9 @@ class TtsService {
   bool _voiceLeadLost(int? lead) => lead != null && lead != _voiceLead;
 
   /// Pousse [rate] et [pitch] au moteur tant que la passe [lead] a la main.
-  Future<void> _applyRateAndPitch(int lead, double? rate, double? pitch) async {
+  /// `lead` null = écriture hors passe (init), jamais interrompue.
+  Future<void> _applyRateAndPitch(
+      int? lead, double? rate, double? pitch) async {
     if (rate != null && !_voiceLeadLost(lead)) await setRate(rate);
     if (pitch != null && !_voiceLeadLost(lead)) await setPitch(pitch);
   }
@@ -1073,12 +1136,12 @@ class TtsService {
   /// le droit de détruire le réglage de l'utilisateur en repartant. La voix
   /// restituée est donc celle qu'il a choisie s'il en a une (cf.
   /// [setUserVoice] via [_selectVoice]), et seulement à défaut
-  /// l'auto-sélection. Rate et pitch, eux, retournent aux défauts plateforme
-  /// — ils ne sont pas mémorisés à ce jour.
+  /// l'auto-sélection. Même règle pour le débit et la hauteur : ceux qu'il a
+  /// réglés (cf. [setUserRate]), à défaut les défauts plateforme.
   Future<void> restoreDefaultVoicePreset() async {
     final lead = _voiceLead;
     if (!_initialized) await init();
-    await _applyRateAndPitch(lead, _platformDefaultRate, _platformDefaultPitch);
+    await _applyStoredUserRateAndPitch(lead: lead);
     if (_voiceLeadLost(lead)) return;
     await _selectVoice(lead: lead);
   }
