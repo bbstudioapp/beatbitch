@@ -1,23 +1,26 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:beat_bitch/career/models/career_generation_inputs.dart';
 import 'package:beat_bitch/career/models/phrase_bank.dart';
+import 'package:beat_bitch/career/services/career_level_gates.dart';
 import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
 import 'package:beat_bitch/services/capability_service.dart';
 
-/// Sonde adversariale — rejeu du constat « grave » du tri du 2026-08-18
-/// (verrou de profondeur : le générateur cible `comfort`, pas `best`).
+/// Verrou de profondeur — le `comfort` rabaissé sous le `best` prouvé ne doit
+/// pas faire disparaître la tranche throat/full des séances normales.
 ///
-/// Prédiction écrite avant exécution : avec `comfort=mid`/`best=throat`,
-/// une séance normale ne devrait produire un step visant `throat` que si
-/// `rhythmDepthMax` est l'axe surchargé de la séance ET que sa
-/// `successRate` franchit `kDepthCranGate` (0.65) — jamais en dessous.
-/// En séance `intense` (Encore) le bonus de cran est inconditionnel dans
-/// `capabilityCapFor`, mais `maxDepthIndex` (plafond de *tirage*, distinct
-/// du clamp) reste dérivé du `comfort` brut pour Encore (`useMe=false`) —
-/// contrairement à Utilise-moi qui le force à `full`. Hypothèse à
-/// trancher ici : Encore seul peut donc ne JAMAIS tirer `throat`, même si
-/// `capabilityCapFor` l'autoriserait — un désaccord avec le rapport, qui
-/// annonce 300/300 pour « Utilise-moi ou Encore » sans distinguer les deux.
+/// Origine : sonde adversariale du tri du 2026-08-18, reprise telle quelle
+/// puis retournée. Dans sa version d'origine elle *caractérisait* le défaut
+/// (elle attendait `rhythm == 0` en séance normale sous le seuil, et passait
+/// au vert sur `origin/develop`). Les deux attentes qui figeaient le défaut
+/// sont réécrites ici pour exprimer le comportement voulu — les deux mesures
+/// brutes correspondantes sont conservées telles quelles dans le rapport.
+///
+/// Ce que le correctif fait, tel que mesuré : la profondeur rythmée vise **un
+/// cran** au-dessus du `comfort`, borné par le `best`. Donc :
+/// - `comfort=mid` / `best=throat` → cap throat : la tranche revient ;
+/// - `comfort=head` / `best=throat` → cap mid : un cran, pas le retour à
+///   throat — la remontée reste graduelle ;
+/// - `best == comfort` → no-op strict.
 
 List<PhraseEntry> _p(List<String> texts) =>
     texts.map((t) => PhraseEntry(text: t)).toList();
@@ -44,11 +47,15 @@ CapabilityAxisState _s(double v, {double sr = 0.5}) =>
 /// une joueuse avec un historique), pour que `rhythmDepthMax` entre en
 /// concurrence pour le tirage d'axe surchargé au lieu d'être le seul
 /// candidat (ce qui gonflerait artificiellement son taux de sélection).
-CapabilityProfile _profile(double depthSuccessRate) {
+CapabilityProfile _profile(
+  double depthSuccessRate, {
+  double comfort = 2.0, // mid
+  double best = 3.0, // throat
+}) {
   return CapabilityProfile({
     CapabilityAxis.rhythmDepthMax: CapabilityAxisState(
-      best: Position.throat.index.toDouble(),
-      comfort: Position.mid.index.toDouble(),
+      best: best,
+      comfort: comfort,
       successRate: depthSuccessRate,
     ),
     CapabilityAxis.gorgeApneeStreak: _s(24),
@@ -67,81 +74,28 @@ CapabilityProfile _profile(double depthSuccessRate) {
   });
 }
 
-/// Variante « à égalité » : les 14 axes surchargeables partagent la MÊME
-/// `successRate` (dont `rhythmDepthMax`). Isole le tirage lui-même : si
-/// tous les axes sont à égalité de confiance, `rhythmDepthMax` ne devrait
-/// gagner la loterie de surcharge qu'un axe sur ~14 (~7 %), pas 300/300 —
-/// contrairement au scénario `_profile` ci-dessus où depth est délibérément
-/// avantagé (sr=0.80 contre 0.50 pour les 13 autres, un écart plus grand
-/// que le tie-break aléatoire ±0.05, donc une victoire garantie).
-CapabilityProfile _profileTied(double sr) {
-  return CapabilityProfile({
-    CapabilityAxis.rhythmDepthMax: CapabilityAxisState(
-      best: Position.throat.index.toDouble(),
-      comfort: Position.mid.index.toDouble(),
-      successRate: sr,
-    ),
-    CapabilityAxis.gorgeApneeStreak: _s(24, sr: sr),
-    CapabilityAxis.gorgeEngagementStreak: _s(35, sr: sr),
-    CapabilityAxis.gorgeCrossingsBpmThroat: _s(90, sr: sr),
-    CapabilityAxis.gorgeCrossingsBpmFull: _s(80, sr: sr),
-    CapabilityAxis.rhythmBpmCeilShallow: _s(100, sr: sr),
-    CapabilityAxis.rhythmBpmCeilThroat: _s(90, sr: sr),
-    CapabilityAxis.rhythmBpmCeilFull: _s(80, sr: sr),
-    CapabilityAxis.rhythmMotionStreak: _s(200, sr: sr),
-    CapabilityAxis.holdThroatStreak: _s(30, sr: sr),
-    CapabilityAxis.holdFullStreak: _s(25, sr: sr),
-    CapabilityAxis.noswallowStreak: _s(120, sr: sr),
-    CapabilityAxis.biffleStreak: _s(30, sr: sr),
-    CapabilityAxis.biffleBpmMax: _s(90, sr: sr),
-  });
-}
-
-int _countRhythmThroatTied({
-  required double sr,
-  required int seedCount,
-}) {
-  final profile = _profileTied(sr);
-  var count = 0;
-  for (var seed = 0; seed < seedCount; seed++) {
-    final r = CareerSessionGenerator(seed: seed).generate(
-      level: 14,
-      bank: _bank(),
-      durationSeconds: 1500,
-      humiliationCareer: 100.0,
-      obedience: 100.0,
-      unlockedKeys: _throatProvenUnlocks,
-      capability: CapabilityInputs(profile: profile),
-    );
-    final hit = r.session.steps.any((s) =>
-        !s.isTextOnly &&
-        s.mode == SessionMode.rhythm &&
-        s.to != null &&
-        s.to!.index >= Position.throat.index);
-    if (hit) count++;
-  }
-  return count;
-}
-
 /// Sur [seedCount] graines, compte séparément les séances qui contiennent
-/// au moins un step **rhythm** (resp. **hold**) dont `to >= throat`.
+/// au moins un step **rhythm** (resp. **hold**) dont `to >= throat`, et la
+/// profondeur maximale jamais atteinte par une **tenue**.
 ///
 /// Séparation cruciale : `pickHoldPosition` (position_pickers.dart:160) est
 /// documenté **« pas de cap par maxDepthIndex »** — la position d'un hold
 /// est gatée par les milestones (`fullHold`/`throatHold`/`holdMid`), pas
-/// par `rhythm.depth_max`. Un comptage fondu rhythm+hold (comme le fait
-/// `use_me_mode_test.dart` pour une autre question) confond deux
+/// par `rhythm.depth_max`. Un comptage fondu rhythm+hold confond deux
 /// mécanismes différents et ne peut pas trancher CE constat.
-({int rhythm, int hold}) _countReachingThroat({
+({int rhythm, int hold, Position? deepestHold}) _countReachingThroat({
   required double depthSuccessRate,
   required bool intense,
   required bool useMe,
   required int seedCount,
   required Set<UnlockKey> unlockedKeys,
+  double comfort = 2.0,
+  double best = 3.0,
 }) {
-  final profile = _profile(depthSuccessRate);
+  final profile = _profile(depthSuccessRate, comfort: comfort, best: best);
   var rhythmCount = 0;
   var holdCount = 0;
+  Position? deepestHold;
   for (var seed = 0; seed < seedCount; seed++) {
     final r = CareerSessionGenerator(seed: seed).generate(
       level: 14,
@@ -159,21 +113,24 @@ int _countRhythmThroatTied({
     for (final s in r.session.steps) {
       if (s.isTextOnly) continue;
       final to = s.to;
-      if (to == null || to.index < Position.throat.index) continue;
+      if (to == null) continue;
+      if (s.mode == SessionMode.hold &&
+          (deepestHold == null || to.index > deepestHold.index)) {
+        deepestHold = to;
+      }
+      if (to.index < Position.throat.index) continue;
       if (s.mode == SessionMode.rhythm) rhythmHit = true;
       if (s.mode == SessionMode.hold) holdHit = true;
     }
     if (rhythmHit) rhythmCount++;
     if (holdHit) holdCount++;
   }
-  return (rhythm: rhythmCount, hold: holdCount);
+  return (rhythm: rhythmCount, hold: holdCount, deepestHold: deepestHold);
 }
 
 /// Milestones réalistes pour un profil `comfort=mid/best=throat` : elle a
 /// prouvé jusqu'à throat, donc les unlocks jusqu'à throat sont acquis —
-/// mais PAS `fullHold`/`fullPulse` (jamais prouvé full). Contraste avec
-/// `_allUnlocks` (utilisé par `use_me_mode_test.dart` pour une autre
-/// question, qui ouvre aussi le palier full).
+/// mais PAS `fullHold`/`fullPulse` (jamais prouvé full).
 final Set<UnlockKey> _throatProvenUnlocks = {
   UnlockKey.holdMid,
   UnlockKey.throatHold,
@@ -183,103 +140,141 @@ final Set<UnlockKey> _throatProvenUnlocks = {
 void main() {
   const seedCount = 300;
 
-  test('normal, successRate 0.50 (< 0.65) — jamais de throat en rhythm', () {
-    final n = _countReachingThroat(
-      depthSuccessRate: 0.50,
-      intense: false,
-      useMe: false,
-      seedCount: seedCount,
-      unlockedKeys: _throatProvenUnlocks,
-    );
-    // ignore: avoid_print
-    print('[depth-probe] normal sr=0.50 (sous le seuil) : '
-        'rhythm=${n.rhythm}/$seedCount hold=${n.hold}/$seedCount');
-    expect(n.rhythm, 0,
-        reason: 'sous kDepthCranGate, capabilityCapFor ne doit jamais '
-            'accorder le +1 cran, quel que soit l\'axe surchargé tiré');
+  group('sonde vers le best prouvé', () {
+    test('comfort=mid/best=throat, sr sous le seuil — throat revient', () {
+      final n = _countReachingThroat(
+        depthSuccessRate: 0.50,
+        intense: false,
+        useMe: false,
+        seedCount: seedCount,
+        unlockedKeys: _throatProvenUnlocks,
+      );
+      expect(n.rhythm, seedCount,
+          reason: 'la sonde vise le best PROUVÉ : reproposer throat ne pousse '
+              'pas au-delà de ce qu\'elle a tenu, donc elle ne doit dépendre '
+              'ni de la loterie de surcharge ni de kDepthCranGate — sinon '
+              'aucun overshoot n\'est possible et le comfort ne remonte '
+              'jamais (le verrou d\'origine : 0/300 ici)');
+    });
+
+    test('comfort=mid/best=throat, sr au-dessus du seuil — inchangé', () {
+      final n = _countReachingThroat(
+        depthSuccessRate: 0.80,
+        intense: false,
+        useMe: false,
+        seedCount: seedCount,
+        unlockedKeys: _throatProvenUnlocks,
+      );
+      expect(n.rhythm, seedCount);
+    });
+
+    test('la sonde rend UN cran, pas le best : comfort=head reste borné à mid',
+        () {
+      final n = _countReachingThroat(
+        depthSuccessRate: 0.80,
+        intense: false,
+        useMe: false,
+        seedCount: seedCount,
+        unlockedKeys: _throatProvenUnlocks,
+        comfort: Position.head.index.toDouble(),
+      );
+      expect(n.rhythm, 0,
+          reason: 'comfort=head + 1 cran = mid : une chute de deux crans ne '
+              'se rattrape pas d\'un coup, même best=throat prouvé');
+    });
+
+    test('best == comfort — no-op strict', () {
+      final n = _countReachingThroat(
+        depthSuccessRate: 0.50,
+        intense: false,
+        useMe: false,
+        seedCount: seedCount,
+        unlockedKeys: _throatProvenUnlocks,
+        best: Position.mid.index.toDouble(),
+      );
+      expect(n.rhythm, 0,
+          reason: 'axe consolidé : rien à sonder, comportement Phase 19.7');
+    });
+
+    test('best < comfort (profil incohérent) — la sonde n\'abaisse pas', () {
+      final n = _countReachingThroat(
+        depthSuccessRate: 0.50,
+        intense: false,
+        useMe: false,
+        seedCount: seedCount,
+        unlockedKeys: _throatProvenUnlocks,
+        comfort: Position.throat.index.toDouble(),
+        best: Position.mid.index.toDouble(),
+      );
+      expect(n.rhythm, seedCount,
+          reason: 'un état persisté où best < comfort ne doit pas faire '
+              'RABAISSER le cap sous le comfort');
+    });
+
+    test('maxDepthIndexForProfile suit la même règle', () {
+      int cap(double comfort, double best) =>
+          CareerLevelGates.maxDepthIndexForProfile(_profile(0.5,
+              comfort: comfort, best: best));
+      expect(cap(2, 3), Position.throat.index); // mid + 1 cran, borné au best
+      expect(cap(2, 4), Position.throat.index); // un seul cran, pas full
+      expect(cap(2, 2), Position.mid.index); // consolidé : no-op
+      expect(cap(1, 3), Position.mid.index); // head + 1 cran, planché mid
+      expect(cap(3, 2), Position.throat.index); // incohérent : pas d'abaissement
+      expect(cap(4, 4), Position.full.index); // plafond full conservé
+    });
   });
 
-  test('normal, successRate 0.80 (>= 0.65) — le +1 cran doit sortir', () {
-    final n = _countReachingThroat(
-      depthSuccessRate: 0.80,
-      intense: false,
-      useMe: false,
-      seedCount: seedCount,
-      unlockedKeys: _throatProvenUnlocks,
-    );
-    // ignore: avoid_print
-    print('[depth-probe] normal sr=0.80 (au-dessus du seuil) : '
-        'rhythm=${n.rhythm}/$seedCount hold=${n.hold}/$seedCount');
-    expect(n.rhythm, greaterThan(0),
-        reason: 'au-dessus du seuil, le +1 cran doit sortir au moins parfois '
-            '(quand rhythmDepthMax est tiré comme axe surchargé) — sinon le '
-            'plafond de TIRAGE (maxDepthIndex, dérivé du comfort BRUT, '
-            'jamais boosté hors useMe) empêche `capabilityCapFor` de '
-            'jamais servir à quoi que ce soit pour rhythm');
+  group('escalade — inchangée', () {
+    test('Encore (intense, sans surcharge ni seuil)', () {
+      final n = _countReachingThroat(
+        depthSuccessRate: 0.50,
+        intense: true,
+        useMe: false,
+        seedCount: seedCount,
+        unlockedKeys: _throatProvenUnlocks,
+      );
+      expect(n.rhythm, seedCount);
+    });
+
+    test('Utilise-moi', () {
+      final n = _countReachingThroat(
+        depthSuccessRate: 0.50,
+        intense: true,
+        useMe: true,
+        seedCount: seedCount,
+        unlockedKeys: _throatProvenUnlocks,
+      );
+      expect(n.rhythm, seedCount);
+    });
   });
 
-  test(
-      'normal, TOUS les axes à sr=0.70 à égalité — loterie ~1/14, pas '
-      'déterministe', () {
-    final n = _countRhythmThroatTied(sr: 0.70, seedCount: seedCount);
-    // ignore: avoid_print
-    print('[depth-probe] normal égalité sr=0.70 (14 axes) : '
-        'rhythm=$n/$seedCount (≈${(n / seedCount * 100).toStringAsFixed(1)}%'
-        ', attendu ≈100/14≈7%)');
-    expect(n, greaterThan(0),
-        reason: 'la loterie doit désigner depth au '
-            'moins une fois sur 300 graines');
-    expect(n, lessThan(seedCount ~/ 3),
-        reason: 'à égalité stricte entre 14 '
-            'candidats, depth ne doit pas gagner la majorité des séances — '
-            'sinon le tirage n\'est pas ce que pickOverloadAxis documente');
-  });
-
-  test('Encore (intense=true, useMe=false), successRate 0.50 — cas litigieux',
-      () {
-    final n = _countReachingThroat(
-      depthSuccessRate: 0.50,
-      intense: true,
-      useMe: false,
-      seedCount: seedCount,
-      unlockedKeys: _throatProvenUnlocks,
-    );
-    // ignore: avoid_print
-    print('[depth-probe] Encore sr=0.50 (sous le seuil) : '
-        'rhythm=${n.rhythm}/$seedCount hold=${n.hold}/$seedCount');
-    // Pas d'expect() ici : c'est la valeur mesurée elle-même qui tranche
-    // entre « le rapport a raison (300) » et « Encore diverge d'Utilise-moi
-    // (0, faute de plafond de tirage relevé) » — voir le rapport final.
-  });
-
-  test('Encore (intense=true, useMe=false), successRate 0.80', () {
-    final n = _countReachingThroat(
-      depthSuccessRate: 0.80,
-      intense: true,
-      useMe: false,
-      seedCount: seedCount,
-      unlockedKeys: _throatProvenUnlocks,
-    );
-    // ignore: avoid_print
-    print('[depth-probe] Encore sr=0.80 (au-dessus du seuil) : '
-        'rhythm=${n.rhythm}/$seedCount hold=${n.hold}/$seedCount');
-  });
-
-  test('Utilise-moi (intense=true, useMe=true), successRate 0.50 — 300/300 ?',
-      () {
-    final n = _countReachingThroat(
-      depthSuccessRate: 0.50,
-      intense: true,
-      useMe: true,
-      seedCount: seedCount,
-      unlockedKeys: _throatProvenUnlocks,
-    );
-    // ignore: avoid_print
-    print('[depth-probe] Utilise-moi sr=0.50 (sous le seuil) : '
-        'rhythm=${n.rhythm}/$seedCount hold=${n.hold}/$seedCount');
-    expect(n.rhythm, seedCount,
-        reason: 'useMe force maxDepthIndex=full au tirage, puis '
-            'capabilityCapFor(intense) autorise comfort+1=throat sans '
-            'gate — devrait sortir dans TOUTES les séances');
+  group('non-régression des tenues', () {
+    // Les tenues sont gatées par les milestones hold, pas par
+    // `rhythm.depth_max` : le correctif ne doit rien y changer. Les compteurs
+    // bruts ne sont pas comparables step à step (déplacer un step rythmé fait
+    // diverger toute la séquence RNG en aval) — d'où deux invariants qui, eux,
+    // le sont : la tranche throat sort toujours, et `full` reste fermé.
+    for (final (label, comfort, best) in [
+      ('sonde active (mid/throat)', 2.0, 3.0),
+      ('no-op (mid/mid)', 2.0, 2.0),
+      ('chute de deux crans (head/throat)', 1.0, 3.0),
+    ]) {
+      test('$label — tenues throat présentes, full jamais ouvert', () {
+        final n = _countReachingThroat(
+          depthSuccessRate: 0.50,
+          intense: false,
+          useMe: false,
+          seedCount: seedCount,
+          unlockedKeys: _throatProvenUnlocks,
+          comfort: comfort,
+          best: best,
+        );
+        expect(n.hold, seedCount,
+            reason: 'les tenues throat ne dépendent pas du profil rythme');
+        expect(n.deepestHold, Position.throat,
+            reason: 'sans `fullHold` acquise, aucune tenue ne doit atteindre '
+                'full — le correctif ne doit pas ouvrir de palier de tenue');
+      });
+    }
   });
 }
