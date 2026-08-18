@@ -211,8 +211,7 @@ class CapabilityClamps implements CapabilityClampSurface {
       final best = p.bestOf(axis) ?? comfort;
       final escalating = axis == config.overloadAxis &&
           p.stateOf(axis).successRate >= CapabilityRegulator.kDepthCranGate;
-      comfort =
-          escalating ? comfort + 1 : max(comfort, min(comfort + 1, best));
+      comfort = escalating ? comfort + 1 : max(comfort, min(comfort + 1, best));
     } else if (comfort != null && axis == config.overloadAxis) {
       comfort = comfort * config.overloadFactor;
     }

@@ -213,13 +213,14 @@ void main() {
 
     test('maxDepthIndexForProfile suit la même règle', () {
       int cap(double comfort, double best) =>
-          CareerLevelGates.maxDepthIndexForProfile(_profile(0.5,
-              comfort: comfort, best: best));
+          CareerLevelGates.maxDepthIndexForProfile(
+              _profile(0.5, comfort: comfort, best: best));
       expect(cap(2, 3), Position.throat.index); // mid + 1 cran, borné au best
       expect(cap(2, 4), Position.throat.index); // un seul cran, pas full
       expect(cap(2, 2), Position.mid.index); // consolidé : no-op
       expect(cap(1, 3), Position.mid.index); // head + 1 cran, planché mid
-      expect(cap(3, 2), Position.throat.index); // incohérent : pas d'abaissement
+      expect(
+          cap(3, 2), Position.throat.index); // incohérent : pas d'abaissement
       expect(cap(4, 4), Position.full.index); // plafond full conservé
     });
   });
