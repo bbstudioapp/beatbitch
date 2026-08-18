@@ -1098,6 +1098,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get coachVoicePreview => 'Écouter';
 
   @override
+  String get coachVoiceResetRatePitch => 'Vitesse et hauteur d’origine';
+
+  @override
   String get coachVoicePlatformNoSelection =>
       'Sur cette plateforme, la voix dépend du moteur installé.';
 

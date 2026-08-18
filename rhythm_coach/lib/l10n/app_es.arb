@@ -538,6 +538,7 @@
   "coachVoiceAutomatic": "Automática",
   "coachVoiceUnavailable": "La voz guardada no está en este dispositivo",
   "coachVoicePreview": "Escuchar",
+  "coachVoiceResetRatePitch": "Velocidad y tono originales",
   "coachVoicePlatformNoSelection": "En esta plataforma la voz depende del motor instalado.",
   "coachVoiceLine": "Voz: {value}",
   "@coachVoiceLine": {

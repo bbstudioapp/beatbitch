@@ -1950,6 +1950,12 @@ abstract class AppLocalizations {
   /// **'Écouter'**
   String get coachVoicePreview;
 
+  /// Bouton de la feuille de voix d'un coach : rend au coach la vitesse et la hauteur de son preset d'origine. Affiché seulement quand au moins l'une des deux a été réglée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vitesse et hauteur d’origine'**
+  String get coachVoiceResetRatePitch;
+
   /// No description provided for @coachVoicePlatformNoSelection.
   ///
   /// In fr, this message translates to:

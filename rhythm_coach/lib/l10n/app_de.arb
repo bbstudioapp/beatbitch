@@ -538,6 +538,7 @@
   "coachVoiceAutomatic": "Automatisch",
   "coachVoiceUnavailable": "Gespeicherte Stimme auf diesem Gerät nicht vorhanden",
   "coachVoicePreview": "Anhören",
+  "coachVoiceResetRatePitch": "Ursprüngliche Geschwindigkeit und Tonhöhe",
   "coachVoicePlatformNoSelection": "Auf dieser Plattform hängt die Stimme von der installierten Engine ab.",
   "coachVoiceLine": "Stimme: {value}",
   "@coachVoiceLine": {

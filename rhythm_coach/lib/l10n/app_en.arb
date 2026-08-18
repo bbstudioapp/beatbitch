@@ -538,6 +538,7 @@
   "coachVoiceAutomatic": "Automatic",
   "coachVoiceUnavailable": "Saved voice not available on this device",
   "coachVoicePreview": "Play",
+  "coachVoiceResetRatePitch": "Original speed and pitch",
   "coachVoicePlatformNoSelection": "On this platform the voice depends on the installed engine.",
   "coachVoiceLine": "Voice: {value}",
   "@coachVoiceLine": {

@@ -37,6 +37,19 @@ class TtsService {
   static const String _userRatePrefsKey = 'tts.rate';
   static const String _userPitchPrefsKey = 'tts.pitch';
 
+  /// Préfixes des clés qui mémorisent le débit et la hauteur réglés **pour
+  /// un coach donné** (`tts.rate.coach.coach_07_marc`).
+  ///
+  /// Une entrée par coach, **pas** par langue — à la différence de
+  /// [_coachVoicePrefsPrefix], et pour la même raison qu'au-dessus : le
+  /// preset d'origine que ce réglage remplace est lui-même déclaré une seule
+  /// fois dans le JSON du coach, sans distinction de langue.
+  ///
+  /// `coachId` opaque, clé composée et jamais parsée (cf.
+  /// [_coachVoicePrefsPrefix]).
+  static const String _coachRatePrefsPrefix = 'tts.rate.coach.';
+  static const String _coachPitchPrefsPrefix = 'tts.pitch.coach.';
+
   static const double _defaultPitch = 1.13;
   static const double _defaultRate = 0.56;
   static const double _defaultVolume = 1.0;
@@ -917,6 +930,53 @@ class TtsService {
     await prefs.remove(coachVoiceKey(coachId, _locale.languageCode));
   }
 
+  /// Clés de persistance du débit et de la hauteur réglés pour [coachId].
+  /// Composées, jamais parsées. Publiques pour les mêmes raisons que
+  /// [coachVoiceKey].
+  static String coachRateKey(String coachId) =>
+      '$_coachRatePrefsPrefix$coachId';
+  static String coachPitchKey(String coachId) =>
+      '$_coachPitchPrefsPrefix$coachId';
+
+  /// Débit et hauteur réglés pour [coachId]. Chaque champ `null` = celui de
+  /// son preset d'origine ; les deux se règlent séparément.
+  Future<({double? rate, double? pitch})> coachRateAndPitch(
+      String coachId) async {
+    final prefs = await SharedPreferences.getInstance();
+    return (
+      rate: prefs.getDouble(coachRateKey(coachId)),
+      pitch: prefs.getDouble(coachPitchKey(coachId)),
+    );
+  }
+
+  /// Mémorise le débit de [coachId]. Comme [setCoachVoice], **n'applique
+  /// rien tout de suite** : hors séance le moteur porte le réglage de
+  /// l'utilisateur, pas celui d'un coach. Le réglage prend effet au prochain
+  /// [applyCoachVoicePreset] de ce coach.
+  Future<void> setCoachRate(String coachId, double rate) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(coachRateKey(coachId), rate.clamp(0.1, 1.0));
+  }
+
+  /// Pendant de [setCoachRate] pour la hauteur.
+  Future<void> setCoachPitch(String coachId, double pitch) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(coachPitchKey(coachId), pitch.clamp(0.5, 2.0));
+  }
+
+  /// Rend à [coachId] le débit et la hauteur de son preset d'origine, en
+  /// **supprimant** les deux clés — même règle que [clearCoachVoice] :
+  /// absence de clé = valeur d'origine, jamais une valeur magique qu'il
+  /// faudrait ensuite distinguer d'un vrai réglage.
+  ///
+  /// Les deux ensemble parce que c'est un seul geste côté écran : « rends-lui
+  /// sa voix ». Rien n'empêcherait d'en exposer deux, personne ne l'a demandé.
+  Future<void> clearCoachRateAndPitch(String coachId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(coachRateKey(coachId));
+    await prefs.remove(coachPitchKey(coachId));
+  }
+
   /// Applique un preset vocal coach : voix nommée + rate + pitch. Toute
   /// valeur null laisse le réglage courant intact. Utilisé au start d'une
   /// session carrière pour donner sa « couleur vocale » à chaque coach
@@ -926,9 +986,10 @@ class TtsService {
   /// `_selectVoice()` (auto-sélection préférée locale) plutôt que
   /// d'échouer silencieusement avec une voix exotique.
   ///
-  /// [coachId] active le réglage manuel de voix : si l'utilisateur a choisi
-  /// une voix pour ce coach dans la langue active, elle prime sur toute la
-  /// cascade. C'est le seul moyen de donner une voix masculine à un coach
+  /// [coachId] active les réglages manuels de ce coach — voix, débit,
+  /// hauteur — qui priment chacun sur ce que le preset ou la plateforme
+  /// aurait posé. Si l'utilisateur a choisi une voix pour ce coach dans la
+  /// langue active, elle prime sur toute la cascade. C'est le seul moyen de donner une voix masculine à un coach
   /// masculin — aucun des canaux que la cascade atteint (Android, web) ne
   /// déclare le genre d'une voix (cf. [_fallbackPick]), donc seule une
   /// oreille humaine peut trancher.
@@ -942,12 +1003,23 @@ class TtsService {
   }) async {
     final lead = _voiceLead;
     if (!_initialized) await init();
+    // Débit et hauteur réglés à la main pour ce coach : ils priment sur le
+    // preset **et** sur ce que la plateforme impose, exactement comme le
+    // réglage manuel de voix prime sur le forçage Windows plus bas.
+    //
+    // Résolus **une seule fois, ici** : cette méthode a quatre sorties, et
+    // chacune pousse son propre couple débit/hauteur. Les résoudre au fil des
+    // sorties, c'est quatre occasions d'en oublier une.
+    final manual = coachId == null
+        ? (rate: null, pitch: null)
+        : await coachRateAndPitch(coachId);
     // Linux : pas de sélection de voix, mais on garde le rate/pitch du
     // coach — c'est ce qui distingue les coachs entre eux. Ni lecture ni
     // écriture d'un réglage manuel : il n'aurait aucune prise (cf.
     // [supportsVoiceSelection]).
     if (_isLinux) {
-      await _applyRateAndPitch(lead, rate, pitch);
+      await _applyRateAndPitch(
+          lead, manual.rate ?? rate, manual.pitch ?? pitch);
       return;
     }
     // Réglage manuel de l'utilisateur pour ce coach : il prime sur tout le
@@ -961,9 +1033,10 @@ class TtsService {
     if (coachId != null &&
         await _applyStoredVoice(coachVoiceKey(coachId, _locale.languageCode),
             lead: lead)) {
-      // Rate et pitch restent ceux du coach : l'utilisateur a choisi un
-      // timbre, pas un rythme.
-      await _applyRateAndPitch(lead, rate, pitch);
+      // Ceux du coach, sauf là où l'utilisateur les a réglés lui aussi :
+      // choisir un timbre n'impose pas un rythme, et réciproquement.
+      await _applyRateAndPitch(
+          lead, manual.rate ?? rate, manual.pitch ?? pitch);
       return;
     }
     // Override Windows : tous les coachs utilisent Julie + rate/pitch
@@ -980,7 +1053,11 @@ class TtsService {
       // coach garde la voix imposée par la plateforme (Julie), pas celle que
       // l'utilisateur a réglée par ailleurs.
       await _selectVoiceWithSeed(null, lead: lead);
-      await _applyRateAndPitch(lead, _windowsDefaultRate, _windowsDefaultPitch);
+      await _applyRateAndPitch(
+        lead,
+        manual.rate ?? _windowsDefaultRate,
+        manual.pitch ?? _windowsDefaultPitch,
+      );
       return;
     }
     // Le preset coach est défini en dur dans le JSON meta (lang-indépendant)
@@ -1038,7 +1115,7 @@ class TtsService {
       await _selectVoiceWithSeed(null,
           skipPreferredVoices: skipPreferredVoices, lead: lead);
     }
-    await _applyRateAndPitch(lead, rate, pitch);
+    await _applyRateAndPitch(lead, manual.rate ?? rate, manual.pitch ?? pitch);
   }
 
   /// Chaîne des écritures de l'état vocal faites par le **réglage de voix**

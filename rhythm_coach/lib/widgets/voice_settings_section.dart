@@ -172,7 +172,7 @@ class _VoiceSettingsSectionState extends State<VoiceSettingsSection> {
           },
         ),
         const SizedBox(height: 8),
-        _LabeledSlider(
+        LabeledVoiceSlider(
           label: t.soundsRateLabel,
           value: _rate,
           min: 0.3,
@@ -184,7 +184,7 @@ class _VoiceSettingsSectionState extends State<VoiceSettingsSection> {
           onChangeEnd: widget.tts.setUserRate,
         ),
         const SizedBox(height: 8),
-        _LabeledSlider(
+        LabeledVoiceSlider(
           label: t.soundsPitchLabel,
           value: _pitch,
           min: 0.5,
@@ -268,7 +268,13 @@ class _VoicePicker extends StatelessWidget {
   }
 }
 
-class _LabeledSlider extends StatelessWidget {
+/// Curseur de débit ou de hauteur : libellé à gauche, valeur chiffrée à
+/// droite, alignés en colonnes fixes pour que deux curseurs empilés se lisent
+/// comme un tableau.
+///
+/// Partagé avec le réglage par coach (`coach_voice_picker.dart`) — les deux
+/// écrans règlent la même chose et doivent se lire pareil.
+class LabeledVoiceSlider extends StatelessWidget {
   final String label;
   final double value;
   final double min;
@@ -279,7 +285,8 @@ class _LabeledSlider extends StatelessWidget {
   /// enregistrée, pas à chaque frame du glissement.
   final ValueChanged<double> onChangeEnd;
 
-  const _LabeledSlider({
+  const LabeledVoiceSlider({
+    super.key,
     required this.label,
     required this.value,
     required this.min,
