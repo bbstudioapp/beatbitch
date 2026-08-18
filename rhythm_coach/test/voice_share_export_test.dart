@@ -88,11 +88,14 @@ const _profileSentinels = <String, Object>{
 };
 
 /// Réglages de voix d'une anglophone qui a réglé Marc (et l'avait déjà réglé
-/// quand elle jouait en français), plus une voix par défaut hors carrière.
+/// quand elle jouait en français), plus une voix par défaut hors carrière et
+/// un débit et une hauteur écartés de leurs défauts.
 const _voiceSettings = <String, Object>{
   'tts.voice.en': 'en-gb-x-gba-local',
   'tts.voice.coach.coach_07_marc.en': 'en-gb-x-gbd-local',
   'tts.voice.coach.coach_07_marc.fr': 'fr-fr-x-frd-local',
+  'tts.rate': 0.42,
+  'tts.pitch': 1.6,
 };
 
 Future<DiagnosticExportService> _build({
@@ -174,7 +177,14 @@ void main() {
       );
       expect(
         (payload['voice'] as Map<String, dynamic>).keys.toSet(),
-        <String>{'activeLanguage', 'selectionSupported', 'default', 'coaches'},
+        <String>{
+          'activeLanguage',
+          'selectionSupported',
+          'rate',
+          'pitch',
+          'default',
+          'coaches',
+        },
         reason: 'Un champ est apparu (ou a disparu) dans la section voix.',
       );
 
@@ -263,6 +273,14 @@ void main() {
               prefs.getString(TtsService.coachVoiceKey(c.id, lang)),
           ].whereType<String>(),
       };
+      // Même règle pour les deux nombres : ce qui est rangé sous la clé de
+      // débit, et rien d'autre. Le seed les écarte de leurs défauts, sinon
+      // `null == null` suffirait à passer et la provenance ne serait pas
+      // éprouvée.
+      final storedRate = prefs.getDouble(TtsService.userRateKey);
+      final storedPitch = prefs.getDouble(TtsService.userPitchKey);
+      expect(storedRate, isNotNull);
+      expect(storedPitch, isNotNull);
 
       // La liste fermée. Chaque entrée dit d'où la valeur vient ; aucune ne
       // se contente de décrire son type.
@@ -272,6 +290,8 @@ void main() {
         'platform': (v) => v == platform,
         'voice.activeLanguage': (v) => v == locale,
         'voice.selectionSupported': (v) => v is bool,
+        'voice.rate': (v) => v == storedRate,
+        'voice.pitch': (v) => v == storedPitch,
         'voice.default[].language': languages.contains,
         'voice.default[].voice': (v) => v == null || storedVoices.contains(v),
         'voice.default[].source': (v) => v == 'chosen' || v == 'automatic',

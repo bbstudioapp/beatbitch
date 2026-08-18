@@ -165,6 +165,8 @@ class DiagnosticImportService {
   /// langue portés par l'entrée : un id inconnu du catalogue (export d'une
   /// version plus récente) se repose donc sans traitement particulier.
   void _voice(Map<String, dynamic> j) {
+    _double(TtsService.userRateKey, j['rate']);
+    _double(TtsService.userPitchKey, j['pitch']);
     for (final e in _entries(j['default'])) {
       final lang = e['language'];
       if (lang is String) _string(TtsService.userVoiceKey(lang), e['voice']);
@@ -313,6 +315,8 @@ class DiagnosticImportService {
   /// Énumération par **composition** (catalogue × langues supportées), jamais
   /// par filtrage-parsing des clés : un `coachId` peut contenir un point.
   Future<void> _clearVoiceKeys() async {
+    await _prefs.remove(TtsService.userRateKey);
+    await _prefs.remove(TtsService.userPitchKey);
     for (final locale in kSupportedLocales) {
       final lang = locale.languageCode;
       await _prefs.remove(TtsService.userVoiceKey(lang));

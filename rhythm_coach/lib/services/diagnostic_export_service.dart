@@ -327,8 +327,9 @@ class DiagnosticExportService {
         'hasBalls': _prefs.getBool('profile.anatomy.has_balls') ?? true,
       };
 
-  /// Réglages de voix : la voix par défaut hors carrière (`tts.voice.<lang>`)
-  /// et celle choisie pour chaque coach (`tts.voice.coach.<coachId>.<lang>`).
+  /// Réglages de voix : la voix par défaut hors carrière (`tts.voice.<lang>`),
+  /// celle choisie pour chaque coach (`tts.voice.coach.<coachId>.<lang>`), et
+  /// le débit et la hauteur de la voix par défaut (`tts.rate`, `tts.pitch`).
   ///
   /// Section conçue pour être lue par un **humain** autant que réimportée :
   /// six coachs sur sept déclarent une voix française en dur, donc hors
@@ -381,6 +382,11 @@ class DiagnosticExportService {
       // Linux entièrement `automatic` se lirait comme un désintérêt alors
       // que le réglage n'a simplement aucune prise.
       'selectionSupported': _platform != 'linux',
+      // Débit et hauteur de la voix par défaut, `null` quand rien n'a été
+      // réglé. Hors de la liste `default` : celle-ci a une entrée par langue
+      // alors que ces deux-là sont globaux (cf. `TtsService.setUserRate`).
+      'rate': _prefs.getDouble(TtsService.userRateKey),
+      'pitch': _prefs.getDouble(TtsService.userPitchKey),
       'default': defaults,
       'coaches': coaches,
     };

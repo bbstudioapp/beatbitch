@@ -9,8 +9,9 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Section `voice` de l'export diagnostic (Phase 3 du réglage de voix par
-/// coach) : elle porte la voix par défaut par langue (`tts.voice.<lang>`) et
-/// les réglages par coach (`tts.voice.coach.<coachId>.<lang>`).
+/// coach) : elle porte la voix par défaut par langue (`tts.voice.<lang>`), les
+/// réglages par coach (`tts.voice.coach.<coachId>.<lang>`) et le débit et la
+/// hauteur de la voix par défaut (`tts.rate`, `tts.pitch`).
 ///
 /// Son premier lecteur est **humain** : les exports renvoyés par les
 /// utilisateurs sont le seul moyen de savoir quelle voix mettre par défaut
@@ -146,6 +147,22 @@ void main() {
       expect(_voiceOf(linux)['selectionSupported'], isFalse,
           reason: 'Sans ça, un export Linux plein d\'« automatique » se lit '
               'comme un désintérêt alors que le réglage n\'a aucune prise.');
+    });
+
+    test('le débit et la hauteur sont portés, `null` quand rien n\'est réglé',
+        () async {
+      final vierge = _voiceOf(await _build(seed: const <String, Object>{}));
+      expect(vierge['rate'], isNull);
+      expect(vierge['pitch'], isNull);
+
+      // Hors de la liste `default`, qui a une entrée par langue : ces deux
+      // réglages-là sont globaux.
+      final regle = _voiceOf(await _build(seed: <String, Object>{
+        TtsService.userRateKey: 0.42,
+        TtsService.userPitchKey: 1.6,
+      }));
+      expect(regle['rate'], 0.42);
+      expect(regle['pitch'], 1.6);
     });
 
     test('ordre déterministe : catalogue, langue active en tête', () async {
@@ -325,6 +342,39 @@ void main() {
       // Un coach laissé en automatique n'écrit aucune clé.
       expect(prefs.getString(TtsService.coachVoiceKey('coach_06_nyx', 'en')),
           isNull);
+    });
+
+    test('le débit et la hauteur survivent à un export → import', () async {
+      final svc = await _build(seed: <String, Object>{
+        TtsService.userRateKey: 0.42,
+        TtsService.userPitchKey: 1.6,
+      });
+      final payload = svc.buildPayload(const DiagnosticExportOptions());
+
+      SharedPreferences.setMockInitialValues(const <String, Object>{});
+      final prefs = await SharedPreferences.getInstance();
+      await DiagnosticImportService(prefs).apply(payload);
+
+      expect(prefs.getDouble(TtsService.userRateKey), 0.42);
+      expect(prefs.getDouble(TtsService.userPitchKey), 1.6);
+    });
+
+    test('un payload porteur de voix efface un débit résiduel', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        TtsService.userRateKey: 0.42,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await DiagnosticImportService(prefs).apply(<String, dynamic>{
+        'voice': {
+          'activeLanguage': 'en',
+          'default': <Map<String, dynamic>>[],
+          'coaches': <Map<String, dynamic>>[],
+        },
+      });
+      expect(prefs.getDouble(TtsService.userRateKey), isNull,
+          reason: 'même règle que les voix : un export qui parle de la voix '
+              'repose l\'état vocal en entier, sinon on diagnostiquerait '
+              'un débit en entendant le sien.');
     });
 
     test('une voix absente de cet appareil est posée telle quelle', () async {
