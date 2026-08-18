@@ -96,6 +96,8 @@ const _voiceSettings = <String, Object>{
   'tts.voice.coach.coach_07_marc.fr': 'fr-fr-x-frd-local',
   'tts.rate': 0.42,
   'tts.pitch': 1.6,
+  'tts.rate.coach.coach_07_marc': 0.48,
+  'tts.pitch.coach.coach_07_marc': 0.78,
 };
 
 Future<DiagnosticExportService> _build({
@@ -219,7 +221,15 @@ void main() {
         expect(
           entry.keys.toSet(),
           entry['voice'] == null
-              ? <String>{'coachId', 'coachName', 'language', 'voice', 'source'}
+              ? <String>{
+                  'coachId',
+                  'coachName',
+                  'language',
+                  'voice',
+                  'source',
+                  'rate',
+                  'pitch',
+                }
               : <String>{
                   'coachId',
                   'coachName',
@@ -227,6 +237,8 @@ void main() {
                   'voice',
                   'source',
                   'platform',
+                  'rate',
+                  'pitch',
                 },
           reason: 'Une entrée de coach porte un champ inattendu : '
               '${entry['coachId']}.',
@@ -281,6 +293,14 @@ void main() {
       final storedPitch = prefs.getDouble(TtsService.userPitchKey);
       expect(storedRate, isNotNull);
       expect(storedPitch, isNotNull);
+      final storedCoachRates = <double>{
+        for (final c in CoachCatalog.defaults)
+          ...<double?>[
+            prefs.getDouble(TtsService.coachRateKey(c.id)),
+            prefs.getDouble(TtsService.coachPitchKey(c.id)),
+          ].whereType<double>(),
+      };
+      expect(storedCoachRates, isNotEmpty);
 
       // La liste fermée. Chaque entrée dit d'où la valeur vient ; aucune ne
       // se contente de décrire son type.
@@ -304,6 +324,10 @@ void main() {
         'voice.coaches[].voice': (v) => v == null || storedVoices.contains(v),
         'voice.coaches[].source': (v) => v == 'chosen' || v == 'automatic',
         'voice.coaches[].platform': (v) => v == platform,
+        'voice.coaches[].rate': (v) =>
+            v == null || storedCoachRates.contains(v),
+        'voice.coaches[].pitch': (v) =>
+            v == null || storedCoachRates.contains(v),
       };
 
       for (final leaf in _leaves(svc.buildVoiceSharePayload())) {

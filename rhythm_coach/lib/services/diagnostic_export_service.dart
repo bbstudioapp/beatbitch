@@ -329,7 +329,9 @@ class DiagnosticExportService {
 
   /// Réglages de voix : la voix par défaut hors carrière (`tts.voice.<lang>`),
   /// celle choisie pour chaque coach (`tts.voice.coach.<coachId>.<lang>`), et
-  /// le débit et la hauteur de la voix par défaut (`tts.rate`, `tts.pitch`).
+  /// les débits et hauteurs réglés — celui de la voix par défaut
+  /// (`tts.rate`, `tts.pitch`) comme ceux de chaque coach
+  /// (`tts.rate.coach.<coachId>`).
   ///
   /// Section conçue pour être lue par un **humain** autant que réimportée :
   /// six coachs sur sept déclarent une voix française en dur, donc hors
@@ -372,6 +374,12 @@ class DiagnosticExportService {
           'coachId': coach.id,
           'coachName': coach.name,
           ..._voiceEntry(lang, stored),
+          // Répétés sur chaque entrée de langue du coach, alors qu'ils n'en
+          // dépendent pas : c'est déjà la règle du fichier (cf. `platform` et
+          // `language`), parce que l'unité qu'on agrège est l'entrée, et
+          // qu'une entrée doit se lire seule une fois sortie de sa section.
+          'rate': _prefs.getDouble(TtsService.coachRateKey(coach.id)),
+          'pitch': _prefs.getDouble(TtsService.coachPitchKey(coach.id)),
         });
       }
     }

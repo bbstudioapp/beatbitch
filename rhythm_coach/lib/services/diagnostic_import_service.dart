@@ -176,6 +176,11 @@ class DiagnosticImportService {
       final lang = e['language'];
       if (id is String && lang is String) {
         _string(TtsService.coachVoiceKey(id, lang), e['voice']);
+        // Le même couple est porté par chaque entrée de langue de ce coach :
+        // réécrire la même valeur est sans effet, et un export qui n'aurait
+        // gardé qu'une seule de ses langues repose quand même le réglage.
+        _double(TtsService.coachRateKey(id), e['rate']);
+        _double(TtsService.coachPitchKey(id), e['pitch']);
       }
     }
   }
@@ -322,6 +327,8 @@ class DiagnosticImportService {
       await _prefs.remove(TtsService.userVoiceKey(lang));
       for (final coach in CoachCatalog.defaults) {
         await _prefs.remove(TtsService.coachVoiceKey(coach.id, lang));
+        await _prefs.remove(TtsService.coachRateKey(coach.id));
+        await _prefs.remove(TtsService.coachPitchKey(coach.id));
       }
     }
   }

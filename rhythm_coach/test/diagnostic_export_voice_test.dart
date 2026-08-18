@@ -359,6 +359,23 @@ void main() {
       expect(prefs.getDouble(TtsService.userPitchKey), 1.6);
     });
 
+    test('le débit d\'un coach survit à un export → import', () async {
+      final svc = await _build(seed: <String, Object>{
+        TtsService.coachRateKey('coach_07_marc'): 0.48,
+        TtsService.coachPitchKey('coach_07_marc'): 0.78,
+      });
+      final payload = svc.buildPayload(const DiagnosticExportOptions());
+
+      SharedPreferences.setMockInitialValues(const <String, Object>{});
+      final prefs = await SharedPreferences.getInstance();
+      await DiagnosticImportService(prefs).apply(payload);
+
+      expect(prefs.getDouble(TtsService.coachRateKey('coach_07_marc')), 0.48);
+      expect(prefs.getDouble(TtsService.coachPitchKey('coach_07_marc')), 0.78);
+      // Un coach laissé à sa couleur d'origine n'écrit aucune clé.
+      expect(prefs.getDouble(TtsService.coachRateKey('coach_06_nyx')), isNull);
+    });
+
     test('un payload porteur de voix efface un débit résiduel', () async {
       SharedPreferences.setMockInitialValues(<String, Object>{
         TtsService.userRateKey: 0.42,
