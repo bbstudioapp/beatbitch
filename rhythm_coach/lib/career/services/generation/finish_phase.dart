@@ -377,9 +377,11 @@ class FinishPhase {
   /// Helper local — convertit un `StepDraft` interne en `SessionStep`
   /// sérialisable. Convention uniforme hold/beg : la position tenue
   /// est dans `to`. Dupliqué depuis `_draftToStep` du générateur
-  /// (helper pur, 8 lignes — pas le coût d'une dépendance threadée).
+  /// (helper pur, 8 lignes — pas le coût d'une dépendance threadée) —
+  /// ancrage rythmé (chantier aimant) compris, même règle.
   SessionStep _draftToStep(StepDraft draft,
       {required int time, String text = ''}) {
+    final isRhythm = draft.mode == SessionMode.rhythm;
     return SessionStep(
       time: time,
       text: text,
@@ -389,6 +391,11 @@ class FinishPhase {
       from: draft.from,
       to: draft.to,
       duration: draft.duration,
+      anchor: isRhythm
+          ? CareerLevelGates.rhythmAnchorFor(
+              level: config.level, bpm: draft.bpm)
+          : BeatAnchor.none,
+      ratio: isRhythm ? CareerLevelGates.rhythmAnchorDefaultRatio : 1,
     );
   }
 

@@ -2058,8 +2058,16 @@ class CareerSessionGenerator {
   /// `to`, les autres modes (rhythm/lick/hand/biffle) utilisent from→to
   /// pour l'alternance. Plus de swap, le draft interne et le SessionStep
   /// produit utilisent la même convention.
+  ///
+  /// Ancrage du geste rythmé (chantier aimant) : décidé ici, au point
+  /// unique de matérialisation, plutôt que porté par `StepDraft` — un champ
+  /// `StepDraft.anchor` demanderait de le recopier dans chacun des ~100
+  /// sites qui reconstruisent un draft (degrade, clamps, pickers…) sous
+  /// peine de le perdre en silence. Décider ici depuis `draft.bpm` (déjà
+  /// stabilisé par tout ce qui a précédé) évite ce risque.
   SessionStep _draftToStep(StepDraft draft,
       {required int time, String text = ''}) {
+    final isRhythm = draft.mode == SessionMode.rhythm;
     return SessionStep(
       time: time,
       text: text,
@@ -2069,6 +2077,11 @@ class CareerSessionGenerator {
       from: draft.from,
       to: draft.to,
       duration: draft.duration,
+      anchor: isRhythm
+          ? CareerLevelGates.rhythmAnchorFor(
+              level: _config.level, bpm: draft.bpm)
+          : BeatAnchor.none,
+      ratio: isRhythm ? CareerLevelGates.rhythmAnchorDefaultRatio : 1,
     );
   }
 

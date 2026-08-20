@@ -104,6 +104,38 @@ class CareerLevelGates {
   /// [defaultMaxDepthIndex] (= full ouvert) — `_clampToCapability` côté
   /// générateur évite que le tirage déborde, le profil se remplira sur
   /// les premières séances.
+  /// Chantier aimant (2026-08-20) : niveau de carrière à partir duquel
+  /// l'ancre du geste rythmé peut se poser sur `to` plutôt que rester
+  /// systématiquement sur `from`. Aucun seuil n'a été chiffré par Manu
+  /// (« de base les from, mais sur les niveaux plus élevés sur les to ») —
+  /// valeur interprétée, à valider par lui. Cf. rapport
+  /// chantier-aimant-étape-3.
+  static const int rhythmAnchorToFloorLevel = 10;
+
+  /// Force par défaut de l'aimant rythmé — schéma 3:1 de Manu (intervalle
+  /// 1,5T sur la position ancrée, 0,5T sur l'autre).
+  static const int rhythmAnchorDefaultRatio = 3;
+
+  /// BPM à partir duquel un step rythmé généré compte comme « difficile
+  /// dans l'instant » pour la bascule d'ancre au-dessus du plancher —
+  /// milieu de la plage `[60,140]` tirée par `RhythmRules.build`.
+  static const int rhythmAnchorHarderBpmThreshold = 100;
+
+  /// Décide l'ancrage d'un step rythmé généré. Sous
+  /// [rhythmAnchorToFloorLevel], l'ancre reste toujours `from`. Au-dessus,
+  /// elle bascule sur `to` pour les steps dont le bpm dépasse
+  /// [rhythmAnchorHarderBpmThreshold] (proxy de la difficulté du moment
+  /// dans la séance) — donc elle alterne d'un step à l'autre au sein d'une
+  /// même séance. Interprétation de la consigne de Manu, cf. rapport
+  /// chantier-aimant-étape-3 : les deux conditions cumulées (plancher +
+  /// alternance par difficulté) ne sont pas sa parole telle quelle.
+  static BeatAnchor rhythmAnchorFor({required int level, required int? bpm}) {
+    if (level < rhythmAnchorToFloorLevel) return BeatAnchor.from;
+    return (bpm ?? 0) >= rhythmAnchorHarderBpmThreshold
+        ? BeatAnchor.to
+        : BeatAnchor.from;
+  }
+
   static int maxDepthIndexForProfile(CapabilityProfile? profile) {
     if (profile == null) return defaultMaxDepthIndex();
     final comfort = profile.comfortOf(CapabilityAxis.rhythmDepthMax);
