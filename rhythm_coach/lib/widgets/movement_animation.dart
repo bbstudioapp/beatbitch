@@ -7,6 +7,7 @@ import '../models/session.dart';
 import '../models/session_step.dart';
 import '../services/beep_engine.dart';
 import '../theme/app_theme.dart';
+import 'movement_trajectory_forecast.dart';
 
 /// Visualisation animée du mouvement courant. Remplace le timer pendant
 /// la séance pour donner un repère visuel du tempo et de la position
@@ -46,6 +47,16 @@ class MovementAnimation extends StatefulWidget {
   /// passe la valeur calculée à partir du contexte joueuse.
   final int positionRowCount;
 
+  /// Temps écoulé de la séance, corrélé à l'instant présent (précision ms).
+  /// Sert d'ancrage pour situer les `upcomingSteps` (exprimés en secondes
+  /// depuis le début de séance) sur l'horloge murale de la trajectoire.
+  final Duration elapsed;
+
+  /// Suite des steps de bip à venir, déjà résolus (mode/from/to/bpm hérités
+  /// — cf. `resolveUpcomingMovementSteps`). Vide = comportement historique
+  /// (extrapolation indéfinie de la consigne courante).
+  final List<UpcomingMovementStep> upcomingSteps;
+
   const MovementAnimation({
     super.key,
     required this.mode,
@@ -55,6 +66,8 @@ class MovementAnimation extends StatefulWidget {
     this.height = 160,
     this.beepEngine,
     this.positionRowCount = 5,
+    this.elapsed = Duration.zero,
+    this.upcomingSteps = const [],
   });
 
   @override
@@ -259,6 +272,7 @@ class _MovementAnimationState extends State<MovementAnimation>
       SessionMode.lick ||
       SessionMode.hand =>
         _PositionLadder(
+          mode: widget.mode,
           from: widget.from,
           to: widget.to ?? widget.from,
           beatDuration: beatDuration,
@@ -267,6 +281,8 @@ class _MovementAnimationState extends State<MovementAnimation>
           cursorStyle: cursorStyle,
           lastBeatAt: _lastBeatAt,
           rowCount: widget.positionRowCount,
+          elapsed: widget.elapsed,
+          upcomingSteps: widget.upcomingSteps,
         ),
       SessionMode.biffle => _Pulse(t: t, color: color),
       // Suckle : la position est tenue (head ou balls), le curseur orb
@@ -323,7 +339,26 @@ class _MovementAnimationState extends State<MovementAnimation>
         SessionMode.freestyle =>
           _CursorStyle.orb,
       };
+
+  /// Famille d'organe engagé par le mode — détermine si la trajectoire
+  /// remonte à `tip` entre deux consignes (cf. `_PositionLadder`) : la
+  /// remontée n'a lieu qu'au franchissement d'une frontière de famille.
+  static _ModeFamily _familyOf(SessionMode m) => switch (m) {
+        SessionMode.rhythm ||
+        SessionMode.hold ||
+        SessionMode.beg ||
+        SessionMode.lick ||
+        SessionMode.suckle =>
+          _ModeFamily.mouth,
+        SessionMode.hand ||
+        SessionMode.biffle ||
+        SessionMode.breath ||
+        SessionMode.freestyle =>
+          _ModeFamily.other,
+      };
 }
+
+enum _ModeFamily { mouth, other }
 
 // ─── Sous-widgets ────────────────────────────────────────────────────────
 
@@ -355,6 +390,7 @@ enum _CursorStyle { orb, ring, tongue }
 /// naturellement de l'ancienne position visible vers la nouvelle cible
 /// pendant un beat — pas de saut sec.
 class _PositionLadder extends StatelessWidget {
+  final SessionMode mode;
   final Position from;
   final Position to;
   final Duration beatDuration;
@@ -368,7 +404,12 @@ class _PositionLadder extends StatelessWidget {
   /// uniformément dans la hauteur disponible quel que soit le rowCount.
   final int rowCount;
 
+  /// Cf. `MovementAnimation.elapsed` / `.upcomingSteps`.
+  final Duration elapsed;
+  final List<UpcomingMovementStep> upcomingSteps;
+
   const _PositionLadder({
+    required this.mode,
     required this.from,
     required this.to,
     required this.beatDuration,
@@ -377,6 +418,8 @@ class _PositionLadder extends StatelessWidget {
     required this.cursorStyle,
     required this.lastBeatAt,
     required this.rowCount,
+    required this.elapsed,
+    required this.upcomingSteps,
   });
 
   /// Fenêtre de prévision de la trajectoire future. Volontairement plus longue
@@ -526,13 +569,12 @@ class _PositionLadder extends StatelessWidget {
 
   /// Calcule les points de la trajectoire future :
   /// - point 0 : position visible courante du curseur (interpolée easeInOutCubic).
-  /// - points suivants : prochains beats du step courant, en alternant from↔to.
-  /// La fenêtre temporelle est `_trajectoryWindow`.
-  ///
-  /// Pas de prédiction au-delà du step courant (on n'a pas la timeline future
-  /// dans ce widget — il faudrait remonter au SessionController). La courbe
-  /// s'arrête naturellement à la fenêtre, et se recale au prochain beat émis
-  /// dans le nouveau step le cas échéant.
+  /// - points suivants : prochains beats, en alternant from↔to au sein du
+  ///   step courant puis, à chaque frontière connue via `upcomingSteps`, du
+  ///   step suivant — avec un point de passage par `tip` quand la frontière
+  ///   franchit une famille de mode (`_MovementAnimationState._familyOf`).
+  /// La fenêtre temporelle est `_trajectoryWindow`. `upcomingSteps` vide =
+  /// comportement historique (extrapolation indéfinie du step courant).
   List<_BeatPoint> _computeFutureBeats() {
     final last = lastBeatAt;
     if (last == null) return const [];
@@ -541,16 +583,16 @@ class _PositionLadder extends StatelessWidget {
 
     final now = DateTime.now();
     final windowMs = _trajectoryWindow.inMilliseconds.toDouble();
-    final elapsed = now.difference(last).inMilliseconds.toDouble();
+    final sinceBeatMs = now.difference(last).inMilliseconds.toDouble();
 
-    // Avant le refactor : à l'instant `lastBeatAt`, le bip de
-    // `flipped ? to : from` vient de sonner — donc la position visuelle au
-    // moment du beat est cette position. Elle glisse ensuite vers la
-    // prochaine cible (`flipped ? from : to`) sur beatDuration ms.
+    // À l'instant `lastBeatAt`, le bip de `flipped ? to : from` vient de
+    // sonner — donc la position visuelle au moment du beat est cette
+    // position. Elle glisse ensuite vers la prochaine cible
+    // (`flipped ? from : to`) sur beatDuration ms.
     final lastPosIdx = (flipped ? to : from).index.toDouble();
     final nextPosIdx = (flipped ? from : to).index.toDouble();
 
-    final progress = (elapsed / beatMs).clamp(0.0, 1.0);
+    final progress = (sinceBeatMs / beatMs).clamp(0.0, 1.0);
     final eased = Curves.easeInOutCubic.transform(progress);
     final yNow = lastPosIdx + (nextPosIdx - lastPosIdx) * eased;
 
@@ -558,32 +600,68 @@ class _PositionLadder extends StatelessWidget {
       _BeatPoint(t: 0, idx: yNow, isAnchor: true),
     ];
 
-    // Prochains beats : à partir du premier qui tombe ≥ now, alterner from↔to.
-    var nextTime = last.add(beatDuration);
-    var nextPos = (flipped ? from : to);
-    while (nextTime.isBefore(now)) {
-      nextTime = nextTime.add(beatDuration);
-      nextPos = (nextPos == from) ? to : from;
+    // Ancrage horloge murale ↔ horloge de séance : `elapsed` est réputé
+    // valable à `now` (rafraîchi à chaque tick du SessionController,
+    // 200 ms — dérive bornée à cette fenêtre, cf. `MovementAnimation.elapsed`).
+    final elapsedMs = elapsed.inMilliseconds;
+    DateTime? boundaryAt(int index) {
+      if (index >= upcomingSteps.length) return null;
+      final offsetMs = upcomingSteps[index].startSecond * 1000 - elapsedMs;
+      return now.add(Duration(milliseconds: offsetMs));
     }
-    // On génère aussi UN beat hors-fenêtre (`_extraBeatsBeyondWindow`) : sa
-    // pastille tombera à x > endX (masquée par le ShaderMask), mais le segment
-    // cubique qui le relie à l'avant-dernier beat traverse la zone de fade et
-    // arrive jusqu'au bord droit. Sans ce beat extra, la courbe s'arrêtait sec
-    // au dernier point dans la fenêtre, laissant une portion vide à droite.
+
+    // On génère aussi UN point hors-fenêtre par segment (`_extraBeatsBeyondWindow`) :
+    // sa pastille tombera à x > endX (masquée par le ShaderMask), mais le
+    // segment cubique qui le relie au précédent traverse la zone de fade et
+    // arrive jusqu'au bord droit. Sans lui, la courbe s'arrêtait sec au
+    // dernier point dans la fenêtre, laissant une portion vide à droite.
     var extraAdded = 0;
-    while (true) {
-      final dtMs = nextTime.difference(now).inMilliseconds.toDouble();
+    bool addPoint(DateTime at, double idx) {
+      final dtMs = at.difference(now).inMilliseconds.toDouble();
+      if (dtMs < 0) return true;
       if (dtMs > windowMs) {
-        if (extraAdded >= _extraBeatsBeyondWindow) break;
+        if (extraAdded >= _extraBeatsBeyondWindow) return false;
         extraAdded++;
       }
-      beats.add(_BeatPoint(
-        t: dtMs / windowMs,
-        idx: nextPos.index.toDouble(),
-        isAnchor: false,
-      ));
-      nextTime = nextTime.add(beatDuration);
-      nextPos = (nextPos == from) ? to : from;
+      beats.add(_BeatPoint(t: dtMs / windowMs, idx: idx, isAnchor: false));
+      return true;
+    }
+
+    var segFamily = _MovementAnimationState._familyOf(mode);
+    var segFrom = from;
+    var segTo = to;
+    var segBeatMs = beatMs;
+    var upcomingIdx = 0;
+    var nextBoundary = boundaryAt(0);
+    var nextTime = last.add(beatDuration);
+    var nextPos = (flipped ? from : to);
+
+    while (true) {
+      if (nextBoundary != null && !nextBoundary.isAfter(nextTime)) {
+        final boundary = nextBoundary;
+        final upcoming = upcomingSteps[upcomingIdx];
+        final newFamily = _MovementAnimationState._familyOf(upcoming.mode);
+        segBeatMs =
+            _MovementAnimationState._durationFor(upcoming.mode, upcoming.bpm)
+                .inMilliseconds
+                .toDouble();
+        if (newFamily != segFamily) {
+          if (!addPoint(boundary, Position.tip.index.toDouble())) break;
+          nextTime = boundary.add(Duration(milliseconds: segBeatMs.round()));
+        } else {
+          nextTime = boundary;
+        }
+        segFamily = newFamily;
+        segFrom = upcoming.from;
+        segTo = upcoming.to ?? upcoming.from;
+        nextPos = segTo;
+        upcomingIdx++;
+        nextBoundary = boundaryAt(upcomingIdx);
+        continue;
+      }
+      if (!addPoint(nextTime, nextPos.index.toDouble())) break;
+      nextTime = nextTime.add(Duration(milliseconds: segBeatMs.round()));
+      nextPos = (nextPos == segFrom) ? segTo : segFrom;
     }
     return beats;
   }
@@ -592,6 +670,36 @@ class _PositionLadder extends StatelessWidget {
   /// suffit : le segment cubique qui le relie au dernier beat dans la
   /// fenêtre couvre toute la zone de fade jusqu'au bord droit.
   static const int _extraBeatsBeyondWindow = 1;
+}
+
+/// Sonde de test pour `_PositionLadder._computeFutureBeats`. Passe par des
+/// records (pas `_BeatPoint`, privé) pour rester compatible avec
+/// `library_private_types_in_public_api`.
+@visibleForTesting
+List<({double t, double idx, bool isAnchor})> computeFutureBeatsForTest({
+  required SessionMode mode,
+  required Position from,
+  required Position to,
+  required Duration beatDuration,
+  required bool flipped,
+  required DateTime lastBeatAt,
+  Duration elapsed = Duration.zero,
+  List<UpcomingMovementStep> upcomingSteps = const [],
+}) {
+  final beats = _PositionLadder(
+    mode: mode,
+    from: from,
+    to: to,
+    beatDuration: beatDuration,
+    flipped: flipped,
+    color: const Color(0xFFFFFFFF),
+    cursorStyle: _CursorStyle.orb,
+    lastBeatAt: lastBeatAt,
+    rowCount: 5,
+    elapsed: elapsed,
+    upcomingSteps: upcomingSteps,
+  )._computeFutureBeats();
+  return [for (final b in beats) (t: b.t, idx: b.idx, isAnchor: b.isAnchor)];
 }
 
 /// Point sur la courbe future. `t` ∈ [0,1] = fraction de la fenêtre temporelle
