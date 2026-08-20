@@ -269,6 +269,7 @@ class _MovementAnimationState extends State<MovementAnimation>
           from: widget.from,
           to: widget.to ?? widget.from,
           beatDuration: beatDuration,
+          bpm: widget.bpm,
           flipped: _flipped,
           color: color,
           cursorStyle: cursorStyle,
@@ -361,10 +362,31 @@ enum _CursorStyle { orb, ring, tongue }
 /// En cas de transition de step (from/to changent), `AnimatedAlign` glisse
 /// naturellement de l'ancienne position visible vers la nouvelle cible
 /// pendant un beat — pas de saut sec.
+///
+/// Intervalle complémentaire d'un battement ancré, pour l'extrapolation de
+/// la trajectoire future : le cycle nominal `2T` (déduit de [bpm]) moins
+/// l'intervalle réel [lastIntervalMs] déjà mesuré par le moteur. Sans
+/// ancrage, `lastIntervalMs` est déjà l'intervalle régulier et le résultat
+/// lui est égal à 1 ms d'arrondi près (même construction par soustraction
+/// que `BeepEngine._intervalAfter`, dont c'est ici l'inverse arithmétique
+/// côté visuel — ce widget ne reçoit ni `anchor` ni `ratio`).
+@visibleForTesting
+int complementaryBeatIntervalMs({
+  required int lastIntervalMs,
+  required int bpm,
+}) =>
+    (120000 / bpm).round() - lastIntervalMs;
+
 class _PositionLadder extends StatelessWidget {
   final Position from;
   final Position to;
   final Duration beatDuration;
+
+  /// BPM affiché du step — sert uniquement à `_computeFutureBeats` pour
+  /// déduire le cycle nominal `2T` (cf. `BeepEngine._intervalAfter`) et
+  /// extrapoler l'intervalle complémentaire d'un battement ancré.
+  final int bpm;
+
   final bool flipped;
   final Color color;
   final _CursorStyle cursorStyle;
@@ -379,6 +401,7 @@ class _PositionLadder extends StatelessWidget {
     required this.from,
     required this.to,
     required this.beatDuration,
+    required this.bpm,
     required this.flipped,
     required this.color,
     required this.cursorStyle,
@@ -540,11 +563,24 @@ class _PositionLadder extends StatelessWidget {
   /// dans ce widget — il faudrait remonter au SessionController). La courbe
   /// s'arrête naturellement à la fenêtre, et se recale au prochain beat émis
   /// dans le nouveau step le cas échéant.
+  ///
+  /// Sous ancrage, `beatDuration` (l'intervalle réel du dernier beat, cf.
+  /// `BeatEvent.nextInterval`) alterne d'un beat à l'autre — extrapoler en le
+  /// répétant dessinerait toute la fenêtre à l'échelle d'un seul des deux
+  /// intervalles. On alterne donc `beatDuration` et son complémentaire
+  /// ([complementaryBeatIntervalMs]), déduit du cycle nominal `2T` plutôt que
+  /// de dupliquer la formule d'ancrage de `BeepEngine` (que ce widget ne
+  /// connaît pas : ni `anchor` ni `ratio` ne lui sont passés).
   List<_BeatPoint> _computeFutureBeats() {
     final last = lastBeatAt;
     if (last == null) return const [];
     final beatMs = beatDuration.inMilliseconds.toDouble();
     if (beatMs <= 0) return const [];
+    final otherMs = complementaryBeatIntervalMs(
+            lastIntervalMs: beatDuration.inMilliseconds, bpm: bpm)
+        .toDouble();
+    Duration intervalAfter(bool wasLastInterval) =>
+        Duration(milliseconds: (wasLastInterval ? beatMs : otherMs).round());
 
     final now = DateTime.now();
     final windowMs = _trajectoryWindow.inMilliseconds.toDouble();
@@ -565,12 +601,16 @@ class _PositionLadder extends StatelessWidget {
       _BeatPoint(t: 0, idx: yNow, isAnchor: true),
     ];
 
-    // Prochains beats : à partir du premier qui tombe ≥ now, alterner from↔to.
+    // Prochains beats : à partir du premier qui tombe ≥ now, alterner from↔to
+    // ET alterner l'intervalle utilisé (`beatMs` était celui qui a amené à
+    // `nextTime` ; l'ajout suivant utilise donc le complémentaire).
     var nextTime = last.add(beatDuration);
     var nextPos = (flipped ? from : to);
+    var wasLastInterval = false;
     while (nextTime.isBefore(now)) {
-      nextTime = nextTime.add(beatDuration);
+      nextTime = nextTime.add(intervalAfter(wasLastInterval));
       nextPos = (nextPos == from) ? to : from;
+      wasLastInterval = !wasLastInterval;
     }
     // On génère aussi UN beat hors-fenêtre (`_extraBeatsBeyondWindow`) : sa
     // pastille tombera à x > endX (masquée par le ShaderMask), mais le segment
@@ -589,8 +629,9 @@ class _PositionLadder extends StatelessWidget {
         idx: nextPos.index.toDouble(),
         isAnchor: false,
       ));
-      nextTime = nextTime.add(beatDuration);
+      nextTime = nextTime.add(intervalAfter(wasLastInterval));
       nextPos = (nextPos == from) ? to : from;
+      wasLastInterval = !wasLastInterval;
     }
     return beats;
   }
