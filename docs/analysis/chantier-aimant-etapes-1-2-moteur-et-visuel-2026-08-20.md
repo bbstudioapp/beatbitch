@@ -27,6 +27,14 @@ relu_contre:
   - rhythm_coach/lib/widgets/movement_animation.dart:216
 ---
 
+> **Correction (2026-08-20, session tss2-aimant-etape3 · claude-sonnet-5)** : ce rapport écrit plus
+> bas « l'unique appelant de production (`session_controller.dart:1596`) ». C'est faux — la relecture
+> adverse (`docs/analysis/relecture-adverse-des-etapes-1-et-2-du-chantier-aimant-2026-08-20.md`) en a
+> compté **six** : `session_controller.dart:1596`, `session_controller_fail_flow.dart:190`, `:295`,
+> `:459`, `session_controller_challenge.dart:854`, `:917`. La conclusion du rapport (« en production,
+> `_anchor` reste `none` ») tenait malgré tout, faute d'appelant passant autre chose que le défaut —
+> mais c'est sur les six chemins qu'il fallait raisonner, pas sur un seul.
+
 ## Ce dont il s'agit
 
 **[mesuré]** Étapes 1 et 2 du chantier aimant (§6 de
