@@ -16,6 +16,7 @@ import '../main.dart' show milestoneService;
 import '../models/punishment.dart';
 import '../models/posture.dart';
 import '../models/session.dart';
+import '../models/session_step.dart' show BeatAnchor;
 import '../services/ambience_engine.dart';
 import '../services/backgrounds_service.dart';
 import '../services/badge_service.dart';
@@ -1444,8 +1445,7 @@ class SessionController extends ChangeNotifier {
   void _armHoldVerifierIfHoldStep(SessionStep step) {
     final verifier = _holdVerifier;
     if (verifier == null) return;
-    final mode = step.mode ?? session.defaultMode;
-    if (mode != SessionMode.hold) return;
+    if (!shouldArmHoldVerifier(step, session.defaultMode)) return;
     // Pour le mode hold, la position cible est portée par `step.to`
     // (sémantique « tenir jusqu'à »). Le `BeepEngine.applyStep` qui précède
     // a déjà reflété `to` dans son état interne `currentFrom`, donc on peut
@@ -1453,6 +1453,20 @@ class SessionController extends ChangeNotifier {
     // ré-arme pas, donc rare).
     final expected = step.to ?? _beep.currentFrom;
     verifier.arm(expected);
+  }
+
+  /// Vrai si `step` doit armer la vérif caméra d'immobilité. Faux pour un
+  /// final `hold` ancré (chantier aimant étape 4, `step.anchor ==
+  /// BeatAnchor.to` — seul un final ancré porte cette valeur pour un hold,
+  /// cf. `CareerLevelGates.holdFinalAnchorEligible`) : les 3-4 allers-
+  /// retours qu'il produit sont un mouvement demandé par l'app elle-même,
+  /// pas une dérive à sanctionner. Limite assumée : l'architecture arme par
+  /// step entier, donc la portion statique qui suit les swings n'est pas
+  /// non plus vérifiée — cf. rapport, question ouverte.
+  @visibleForTesting
+  static bool shouldArmHoldVerifier(SessionStep step, SessionMode defaultMode) {
+    final mode = step.mode ?? defaultMode;
+    return mode == SessionMode.hold && step.anchor != BeatAnchor.to;
   }
 
   /// Compose le contexte poussé à `BackgroundsService.pickForContext` au

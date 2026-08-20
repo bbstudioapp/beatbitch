@@ -2077,25 +2077,44 @@ class CareerSessionGenerator {
   /// passages qui montent (mini-vague, boosts de la phase finish), cf.
   /// rapport chantier-aimant-étape-3-bis. `false` par défaut : seuls les
   /// call sites de ces passages le passent à `true`.
+  ///
+  /// Étape 4 : le final `hold` (`emitFinalStep`) passe aussi `intense` —
+  /// au-dessus du plancher [CareerLevelGates.holdFinalAnchorEligible], il
+  /// reçoit l'ancre « très dur » sur `to`, avec le bpm dédié qui la cadence
+  /// (le draft d'un hold ne porte normalement pas de bpm). Cf. rapport
+  /// chantier-aimant-étape-4.
   SessionStep _draftToStep(StepDraft draft,
       {required int time, String text = '', bool intense = false}) {
     final isRhythm = draft.mode == SessionMode.rhythm;
-    final anchor = (isRhythm && intense)
-        ? CareerLevelGates.rhythmAnchorFor(level: _config.level, bpm: draft.bpm)
-        : BeatAnchor.none;
+    final isHold = draft.mode == SessionMode.hold;
+    BeatAnchor anchor = BeatAnchor.none;
+    int ratio = 1;
+    int? bpm = draft.bpm;
+    if (isRhythm && intense) {
+      anchor = CareerLevelGates.rhythmAnchorFor(
+          level: _config.level, bpm: draft.bpm);
+      ratio = anchor != BeatAnchor.none
+          ? CareerLevelGates.rhythmAnchorDefaultRatio
+          : 1;
+    } else if (isHold &&
+        intense &&
+        CareerLevelGates.holdFinalAnchorEligible(
+            level: _config.level, to: draft.to)) {
+      anchor = BeatAnchor.to;
+      ratio = CareerLevelGates.holdFinalAnchorRatio;
+      bpm = CareerLevelGates.holdFinalAnchorBpm;
+    }
     return SessionStep(
       time: time,
       text: text,
       mode: draft.mode,
-      bpm: draft.bpm,
+      bpm: bpm,
       bpmEnd: draft.bpmEnd,
       from: draft.from,
       to: draft.to,
       duration: draft.duration,
       anchor: anchor,
-      ratio: anchor != BeatAnchor.none
-          ? CareerLevelGates.rhythmAnchorDefaultRatio
-          : 1,
+      ratio: ratio,
     );
   }
 

@@ -461,7 +461,17 @@ class BeepEngine {
       case SessionMode.biffle:
         _startBiffleLoop();
       case SessionMode.hold:
-        _playHoldOneShot(_from);
+        // Final ancré (chantier aimant étape 4) : `_to` porte la position
+        // tenue (convention hold), `_anchor == to` signale que le
+        // générateur a choisi d'y poser l'aimant très dur. `_to!.index > 0`
+        // exclu par construction côté générateur (`holdFinalAnchorEligible`)
+        // mais revérifié ici : sans position plus aiguë, pas d'aller-retour
+        // possible.
+        if (_anchor == BeatAnchor.to && _to != null && _to!.index > 0) {
+          _startHoldSwingLoop(_to!);
+        } else {
+          _playHoldOneShot(_from);
+        }
       case SessionMode.breath:
         _playBreathOneShot();
       case SessionMode.freestyle:
@@ -753,6 +763,94 @@ class BeepEngine {
     _trigger(_assetForPosition(position), _rhythmVolume);
     _trigger(_holdAsset, _holdLayerVolume);
   }
+
+  /// Nombre d'allers-retours joués par un final `hold` ancré avant que la
+  /// tenue ne redevienne immobile pour le reste de sa durée (chantier
+  /// aimant étape 4). Manu : « seulement 3 ou 4 ensuite on reste sur le
+  /// hold normal » — fourchette jamais tranchée par lui à l'oreille ;
+  /// fixé au haut de la fourchette plutôt que tiré au hasard (RNG côté
+  /// génération, hors de portée de ce moteur de lecture). Cf. rapport.
+  static const int _holdFinalAnchorSwings = 4;
+
+  /// Séquence pure (position, intervalle en ms jusqu'à ce beat) d'un final
+  /// `hold` ancré : [swings] allers-retours entre [anchorPos] et la
+  /// position un cran plus aiguë. Même arithmétique long/court que
+  /// [_intervalAfter] (le court se déduit du long par soustraction — cf.
+  /// doc de [_intervalAfter] pour l'invariant `2T`), mais **volontairement
+  /// dupliquée plutôt que réutilisée** : [_intervalAfter] lit les champs
+  /// globaux `_from`/`_to`/`_anchor`, qu'on ne veut pas dévier le temps du
+  /// swing — `_from` reste égal à la position tenue pendant tout le step
+  /// (c'est lui que lisent les ticks stats/capacités via [currentFrom]),
+  /// jamais la position haute du swing.
+  ///
+  /// Pure — aucun Timer, aucun état mutable lu ou écrit. Exposée via
+  /// [holdSwingSequenceForTest] pour être pilotée sans horloge réelle.
+  List<(Position, int)> _holdSwingSequence({
+    required Position anchorPos,
+    required double bpm,
+    required int ratio,
+    required int swings,
+  }) {
+    final upPos = Position.values[anchorPos.index - 1];
+    final fullCycle = 2 * 60000 / bpm;
+    final longMs = (fullCycle * ratio / (ratio + 1)).round();
+    final shortMs = fullCycle.round() - longMs;
+    final out = <(Position, int)>[];
+    for (var i = 0; i < swings; i++) {
+      // On vient de sonner `anchorPos` (one-shot ou retour précédent) :
+      // l'ancre retient, l'intervalle avant de la quitter est le long.
+      out.add((upPos, longMs));
+      // On vient de sonner la position haute : retour rapide, court.
+      out.add((anchorPos, shortMs));
+    }
+    return out;
+  }
+
+  /// Lance le final `hold` ancré : one-shot d'arrivée sur [anchorPos]
+  /// (identique à [_playHoldOneShot] — un final non ancré ne change pas de
+  /// comportement), puis [_holdFinalAnchorSwings] allers-retours cadencés
+  /// par `_bpm`/`_ratio`. S'arrête de lui-même après le dernier retour :
+  /// pas de Timer à annuler pour « geler » le hold, il n'y en a
+  /// simplement plus — le hold redevient silencieux et immobile, comme un
+  /// hold classique.
+  void _startHoldSwingLoop(Position anchorPos) {
+    _playHoldOneShot(anchorPos);
+    final sequence = _holdSwingSequence(
+      anchorPos: anchorPos,
+      bpm: _bpm.toDouble(),
+      ratio: _ratio,
+      swings: _holdFinalAnchorSwings,
+    );
+    final myGen = ++_loopGen;
+    var lastTargetMs = DateTime.now().millisecondsSinceEpoch;
+    void scheduleAt(int i) {
+      if (myGen != _loopGen || i >= sequence.length) return;
+      final (pos, intervalMs) = sequence[i];
+      lastTargetMs += intervalMs;
+      final delayMs =
+          max(1, lastTargetMs - DateTime.now().millisecondsSinceEpoch);
+      _loopTimer = Timer(Duration(milliseconds: delayMs), () {
+        if (myGen != _loopGen) return;
+        _trigger(_assetForPosition(pos), _rhythmVolume);
+        scheduleAt(i + 1);
+      });
+    }
+
+    scheduleAt(0);
+  }
+
+  /// Sonde de test : expose [_holdSwingSequence] sans Timer réel, pour
+  /// piloter le compte de swings et l'arithmétique long/court d'un final
+  /// `hold` ancré.
+  @visibleForTesting
+  List<(Position, int)> holdSwingSequenceForTest({
+    required Position anchorPos,
+    required double bpm,
+    required int ratio,
+    int swings = _holdFinalAnchorSwings,
+  }) =>
+      _holdSwingSequence(
+          anchorPos: anchorPos, bpm: bpm, ratio: ratio, swings: swings);
 
   void _playBreathOneShot() {
     _trigger(_breathAsset, _breathVolume);

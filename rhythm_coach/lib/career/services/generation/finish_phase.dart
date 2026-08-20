@@ -381,27 +381,45 @@ class FinishPhase {
   /// sérialisable. Convention uniforme hold/beg : la position tenue
   /// est dans `to`. Dupliqué depuis `_draftToStep` du générateur
   /// (helper pur, 8 lignes — pas le coût d'une dépendance threadée) —
-  /// ancrage rythmé (chantier aimant) compris, même règle, y compris
-  /// le gate [intense] (cf. doc `_draftToStep` du générateur).
+  /// ancrage rythmé et ancrage du final `hold` (chantier aimant)
+  /// compris, même règle, y compris le gate [intense] (cf. doc
+  /// `_draftToStep` du générateur). N'est en pratique jamais appelé
+  /// avec `draft.mode == hold` (les boosts, seul call site à passer
+  /// `intense: true` ici, tirent un mode burst — jamais hold) : la
+  /// branche hold est gardée par symétrie documentaire, pas parce
+  /// qu'elle est atteinte.
   SessionStep _draftToStep(StepDraft draft,
       {required int time, String text = '', bool intense = false}) {
     final isRhythm = draft.mode == SessionMode.rhythm;
-    final anchor = (isRhythm && intense)
-        ? CareerLevelGates.rhythmAnchorFor(level: config.level, bpm: draft.bpm)
-        : BeatAnchor.none;
+    final isHold = draft.mode == SessionMode.hold;
+    BeatAnchor anchor = BeatAnchor.none;
+    int ratio = 1;
+    int? bpm = draft.bpm;
+    if (isRhythm && intense) {
+      anchor =
+          CareerLevelGates.rhythmAnchorFor(level: config.level, bpm: draft.bpm);
+      ratio = anchor != BeatAnchor.none
+          ? CareerLevelGates.rhythmAnchorDefaultRatio
+          : 1;
+    } else if (isHold &&
+        intense &&
+        CareerLevelGates.holdFinalAnchorEligible(
+            level: config.level, to: draft.to)) {
+      anchor = BeatAnchor.to;
+      ratio = CareerLevelGates.holdFinalAnchorRatio;
+      bpm = CareerLevelGates.holdFinalAnchorBpm;
+    }
     return SessionStep(
       time: time,
       text: text,
       mode: draft.mode,
-      bpm: draft.bpm,
+      bpm: bpm,
       bpmEnd: draft.bpmEnd,
       from: draft.from,
       to: draft.to,
       duration: draft.duration,
       anchor: anchor,
-      ratio: anchor != BeatAnchor.none
-          ? CareerLevelGates.rhythmAnchorDefaultRatio
-          : 1,
+      ratio: ratio,
     );
   }
 
@@ -503,6 +521,10 @@ class FinishPhase {
       text: finalStepText,
       progress: 1.0,
       asTransit: true,
+      // Chantier aimant étape 4 : seul flag qui laisse `_draftToStep`
+      // envisager l'ancrage du final `hold` (cf. sa doc). N'affecte que
+      // hold/rhythm — le final n'est jamais rhythm (cf. rapport).
+      intense: true,
     );
     return (
       finalCategory: finalCategory,

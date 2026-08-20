@@ -136,6 +136,30 @@ class CareerLevelGates {
         : BeatAnchor.from;
   }
 
+  /// Force de l'aimant du final `hold` ancré (chantier aimant étape 4,
+  /// 2026-08-21) — Manu : « ok très dur dans ce cas ». Reprend telle quelle
+  /// l'illustration montrée à Manu à 60 bpm (~1,8 s sur l'ancre, ~0,2 s sur
+  /// l'autre ⇒ 9:1) : le chiffre n'a pas été validé à l'oreille, cf. rapport.
+  static const int holdFinalAnchorRatio = 9;
+
+  /// BPM qui cadence les allers-retours du final `hold` ancré — repris de
+  /// la même illustration que [holdFinalAnchorRatio], pas confirmé comme
+  /// valeur de production.
+  static const int holdFinalAnchorBpm = 60;
+
+  /// Vrai quand le final `hold` de la séance peut recevoir l'ancrage « très
+  /// dur » sur `to` (chantier aimant étape 4). Réutilise le même plancher
+  /// que [rhythmAnchorToFloorLevel] plutôt qu'un nouveau chiffre : Manu n'a
+  /// jamais levé la restriction « l'ancrage au fond » pour les profils
+  /// débutants, et c'est la même restriction ici — le final n'est qu'une
+  /// deuxième source qui la déclenche. Faux quand [to] est `tip` (index 0) :
+  /// il n'existe pas de position plus aiguë pour l'aller-retour.
+  static bool holdFinalAnchorEligible({
+    required int level,
+    required Position? to,
+  }) =>
+      level >= rhythmAnchorToFloorLevel && to != null && to.index > 0;
+
   static int maxDepthIndexForProfile(CapabilityProfile? profile) {
     if (profile == null) return defaultMaxDepthIndex();
     final comfort = profile.comfortOf(CapabilityAxis.rhythmDepthMax);
