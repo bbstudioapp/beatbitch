@@ -592,7 +592,15 @@ class BeepEngine {
   /// soustraction plutôt qu'un arrondi indépendant, pour que leur somme
   /// reste exactement `2T` arrondi.
   int _intervalAfter(Position emittedPos, double bpm) {
-    if (_anchor == BeatAnchor.none || _ratio == 1) {
+    final to = _to;
+    // Sans amplitude, `_pickPosition` renvoie toujours `_from` : ancrer
+    // rendrait *tous* les intervalles longs (ou tous courts) et le cycle ne
+    // vaudrait plus `2T`. Un `ratio` ≤ 1 donnerait un intervalle nul ou
+    // négatif.
+    if (_anchor == BeatAnchor.none ||
+        _ratio <= 1 ||
+        to == null ||
+        to == _from) {
       return _regularInterval(bpm);
     }
     final fullCycle = 2 * 60000 / bpm;
