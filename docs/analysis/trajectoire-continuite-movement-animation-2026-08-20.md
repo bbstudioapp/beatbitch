@@ -11,13 +11,20 @@ porte_sur:
   - /home/emmanuel/perso/git/tss2-trajectory/rhythm_coach/lib/widgets/movement_trajectory_forecast.dart
   - /home/emmanuel/perso/git/tss2-trajectory/rhythm_coach/test/movement_trajectory_continuity_test.dart
 provenance:
-  mesure: 8
+  mesure: 9
   deduit: 7
   document: 2
   sans_marqueur: 0
 sources_citees: []
 relu_contre: ⚠️ NON RENSEIGNÉ
 ---
+
+> **Erratum — le classement des familles ci-dessous n'est plus celui du code.** [mesuré] Ce rapport
+> est antérieur à `6ec7811`, qui a redressé `_familyOf` sur la correction de Manu : `beg` et `lick` sont
+> **hors** bouche, et `suckle` se classe sur sa position (`head` bouche, `balls` hors bouche). Les
+> chiffres de tests (« 6 tests », « 1021 ») sont également ceux d'avant : 8 et 1023. Les réserves
+> listées en fin de document sur les gels et la performance sont réfutées par la mesure. Voir
+> `docs/analysis/relecture-adverse-continuite-de-trajectoire-2026-08-20.md`.
 
 Correctif de la trajectoire future du `MovementAnimation` : elle ne connaissait que la consigne
 en cours et extrapolait son alternance from/to indéfiniment, sans jamais savoir qu'un changement de
