@@ -1,7 +1,9 @@
+import 'package:beat_bitch/l10n/app_localizations.dart';
 import 'package:beat_bitch/models/session.dart';
 import 'package:beat_bitch/models/session_step.dart';
 import 'package:beat_bitch/services/beep_engine.dart';
 import 'package:beat_bitch/widgets/movement_animation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// `_computeFutureBeats` (courbe de prévision pointillée) alterne
@@ -82,5 +84,56 @@ void main() {
         reason: 'reproduit le défaut de la relecture §4 : sous le bpm de '
             'départ, le complément passe sous zéro et la courbe recule '
             'dans le temps');
+  });
+
+  testWidgets(
+      'le widget monté retient bien le BPM interpolé du beat pour peindre '
+      'sa courbe de prévision — round 3, réserve gênante : le fil '
+      'BeatEvent.bpm → écran n\'était tenu par aucun test (en lui rendant '
+      'son code d\'avant, `widget.bpm`, les 1039 tests restaient verts)',
+      (tester) async {
+    final engine = BeepEngine();
+    engine.configureBeatSourceForTest(
+      mode: SessionMode.rhythm,
+      from: Position.head,
+      to: Position.throat,
+      anchor: BeatAnchor.from,
+      ratio: 3,
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Scaffold(
+        body: MovementAnimation(
+          mode: SessionMode.rhythm,
+          from: Position.head,
+          to: Position.throat,
+          bpm:
+              80, // BPM affiché au montage — ne doit plus servir après un beat.
+          beepEngine: engine,
+        ),
+      ),
+    ));
+    await tester.pump();
+
+    // Rampe 80 → 50 sur `beatStream` (broadcast asynchrone, contrairement à
+    // `onBeat` synchrone) : chaque emit demande son `pump()` pour laisser
+    // `_onBeatEvent` livrer et mettre à jour `_lastBeatBpm`.
+    engine.emitOneBeatForTest(80);
+    await tester.pump();
+    engine.emitOneBeatForTest(50);
+    await tester.pump();
+
+    // `_PositionLadder` est privé au widget — accès par nom de champ public
+    // (`bpm`) via `dynamic`, la seule voie pour lire l'état interne réel
+    // plutôt que reconstruire la formule en parallèle du fix.
+    final ladder = tester
+        .widgetList(find.byWidgetPredicate(
+            (w) => w.runtimeType.toString() == '_PositionLadder'))
+        .single;
+    expect((ladder as dynamic).bpm, 50,
+        reason: 'doit porter le BPM interpolé du dernier BeatEvent (50), '
+            'pas le BPM affiché au montage du widget (widget.bpm=80)');
   });
 }
