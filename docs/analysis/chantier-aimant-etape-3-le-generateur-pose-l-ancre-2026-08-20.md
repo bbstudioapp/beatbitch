@@ -17,8 +17,8 @@ porte_sur:
   - rhythm_coach/lib/services/beep_engine.dart
   - rhythm_coach/lib/widgets/movement_animation.dart
 provenance:
-  mesure: 15
-  deduit: 6
+  mesure: 16
+  deduit: 7
   document: 4
   sans_marqueur: 0
 sources_citees: []
@@ -35,6 +35,39 @@ relu_contre:
   - rhythm_coach/lib/widgets/movement_animation.dart:162
   - rhythm_coach/lib/widgets/movement_animation.dart:551
 ---
+
+> ## Erratum (2026-08-20, session tss2-aimant-e3-round2 · claude-sonnet-5)
+>
+> **Le §4 ci-dessous décrit le périmètre non ancré à l'envers.** Il affirme que « les 6 autres
+> méthodes de `RhythmRules` » (`buildMiniWaveSegment`, `buildRecovery`, `postFinalVariants`,
+> `buildPreFinisher`, `buildIntroStep`, `firstStepVariants`) « ne sont pas ancrées non plus ». **C'est
+> faux.** Toutes les six passent par `_draftToStep` (dupliqué dans
+> `career_session_generator.dart` et `finish_phase.dart`), dont le seul critère est
+> `draft.mode == SessionMode.rhythm` — sans distinction de méthode appelante. **[déduit]** Vérifié en
+> remontant chaque appelant jusqu'à ce point de matérialisation :
+> `buildMiniWaveSegment` → `buildMiniWave` → `_tryEmitMiniWaveCycle` → `_emitStep` ;
+> `buildRecovery` → `buildRecoveryStep` → boucle principale → `_emitStep` ;
+> `postFinalVariants` → `buildPostFinalDraft` → `emitPostFinal` → `emitStep` ;
+> `buildPreFinisher` → `emitPreFinisher` → `emitStep` ;
+> `buildIntroStep`/`firstStepVariants` → `firstStep()` → `_draftToStep` direct (ligne 841). Les trois
+> derniers appellent `_draftToStep` via `finish_phase.dart:382`, structurellement identique à celui du
+> générateur. **[mesuré]** Le test déjà vert `test/career_rhythm_anchor_placement_test.dart` le
+> confirme empiriquement : il scanne *tous* les steps rythmés d'une séance générée (pas seulement ceux
+> de la boucle principale) et vérifie qu'aucun n'échappe à `CareerLevelGates.rhythmAnchorFor` — s'il
+> existait un chemin de contournement parmi ces six méthodes, ce test échouerait déjà.
+>
+> Le vrai périmètre **non** ancré, mesuré indépendamment (voir rapport round 2
+> `docs/analysis/chantier-aimant-round-2-reserves-1-et-2-de-la-relecture-2026-08-20.md`) : 7 builders de
+> défis rythmés qui construisent leur `SessionStep` en direct
+> (`rhythm_bpm_ceil_{full,shallow,throat}`, `rhythm_motion_streak`, `rhythm_depth_max`,
+> `gorge_crossings_bpm_{full,throat}`), `punishment_builder.dart`, et les trois familles JSON
+> statiques (`assets/sessions/`, `assets/career/milestones.json`, `assets/punishments*.json`) —
+> légitimement non ancrées par la contrainte de compatibilité de Manu.
+>
+> **Ce que je n'ai ni tranché ni changé** : le périmètre ancré lui-même reste tel que le code le fait
+> déjà — je corrige l'énoncé, pas le comportement. Que la mini-vague (et les cinq autres) soient
+> ancrées n'a été ni voulu ni relu par Manu ; c'est une question ouverte, pas une décision, cf. rapport
+> round 2.
 
 ## Ce dont il s'agit
 
