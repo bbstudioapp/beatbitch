@@ -53,8 +53,10 @@ void main() {
         expect(rhythmSteps, isNotEmpty, reason: 'level=$level');
         final anchored =
             rhythmSteps.where((s) => s.anchor != BeatAnchor.none).length;
-        // Les boosts de fin de séance sont toujours émis (≥1, quel que soit
-        // le tirage) — il y a donc toujours au moins un step ancré.
+        // Aux niveaux balayés ici (mini-vague éligible dès 5), la vague ou
+        // les boosts rythmés posent au moins une ancre. Aux niveaux 3-4 —
+        // ni pré-finisher (≤ 2) ni mini-vague (≥ 5) — une séance entière
+        // peut n'en porter aucune quand les boosts sortent en hand.
         expect(anchored, greaterThan(0), reason: 'level=$level');
         // Minoritaire : la mini-vague (2-3 steps) + le pré-finisher (0-1) +
         // les boosts (quelques-uns) ne pèsent jamais la moitié d'une séance
@@ -88,11 +90,12 @@ void main() {
                 : BeatAnchor.from;
         expect(s.anchor, expected, reason: 'step t=${s.time} bpm=${s.bpm}');
       }
-      // Pas de `containsAll([from, to])` ici : au-dessus du plancher, les
-      // deux seules sources ancrées (mini-vague, boosts) plafonnent leur
-      // bpm à ≥100 par construction — la branche `from` de la règle n'est
-      // donc jamais atteinte en génération réelle à ce niveau. Couverte à
-      // part par le test unitaire de `rhythmAnchorFor` ci-dessous.
+      // Pas de `containsAll([from, to])` ici : en génération carrière
+      // au-dessus du plancher, les deux seules sources ancrées (mini-vague,
+      // boosts) plafonnent leur bpm à ≥100 — la branche `from` de la règle
+      // n'y est plus atteinte. Elle l'est encore hors carrière : le mode
+      // Custom passe des bornes BPM utilisateur au même générateur. Couverte
+      // à part par le test unitaire de `rhythmAnchorFor` ci-dessous.
     });
 
     test(
