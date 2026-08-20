@@ -538,6 +538,10 @@
   "coachVoiceAutomatic": "Automatique",
   "coachVoiceUnavailable": "Voix enregistrée absente de cet appareil",
   "coachVoicePreview": "Écouter",
+  "coachVoiceResetRatePitch": "Vitesse et hauteur d’origine",
+  "@coachVoiceResetRatePitch": {
+    "description": "Bouton de la feuille de voix d'un coach : rend au coach la vitesse et la hauteur de son preset d'origine. Affiché seulement quand au moins l'une des deux a été réglée."
+  },
   "coachVoicePlatformNoSelection": "Sur cette plateforme, la voix dépend du moteur installé.",
   "coachVoiceLine": "Voix : {value}",
   "@coachVoiceLine": {

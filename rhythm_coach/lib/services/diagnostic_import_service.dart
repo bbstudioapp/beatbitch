@@ -165,6 +165,8 @@ class DiagnosticImportService {
   /// langue portés par l'entrée : un id inconnu du catalogue (export d'une
   /// version plus récente) se repose donc sans traitement particulier.
   void _voice(Map<String, dynamic> j) {
+    _double(TtsService.userRateKey, j['rate']);
+    _double(TtsService.userPitchKey, j['pitch']);
     for (final e in _entries(j['default'])) {
       final lang = e['language'];
       if (lang is String) _string(TtsService.userVoiceKey(lang), e['voice']);
@@ -174,6 +176,11 @@ class DiagnosticImportService {
       final lang = e['language'];
       if (id is String && lang is String) {
         _string(TtsService.coachVoiceKey(id, lang), e['voice']);
+        // Le même couple est porté par chaque entrée de langue de ce coach :
+        // réécrire la même valeur est sans effet, et un export qui n'aurait
+        // gardé qu'une seule de ses langues repose quand même le réglage.
+        _double(TtsService.coachRateKey(id), e['rate']);
+        _double(TtsService.coachPitchKey(id), e['pitch']);
       }
     }
   }
@@ -313,11 +320,15 @@ class DiagnosticImportService {
   /// Énumération par **composition** (catalogue × langues supportées), jamais
   /// par filtrage-parsing des clés : un `coachId` peut contenir un point.
   Future<void> _clearVoiceKeys() async {
+    await _prefs.remove(TtsService.userRateKey);
+    await _prefs.remove(TtsService.userPitchKey);
     for (final locale in kSupportedLocales) {
       final lang = locale.languageCode;
       await _prefs.remove(TtsService.userVoiceKey(lang));
       for (final coach in CoachCatalog.defaults) {
         await _prefs.remove(TtsService.coachVoiceKey(coach.id, lang));
+        await _prefs.remove(TtsService.coachRateKey(coach.id));
+        await _prefs.remove(TtsService.coachPitchKey(coach.id));
       }
     }
   }

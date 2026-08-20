@@ -6,7 +6,8 @@ import '../services/locale_service.dart';
 import '../services/tts_service.dart';
 import '../services/user_profile_service.dart';
 import '../theme/app_theme.dart';
-import 'voice_settings_section.dart' show resolveVoiceTestPhrase;
+import 'voice_settings_section.dart'
+    show LabeledVoiceSlider, resolveVoiceTestPhrase;
 
 /// Voix effective de chaque coach, résolue en un seul aller-retour moteur
 /// pour tout un écran.
@@ -23,11 +24,22 @@ class CoachVoiceLabels {
   /// `coachId` → voix choisie pour la langue active, absent si « automatique ».
   final Map<String, String> _chosen;
 
-  const CoachVoiceLabels._(this.voices, this._chosen);
+  /// `coachId` → débit et hauteur réglés à la main, absents si le coach garde
+  /// ceux de son preset. Contrairement à la voix, ils ne dépendent pas de la
+  /// langue (cf. [TtsService.coachRateAndPitch]).
+  final Map<String, double> _rates;
+  final Map<String, double> _pitches;
+
+  const CoachVoiceLabels._(
+      this.voices, this._chosen, this._rates, this._pitches);
 
   /// État avant chargement : aucune voix, aucun réglage connu.
-  static const CoachVoiceLabels empty =
-      CoachVoiceLabels._(<Map<String, String>>[], <String, String>{});
+  static const CoachVoiceLabels empty = CoachVoiceLabels._(
+    <Map<String, String>>[],
+    <String, String>{},
+    <String, double>{},
+    <String, double>{},
+  );
 
   static Future<CoachVoiceLabels> load(
     TtsService tts,
@@ -39,14 +51,24 @@ class CoachVoiceLabels {
         ? await tts.listVoicesForLocale(tts.locale)
         : const <Map<String, String>>[];
     final chosen = <String, String>{};
+    final rates = <String, double>{};
+    final pitches = <String, double>{};
     for (final coach in coaches) {
       final name = await tts.coachVoiceName(coach.id);
       if (name != null) chosen[coach.id] = name;
+      final tuning = await tts.coachRateAndPitch(coach.id);
+      if (tuning.rate != null) rates[coach.id] = tuning.rate!;
+      if (tuning.pitch != null) pitches[coach.id] = tuning.pitch!;
     }
-    return CoachVoiceLabels._(voices, chosen);
+    return CoachVoiceLabels._(voices, chosen, rates, pitches);
   }
 
   String? chosenFor(String coachId) => _chosen[coachId];
+
+  /// Débit réglé à la main pour ce coach, `null` s'il garde celui de son
+  /// preset.
+  double? rateFor(String coachId) => _rates[coachId];
+  double? pitchFor(String coachId) => _pitches[coachId];
 
   /// Voix effective : le nom choisi, l'absence constatée, ou « Automatique ».
   ///
@@ -90,6 +112,8 @@ Future<void> showCoachVoicePicker(
       voices: labels.voices,
       userProfile: userProfile,
       initialSelection: labels.chosenFor(coach.id),
+      initialRate: labels.rateFor(coach.id),
+      initialPitch: labels.pitchFor(coach.id),
     ),
   );
   // Couper l'aperçu encore audible : hors file, puisque c'est justement
@@ -156,13 +180,18 @@ class CoachVoiceLine extends StatelessWidget {
   }
 }
 
-/// Feuille de sélection de la voix d'un coach : « Automatique » en tête (=
-/// suppression de la clé, cf. [TtsService.clearCoachVoice]), puis les voix du
-/// moteur pour la langue active.
+/// Feuille de réglage vocal d'un coach : « Automatique » en tête de la liste
+/// de voix (= suppression de la clé, cf. [TtsService.clearCoachVoice]), les
+/// voix du moteur pour la langue active, puis la vitesse et la hauteur.
 ///
-/// Sélectionner une voix la mémorise **et** l'apercevoit dans la foulée : les
-/// noms sont des identifiants techniques (`en-gb-x-gbd-local`), sans écoute
-/// l'utilisateur ne choisit pas, il tâtonne en relançant des séances.
+/// Toucher un réglage le mémorise **et** l'apercevoit dans la foulée : les
+/// noms de voix sont des identifiants techniques (`en-gb-x-gbd-local`) et
+/// deux nombres ne disent rien d'un timbre — sans écoute l'utilisateur ne
+/// choisit pas, il tâtonne en relançant des séances.
+///
+/// Les deux curseurs sont **posés à même la feuille**, pas repliés derrière
+/// un second geste : décision de Manu, 2026-08-18. Le prix est une feuille
+/// plus haute, donc une liste de voix plus courte à l'écran — elle défile.
 class _CoachVoiceSheet extends StatefulWidget {
   final TtsService tts;
   final Coach coach;
@@ -170,12 +199,20 @@ class _CoachVoiceSheet extends StatefulWidget {
   final UserProfileService userProfile;
   final String? initialSelection;
 
+  /// Réglages manuels en vigueur, `null` quand le coach garde ceux de son
+  /// preset — c'est cette absence, et non une valeur repère, qui distingue
+  /// « réglé » de « d'origine ».
+  final double? initialRate;
+  final double? initialPitch;
+
   const _CoachVoiceSheet({
     required this.tts,
     required this.coach,
     required this.voices,
     required this.userProfile,
     required this.initialSelection,
+    required this.initialRate,
+    required this.initialPitch,
   });
 
   @override
@@ -184,12 +221,25 @@ class _CoachVoiceSheet extends StatefulWidget {
 
 class _CoachVoiceSheetState extends State<_CoachVoiceSheet> {
   String? _selected;
+  double? _rate;
+  double? _pitch;
 
   @override
   void initState() {
     super.initState();
     _selected = widget.initialSelection;
+    _rate = widget.initialRate;
+    _pitch = widget.initialPitch;
   }
+
+  /// Débit affiché : celui réglé à la main, sinon celui du preset du coach,
+  /// sinon le défaut de la plateforme — la cascade que [TtsService] applique.
+  double get _shownRate =>
+      _rate ?? widget.coach.voicePreset.rate ?? TtsService.defaultRate;
+  double get _shownPitch =>
+      _pitch ?? widget.coach.voicePreset.pitch ?? TtsService.defaultPitch;
+
+  bool get _tuned => _rate != null || _pitch != null;
 
   /// `null` = « Automatique ».
   Future<void> _select(String? name) async {
@@ -200,6 +250,30 @@ class _CoachVoiceSheetState extends State<_CoachVoiceSheet> {
     }
     if (!mounted) return;
     setState(() => _selected = name);
+    await _preview();
+  }
+
+  /// Enregistre au **relâchement** seulement, et apercevoit dans la foulée :
+  /// écrire à chaque frame du glissement ferait une préférence par pixel et
+  /// une phrase par pixel.
+  Future<void> _commitRate(double v) async {
+    await widget.tts.setCoachRate(widget.coach.id, v);
+    await _preview();
+  }
+
+  Future<void> _commitPitch(double v) async {
+    await widget.tts.setCoachPitch(widget.coach.id, v);
+    await _preview();
+  }
+
+  /// Rend au coach la vitesse et la hauteur de son preset d'origine.
+  Future<void> _resetTuning() async {
+    await widget.tts.clearCoachRateAndPitch(widget.coach.id);
+    if (!mounted) return;
+    setState(() {
+      _rate = null;
+      _pitch = null;
+    });
     await _preview();
   }
 
@@ -279,6 +353,48 @@ class _CoachVoiceSheetState extends State<_CoachVoiceSheet> {
                   ],
                 ),
               ),
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  LabeledVoiceSlider(
+                    label: t.soundsRateLabel,
+                    value: _shownRate,
+                    min: 0.3,
+                    max: 0.8,
+                    onChanged: (v) => setState(() => _rate = v),
+                    onChangeEnd: _commitRate,
+                  ),
+                  LabeledVoiceSlider(
+                    label: t.soundsPitchLabel,
+                    value: _shownPitch,
+                    min: 0.5,
+                    max: 2.0,
+                    onChanged: (v) => setState(() => _pitch = v),
+                    onChangeEnd: _commitPitch,
+                  ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    // Affiché même inerte : un bouton qui apparaît ferait
+                    // sauter la feuille au premier glissement, et son absence
+                    // laisserait croire qu'aucun retour en arrière n'existe.
+                    child: TextButton.icon(
+                      onPressed: _tuned ? _resetTuning : null,
+                      icon: const Icon(Icons.settings_backup_restore, size: 18),
+                      label: Text(t.coachVoiceResetRatePitch),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppTheme.accent,
+                        disabledForegroundColor: AppTheme.textMuted,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.play_arrow, color: AppTheme.accent),

@@ -223,6 +223,30 @@ void main() {
     );
   }
 
+  /// Amène l'option de voix [label] dans le viewport de la feuille, puis la
+  /// rend.
+  ///
+  /// La feuille porte ses curseurs de vitesse et de hauteur sous la liste :
+  /// passé les premières entrées, la voix visée n'est plus à l'écran, et le
+  /// geste réel est de défiler jusqu'à elle. Tous les taps de voix passent
+  /// par ici, y compris ceux qui atteignent encore leur cible sans défiler —
+  /// sinon la prochaine voix ajoutée recasse un test au hasard.
+  Future<Finder> voiceOption(WidgetTester tester, String label) async {
+    final option = find.text(label);
+    await tester.scrollUntilVisible(
+      option,
+      60,
+      // Le `Scrollable` de la feuille, pas celui de l'écran qui l'a
+      // ouverte : les sélecteurs de coach en ont un aussi.
+      scrollable: find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    await tester.pump();
+    return option;
+  }
+
   group('La ligne « Voix » sur le sélecteur de carrière', () {
     testWidgets('annonce la voix effective du coach', (tester) async {
       final tts = TtsService(locale: const Locale('en'));
@@ -276,7 +300,8 @@ void main() {
 
       await tester.tap(voiceLineButton());
       await tester.pumpAndSettle();
-      await tester.tap(find.text('en-gb-x-gbd-local  ·  en-GB'));
+      await tester
+          .tap(await voiceOption(tester, 'en-gb-x-gbd-local  ·  en-GB'));
       await tester.pumpAndSettle();
       Navigator.of(tester.element(find.byType(CoachPickerScreen))).pop();
       await tester.pumpAndSettle();
@@ -317,7 +342,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Victoria\'s voice'), findsOne);
 
-      await tester.tap(find.text('en-us-x-tpd-local  ·  en-US'));
+      await tester
+          .tap(await voiceOption(tester, 'en-us-x-tpd-local  ·  en-US'));
       await tester.pumpAndSettle();
       Navigator.of(tester.element(find.byType(CustomCoachPickerScreen))).pop();
       await tester.pumpAndSettle();
@@ -349,7 +375,8 @@ void main() {
 
       await tester.tap(voiceLineButton());
       await tester.pumpAndSettle();
-      await tester.tap(find.text('en-gb-x-gbd-local  ·  en-GB'));
+      await tester
+          .tap(await voiceOption(tester, 'en-gb-x-gbd-local  ·  en-GB'));
       // Surtout pas de `pumpAndSettle` ici : l'aperçu doit être encore en
       // vol au moment où la feuille se ferme.
       await tester.pump();
@@ -400,7 +427,8 @@ void main() {
       await pumpCareerPicker(tester, tts);
       await tester.tap(voiceLineButton());
       await tester.pumpAndSettle();
-      await tester.tap(find.text('en-gb-x-gbd-local  ·  en-GB'));
+      await tester
+          .tap(await voiceOption(tester, 'en-gb-x-gbd-local  ·  en-GB'));
       await tester.pump(const Duration(seconds: 1));
       await tester.pumpAndSettle();
     }
@@ -451,7 +479,8 @@ void main() {
       // attente* derrière lui, pas en vol. Sa durée de vie est celle du
       // service, pas celle de l'écran — elle survit au sélecteur.
       voiceCallLatency = const Duration(milliseconds: 400);
-      await tester.tap(find.text('en-gb-x-gbd-local  ·  en-GB'));
+      await tester
+          .tap(await voiceOption(tester, 'en-gb-x-gbd-local  ·  en-GB'));
       await tester.pump();
       Navigator.of(tester.element(find.byType(CoachPickerScreen))).pop();
       await tester.pumpAndSettle();
