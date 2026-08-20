@@ -118,6 +118,72 @@ void main() {
         );
       },
     );
+
+    test(
+      'lick est hors de la famille bouche : rhythm -> lick passe par tip',
+      () {
+        final beats = computeFutureBeatsForTest(
+          mode: SessionMode.rhythm,
+          from: Position.head,
+          to: Position.throat,
+          beatDuration: const Duration(milliseconds: 1000),
+          flipped: false,
+          lastBeatAt: DateTime.now(),
+          elapsed: const Duration(seconds: 10, milliseconds: 200),
+          upcomingSteps: const [
+            UpcomingMovementStep(
+              mode: SessionMode.lick,
+              from: Position.head,
+              to: Position.mid,
+              bpm: 60,
+              startSecond: 12,
+            ),
+          ],
+        );
+
+        expect(beats.any((b) => !b.isAnchor && b.idx == Position.tip.index),
+            isTrue);
+      },
+    );
+
+    test(
+      'suckle head reste dans la famille bouche, suckle balls en sort',
+      () {
+        List<({double t, double idx, bool isAnchor})> beatsFor(
+                Position sucklePosition) =>
+            computeFutureBeatsForTest(
+              mode: SessionMode.rhythm,
+              from: Position.head,
+              to: Position.throat,
+              beatDuration: const Duration(milliseconds: 1000),
+              flipped: false,
+              lastBeatAt: DateTime.now(),
+              elapsed: const Duration(seconds: 10, milliseconds: 200),
+              upcomingSteps: [
+                UpcomingMovementStep(
+                  mode: SessionMode.suckle,
+                  from: sucklePosition,
+                  to: sucklePosition,
+                  bpm: 60,
+                  startSecond: 12,
+                ),
+              ],
+            );
+
+        expect(
+          beatsFor(Position.head)
+              .any((b) => !b.isAnchor && b.idx == Position.tip.index),
+          isFalse,
+          reason: 'aspirer le gland garde la bouche en place',
+        );
+        expect(
+          beatsFor(Position.balls)
+              .any((b) => !b.isAnchor && b.idx == Position.tip.index),
+          isTrue,
+          reason: 'aspirer les bourses sort la bouche de la verge',
+        );
+      },
+    );
   });
 
   group('resolveUpcomingMovementSteps', () {

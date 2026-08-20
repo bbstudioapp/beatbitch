@@ -340,16 +340,17 @@ class _MovementAnimationState extends State<MovementAnimation>
           _CursorStyle.orb,
       };
 
-  /// Famille d'organe engagé par le mode — détermine si la trajectoire
-  /// remonte à `tip` entre deux consignes (cf. `_PositionLadder`) : la
-  /// remontée n'a lieu qu'au franchissement d'une frontière de famille.
-  static _ModeFamily _familyOf(SessionMode m) => switch (m) {
-        SessionMode.rhythm ||
-        SessionMode.hold ||
+  /// Famille d'organe engagé — détermine si la trajectoire remonte à `tip`
+  /// entre deux consignes (cf. `_PositionLadder`) : la remontée n'a lieu
+  /// qu'au franchissement d'une frontière de famille. `suckle` dépend de sa
+  /// position, seul mode dont les deux valeurs valides (`head`, `balls`)
+  /// tombent de part et d'autre de la frontière.
+  static _ModeFamily _familyOf(SessionMode m, Position p) => switch (m) {
+        SessionMode.rhythm || SessionMode.hold => _ModeFamily.mouth,
+        SessionMode.suckle =>
+          p == Position.head ? _ModeFamily.mouth : _ModeFamily.other,
         SessionMode.beg ||
         SessionMode.lick ||
-        SessionMode.suckle =>
-          _ModeFamily.mouth,
         SessionMode.hand ||
         SessionMode.biffle ||
         SessionMode.breath ||
@@ -627,7 +628,7 @@ class _PositionLadder extends StatelessWidget {
       return true;
     }
 
-    var segFamily = _MovementAnimationState._familyOf(mode);
+    var segFamily = _MovementAnimationState._familyOf(mode, from);
     var segFrom = from;
     var segTo = to;
     var segBeatMs = beatMs;
@@ -640,7 +641,8 @@ class _PositionLadder extends StatelessWidget {
       if (nextBoundary != null && !nextBoundary.isAfter(nextTime)) {
         final boundary = nextBoundary;
         final upcoming = upcomingSteps[upcomingIdx];
-        final newFamily = _MovementAnimationState._familyOf(upcoming.mode);
+        final newFamily =
+            _MovementAnimationState._familyOf(upcoming.mode, upcoming.from);
         segBeatMs =
             _MovementAnimationState._durationFor(upcoming.mode, upcoming.bpm)
                 .inMilliseconds
