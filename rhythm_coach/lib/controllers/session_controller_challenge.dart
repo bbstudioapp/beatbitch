@@ -1013,6 +1013,8 @@ extension ChallengeOrchestrator on SessionController {
         chainAction: s.chainAction,
         swallowMode: s.swallowMode,
         background: s.background,
+        anchor: s.anchor,
+        ratio: s.ratio,
       ));
     }
 
