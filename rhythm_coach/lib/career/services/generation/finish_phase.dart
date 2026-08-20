@@ -38,6 +38,7 @@ typedef EmitStep = void Function(
   required double progress,
   required bool asTransit,
   bool updateLastBpm,
+  bool intense,
 });
 
 /// Callback de tirage de phrase contextualisée. Pointe sur
@@ -216,6 +217,7 @@ class FinishPhase {
       text: preText,
       progress: ctx.progress,
       asTransit: true,
+      intense: true,
     );
   }
 
@@ -347,7 +349,8 @@ class FinishPhase {
       if (boostText.isEmpty) {
         boostText = pickPhraseForDraft(ctx.bank, boostDraft, 'hard');
       }
-      ctx.steps.add(_draftToStep(boostDraft, time: ctx.time, text: boostText));
+      ctx.steps.add(_draftToStep(boostDraft,
+          time: ctx.time, text: boostText, intense: true));
       lastBoostIndex = ctx.steps.length - 1;
       state.recordLastTransit(boostDraft.mode, boostText);
       state.lastBpm = boostDraft.bpm ?? state.lastBpm;
@@ -378,10 +381,14 @@ class FinishPhase {
   /// sérialisable. Convention uniforme hold/beg : la position tenue
   /// est dans `to`. Dupliqué depuis `_draftToStep` du générateur
   /// (helper pur, 8 lignes — pas le coût d'une dépendance threadée) —
-  /// ancrage rythmé (chantier aimant) compris, même règle.
+  /// ancrage rythmé (chantier aimant) compris, même règle, y compris
+  /// le gate [intense] (cf. doc `_draftToStep` du générateur).
   SessionStep _draftToStep(StepDraft draft,
-      {required int time, String text = ''}) {
+      {required int time, String text = '', bool intense = false}) {
     final isRhythm = draft.mode == SessionMode.rhythm;
+    final anchor = (isRhythm && intense)
+        ? CareerLevelGates.rhythmAnchorFor(level: config.level, bpm: draft.bpm)
+        : BeatAnchor.none;
     return SessionStep(
       time: time,
       text: text,
@@ -391,11 +398,10 @@ class FinishPhase {
       from: draft.from,
       to: draft.to,
       duration: draft.duration,
-      anchor: isRhythm
-          ? CareerLevelGates.rhythmAnchorFor(
-              level: config.level, bpm: draft.bpm)
-          : BeatAnchor.none,
-      ratio: isRhythm ? CareerLevelGates.rhythmAnchorDefaultRatio : 1,
+      anchor: anchor,
+      ratio: anchor != BeatAnchor.none
+          ? CareerLevelGates.rhythmAnchorDefaultRatio
+          : 1,
     );
   }
 

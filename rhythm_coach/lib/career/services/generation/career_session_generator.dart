@@ -1200,6 +1200,7 @@ class CareerSessionGenerator {
   ///     BPM du **prochain action step** doit comparer contre celui-ci
   ///     (mini-vague, boost). Inutile pour les transit/parts qui préservent
   ///     le `lastBpm` de l'outer step.
+  ///   * [intense] : cf. doc `_draftToStep`. Répercuté tel quel.
   void _emitStep(
     GenerationContext ctx, {
     required StepDraft draft,
@@ -1207,8 +1208,10 @@ class CareerSessionGenerator {
     required double progress,
     required bool asTransit,
     bool updateLastBpm = false,
+    bool intense = false,
   }) {
-    ctx.steps.add(_draftToStep(draft, time: ctx.time, text: text));
+    ctx.steps
+        .add(_draftToStep(draft, time: ctx.time, text: text, intense: intense));
     final staminaBefore = ctx.stamina;
     final newStamina = StaminaModel.apply(
       ctx.stamina,
@@ -1271,6 +1274,7 @@ class CareerSessionGenerator {
         progress: progressForWave,
         asTransit: false,
         updateLastBpm: true,
+        intense: true,
       );
     }
     // Pause longue post-vague : breath dédié dimensionné pour viser
@@ -2067,9 +2071,18 @@ class CareerSessionGenerator {
   /// sites qui reconstruisent un draft (degrade, clamps, pickers…) sous
   /// peine de le perdre en silence. Décider ici depuis `draft.bpm` (déjà
   /// stabilisé par tout ce qui a précédé) évite ce risque.
+  ///
+  /// [intense] : le métronome (boucle main + recovery) reste le standard,
+  /// jamais ancré — l'ancre est une variation posée uniquement sur les
+  /// passages qui montent (mini-vague, boosts de la phase finish), cf.
+  /// rapport chantier-aimant-étape-3-bis. `false` par défaut : seuls les
+  /// call sites de ces passages le passent à `true`.
   SessionStep _draftToStep(StepDraft draft,
-      {required int time, String text = ''}) {
+      {required int time, String text = '', bool intense = false}) {
     final isRhythm = draft.mode == SessionMode.rhythm;
+    final anchor = (isRhythm && intense)
+        ? CareerLevelGates.rhythmAnchorFor(level: _config.level, bpm: draft.bpm)
+        : BeatAnchor.none;
     return SessionStep(
       time: time,
       text: text,
@@ -2079,11 +2092,10 @@ class CareerSessionGenerator {
       from: draft.from,
       to: draft.to,
       duration: draft.duration,
-      anchor: isRhythm
-          ? CareerLevelGates.rhythmAnchorFor(
-              level: _config.level, bpm: draft.bpm)
-          : BeatAnchor.none,
-      ratio: isRhythm ? CareerLevelGates.rhythmAnchorDefaultRatio : 1,
+      anchor: anchor,
+      ratio: anchor != BeatAnchor.none
+          ? CareerLevelGates.rhythmAnchorDefaultRatio
+          : 1,
     );
   }
 
