@@ -16,7 +16,7 @@ porte_sur:
 provenance:
   mesure: 27
   deduit: 14
-  document: 3
+  document: 4
   sans_marqueur: 0
 sources_citees: []
 relu_contre:
@@ -129,6 +129,11 @@ générateur réel), **27 steps sur 11 911** portent une rampe, tous en mode syn
 17,2 BPM et maximum 24 — soit **875 secondes sur 86 106** de temps rythmé, **1,0 %**. C'est une borne
 basse : plusieurs constructeurs de défis (`rhythm_bpm_ceil_*`, `gorge_crossings_bpm_*`) posent aussi
 des rampes, et ces steps-là sont insérés hors timeline.
+
+**[document]** Ce changement n'est pas orphelin : la relecture du chantier « continuité de
+trajectoire » avait laissé ouverte, comme réserve jamais atteinte, « les rampes de BPM affichées à
+tempo constant (0,19 % des steps) ». L'étape 2 la ferme, sans que ni son rapport ni son message de
+commit ne le disent. Mon comptage indépendant (0,23 % des steps) recoupe le sien.
 
 **[mesuré]** Le même changement atteint la **courbe de prévision pointillée** : `_computeFutureBeats`
 lit `beatDuration`, qui est désormais `_controller.duration`. Elle est déjà sur cette branche, donc
