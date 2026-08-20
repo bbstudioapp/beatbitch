@@ -1,3 +1,6 @@
+import 'package:beat_bitch/models/session.dart';
+import 'package:beat_bitch/models/session_step.dart';
+import 'package:beat_bitch/services/beep_engine.dart';
 import 'package:beat_bitch/widgets/movement_animation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -31,5 +34,54 @@ void main() {
     final other =
         complementaryBeatIntervalMs(lastIntervalMs: regular, bpm: bpm);
     expect((other - regular).abs(), lessThanOrEqualTo(1));
+  });
+
+  test(
+      'rampe + ancrage : nourri du BPM interpolé porté par BeatEvent.bpm, le '
+      'complément peint reste positif et cohérent avec le BPM réel de ce '
+      'beat — nourri du BPM de départ (widget.bpm), il passe sous zéro '
+      '(relecture adverse §4, cas 81→58)', () {
+    final engine = BeepEngine();
+    engine.configureBeatSourceForTest(
+      mode: SessionMode.rhythm,
+      from: Position.head,
+      to: Position.throat,
+      anchor: BeatAnchor.from,
+      ratio: 3,
+    );
+
+    // `onBeat` livre synchrone (contrairement à `beatStream`, broadcast
+    // asynchrone — cf. doc de `simulateBeatsForTest`).
+    final events = <BeatEvent>[];
+    engine.onBeat = events.add;
+    // Rampe 80 → 50 bpm (ralentissement de 37,5 %, au-delà du quart qui
+    // fait passer le complément sous zéro — cf. relecture) : un premier
+    // beat tôt dans la rampe (bpm interpolé ≈ 80, le bpm de départ que le
+    // widget affiche à son montage), un second en fin de rampe (bpm
+    // interpolé tombé à 50).
+    engine.emitOneBeatForTest(80);
+    final secondInterval = engine.emitOneBeatForTest(50);
+
+    final lastEvent = events.last;
+    expect(lastEvent.bpm, 50.0,
+        reason: 'BeatEvent doit porter le BPM interpolé de ce beat précis, '
+            'pas le BPM de départ affiché au montage du widget');
+
+    final paintedWithInterpolatedBpm = complementaryBeatIntervalMs(
+      lastIntervalMs: secondInterval.inMilliseconds,
+      bpm: lastEvent.bpm.round(),
+    );
+    expect(paintedWithInterpolatedBpm, 600,
+        reason: 'doit correspondre exactement au court intervalle réel à '
+            '50 bpm, pas à une valeur déduite du bpm de départ');
+
+    final paintedWithMountBpm = complementaryBeatIntervalMs(
+      lastIntervalMs: secondInterval.inMilliseconds,
+      bpm: 80,
+    );
+    expect(paintedWithMountBpm, lessThan(0),
+        reason: 'reproduit le défaut de la relecture §4 : sous le bpm de '
+            'départ, le complément passe sous zéro et la courbe recule '
+            'dans le temps');
   });
 }

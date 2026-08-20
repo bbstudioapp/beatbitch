@@ -574,7 +574,7 @@ class BeepEngine {
     } else {
       _trigger(_assetForPosition(pos), baseVolume);
     }
-    _notifyBeat(_mode, pos, Duration(milliseconds: intervalMs));
+    _notifyBeat(_mode, pos, Duration(milliseconds: intervalMs), currentBpm);
     return intervalMs;
   }
 
@@ -691,7 +691,8 @@ class BeepEngine {
     return (_handUpAsset, baseVolume * 0.85);
   }
 
-  void _notifyBeat(SessionMode mode, Position pos, Duration nextInterval) {
+  void _notifyBeat(
+      SessionMode mode, Position pos, Duration nextInterval, double bpm) {
     // Pour rhythm/lick/hand : pos = la position effectivement jouée ce beat
     // (alternance from/to). Pour biffle : on fournit `to` si dispo, sinon
     // `from`, à titre informatif (pas de notion de profondeur acoustique).
@@ -701,6 +702,7 @@ class BeepEngine {
       from: _from,
       to: _to,
       nextInterval: nextInterval,
+      bpm: bpm,
     );
     onBeat?.call(event);
     if (!_beatController.isClosed) _beatController.add(event);
@@ -736,8 +738,8 @@ class BeepEngine {
       final currentBpm = _currentInterpolatedBpm(elapsedMs);
       final intervalMs = _regularInterval(currentBpm);
       _trigger(_biffleAsset, _rhythmVolume);
-      _notifyBeat(
-          SessionMode.biffle, _to ?? _from, Duration(milliseconds: intervalMs));
+      _notifyBeat(SessionMode.biffle, _to ?? _from,
+          Duration(milliseconds: intervalMs), currentBpm);
       lastTargetMs += intervalMs;
       final delayMs =
           max(1, lastTargetMs - DateTime.now().millisecondsSinceEpoch);
@@ -1070,12 +1072,19 @@ class BeatEvent {
   /// Durée jusqu'au prochain battement de ce loop.
   final Duration nextInterval;
 
+  /// BPM ayant servi à calculer [nextInterval] — le BPM interpolé au moment
+  /// de ce beat sous rampe intra-step, `_bpm` constant sinon. Permet à un
+  /// consommateur externe (le widget d'animation) de déduire le cycle
+  /// nominal réel plutôt que de supposer le BPM de départ du step.
+  final double bpm;
+
   const BeatEvent({
     required this.mode,
     required this.position,
     required this.from,
     required this.to,
     required this.nextInterval,
+    required this.bpm,
   });
 }
 

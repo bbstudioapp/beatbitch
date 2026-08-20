@@ -81,6 +81,13 @@ class _MovementAnimationState extends State<MovementAnimation>
   /// from↔to. Null tant qu'aucun beat n'a été reçu.
   DateTime? _lastBeatAt;
 
+  /// BPM ayant servi à calculer l'intervalle du dernier beat reçu
+  /// (`BeatEvent.bpm`) — le BPM interpolé sous rampe, `widget.bpm` sinon.
+  /// Remplace `widget.bpm` (BPM de départ, constant pendant toute la rampe)
+  /// pour déduire le cycle nominal `2T` dans `_computeFutureBeats`. Null
+  /// tant qu'aucun beat n'a été reçu.
+  double? _lastBeatBpm;
+
   @override
   void initState() {
     super.initState();
@@ -141,6 +148,7 @@ class _MovementAnimationState extends State<MovementAnimation>
     if (modeChanged || tempoChanged || positionChanged) {
       _flipped = false;
       _lastBeatAt = null;
+      _lastBeatBpm = null;
     }
   }
 
@@ -181,6 +189,7 @@ class _MovementAnimationState extends State<MovementAnimation>
       setState(() {
         _flipped = nextIsFrom;
         _lastBeatAt = DateTime.now();
+        _lastBeatBpm = event.bpm;
       });
       _controller.forward(from: 0);
     } else if (event.mode == SessionMode.biffle) {
@@ -269,7 +278,7 @@ class _MovementAnimationState extends State<MovementAnimation>
           from: widget.from,
           to: widget.to ?? widget.from,
           beatDuration: beatDuration,
-          bpm: widget.bpm,
+          bpm: (_lastBeatBpm ?? widget.bpm.toDouble()).round(),
           flipped: _flipped,
           color: color,
           cursorStyle: cursorStyle,
@@ -382,9 +391,10 @@ class _PositionLadder extends StatelessWidget {
   final Position to;
   final Duration beatDuration;
 
-  /// BPM affiché du step — sert uniquement à `_computeFutureBeats` pour
-  /// déduire le cycle nominal `2T` (cf. `BeepEngine._intervalAfter`) et
-  /// extrapoler l'intervalle complémentaire d'un battement ancré.
+  /// BPM du dernier beat reçu (interpolé sous rampe, cf. `BeatEvent.bpm`) —
+  /// sert uniquement à `_computeFutureBeats` pour déduire le cycle nominal
+  /// `2T` (cf. `BeepEngine._intervalAfter`) et extrapoler l'intervalle
+  /// complémentaire d'un battement ancré.
   final int bpm;
 
   final bool flipped;
