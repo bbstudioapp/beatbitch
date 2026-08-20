@@ -182,7 +182,9 @@ void main() {
       }
     });
 
-    test('modes non-rythmés : jamais ancrés (none / ratio 1)', () {
+    test(
+        'modes non-rythmés : jamais ancrés (none / ratio 1), sauf le '
+        'final hold (chantier aimant étape 4)', () {
       final gen = CareerSessionGenerator(seed: 42);
       final result = gen.generate(
         level: 25,
@@ -193,7 +195,18 @@ void main() {
       final nonRhythm = result.session.steps.where(
           (s) => (s.mode ?? result.session.defaultMode) != SessionMode.rhythm);
       expect(nonRhythm, isNotEmpty);
+      final finalTime = result.session.finalStepTime;
       for (final s in nonRhythm) {
+        final isEligibleFinalHold = s.time == finalTime &&
+            (s.mode ?? result.session.defaultMode) == SessionMode.hold &&
+            s.to != null &&
+            s.to!.index > 0;
+        if (isEligibleFinalHold) {
+          // Seul cas légitime : le final lui-même, quand c'est un hold
+          // qui n'est pas déjà sur `tip`. Vérifié en détail par
+          // `career_hold_final_anchor_placement_test.dart`.
+          continue;
+        }
         expect(s.anchor, BeatAnchor.none, reason: '${s.mode} t=${s.time}');
         expect(s.ratio, 1, reason: '${s.mode} t=${s.time}');
       }

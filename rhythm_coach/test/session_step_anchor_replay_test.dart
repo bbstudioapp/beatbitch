@@ -1,4 +1,5 @@
 import 'package:beat_bitch/career/models/phrase_bank.dart';
+import 'package:beat_bitch/career/services/career_level_gates.dart';
 import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
 import 'package:beat_bitch/controllers/session_controller.dart';
 import 'package:beat_bitch/models/session.dart';
@@ -59,7 +60,14 @@ void main() {
     final kept = upgraded.steps.where((s) => s.anchor != BeatAnchor.none);
     expect(kept.length, before.length);
     for (final s in kept) {
-      expect(s.ratio, 3, reason: 't=${s.time}');
+      // Étape 4 : le final `hold` porte désormais son propre ratio (aimant
+      // « très dur »), distinct du ratio rythmé par défaut — cf. rapport
+      // chantier-aimant-étape-4.
+      final mode = s.mode ?? session.defaultMode;
+      final expectedRatio = mode == SessionMode.hold
+          ? CareerLevelGates.holdFinalAnchorRatio
+          : CareerLevelGates.rhythmAnchorDefaultRatio;
+      expect(s.ratio, expectedRatio, reason: 't=${s.time} mode=$mode');
     }
   });
 
