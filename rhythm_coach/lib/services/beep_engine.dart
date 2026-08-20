@@ -603,12 +603,37 @@ class BeepEngine {
     return isAnchored ? longMs : fullCycleMs - longMs;
   }
 
-  /// Sonde de test : simule [count] battements du loop rythmé via le même
-  /// `_emitPositionBeat` que la boucle réelle, sans Timer ni audio (les
-  /// pools ne sont pas chargées tant que `init()` n'a pas tourné, donc
-  /// `_trigger` ne fait rien). Renvoie les `BeatEvent` produits, dans
-  /// l'ordre — capturés via `onBeat` (synchrone), pas `beatStream`
-  /// (broadcast asynchrone).
+  /// Sonde de test : configure le loop rythmé (from/to/mode/ancrage) sans
+  /// démarrer de Timer, pour piloter les battements un à un via
+  /// [emitOneBeatForTest].
+  @visibleForTesting
+  void configureBeatSourceForTest({
+    required SessionMode mode,
+    required Position from,
+    required Position? to,
+    BeatAnchor anchor = BeatAnchor.none,
+    int ratio = 1,
+  }) {
+    _mode = mode;
+    _from = from;
+    _to = to;
+    _anchor = anchor;
+    _ratio = ratio;
+    _alternateToggle = true;
+  }
+
+  /// Sonde de test : émet un battement via le même `_emitPositionBeat` que
+  /// la boucle réelle, sans audio (les pools ne sont pas chargées tant que
+  /// `init()` n'a pas tourné, donc `_trigger` ne fait rien) — sur
+  /// `beatStream` comme sur `onBeat`. Renvoie l'intervalle jusqu'au
+  /// prochain.
+  @visibleForTesting
+  Duration emitOneBeatForTest(double bpm) =>
+      Duration(milliseconds: _emitPositionBeat(_rhythmVolume, bpm));
+
+  /// Sonde de test : simule [count] battements du loop rythmé d'un coup.
+  /// Renvoie les `BeatEvent` produits, dans l'ordre — capturés via `onBeat`
+  /// (synchrone), pas `beatStream` (broadcast asynchrone).
   @visibleForTesting
   List<BeatEvent> simulateBeatsForTest({
     required SessionMode mode,
@@ -619,17 +644,13 @@ class BeepEngine {
     int ratio = 1,
     required int count,
   }) {
-    _mode = mode;
-    _from = from;
-    _to = to;
-    _anchor = anchor;
-    _ratio = ratio;
-    _alternateToggle = true;
+    configureBeatSourceForTest(
+        mode: mode, from: from, to: to, anchor: anchor, ratio: ratio);
     final events = <BeatEvent>[];
     final previousOnBeat = onBeat;
     onBeat = events.add;
     for (var i = 0; i < count; i++) {
-      _emitPositionBeat(_rhythmVolume, bpm);
+      emitOneBeatForTest(bpm);
     }
     onBeat = previousOnBeat;
     return events;

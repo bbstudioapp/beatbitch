@@ -171,11 +171,13 @@ class _MovementAnimationState extends State<MovementAnimation>
       // À l'instant du bip de `event.position`, le curseur EST visuellement à
       // cette position (l'AnimatedAlign du beat précédent vient juste de l'y
       // déposer). On programme immédiatement l'animation vers la PROCHAINE
-      // position : durée = beatDuration, courbe d'anticipation easeInOutCubic
-      // → le curseur arrivera pile sur la cible à l'instant du prochain bip.
-      // L'audio reste maître : le bip déclenche le mouvement visuel, jamais
-      // l'inverse.
+      // position : durée = `event.nextInterval` (l'intervalle réel jusqu'au
+      // prochain bip — pas forcément `60000/bpm`, cf. `BeepEngine.
+      // _intervalAfter`), courbe d'anticipation easeInOutCubic → le curseur
+      // arrivera pile sur la cible à l'instant du prochain bip. L'audio
+      // reste maître : le bip déclenche le mouvement visuel, jamais l'inverse.
       final nextIsFrom = event.position == widget.to;
+      _controller.duration = event.nextInterval;
       setState(() {
         _flipped = nextIsFrom;
         _lastBeatAt = DateTime.now();
@@ -253,7 +255,12 @@ class _MovementAnimationState extends State<MovementAnimation>
 
   Widget _buildForMode(double t, Color color) {
     final cursorStyle = _cursorStyleFor(widget.mode);
-    final beatDuration = _durationFor(widget.mode, widget.bpm);
+    // Pour rhythm/lick/hand, `_controller.duration` est tenu à jour par
+    // `_onBeatEvent` sur chaque bip (intervalle réel, pas forcément
+    // `60000/bpm`) ; les autres modes ne reçoivent jamais de BeatEvent donc
+    // il reste celui posé par `_durationFor` en fallback.
+    final beatDuration =
+        _controller.duration ?? _durationFor(widget.mode, widget.bpm);
     return switch (widget.mode) {
       SessionMode.rhythm ||
       SessionMode.lick ||
