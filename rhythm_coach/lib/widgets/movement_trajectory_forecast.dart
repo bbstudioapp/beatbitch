@@ -27,10 +27,6 @@ class UpcomingMovementStep {
 /// Résout la suite des steps de bip (non text-only) qui commencent après
 /// `afterSecond`, en héritant mode/from/to/bpm depuis la configuration
 /// courante (`currentMode`..`currentBpm`) comme le ferait le moteur audio.
-///
-/// Ne modélise pas les gels runtime (gate posture, défi, report TTS) : la
-/// prévision se base sur `SessionStep.time` nominal, une approximation
-/// suffisante pour un affichage.
 List<UpcomingMovementStep> resolveUpcomingMovementSteps({
   required List<SessionStep> steps,
   required SessionMode defaultMode,

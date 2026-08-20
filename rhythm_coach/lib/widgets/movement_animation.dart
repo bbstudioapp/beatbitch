@@ -340,11 +340,8 @@ class _MovementAnimationState extends State<MovementAnimation>
           _CursorStyle.orb,
       };
 
-  /// Famille d'organe engagé — détermine si la trajectoire remonte à `tip`
-  /// entre deux consignes (cf. `_PositionLadder`) : la remontée n'a lieu
-  /// qu'au franchissement d'une frontière de famille. `suckle` dépend de sa
-  /// position, seul mode dont les deux valeurs valides (`head`, `balls`)
-  /// tombent de part et d'autre de la frontière.
+  /// Famille d'organe engagé — la trajectoire remonte à `tip` au
+  /// franchissement d'une frontière de famille (cf. `_PositionLadder`).
   static _ModeFamily _familyOf(SessionMode m, Position p) => switch (m) {
         SessionMode.rhythm || SessionMode.hold => _ModeFamily.mouth,
         SessionMode.suckle =>
