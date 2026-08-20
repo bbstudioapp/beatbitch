@@ -10,10 +10,6 @@ import '../models/final_category.dart';
 import '../models/session.dart';
 import '../models/session_step.dart';
 
-/// Point d'ancrage du geste rythmé : quelle position retient le battement
-/// suivant plus longtemps. `none` = intervalles réguliers.
-enum BeatAnchor { none, from, to }
-
 /// Moteur audio des bips de guidage rythmique.
 ///
 /// Implémentation : pool de [_poolSize] AudioPlayer par sample, en round-robin.
@@ -181,8 +177,8 @@ class BeepEngine {
   bool _alternateToggle = true;
 
   /// Point d'ancrage du loop rythmé courant. `none` = intervalles réguliers.
-  /// Réglé par [applyStep] ; aucun appelant ne passe autre chose que la
-  /// valeur par défaut pour l'instant.
+  /// Réglé par [applyStep] depuis `step.anchor`, ou remis à `none` par
+  /// [startRhythmDemo] / [startLickDemo].
   BeatAnchor _anchor = BeatAnchor.none;
 
   /// Force de l'ancrage — cf. [_intervalAfter]. `1` = régulier quel que
@@ -357,22 +353,23 @@ class BeepEngine {
   /// Applique une étape au moteur. Les étapes text-only sont ignorées
   /// (elles ne touchent pas au loop courant).
   ///
-  /// [anchor] / [ratio] : geste ancré du loop rythmé (cf. [_intervalAfter]).
-  /// Par défaut réguliers — aucun appelant ne passe encore autre chose.
+  /// Ancrage du loop rythmé (cf. [_intervalAfter]) : porté par `step.anchor`
+  /// / `step.ratio` plutôt qu'en paramètre — l'info doit survivre à la
+  /// sérialisation et aux chemins de reprise (fail flow, défis), qui
+  /// rejouent un `SessionStep` déjà construit sans repasser par l'appelant
+  /// d'origine.
   Future<void> applyStep(
     SessionStep step,
-    SessionMode sessionMode, {
-    BeatAnchor anchor = BeatAnchor.none,
-    int ratio = 1,
-  }) async {
+    SessionMode sessionMode,
+  ) async {
     if (step.isTextOnly) return;
     if (!_initialized) await init();
 
     final mode = step.mode ?? sessionMode;
     final previousMode = _mode;
     _mode = mode;
-    _anchor = anchor;
-    _ratio = ratio;
+    _anchor = step.anchor;
+    _ratio = step.ratio;
     if (step.bpm != null) _bpm = step.bpm!.clamp(kMinBpm, kMaxBpm);
     // Rampe BPM intra-step : on n'arme `_bpmEnd` / `_loopDurationMs` que
     // si la valeur cible est explicitement différente du BPM de départ ET
@@ -902,6 +899,8 @@ class BeepEngine {
       _from = _pickShallowerThan(_from);
     }
     _alternateToggle = true;
+    _anchor = BeatAnchor.none;
+    _ratio = 1;
     _stopLoop();
     _startBeatLoop(volume: _rhythmVolume);
   }
@@ -920,6 +919,8 @@ class BeepEngine {
       _from = _pickShallowerThan(_from);
     }
     _alternateToggle = true;
+    _anchor = BeatAnchor.none;
+    _ratio = 1;
     _stopLoop();
     _startBeatLoop(volume: _lickVolume);
   }

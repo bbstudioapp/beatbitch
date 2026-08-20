@@ -192,10 +192,8 @@ class _LoggingBeepEngine extends BeepEngine {
   @override
   Future<void> applyStep(
     SessionStep step,
-    SessionMode sessionMode, {
-    BeatAnchor anchor = BeatAnchor.none,
-    int ratio = 1,
-  }) async {
+    SessionMode sessionMode,
+  ) async {
     applied.add(step);
   }
 

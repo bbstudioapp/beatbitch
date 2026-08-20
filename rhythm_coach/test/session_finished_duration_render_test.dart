@@ -238,10 +238,8 @@ class _SilentBeepEngine extends BeepEngine {
   @override
   Future<void> applyStep(
     SessionStep step,
-    SessionMode sessionMode, {
-    BeatAnchor anchor = BeatAnchor.none,
-    int ratio = 1,
-  }) async {}
+    SessionMode sessionMode,
+  ) async {}
   @override
   Future<void> pause() async {}
   @override
