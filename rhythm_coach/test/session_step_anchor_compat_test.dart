@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:beat_bitch/models/session.dart';
 import 'package:beat_bitch/models/session_step.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -35,8 +36,8 @@ void main() {
         .whereType<File>()
         .where((f) => f.path.endsWith('.json'))
         .toList();
-    expect(files, isNotEmpty,
-        reason: 'aucun fichier trouvé sous assets/sessions');
+    expect(files.length, greaterThanOrEqualTo(20),
+        reason: 'la surface couverte ne doit pas rétrécir en silence');
 
     var total = 0;
     for (final file in files) {
@@ -48,7 +49,8 @@ void main() {
         total++;
       }
     }
-    expect(total, greaterThan(0));
+    expect(total, greaterThanOrEqualTo(430),
+        reason: 'la surface couverte ne doit pas rétrécir en silence');
   });
 
   test(
@@ -59,7 +61,8 @@ void main() {
     ) as Map<String, dynamic>;
     final milestones =
         (data['milestones'] as List).cast<Map<String, dynamic>>();
-    expect(milestones, isNotEmpty);
+    expect(milestones.length, greaterThanOrEqualTo(37),
+        reason: 'la surface couverte ne doit pas rétrécir en silence');
 
     var total = 0;
     for (final m in milestones) {
@@ -72,6 +75,47 @@ void main() {
         total++;
       }
     }
-    expect(total, greaterThan(0));
+    expect(total, greaterThanOrEqualTo(202),
+        reason: 'la surface couverte ne doit pas rétrécir en silence');
+  });
+
+  test(
+      'assets/punishments*.json : tous les steps rejouent le geste d\'avant '
+      'le chantier aimant', () {
+    final files = Directory('$repoRoot/assets')
+        .listSync()
+        .whereType<File>()
+        .where(
+            (f) => RegExp(r'punishments(_[a-z]{2})?\.json$').hasMatch(f.path))
+        .toList();
+    expect(files.length, greaterThanOrEqualTo(4),
+        reason: 'la surface couverte ne doit pas rétrécir en silence');
+
+    var total = 0;
+    for (final file in files) {
+      final data = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+      for (final raw
+          in (data['punishments'] as List).cast<Map<String, dynamic>>()) {
+        for (final rawStep
+            in (raw['steps'] as List).cast<Map<String, dynamic>>()) {
+          final step = SessionStep.fromJson(rawStep);
+          expectUnanchored(step, '${file.path} ${raw['id']} t=${step.time}');
+          total++;
+        }
+      }
+    }
+    expect(total, greaterThanOrEqualTo(76),
+        reason: 'la surface couverte ne doit pas rétrécir en silence');
+  });
+
+  // Les fichiers JSON règlent leur compatibilité par l'absence des clés, donc
+  // par les replis de `fromJson`. Tout le reste du code construit un
+  // `SessionStep` sans les nommer et dépend du défaut du constructeur, que
+  // `fromJson` n'emprunte jamais : sans cette sonde, le renverser ne casse
+  // aucun test.
+  test('le défaut du constructeur reproduit lui aussi le geste d\'avant', () {
+    const step = SessionStep(time: 0, mode: SessionMode.rhythm);
+    expect(step.anchor, BeatAnchor.none);
+    expect(step.ratio, 1);
   });
 }
