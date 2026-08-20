@@ -37,10 +37,9 @@ void main() {
   });
 
   test(
-      'rampe + ancrage : nourri du BPM interpolé porté par BeatEvent.bpm, le '
-      'complément peint reste positif et cohérent avec le BPM réel de ce '
-      'beat — nourri du BPM de départ (widget.bpm), il passe sous zéro '
-      '(relecture adverse §4, cas 81→58)', () {
+      'rampe + ancrage : BeatEvent porte le BPM interpolé du beat, dont '
+      'complementaryBeatIntervalMs déduit 600 ms à 50 bpm — le BPM de '
+      'départ (80) en déduisait −300 ms', () {
     final engine = BeepEngine();
     engine.configureBeatSourceForTest(
       mode: SessionMode.rhythm,
