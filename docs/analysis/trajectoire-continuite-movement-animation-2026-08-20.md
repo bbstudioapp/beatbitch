@@ -19,8 +19,8 @@ sources_citees: []
 relu_contre: ⚠️ NON RENSEIGNÉ
 ---
 
-> **Erratum — le classement des familles ci-dessous n'est plus celui du code.** [mesuré] Ce rapport
-> est antérieur à `6ec7811`, qui a redressé `_familyOf` sur la correction de Manu : `beg` et `lick` sont
+> **Erratum du 2026-08-20 — le classement des familles ci-dessous n'est plus celui du code.**
+> [mesuré] Ce rapport est antérieur à `6ec7811`, qui a redressé `_familyOf` sur la correction de Manu : `beg` et `lick` sont
 > **hors** bouche, et `suckle` se classe sur sa position (`head` bouche, `balls` hors bouche). Les
 > chiffres de tests (« 6 tests », « 1021 ») sont également ceux d'avant : 8 et 1023. Les réserves
 > listées en fin de document sur les gels et la performance sont réfutées par la mesure. Voir

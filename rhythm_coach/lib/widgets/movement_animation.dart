@@ -570,7 +570,8 @@ class _PositionLadder extends StatelessWidget {
   /// - points suivants : prochains beats, en alternant from↔to au sein du
   ///   step courant puis, à chaque frontière connue via `upcomingSteps`, du
   ///   step suivant — avec un point de passage par `tip` quand la frontière
-  ///   franchit une famille de mode (`_MovementAnimationState._familyOf`).
+  ///   franchit une famille de mode (`_MovementAnimationState._familyOf`),
+  ///   décalé du gap de transition réel du moteur (`upcoming.transitionGap`).
   /// La fenêtre temporelle est `_trajectoryWindow`. `upcomingSteps` vide =
   /// comportement historique (extrapolation indéfinie du step courant).
   List<_BeatPoint> _computeFutureBeats() {
@@ -644,11 +645,15 @@ class _PositionLadder extends StatelessWidget {
             _MovementAnimationState._durationFor(upcoming.mode, upcoming.bpm)
                 .inMilliseconds
                 .toDouble();
+        // Le premier bip réel du step suivant n'arrive pas à `boundary`
+        // (instant nominal du step) mais après le gap que
+        // `BeepEngine.applyStep` insère avant de démarrer le nouveau mode.
+        final resumeAt = boundary.add(upcoming.transitionGap);
         if (newFamily != segFamily) {
-          if (!addPoint(boundary, Position.tip.index.toDouble())) break;
-          nextTime = boundary.add(Duration(milliseconds: segBeatMs.round()));
+          if (!addPoint(resumeAt, Position.tip.index.toDouble())) break;
+          nextTime = resumeAt.add(Duration(milliseconds: segBeatMs.round()));
         } else {
-          nextTime = boundary;
+          nextTime = resumeAt;
         }
         segFamily = newFamily;
         segFrom = upcoming.from;

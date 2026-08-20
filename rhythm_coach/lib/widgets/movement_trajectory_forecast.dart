@@ -1,5 +1,6 @@
 import '../models/session.dart';
 import '../models/session_step.dart';
+import '../services/beep_engine.dart';
 
 /// Configuration effective d'un step à venir, résolue (mode/from/to/bpm
 /// hérités des steps précédents quand `null` dans le JSON source — même
@@ -15,12 +16,18 @@ class UpcomingMovementStep {
   /// Départ du step, en secondes depuis le début de la session.
   final int startSecond;
 
+  /// Pause que `BeepEngine.applyStep` insère avant de démarrer ce step,
+  /// lue via `BeepEngine.transitionGap` — pas dupliquée. Défaut zéro pour
+  /// les `UpcomingMovementStep` construits hors résolveur.
+  final Duration transitionGap;
+
   const UpcomingMovementStep({
     required this.mode,
     required this.from,
     required this.to,
     required this.bpm,
     required this.startSecond,
+    this.transitionGap = Duration.zero,
   });
 }
 
@@ -46,6 +53,7 @@ List<UpcomingMovementStep> resolveUpcomingMovementSteps({
     if (step.isTextOnly) continue;
     if (step.time <= afterSecond) continue;
 
+    final previousMode = mode;
     mode = step.mode ?? defaultMode;
     if (step.bpm != null) bpm = step.bpm!;
     if (mode == SessionMode.hold ||
@@ -63,6 +71,11 @@ List<UpcomingMovementStep> resolveUpcomingMovementSteps({
       to: to,
       bpm: bpm,
       startSecond: step.time,
+      transitionGap: BeepEngine.transitionGap(
+        incoming: mode,
+        previous: previousMode,
+        incomingTo: to,
+      ),
     ));
   }
   return result;

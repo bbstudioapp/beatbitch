@@ -324,7 +324,7 @@ class BeepEngine {
   /// Modes pour lesquels l'arrivée demande un changement physique audible
   /// → on prend la grosse pause. Beg sans `to` (libre) en fait partie ;
   /// beg avec `to` (gardé en position) reste sur la pause courte.
-  bool _needsBigGap(SessionMode incoming, Position? incomingTo) {
+  static bool _needsBigGap(SessionMode incoming, Position? incomingTo) {
     switch (incoming) {
       case SessionMode.lick:
       case SessionMode.hand:
@@ -339,6 +339,20 @@ class BeepEngine {
       case SessionMode.hold:
         return false;
     }
+  }
+
+  /// Pause appliquée par [applyStep] avant de démarrer `incoming`, exposée
+  /// en lecture seule pour que l'affichage (prévision de trajectoire) situe
+  /// ses propres points sur le même calage sans dupliquer cette règle.
+  static Duration transitionGap({
+    required SessionMode incoming,
+    required SessionMode? previous,
+    Position? incomingTo,
+  }) {
+    if (incoming == previous) return _sameModeTransitionGap;
+    return _needsBigGap(incoming, incomingTo)
+        ? _modeTransitionGapBig
+        : _modeTransitionGap;
   }
 
   /// Applique une étape au moteur. Les étapes text-only sont ignorées
@@ -401,32 +415,18 @@ class BeepEngine {
     _suckleTimer?.cancel();
     _suckleTimer = null;
 
-    // Gap de transition : silence avant le démarrage du nouveau mode pour
-    // fluidifier l'enchaînement et laisser le temps physique de changer
-    // (sortir la langue, passer à la main, respirer). Deux durées :
-    // - Modes qui demandent un changement de geste (lick/hand/biffle/
-    //   breath/freestyle/beg-libre) : 1.5 s.
-    // - Modes en continuité (rythme/hold/beg-non-libre) : 600 ms — juste
-    //   le décay du sample précédent.
-    // Pas de pause si on reste sur le même mode (changements bpm/position
-    // doivent rester continus). Le TTS du step a été lancé en parallèle
-    // par le contrôleur, donc cette pause ne le bloque pas — elle ne fait
-    // que retarder les bips, ce qui laisse l'annonce vocale en clair.
-    if (mode != previousMode) {
-      final gap = _needsBigGap(mode, step.to)
-          ? _modeTransitionGapBig
-          : _modeTransitionGap;
-      await Future<void>.delayed(gap);
-      // Si un autre `applyStep` a passé entretemps (changement de mode très
-      // rapide), c'est lui qui doit gagner — on abandonne ce démarrage.
-      if (_mode != mode) return;
-    } else {
-      // Même mode : petite respiration pour démarquer la nouvelle config
-      // (ex: rhythm 80 BPM head→mid → rhythm 100 BPM mid→throat). Sans
-      // ce gap, le passage est mécanique et on entend le tempo « sauter ».
-      await Future<void>.delayed(_sameModeTransitionGap);
-      if (_mode != mode) return;
-    }
+    // Gap de transition avant le démarrage du nouveau mode — cf.
+    // `transitionGap` pour le détail des durées. Le TTS du step a été lancé
+    // en parallèle par le contrôleur, donc cette pause ne le bloque pas —
+    // elle ne fait que retarder les bips, ce qui laisse l'annonce vocale en
+    // clair.
+    await Future<void>.delayed(
+      transitionGap(
+          incoming: mode, previous: previousMode, incomingTo: step.to),
+    );
+    // Si un autre `applyStep` a passé entretemps (changement de mode très
+    // rapide), c'est lui qui doit gagner — on abandonne ce démarrage.
+    if (_mode != mode) return;
 
     switch (mode) {
       case SessionMode.rhythm:

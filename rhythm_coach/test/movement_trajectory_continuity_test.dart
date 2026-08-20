@@ -147,6 +147,75 @@ void main() {
     );
 
     test(
+      'même famille : le premier point du step suivant respecte son '
+      'transitionGap, pas l\'instant nominal de la frontière (BeepEngine '
+      'retarde le démarrage du nouveau step, cf. transitionGap)',
+      () {
+        final beats = computeFutureBeatsForTest(
+          mode: SessionMode.rhythm,
+          from: Position.head,
+          to: Position.throat,
+          beatDuration: const Duration(milliseconds: 1000),
+          flipped: false,
+          lastBeatAt: DateTime.now(),
+          elapsed: const Duration(seconds: 11, milliseconds: 200),
+          upcomingSteps: const [
+            UpcomingMovementStep(
+              mode: SessionMode.hold,
+              from: Position.full,
+              to: Position.full,
+              bpm: 60,
+              startSecond: 12, // frontière nominale = 800 ms depuis `now`
+              transitionGap: Duration(milliseconds: 600),
+            ),
+          ],
+        );
+
+        final fullPoints =
+            beats.where((b) => !b.isAnchor && b.idx == Position.full.index);
+        expect(fullPoints, isNotEmpty);
+        final firstFullMs =
+            fullPoints.map((b) => b.t * 3000).reduce((a, b) => a < b ? a : b);
+        expect(firstFullMs, greaterThan(1300));
+        expect(firstFullMs, lessThan(1500));
+      },
+    );
+
+    test(
+      'frontière de famille : le point tip respecte le transitionGap du '
+      'step suivant, pas l\'instant nominal de la frontière',
+      () {
+        final beats = computeFutureBeatsForTest(
+          mode: SessionMode.rhythm,
+          from: Position.head,
+          to: Position.throat,
+          beatDuration: const Duration(milliseconds: 1000),
+          flipped: false,
+          lastBeatAt: DateTime.now(),
+          elapsed: const Duration(seconds: 11, milliseconds: 200),
+          upcomingSteps: const [
+            UpcomingMovementStep(
+              mode: SessionMode.hand,
+              from: Position.mid,
+              to: Position.full,
+              bpm: 60,
+              startSecond: 12, // frontière nominale = 800 ms depuis `now`
+              transitionGap: Duration(milliseconds: 1500),
+            ),
+          ],
+        );
+
+        final tipPoints =
+            beats.where((b) => !b.isAnchor && b.idx == Position.tip.index);
+        expect(tipPoints, isNotEmpty);
+        final tipMs =
+            tipPoints.map((b) => b.t * 3000).reduce((a, b) => a < b ? a : b);
+        expect(tipMs, greaterThan(2200));
+        expect(tipMs, lessThan(2400));
+      },
+    );
+
+    test(
       'suckle head reste dans la famille bouche, suckle balls en sort',
       () {
         List<({double t, double idx, bool isAnchor})> beatsFor(
@@ -250,5 +319,37 @@ void main() {
       expect(result.single.from, Position.full);
       expect(result.single.to, Position.full);
     });
+
+    test(
+      'transitionGap suit BeepEngine.transitionGap : même mode 300 ms, '
+      'changement de mode 600 ou 1500 ms selon _needsBigGap',
+      () {
+        final result = resolveUpcomingMovementSteps(
+          steps: [
+            const SessionStep(time: 5, mode: SessionMode.rhythm, bpm: 100),
+            const SessionStep(
+                time: 10, mode: SessionMode.hold, to: Position.full),
+            const SessionStep(
+                time: 15,
+                mode: SessionMode.hand,
+                from: Position.head,
+                to: Position.full),
+          ],
+          defaultMode: SessionMode.rhythm,
+          afterSecond: 0,
+          currentMode: SessionMode.rhythm,
+          currentFrom: Position.tip,
+          currentTo: Position.head,
+          currentBpm: 90,
+        );
+
+        expect(result[0].transitionGap, const Duration(milliseconds: 300),
+            reason: 'rhythm -> rhythm : même mode');
+        expect(result[1].transitionGap, const Duration(milliseconds: 600),
+            reason: 'rhythm -> hold : changement de mode, needsBigGap=false');
+        expect(result[2].transitionGap, const Duration(milliseconds: 1500),
+            reason: 'hold -> hand : changement de mode, needsBigGap=true');
+      },
+    );
   });
 }
