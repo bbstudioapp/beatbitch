@@ -598,6 +598,7 @@ class _PositionLadder extends StatefulWidget {
     final double yNow;
     final Position afterAnchorPos;
     double? bridgeTargetIdx;
+    DateTime? bridgeViaAt;
     if (lastBeatAt != null) {
       // À l'instant `lastBeatAt`, le bip de `flipped ? to : from` vient de
       // sonner — la position visuelle au moment du beat est cette position,
@@ -623,30 +624,46 @@ class _PositionLadder extends StatefulWidget {
       final anchorAt = frozenAt ?? now;
       final anchorIdx = frozenIdx ?? to.index.toDouble();
       final bridgeMs = (bridgeGap?.inMilliseconds ?? _bridgeMs).toDouble();
-      final bridgeTarget = bridgeViaTip ? Position.tip : to;
-      final resumePos = bridgeViaTip ? to : from;
-      final sinceFrozenMs = now.difference(anchorAt).inMilliseconds.toDouble();
-      final progress = (sinceFrozenMs / bridgeMs).clamp(0.0, 1.0);
+      // Le 1er bip réel du step tombe sur `to` à la fin du gap : le passage
+      // par `tip` du franchissement de famille tient donc DANS le gap, il ne
+      // décale pas `to` d'un battement.
       last = anchorAt.add(Duration(milliseconds: bridgeMs.round()));
+      final viaAt = bridgeViaTip
+          ? anchorAt.add(Duration(milliseconds: (bridgeMs / 2).round()))
+          : null;
+      double leg(DateTime start, DateTime end, double fromIdx, double toIdx) {
+        final spanMs = end.difference(start).inMilliseconds.toDouble();
+        if (spanMs <= 0) return toIdx;
+        final p = (now.difference(start).inMilliseconds.toDouble() / spanMs)
+            .clamp(0.0, 1.0);
+        return fromIdx + (toIdx - fromIdx) * Curves.easeInOutCubic.transform(p);
+      }
+
       // Hors rhythm/lick/hand, aucun `BeatEvent` ne vient jamais relever
       // `lastBeatAt` : le pont reste la seule source de position pour tout le
       // step. Passé son arrivée, il enchaîne donc lui-même sur le bip
       // synthétique de `last`, sinon le curseur reste collé à la cible du
       // pont et y retombe à chaque recalcul.
-      yNow = progress < 1
-          ? anchorIdx +
-              (bridgeTarget.index - anchorIdx) *
-                  Curves.easeInOutCubic.transform(progress)
-          : _MovementAnimationState._visualIdxNow(
-              from: bridgeTarget,
-              to: resumePos,
-              flipped: false,
-              lastBeatAt: last,
-              beatDuration: beatDuration,
-              now: now,
-            );
-      afterAnchorPos = resumePos;
-      bridgeTargetIdx = bridgeTarget.index.toDouble();
+      final tipIdx = Position.tip.index.toDouble();
+      final toIdx = to.index.toDouble();
+      if (now.isAfter(last) || now.isAtSameMomentAs(last)) {
+        yNow = _MovementAnimationState._visualIdxNow(
+          from: to,
+          to: from,
+          flipped: false,
+          lastBeatAt: last,
+          beatDuration: beatDuration,
+          now: now,
+        );
+      } else if (viaAt != null && now.isBefore(viaAt)) {
+        yNow = leg(anchorAt, viaAt, anchorIdx, tipIdx);
+      } else {
+        yNow = leg(
+            viaAt ?? anchorAt, last, viaAt == null ? anchorIdx : tipIdx, toIdx);
+      }
+      afterAnchorPos = from;
+      bridgeTargetIdx = toIdx;
+      bridgeViaAt = viaAt;
     }
 
     final beats = <_BeatPoint>[
@@ -659,14 +676,17 @@ class _PositionLadder extends StatefulWidget {
     // cette droite, jusqu'à ce qu'un recalcul le remette sur le pont — un
     // saut par recalcul.
     if (bridgeTargetIdx != null) {
-      final bridgeEndMs = last.difference(now).inMilliseconds.toDouble();
-      if (bridgeEndMs > 0) {
-        beats.add(_BeatPoint(
-          t: bridgeEndMs / windowMs,
-          idx: bridgeTargetIdx,
-          isAnchor: false,
-        ));
+      void addBridgePoint(DateTime at, double idx) {
+        final dtMs = at.difference(now).inMilliseconds.toDouble();
+        if (dtMs > 0) {
+          beats.add(_BeatPoint(t: dtMs / windowMs, idx: idx, isAnchor: false));
+        }
       }
+
+      if (bridgeViaAt != null) {
+        addBridgePoint(bridgeViaAt, Position.tip.index.toDouble());
+      }
+      addBridgePoint(last, bridgeTargetIdx);
     }
 
     // Ancrage horloge murale ↔ horloge de séance : `elapsed` est réputé
@@ -740,8 +760,10 @@ class _PositionLadder extends StatefulWidget {
         // `BeepEngine.applyStep` insère avant de démarrer le nouveau mode.
         final resumeAt = boundary.add(upcoming.transitionGap);
         if (newFamily != segFamily) {
-          if (!addPoint(resumeAt, Position.tip.index.toDouble())) break;
-          nextTime = resumeAt.add(Duration(milliseconds: segBeatMs.round()));
+          final viaAt = boundary.add(Duration(
+              milliseconds: upcoming.transitionGap.inMilliseconds ~/ 2));
+          if (!addPoint(viaAt, Position.tip.index.toDouble())) break;
+          nextTime = resumeAt;
           nextPos = newTo;
         } else {
           nextTime = resumeAt;
