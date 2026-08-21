@@ -932,8 +932,15 @@ List<_BeatPoint>? _scrollBeats(List<_BeatPoint> raw, double deltaT) {
   } else {
     final span = next.t - prev.t;
     final frac = span <= 0 ? 1.0 : ((0 - prev.t) / span).clamp(0.0, 1.0);
-    anchorIdx = prev.idx +
-        (next.idx - prev.idx) * Curves.easeInOutCubic.transform(frac);
+    // L'amortissement ne vaut que pour un vrai changement de sens : appliqué
+    // à chaque point, il fait ralentir le curseur jusqu'à l'arrêt entre deux
+    // points alignés, ce qui se voit comme une saccade.
+    final after = future.length > 1 ? future[1] : null;
+    final incoming = (next.idx - prev.idx).sign;
+    final outgoing = after == null ? incoming : (after.idx - next.idx).sign;
+    final turns = incoming != 0 && outgoing != incoming;
+    final eased = turns ? Curves.easeInOutCubic.transform(frac) : frac;
+    anchorIdx = prev.idx + (next.idx - prev.idx) * eased;
   }
   return [
     _BeatPoint(t: 0, idx: anchorIdx, isAnchor: true),
