@@ -141,10 +141,15 @@ void main() {
       final throatIdx = Position.throat.index.toDouble();
       final tipIdx = Position.tip.index.toDouble();
 
-      expect(lying.map((p) => p.idx).toList(), contains(tipIdx),
-          reason: 'lue crûment, la trajectoire remonte au bout et y reste — '
-              'la courbe collée en haut pendant le défi');
-      expect(lying.last.idx, tipIdx);
+      // Un point au bout ne suffit pas à décrire le symptôme : le
+      // franchissement de famille en pose un au passage. Ce qui le décrit,
+      // c'est que la courbe n'en redescend plus.
+      final fromFirstTip =
+          lying.map((p) => p.idx).skipWhile((idx) => idx != tipIdx).toList();
+      expect(fromFirstTip, isNotEmpty,
+          reason: 'lue crûment, la trajectoire remonte au bout');
+      expect(fromFirstTip, everyElement(tipIdx),
+          reason: 'et y reste — la courbe collée en haut pendant le défi');
       expect(
         applied.map((p) => p.idx),
         everyElement(closeTo(throatIdx, 0.01)),
