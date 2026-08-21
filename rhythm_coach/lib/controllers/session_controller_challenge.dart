@@ -1001,19 +1001,7 @@ extension ChallengeOrchestrator on SessionController {
         newSteps.add(s);
         continue;
       }
-      newSteps.add(SessionStep(
-        time: s.time - shift,
-        text: s.text,
-        mode: s.mode,
-        from: s.from,
-        to: s.to,
-        bpm: s.bpm,
-        bpmEnd: s.bpmEnd,
-        duration: s.duration,
-        chainAction: s.chainAction,
-        swallowMode: s.swallowMode,
-        background: s.background,
-      ));
+      newSteps.add(s.rebased(s.time - shift));
     }
 
     _session = Session(

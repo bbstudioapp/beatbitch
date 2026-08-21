@@ -2102,20 +2102,7 @@ class SessionController extends ChangeNotifier {
         bpm: insistentBeg.bpm,
         duration: begDuration,
       ),
-      for (final s in upcoming.steps)
-        SessionStep(
-          time: s.time + offset,
-          text: s.text,
-          mode: s.mode,
-          from: s.from,
-          to: s.to,
-          bpm: s.bpm,
-          bpmEnd: s.bpmEnd,
-          duration: s.duration,
-          chainAction: s.chainAction,
-          swallowMode: s.swallowMode,
-          background: s.background,
-        ),
+      for (final s in upcoming.steps) s.rebased(s.time + offset),
     ];
 
     final bodies = <({String id, int start, int? duration})>[];
@@ -2189,20 +2176,7 @@ class SessionController extends ChangeNotifier {
     required int breathEnd,
   }) {
     final newSteps = <SessionStep>[
-      for (final s in upcoming.steps)
-        SessionStep(
-          time: s.time + breathEnd,
-          text: s.text,
-          mode: s.mode,
-          from: s.from,
-          to: s.to,
-          bpm: s.bpm,
-          bpmEnd: s.bpmEnd,
-          duration: s.duration,
-          chainAction: s.chainAction,
-          swallowMode: s.swallowMode,
-          background: s.background,
-        ),
+      for (final s in upcoming.steps) s.rebased(s.time + breathEnd),
     ];
     final upFinalStepTime = upcoming.finalStepTime;
     final upSilentFinish = upcoming.silentFinishStartTime;
