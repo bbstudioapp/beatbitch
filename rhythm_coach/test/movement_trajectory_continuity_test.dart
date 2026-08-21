@@ -291,9 +291,11 @@ void main() {
           bridgeViaTip: true,
         );
 
-        final first = beats.firstWhere((b) => !b.isAnchor);
-        expect(first.idx, Position.full.index.toDouble());
-        expect(first.t * 3000, closeTo(1600, 60));
+        final points = beats.where((b) => !b.isAnchor).toList();
+        expect(points.first.idx, Position.tip.index.toDouble());
+        expect(points.first.t * 3000, closeTo(600, 40));
+        expect(points[1].idx, Position.full.index.toDouble());
+        expect(points[1].t * 3000, closeTo(1600, 60));
       },
     );
 
@@ -312,8 +314,10 @@ void main() {
           bridgeGap: const Duration(milliseconds: 300),
         );
 
-        final first = beats.firstWhere((b) => !b.isAnchor);
-        expect(first.t * 3000, closeTo(1300, 40));
+        final points = beats.where((b) => !b.isAnchor).toList();
+        expect(points.first.idx, Position.throat.index.toDouble());
+        expect(points.first.t * 3000, closeTo(300, 40));
+        expect(points[1].t * 3000, closeTo(1300, 40));
       },
     );
   });
