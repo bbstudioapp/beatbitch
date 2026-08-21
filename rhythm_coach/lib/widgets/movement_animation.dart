@@ -597,6 +597,7 @@ class _PositionLadder extends StatefulWidget {
     final DateTime last;
     final double yNow;
     final Position afterAnchorPos;
+    double? bridgeTargetIdx;
     if (lastBeatAt != null) {
       // À l'instant `lastBeatAt`, le bip de `flipped ? to : from` vient de
       // sonner — la position visuelle au moment du beat est cette position,
@@ -629,11 +630,28 @@ class _PositionLadder extends StatefulWidget {
       yNow = anchorIdx + (targetIdx - anchorIdx) * eased;
       last = anchorAt.add(Duration(milliseconds: bridgeMs.round()));
       afterAnchorPos = bridgeViaTip ? to : from;
+      bridgeTargetIdx = targetIdx;
     }
 
     final beats = <_BeatPoint>[
       _BeatPoint(t: 0, idx: yNow, isAnchor: true),
     ];
+
+    // L'arrivée du pont est un point de la courbe, pas seulement une cible du
+    // curseur : sans elle, la géométrie mémoïsée relie l'ancre au beat
+    // suivant en ligne droite et le défilement fait glisser le curseur sur
+    // cette droite, jusqu'à ce qu'un recalcul le remette sur le pont — un
+    // saut par recalcul.
+    if (bridgeTargetIdx != null) {
+      final bridgeEndMs = last.difference(now).inMilliseconds.toDouble();
+      if (bridgeEndMs > 0) {
+        beats.add(_BeatPoint(
+          t: bridgeEndMs / windowMs,
+          idx: bridgeTargetIdx,
+          isAnchor: false,
+        ));
+      }
+    }
 
     // Ancrage horloge murale ↔ horloge de séance : `elapsed` est réputé
     // valable à `now` (rafraîchi à chaque tick du SessionController,
