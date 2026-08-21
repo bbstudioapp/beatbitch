@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:beat_bitch/career/models/challenge.dart';
+import 'package:beat_bitch/career/models/session_length_choice.dart';
 import 'package:beat_bitch/career/models/specialization.dart';
 import 'package:beat_bitch/career/models/unlock_key.dart';
 import 'package:beat_bitch/career/services/challenge_service.dart';
@@ -64,6 +65,7 @@ void main() {
         excludeAxes: const {},
         rng: Random(42),
         isTutorial: true,
+        maxChallengeDurationSeconds: _noTruncationCap,
       );
       expect(challenge, isNotNull);
       expect(challenge!.isTutorial, isTrue);
@@ -85,6 +87,7 @@ void main() {
         excludeAxes: const {},
         rng: Random(0),
         isTutorial: false,
+        maxChallengeDurationSeconds: _noTruncationCap,
       );
       expect(challenge, isNotNull);
       expect(challenge!.axis, CapabilityAxis.holdThroatStreak);
@@ -103,6 +106,7 @@ void main() {
         excludeAxes: const {},
         rng: Random(0),
         isTutorial: false,
+        maxChallengeDurationSeconds: _noTruncationCap,
       );
       expect(challenge, isNotNull);
       expect(challenge!.axis, CapabilityAxis.rhythmBpmCeilThroat);
@@ -128,6 +132,7 @@ void main() {
         excludeAxes: const {},
         rng: Random(0),
         isTutorial: false,
+        maxChallengeDurationSeconds: _noTruncationCap,
       );
       expect(challenge, isNotNull);
       expect(challenge!.kind, ChallengeAxisKind.depthCran);
@@ -153,6 +158,7 @@ void main() {
         excludeAxes: {CapabilityAxis.holdThroatStreak},
         rng: Random(0),
         isTutorial: false,
+        maxChallengeDurationSeconds: _noTruncationCap,
       );
       // Phase 2 : le seul axe avec donnée est exclu, mais d'autres axes
       // pilotants sont vierges → fallback exploratoire actif.
@@ -169,6 +175,7 @@ void main() {
         excludeAxes: const {},
         rng: Random(0),
         isTutorial: false,
+        maxChallengeDurationSeconds: _noTruncationCap,
       );
       // Phase 2 : profil vide → fallback exploratoire (axe vierge tiré au
       // hasard parmi `CapabilityClamps.overloadableAxes`).
@@ -189,6 +196,7 @@ void main() {
           excludeAxes: const {},
           rng: Random(0),
           isTutorial: false,
+          maxChallengeDurationSeconds: _noTruncationCap,
         );
         expect(first?.axis, CapabilityAxis.rhythmBpmCeilThroat);
         expect(first?.targetCrossings, 5);
@@ -201,6 +209,7 @@ void main() {
           excludeAxes: const {},
           rng: Random(0),
           isTutorial: false,
+          maxChallengeDurationSeconds: _noTruncationCap,
         );
         expect(second?.targetCrossings, 8);
 
@@ -212,6 +221,7 @@ void main() {
           excludeAxes: const {},
           rng: Random(0),
           isTutorial: false,
+          maxChallengeDurationSeconds: _noTruncationCap,
         );
         expect(third?.targetCrossings, 12);
       },
@@ -229,6 +239,7 @@ void main() {
           excludeAxes: const {},
           rng: Random(0),
           isTutorial: false,
+          maxChallengeDurationSeconds: _noTruncationCap,
         );
         expect(challenge?.axis, CapabilityAxis.holdThroatStreak);
         expect(challenge?.targetCrossings, isNull);
@@ -249,6 +260,7 @@ void main() {
           excludeAxes: const {CapabilityAxis.rhythmDepthMax},
           rng: Random(0),
           isTutorial: false,
+          maxChallengeDurationSeconds: _noTruncationCap,
         );
         expect(throatCh?.axis, CapabilityAxis.gorgeCrossingsBpmThroat);
         expect(throatCh?.to, Position.throat,
@@ -263,6 +275,7 @@ void main() {
           excludeAxes: const {CapabilityAxis.rhythmDepthMax},
           rng: Random(0),
           isTutorial: false,
+          maxChallengeDurationSeconds: _noTruncationCap,
         );
         expect(fullCh?.axis, CapabilityAxis.gorgeCrossingsBpmFull);
         expect(fullCh?.to, Position.full);
@@ -281,6 +294,7 @@ void main() {
           excludeAxes: const {},
           rng: Random(42),
           isTutorial: true,
+          maxChallengeDurationSeconds: _noTruncationCap,
         );
         expect(challenge?.isTutorial, isTrue);
         expect(challenge?.targetCrossings, isNull);
@@ -333,6 +347,7 @@ void main() {
           excludeAxes: excluded,
           rng: Random(i),
           isTutorial: false,
+          maxChallengeDurationSeconds: _noTruncationCap,
         );
         if (ch == null) break;
         picks.add(ch);
@@ -467,6 +482,7 @@ void main() {
         excludeAxes: const {},
         rng: Random(0),
         isTutorial: false,
+        maxChallengeDurationSeconds: _noTruncationCap,
         unlocks: const {UnlockKey.basics},
       );
       expect(challenge, isNotNull);
@@ -498,6 +514,7 @@ void main() {
         excludeAxes: const {},
         rng: Random(0),
         isTutorial: false,
+        maxChallengeDurationSeconds: _noTruncationCap,
         // unlocks: default {} → mode hérité, pas de gating.
       );
       expect(challenge, isNotNull);
@@ -601,6 +618,7 @@ void main() {
         excludeAxes: const {},
         rng: Random(0),
         isTutorial: false,
+        maxChallengeDurationSeconds: _noTruncationCap,
       );
       // rhythmDepthMax reste candidat (son rôle est de pousser la
       // profondeur — pas gaté).
@@ -618,6 +636,7 @@ void main() {
         excludeAxes: const {},
         rng: Random(42),
         isTutorial: true,
+        maxChallengeDurationSeconds: _noTruncationCap,
       );
       expect(challenge, isNotNull);
       expect(challenge!.isTutorial, isTrue);
@@ -642,6 +661,7 @@ void main() {
         excludeAxes: const {},
         rng: Random(0),
         isTutorial: false,
+        maxChallengeDurationSeconds: _noTruncationCap,
       );
       expect(challenge, isNotNull);
       expect(challenge!.axis, CapabilityAxis.rhythmDepthMax);
@@ -675,6 +695,7 @@ void main() {
         excludeAxes: {CapabilityAxis.rhythmDepthMax},
         rng: Random(0),
         isTutorial: false,
+        maxChallengeDurationSeconds: _noTruncationCap,
       );
       expect(challenge, isNotNull);
       expect(challenge!.axis, CapabilityAxis.rhythmMotionStreak);
@@ -708,6 +729,7 @@ void main() {
         excludeAxes: const {},
         rng: Random(0),
         isTutorial: false,
+        maxChallengeDurationSeconds: _noTruncationCap,
       );
       expect(challenge, isNotNull);
       expect(challenge!.axis, CapabilityAxis.rhythmMotionStreak);
@@ -739,6 +761,7 @@ void main() {
         excludeAxes: const {},
         rng: Random(0),
         isTutorial: false,
+        maxChallengeDurationSeconds: _noTruncationCap,
       );
       expect(challenge, isNotNull);
       expect(challenge!.axis, CapabilityAxis.holdThroatStreak);
@@ -830,6 +853,7 @@ void main() {
           excludeAxes: const {},
           rng: Random(0),
           isTutorial: false,
+          maxChallengeDurationSeconds: _noTruncationCap,
         );
         expect(firstSession, isNotNull);
         await svc.recordSessionChallenges([firstSession!.axis]);
@@ -844,6 +868,7 @@ void main() {
           excludeAxes: lastAxes,
           rng: Random(0),
           isTutorial: false,
+          maxChallengeDurationSeconds: _noTruncationCap,
         );
         expect(secondSession, isNotNull);
         expect(secondSession!.axis, isNot(firstSession.axis));
@@ -872,6 +897,7 @@ void main() {
           excludeAxes: await svc.lastSessionAxes(),
           rng: Random(0),
           isTutorial: false,
+          maxChallengeDurationSeconds: _noTruncationCap,
         );
         // L'exploratoire reste activé tant qu'il existe au moins un axe
         // pilotant vierge non exclu (le cas ici).
@@ -926,6 +952,7 @@ void main() {
           ChallengeAxisKind.duration,
           10,
           CapabilityAxis.holdThroatStreak,
+          maxDurationSeconds: _noTruncationCap,
         ),
         13,
       );
@@ -937,6 +964,7 @@ void main() {
           ChallengeAxisKind.bpm,
           100,
           CapabilityAxis.rhythmBpmCeilThroat,
+          maxDurationSeconds: _noTruncationCap,
         ),
         130,
       );
@@ -949,6 +977,7 @@ void main() {
           ChallengeAxisKind.bpm,
           60,
           CapabilityAxis.rhythmBpmFloorThroat,
+          maxDurationSeconds: _noTruncationCap,
         ),
         46,
       );
@@ -962,6 +991,7 @@ void main() {
           ChallengeAxisKind.bpm,
           20,
           CapabilityAxis.rhythmBpmFloorShallow,
+          maxDurationSeconds: _noTruncationCap,
         ),
         18,
       );
@@ -973,6 +1003,7 @@ void main() {
           ChallengeAxisKind.depthCran,
           2, // mid
           CapabilityAxis.rhythmDepthMax,
+          maxDurationSeconds: _noTruncationCap,
         ),
         3, // throat
       );
@@ -986,6 +1017,7 @@ void main() {
           ChallengeAxisKind.depthCran,
           lastCran.toDouble(),
           CapabilityAxis.rhythmDepthMax,
+          maxDurationSeconds: _noTruncationCap,
         ),
         lastCran,
       );
@@ -1085,3 +1117,7 @@ void main() {
     });
   });
 }
+
+/// Ces tests ne portent pas sur le plafond de durée par palier : celui du
+/// plus long des formats ne tronque aucun de leurs seuils.
+final _noTruncationCap = SessionLengthChoice.longue.maxChallengeDurationSeconds;

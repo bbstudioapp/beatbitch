@@ -984,7 +984,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                                       onSave: widget.canSave
                                           ? () => _handleSave(ctrl)
                                           : null,
-                                      elapsedSeconds: ctrl.elapsedSeconds,
+                                      elapsedSeconds: ctrl.playedSeconds,
                                     ))
                               : Stack(
                                   children: [
@@ -2540,8 +2540,8 @@ class _FinishedPanel extends StatefulWidget {
   /// callback retourne le nom donné, ou null si l'utilisateur a annulé.
   final Future<String?> Function()? onSave;
 
-  /// Durée totale écoulée pendant la séance (timeline incluant les sauts
-  /// post-fail). Affichée en haut du panel.
+  /// Temps réellement passé en séance, pauses exclues
+  /// (`SessionController.playedSeconds`). Affiché en haut du panel.
   final int elapsedSeconds;
 
   const _FinishedPanel({

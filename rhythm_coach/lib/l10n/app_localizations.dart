@@ -1050,6 +1050,12 @@ abstract class AppLocalizations {
   /// **'Erreur de chargement :\n{error}'**
   String careerLoadError(String error);
 
+  /// No description provided for @careerDurationPlusChallenges.
+  ///
+  /// In fr, this message translates to:
+  /// **'{duration} + le temps des défis'**
+  String careerDurationPlusChallenges(String duration);
+
   /// No description provided for @careerDurationSection.
   ///
   /// In fr, this message translates to:
@@ -1173,7 +1179,7 @@ abstract class AppLocalizations {
   /// No description provided for @careerChallengesDescription.
   ///
   /// In fr, this message translates to:
-  /// **'Un défi opt-in vers 60 % de la séance. Calibre vite, peut faire monter le niveau plus rapidement.'**
+  /// **'De un à quatre défis opt-in répartis dans la séance, selon le format choisi. Calibrent vite, peuvent faire monter le niveau plus rapidement. Leur temps s\'ajoute à la durée annoncée.'**
   String get careerChallengesDescription;
 
   /// No description provided for @challengePassButton.
@@ -1944,6 +1950,12 @@ abstract class AppLocalizations {
   /// **'Écouter'**
   String get coachVoicePreview;
 
+  /// Bouton de la feuille de voix d'un coach : rend au coach la vitesse et la hauteur de son preset d'origine. Affiché seulement quand au moins l'une des deux a été réglée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vitesse et hauteur d’origine'**
+  String get coachVoiceResetRatePitch;
+
   /// No description provided for @coachVoicePlatformNoSelection.
   ///
   /// In fr, this message translates to:
@@ -2363,18 +2375,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Affiche un bouton dans la séance qui termine immédiatement comme un succès complet (badges, milestones, niveau). Pratique pour itérer sur le contenu sans tout jouer.'**
   String get soundsDebugSkipSessionSubtitle;
-
-  /// No description provided for @soundsDebugScriptedBreaks.
-  ///
-  /// In fr, this message translates to:
-  /// **'Postures + breaks scénarisés'**
-  String get soundsDebugScriptedBreaks;
-
-  /// No description provided for @soundsDebugScriptedBreaksSubtitle.
-  ///
-  /// In fr, this message translates to:
-  /// **'Active les postures imposées (à genoux, à quatre pattes…) et les pauses actives de récup sur les sessions longues. Expérimental, en cours de calibration.'**
-  String get soundsDebugScriptedBreaksSubtitle;
 
   /// No description provided for @soundsShowBackgroundMedia.
   ///
@@ -3995,6 +3995,24 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Petite horloge mm:ss en haut de l\'écran pendant la séance.'**
   String get profileShowRemainingTimeSubtitle;
+
+  /// No description provided for @profileSessionFlowSection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déroulé de séance'**
+  String get profileSessionFlowSection;
+
+  /// No description provided for @profileScriptedBreaks.
+  ///
+  /// In fr, this message translates to:
+  /// **'Postures imposées et pauses'**
+  String get profileScriptedBreaks;
+
+  /// No description provided for @profileScriptedBreaksSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'La coach impose une posture (à genoux, à quatre pattes…) et insère des pauses actives sur les séances longues. Les postures se débloquent au fil des paliers de carrière.'**
+  String get profileScriptedBreaksSubtitle;
 
   /// No description provided for @sessionRemainingTimeLabel.
   ///

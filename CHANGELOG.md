@@ -4,6 +4,32 @@
 
 ## [Non publié]
 
+## [0.6.2] — 2026-08-20
+
+Version de correction née d'un retour d'utilisation de la 0.6.1 : des séances beaucoup plus longues qu'annoncé, des défis qui disparaissaient ou figeaient la séance, et une fonctionnalité annoncée en 0.6.0 que personne n'a jamais vue. Plus deux nouveautés : régler la voix de chaque coach, et une profondeur qui remonte enfin toute seule.
+
+### Ajouté
+- **Les postures imposées et les pauses scénarisées sont enfin actives** — annoncées avec la 0.6.0, elles étaient en réalité restées éteintes derrière un interrupteur caché : personne ne les a vues pendant deux versions. Elles sont désormais actives par défaut, et se coupent depuis le Profil, section « Déroulé de séance ».
+- **Le débit et la hauteur de la voix se règlent coach par coach** — les deux curseurs sont posés directement sur la fiche du coach, avec un bouton pour revenir à sa voix d'origine. Le réglage est retenu, et part avec le fichier de voix que tu peux partager.
+
+### Modifié
+- **La durée annoncée dit maintenant que le temps des défis s'ajoute** — un défi ne prend rien à la séance, il la rallonge. Une « Moyenne » à trois défis annonçait 25 minutes pour environ 35 minutes vécues. La durée affichée porte désormais la mention « + le temps des défis » quand ils sont activés, et le réglage des défis prévient au moment où on l'active.
+- **Le réglage des défis dit combien il en pose** — il annonçait « un défi vers 60 % de la séance » alors qu'il peut en poser jusqu'à quatre, répartis entre 20 % et 80 % de la séance. Faux dans les quatre langues.
+
+### Corrigé
+- **Les séances rendaient beaucoup moins de contenu qu'annoncé** — le temps réservé à un défi était retiré deux fois de la séance. Une « Moyenne » d'environ 25 minutes avec trois défis ne rendait plus qu'environ 16 minutes de contenu réel. La séance dure de nouveau le temps demandé, plus le temps des défis.
+- **Un défi sur trois disparaissait sans un mot** — le plus long des défis tirés n'entrait jamais dans la séance, faute d'une place que son insertion crée pourtant elle-même. Tous les défis demandés sont désormais posés.
+- **Des défis interminables** — un défi de tenue n'avait aucune limite de durée et grandissait indéfiniment avec la pratique : sur un profil avancé, une « Bâclée » annoncée 6 minutes en durait 15, et rien ne bornait la suite. La durée d'un défi est désormais proportionnée au format de séance choisi ; l'ensemble des défis ne peut plus dépasser la moitié de la durée annoncée.
+- **Le temps passé en défi ne comptait pour rien** — l'écran de fin l'ignorait, et il n'était crédité ni aux statistiques, ni aux points de spécialisation, ni aux déblocages de coach, ni aux badges d'endurance. Un défi de dix minutes ne rapportait rien. Le temps réellement joué est maintenant compté partout.
+- **Un « JE PEUX PAS » pouvait faire perdre un défi** — quand il tombait juste au moment où un défi allait s'annoncer, la reprise passait par-dessus et le défi disparaissait : quatre défis demandés, trois joués.
+- **Une séance pouvait se figer ou planter à cause d'un défi** — quand un défi avait été écarté, les repères internes se décalaient et la séance se bloquait ou s'arrêtait net. Et si un décalage devait réapparaître, il laisse maintenant une trace au lieu de disparaître en silence.
+- **Une séance restait gelée après une pause scénarisée** — la demande de se mettre en position ne se levait pas sur plusieurs chemins : un « JE PEUX PAS » pendant la pause, une escalade « Utilise-moi », une reprise après un défi. La séance semblait tourner, mais plus rien n'avançait pendant une minute et demie. Le blocage est désormais déduit de la scène qui l'a ordonné, et non plus levé chemin par chemin.
+- **L'ordre de se mettre en position et l'annonce d'un défi tombaient au même instant** — les deux visaient le milieu de la séance sans se voir. Les pauses cèdent maintenant le passage aux défis, sans que les horaires de défi bougent.
+- **La mise en scène disparaissait après un défi** — dès qu'un défi s'était joué, toutes les pauses scénarisées restantes de la séance s'évaporaient.
+- **Une posture pouvait réveiller un écran de fin** — la sécurité de mise en place continuait de courir après l'arrêt d'une séance et se déclenchait une minute et demie plus tard, dans le vide.
+- **La profondeur restait bloquée au palier du dessous** — l'app savait qu'une joueuse avait déjà tenu un palier, et ne le lui reproposait plus jamais en rythme pulsé, sauf si elle réclamait elle-même une escalade. Ce qui a été perdu se regagne maintenant en deux séances de réussite. Les profils déjà faussés se réparent d'eux-mêmes, sans rien perdre.
+- **Le débit et la hauteur réglés dans le Profil étaient perdus** — les deux curseurs agissaient sur le moment mais n'étaient jamais enregistrés : perdus à la fermeture de l'app, et remplacés par les valeurs d'usine dès qu'une séance de carrière rendait la main.
+
 ## [0.6.1] — 2026-08-08
 
 Version de correction, née d'un retour d'utilisation de la 0.6.0 : des séances qui se figeaient sur la première consigne, des autorisations demandées pour rien, un défi de vitesse devenu injouable. Plus une nouveauté : choisir soi-même la voix de chaque coach.
@@ -227,7 +253,8 @@ Grosse mise à jour du mode carrière : nouvelle enveloppe de difficulté, nouve
 ## [0.1.0] — 2026-05-08
 - Premier release public : coach vocal rythmique hors-ligne pour Android, adult gate 18+, onboarding, mode carrière + scénarios, badges, profil/réputation.
 
-[Non publié]: https://github.com/bbstudioapp/beatbitch/compare/v0.6.1...develop
+[Non publié]: https://github.com/bbstudioapp/beatbitch/compare/v0.6.2...develop
+[0.6.2]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.6.2
 [0.6.1]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.6.1
 [0.6.0]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.6.0
 [0.5.3]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.5.3

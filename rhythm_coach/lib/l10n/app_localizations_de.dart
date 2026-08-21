@@ -526,6 +526,11 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String careerDurationPlusChallenges(String duration) {
+    return '$duration + Challenge-Zeit';
+  }
+
+  @override
   String get careerDurationSection => 'Dauer';
 
   @override
@@ -592,7 +597,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get careerChallengesDescription =>
-      'Eine optionale Herausforderung etwa bei 60 % der Sitzung. Kalibriert schnell, kann das Level-Up beschleunigen.';
+      'Ein bis vier optionale Herausforderungen, über die Sitzung verteilt, je nach gewähltem Format. Kalibrieren schnell, können das Level-Up beschleunigen. Ihre Zeit kommt zur angezeigten Dauer hinzu.';
 
   @override
   String get challengePassButton => 'ÜBERSPR.';
@@ -1091,6 +1096,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get coachVoicePreview => 'Anhören';
 
   @override
+  String get coachVoiceResetRatePitch =>
+      'Ursprüngliche Geschwindigkeit und Tonhöhe';
+
+  @override
   String get coachVoicePlatformNoSelection =>
       'Auf dieser Plattform hängt die Stimme von der installierten Engine ab.';
 
@@ -1336,13 +1345,6 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get soundsDebugSkipSessionSubtitle =>
       'Zeigt einen Knopf in der Session, der sie sofort als vollen Erfolg beendet (Abzeichen, Meilensteine, Stufe). Praktisch, um an Inhalten zu feilen, ohne alles durchzuspielen.';
-
-  @override
-  String get soundsDebugScriptedBreaks => 'Vorgegebene Posen + Breaks';
-
-  @override
-  String get soundsDebugScriptedBreaksSubtitle =>
-      'Aktiviert vorgegebene Posen (kniend, auf allen vieren…) und aktive Erholungspausen in langen Sessions. Experimentell, in Kalibrierung.';
 
   @override
   String get soundsShowBackgroundMedia => 'Hintergrundmedien in der Session';
@@ -2265,6 +2267,16 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get profileShowRemainingTimeSubtitle =>
       'Kleine mm:ss-Uhr oben auf dem Bildschirm während der Sitzung.';
+
+  @override
+  String get profileSessionFlowSection => 'Sitzungsablauf';
+
+  @override
+  String get profileScriptedBreaks => 'Vorgegebene Posen und Pausen';
+
+  @override
+  String get profileScriptedBreaksSubtitle =>
+      'Die Domina gibt eine Pose vor (kniend, auf allen vieren …) und baut in langen Sitzungen aktive Pausen ein. Die Posen werden nach und nach über die Karriere-Meilensteine freigeschaltet.';
 
   @override
   String sessionRemainingTimeLabel(String time) {

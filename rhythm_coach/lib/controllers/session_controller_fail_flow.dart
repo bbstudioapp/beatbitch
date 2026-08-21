@@ -52,6 +52,19 @@ extension FailFlowOrchestrator on SessionController {
       return;
     }
 
+    // Break scénarisé (issue #77) : tout ce qui suit rebat la timeline (saut
+    // de section, ou régénération de retry) sans jamais passer par
+    // `_exitBreak`, qui resterait sinon coincé à `true` sur une timeline qui
+    // n'a plus de trou d'effort.
+    //
+    // La pose du break n'est pas appliquée : sa phrase de changement ne sera
+    // pas prononcée, imposer une position sans l'ordonner serait un ordre
+    // muet. Le break est annulé, sa mise en scène avec. Le gel de posture,
+    // lui, n'a rien à lever ici : il est dérivé de la scène qui l'a ordonné
+    // (`PostureGate`) et tombe de lui-même dès que ce flow prend la main.
+    _breakActive = false;
+    _activeBreak = null;
+
     // Retry milestone : si on rate dans la fenêtre pédagogique, on tente
     // d'abord de proposer une nouvelle tentative via le callback (qui
     // regénère + appelle requestUpgrade). Si le callback prend la main,
@@ -462,12 +475,22 @@ extension FailFlowOrchestrator on SessionController {
   /// sont sautés silencieusement.
   ///
   /// Retourne true si un saut a eu lieu, false si on est déjà dans la
-  /// dernière section (pas de saut effectué).
+  /// dernière section (pas de saut effectué) **ou** si le saut aurait
+  /// enjambé la fenêtre d'armement d'un défi encore à jouer.
   bool _skipToNextSection() {
     final currentSec = elapsedSeconds;
+    // Un défi ne s'arme que si l'horloge traverse `[trigger, trigger + 13)`
+    // pendant qu'un tick tourne (`_updateChallengePhase`). Un fail qui tombe
+    // dans cette fenêtre, ou pile dessus, laissait le saut passer par-dessus :
+    // le défi n'était jamais proposé et disparaissait sans un mot. On borne
+    // donc le saut à l'ouverture de la fenêtre — quitte à ne pas sauter du
+    // tout quand elle est déjà ouverte (le défi s'arme alors au tick suivant
+    // et gèle l'horloge lui-même).
+    final pendingTrigger = _nextPendingChallengeTrigger(currentSec);
     for (var i = _nextStepIndex; i < session.steps.length; i++) {
       final step = session.steps[i];
       if (!step.isTextOnly && step.time > currentSec) {
+        if (pendingTrigger != null && step.time > pendingTrigger) break;
         final delta = step.time - currentSec;
         _timelineOffset += Duration(seconds: delta);
         _nextStepIndex = i;
@@ -475,6 +498,21 @@ extension FailFlowOrchestrator on SessionController {
       }
     }
     return false;
+  }
+
+  /// Trigger time du premier défi encore armable à [fromSec] ou après (sa
+  /// fenêtre est ouverte ou à venir), ou null s'il n'en reste aucun.
+  int? _nextPendingChallengeTrigger(int fromSec) {
+    final armable =
+        min(session.challenges.length, session.challengeTriggerTimes.length);
+    int? earliest;
+    for (var i = 0; i < armable; i++) {
+      if (_completedChallengeIndices.contains(i)) continue;
+      final trigger = session.challengeTriggerTimes[i];
+      if (trigger + kChallengeBreathDurationSeconds <= fromSec) continue;
+      if (earliest == null || trigger < earliest) earliest = trigger;
+    }
+    return earliest;
   }
 
   /// Délai annulable : si [_failActive] passe à false pendant l'attente

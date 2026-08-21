@@ -403,6 +403,8 @@ class _CareerScreenState extends State<CareerScreen> {
           excludeAxes: strictExcluded,
           rng: Random(),
           isTutorial: isTuto,
+          maxChallengeDurationSeconds:
+              effectiveLengthChoice.maxChallengeDurationSeconds,
           // Cascade showcase (spec § 5.1) : si la file showcase a une
           // tête non-encore-consommée par une milestone insérée, le défi
           // tente de l'honorer en priorité (axe pilotant de la branche).
@@ -422,6 +424,8 @@ class _CareerScreenState extends State<CareerScreen> {
             excludeAxes: excludedAxes,
             rng: Random(),
             isTutorial: false,
+            maxChallengeDurationSeconds:
+                effectiveLengthChoice.maxChallengeDurationSeconds,
             showcaseBranch: isFirst ? showcaseBranch : null,
             unlocks: unlockedKeys,
           );
@@ -1263,9 +1267,17 @@ class _CareerScreenState extends State<CareerScreen> {
             sessionsCompleted: bundle.completedSessions,
             lengthChoice: lengthForDisplay,
           );
-          final durationLabel = lengthChoice == SessionLengthChoice.aleatoire
+          final baseDurationLabel = lengthChoice ==
+                  SessionLengthChoice.aleatoire
               ? lengthChoice.localizedDuration(context)
               : formatDurationCompact(context, lengthChoice.durationSeconds);
+          // Un défi ne prend rien à la séance, il s'y ajoute : la durée du
+          // palier est celle du contenu, pas celle de la montre. Tous les
+          // paliers reçoivent au moins un défi quand le toggle est actif
+          // (`targetChallengesFor`), donc la mention vaut pour tous.
+          final durationLabel = _challengesEnabled
+              ? t.careerDurationPlusChallenges(baseDurationLabel)
+              : baseDurationLabel;
           final activeCoach = _resolveCoach(bundle);
           final principal = coachService.currentTierPrincipal;
           final isFreeTraining = !coachService.advancesTier(activeCoach);
@@ -2084,9 +2096,12 @@ class _CareerBundle {
   /// Sert au déblocage des coachs par investissement (Phase 19.10).
   final int totalSeconds;
 
-  /// Flag debug `debug.scripted_breaks` (issue #77). Quand `true`, les
-  /// postures imposées + breaks scénarisés sont activés : passé à
-  /// `generate(scriptedBreaks:)` à tous les call sites.
+  /// Préférence utilisateur `pref.scripted_breaks` (issue #77), on par défaut.
+  /// Quand `true`, les postures imposées + breaks scénarisés sont activés.
+  /// Passé à `generate(scriptedBreaks:)` sur les deux entrées qui construisent
+  /// un contrôleur frais (`_start`, `_handleEncore`) — pas aux régens
+  /// mi-séance, qui swappent `_session` en vol et repartent sans break (cf.
+  /// reset d'état dans `requestUpgrade`).
   final bool scriptedBreaks;
 
   const _CareerBundle({

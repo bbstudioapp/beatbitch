@@ -171,6 +171,30 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// Amène l'option de voix [label] dans le viewport de la feuille, puis la
+  /// rend.
+  ///
+  /// La feuille porte ses curseurs de vitesse et de hauteur sous la liste :
+  /// passé les premières entrées, la voix visée n'est plus à l'écran, et le
+  /// geste réel est de défiler jusqu'à elle. Tous les taps de voix passent
+  /// par ici, y compris ceux qui atteignent encore leur cible sans défiler —
+  /// sinon la prochaine voix ajoutée recasse un test au hasard.
+  Future<Finder> voiceOption(WidgetTester tester, String label) async {
+    final option = find.text(label);
+    await tester.scrollUntilVisible(
+      option,
+      60,
+      // Le `Scrollable` de la feuille, pas celui de l'écran qui l'a
+      // ouverte : les sélecteurs de coach en ont un aussi.
+      scrollable: find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    await tester.pump();
+    return option;
+  }
+
   /// Ouvre la feuille du coach et y choisit [voiceLabel], exactement comme
   /// l'utilisateur le fait dans le Profil.
   Future<void> pickVoiceForCoach(
@@ -183,7 +207,7 @@ void main() {
     await pumpSection(tester, tts, coaches: coaches);
     await tester.tap(find.text(coachName));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(voiceLabel));
+    await tester.tap(await voiceOption(tester, voiceLabel));
     await tester.pumpAndSettle();
     // Fermer la feuille : c'est là que le service rend la main au réglage
     // hors-carrière (l'aperçu a posé le preset du coach).
@@ -317,9 +341,11 @@ void main() {
     });
   });
 
-  group('Débit et hauteur restent ceux du coach', () {
-    testWidgets('l\'utilisateur choisit un timbre, pas un rythme',
-        (tester) async {
+  group('Choisir une voix ne touche pas le débit ni la hauteur', () {
+    // Les deux se règlent séparément depuis la même fiche (cf.
+    // `coach_voice_tuning_test.dart`) : ce test dit que **choisir un timbre**
+    // laisse la couleur du coach intacte, pas que celle-ci soit intouchable.
+    testWidgets('la couleur vocale du coach reste la sienne', (tester) async {
       final tts = TtsService(locale: const Locale('en'));
       await pickVoiceForCoach(
           tester, tts, 'Marc', 'en-gb-x-gbd-local  ·  en-GB');
@@ -475,7 +501,8 @@ void main() {
 
       await tester.tap(find.text('Marc'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('en-gb-x-gbd-local  ·  en-GB'));
+      await tester
+          .tap(await voiceOption(tester, 'en-gb-x-gbd-local  ·  en-GB'));
       // Surtout pas de `pumpAndSettle` ici : l'aperçu doit être encore en
       // vol au moment où la feuille se ferme.
       await tester.pump();

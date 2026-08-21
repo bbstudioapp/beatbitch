@@ -527,6 +527,11 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String careerDurationPlusChallenges(String duration) {
+    return '$duration + tiempo de retos';
+  }
+
+  @override
   String get careerDurationSection => 'Duración';
 
   @override
@@ -594,7 +599,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get careerChallengesDescription =>
-      'Un reto opcional alrededor del 60% de la sesión. Se calibra rápido, puede acelerar tu progresión de nivel.';
+      'De uno a cuatro retos opcionales repartidos por la sesión, según el formato elegido. Se calibran rápido, pueden acelerar tu progresión de nivel. Su tiempo se suma a la duración indicada.';
 
   @override
   String get challengePassButton => 'PASAR';
@@ -1092,6 +1097,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get coachVoicePreview => 'Escuchar';
 
   @override
+  String get coachVoiceResetRatePitch => 'Velocidad y tono originales';
+
+  @override
   String get coachVoicePlatformNoSelection =>
       'En esta plataforma la voz depende del motor instalado.';
 
@@ -1336,13 +1344,6 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get soundsDebugSkipSessionSubtitle =>
       'Muestra un botón en la sesión que la termina inmediatamente como éxito total (insignias, hitos, nivel). Útil para iterar sobre el contenido sin jugar.';
-
-  @override
-  String get soundsDebugScriptedBreaks => 'Posturas + pausas guionizadas';
-
-  @override
-  String get soundsDebugScriptedBreaksSubtitle =>
-      'Activa las posturas impuestas (de rodillas, a cuatro patas…) y las pausas activas de recuperación en sesiones largas. Experimental, en calibración.';
 
   @override
   String get soundsShowBackgroundMedia => 'Medios de fondo en sesión';
@@ -2263,6 +2264,16 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get profileShowRemainingTimeSubtitle =>
       'Reloj mm:ss pequeño en la parte alta de la pantalla durante la sesión.';
+
+  @override
+  String get profileSessionFlowSection => 'Desarrollo de la sesión';
+
+  @override
+  String get profileScriptedBreaks => 'Posturas impuestas y pausas';
+
+  @override
+  String get profileScriptedBreaksSubtitle =>
+      'La coach impone una postura (de rodillas, a cuatro patas…) e inserta pausas activas en las sesiones largas. Las posturas se desbloquean a medida que avanzas por los hitos de carrera.';
 
   @override
   String sessionRemainingTimeLabel(String time) {

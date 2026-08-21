@@ -228,6 +228,10 @@
       "error": { "type": "String" }
     }
   },
+  "careerDurationPlusChallenges": "{duration} + le temps des défis",
+  "@careerDurationPlusChallenges": {
+    "placeholders": { "duration": { "type": "String" } }
+  },
   "careerDurationSection": "Durée",
   "careerQuickieToggle": "Session bâclée",
   "careerQuickieSubtitle": "6 min — intense",
@@ -248,7 +252,7 @@
   "sessionLengthAleatoireDuration": "Surprise",
   "sessionLengthAleatoireDescription": "Durée surprise tirée parmi Courte, Moyenne ou Longue. Pas de minuteur.",
   "careerChallengesToggle": "Défis intra-séance",
-  "careerChallengesDescription": "Un défi opt-in vers 60 % de la séance. Calibre vite, peut faire monter le niveau plus rapidement.",
+  "careerChallengesDescription": "De un à quatre défis opt-in répartis dans la séance, selon le format choisi. Calibrent vite, peuvent faire monter le niveau plus rapidement. Leur temps s'ajoute à la durée annoncée.",
   "challengePassButton": "PASSE",
   "challengeGoButton": "MAINTIENS",
   "challengeHoldHintLive": "Garde le doigt sur l'écran",
@@ -534,6 +538,10 @@
   "coachVoiceAutomatic": "Automatique",
   "coachVoiceUnavailable": "Voix enregistrée absente de cet appareil",
   "coachVoicePreview": "Écouter",
+  "coachVoiceResetRatePitch": "Vitesse et hauteur d’origine",
+  "@coachVoiceResetRatePitch": {
+    "description": "Bouton de la feuille de voix d'un coach : rend au coach la vitesse et la hauteur de son preset d'origine. Affiché seulement quand au moins l'une des deux a été réglée."
+  },
   "coachVoicePlatformNoSelection": "Sur cette plateforme, la voix dépend du moteur installé.",
   "coachVoiceLine": "Voix : {value}",
   "@coachVoiceLine": {
@@ -648,8 +656,6 @@
   "soundsDebugCameraHoldCheckSubtitle": "Pendant les holds, la caméra avant vérifie que la position est tenue. Le coach lance un rappel court si tu dérives. Nécessite d'avoir calibré la caméra (icône caméra de l'écran SCÉNARIO).",
   "soundsDebugSkipSession": "Bouton « terminer en succès »",
   "soundsDebugSkipSessionSubtitle": "Affiche un bouton dans la séance qui termine immédiatement comme un succès complet (badges, milestones, niveau). Pratique pour itérer sur le contenu sans tout jouer.",
-  "soundsDebugScriptedBreaks": "Postures + breaks scénarisés",
-  "soundsDebugScriptedBreaksSubtitle": "Active les postures imposées (à genoux, à quatre pattes…) et les pauses actives de récup sur les sessions longues. Expérimental, en cours de calibration.",
   "soundsShowBackgroundMedia": "Fonds média en séance",
   "soundsShowBackgroundMediaSubtitle": "Affiche les images/GIF présents dans assets/backgrounds/ en arrière-plan, avec rotation à chaque step. Désactive pour ne voir que le dégradé d'ambiance.",
   "sessionDebugFinishButton": "DEBUG : terminer en succès",
@@ -1102,6 +1108,9 @@
   "profileSessionDisplaySection": "Affichage de session",
   "profileShowRemainingTime": "Afficher le temps restant",
   "profileShowRemainingTimeSubtitle": "Petite horloge mm:ss en haut de l'écran pendant la séance.",
+  "profileSessionFlowSection": "Déroulé de séance",
+  "profileScriptedBreaks": "Postures imposées et pauses",
+  "profileScriptedBreaksSubtitle": "La coach impose une posture (à genoux, à quatre pattes…) et insère des pauses actives sur les séances longues. Les postures se débloquent au fil des paliers de carrière.",
   "sessionRemainingTimeLabel": "Restant : {time}",
   "@sessionRemainingTimeLabel": {
     "placeholders": {

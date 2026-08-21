@@ -12,6 +12,7 @@ library;
 import 'dart:async';
 
 import 'package:beat_bitch/career/models/challenge.dart';
+import 'package:beat_bitch/career/models/session_length_choice.dart';
 import 'package:beat_bitch/career/services/challenge_service.dart';
 import 'package:beat_bitch/career/services/generation/bpm_pacing.dart';
 import 'package:beat_bitch/models/session.dart';
@@ -117,6 +118,7 @@ void main() {
         ChallengeAxisKind.bpm,
         prefs.getDouble('cap.rhythm.bpm_ceil.shallow.comfort')!,
         CapabilityAxis.rhythmBpmCeilShallow,
+        maxDurationSeconds: _noTruncationCap,
       );
       expect(target, lessThanOrEqualTo(BeepEngine.kMaxBpm));
     });
@@ -568,3 +570,7 @@ void main() {
     });
   });
 }
+
+/// Ces tests ne portent pas sur le plafond de durée par palier : celui du
+/// plus long des formats ne tronque aucun de leurs seuils.
+final _noTruncationCap = SessionLengthChoice.longue.maxChallengeDurationSeconds;

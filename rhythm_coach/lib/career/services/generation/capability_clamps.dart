@@ -168,8 +168,8 @@ class CapabilityClamps implements CapabilityClampSurface {
   static const double kIntenseComfortBoost = 1.30;
 
   /// Bonus de cran de profondeur appliqué à `rhythmDepthMax` quand
-  /// `intense=true` (séance d'escalade). Cumulé avec le +1 cran de
-  /// surcharge si l'axe est aussi `overloadAxis`. Le clamp `to <=
+  /// `intense=true` (séance d'escalade). Cumulé avec le +1 cran accordé en
+  /// amont par [capabilityCapFor] (surcharge ou sonde). Le clamp `to <=
   /// maxDepthIndex` (Position.full) et les milestones acquittées bornent
   /// en amont via `_maxDepthIndex`/`_milestoneRhythmCeilingIdx`, donc
   /// "+1 cran" ne fait jamais sauter une milestone non débloquée.
@@ -177,7 +177,8 @@ class CapabilityClamps implements CapabilityClampSurface {
 
   /// Plafond effectif (= le plus contraignant) d'un axe de capacité pour
   /// la génération en cours : minimum de `comfort` (éventuellement
-  /// **surchargé** si c'est [overloadAxis] de la séance, et **boosté**
+  /// **surchargé** si c'est [overloadAxis] de la séance, **sondé d'un cran
+  /// vers le `best` prouvé** pour `rhythmDepthMax`, et **boosté**
   /// par `kIntenseComfortBoost` si la séance est `intense`) et du plafond
   /// figé sur un FAIL de cette session ([ceilings], §6 — qui plafonne
   /// *même* l'axe surchargé : pas de re-fail dans la même séance).
@@ -189,18 +190,30 @@ class CapabilityClamps implements CapabilityClampSurface {
     final p = config.capProfile;
     if (p == null) return null;
     var comfort = p.comfortOf(axis);
-    if (comfort != null && axis == config.overloadAxis) {
-      if (axis == CapabilityAxis.rhythmDepthMax) {
-        // Profondeur = cran discret : on autorise +1 cran, et seulement si
-        // la confiance au cran courant est là (cf. asymétries §5).
-        // « Humiliation l'autorise » + « milestone d'unlock acquittée »
-        // sont déjà garantis par `_maxDepthIndex` (qui borne `to` en amont).
-        if (p.stateOf(axis).successRate >= CapabilityRegulator.kDepthCranGate) {
-          comfort = comfort + 1;
-        }
-      } else {
-        comfort = comfort * config.overloadFactor;
-      }
+    if (comfort != null && axis == CapabilityAxis.rhythmDepthMax) {
+      // Profondeur = cran discret, deux régimes distincts pour le +1 cran :
+      //
+      // - **Escalade** (la profondeur EST l'axe surchargé et la confiance au
+      //   cran courant est là) : le cran peut dépasser le `best`. C'est ce
+      //   qui fait grandir le `best` — comportement d'origine, inchangé.
+      // - **Sonde** (tout le reste) : le cran est borné par le `best` déjà
+      //   prouvé. On ne pousse pas au-delà de ce qu'elle a tenu, donc pas
+      //   besoin d'attendre que l'axe gagne la loterie de surcharge ni que
+      //   `successRate` repasse le seuil — deux conditions qui verrouillaient
+      //   la remontée : tant que le clamp rabat `to` au comfort, `reached` ne
+      //   dépasse jamais le comfort, donc le régulateur ne voit jamais
+      //   l'overshoot qui le ferait remonter.
+      //
+      // `max(comfort, …)` : garde-fou pour un profil où `best < comfort`
+      // (état persisté incohérent) — la sonde ne doit jamais RABAISSER le cap.
+      // « Milestone d'unlock acquittée » reste garanti en amont par
+      // `_maxDepthIndex` / `milestoneRhythmCeilingIdx`.
+      final best = p.bestOf(axis) ?? comfort;
+      final escalating = axis == config.overloadAxis &&
+          p.stateOf(axis).successRate >= CapabilityRegulator.kDepthCranGate;
+      comfort = escalating ? comfort + 1 : max(comfort, min(comfort + 1, best));
+    } else if (comfort != null && axis == config.overloadAxis) {
+      comfort = comfort * config.overloadFactor;
     }
     // Boost intense (Supplier / Encore) : cumulatif avec la surcharge
     // de l'axe. Pour `rhythmDepthMax` (cran discret), bonus exprimé en

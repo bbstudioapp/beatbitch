@@ -22,10 +22,15 @@ import '../theme/app_theme.dart';
 /// reflète l'état courant du [TtsService] partagé : changer la voix /
 /// vitesse / hauteur ici s'applique immédiatement.
 ///
-/// Seule la **voix** est mémorisée (par langue, cf. `TtsService.setUserVoice`) :
-/// elle survit à la fermeture de l'app et est restituée en sortie de session
-/// carrière. Vitesse et hauteur ne le sont pas encore — elles retombent aux
-/// défauts plateforme dès qu'un coach a posé son preset.
+/// Les trois réglages sont mémorisés et restitués à l'identique — à la
+/// fermeture de l'app comme en sortie de session carrière (cf.
+/// `TtsService.setUserVoice`, `setUserRate`, `setUserPitch`). La voix l'est
+/// par langue, la vitesse et la hauteur globalement : un nom de voix
+/// appartient à sa langue, un débit est un confort d'écoute.
+///
+/// Les curseurs poussent au moteur à chaque frame et n'enregistrent qu'au
+/// relâchement : on entend l'effet en glissant sans écrire une préférence
+/// par pixel parcouru.
 final RegExp _namePlaceholder =
     RegExp(r'\s?\{\s*name\s*\}', caseSensitive: false);
 
@@ -167,7 +172,7 @@ class _VoiceSettingsSectionState extends State<VoiceSettingsSection> {
           },
         ),
         const SizedBox(height: 8),
-        _LabeledSlider(
+        LabeledVoiceSlider(
           label: t.soundsRateLabel,
           value: _rate,
           min: 0.3,
@@ -176,9 +181,10 @@ class _VoiceSettingsSectionState extends State<VoiceSettingsSection> {
             setState(() => _rate = v);
             widget.tts.setRate(v);
           },
+          onChangeEnd: widget.tts.setUserRate,
         ),
         const SizedBox(height: 8),
-        _LabeledSlider(
+        LabeledVoiceSlider(
           label: t.soundsPitchLabel,
           value: _pitch,
           min: 0.5,
@@ -187,6 +193,7 @@ class _VoiceSettingsSectionState extends State<VoiceSettingsSection> {
             setState(() => _pitch = v);
             widget.tts.setPitch(v);
           },
+          onChangeEnd: widget.tts.setUserPitch,
         ),
         const SizedBox(height: 8),
         _TestVoiceButton(
@@ -261,19 +268,31 @@ class _VoicePicker extends StatelessWidget {
   }
 }
 
-class _LabeledSlider extends StatelessWidget {
+/// Curseur de débit ou de hauteur : libellé à gauche, valeur chiffrée à
+/// droite, alignés en colonnes fixes pour que deux curseurs empilés se lisent
+/// comme un tableau.
+///
+/// Partagé avec le réglage par coach (`coach_voice_picker.dart`) — les deux
+/// écrans règlent la même chose et doivent se lire pareil.
+class LabeledVoiceSlider extends StatelessWidget {
   final String label;
   final double value;
   final double min;
   final double max;
   final ValueChanged<double> onChanged;
 
-  const _LabeledSlider({
+  /// Appelé au relâchement seulement — c'est là que la valeur est
+  /// enregistrée, pas à chaque frame du glissement.
+  final ValueChanged<double> onChangeEnd;
+
+  const LabeledVoiceSlider({
+    super.key,
     required this.label,
     required this.value,
     required this.min,
     required this.max,
     required this.onChanged,
+    required this.onChangeEnd,
   });
 
   @override
@@ -297,6 +316,7 @@ class _LabeledSlider extends StatelessWidget {
             min: min,
             max: max,
             onChanged: onChanged,
+            onChangeEnd: onChangeEnd,
           ),
         ),
         SizedBox(
