@@ -107,6 +107,12 @@ class _MovementAnimationState extends State<MovementAnimation>
   double? _frozenIdx;
   DateTime? _frozenAt;
 
+  /// Dernière position que le ladder a réellement affichée. Le gel part de
+  /// là et non d'un recalcul théorique : le step s'applique jusqu'à un tick
+  /// après l'instant où la courbe l'avait annoncé, et la courbe a donc déjà
+  /// entamé le mouvement quand le gel tombe.
+  double? _renderedIdx;
+
   /// Gap réel que `BeepEngine.applyStep` insère avant le 1er bip du step
   /// courant, et passage par `tip` imposé par un franchissement de famille :
   /// la durée et la forme du pont synthétique, pour qu'il parcoure la
@@ -200,14 +206,15 @@ class _MovementAnimationState extends State<MovementAnimation>
     if (modeChanged || tempoChanged || positionChanged) {
       final (oldLadderFrom, oldLadderTo) =
           _ladderPositionsFor(oldWidget.mode, oldWidget.from, oldWidget.to);
-      _frozenIdx = _visualIdxNow(
-        from: oldLadderFrom,
-        to: oldLadderTo,
-        flipped: _flipped,
-        lastBeatAt: _lastBeatAt,
-        beatDuration: _durationFor(oldWidget.mode, oldWidget.bpm),
-        now: DateTime.now(),
-      );
+      _frozenIdx = _renderedIdx ??
+          _visualIdxNow(
+            from: oldLadderFrom,
+            to: oldLadderTo,
+            flipped: _flipped,
+            lastBeatAt: _lastBeatAt,
+            beatDuration: _durationFor(oldWidget.mode, oldWidget.bpm),
+            now: DateTime.now(),
+          );
       _frozenAt = DateTime.now();
       _bridgeGap = BeepEngine.transitionGap(
         incoming: widget.mode,
@@ -384,9 +391,12 @@ class _MovementAnimationState extends State<MovementAnimation>
     final beatDuration = _durationFor(widget.mode, widget.bpm);
     final (ladderFrom, ladderTo) =
         _ladderPositionsFor(widget.mode, widget.from, widget.to);
-    final elapsedNow = _elapsedAnchorAt == null || _elapsedAnchorValue == null
-        ? widget.elapsed
-        : _elapsedAnchorValue! + DateTime.now().difference(_elapsedAnchorAt!);
+    final elapsedNow = extrapolatedElapsed(
+      anchorValue: _elapsedAnchorValue,
+      anchorAt: _elapsedAnchorAt,
+      fallback: widget.elapsed,
+      now: DateTime.now(),
+    );
     return _PositionLadder(
       mode: widget.mode,
       from: ladderFrom,
@@ -398,6 +408,7 @@ class _MovementAnimationState extends State<MovementAnimation>
       lastBeatAt: _lastBeatAt,
       frozenIdx: _frozenIdx,
       frozenAt: _frozenAt,
+      onCursorIdx: (idx) => _renderedIdx = idx,
       bridgeGap: _bridgeGap,
       bridgeViaTip: _bridgeViaTip,
       rowCount: widget.positionRowCount,
@@ -510,6 +521,10 @@ class _PositionLadder extends StatefulWidget {
   final double? frozenIdx;
   final DateTime? frozenAt;
 
+  /// Appelé à chaque frame avec la position réellement affichée, pour que le
+  /// gel de transition parte de là.
+  final void Function(double idx)? onCursorIdx;
+
   /// Cf. `_MovementAnimationState._bridgeGap` / `._bridgeViaTip`.
   final Duration? bridgeGap;
   final bool bridgeViaTip;
@@ -538,6 +553,7 @@ class _PositionLadder extends StatefulWidget {
     required this.lastBeatAt,
     required this.frozenIdx,
     required this.frozenAt,
+    this.onCursorIdx,
     this.bridgeGap,
     this.bridgeViaTip = false,
     required this.pulseT,
@@ -902,6 +918,7 @@ class _PositionLadderState extends State<_PositionLadder> {
     final cursorIdx = beats.isNotEmpty
         ? beats.first.idx
         : (widget.flipped ? widget.from : widget.to).index.toDouble();
+    widget.onCursorIdx?.call(cursorIdx);
     final cursorAlignment = Alignment(
         _kCursorX, _PositionLadder._toAlign(cursorIdx, widget.rowCount));
 
@@ -1217,6 +1234,28 @@ double? anchorAfterScrollForTest({
   final scrolled = _scrollBeats(
       raw, elapsedSinceCompute.inMilliseconds.toDouble() / windowMs);
   return scrolled?.first.idx;
+}
+
+/// Épaisseur d'un tick du `SessionController` (200 ms), majorée d'une marge.
+/// Borne l'extrapolation de `elapsed` : la timeline de séance se **fige**
+/// pendant un défi (`_timelineOffset` décrémenté à chaque tick), donc
+/// `widget.elapsed` cesse d'avancer et l'ancre n'est jamais réarmée — sans
+/// borne, l'extrapolation dérive de toute la durée du défi et la courbe
+/// situe les frontières à venir dans le passé.
+const Duration _kElapsedExtrapolationCap = Duration(milliseconds: 250);
+
+/// `elapsed` interpolé entre deux ticks du contrôleur, borné à un tick.
+@visibleForTesting
+Duration extrapolatedElapsed({
+  required Duration? anchorValue,
+  required DateTime? anchorAt,
+  required Duration fallback,
+  required DateTime now,
+}) {
+  if (anchorValue == null || anchorAt == null) return fallback;
+  final since = now.difference(anchorAt);
+  return anchorValue +
+      (since > _kElapsedExtrapolationCap ? _kElapsedExtrapolationCap : since);
 }
 
 /// Point sur la courbe future. `t` ∈ [0,1] = fraction de la fenêtre temporelle

@@ -498,6 +498,39 @@ void main() {
     );
   });
 
+  group('horloge de séance', () {
+    test(
+      'l\'extrapolation entre deux ticks est bornée à un tick : une timeline '
+      'figée (défi) ne fait pas dériver la courbe',
+      () {
+        final now = DateTime.now();
+        final anchorAt = now.subtract(const Duration(seconds: 40));
+
+        final elapsed = extrapolatedElapsed(
+          anchorValue: const Duration(seconds: 100),
+          anchorAt: anchorAt,
+          fallback: Duration.zero,
+          now: now,
+        );
+
+        expect(elapsed.inMilliseconds, lessThanOrEqualTo(100 * 1000 + 250));
+        expect(elapsed.inMilliseconds, greaterThanOrEqualTo(100 * 1000));
+      },
+    );
+
+    test('entre deux ticks, elle interpole normalement', () {
+      final now = DateTime.now();
+      final elapsed = extrapolatedElapsed(
+        anchorValue: const Duration(seconds: 10),
+        anchorAt: now.subtract(const Duration(milliseconds: 120)),
+        fallback: Duration.zero,
+        now: now,
+      );
+
+      expect(elapsed.inMilliseconds, closeTo(10120, 5));
+    });
+  });
+
   group('resolveUpcomingMovementSteps', () {
     test('ignore les steps text-only et ceux déjà passés', () {
       final result = resolveUpcomingMovementSteps(
