@@ -356,6 +356,37 @@ void main() {
     );
   });
 
+  group('défilement vs recalcul', () {
+    test(
+      'la position défilée coïncide avec celle qu\'un recalcul au même '
+      'instant aurait donnée — sinon on sent le recalcul',
+      () {
+        final now = DateTime.now();
+        final recalcule = computeFutureBeatsForTest(
+          mode: SessionMode.rhythm,
+          from: Position.head,
+          to: Position.throat,
+          beatDuration: const Duration(milliseconds: 1000),
+          flipped: false,
+          lastBeatAt: now.subtract(const Duration(milliseconds: 600)),
+        ).first.idx;
+
+        final defile = anchorAfterScrollForTest(
+          mode: SessionMode.rhythm,
+          from: Position.head,
+          to: Position.throat,
+          beatDuration: const Duration(milliseconds: 1000),
+          flipped: false,
+          lastBeatAt: now.subtract(const Duration(milliseconds: 500)),
+          elapsedSinceCompute: const Duration(milliseconds: 100),
+        );
+
+        expect(defile, isNotNull);
+        expect(defile!, closeTo(recalcule, 0.05));
+      },
+    );
+  });
+
   group('resolveUpcomingMovementSteps', () {
     test('ignore les steps text-only et ceux déjà passés', () {
       final result = resolveUpcomingMovementSteps(

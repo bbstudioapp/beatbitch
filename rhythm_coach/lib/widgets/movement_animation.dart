@@ -599,6 +599,8 @@ class _PositionLadder extends StatefulWidget {
     final Position afterAnchorPos;
     double? bridgeTargetIdx;
     DateTime? bridgeViaAt;
+    DateTime? originAt;
+    double? originIdx;
     if (lastBeatAt != null) {
       // À l'instant `lastBeatAt`, le bip de `flipped ? to : from` vient de
       // sonner — la position visuelle au moment du beat est cette position,
@@ -613,6 +615,8 @@ class _PositionLadder extends StatefulWidget {
       );
       last = lastBeatAt!;
       afterAnchorPos = flipped ? from : to;
+      originAt = lastBeatAt;
+      originIdx = (flipped ? to : from).index.toDouble();
     } else {
       // Pont synthétique : aucun beat réel n'est encore arrivé pour ce step
       // (juste après une transition). On glisse de la position gelée
@@ -655,19 +659,34 @@ class _PositionLadder extends StatefulWidget {
           beatDuration: beatDuration,
           now: now,
         );
+        originAt = last;
+        originIdx = toIdx;
       } else if (viaAt != null && now.isBefore(viaAt)) {
         yNow = leg(anchorAt, viaAt, anchorIdx, tipIdx);
+        originAt = anchorAt;
+        originIdx = anchorIdx;
       } else {
         yNow = leg(
             viaAt ?? anchorAt, last, viaAt == null ? anchorIdx : tipIdx, toIdx);
+        originAt = viaAt ?? anchorAt;
+        originIdx = viaAt == null ? anchorIdx : tipIdx;
       }
       afterAnchorPos = from;
       bridgeTargetIdx = toIdx;
       bridgeViaAt = viaAt;
     }
 
+    final anchorOrigin = originAt;
     final beats = <_BeatPoint>[
-      _BeatPoint(t: 0, idx: yNow, isAnchor: true),
+      _BeatPoint(
+        t: 0,
+        idx: yNow,
+        isAnchor: true,
+        originT: anchorOrigin == null
+            ? null
+            : anchorOrigin.difference(now).inMilliseconds.toDouble() / windowMs,
+        originIdx: originIdx,
+      ),
     ];
 
     // L'arrivée du pont est un point de la courbe, pas seulement une cible du
@@ -997,7 +1016,13 @@ List<_BeatPoint>? _scrollBeats(List<_BeatPoint> raw, double deltaT) {
   for (final b in raw) {
     final t = b.t - deltaT;
     if (t <= 0) {
-      prev = _BeatPoint(t: t, idx: b.idx, isAnchor: false);
+      prev = _BeatPoint(
+        t: t,
+        idx: b.idx,
+        isAnchor: false,
+        originT: b.originT,
+        originIdx: b.originIdx,
+      );
     } else {
       future.add(_BeatPoint(t: t, idx: b.idx, isAnchor: false));
     }
@@ -1008,17 +1033,19 @@ List<_BeatPoint>? _scrollBeats(List<_BeatPoint> raw, double deltaT) {
   if (prev == null) {
     anchorIdx = next.idx;
   } else {
-    final span = next.t - prev.t;
-    final frac = span <= 0 ? 1.0 : ((0 - prev.t) / span).clamp(0.0, 1.0);
+    final prevT = prev.originT == null ? prev.t : prev.originT! - deltaT;
+    final prevIdx = prev.originIdx ?? prev.idx;
+    final span = next.t - prevT;
+    final frac = span <= 0 ? 1.0 : ((0 - prevT) / span).clamp(0.0, 1.0);
     // L'amortissement ne vaut que pour un vrai changement de sens : appliqué
     // à chaque point, il fait ralentir le curseur jusqu'à l'arrêt entre deux
     // points alignés, ce qui se voit comme une saccade.
     final after = future.length > 1 ? future[1] : null;
-    final incoming = (next.idx - prev.idx).sign;
+    final incoming = (next.idx - prevIdx).sign;
     final outgoing = after == null ? incoming : (after.idx - next.idx).sign;
     final turns = incoming != 0 && outgoing != incoming;
     final eased = turns ? Curves.easeInOutCubic.transform(frac) : frac;
-    anchorIdx = prev.idx + (next.idx - prev.idx) * eased;
+    anchorIdx = prevIdx + (next.idx - prevIdx) * eased;
   }
   return [
     _BeatPoint(t: 0, idx: anchorIdx, isAnchor: true),
@@ -1121,6 +1148,48 @@ List<({double t, double idx, bool isAnchor})> computeFutureBeatsForTest({
   return [for (final b in beats) (t: b.t, idx: b.idx, isAnchor: b.isAnchor)];
 }
 
+/// Sonde de test : position du curseur après un défilement de
+/// [elapsedSinceCompute] appliqué à une géométrie calculée maintenant.
+/// Sert à vérifier qu'elle coïncide avec celle qu'un recalcul au même
+/// instant aurait donnée.
+@visibleForTesting
+double? anchorAfterScrollForTest({
+  required SessionMode mode,
+  required Position from,
+  required Position to,
+  required Duration beatDuration,
+  required bool flipped,
+  required Duration elapsedSinceCompute,
+  DateTime? lastBeatAt,
+  double? frozenIdx,
+  DateTime? frozenAt,
+  Duration? bridgeGap,
+  bool bridgeViaTip = false,
+}) {
+  final raw = _PositionLadder(
+    mode: mode,
+    from: from,
+    to: to,
+    beatDuration: beatDuration,
+    flipped: flipped,
+    color: const Color(0xFFFFFFFF),
+    cursorStyle: _CursorStyle.orb,
+    lastBeatAt: lastBeatAt,
+    frozenIdx: frozenIdx,
+    frozenAt: frozenAt,
+    bridgeGap: bridgeGap,
+    bridgeViaTip: bridgeViaTip,
+    pulseT: 0,
+    rowCount: 5,
+    elapsed: Duration.zero,
+    upcomingSteps: const [],
+  )._computeFutureBeats();
+  final windowMs = _PositionLadder._trajectoryWindow.inMilliseconds.toDouble();
+  final scrolled = _scrollBeats(
+      raw, elapsedSinceCompute.inMilliseconds.toDouble() / windowMs);
+  return scrolled?.first.idx;
+}
+
 /// Point sur la courbe future. `t` ∈ [0,1] = fraction de la fenêtre temporelle
 /// (0 = présent, 1 = +window). `idx` ∈ [0,4] = position (tip→full).
 /// `isAnchor=true` pour le point t=0 (curseur courant) — pas de pastille
@@ -1129,8 +1198,20 @@ class _BeatPoint {
   final double t;
   final double idx;
   final bool isAnchor;
-  const _BeatPoint(
-      {required this.t, required this.idx, required this.isAnchor});
+
+  /// Début du segment dont l'ancre est un point intermédiaire (`t` négatif,
+  /// même unité que `t`). Le défilement interpole depuis là plutôt que depuis
+  /// l'ancre : sans ça, chaque recalcul redémarre l'easing au milieu du
+  /// mouvement et sa vitesse se casse — l'à-coup qu'on « sent ».
+  final double? originT;
+  final double? originIdx;
+  const _BeatPoint({
+    required this.t,
+    required this.idx,
+    required this.isAnchor,
+    this.originT,
+    this.originIdx,
+  });
 }
 
 /// Trace la trajectoire future dans la zone à droite du curseur.
