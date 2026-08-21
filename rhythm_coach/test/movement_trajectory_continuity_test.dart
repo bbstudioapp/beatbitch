@@ -182,8 +182,8 @@ void main() {
     );
 
     test(
-      'frontière de famille : le point tip respecte le transitionGap du '
-      'step suivant, pas l\'instant nominal de la frontière',
+      'frontière de famille : le passage par tip tient dans le gap, et le '
+      '1er bip du step suivant tombe sur `to` à la fin du gap',
       () {
         final beats = computeFutureBeatsForTest(
           mode: SessionMode.rhythm,
@@ -210,8 +210,12 @@ void main() {
         expect(tipPoints, isNotEmpty);
         final tipMs =
             tipPoints.map((b) => b.t * 3000).reduce((a, b) => a < b ? a : b);
-        expect(tipMs, greaterThan(2200));
-        expect(tipMs, lessThan(2400));
+        expect(tipMs, greaterThan(800), reason: 'après la frontière nominale');
+        expect(tipMs, lessThan(2300), reason: 'avant le 1er bip réel');
+
+        final afterTip = beats.firstWhere((b) => b.t * 3000 > tipMs + 1);
+        expect(afterTip.idx, Position.full.index.toDouble());
+        expect(afterTip.t * 3000, closeTo(2300, 60));
       },
     );
 
@@ -255,8 +259,8 @@ void main() {
     );
 
     test(
-      'pont de transition : au franchissement d\'une famille, il rejoint '
-      'tip — la trajectoire annoncée — et pas directement `to`',
+      'pont de transition : au franchissement d\'une famille, il passe par '
+      'tip au milieu du gap — la trajectoire annoncée',
       () {
         final beats = computeFutureBeatsForTest(
           mode: SessionMode.hand,
@@ -265,7 +269,7 @@ void main() {
           beatDuration: const Duration(milliseconds: 1000),
           flipped: false,
           frozenIdx: Position.head.index.toDouble(),
-          frozenAt: DateTime.now().subtract(const Duration(milliseconds: 600)),
+          frozenAt: DateTime.now().subtract(const Duration(milliseconds: 300)),
           bridgeGap: const Duration(milliseconds: 600),
           bridgeViaTip: true,
         );
@@ -276,8 +280,8 @@ void main() {
     );
 
     test(
-      'pont de transition : `to` est joué un battement après la fin du '
-      'pont, comme la prévision l\'annonçait',
+      'pont de transition : `to` est joué à la fin du gap, pas un battement '
+      'plus tard — le curseur ne refait pas le mouvement',
       () {
         final beats = computeFutureBeatsForTest(
           mode: SessionMode.hand,
@@ -293,9 +297,9 @@ void main() {
 
         final points = beats.where((b) => !b.isAnchor).toList();
         expect(points.first.idx, Position.tip.index.toDouble());
-        expect(points.first.t * 3000, closeTo(600, 40));
+        expect(points.first.t * 3000, closeTo(300, 40));
         expect(points[1].idx, Position.full.index.toDouble());
-        expect(points[1].t * 3000, closeTo(1600, 60));
+        expect(points[1].t * 3000, closeTo(600, 40));
       },
     );
 
