@@ -167,14 +167,20 @@ class BeepEngine {
   /// fenêtre temporelle pour avoir du sens).
   int? _loopDurationMs;
 
-  /// Toggle d'alternance from↔to du loop rythmé. Initialisé à `true` pour
-  /// que le **premier beat tombe sur `to`** (cf. `_pickPosition` :
-  /// `_alternateToggle ? to : _from`). Démarrer sur la profondeur cible —
-  /// pas sur le point de départ — colle au phrasé naturel d'une cadence
-  /// (« mid mid mid… » et pas « head mid head mid… ») et fait que l'orbe
-  /// visuel atteint `to` dès le premier bip. Réarmé à `true` à chaque
-  /// `applyStep` / `startRhythmDemo` / `startLickDemo`.
+  /// Toggle d'alternance from↔to du loop rythmé (cf. `_pickPosition` :
+  /// `_alternateToggle ? to : _from`). `applyStep` le pose via
+  /// [shouldStartOnTo] : un step démarre sur `to` sauf quand ça enchaînerait
+  /// deux mouvements dans le même sens. Les démos (`startRhythmDemo` /
+  /// `startLickDemo`) le réarment à `true` : isolées, elles n'ont pas de
+  /// mouvement précédent.
   bool _alternateToggle = true;
+
+  /// Les deux dernières positions réellement émises par [_pickPosition]
+  /// (rhythm/lick/hand). Les modes sans amplitude ne passent jamais par là :
+  /// l'historique traverse donc une tenue ou une respiration sans être remis
+  /// à zéro, et l'alternance reprend là où le dernier mouvement l'a laissée.
+  Position? _lastMovePos;
+  Position? _prevMovePos;
 
   /// Hand : alternance down/up indépendante du toggle de position.
   /// Utilisé seulement quand `_to` est null ou égal à `_from` (pas
@@ -344,6 +350,26 @@ class BeepEngine {
   /// Pause appliquée par [applyStep] avant de démarrer `incoming`, exposée
   /// en lecture seule pour que l'affichage (prévision de trajectoire) situe
   /// ses propres points sur le même calage sans dupliquer cette règle.
+  /// Le prochain step doit-il démarrer sur `to` ? Non quand ça enchaînerait
+  /// deux mouvements dans le même sens : l'alternance haut/bas doit tenir au
+  /// passage d'un step au suivant, pas seulement à l'intérieur d'un step.
+  ///
+  /// Pure et statique : l'affichage l'appelle pour prédire ce que le moteur
+  /// va jouer, au lieu d'en écrire une deuxième version qui divergerait.
+  static bool shouldStartOnTo({
+    required Position from,
+    required Position? to,
+    required Position? lastMovePos,
+    required Position? prevMovePos,
+  }) {
+    if (to == null || to == from) return true;
+    if (lastMovePos == null || prevMovePos == null) return true;
+    final lastDir = (lastMovePos.index - prevMovePos.index).sign;
+    final candidateDir = (to.index - lastMovePos.index).sign;
+    if (lastDir != 0 && candidateDir == lastDir) return false;
+    return true;
+  }
+
   static Duration transitionGap({
     required SessionMode incoming,
     required SessionMode? previous,
@@ -407,7 +433,12 @@ class BeepEngine {
       _from = _pickShallowerThan(_from);
     }
 
-    _alternateToggle = true;
+    _alternateToggle = shouldStartOnTo(
+      from: _from,
+      to: _to,
+      lastMovePos: _lastMovePos,
+      prevMovePos: _prevMovePos,
+    );
     _handStrokeFallbackDown = true;
     _stopLoop();
     _freestyleEndTimer?.cancel();
@@ -551,6 +582,8 @@ class BeepEngine {
 
   void _emitPositionBeat(double baseVolume) {
     final pos = _pickPosition();
+    _prevMovePos = _lastMovePos;
+    _lastMovePos = pos;
     if (_mode == SessionMode.hand) {
       final (asset, vol) = _resolveHandBeat(pos, baseVolume);
       _trigger(asset, vol);
