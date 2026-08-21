@@ -473,7 +473,7 @@ enum _CursorStyle { orb, ring, tongue }
 /// En cas de transition de step (from/to changent), `_frozenIdx` gèle la
 /// position visuelle d'avant-transition — point de départ du pont
 /// synthétique tracé par `_computeFutureBeats` — pas de saut sec.
-class _PositionLadder extends StatelessWidget {
+class _PositionLadder extends StatefulWidget {
   final SessionMode mode;
   final Position from;
   final Position to;
@@ -521,6 +521,9 @@ class _PositionLadder extends StatelessWidget {
     required this.upcomingSteps,
   });
 
+  @override
+  State<_PositionLadder> createState() => _PositionLadderState();
+
   /// Fenêtre de prévision de la trajectoire future. Volontairement plus longue
   /// que les 2 s perçues : les ~1 s supplémentaires servent de réserve dans
   /// laquelle les nouveaux beats *émergent en fondu* (cf. `_kFadeFraction`)
@@ -548,119 +551,6 @@ class _PositionLadder extends StatelessWidget {
   /// complètement masquées. Cette même constante pilote la fin du fade dans
   /// le shader ET la zone utile du painter (cohérence garantie).
   static const double _kRightPaddingFraction = 0.20;
-
-  @override
-  Widget build(BuildContext context) {
-    final activeIndices = {from.index, to.index};
-    final beats = _computeFutureBeats();
-    // Le curseur EST le point d'ancrage t=0 de la trajectoire (cf. _BeatPoint
-    // .isAnchor) — plus de moteur d'interpolation séparé : une seule source
-    // pour la position affichée, curseur et courbe ne peuvent plus diverger.
-    final cursorIdx = beats.isNotEmpty
-        ? beats.first.idx
-        : (flipped ? from : to).index.toDouble();
-    final cursorAlignment = Alignment(_kCursorX, _toAlign(cursorIdx, rowCount));
-
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        // Silhouette discrète de la verge derrière les graduations.
-        // Donne le contexte anatomique (la position ce n'est pas dans le vide,
-        // c'est sur la verge) → utile pour tous les modes mais surtout pour
-        // hand qui sinon évoque le même axe que la bouche sans repère.
-        const _ShaftBackdrop(),
-        // Lignes horizontales fines pour repérer les positions visibles.
-        for (var i = 0; i < rowCount; i++)
-          Align(
-            alignment: Alignment(0, _toAlign(i, rowCount)),
-            child: FractionallySizedBox(
-              widthFactor: 0.55,
-              child: Container(
-                height: 1,
-                color: AppTheme.textMuted.withValues(alpha: 0.18),
-              ),
-            ),
-          ),
-        // Trajectoire future : courbe qui montre les `_trajectoryWindow` à
-        // venir. Dessinée DERRIÈRE le curseur dans le Stack pour que l'orbe
-        // masque proprement le t=0 de la courbe (sinon double-affichage).
-        //
-        // Deux mécaniques de douceur :
-        // 1. ShaderMask horizontal → la moitié droite de la zone utile fade
-        //    progressivement vers transparent, et la zone des labels (à
-        //    partir de `1 - _kRightPaddingFraction`) est totalement masquée.
-        //    La courbe ne peut donc jamais traverser les libellés Bout/
-        //    Gland/Milieu/Gorge/Tout ni ressortir à leur droite.
-        // 2. AnimatedOpacity → fade-in/out de la courbe entière quand elle
-        //    apparaît ou disparaît (transition entre modes synced/non-synced,
-        //    reset après mode change). Évite le blink.
-        Positioned.fill(
-          child: IgnorePointer(
-            child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 250),
-              opacity: beats.length >= 2 ? 1.0 : 0.0,
-              child: ShaderMask(
-                blendMode: BlendMode.dstIn,
-                shaderCallback: (rect) {
-                  const cursorX = (_kCursorX + 1) / 2;
-                  const rightEdge = 1.0 - _kRightPaddingFraction;
-                  const usable = rightEdge - cursorX;
-                  const fadeStart = rightEdge - usable * _kFadeFraction;
-                  return const LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: [
-                      Colors.white,
-                      Colors.white,
-                      Colors.transparent,
-                      Colors.transparent,
-                    ],
-                    stops: [0.0, fadeStart, rightEdge, 1.0],
-                  ).createShader(rect);
-                },
-                child: CustomPaint(
-                  painter: _TrajectoryPainter(
-                    beats: beats.length >= 2 ? beats : const [],
-                    color: color,
-                    cursorXFraction: (_kCursorX + 1) / 2,
-                    rightPaddingFraction: _kRightPaddingFraction,
-                    rowCount: rowCount,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        // Labels de position à droite. Mis en avant pour from / to.
-        for (var i = 0; i < rowCount; i++)
-          Align(
-            alignment: Alignment(0.92, _toAlign(i, rowCount)),
-            child: Text(
-              Position.values[i].localizedLabel(context),
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: activeIndices.contains(i)
-                    ? FontWeight.w700
-                    : FontWeight.w400,
-                letterSpacing: 1,
-                color: activeIndices.contains(i)
-                    ? color.withValues(alpha: 0.85)
-                    : AppTheme.textMuted.withValues(alpha: 0.45),
-              ),
-            ),
-          ),
-        Align(
-          alignment: cursorAlignment,
-          child: _CursorVisual(
-            mode: mode,
-            cursorStyle: cursorStyle,
-            color: color,
-            pulseT: pulseT,
-          ),
-        ),
-      ],
-    );
-  }
 
   /// Convertit un index de position en y d'Alignment (-1..1) sur un
   /// ladder de [rowCount] lignes. Avec [rowCount] = 5, l'index 4 (full)
@@ -833,6 +723,272 @@ class _PositionLadder extends StatelessWidget {
   /// suffit : le segment cubique qui le relie au dernier beat dans la
   /// fenêtre couvre toute la zone de fade jusqu'au bord droit.
   static const int _extraBeatsBeyondWindow = 1;
+}
+
+class _PositionLadderState extends State<_PositionLadder> {
+  List<_BeatPoint>? _rawBeats;
+  DateTime? _computedAt;
+
+  @override
+  void initState() {
+    super.initState();
+    _recompute();
+  }
+
+  @override
+  void didUpdateWidget(covariant _PositionLadder oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_sameGeometry(oldWidget, widget)) {
+      _recompute();
+    }
+  }
+
+  void _recompute() {
+    _rawBeats = widget._computeFutureBeats();
+    _computedAt = DateTime.now();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final windowMs =
+        _PositionLadder._trajectoryWindow.inMilliseconds.toDouble();
+    final deltaT =
+        DateTime.now().difference(_computedAt!).inMilliseconds / windowMs;
+    var beats = _scrollBeats(_rawBeats!, deltaT);
+    if (beats == null) {
+      // La mémoïsation ne peut plus répondre à la frame courante (plus aucun
+      // point au-delà de t=0) : on force un recalcul plutôt que d'afficher
+      // une courbe tronquée.
+      _recompute();
+      beats = _scrollBeats(_rawBeats!, 0.0) ?? const [];
+    }
+
+    final activeIndices = {widget.from.index, widget.to.index};
+    // Le curseur EST le point d'ancrage t=0 de la trajectoire décalée (cf.
+    // _BeatPoint.isAnchor) — une seule source pour la position affichée,
+    // curseur et courbe ne peuvent plus diverger (acquis de 86ec18d).
+    final cursorIdx = beats.isNotEmpty
+        ? beats.first.idx
+        : (widget.flipped ? widget.from : widget.to).index.toDouble();
+    final cursorAlignment = Alignment(
+        _kCursorX, _PositionLadder._toAlign(cursorIdx, widget.rowCount));
+
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        const _ShaftBackdrop(),
+        for (var i = 0; i < widget.rowCount; i++)
+          Align(
+            alignment:
+                Alignment(0, _PositionLadder._toAlign(i, widget.rowCount)),
+            child: FractionallySizedBox(
+              widthFactor: 0.55,
+              child: Container(
+                height: 1,
+                color: AppTheme.textMuted.withValues(alpha: 0.18),
+              ),
+            ),
+          ),
+        Positioned.fill(
+          child: IgnorePointer(
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 250),
+              opacity: beats.length >= 2 ? 1.0 : 0.0,
+              child: ShaderMask(
+                blendMode: BlendMode.dstIn,
+                shaderCallback: (rect) {
+                  const cursorX = (_kCursorX + 1) / 2;
+                  const rightEdge =
+                      1.0 - _PositionLadder._kRightPaddingFraction;
+                  const usable = rightEdge - cursorX;
+                  const fadeStart =
+                      rightEdge - usable * _PositionLadder._kFadeFraction;
+                  return const LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      Colors.white,
+                      Colors.white,
+                      Colors.transparent,
+                      Colors.transparent,
+                    ],
+                    stops: [0.0, fadeStart, rightEdge, 1.0],
+                  ).createShader(rect);
+                },
+                child: CustomPaint(
+                  painter: _TrajectoryPainter(
+                    beats: beats.length >= 2 ? beats : const [],
+                    color: widget.color,
+                    cursorXFraction: (_kCursorX + 1) / 2,
+                    rightPaddingFraction:
+                        _PositionLadder._kRightPaddingFraction,
+                    rowCount: widget.rowCount,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        for (var i = 0; i < widget.rowCount; i++)
+          Align(
+            alignment:
+                Alignment(0.92, _PositionLadder._toAlign(i, widget.rowCount)),
+            child: Text(
+              Position.values[i].localizedLabel(context),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: activeIndices.contains(i)
+                    ? FontWeight.w700
+                    : FontWeight.w400,
+                letterSpacing: 1,
+                color: activeIndices.contains(i)
+                    ? widget.color.withValues(alpha: 0.85)
+                    : AppTheme.textMuted.withValues(alpha: 0.45),
+              ),
+            ),
+          ),
+        Align(
+          alignment: cursorAlignment,
+          child: _CursorVisual(
+            mode: widget.mode,
+            cursorStyle: widget.cursorStyle,
+            color: widget.color,
+            pulseT: widget.pulseT,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Vrai si `a` et `b` décrivent la même géométrie de trajectoire — clé de
+/// recalcul de `_PositionLadderState`. Volontairement **sans** `pulseT` (ce
+/// qui fait avancer les frames, pas la géométrie) ni `elapsed` (dérivé en
+/// continu de l'horloge murale comme `now`, déjà pris en compte par le
+/// défilement entre deux calculs).
+bool _sameGeometry(_PositionLadder a, _PositionLadder b) {
+  return a.mode == b.mode &&
+      a.from == b.from &&
+      a.to == b.to &&
+      a.beatDuration == b.beatDuration &&
+      a.flipped == b.flipped &&
+      a.lastBeatAt == b.lastBeatAt &&
+      a.frozenIdx == b.frozenIdx &&
+      a.frozenAt == b.frozenAt &&
+      a.rowCount == b.rowCount &&
+      _sameUpcomingSteps(a.upcomingSteps, b.upcomingSteps);
+}
+
+bool _sameUpcomingSteps(
+    List<UpcomingMovementStep> a, List<UpcomingMovementStep> b) {
+  if (identical(a, b)) return true;
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    final sa = a[i];
+    final sb = b[i];
+    if (sa.mode != sb.mode ||
+        sa.from != sb.from ||
+        sa.to != sb.to ||
+        sa.bpm != sb.bpm ||
+        sa.startSecond != sb.startSecond ||
+        sa.transitionGap != sb.transitionGap) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/// Décale une géométrie mémoïsée de `deltaT` (fraction de `_trajectoryWindow`
+/// écoulée depuis son calcul) : tous les `t` glissent de `-deltaT`, les
+/// points sortis par la gauche (`t <= 0`) disparaissent de la trajectoire
+/// affichée mais servent à interpoler le nouvel ancrage à `t = 0` — avec la
+/// même easing que le pont synthétique (`Curves.easeInOutCubic`, cf.
+/// `_PositionLadder._computeFutureBeats`). Renvoie `null` quand plus aucun
+/// point ne dépasse `t = 0` : la mémoïsation ne peut plus répondre à la
+/// frame courante, il faut recalculer.
+List<_BeatPoint>? _scrollBeats(List<_BeatPoint> raw, double deltaT) {
+  if (raw.isEmpty) return const [];
+  _BeatPoint? prev;
+  final future = <_BeatPoint>[];
+  for (final b in raw) {
+    final t = b.t - deltaT;
+    if (t <= 0) {
+      prev = _BeatPoint(t: t, idx: b.idx, isAnchor: false);
+    } else {
+      future.add(_BeatPoint(t: t, idx: b.idx, isAnchor: false));
+    }
+  }
+  if (future.isEmpty) return null;
+  final next = future.first;
+  final double anchorIdx;
+  if (prev == null) {
+    anchorIdx = next.idx;
+  } else {
+    final span = next.t - prev.t;
+    final frac = span <= 0 ? 1.0 : ((0 - prev.t) / span).clamp(0.0, 1.0);
+    anchorIdx = prev.idx +
+        (next.idx - prev.idx) * Curves.easeInOutCubic.transform(frac);
+  }
+  return [
+    _BeatPoint(t: 0, idx: anchorIdx, isAnchor: true),
+    ...future,
+  ];
+}
+
+/// Sonde de test pour `_scrollBeats` — même convention de records que
+/// `computeFutureBeatsForTest` (le type privé `_BeatPoint` n'est pas
+/// exposable).
+@visibleForTesting
+List<({double t, double idx, bool isAnchor})>? scrollBeatsForTest({
+  required List<({double t, double idx, bool isAnchor})> raw,
+  required double deltaT,
+}) {
+  final beats = _scrollBeats(
+    [for (final b in raw) _BeatPoint(t: b.t, idx: b.idx, isAnchor: b.isAnchor)],
+    deltaT,
+  );
+  if (beats == null) return null;
+  return [for (final b in beats) (t: b.t, idx: b.idx, isAnchor: b.isAnchor)];
+}
+
+/// Jeu de paramètres décrivant une géométrie de trajectoire, pour
+/// [sameGeometryForTest].
+typedef GeometryKeyForTest = ({
+  SessionMode mode,
+  Position from,
+  Position to,
+  Duration beatDuration,
+  bool flipped,
+  DateTime? lastBeatAt,
+  double? frozenIdx,
+  DateTime? frozenAt,
+  int rowCount,
+  List<UpcomingMovementStep> upcomingSteps,
+});
+
+/// Sonde de test pour `_sameGeometry` (clé de recalcul de
+/// `_PositionLadderState`) — construit deux `_PositionLadder` (type privé,
+/// non exposable) et compare via la fonction réellement utilisée par le
+/// `State`, pour ne pas dupliquer la logique testée.
+@visibleForTesting
+bool sameGeometryForTest(GeometryKeyForTest a, GeometryKeyForTest b) {
+  _PositionLadder build(GeometryKeyForTest k) => _PositionLadder(
+        mode: k.mode,
+        from: k.from,
+        to: k.to,
+        beatDuration: k.beatDuration,
+        flipped: k.flipped,
+        color: const Color(0xFFFFFFFF),
+        cursorStyle: _CursorStyle.orb,
+        lastBeatAt: k.lastBeatAt,
+        frozenIdx: k.frozenIdx,
+        frozenAt: k.frozenAt,
+        pulseT: 0,
+        rowCount: k.rowCount,
+        elapsed: Duration.zero,
+        upcomingSteps: k.upcomingSteps,
+      );
+  return _sameGeometry(build(a), build(b));
 }
 
 /// Sonde de test pour `_PositionLadder._computeFutureBeats`. Passe par des
