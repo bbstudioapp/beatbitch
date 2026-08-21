@@ -1139,7 +1139,6 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                               afterSecond: ctrl.elapsedSeconds,
                               currentMode: ctrl.currentMode,
                               currentFrom: ctrl.currentFrom,
-                              currentTo: ctrl.currentTo,
                               currentBpm: ctrl.currentBpm,
                             ),
                     )
