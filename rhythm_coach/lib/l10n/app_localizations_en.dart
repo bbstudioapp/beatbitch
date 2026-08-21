@@ -1317,6 +1317,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Debug only: in prod the animation is enough to indicate what\'s happening.';
 
   @override
+  String get soundsDebugShowTrajectoryDots => 'Show trajectory dots';
+
+  @override
+  String get soundsDebugShowTrajectoryDotsSubtitle =>
+      'Debug only: during a session, only the curve and the cursor stay visible.';
+
+  @override
   String get debugBarLabelHumiliation => 'HUMIL.';
 
   @override

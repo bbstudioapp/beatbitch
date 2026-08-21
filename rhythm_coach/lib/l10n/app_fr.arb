@@ -649,6 +649,8 @@
   "soundsDebugShowSessionControlsSubtitle": "Réservé au debug : en prod la séance se déroule sans interaction (téléphone posé), seul le bouton FAIL reste utile.",
   "soundsDebugShowModeBadge": "Afficher mode / BPM / position",
   "soundsDebugShowModeBadgeSubtitle": "Réservé au debug : en prod l'animation suffit à indiquer ce qui se passe.",
+  "soundsDebugShowTrajectoryDots": "Afficher les mini-points de trajectoire",
+  "soundsDebugShowTrajectoryDotsSubtitle": "Réservé au debug : en séance, seules la courbe et le curseur restent visibles.",
   "debugBarLabelHumiliation": "HUMIL.",
   "debugBarLabelObedience": "OBÉI.",
   "debugBarLabelSaliva": "SALIVE",

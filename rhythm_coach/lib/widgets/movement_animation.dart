@@ -67,6 +67,10 @@ class MovementAnimation extends StatefulWidget {
   /// (extrapolation indéfinie de la consigne courante).
   final List<UpcomingMovementStep> upcomingSteps;
 
+  /// Quand true, la trajectoire pose une pastille sur chaque beat à venir.
+  /// Off en séance : seules la courbe lissée et le curseur restent visibles.
+  final bool showTrajectoryDots;
+
   const MovementAnimation({
     super.key,
     required this.mode,
@@ -79,6 +83,7 @@ class MovementAnimation extends StatefulWidget {
     this.stepSerial = 0,
     this.elapsed = Duration.zero,
     this.upcomingSteps = const [],
+    this.showTrajectoryDots = false,
   });
 
   @override
@@ -422,6 +427,7 @@ class _MovementAnimationState extends State<MovementAnimation>
       rowCount: widget.positionRowCount,
       elapsed: elapsedNow,
       upcomingSteps: widget.upcomingSteps,
+      showTrajectoryDots: widget.showTrajectoryDots,
       pulseT: t,
     );
   }
@@ -546,9 +552,11 @@ class _PositionLadder extends StatefulWidget {
   /// uniformément dans la hauteur disponible quel que soit le rowCount.
   final int rowCount;
 
-  /// Cf. `MovementAnimation.elapsed` / `.upcomingSteps`.
+  /// Cf. `MovementAnimation.elapsed` / `.upcomingSteps` /
+  /// `.showTrajectoryDots`.
   final Duration elapsed;
   final List<UpcomingMovementStep> upcomingSteps;
+  final bool showTrajectoryDots;
 
   const _PositionLadder({
     required this.mode,
@@ -568,6 +576,7 @@ class _PositionLadder extends StatefulWidget {
     required this.rowCount,
     required this.elapsed,
     required this.upcomingSteps,
+    this.showTrajectoryDots = false,
   });
 
   @override
@@ -980,6 +989,7 @@ class _PositionLadderState extends State<_PositionLadder> {
                     rightPaddingFraction:
                         _PositionLadder._kRightPaddingFraction,
                     rowCount: widget.rowCount,
+                    showDots: widget.showTrajectoryDots,
                   ),
                 ),
               ),
@@ -1315,12 +1325,16 @@ class _TrajectoryPainter extends CustomPainter {
   /// (et balls tombait carrément sous le canvas).
   final int rowCount;
 
+  /// Cf. `MovementAnimation.showTrajectoryDots`.
+  final bool showDots;
+
   _TrajectoryPainter({
     required this.beats,
     required this.color,
     required this.cursorXFraction,
     required this.rightPaddingFraction,
     required this.rowCount,
+    required this.showDots,
   });
 
   /// Marge verticale (en pixels) entre le tracé et les bords du canvas.
@@ -1369,6 +1383,8 @@ class _TrajectoryPainter extends CustomPainter {
       ..strokeJoin = StrokeJoin.round;
     canvas.drawPath(path, stroke);
 
+    if (!showDots) return;
+
     // Pastille sur chaque beat futur. Plus le beat est lointain, plus la
     // pastille est pâle → repère visuel d'horizon temporel. Skip les beats
     // hors fenêtre (`t > 1`) : ils existent uniquement pour que le segment
@@ -1386,6 +1402,7 @@ class _TrajectoryPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _TrajectoryPainter old) {
     if (old.color != color ||
+        old.showDots != showDots ||
         old.beats.length != beats.length ||
         old.cursorXFraction != cursorXFraction ||
         old.rightPaddingFraction != rightPaddingFraction ||
