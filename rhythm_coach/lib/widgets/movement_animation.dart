@@ -99,6 +99,13 @@ class _MovementAnimationState extends State<MovementAnimation>
   /// transition de step, cf. `_frozenIdx`).
   DateTime? _lastBeatAt;
 
+  /// Les deux dernières positions émises par le moteur — miroir local de ce
+  /// que `BeepEngine` mémorise, alimenté par le même `BeatEvent`. Sert à
+  /// prédire, via `BeepEngine.shouldStartOnTo`, sur quelle position le step
+  /// suivant démarrera.
+  Position? _lastMovePos;
+  Position? _prevMovePos;
+
   /// Position visuelle gelée juste avant une transition de step (mode/tempo/
   /// position), point de départ du pont synthétique que dessine la courbe
   /// pendant le court intervalle sans beat réel (cf.
@@ -201,7 +208,14 @@ class _MovementAnimationState extends State<MovementAnimation>
         now: DateTime.now(),
       );
       _frozenAt = DateTime.now();
-      _flipped = false;
+      // Positions brutes, pas mappées sur le ladder : `applyStep` décide sur
+      // ses propres `_from`/`_to`, et c'est son verdict qu'on prédit ici.
+      _flipped = !BeepEngine.shouldStartOnTo(
+        from: widget.from,
+        to: widget.to,
+        lastMovePos: _lastMovePos,
+        prevMovePos: _prevMovePos,
+      );
       _lastBeatAt = null;
     }
   }
@@ -290,6 +304,8 @@ class _MovementAnimationState extends State<MovementAnimation>
       // l'inverse.
       final nextIsFrom = event.position == widget.to;
       setState(() {
+        _prevMovePos = _lastMovePos;
+        _lastMovePos = event.position;
         _flipped = nextIsFrom;
         _lastBeatAt = DateTime.now();
       });
@@ -739,6 +755,11 @@ class _PositionLadder extends StatelessWidget {
     // arrive jusqu'au bord droit. Sans lui, la courbe s'arrêtait sec au
     // dernier point dans la fenêtre, laissant une portion vide à droite.
     var extraAdded = 0;
+    // Les deux derniers points prédits : ils tiennent lieu d'historique de
+    // mouvement pour interroger `BeepEngine.shouldStartOnTo` sur les steps
+    // à venir, que le moteur n'a pas encore joués.
+    double? prevIdx;
+    double? lastIdx;
     bool addPoint(DateTime at, double idx) {
       final dtMs = at.difference(now).inMilliseconds.toDouble();
       if (dtMs < 0) return true;
@@ -747,6 +768,8 @@ class _PositionLadder extends StatelessWidget {
         extraAdded++;
       }
       beats.add(_BeatPoint(t: dtMs / windowMs, idx: idx, isAnchor: false));
+      prevIdx = lastIdx;
+      lastIdx = idx;
       return true;
     }
 
@@ -790,12 +813,19 @@ class _PositionLadder extends StatelessWidget {
           nextPos = newTo;
         } else {
           nextTime = resumeAt;
-          // `BeepEngine.applyStep` remet `_alternateToggle` à true et
-          // `_pickPosition` rend `to` en premier : le 1er bip d'un step est
-          // toujours `to`. Prédire autre chose ici ferait diverger la courbe
-          // du son, et le recalage sur le vrai `BeatEvent` déplacerait toute
-          // la courbe d'un coup.
-          nextPos = newTo;
+          // Même règle que `applyStep` : c'est `shouldStartOnTo` qui décide,
+          // ici comme dans le moteur, pour que la courbe annonce la position
+          // qui sera réellement jouée.
+          nextPos = BeepEngine.shouldStartOnTo(
+            from: newFrom,
+            to: newTo,
+            lastMovePos:
+                lastIdx == null ? null : Position.values[lastIdx!.round()],
+            prevMovePos:
+                prevIdx == null ? null : Position.values[prevIdx!.round()],
+          )
+              ? newTo
+              : newFrom;
         }
         segFamily = newFamily;
         segFrom = newFrom;
