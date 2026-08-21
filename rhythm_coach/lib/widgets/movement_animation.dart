@@ -107,6 +107,14 @@ class _MovementAnimationState extends State<MovementAnimation>
   double? _frozenIdx;
   DateTime? _frozenAt;
 
+  /// Gap réel que `BeepEngine.applyStep` insère avant le 1er bip du step
+  /// courant, et passage par `tip` imposé par un franchissement de famille :
+  /// la durée et la forme du pont synthétique, pour qu'il parcoure la
+  /// trajectoire que la prévision avait annoncée (cf.
+  /// `_PositionLadder._computeFutureBeats`).
+  Duration? _bridgeGap;
+  bool _bridgeViaTip = false;
+
   /// Ancrage horloge murale du `elapsed` de séance (rafraîchi au tick
   /// ~200 ms du `SessionController`, alors que ce widget se redessine à
   /// 60 fps). Sert à extrapoler un elapsed continu entre deux ticks au lieu
@@ -201,6 +209,13 @@ class _MovementAnimationState extends State<MovementAnimation>
         now: DateTime.now(),
       );
       _frozenAt = DateTime.now();
+      _bridgeGap = BeepEngine.transitionGap(
+        incoming: widget.mode,
+        previous: oldWidget.mode,
+        incomingTo: widget.to,
+      );
+      _bridgeViaTip = _familyOf(widget.mode, widget.from) !=
+          _familyOf(oldWidget.mode, oldWidget.from);
       _flipped = false;
       _lastBeatAt = null;
     }
@@ -383,6 +398,8 @@ class _MovementAnimationState extends State<MovementAnimation>
       lastBeatAt: _lastBeatAt,
       frozenIdx: _frozenIdx,
       frozenAt: _frozenAt,
+      bridgeGap: _bridgeGap,
+      bridgeViaTip: _bridgeViaTip,
       rowCount: widget.positionRowCount,
       elapsed: elapsedNow,
       upcomingSteps: widget.upcomingSteps,
@@ -491,6 +508,10 @@ class _PositionLadder extends StatefulWidget {
   final double? frozenIdx;
   final DateTime? frozenAt;
 
+  /// Cf. `_MovementAnimationState._bridgeGap` / `._bridgeViaTip`.
+  final Duration? bridgeGap;
+  final bool bridgeViaTip;
+
   /// Phase du `AnimationController` (0..1), consommée par `_CursorVisual`
   /// pour les pulses propres à biffle/breath/hold/beg/suckle.
   final double pulseT;
@@ -515,6 +536,8 @@ class _PositionLadder extends StatefulWidget {
     required this.lastBeatAt,
     required this.frozenIdx,
     required this.frozenAt,
+    this.bridgeGap,
+    this.bridgeViaTip = false,
     required this.pulseT,
     required this.rowCount,
     required this.elapsed,
@@ -531,11 +554,8 @@ class _PositionLadder extends StatefulWidget {
   /// la marge est cruciale — un beat entier rentrerait sec sans elle.
   static const Duration _trajectoryWindow = Duration(milliseconds: 3000);
 
-  /// Durée du pont synthétique tracé entre la position gelée d'avant-
-  /// transition (`frozenIdx`/`frozenAt`) et `to` tant qu'aucun beat réel
-  /// n'est encore arrivé (`lastBeatAt == null`) — partagée avec la
-  /// durée de l'`AnimatedAlign` du curseur dans `build()` pour que le
-  /// tracé de la courbe et le glissement visuel du curseur s'accordent.
+  /// Durée du pont synthétique quand le gap réel du moteur n'est pas connu
+  /// (`bridgeGap` nul : premier step de la séance, aucune transition avant).
   static const int _bridgeMs = 260;
 
   /// Fraction de la zone visible à droite consacrée au fade-out (apparition
@@ -594,19 +614,21 @@ class _PositionLadder extends StatefulWidget {
     } else {
       // Pont synthétique : aucun beat réel n'est encore arrivé pour ce step
       // (juste après une transition). On glisse de la position gelée
-      // (`frozenIdx`/`frozenAt`) vers `to` en `_bridgeMs`, puis on prétend
-      // qu'un beat vient de sonner sur `to` à la fin du pont — c'est
-      // toujours vrai pour le 1er bip réel d'un step (cf. `beep_engine.dart`,
-      // jamais modifié ici) — pour rebrancher l'alternance normale derrière.
+      // (`frozenIdx`/`frozenAt`) vers la cible que la prévision avait
+      // annoncée pour l'instant de reprise — `tip` au franchissement d'une
+      // famille, `to` sinon — sur la durée du gap réel du moteur, puis on
+      // prétend qu'un beat vient de sonner dessus pour rebrancher
+      // l'alternance normale derrière.
       final anchorAt = frozenAt ?? now;
       final anchorIdx = frozenIdx ?? to.index.toDouble();
-      final targetIdx = to.index.toDouble();
+      final bridgeMs = (bridgeGap?.inMilliseconds ?? _bridgeMs).toDouble();
+      final targetIdx = (bridgeViaTip ? Position.tip : to).index.toDouble();
       final sinceFrozenMs = now.difference(anchorAt).inMilliseconds.toDouble();
-      final progress = (sinceFrozenMs / _bridgeMs).clamp(0.0, 1.0);
+      final progress = (sinceFrozenMs / bridgeMs).clamp(0.0, 1.0);
       final eased = Curves.easeInOutCubic.transform(progress);
       yNow = anchorIdx + (targetIdx - anchorIdx) * eased;
-      last = anchorAt.add(const Duration(milliseconds: _bridgeMs));
-      afterAnchorPos = from;
+      last = anchorAt.add(Duration(milliseconds: bridgeMs.round()));
+      afterAnchorPos = bridgeViaTip ? to : from;
     }
 
     final beats = <_BeatPoint>[
@@ -1017,6 +1039,8 @@ List<({double t, double idx, bool isAnchor})> computeFutureBeatsForTest({
   DateTime? lastBeatAt,
   double? frozenIdx,
   DateTime? frozenAt,
+  Duration? bridgeGap,
+  bool bridgeViaTip = false,
   Duration elapsed = Duration.zero,
   List<UpcomingMovementStep> upcomingSteps = const [],
 }) {
@@ -1031,6 +1055,8 @@ List<({double t, double idx, bool isAnchor})> computeFutureBeatsForTest({
     lastBeatAt: lastBeatAt,
     frozenIdx: frozenIdx,
     frozenAt: frozenAt,
+    bridgeGap: bridgeGap,
+    bridgeViaTip: bridgeViaTip,
     pulseT: 0,
     rowCount: 5,
     elapsed: elapsed,

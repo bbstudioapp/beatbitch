@@ -253,6 +253,69 @@ void main() {
         );
       },
     );
+
+    test(
+      'pont de transition : au franchissement d\'une famille, il rejoint '
+      'tip — la trajectoire annoncée — et pas directement `to`',
+      () {
+        final beats = computeFutureBeatsForTest(
+          mode: SessionMode.hand,
+          from: Position.mid,
+          to: Position.full,
+          beatDuration: const Duration(milliseconds: 1000),
+          flipped: false,
+          frozenIdx: Position.head.index.toDouble(),
+          frozenAt: DateTime.now().subtract(const Duration(milliseconds: 600)),
+          bridgeGap: const Duration(milliseconds: 600),
+          bridgeViaTip: true,
+        );
+
+        expect(beats.first.isAnchor, isTrue);
+        expect(beats.first.idx, closeTo(Position.tip.index.toDouble(), 0.05));
+      },
+    );
+
+    test(
+      'pont de transition : `to` est joué un battement après la fin du '
+      'pont, comme la prévision l\'annonçait',
+      () {
+        final beats = computeFutureBeatsForTest(
+          mode: SessionMode.hand,
+          from: Position.mid,
+          to: Position.full,
+          beatDuration: const Duration(milliseconds: 1000),
+          flipped: false,
+          frozenIdx: Position.head.index.toDouble(),
+          frozenAt: DateTime.now(),
+          bridgeGap: const Duration(milliseconds: 600),
+          bridgeViaTip: true,
+        );
+
+        final first = beats.firstWhere((b) => !b.isAnchor);
+        expect(first.idx, Position.full.index.toDouble());
+        expect(first.t * 3000, closeTo(1600, 60));
+      },
+    );
+
+    test(
+      'pont de transition : sa durée est le gap réel du moteur, pas une '
+      'constante d\'affichage',
+      () {
+        final beats = computeFutureBeatsForTest(
+          mode: SessionMode.rhythm,
+          from: Position.head,
+          to: Position.throat,
+          beatDuration: const Duration(milliseconds: 1000),
+          flipped: false,
+          frozenIdx: Position.tip.index.toDouble(),
+          frozenAt: DateTime.now(),
+          bridgeGap: const Duration(milliseconds: 300),
+        );
+
+        final first = beats.firstWhere((b) => !b.isAnchor);
+        expect(first.t * 3000, closeTo(1300, 40));
+      },
+    );
   });
 
   group('resolveUpcomingMovementSteps', () {
