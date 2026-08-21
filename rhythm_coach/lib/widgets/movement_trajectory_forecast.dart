@@ -1,12 +1,12 @@
 import '../models/session.dart';
 import '../models/session_step.dart';
 import '../services/beep_engine.dart';
+import '../services/step_resolution.dart';
 
 /// Configuration effective d'un step à venir, résolue (mode/from/to/bpm
-/// hérités des steps précédents quand `null` dans le JSON source — même
-/// règle de résolution que `BeepEngine.applyStep`, dupliquée ici en lecture
-/// seule pour l'affichage : `movement_animation.dart` n'a pas accès à l'état
-/// interne du moteur audio).
+/// hérités des steps précédents quand `null` dans le JSON source, par
+/// `resolveStepConfig` — la même règle que `BeepEngine.applyStep` applique
+/// au son).
 class UpcomingMovementStep {
   final SessionMode mode;
   final Position from;
@@ -54,16 +54,16 @@ List<UpcomingMovementStep> resolveUpcomingMovementSteps({
     if (step.time <= afterSecond) continue;
 
     final previousMode = mode;
-    mode = step.mode ?? defaultMode;
-    if (step.bpm != null) bpm = step.bpm!;
-    if (mode == SessionMode.hold ||
-        mode == SessionMode.beg ||
-        mode == SessionMode.suckle) {
-      if (step.to != null) from = step.to!;
-    } else if (step.from != null) {
-      from = step.from!;
-    }
-    to = step.to;
+    final resolved = resolveStepConfig(
+      step: step,
+      defaultMode: defaultMode,
+      currentFrom: from,
+      currentBpm: bpm,
+    );
+    mode = resolved.mode;
+    from = resolved.from;
+    to = resolved.to;
+    bpm = resolved.bpm;
 
     result.add(UpcomingMovementStep(
       mode: mode,
