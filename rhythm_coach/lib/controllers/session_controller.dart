@@ -925,6 +925,15 @@ class SessionController extends ChangeNotifier {
   Session get session => _session;
   SessionState get state => _state;
   Duration get elapsed => _stopwatch.elapsed + _timelineOffset;
+
+  /// Vrai tant que `_onTick` gèle l'horloge de séance. Lu par l'affichage :
+  /// les instants des steps à venir sont exprimés sur cette horloge, donc
+  /// tant qu'elle ne tourne pas, ils ne situent plus rien. Le gel dure au-delà
+  /// du défi lui-même (respiration de récupération, attente de posture) —
+  /// c'est la même expression qui gèle et qui répond ici, pour que les deux ne
+  /// puissent pas diverger.
+  bool get isTimelineFrozen =>
+      isChallengeActive || _inPostChallengeBreath || awaitingPostureReady;
   int get elapsedSeconds => elapsed.inSeconds;
 
   /// Temps réellement passé en séance, pauses exclues. Contrairement à
@@ -1368,7 +1377,7 @@ class SessionController extends ChangeNotifier {
     // brut, jamais freezé) pour rester indépendantes de ce gel — sans
     // cela, `_inPostChallengeBreath` ne se terminerait jamais (son seuil
     // ne serait jamais franchi par un `elapsedSeconds` gelé).
-    if (isChallengeActive || _inPostChallengeBreath || awaitingPostureReady) {
+    if (isTimelineFrozen) {
       _timelineOffset -= _tickInterval;
     }
     if (elapsedSeconds >= session.durationSeconds) {
