@@ -207,6 +207,7 @@ class BeepEngine {
   /// Stream broadcast des beats (rhythm/lick/biffle/hand). Permet à plusieurs
   /// consommateurs (UI animation, debug overlays) de réagir à chaque bip
   /// sans monopoliser [onBeat]. Émis exactement au même instant que [onBeat].
+  int _stepSerial = 0;
   final StreamController<BeatEvent> _beatController =
       StreamController<BeatEvent>.broadcast();
   Stream<BeatEvent> get beatStream => _beatController.stream;
@@ -359,6 +360,7 @@ class BeepEngine {
   /// (elles ne touchent pas au loop courant).
   Future<void> applyStep(SessionStep step, SessionMode sessionMode) async {
     if (step.isTextOnly) return;
+    _stepSerial++;
     if (!_initialized) await init();
 
     final mode = step.mode ?? sessionMode;
@@ -880,6 +882,13 @@ class BeepEngine {
   // ─── État courant exposé pour l'affichage UI ───────────────────────────
 
   SessionMode get currentMode => _mode;
+
+  /// Nombre de steps réellement appliqués au moteur. Une réapplication à
+  /// configuration identique passe quand même par le gap de transition
+  /// (mesuré : 301 ms) : sans ce compteur, rien ne distingue ce silence pour
+  /// un affichage qui ne regarde que mode/positions/tempo.
+  int get stepSerial => _stepSerial;
+
   Position get currentFrom => _from;
   Position? get currentTo => _to;
   int get currentBpm => _bpm;
