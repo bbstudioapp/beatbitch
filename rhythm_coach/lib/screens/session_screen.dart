@@ -1121,11 +1121,11 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                       stepSerial: widget.beep.stepSerial,
                       elapsed: ctrl.elapsed,
                       // Un défi joue des segments produits en direct par son
-                      // builder et jamais insérés dans `session.steps` : la
-                      // liste ne décrit alors plus ce qui va être joué, et
-                      // ses instants sont ceux d'une horloge que le défi a
-                      // décalée. On n'annonce rien tant qu'il tourne.
-                      upcomingSteps: ctrl.isChallengeActive
+                      // builder et jamais insérés dans `session.steps`, et son
+                      // gel d'horloge se prolonge après lui : les instants des
+                      // steps à venir ne situent plus rien. On n'annonce rien
+                      // tant que l'horloge ne tourne pas.
+                      upcomingSteps: ctrl.isTimelineFrozen
                           ? const []
                           : resolveUpcomingMovementSteps(
                               steps: ctrl.session.steps,
