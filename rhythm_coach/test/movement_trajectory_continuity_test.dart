@@ -320,6 +320,36 @@ void main() {
         expect(points[1].t * 3000, closeTo(1300, 40));
       },
     );
+
+    test(
+      'aspirer (aucun BeatEvent) : passé son arrivée, le pont enchaîne sur la '
+      'position tenue au lieu de rester collé à tip',
+      () {
+        List<({double t, double idx, bool isAnchor})> beatsAfter(int ms) =>
+            computeFutureBeatsForTest(
+              mode: SessionMode.suckle,
+              from: Position.full,
+              to: Position.full,
+              beatDuration: const Duration(milliseconds: 1000),
+              flipped: false,
+              frozenIdx: Position.head.index.toDouble(),
+              frozenAt: DateTime.now().subtract(Duration(milliseconds: ms)),
+              bridgeGap: const Duration(milliseconds: 600),
+              bridgeViaTip: true,
+            );
+
+        expect(
+          beatsAfter(1100).first.idx,
+          greaterThan(Position.tip.index.toDouble()),
+          reason: 'à mi-chemin du bip qui suit le pont, le curseur descend',
+        );
+        expect(
+          beatsAfter(2000).first.idx,
+          closeTo(Position.full.index.toDouble(), 0.05),
+          reason: 'la tenue se joue sur sa position, pas en haut du ladder',
+        );
+      },
+    );
   });
 
   group('resolveUpcomingMovementSteps', () {

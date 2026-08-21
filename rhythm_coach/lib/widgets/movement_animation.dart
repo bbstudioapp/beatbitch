@@ -623,14 +623,30 @@ class _PositionLadder extends StatefulWidget {
       final anchorAt = frozenAt ?? now;
       final anchorIdx = frozenIdx ?? to.index.toDouble();
       final bridgeMs = (bridgeGap?.inMilliseconds ?? _bridgeMs).toDouble();
-      final targetIdx = (bridgeViaTip ? Position.tip : to).index.toDouble();
+      final bridgeTarget = bridgeViaTip ? Position.tip : to;
+      final resumePos = bridgeViaTip ? to : from;
       final sinceFrozenMs = now.difference(anchorAt).inMilliseconds.toDouble();
       final progress = (sinceFrozenMs / bridgeMs).clamp(0.0, 1.0);
-      final eased = Curves.easeInOutCubic.transform(progress);
-      yNow = anchorIdx + (targetIdx - anchorIdx) * eased;
       last = anchorAt.add(Duration(milliseconds: bridgeMs.round()));
-      afterAnchorPos = bridgeViaTip ? to : from;
-      bridgeTargetIdx = targetIdx;
+      // Hors rhythm/lick/hand, aucun `BeatEvent` ne vient jamais relever
+      // `lastBeatAt` : le pont reste la seule source de position pour tout le
+      // step. Passé son arrivée, il enchaîne donc lui-même sur le bip
+      // synthétique de `last`, sinon le curseur reste collé à la cible du
+      // pont et y retombe à chaque recalcul.
+      yNow = progress < 1
+          ? anchorIdx +
+              (bridgeTarget.index - anchorIdx) *
+                  Curves.easeInOutCubic.transform(progress)
+          : _MovementAnimationState._visualIdxNow(
+              from: bridgeTarget,
+              to: resumePos,
+              flipped: false,
+              lastBeatAt: last,
+              beatDuration: beatDuration,
+              now: now,
+            );
+      afterAnchorPos = resumePos;
+      bridgeTargetIdx = bridgeTarget.index.toDouble();
     }
 
     final beats = <_BeatPoint>[
