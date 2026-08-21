@@ -8,7 +8,7 @@
   "intro": "Salut. C'est une démo : tu vas entendre tous les modes — rythme, lick, biffle, hold, respiration — sur toutes les positions. Sers-toi de cette session pour bien identifier chaque son et chaque profondeur. Pose ton téléphone, écoute attentivement, et appuie quand tu es prête à dérouler.",
   "steps": [
     {"time": 0,   "text": "Position de départ. On commence sur la tête, tempo lent.",
-                  "from": "head", "to": "head", "bpm": 60,  "duration": 30},
+                  "from": "tip", "to": "head", "bpm": 60,  "duration": 30},
     {"time": 15,  "text": "Garde le tempo. Concentre-toi sur la régularité."},
 
     {"time": 30,  "text": "On élargit. De la tête au milieu.",

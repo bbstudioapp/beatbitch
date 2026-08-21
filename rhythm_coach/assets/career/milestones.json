@@ -122,7 +122,7 @@
         {"time": 20, "text": "Encore. Quatre secondes cette fois.", "mode": "hold", "to": "mid", "duration": 4},
         {"time": 24, "text": "Bien. Respire.", "mode": "breath", "duration": 8},
         {"time": 32, "text": "Dernière. Six secondes. Garde-la immobile.", "mode": "hold", "to": "mid", "duration": 6},
-        {"time": 38, "text": "Bien fait. Lèche.", "mode": "lick", "from": "head", "to": "head", "bpm": 80, "duration": 10}
+        {"time": 38, "text": "Bien fait. Lèche.", "mode": "lick", "from": "tip", "to": "head", "bpm": 80, "duration": 10}
       ]
     },
     {
@@ -138,7 +138,7 @@
         {"time": 0,  "text": "Ouvre la bouche. Tu vas recevoir.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 90, "duration": 8},
         {"time": 8,  "text": "Coups de queue, lents. Reçois-les.", "mode": "biffle", "bpm": 50, "duration": 10},
         {"time": 18, "text": "Plus vite maintenant.", "mode": "biffle", "bpm": 100, "duration": 10},
-        {"time": 28, "text": "Bien. Lèche pour finir.", "mode": "lick", "from": "head", "to": "head", "bpm": 70, "duration": 8}
+        {"time": 28, "text": "Bien. Lèche pour finir.", "mode": "lick", "from": "tip", "to": "head", "bpm": 70, "duration": 8}
       ]
     },
     {
@@ -149,7 +149,7 @@
       "branches": ["obeissance"],
       "sequence": [
         {"time": 0,  "text": "Tu sais finir une séance. Maintenant tu vas apprendre quelque chose de plus difficile : redemander.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 85, "duration": 10},
-        {"time": 10, "text": "À la fin d'une séance, si tu en veux encore, tu peux le demander. Mais il faut le mériter, et le supplier.", "mode": "lick", "from": "head", "to": "head", "bpm": 70, "duration": 10},
+        {"time": 10, "text": "À la fin d'une séance, si tu en veux encore, tu peux le demander. Mais il faut le mériter, et le supplier.", "mode": "lick", "from": "tip", "to": "head", "bpm": 70, "duration": 10},
         {"time": 20, "text": "Première supplique : dis-moi que tu n'en as pas eu assez.", "mode": "beg", "duration": 12},
         {"time": 32, "text": "Deuxième : promets-moi que tu vas faire mieux la prochaine fois.", "mode": "beg", "duration": 12},
         {"time": 44, "text": "Dernière : implore-moi de te ressortir ma queue.", "mode": "beg", "duration": 12},
@@ -263,7 +263,7 @@
         {"time": 22, "text": "Encore. Quatre secondes.", "mode": "hold", "to": "full", "duration": 4},
         {"time": 26, "text": "Respire à fond.", "mode": "breath", "duration": 12},
         {"time": 38, "text": "Dernière. Six secondes nez dans le ventre.", "mode": "hold", "to": "full", "duration": 6},
-        {"time": 44, "text": "Très bien. Repose-toi.", "mode": "lick", "from": "head", "to": "head", "bpm": 70, "duration": 12}
+        {"time": 44, "text": "Très bien. Repose-toi.", "mode": "lick", "from": "tip", "to": "head", "bpm": 70, "duration": 12}
       ]
     },
     {
@@ -282,7 +282,7 @@
         {"time": 0,  "text": "Échauffement avant la profondeur.", "mode": "rhythm", "from": "head", "to": "throat", "bpm": 100, "duration": 10},
         {"time": 10, "text": "Va-et-vient à fond.", "mode": "rhythm", "from": "mid", "to": "full", "bpm": 80, "duration": 20},
         {"time": 30, "text": "Respire.", "mode": "breath", "duration": 10},
-        {"time": 40, "text": "Lèche pour finir.", "mode": "lick", "from": "head", "to": "head", "bpm": 70, "duration": 10}
+        {"time": 40, "text": "Lèche pour finir.", "mode": "lick", "from": "tip", "to": "head", "bpm": 70, "duration": 10}
       ]
     },
     {
@@ -792,7 +792,7 @@
       "branches": ["obeissance"],
       "sequence": [
         {"time": 0,  "text": "À partir d'aujourd'hui, je peux te surprendre. Je vais te faire bosser quand JE veux.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 100, "duration": 10},
-        {"time": 10, "text": "Tu vas activer les notifications. Quand l'icône apparaît dans l'AppBar, ouvre-la et règle les plages où je peux te déranger.", "mode": "lick", "from": "head", "to": "head", "bpm": 75, "duration": 10},
+        {"time": 10, "text": "Tu vas activer les notifications. Quand l'icône apparaît dans l'AppBar, ouvre-la et règle les plages où je peux te déranger.", "mode": "lick", "from": "tip", "to": "head", "bpm": 75, "duration": 10},
         {"time": 20, "text": "Tu acceptes ?", "mode": "beg", "duration": 6},
         {"time": 26, "text": "Bien. À partir de maintenant, tu pourrais entendre un bip de moi à n'importe quelle heure. Et tu obéiras.", "mode": "rhythm", "from": "head", "to": "mid", "bpm": 90, "duration": 10}
       ]
