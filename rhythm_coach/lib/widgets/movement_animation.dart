@@ -738,12 +738,7 @@ class _PositionLadder extends StatelessWidget {
     // segment cubique qui le relie au précédent traverse la zone de fade et
     // arrive jusqu'au bord droit. Sans lui, la courbe s'arrêtait sec au
     // dernier point dans la fenêtre, laissant une portion vide à droite.
-    //
-    // `prevIdx`/`lastIdx` gardent trace des 2 derniers points ajoutés — sert
-    // à préserver l'alternance visuelle à une frontière de steps (plus bas).
     var extraAdded = 0;
-    double? prevIdx;
-    double? lastIdx;
     bool addPoint(DateTime at, double idx) {
       final dtMs = at.difference(now).inMilliseconds.toDouble();
       if (dtMs < 0) return true;
@@ -752,8 +747,6 @@ class _PositionLadder extends StatelessWidget {
         extraAdded++;
       }
       beats.add(_BeatPoint(t: dtMs / windowMs, idx: idx, isAnchor: false));
-      prevIdx = lastIdx;
-      lastIdx = idx;
       return true;
     }
 
@@ -797,23 +790,12 @@ class _PositionLadder extends StatelessWidget {
           nextPos = newTo;
         } else {
           nextTime = resumeAt;
-          // Point 6 de Manu : si viser `newTo` directement continuerait dans
-          // le même sens que le dernier mouvement affiché, viser `newFrom`
-          // d'abord pour préserver l'alternance visuelle (haut/bas/haut/
-          // bas). Artefact de PRÉVISION seulement (dots pas encore réels) —
-          // le vrai 1er beat du step reste toujours `to` (cf. beep_engine.dart,
-          // jamais modifié ici).
-          var target = newTo;
-          if (prevIdx != null &&
-              segFrom.index != segTo.index &&
-              newFrom.index != newTo.index) {
-            final lastDir = (lastIdx! - prevIdx!).sign;
-            final candidateDir = (newTo.index - lastIdx!).sign;
-            if (lastDir != 0 && candidateDir == lastDir) {
-              target = newFrom;
-            }
-          }
-          nextPos = target;
+          // `BeepEngine.applyStep` remet `_alternateToggle` à true et
+          // `_pickPosition` rend `to` en premier : le 1er bip d'un step est
+          // toujours `to`. Prédire autre chose ici ferait diverger la courbe
+          // du son, et le recalage sur le vrai `BeatEvent` déplacerait toute
+          // la courbe d'un coup.
+          nextPos = newTo;
         }
         segFamily = newFamily;
         segFrom = newFrom;
