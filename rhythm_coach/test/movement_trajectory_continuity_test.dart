@@ -543,7 +543,6 @@ void main() {
         afterSecond: 10,
         currentMode: SessionMode.rhythm,
         currentFrom: Position.tip,
-        currentTo: Position.head,
         currentBpm: 90,
       );
 
@@ -565,7 +564,6 @@ void main() {
           afterSecond: 0,
           currentMode: SessionMode.rhythm,
           currentFrom: Position.tip,
-          currentTo: Position.head,
           currentBpm: 90,
         );
 
@@ -588,7 +586,6 @@ void main() {
         afterSecond: 0,
         currentMode: SessionMode.rhythm,
         currentFrom: Position.tip,
-        currentTo: Position.head,
         currentBpm: 90,
       );
 
@@ -615,7 +612,6 @@ void main() {
           afterSecond: 0,
           currentMode: SessionMode.rhythm,
           currentFrom: Position.tip,
-          currentTo: Position.head,
           currentBpm: 90,
         );
 

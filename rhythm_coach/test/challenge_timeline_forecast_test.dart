@@ -202,7 +202,6 @@ List<UpcomingMovementStep> _rawForecast(SessionController ctrl) =>
       afterSecond: ctrl.elapsedSeconds,
       currentMode: ctrl.currentMode,
       currentFrom: ctrl.currentFrom,
-      currentTo: ctrl.currentTo,
       currentBpm: ctrl.currentBpm,
     );
 

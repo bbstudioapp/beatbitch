@@ -32,21 +32,20 @@ class UpcomingMovementStep {
 }
 
 /// Résout la suite des steps de bip (non text-only) qui commencent après
-/// `afterSecond`, en héritant mode/from/to/bpm depuis la configuration
-/// courante (`currentMode`..`currentBpm`) comme le ferait le moteur audio.
+/// `afterSecond`, en héritant mode/from/bpm depuis la configuration courante
+/// (`currentMode`..`currentBpm`) comme le ferait le moteur audio. `to` n'est
+/// jamais hérité : chaque step porte le sien, ou aucun.
 List<UpcomingMovementStep> resolveUpcomingMovementSteps({
   required List<SessionStep> steps,
   required SessionMode defaultMode,
   required int afterSecond,
   required SessionMode currentMode,
   required Position currentFrom,
-  required Position? currentTo,
   required int currentBpm,
 }) {
   final result = <UpcomingMovementStep>[];
   var mode = currentMode;
   var from = currentFrom;
-  Position? to = currentTo;
   var bpm = currentBpm;
 
   for (final step in steps) {
@@ -62,8 +61,8 @@ List<UpcomingMovementStep> resolveUpcomingMovementSteps({
     );
     mode = resolved.mode;
     from = resolved.from;
-    to = resolved.to;
     bpm = resolved.bpm;
+    final to = resolved.to;
 
     result.add(UpcomingMovementStep(
       mode: mode,
