@@ -126,7 +126,10 @@ class _MovementAnimationState extends State<MovementAnimation>
     );
     _elapsedAnchorAt = DateTime.now();
     _elapsedAnchorValue = widget.elapsed;
-    _frozenIdx = (widget.to ?? widget.from).index.toDouble();
+    _frozenIdx = _ladderPositionsFor(widget.mode, widget.from, widget.to)
+        .$2
+        .index
+        .toDouble();
     _frozenAt = DateTime.now();
     _startController();
     _maybeSubscribeBeats(widget.beepEngine);
@@ -187,9 +190,11 @@ class _MovementAnimationState extends State<MovementAnimation>
     // disparaissait jusqu'au prochain `BeatEvent` (`beats.length < 2` →
     // `AnimatedOpacity` à 0).
     if (modeChanged || tempoChanged || positionChanged) {
+      final (oldLadderFrom, oldLadderTo) =
+          _ladderPositionsFor(oldWidget.mode, oldWidget.from, oldWidget.to);
       _frozenIdx = _visualIdxNow(
-        from: oldWidget.from,
-        to: oldWidget.to ?? oldWidget.from,
+        from: oldLadderFrom,
+        to: oldLadderTo,
         flipped: _flipped,
         lastBeatAt: _lastBeatAt,
         beatDuration: _durationFor(oldWidget.mode, oldWidget.bpm),
@@ -224,6 +229,33 @@ class _MovementAnimationState extends State<MovementAnimation>
     final eased = Curves.easeInOutCubic.transform(progress);
     return lastPosIdx + (nextPosIdx - lastPosIdx) * eased;
   }
+
+  /// Position affichée sur le ladder selon le mode : alternance réelle
+  /// (rhythm/lick/hand), tenue plate sur `from` (hold/beg/suckle), ou
+  /// ligne plate en haut pour les modes sans notion de position (Manu :
+  /// « pour les respirations ou les biffles, on peut mettre une ligne
+  /// droite en haut »). Utilisée pour ce qui est réellement affiché ET pour
+  /// geler l'ancre de transition sur la même valeur (cf. `didUpdateWidget`) —
+  /// sinon `_frozenIdx` capture une position brute jamais montrée à l'écran.
+  static (Position, Position) _ladderPositionsFor(
+    SessionMode mode,
+    Position from,
+    Position? to,
+  ) =>
+      switch (mode) {
+        SessionMode.rhythm || SessionMode.lick || SessionMode.hand => (
+            from,
+            to ?? from
+          ),
+        SessionMode.hold || SessionMode.beg || SessionMode.suckle => (
+            from,
+            from
+          ),
+        SessionMode.biffle || SessionMode.breath || SessionMode.freestyle => (
+            Position.tip,
+            Position.tip
+          ),
+      };
 
   @override
   void dispose() {
@@ -335,27 +367,8 @@ class _MovementAnimationState extends State<MovementAnimation>
   Widget _buildForMode(double t, Color color) {
     final cursorStyle = _cursorStyleFor(widget.mode);
     final beatDuration = _durationFor(widget.mode, widget.bpm);
-    // Position affichée sur le ladder selon le mode : alternance réelle
-    // (rhythm/lick/hand), tenue plate sur `from` (hold/beg/suckle), ou
-    // ligne plate en haut pour les modes sans notion de position (Manu :
-    // « pour les respirations ou les biffles, on peut mettre une ligne
-    // droite en haut »). Le ladder — silhouette, graduations, trajectoire —
-    // reste le même widget dans les 3 cas : jamais démonté d'une consigne à
-    // l'autre.
-    final (ladderFrom, ladderTo) = switch (widget.mode) {
-      SessionMode.rhythm || SessionMode.lick || SessionMode.hand => (
-          widget.from,
-          widget.to ?? widget.from
-        ),
-      SessionMode.hold || SessionMode.beg || SessionMode.suckle => (
-          widget.from,
-          widget.from
-        ),
-      SessionMode.biffle || SessionMode.breath || SessionMode.freestyle => (
-          Position.tip,
-          Position.tip
-        ),
-    };
+    final (ladderFrom, ladderTo) =
+        _ladderPositionsFor(widget.mode, widget.from, widget.to);
     final elapsedNow = _elapsedAnchorAt == null || _elapsedAnchorValue == null
         ? widget.elapsed
         : _elapsedAnchorValue! + DateTime.now().difference(_elapsedAnchorAt!);
@@ -777,8 +790,8 @@ class _PositionLadder extends StatelessWidget {
         final upcoming = upcomingSteps[upcomingIdx];
         final newFamily =
             _MovementAnimationState._familyOf(upcoming.mode, upcoming.from);
-        final newFrom = upcoming.from;
-        final newTo = upcoming.to ?? upcoming.from;
+        final (newFrom, newTo) = _MovementAnimationState._ladderPositionsFor(
+            upcoming.mode, upcoming.from, upcoming.to);
         segBeatMs =
             _MovementAnimationState._durationFor(upcoming.mode, upcoming.bpm)
                 .inMilliseconds
