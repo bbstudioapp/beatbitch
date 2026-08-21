@@ -184,8 +184,8 @@ void main() {
           reason: 'le breath post-défi fini, la séance reprend son horloge');
       expect(ctrl.currentMode, SessionMode.rhythm,
           reason: 'le step qui suivait le défi est consommé au dégel');
-      expect(_rawForecast(ctrl).map((u) => u.startSecond),
-          [_kLastStep - shift]);
+      expect(
+          _rawForecast(ctrl).map((u) => u.startSecond), [_kLastStep - shift]);
 
       await ctrl.stop();
     },
