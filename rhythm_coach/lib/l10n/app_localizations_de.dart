@@ -1324,6 +1324,13 @@ class AppLocalizationsDe extends AppLocalizations {
       'Nur Debug: im Produktivbetrieb reicht die Animation, um anzuzeigen, was passiert.';
 
   @override
+  String get soundsDebugShowTrajectoryDots => 'Trajektorienpunkte anzeigen';
+
+  @override
+  String get soundsDebugShowTrajectoryDotsSubtitle =>
+      'Nur Debug: In der Sitzung bleiben nur die Kurve und der Cursor sichtbar.';
+
+  @override
   String get debugBarLabelHumiliation => 'ERNIEDR.';
 
   @override

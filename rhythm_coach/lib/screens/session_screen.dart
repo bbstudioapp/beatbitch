@@ -520,6 +520,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
   bool _showSalivaBar = false;
   bool _showSessionControls = false;
   bool _showModeBadge = false;
+  bool _showTrajectoryDots = false;
   bool _showSkipSessionButton = false;
   bool _showBackgroundMedia = true;
   bool _showRemainingTime = false;
@@ -616,6 +617,10 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     debug.getShowModeBadge().then((value) {
       if (!mounted) return;
       setState(() => _showModeBadge = value);
+    });
+    debug.getShowTrajectoryDots().then((value) {
+      if (!mounted) return;
+      setState(() => _showTrajectoryDots = value);
     });
     debug.getShowBackgroundMedia().then((value) {
       if (!mounted) return;
@@ -1120,6 +1125,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                       positionRowCount: widget.positionRowCount,
                       stepSerial: widget.beep.stepSerial,
                       elapsed: ctrl.elapsed,
+                      showTrajectoryDots: _showTrajectoryDots,
                       // Un défi joue des segments produits en direct par son
                       // builder et jamais insérés dans `session.steps`, et son
                       // gel d'horloge se prolonge après lui : les instants des
