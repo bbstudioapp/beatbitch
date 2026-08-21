@@ -658,7 +658,15 @@ class _PositionLadder extends StatefulWidget {
       // pas de `segBeatMs` depuis cette ancre jusqu'à `now` — des centaines
       // d'itérations à vide sur un hold/biffle long à BPM élevé.
       if (segFrom.index == segTo.index && nextTime.isBefore(now)) {
-        nextTime = now;
+        // Avancer par multiples entiers du battement, pas jusqu'à `now` :
+        // deux recalculs successifs doivent poser leurs points aux mêmes
+        // instants, sinon un plateau voit ses points se recréer ailleurs et
+        // la courbe saute.
+        final lateMs = now.difference(nextTime).inMilliseconds.toDouble();
+        final steps = (lateMs / segBeatMs).ceil();
+        nextTime = nextTime.add(
+          Duration(milliseconds: (steps * segBeatMs).round()),
+        );
       }
       if (nextBoundary != null && !nextBoundary.isAfter(nextTime)) {
         final boundary = nextBoundary;
