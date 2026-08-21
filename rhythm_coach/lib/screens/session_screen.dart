@@ -43,6 +43,7 @@ import '../theme/app_theme.dart';
 import '../models/posture.dart';
 import '../widgets/mode_badge_row.dart';
 import '../widgets/movement_animation.dart';
+import '../widgets/movement_trajectory_forecast.dart';
 import '../widgets/posture_indicator.dart';
 import '../widgets/session_background.dart';
 import '../widgets/session_finale_overlay.dart';
@@ -1117,6 +1118,16 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                       height: animHeight,
                       beepEngine: widget.beep,
                       positionRowCount: widget.positionRowCount,
+                      elapsed: ctrl.elapsed,
+                      upcomingSteps: resolveUpcomingMovementSteps(
+                        steps: ctrl.session.steps,
+                        defaultMode: ctrl.session.defaultMode,
+                        afterSecond: ctrl.elapsedSeconds,
+                        currentMode: ctrl.currentMode,
+                        currentFrom: ctrl.currentFrom,
+                        currentTo: ctrl.currentTo,
+                        currentBpm: ctrl.currentBpm,
+                      ),
                     )
                   else
                     SizedBox(height: animHeight),
