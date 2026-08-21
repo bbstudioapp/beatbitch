@@ -459,20 +459,20 @@ enum _CursorStyle { orb, ring, tongue }
 /// (anatomie + milestone). Quand `from == to`, le curseur pulse
 /// simplement sur cette position.
 ///
-/// Le curseur **glisse** vers la prochaine cible avec une courbe d'easing
-/// (`Curves.easeInOutCubic`) sur la durée d'un beat. Anticipation : départ
-/// doux, accélération, arrivée freinée → l'utilisatrice voit où le curseur
-/// va avant qu'il arrive, et à l'instant du prochain bip il est pile dessus.
+/// Le curseur **est** le point d'ancrage `t=0` de `_computeFutureBeats`
+/// (cf. `_BeatPoint.isAnchor`) : sa position vient de `_visualIdxNow`, la
+/// même interpolation `Curves.easeInOutCubic` sur la durée d'un beat,
+/// recalculée à chaque frame via `DateTime.now()` — la même formule qui
+/// trace la trajectoire future. Une seule source pour les deux, ils ne
+/// peuvent plus diverger.
 ///
-/// L'audio reste maître : la cible de l'AnimatedAlign change à l'instant
-/// même où le bip courant sonne (cf. `_onBeatEvent`), ce qui garantit que
-/// le curseur visible *est* à `event.position` à ce moment précis (fin de
-/// l'animation précédente) et que la suivante glissera pendant exactement
-/// un beat. Pas de drift visuel/audio.
+/// L'audio reste maître : `lastBeatAt`/`flipped` ne changent qu'à la
+/// réception d'un vrai `BeatEvent` (cf. `_onBeatEvent`), jamais par une
+/// horloge murale libre.
 ///
-/// En cas de transition de step (from/to changent), `AnimatedAlign` glisse
-/// naturellement de l'ancienne position visible vers la nouvelle cible
-/// pendant un beat — pas de saut sec.
+/// En cas de transition de step (from/to changent), `_frozenIdx` gèle la
+/// position visuelle d'avant-transition — point de départ du pont
+/// synthétique tracé par `_computeFutureBeats` — pas de saut sec.
 class _PositionLadder extends StatelessWidget {
   final SessionMode mode;
   final Position from;
@@ -551,13 +551,15 @@ class _PositionLadder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Cible courante du curseur : flipped=false → `to`, flipped=true → `from`.
-    final target = flipped ? from : to;
-    final targetAlignment =
-        Alignment(_kCursorX, _toAlign(target.index, rowCount));
-
     final activeIndices = {from.index, to.index};
     final beats = _computeFutureBeats();
+    // Le curseur EST le point d'ancrage t=0 de la trajectoire (cf. _BeatPoint
+    // .isAnchor) — plus de moteur d'interpolation séparé : une seule source
+    // pour la position affichée, curseur et courbe ne peuvent plus diverger.
+    final cursorIdx = beats.isNotEmpty
+        ? beats.first.idx
+        : (flipped ? from : to).index.toDouble();
+    final cursorAlignment = Alignment(_kCursorX, _toAlign(cursorIdx, rowCount));
 
     return Stack(
       alignment: Alignment.center,
@@ -647,19 +649,8 @@ class _PositionLadder extends StatelessWidget {
               ),
             ),
           ),
-        AnimatedAlign(
-          alignment: targetAlignment,
-          // En régime établi : glisse vers la prochaine cible sur exactement
-          // un beat (anticipation easeInOutCubic, arrivée pile sur le bip).
-          // Juste après une bascule de step (lastBeatAt == null, on attend le
-          // 1er bip pendant le gap de transition silencieux du BeepEngine) :
-          // on rejoint `to` plus vite (≈ le gap mini de 300 ms) pour être en
-          // place quand ce 1er bip — toujours sur `to` — tombe. Le curseur
-          // bouge quand même (pas de saut sec), il se cale juste plus tôt.
-          duration: lastBeatAt == null
-              ? const Duration(milliseconds: _bridgeMs)
-              : beatDuration,
-          curve: Curves.easeInOutCubic,
+        Align(
+          alignment: cursorAlignment,
           child: _CursorVisual(
             mode: mode,
             cursorStyle: cursorStyle,
@@ -675,7 +666,7 @@ class _PositionLadder extends StatelessWidget {
   /// ladder de [rowCount] lignes. Avec [rowCount] = 5, l'index 4 (full)
   /// tombe en bas (y=1) ; avec [rowCount] = 6, l'index 5 (balls) tombe
   /// en bas et full remonte à 0.6.
-  static double _toAlign(int index, int rowCount) =>
+  static double _toAlign(num index, int rowCount) =>
       rowCount <= 1 ? 0 : index / (rowCount - 1) * 2 - 1;
 
   /// Calcule les points de la trajectoire future :
