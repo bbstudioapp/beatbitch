@@ -16,6 +16,12 @@ et `resolveUpcomingMovementSteps` l'appellent tous les deux au lieu de la rééc
 26 tests de caractérisation figent le comportement du moteur, écrits et verts **avant** l'extraction,
 et rouges sur cinq mutations de la règle.
 
+**[mesuré]** Ce que la courbe annonce est inchangé : l'ancien corps de
+`resolveUpcomingMovementSteps` et le nouveau, comparés champ à champ sur 600 séances générées et
+quatre instants de lecture chacune, donnent **0 différence sur 214 180 steps annoncés**
+(mode, from, to, bpm, instant de départ, gap de transition). La sonde était jetable et n'est pas
+conservée : elle embarquait une copie de l'ancien code.
+
 **[mesuré]** Un seul comportement change dans cette extraction : le résolveur d'affichage clampe
 maintenant le BPM à `[20, 300]` comme le moteur le faisait déjà. Aucune source de contenu mesurée ne
 sort de ces bornes (assets JSON scannés, mode Custom borné à 30-220 par
