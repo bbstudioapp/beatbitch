@@ -1119,15 +1119,22 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                       beepEngine: widget.beep,
                       positionRowCount: widget.positionRowCount,
                       elapsed: ctrl.elapsed,
-                      upcomingSteps: resolveUpcomingMovementSteps(
-                        steps: ctrl.session.steps,
-                        defaultMode: ctrl.session.defaultMode,
-                        afterSecond: ctrl.elapsedSeconds,
-                        currentMode: ctrl.currentMode,
-                        currentFrom: ctrl.currentFrom,
-                        currentTo: ctrl.currentTo,
-                        currentBpm: ctrl.currentBpm,
-                      ),
+                      // Un défi joue des segments produits en direct par son
+                      // builder et jamais insérés dans `session.steps` : la
+                      // liste ne décrit alors plus ce qui va être joué, et
+                      // ses instants sont ceux d'une horloge que le défi a
+                      // décalée. On n'annonce rien tant qu'il tourne.
+                      upcomingSteps: ctrl.isChallengeActive
+                          ? const []
+                          : resolveUpcomingMovementSteps(
+                              steps: ctrl.session.steps,
+                              defaultMode: ctrl.session.defaultMode,
+                              afterSecond: ctrl.elapsedSeconds,
+                              currentMode: ctrl.currentMode,
+                              currentFrom: ctrl.currentFrom,
+                              currentTo: ctrl.currentTo,
+                              currentBpm: ctrl.currentBpm,
+                            ),
                     )
                   else
                     SizedBox(height: animHeight),
