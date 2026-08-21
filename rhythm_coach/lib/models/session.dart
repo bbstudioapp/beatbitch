@@ -40,8 +40,8 @@ enum SessionMode {
   /// Aspiration / téter : geste actif-statique. La bouche reste en place
   /// sur la position visée (head ou balls), mais aspire au lieu de
   /// bouger. Audio = un sample wet pulsé toutes ~1.2s pendant `duration`,
-  /// pas de loop BPM, pas d'amplitude. Visuel = `_StaticPosition` orb
-  /// pulsé (comme hold/beg). Positions valides : `head` (sloppy modéré)
+  /// pas de loop BPM, pas d'amplitude. Visuel = orb pulsé sur le ladder
+  /// (comme hold/beg). Positions valides : `head` (sloppy modéré)
   /// et `balls` (sloppy soumis, gated anatomy). Interdit sur
   /// tip/mid/throat/full.
   suckle;
