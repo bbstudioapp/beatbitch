@@ -446,10 +446,12 @@ class _MovementAnimationState extends State<MovementAnimation>
   /// Famille d'organe engagé — la trajectoire remonte à `tip` au
   /// franchissement d'une frontière de famille (cf. `_PositionLadder`).
   static _ModeFamily _familyOf(SessionMode m, Position p) => switch (m) {
-        SessionMode.rhythm || SessionMode.hold => _ModeFamily.mouth,
+        SessionMode.rhythm ||
+        SessionMode.hold ||
+        SessionMode.beg =>
+          _ModeFamily.mouth,
         SessionMode.suckle =>
           p == Position.head ? _ModeFamily.mouth : _ModeFamily.other,
-        SessionMode.beg ||
         SessionMode.lick ||
         SessionMode.hand ||
         SessionMode.biffle ||
@@ -725,8 +727,16 @@ class _PositionLadder extends StatefulWidget {
     // dernier point dans la fenêtre, laissant une portion vide à droite.
     //
     var extraAdded = 0;
+    // Dernier repère posé — sert à situer la position réellement atteinte à
+    // une frontière de step, qui tombe presque toujours entre deux battements.
+    var lastPointAt = last;
+    var lastPointIdx = lastBeatAt != null
+        ? (flipped ? to : from).index.toDouble()
+        : (bridgeTargetIdx ?? to.index.toDouble());
     bool addPoint(DateTime at, double idx) {
       final dtMs = at.difference(now).inMilliseconds.toDouble();
+      lastPointAt = at;
+      lastPointIdx = idx;
       if (dtMs < 0) return true;
       if (dtMs > windowMs) {
         if (extraAdded >= _extraBeatsBeyondWindow) return false;
@@ -765,14 +775,25 @@ class _PositionLadder extends StatefulWidget {
       }
       if (nextBoundary != null && !nextBoundary.isAfter(nextTime)) {
         final boundary = nextBoundary;
-        // Une tenue tient sa position jusqu'à la frontière : sans ce point,
-        // le segment part de son dernier battement et la courbe commence à
+        // Position réellement atteinte à la frontière : sans ce point, le
+        // segment part de son dernier battement et la courbe commence à
         // rejoindre le step suivant avant même qu'il ait commencé — le gel
         // de transition ramène alors le curseur en arrière.
-        if (segFrom.index == segTo.index &&
-            !addPoint(boundary, segFrom.index.toDouble())) {
-          break;
-        }
+        final legMs =
+            nextTime.difference(lastPointAt).inMilliseconds.toDouble();
+        final atBoundaryIdx = legMs <= 0
+            ? lastPointIdx
+            : lastPointIdx +
+                (nextPos.index.toDouble() - lastPointIdx) *
+                    Curves.easeInOutCubic.transform(
+                      (boundary
+                                  .difference(lastPointAt)
+                                  .inMilliseconds
+                                  .toDouble() /
+                              legMs)
+                          .clamp(0.0, 1.0),
+                    );
+        if (!addPoint(boundary, atBoundaryIdx)) break;
         final upcoming = upcomingSteps[upcomingIdx];
         final newFamily =
             _MovementAnimationState._familyOf(upcoming.mode, upcoming.from);

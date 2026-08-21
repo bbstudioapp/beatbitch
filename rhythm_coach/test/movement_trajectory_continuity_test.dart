@@ -401,6 +401,72 @@ void main() {
     },
   );
 
+  test(
+    'mode alterné : la frontière porte la position à mi-mouvement, pas le '
+    'dernier battement (rythme gland/gorge → respire)',
+    () {
+      final beats = computeFutureBeatsForTest(
+        mode: SessionMode.rhythm,
+        from: Position.head,
+        to: Position.throat,
+        beatDuration: const Duration(milliseconds: 1000),
+        flipped: false,
+        lastBeatAt: DateTime.now(),
+        elapsed: const Duration(seconds: 10, milliseconds: 500),
+        upcomingSteps: const [
+          UpcomingMovementStep(
+            mode: SessionMode.breath,
+            from: Position.tip,
+            to: Position.tip,
+            bpm: 60,
+            startSecond: 12, // frontière = 1500 ms, entre deux battements
+            transitionGap: Duration(milliseconds: 600),
+          ),
+        ],
+      );
+
+      final aLaFrontiere = beats.where(
+        (b) => !b.isAnchor && (b.t * 3000 - 1500).abs() < 40,
+      );
+      expect(aLaFrontiere, isNotEmpty,
+          reason: 'un repère existe à la frontière elle-même');
+      final idx = aLaFrontiere.first.idx;
+      expect(idx, greaterThan(Position.head.index.toDouble()));
+      expect(idx, lessThan(Position.throat.index.toDouble()));
+    },
+  );
+
+  test(
+    'supplier reste dans la famille bouche : pas de remontée au bout en '
+    'entrant ni en sortant',
+    () {
+      final beats = computeFutureBeatsForTest(
+        mode: SessionMode.rhythm,
+        from: Position.head,
+        to: Position.throat,
+        beatDuration: const Duration(milliseconds: 1000),
+        flipped: false,
+        lastBeatAt: DateTime.now(),
+        elapsed: const Duration(seconds: 10, milliseconds: 500),
+        upcomingSteps: const [
+          UpcomingMovementStep(
+            mode: SessionMode.beg,
+            from: Position.throat,
+            to: Position.throat,
+            bpm: 60,
+            startSecond: 12,
+            transitionGap: Duration(milliseconds: 600),
+          ),
+        ],
+      );
+
+      expect(
+        beats.any((b) => !b.isAnchor && b.idx == Position.tip.index),
+        isFalse,
+      );
+    },
+  );
+
   group('défilement vs recalcul', () {
     test(
       'la position défilée coïncide avec celle qu\'un recalcul au même '
