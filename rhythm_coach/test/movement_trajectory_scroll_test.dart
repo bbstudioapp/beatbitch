@@ -57,15 +57,17 @@ void main() {
 
     test(
       'le nouvel ancrage à t=0 interpole entre les 2 points qui '
-      'l\'encadrent avec la même easing que le pont synthétique '
-      '(Curves.easeInOutCubic, pas une interpolation linéaire)',
+      'l\'encadrent avec la même easing que le pont synthétique quand le '
+      'mouvement change de sens (Curves.easeInOutCubic, pas linéaire)',
       () {
         // prev à t=-0.1 (idx tip=0), next à t=0.1 (idx full=4) après
-        // décalage -> frac = 0.5 au point t=0.
+        // décalage -> frac = 0.5 au point t=0. Le point qui suit remonte :
+        // `next` est un extremum, l'amortissement s'applique.
         final scrolled = scrollBeatsForTest(
           raw: const [
             (t: 0.1, idx: 0.0, isAnchor: false),
             (t: 0.3, idx: 4.0, isAnchor: false),
+            (t: 0.5, idx: 0.0, isAnchor: false),
           ],
           deltaT: 0.2,
         );
@@ -82,14 +84,59 @@ void main() {
     );
 
     test(
-      'interpolation à frac=0.25 : easeInOutCubic diverge nettement du '
-      'linéaire, la valeur observée doit suivre la courbe',
+      'arrivée sur un plateau : le mouvement s\'amortit aussi, sinon il se '
+      'fige net au lieu de se poser',
       () {
-        // prev à t=-0.1 (idx=0), next à t=0.3 (idx=4) -> frac = 0.25.
+        // prev(idx=0) -> next(idx=4) -> après(idx=4) : le mouvement s'arrête
+        // sur `next`. C'est une arrivée, elle doit être amortie.
         final scrolled = scrollBeatsForTest(
           raw: const [
             (t: 0.0, idx: 0.0, isAnchor: false),
             (t: 0.4, idx: 4.0, isAnchor: false),
+            (t: 0.8, idx: 4.0, isAnchor: false),
+          ],
+          deltaT: 0.1,
+        );
+
+        expect(scrolled, isNotNull);
+        final eased = Curves.easeInOutCubic.transform(0.25);
+        expect(scrolled!.first.idx, closeTo(4.0 * eased, 1e-9));
+      },
+    );
+
+    test(
+      'sur un trajet continu (pas de changement de sens), l\'ancrage est '
+      'linéaire : sinon le curseur s\'arrête à chaque mini-point',
+      () {
+        // prev(idx=0) -> next(idx=2) -> après(idx=4) : même sens, `next`
+        // n'est pas un extremum, aucun amortissement ne doit s'appliquer.
+        final scrolled = scrollBeatsForTest(
+          raw: const [
+            (t: 0.0, idx: 0.0, isAnchor: false),
+            (t: 0.4, idx: 2.0, isAnchor: false),
+            (t: 0.8, idx: 4.0, isAnchor: false),
+          ],
+          deltaT: 0.1,
+        );
+
+        expect(scrolled, isNotNull);
+        final anchor = scrolled!.first;
+        // frac = 0.25 : linéaire -> 0.5 ; easeInOutCubic aurait donné ~0.17.
+        expect(anchor.idx, closeTo(0.5, 1e-9));
+      },
+    );
+
+    test(
+      'interpolation à frac=0.25 sur un extremum : easeInOutCubic diverge '
+      'nettement du linéaire, la valeur observée doit suivre la courbe',
+      () {
+        // prev à t=-0.1 (idx=0), next à t=0.3 (idx=4) -> frac = 0.25.
+        // Le point suivant redescend : `next` est un extremum.
+        final scrolled = scrollBeatsForTest(
+          raw: const [
+            (t: 0.0, idx: 0.0, isAnchor: false),
+            (t: 0.4, idx: 4.0, isAnchor: false),
+            (t: 0.8, idx: 0.0, isAnchor: false),
           ],
           deltaT: 0.1,
         );
