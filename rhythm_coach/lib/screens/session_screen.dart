@@ -1118,6 +1118,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                       height: animHeight,
                       beepEngine: widget.beep,
                       positionRowCount: widget.positionRowCount,
+                      stepSerial: widget.beep.stepSerial,
                       elapsed: ctrl.elapsed,
                       // Un défi joue des segments produits en direct par son
                       // builder et jamais insérés dans `session.steps` : la

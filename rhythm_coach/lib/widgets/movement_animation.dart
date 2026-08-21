@@ -56,6 +56,12 @@ class MovementAnimation extends StatefulWidget {
   /// depuis le début de séance) sur l'horloge murale de la trajectoire.
   final Duration elapsed;
 
+  /// Compteur de steps appliqués au moteur (`BeepEngine.stepSerial`). Deux
+  /// steps de configuration identique laissent toutes les autres propriétés
+  /// inchangées alors que le moteur se tait pendant son gap : ce compteur est
+  /// le seul signal qui les distingue.
+  final int stepSerial;
+
   /// Suite des steps de bip à venir, déjà résolus (mode/from/to/bpm hérités
   /// — cf. `resolveUpcomingMovementSteps`). Vide = comportement historique
   /// (extrapolation indéfinie de la consigne courante).
@@ -70,6 +76,7 @@ class MovementAnimation extends StatefulWidget {
     this.height = 160,
     this.beepEngine,
     this.positionRowCount = 5,
+    this.stepSerial = 0,
     this.elapsed = Duration.zero,
     this.upcomingSteps = const [],
   });
@@ -203,7 +210,8 @@ class _MovementAnimationState extends State<MovementAnimation>
     // `_PositionLadder._computeFutureBeats`). Sans ce gel, la courbe entière
     // disparaissait jusqu'au prochain `BeatEvent` (`beats.length < 2` →
     // `AnimatedOpacity` à 0).
-    if (modeChanged || tempoChanged || positionChanged) {
+    final stepReapplied = oldWidget.stepSerial != widget.stepSerial;
+    if (modeChanged || tempoChanged || positionChanged || stepReapplied) {
       final (oldLadderFrom, oldLadderTo) =
           _ladderPositionsFor(oldWidget.mode, oldWidget.from, oldWidget.to);
       _frozenIdx = _renderedIdx ??
