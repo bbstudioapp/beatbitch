@@ -711,6 +711,12 @@ class _PositionLadderState extends State<_PositionLadder> {
   List<_BeatPoint>? _rawBeats;
   DateTime? _computedAt;
 
+  /// Vrai quand le dernier recalcul n'a pas réussi à remplir la fenêtre
+  /// jusqu'au bord droit — fin de séance, ou plus aucun step à venir. Sans
+  /// ce drapeau, la garde de remplissage relancerait un recalcul à chaque
+  /// frame pour une fenêtre qu'aucun recalcul ne peut compléter.
+  bool _windowUnfillable = false;
+
   @override
   void initState() {
     super.initState();
@@ -728,6 +734,7 @@ class _PositionLadderState extends State<_PositionLadder> {
   void _recompute() {
     _rawBeats = widget._computeFutureBeats();
     _computedAt = DateTime.now();
+    _windowUnfillable = _rawBeats!.isEmpty || _rawBeats!.last.t < 1.0;
   }
 
   @override
@@ -737,6 +744,15 @@ class _PositionLadderState extends State<_PositionLadder> {
     final deltaT =
         DateTime.now().difference(_computedAt!).inMilliseconds / windowMs;
     var beats = _scrollBeats(_rawBeats!, deltaT);
+    // Le défilement décale les points, il n'en fabrique aucun : sans cette
+    // garde, la fenêtre se viderait par la droite jusqu'à n'avoir plus rien,
+    // et la courbe réapparaîtrait par blocs au recalcul suivant.
+    if (beats != null &&
+        !_windowUnfillable &&
+        (beats.isEmpty || beats.last.t < 1.0)) {
+      _recompute();
+      beats = _scrollBeats(_rawBeats!, 0.0);
+    }
     if (beats == null) {
       // La mémoïsation ne peut plus répondre à la frame courante (plus aucun
       // point au-delà de t=0) : on force un recalcul plutôt que d'afficher
