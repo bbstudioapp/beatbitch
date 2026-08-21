@@ -99,7 +99,8 @@ void main() {
       );
       apply(
         beep,
-        const SessionStep(time: 10, mode: SessionMode.rhythm, to: Position.balls),
+        const SessionStep(
+            time: 10, mode: SessionMode.rhythm, to: Position.balls),
       );
       expect(beep.currentFrom, Position.mid);
       expect(beep.currentTo, Position.balls);
@@ -118,7 +119,8 @@ void main() {
       );
       apply(
         beep,
-        const SessionStep(time: 10, mode: SessionMode.rhythm, from: Position.mid),
+        const SessionStep(
+            time: 10, mode: SessionMode.rhythm, from: Position.mid),
       );
       expect(beep.currentTo, isNull);
       expect(beep.currentFrom, Position.mid);
