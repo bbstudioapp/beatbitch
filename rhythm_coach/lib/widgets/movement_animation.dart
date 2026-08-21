@@ -765,6 +765,14 @@ class _PositionLadder extends StatefulWidget {
       }
       if (nextBoundary != null && !nextBoundary.isAfter(nextTime)) {
         final boundary = nextBoundary;
+        // Une tenue tient sa position jusqu'à la frontière : sans ce point,
+        // le segment part de son dernier battement et la courbe commence à
+        // rejoindre le step suivant avant même qu'il ait commencé — le gel
+        // de transition ramène alors le curseur en arrière.
+        if (segFrom.index == segTo.index &&
+            !addPoint(boundary, segFrom.index.toDouble())) {
+          break;
+        }
         final upcoming = upcomingSteps[upcomingIdx];
         final newFamily =
             _MovementAnimationState._familyOf(upcoming.mode, upcoming.from);

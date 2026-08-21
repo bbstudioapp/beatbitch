@@ -356,6 +356,51 @@ void main() {
     );
   });
 
+  test(
+    'une tenue garde sa position jusqu\'à la frontière : la remontée vers '
+    'le step suivant ne commence pas avant lui',
+    () {
+      final beats = computeFutureBeatsForTest(
+        mode: SessionMode.hold,
+        from: Position.full,
+        to: Position.full,
+        beatDuration: const Duration(milliseconds: 1000),
+        flipped: false,
+        lastBeatAt: DateTime.now(),
+        elapsed: const Duration(seconds: 10, milliseconds: 500),
+        upcomingSteps: const [
+          UpcomingMovementStep(
+            mode: SessionMode.suckle,
+            from: Position.head,
+            to: Position.head,
+            bpm: 60,
+            startSecond: 12, // frontière = 1500 ms depuis `now`
+            transitionGap: Duration(milliseconds: 600),
+          ),
+        ],
+      );
+
+      final avantFrontiere = beats
+          .where((b) => !b.isAnchor && b.t * 3000 <= 1500)
+          .map((b) => b.idx);
+      expect(avantFrontiere, isNotEmpty);
+      expect(
+        avantFrontiere.every((idx) => idx == Position.full.index.toDouble()),
+        isTrue,
+        reason: 'la tenue reste au fond tant que le step suivant n\'a pas '
+            'commencé',
+      );
+      expect(
+        beats.any((b) =>
+            !b.isAnchor &&
+            (b.t * 3000 - 1500).abs() < 40 &&
+            b.idx == Position.full.index.toDouble()),
+        isTrue,
+        reason: 'un point tient la position à la frontière elle-même',
+      );
+    },
+  );
+
   group('défilement vs recalcul', () {
     test(
       'la position défilée coïncide avec celle qu\'un recalcul au même '
