@@ -62,8 +62,10 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
-    // Moteur qui complète : sans `onComplete`, l'anti-coupure de
-    // `_checkSteps` diffère les steps et décale la sortie du break.
+    // Moteur qui complète, par cohérence avec le harnais voisin — sans effet
+    // mesuré ici : aucun step de cette séance n'a de texte et `_host()` ne
+    // fournit pas de `PhraseBank`, donc `_tts.speak()` n'est jamais appelé
+    // dans ce scénario (vérifié en retirant `onComplete` : même résultat).
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(ttsChannel, (call) async {
       switch (call.method) {
