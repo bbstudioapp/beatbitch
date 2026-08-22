@@ -62,4 +62,34 @@ void main() {
         reason: 'le recalcul repose le curseur ailleurs que là où la '
             'géométrie précédente l\'affichait');
   });
+
+  test(
+      'un recalcul tombé dans la dernière milliseconde du pont d\'entrée '
+      'laisse le curseur sur la cible du pont', () {
+    // `at.difference(now).inMilliseconds` tronque vers zéro : une arrivée de
+    // pont à moins d'une milliseconde n'est pas posée. On balaie la fenêtre
+    // de troncature pour ne pas dépendre de l'instant d'exécution.
+    final positions = <double>[];
+    for (var us = 599900; us >= 599100; us -= 50) {
+      final v = anchorAfterScrollForTest(
+        mode: SessionMode.hold,
+        from: Position.full,
+        to: Position.full,
+        beatDuration: const Duration(milliseconds: 1800),
+        flipped: false,
+        elapsedSinceCompute: Duration.zero,
+        frozenIdx: 2.497,
+        frozenAt: DateTime.now().subtract(Duration(microseconds: us)),
+        bridgeGap: const Duration(milliseconds: 600),
+        elapsed: const Duration(milliseconds: 8600),
+        upcomingSteps: const [_rythmeApresTenue],
+      );
+      if (v != null) positions.add(v);
+    }
+    expect(positions, isNotEmpty);
+    expect(positions.reduce((a, b) => a < b ? a : b),
+        closeTo(Position.full.index.toDouble(), 0.05),
+        reason: 'le curseur retombe sur la corde qui part du gel de '
+            'transition au lieu de rester sur l\'arrivée du pont');
+  });
 }
