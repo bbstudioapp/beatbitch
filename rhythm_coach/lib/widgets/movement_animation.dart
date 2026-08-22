@@ -724,11 +724,6 @@ class _PositionLadder extends StatefulWidget {
       ),
     ];
 
-    // L'arrivée du pont est un point de la courbe, pas seulement une cible du
-    // curseur : sans elle, la géométrie mémoïsée relie l'ancre au beat
-    // suivant en ligne droite et le défilement fait glisser le curseur sur
-    // cette droite, jusqu'à ce qu'un recalcul le remette sur le pont — un
-    // saut par recalcul.
     // Dernier repère de la trajectoire déjà tombé dans le passé. Un point
     // passé n'est pas posé, mais il reste l'origine légitime du curseur :
     // sans lui, `_scrollBeats` re-dérive l'ancre depuis `originAt`, qui pour
@@ -737,6 +732,11 @@ class _PositionLadder extends StatefulWidget {
     DateTime? pastAt;
     double? pastIdx;
 
+    // L'arrivée du pont est un point de la courbe, pas seulement une cible du
+    // curseur : sans elle, la géométrie mémoïsée relie l'ancre au beat
+    // suivant en ligne droite et le défilement fait glisser le curseur sur
+    // cette droite, jusqu'à ce qu'un recalcul le remette sur le pont — un
+    // saut par recalcul.
     if (bridgeTargetIdx != null) {
       void addBridgePoint(DateTime at, double idx) {
         final dtMs = at.difference(now).inMilliseconds.toDouble();
