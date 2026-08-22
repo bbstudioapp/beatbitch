@@ -12,7 +12,7 @@ porte_sur:
   - rhythm_coach/test/session_frozen_upcoming_steps_wiring_test.dart
 provenance:
   mesure: 15
-  deduit: 3
+  deduit: 4
   document: 2
   sans_marqueur: 0
 sources_citees: []
@@ -119,8 +119,11 @@ fichier livré.
 ## Ce que je n'ai PAS pu établir
 
 **[mesuré]** La troisième branche du gel, `awaitingPostureReady`, n'est jamais entrée dans ce
-scénario : la sonde n'a traversé que `isChallengeActive` et `_inPostChallengeBreath`. Elle est tenue
-par transitivité — la garde ne lit qu'une expression — mais aucune frame observée ne la porte.
+scénario : la sonde n'a traversé que `isChallengeActive` et `_inPostChallengeBreath`.
+
+**[déduit]** Seul son **câblage** est tenu par transitivité — le site d'appel lit l'agrégat au lieu de
+redire l'expression —, pas son **comportement** : un défaut interne à la clause posture passerait ici
+inaperçu.
 
 **[mesuré]** Le défi est refusé par le bouton `PASSE`, chemin joueur réel. Le chemin où la joueuse
 **joue** le défi jusqu'au bout (`MAINTIENS`, puis relâche) n'a pas été emprunté ; rien ne dit que les
