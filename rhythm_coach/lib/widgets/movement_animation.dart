@@ -729,11 +729,22 @@ class _PositionLadder extends StatefulWidget {
     // suivant en ligne droite et le défilement fait glisser le curseur sur
     // cette droite, jusqu'à ce qu'un recalcul le remette sur le pont — un
     // saut par recalcul.
+    // Dernier repère de la trajectoire déjà tombé dans le passé. Un point
+    // passé n'est pas posé, mais il reste l'origine légitime du curseur :
+    // sans lui, `_scrollBeats` re-dérive l'ancre depuis `originAt`, qui pour
+    // un plateau a l'âge du plateau entier, et pose le curseur sur une corde
+    // qui le traverse d'un bout à l'autre.
+    DateTime? pastAt;
+    double? pastIdx;
+
     if (bridgeTargetIdx != null) {
       void addBridgePoint(DateTime at, double idx) {
         final dtMs = at.difference(now).inMilliseconds.toDouble();
         if (dtMs > 0) {
           beats.add(_BeatPoint(t: dtMs / windowMs, idx: idx, isAnchor: false));
+        } else {
+          pastAt = at;
+          pastIdx = idx;
         }
       }
 
@@ -770,7 +781,11 @@ class _PositionLadder extends StatefulWidget {
       final dtMs = at.difference(now).inMilliseconds.toDouble();
       lastPointAt = at;
       lastPointIdx = idx;
-      if (dtMs < 0) return true;
+      if (dtMs < 0) {
+        pastAt = at;
+        pastIdx = idx;
+        return true;
+      }
       if (dtMs > windowMs) {
         if (extraAdded >= _extraBeatsBeyondWindow) return false;
         extraAdded++;
@@ -864,6 +879,20 @@ class _PositionLadder extends StatefulWidget {
       if (!addPoint(nextTime, nextPos.index.toDouble())) break;
       nextTime = nextTime.add(Duration(milliseconds: segBeatMs.round()));
       nextPos = (nextPos == segFrom) ? segTo : segFrom;
+    }
+
+    final freshAt = pastAt;
+    final freshIdx = pastIdx;
+    if (freshAt != null &&
+        freshIdx != null &&
+        (anchorOrigin == null || freshAt.isAfter(anchorOrigin))) {
+      beats[0] = _BeatPoint(
+        t: 0,
+        idx: beats[0].idx,
+        isAnchor: true,
+        originT: freshAt.difference(now).inMilliseconds.toDouble() / windowMs,
+        originIdx: freshIdx,
+      );
     }
     return beats;
   }
@@ -1229,6 +1258,8 @@ double? anchorAfterScrollForTest({
   DateTime? frozenAt,
   Duration? bridgeGap,
   bool bridgeViaTip = false,
+  Duration elapsed = Duration.zero,
+  List<UpcomingMovementStep> upcomingSteps = const [],
 }) {
   final raw = _PositionLadder(
     mode: mode,
@@ -1245,8 +1276,8 @@ double? anchorAfterScrollForTest({
     bridgeViaTip: bridgeViaTip,
     pulseT: 0,
     rowCount: 5,
-    elapsed: Duration.zero,
-    upcomingSteps: const [],
+    elapsed: elapsed,
+    upcomingSteps: upcomingSteps,
   )._computeFutureBeats();
   final windowMs = _PositionLadder._trajectoryWindow.inMilliseconds.toDouble();
   final scrolled = _scrollBeats(
