@@ -925,6 +925,17 @@ class SessionController extends ChangeNotifier {
   Session get session => _session;
   SessionState get state => _state;
   Duration get elapsed => _stopwatch.elapsed + _timelineOffset;
+
+  /// Vrai tant que `_onTick` gèle l'horloge de séance sur un défi, sa
+  /// respiration de récupération ou une attente de posture. Lu par
+  /// l'affichage : les instants des steps à venir sont exprimés sur cette
+  /// horloge, donc tant qu'elle ne tourne pas, ils ne situent plus rien.
+  /// `_onTick` appelle ce getter plutôt que de réécrire l'expression, pour que
+  /// les deux ne puissent pas diverger sur ces trois conditions. Le report TTS
+  /// de `_checkSteps` décrémente lui aussi `_timelineOffset` et n'est pas
+  /// couvert ici.
+  bool get isTimelineFrozen =>
+      isChallengeActive || _inPostChallengeBreath || awaitingPostureReady;
   int get elapsedSeconds => elapsed.inSeconds;
 
   /// Temps réellement passé en séance, pauses exclues. Contrairement à
@@ -1368,7 +1379,7 @@ class SessionController extends ChangeNotifier {
     // brut, jamais freezé) pour rester indépendantes de ce gel — sans
     // cela, `_inPostChallengeBreath` ne se terminerait jamais (son seuil
     // ne serait jamais franchi par un `elapsedSeconds` gelé).
-    if (isChallengeActive || _inPostChallengeBreath || awaitingPostureReady) {
+    if (isTimelineFrozen) {
       _timelineOffset -= _tickInterval;
     }
     if (elapsedSeconds >= session.durationSeconds) {
@@ -2093,20 +2104,7 @@ class SessionController extends ChangeNotifier {
         bpm: insistentBeg.bpm,
         duration: begDuration,
       ),
-      for (final s in upcoming.steps)
-        SessionStep(
-          time: s.time + offset,
-          text: s.text,
-          mode: s.mode,
-          from: s.from,
-          to: s.to,
-          bpm: s.bpm,
-          bpmEnd: s.bpmEnd,
-          duration: s.duration,
-          chainAction: s.chainAction,
-          swallowMode: s.swallowMode,
-          background: s.background,
-        ),
+      for (final s in upcoming.steps) s.rebased(s.time + offset),
     ];
 
     final bodies = <({String id, int start, int? duration})>[];
@@ -2180,20 +2178,7 @@ class SessionController extends ChangeNotifier {
     required int breathEnd,
   }) {
     final newSteps = <SessionStep>[
-      for (final s in upcoming.steps)
-        SessionStep(
-          time: s.time + breathEnd,
-          text: s.text,
-          mode: s.mode,
-          from: s.from,
-          to: s.to,
-          bpm: s.bpm,
-          bpmEnd: s.bpmEnd,
-          duration: s.duration,
-          chainAction: s.chainAction,
-          swallowMode: s.swallowMode,
-          background: s.background,
-        ),
+      for (final s in upcoming.steps) s.rebased(s.time + breathEnd),
     ];
     final upFinalStepTime = upcoming.finalStepTime;
     final upSilentFinish = upcoming.silentFinishStartTime;

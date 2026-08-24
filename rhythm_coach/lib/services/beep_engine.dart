@@ -9,6 +9,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import '../models/final_category.dart';
 import '../models/session.dart';
 import '../models/session_step.dart';
+import 'step_resolution.dart';
 
 /// Moteur audio des bips de guidage rythmique.
 ///
@@ -207,6 +208,7 @@ class BeepEngine {
   /// Stream broadcast des beats (rhythm/lick/biffle/hand). Permet à plusieurs
   /// consommateurs (UI animation, debug overlays) de réagir à chaque bip
   /// sans monopoliser [onBeat]. Émis exactement au même instant que [onBeat].
+  int _stepSerial = 0;
   final StreamController<BeatEvent> _beatController =
       StreamController<BeatEvent>.broadcast();
   Stream<BeatEvent> get beatStream => _beatController.stream;
@@ -359,12 +361,19 @@ class BeepEngine {
   /// (elles ne touchent pas au loop courant).
   Future<void> applyStep(SessionStep step, SessionMode sessionMode) async {
     if (step.isTextOnly) return;
+    _stepSerial++;
     if (!_initialized) await init();
 
-    final mode = step.mode ?? sessionMode;
+    final resolved = resolveStepConfig(
+      step: step,
+      defaultMode: sessionMode,
+      currentFrom: _from,
+      currentBpm: _bpm,
+    );
+    final mode = resolved.mode;
     final previousMode = _mode;
     _mode = mode;
-    if (step.bpm != null) _bpm = step.bpm!.clamp(kMinBpm, kMaxBpm);
+    _bpm = resolved.bpm;
     // Rampe BPM intra-step : on n'arme `_bpmEnd` / `_loopDurationMs` que
     // si la valeur cible est explicitement différente du BPM de départ ET
     // qu'on a une durée connue. Sinon on retombe en mode constant — un
@@ -381,23 +390,8 @@ class BeepEngine {
       _loopDurationMs = null;
     }
 
-    // Hold / beg / suckle : la position cible vient de `step.to` (sémantique
-    // « tenir / aspirer à ce point »). On la stocke dans `_from` pour rester
-    // compatible avec les consommateurs UI (`currentFrom`, badge, ladder du
-    // `MovementAnimation` qui s'aligne sur `widget.from` pour les modes
-    // statiques). Sans cette ligne pour suckle, `_from` héritait de la
-    // position du step rythmé précédent → le ladder affichait « tip » /
-    // « head » selon le from précédent malgré un suckle to=head ou balls.
-    // Pour rhythm/lick/hand/biffle : `_from` = step.from (point de départ
-    // de l'alternance).
-    if (mode == SessionMode.hold ||
-        mode == SessionMode.beg ||
-        mode == SessionMode.suckle) {
-      if (step.to != null) _from = step.to!;
-    } else if (step.from != null) {
-      _from = step.from!;
-    }
-    _to = step.to;
+    _from = resolved.from;
+    _to = resolved.to;
 
     // En rythme/lick avec from == to (ex: throat/throat), on relève `from`
     // vers une position plus haute au hasard pour créer une alternance.
@@ -880,6 +874,13 @@ class BeepEngine {
   // ─── État courant exposé pour l'affichage UI ───────────────────────────
 
   SessionMode get currentMode => _mode;
+
+  /// Nombre de steps réellement appliqués au moteur. Une réapplication à
+  /// configuration identique passe quand même par le gap de transition
+  /// (mesuré : 301 ms) : sans ce compteur, rien ne distingue ce silence pour
+  /// un affichage qui ne regarde que mode/positions/tempo.
+  int get stepSerial => _stepSerial;
+
   Position get currentFrom => _from;
   Position? get currentTo => _to;
   int get currentBpm => _bpm;

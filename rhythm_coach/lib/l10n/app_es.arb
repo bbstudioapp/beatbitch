@@ -646,6 +646,8 @@
   "soundsDebugShowSessionControlsSubtitle": "Solo debug: en prod la sesión va sin interacción (móvil apoyado), solo el botón FALLO sigue útil.",
   "soundsDebugShowModeBadge": "Mostrar modo / BPM / posición",
   "soundsDebugShowModeBadgeSubtitle": "Solo debug: en prod la animación basta para indicar lo que pasa.",
+  "soundsDebugShowTrajectoryDots": "Mostrar los puntos de trayectoria",
+  "soundsDebugShowTrajectoryDotsSubtitle": "Solo debug: en sesión, solo la curva y el cursor siguen visibles.",
   "debugBarLabelHumiliation": "HUMIL.",
   "debugBarLabelObedience": "OBED.",
   "debugBarLabelSaliva": "SALIVA",

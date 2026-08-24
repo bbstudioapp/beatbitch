@@ -1,12 +1,12 @@
 import '../models/session.dart';
 import '../models/session_step.dart';
 import '../services/beep_engine.dart';
+import '../services/step_resolution.dart';
 
 /// Configuration effective d'un step à venir, résolue (mode/from/to/bpm
-/// hérités des steps précédents quand `null` dans le JSON source — même
-/// règle de résolution que `BeepEngine.applyStep`, dupliquée ici en lecture
-/// seule pour l'affichage : `movement_animation.dart` n'a pas accès à l'état
-/// interne du moteur audio).
+/// hérités des steps précédents quand `null` dans le JSON source, par
+/// `resolveStepConfig` — la même règle que `BeepEngine.applyStep` applique
+/// au son).
 class UpcomingMovementStep {
   final SessionMode mode;
   final Position from;
@@ -32,21 +32,20 @@ class UpcomingMovementStep {
 }
 
 /// Résout la suite des steps de bip (non text-only) qui commencent après
-/// `afterSecond`, en héritant mode/from/to/bpm depuis la configuration
-/// courante (`currentMode`..`currentBpm`) comme le ferait le moteur audio.
+/// `afterSecond`, en héritant mode/from/bpm depuis la configuration courante
+/// (`currentMode`..`currentBpm`) comme le ferait le moteur audio. `to` n'est
+/// jamais hérité : chaque step porte le sien, ou aucun.
 List<UpcomingMovementStep> resolveUpcomingMovementSteps({
   required List<SessionStep> steps,
   required SessionMode defaultMode,
   required int afterSecond,
   required SessionMode currentMode,
   required Position currentFrom,
-  required Position? currentTo,
   required int currentBpm,
 }) {
   final result = <UpcomingMovementStep>[];
   var mode = currentMode;
   var from = currentFrom;
-  Position? to = currentTo;
   var bpm = currentBpm;
 
   for (final step in steps) {
@@ -54,16 +53,16 @@ List<UpcomingMovementStep> resolveUpcomingMovementSteps({
     if (step.time <= afterSecond) continue;
 
     final previousMode = mode;
-    mode = step.mode ?? defaultMode;
-    if (step.bpm != null) bpm = step.bpm!;
-    if (mode == SessionMode.hold ||
-        mode == SessionMode.beg ||
-        mode == SessionMode.suckle) {
-      if (step.to != null) from = step.to!;
-    } else if (step.from != null) {
-      from = step.from!;
-    }
-    to = step.to;
+    final resolved = resolveStepConfig(
+      step: step,
+      defaultMode: defaultMode,
+      currentFrom: from,
+      currentBpm: bpm,
+    );
+    mode = resolved.mode;
+    from = resolved.from;
+    bpm = resolved.bpm;
+    final to = resolved.to;
 
     result.add(UpcomingMovementStep(
       mode: mode,

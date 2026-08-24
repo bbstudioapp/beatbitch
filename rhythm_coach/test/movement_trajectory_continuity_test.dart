@@ -182,8 +182,8 @@ void main() {
     );
 
     test(
-      'frontière de famille : le point tip respecte le transitionGap du '
-      'step suivant, pas l\'instant nominal de la frontière',
+      'frontière de famille : le passage par tip tient dans le gap, et le '
+      '1er bip du step suivant tombe sur `to` à la fin du gap',
       () {
         final beats = computeFutureBeatsForTest(
           mode: SessionMode.rhythm,
@@ -210,8 +210,12 @@ void main() {
         expect(tipPoints, isNotEmpty);
         final tipMs =
             tipPoints.map((b) => b.t * 3000).reduce((a, b) => a < b ? a : b);
-        expect(tipMs, greaterThan(2200));
-        expect(tipMs, lessThan(2400));
+        expect(tipMs, greaterThan(800), reason: 'après la frontière nominale');
+        expect(tipMs, lessThan(2300), reason: 'avant le 1er bip réel');
+
+        final afterTip = beats.firstWhere((b) => b.t * 3000 > tipMs + 1);
+        expect(afterTip.idx, Position.full.index.toDouble());
+        expect(afterTip.t * 3000, closeTo(2300, 60));
       },
     );
 
@@ -253,6 +257,278 @@ void main() {
         );
       },
     );
+
+    test(
+      'pont de transition : au franchissement d\'une famille, il passe par '
+      'tip au milieu du gap — la trajectoire annoncée',
+      () {
+        final beats = computeFutureBeatsForTest(
+          mode: SessionMode.hand,
+          from: Position.mid,
+          to: Position.full,
+          beatDuration: const Duration(milliseconds: 1000),
+          flipped: false,
+          frozenIdx: Position.head.index.toDouble(),
+          frozenAt: DateTime.now().subtract(const Duration(milliseconds: 300)),
+          bridgeGap: const Duration(milliseconds: 600),
+          bridgeViaTip: true,
+        );
+
+        expect(beats.first.isAnchor, isTrue);
+        expect(beats.first.idx, closeTo(Position.tip.index.toDouble(), 0.05));
+      },
+    );
+
+    test(
+      'pont de transition : `to` est joué à la fin du gap, pas un battement '
+      'plus tard — le curseur ne refait pas le mouvement',
+      () {
+        final beats = computeFutureBeatsForTest(
+          mode: SessionMode.hand,
+          from: Position.mid,
+          to: Position.full,
+          beatDuration: const Duration(milliseconds: 1000),
+          flipped: false,
+          frozenIdx: Position.head.index.toDouble(),
+          frozenAt: DateTime.now(),
+          bridgeGap: const Duration(milliseconds: 600),
+          bridgeViaTip: true,
+        );
+
+        final points = beats.where((b) => !b.isAnchor).toList();
+        expect(points.first.idx, Position.tip.index.toDouble());
+        expect(points.first.t * 3000, closeTo(300, 40));
+        expect(points[1].idx, Position.full.index.toDouble());
+        expect(points[1].t * 3000, closeTo(600, 40));
+      },
+    );
+
+    test(
+      'pont de transition : sa durée est le gap réel du moteur, pas une '
+      'constante d\'affichage',
+      () {
+        final beats = computeFutureBeatsForTest(
+          mode: SessionMode.rhythm,
+          from: Position.head,
+          to: Position.throat,
+          beatDuration: const Duration(milliseconds: 1000),
+          flipped: false,
+          frozenIdx: Position.tip.index.toDouble(),
+          frozenAt: DateTime.now(),
+          bridgeGap: const Duration(milliseconds: 300),
+        );
+
+        final points = beats.where((b) => !b.isAnchor).toList();
+        expect(points.first.idx, Position.throat.index.toDouble());
+        expect(points.first.t * 3000, closeTo(300, 40));
+        expect(points[1].t * 3000, closeTo(1300, 40));
+      },
+    );
+
+    test(
+      'aspirer (aucun BeatEvent) : passé son arrivée, le pont enchaîne sur la '
+      'position tenue au lieu de rester collé à tip',
+      () {
+        List<({double t, double idx, bool isAnchor})> beatsAfter(int ms) =>
+            computeFutureBeatsForTest(
+              mode: SessionMode.suckle,
+              from: Position.full,
+              to: Position.full,
+              beatDuration: const Duration(milliseconds: 1000),
+              flipped: false,
+              frozenIdx: Position.head.index.toDouble(),
+              frozenAt: DateTime.now().subtract(Duration(milliseconds: ms)),
+              bridgeGap: const Duration(milliseconds: 600),
+              bridgeViaTip: true,
+            );
+
+        expect(
+          beatsAfter(1100).first.idx,
+          greaterThan(Position.tip.index.toDouble()),
+          reason: 'à mi-chemin du bip qui suit le pont, le curseur descend',
+        );
+        expect(
+          beatsAfter(2000).first.idx,
+          closeTo(Position.full.index.toDouble(), 0.05),
+          reason: 'la tenue se joue sur sa position, pas en haut du ladder',
+        );
+      },
+    );
+  });
+
+  test(
+    'une tenue garde sa position jusqu\'à la frontière : la remontée vers '
+    'le step suivant ne commence pas avant lui',
+    () {
+      final beats = computeFutureBeatsForTest(
+        mode: SessionMode.hold,
+        from: Position.full,
+        to: Position.full,
+        beatDuration: const Duration(milliseconds: 1000),
+        flipped: false,
+        lastBeatAt: DateTime.now(),
+        elapsed: const Duration(seconds: 10, milliseconds: 500),
+        upcomingSteps: const [
+          UpcomingMovementStep(
+            mode: SessionMode.suckle,
+            from: Position.head,
+            to: Position.head,
+            bpm: 60,
+            startSecond: 12, // frontière = 1500 ms depuis `now`
+            transitionGap: Duration(milliseconds: 600),
+          ),
+        ],
+      );
+
+      final avantFrontiere = beats
+          .where((b) => !b.isAnchor && b.t * 3000 <= 1500)
+          .map((b) => b.idx);
+      expect(avantFrontiere, isNotEmpty);
+      expect(
+        avantFrontiere.every((idx) => idx == Position.full.index.toDouble()),
+        isTrue,
+        reason: 'la tenue reste au fond tant que le step suivant n\'a pas '
+            'commencé',
+      );
+      expect(
+        beats.any((b) =>
+            !b.isAnchor &&
+            (b.t * 3000 - 1500).abs() < 40 &&
+            b.idx == Position.full.index.toDouble()),
+        isTrue,
+        reason: 'un point tient la position à la frontière elle-même',
+      );
+    },
+  );
+
+  test(
+    'mode alterné : la frontière porte la position à mi-mouvement, pas le '
+    'dernier battement (rythme gland/gorge → respire)',
+    () {
+      final beats = computeFutureBeatsForTest(
+        mode: SessionMode.rhythm,
+        from: Position.head,
+        to: Position.throat,
+        beatDuration: const Duration(milliseconds: 1000),
+        flipped: false,
+        lastBeatAt: DateTime.now(),
+        elapsed: const Duration(seconds: 10, milliseconds: 500),
+        upcomingSteps: const [
+          UpcomingMovementStep(
+            mode: SessionMode.breath,
+            from: Position.tip,
+            to: Position.tip,
+            bpm: 60,
+            startSecond: 12, // frontière = 1500 ms, entre deux battements
+            transitionGap: Duration(milliseconds: 600),
+          ),
+        ],
+      );
+
+      final aLaFrontiere = beats.where(
+        (b) => !b.isAnchor && (b.t * 3000 - 1500).abs() < 40,
+      );
+      expect(aLaFrontiere, isNotEmpty,
+          reason: 'un repère existe à la frontière elle-même');
+      final idx = aLaFrontiere.first.idx;
+      expect(idx, greaterThan(Position.head.index.toDouble()));
+      expect(idx, lessThan(Position.throat.index.toDouble()));
+    },
+  );
+
+  test(
+    'supplier reste dans la famille bouche : pas de remontée au bout en '
+    'entrant ni en sortant',
+    () {
+      final beats = computeFutureBeatsForTest(
+        mode: SessionMode.rhythm,
+        from: Position.head,
+        to: Position.throat,
+        beatDuration: const Duration(milliseconds: 1000),
+        flipped: false,
+        lastBeatAt: DateTime.now(),
+        elapsed: const Duration(seconds: 10, milliseconds: 500),
+        upcomingSteps: const [
+          UpcomingMovementStep(
+            mode: SessionMode.beg,
+            from: Position.throat,
+            to: Position.throat,
+            bpm: 60,
+            startSecond: 12,
+            transitionGap: Duration(milliseconds: 600),
+          ),
+        ],
+      );
+
+      expect(
+        beats.any((b) => !b.isAnchor && b.idx == Position.tip.index),
+        isFalse,
+      );
+    },
+  );
+
+  group('défilement vs recalcul', () {
+    test(
+      'la position défilée coïncide avec celle qu\'un recalcul au même '
+      'instant aurait donnée — sinon on sent le recalcul',
+      () {
+        final now = DateTime.now();
+        final recalcule = computeFutureBeatsForTest(
+          mode: SessionMode.rhythm,
+          from: Position.head,
+          to: Position.throat,
+          beatDuration: const Duration(milliseconds: 1000),
+          flipped: false,
+          lastBeatAt: now.subtract(const Duration(milliseconds: 600)),
+        ).first.idx;
+
+        final defile = anchorAfterScrollForTest(
+          mode: SessionMode.rhythm,
+          from: Position.head,
+          to: Position.throat,
+          beatDuration: const Duration(milliseconds: 1000),
+          flipped: false,
+          lastBeatAt: now.subtract(const Duration(milliseconds: 500)),
+          elapsedSinceCompute: const Duration(milliseconds: 100),
+        );
+
+        expect(defile, isNotNull);
+        expect(defile!, closeTo(recalcule, 0.05));
+      },
+    );
+  });
+
+  group('horloge de séance', () {
+    test(
+      'l\'extrapolation entre deux ticks est bornée à un tick : une timeline '
+      'figée (défi) ne fait pas dériver la courbe',
+      () {
+        final now = DateTime.now();
+        final anchorAt = now.subtract(const Duration(seconds: 40));
+
+        final elapsed = extrapolatedElapsed(
+          anchorValue: const Duration(seconds: 100),
+          anchorAt: anchorAt,
+          fallback: Duration.zero,
+          now: now,
+        );
+
+        expect(elapsed.inMilliseconds, lessThanOrEqualTo(100 * 1000 + 250));
+        expect(elapsed.inMilliseconds, greaterThanOrEqualTo(100 * 1000));
+      },
+    );
+
+    test('entre deux ticks, elle interpole normalement', () {
+      final now = DateTime.now();
+      final elapsed = extrapolatedElapsed(
+        anchorValue: const Duration(seconds: 10),
+        anchorAt: now.subtract(const Duration(milliseconds: 120)),
+        fallback: Duration.zero,
+        now: now,
+      );
+
+      expect(elapsed.inMilliseconds, closeTo(10120, 5));
+    });
   });
 
   group('resolveUpcomingMovementSteps', () {
@@ -267,7 +543,6 @@ void main() {
         afterSecond: 10,
         currentMode: SessionMode.rhythm,
         currentFrom: Position.tip,
-        currentTo: Position.head,
         currentBpm: 90,
       );
 
@@ -289,7 +564,6 @@ void main() {
           afterSecond: 0,
           currentMode: SessionMode.rhythm,
           currentFrom: Position.tip,
-          currentTo: Position.head,
           currentBpm: 90,
         );
 
@@ -312,7 +586,6 @@ void main() {
         afterSecond: 0,
         currentMode: SessionMode.rhythm,
         currentFrom: Position.tip,
-        currentTo: Position.head,
         currentBpm: 90,
       );
 
@@ -339,7 +612,6 @@ void main() {
           afterSecond: 0,
           currentMode: SessionMode.rhythm,
           currentFrom: Position.tip,
-          currentTo: Position.head,
           currentBpm: 90,
         );
 
