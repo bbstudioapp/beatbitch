@@ -677,6 +677,7 @@ class CareerSessionGenerator {
       coachModeWeights: coachModeWeights,
       bpmRange: custom.normalizedBpmRange,
       holdDurationRange: custom.normalizedHoldDurationRange,
+      customAnchor: custom.anchor,
       humiliationCareer: humiliationCareer,
       humiliationSession: humiliationSession,
       obedience: obedience,
@@ -2078,6 +2079,11 @@ class CareerSessionGenerator {
   /// rapport chantier-aimant-étape-3-bis. `false` par défaut : seuls les
   /// call sites de ces passages le passent à `true`.
   ///
+  /// Étape 5 : quand la config Custom allume l'aimant
+  /// (`SessionConfig.customAnchor`), son point et sa force priment sur la
+  /// décision ci-dessus pour `rhythm` et `hold`, `intense` ou non, et pour
+  /// eux seuls. Éteint (donc toujours en carrière), rien ne change.
+  ///
   /// Étape 4 : le final `hold` (`emitFinalStep`) passe aussi `intense` —
   /// au-dessus du plancher [CareerLevelGates.holdFinalAnchorEligible], il
   /// reçoit l'ancre « très dur » sur `to`, avec le bpm dédié qui la cadence
@@ -2090,7 +2096,24 @@ class CareerSessionGenerator {
     BeatAnchor anchor = BeatAnchor.none;
     int ratio = 1;
     int? bpm = draft.bpm;
-    if (isRhythm && intense) {
+    final customAnchor = _config.customAnchor;
+    if (customAnchor != null && (isRhythm || isHold)) {
+      final (point, customRatio) = customAnchor;
+      if (isRhythm) {
+        anchor = point;
+        ratio = customRatio;
+      } else if (point == BeatAnchor.to &&
+          draft.to != null &&
+          draft.to!.index > 0) {
+        // Un hold ancré sur `from` n'a pas d'aller-retour à jouer
+        // (`BeepEngine` n'ouvre son swing que sur `to`, et un hold ne porte
+        // que cette position) ; à `tip` il n'existe pas de position plus
+        // aiguë. Dans ces deux cas le hold reste tenu, non ancré.
+        anchor = BeatAnchor.to;
+        ratio = customRatio;
+        bpm ??= CareerLevelGates.holdFinalAnchorBpm;
+      }
+    } else if (isRhythm && intense) {
       anchor = CareerLevelGates.rhythmAnchorFor(
           level: _config.level, bpm: draft.bpm);
       ratio = anchor != BeatAnchor.none

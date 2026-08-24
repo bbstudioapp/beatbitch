@@ -211,6 +211,7 @@ class _CustomModeScreenState extends State<CustomModeScreen> {
             cfg.maxDepthIndex == Position.full.index ? null : cfg.maxDepthIndex,
         bpmRange: (cfg.bpmMin, cfg.bpmMax),
         holdDurationRange: (cfg.holdDurationMin, cfg.holdDurationMax),
+        anchor: cfg.resolveAnchor(),
         noStats: true,
       ),
     );
@@ -389,6 +390,7 @@ class _CustomModeScreenState extends State<CustomModeScreen> {
             maxDepthIndex: cfg.maxDepthIndex < 4 ? cfg.maxDepthIndex : null,
             bpmRange: (cfg.bpmMin, cfg.bpmMax),
             holdDurationRange: (cfg.holdDurationMin, cfg.holdDurationMax),
+            anchor: cfg.resolveAnchor(),
             noStats: true,
           ),
         )

@@ -30,6 +30,7 @@
 // sites « scénario par défaut » (carrière de base, surprise router,
 // tests minimaux).
 
+import '../../models/session_step.dart' show BeatAnchor;
 import '../../services/capability_axis.dart';
 import '../../services/capability_service.dart';
 import 'level_milestone.dart';
@@ -78,6 +79,14 @@ class CustomOverrides {
   /// imposées par l'utilisateur (mode Custom). `null` = pas de bornage.
   final (int, int)? holdDurationRange;
 
+  /// Aimant du geste rythmé imposé par la config Custom : `(point, ratio)`.
+  /// `null` = aucune surcharge, le générateur garde l'ancrage qu'il dérive
+  /// seul du niveau (comportement de toutes les séances d'avant ce
+  /// réglage, carrière comme Custom). Non-null, il prime sur cette
+  /// décision pour les steps `rhythm` et `hold` du corps de séance — la
+  /// phase finish (boosts + final) garde la sienne.
+  final (BeatAnchor, int)? anchor;
+
   /// Si true, la `Session` générée est marquée `noStats` → le
   /// `SessionController` n'écrit rien dans `StatsService`. Le mode
   /// Custom est un bac à sable et passe toujours `true` ici.
@@ -88,6 +97,7 @@ class CustomOverrides {
     this.maxDepthIndex,
     this.bpmRange,
     this.holdDurationRange,
+    this.anchor,
     this.noStats = false,
   });
 
