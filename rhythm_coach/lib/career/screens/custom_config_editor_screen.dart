@@ -67,6 +67,9 @@ class _CustomConfigEditorScreenState extends State<CustomConfigEditorScreen> {
   late int _maxDepthIndex;
   late RangeValues _bpmRange;
   late RangeValues _holdRange;
+  late bool _anchorEnabled;
+  late AnchorStrength _anchorStrength;
+  late BeatAnchor _anchorPoint;
 
   @override
   void initState() {
@@ -94,6 +97,9 @@ class _CustomConfigEditorScreenState extends State<CustomConfigEditorScreen> {
       c.holdDurationMin.toDouble(),
       c.holdDurationMax.toDouble(),
     );
+    _anchorEnabled = c.anchorEnabled;
+    _anchorStrength = c.anchorStrength;
+    _anchorPoint = c.anchorPoint;
   }
 
   @override
@@ -141,6 +147,9 @@ class _CustomConfigEditorScreenState extends State<CustomConfigEditorScreen> {
       bpmMax: _bpmRange.end.round(),
       holdDurationMin: _holdRange.start.round(),
       holdDurationMax: _holdRange.end.round(),
+      anchorEnabled: _anchorEnabled,
+      anchorStrength: _anchorStrength,
+      anchorPoint: _anchorPoint,
     );
   }
 
@@ -394,6 +403,56 @@ class _CustomConfigEditorScreenState extends State<CustomConfigEditorScreen> {
           ),
           Text(t.customHoldDurationRangeHint,
               style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+          const SizedBox(height: 12),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(t.customAnchorLabel,
+                style:
+                    const TextStyle(fontSize: 14, color: AppTheme.textPrimary)),
+            subtitle: Text(t.customAnchorHint,
+                style:
+                    const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+            value: _anchorEnabled,
+            onChanged: (v) => setState(() => _anchorEnabled = v),
+          ),
+          if (_anchorEnabled) ...[
+            const SizedBox(height: 4),
+            _LabeledValue(
+              label: t.customAnchorStrengthLabel,
+              value: _anchorStrength.localizedLabel(context),
+            ),
+            Wrap(
+              spacing: 8,
+              children: [
+                for (final a in AnchorStrength.values)
+                  ChoiceChip(
+                    label: Text(a.localizedLabel(context)),
+                    selected: _anchorStrength == a,
+                    onSelected: (_) => setState(() => _anchorStrength = a),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _LabeledValue(
+              label: t.customAnchorPointLabel,
+              value: _anchorPoint == BeatAnchor.to
+                  ? t.customAnchorPointTo
+                  : t.customAnchorPointFrom,
+            ),
+            Wrap(
+              spacing: 8,
+              children: [
+                for (final p in [BeatAnchor.from, BeatAnchor.to])
+                  ChoiceChip(
+                    label: Text(p == BeatAnchor.to
+                        ? t.customAnchorPointTo
+                        : t.customAnchorPointFrom),
+                    selected: _anchorPoint == p,
+                    onSelected: (_) => setState(() => _anchorPoint = p),
+                  ),
+              ],
+            ),
+          ],
           const SizedBox(height: 24),
 
           // ─── Dosage des modes ────────────────────────────────────────

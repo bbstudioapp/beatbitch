@@ -3900,6 +3900,60 @@ abstract class AppLocalizations {
   /// **'Borne la durée des holds et des supplications tenues.'**
   String get customHoldDurationRangeHint;
 
+  /// No description provided for @customAnchorLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aimant'**
+  String get customAnchorLabel;
+
+  /// No description provided for @customAnchorHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le battement retient une position et repart vite vers l\'autre. Éteint, le métronome reste régulier.'**
+  String get customAnchorHint;
+
+  /// No description provided for @customAnchorStrengthLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Force'**
+  String get customAnchorStrengthLabel;
+
+  /// No description provided for @customAnchorStrengthLight.
+  ///
+  /// In fr, this message translates to:
+  /// **'Léger'**
+  String get customAnchorStrengthLight;
+
+  /// No description provided for @customAnchorStrengthMedium.
+  ///
+  /// In fr, this message translates to:
+  /// **'Moyen'**
+  String get customAnchorStrengthMedium;
+
+  /// No description provided for @customAnchorStrengthHard.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dur'**
+  String get customAnchorStrengthHard;
+
+  /// No description provided for @customAnchorPointLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Position retenue'**
+  String get customAnchorPointLabel;
+
+  /// No description provided for @customAnchorPointFrom.
+  ///
+  /// In fr, this message translates to:
+  /// **'Départ'**
+  String get customAnchorPointFrom;
+
+  /// No description provided for @customAnchorPointTo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arrivée'**
+  String get customAnchorPointTo;
+
   /// No description provided for @customSaveAndLaunch.
   ///
   /// In fr, this message translates to:

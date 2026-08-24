@@ -187,6 +187,17 @@ extension CustomDifficultyL10n on CustomDifficulty {
   }
 }
 
+extension AnchorStrengthL10n on AnchorStrength {
+  String localizedLabel(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return switch (this) {
+      AnchorStrength.light => t.customAnchorStrengthLight,
+      AnchorStrength.medium => t.customAnchorStrengthMedium,
+      AnchorStrength.hard => t.customAnchorStrengthHard,
+    };
+  }
+}
+
 extension ModeDoseL10n on ModeDose {
   String localizedLabel(BuildContext context) {
     final t = AppLocalizations.of(context);

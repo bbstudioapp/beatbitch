@@ -2203,6 +2203,34 @@ class AppLocalizationsEn extends AppLocalizations {
       'Bounds the duration of holds and held begs.';
 
   @override
+  String get customAnchorLabel => 'Magnet';
+
+  @override
+  String get customAnchorHint =>
+      'The beat lingers on one position and snaps back to the other. Off, the metronome stays even.';
+
+  @override
+  String get customAnchorStrengthLabel => 'Strength';
+
+  @override
+  String get customAnchorStrengthLight => 'Light';
+
+  @override
+  String get customAnchorStrengthMedium => 'Medium';
+
+  @override
+  String get customAnchorStrengthHard => 'Hard';
+
+  @override
+  String get customAnchorPointLabel => 'Held position';
+
+  @override
+  String get customAnchorPointFrom => 'Start';
+
+  @override
+  String get customAnchorPointTo => 'End';
+
+  @override
   String get customSaveAndLaunch => 'Save and launch';
 
   @override
