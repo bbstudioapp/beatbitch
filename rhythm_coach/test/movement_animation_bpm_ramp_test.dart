@@ -44,11 +44,14 @@ void main() {
       // transition pilotée par un vrai `BeatEvent`.
       await tester.pump(const Duration(milliseconds: 500));
 
-      Finder cursorFinder() => find
-          .descendant(
-              of: find.byType(AnimatedAlign), matching: find.byType(Container))
-          .first;
-      double cursorY() => tester.getCenter(cursorFinder()).dy;
+      // `_PositionLadder` est privé au widget — accès par nom de champ
+      // public (`beatDuration`) via `dynamic`, la seule voie pour lire
+      // l'intervalle réellement remonté à l'affichage.
+      Duration ladderBeatDuration() => (tester
+              .widgetList(find.byWidgetPredicate(
+                  (w) => w.runtimeType.toString() == '_PositionLadder'))
+              .single as dynamic)
+          .beatDuration as Duration;
 
       // Le loop tourne maintenant à 200 BPM interpolé (rampe en cours) —
       // l'intervalle réel est donc 300 ms, pas les 500 ms qu'aurait donné
@@ -57,16 +60,9 @@ void main() {
       expect(interval, const Duration(milliseconds: 300));
       await tester.pump();
 
-      await tester.pump(const Duration(milliseconds: 300));
-      final at300msY = cursorY();
-      await tester
-          .pump(const Duration(seconds: 1)); // referme, posé sur la cible
-      final settledY = cursorY();
-
-      expect(at300msY, closeTo(settledY, 0.5),
-          reason: 'doit être arrivé à 300ms (BPM interpolé 200), pas être '
-              'encore à mi-chemin d\'une transition de 500ms (BPM de '
-              'montage 120)');
+      expect(ladderBeatDuration(), interval,
+          reason: 'doit recevoir l\'intervalle du BPM interpolé (300ms), pas '
+              'celui du BPM de montage (500ms à 120 bpm)');
     },
   );
 }

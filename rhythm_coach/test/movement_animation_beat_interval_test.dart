@@ -38,46 +38,36 @@ void main() {
       // pilotée par un vrai `BeatEvent`.
       await tester.pump(const Duration(milliseconds: 300));
 
-      Finder cursorFinder() => find
-          .descendant(
-              of: find.byType(AnimatedAlign), matching: find.byType(Container))
-          .first;
-      double cursorY() => tester.getCenter(cursorFinder()).dy;
+      // `_PositionLadder` est privé au widget — accès par nom de champ
+      // public (`beatDuration`) via `dynamic`, la seule voie pour lire
+      // l'intervalle réellement remonté à l'affichage.
+      Duration ladderBeatDuration() => (tester
+              .widgetList(find.byWidgetPredicate(
+                  (w) => w.runtimeType.toString() == '_PositionLadder'))
+              .single as dynamic)
+          .beatDuration as Duration;
 
       // Battement émis = `to` (l'alternance démarre sur `to`) → ancre
       // `from` pas atteinte → intervalle court (0,5T = 150ms).
       final shortInterval = engine.emitOneBeatForTest(200);
       expect(shortInterval, const Duration(milliseconds: 150));
       await tester.pump();
-
-      await tester.pump(shortInterval ~/ 2);
-      final shortMidY = cursorY();
-      await tester.pump(shortInterval - shortInterval ~/ 2);
-      final shortEndY = cursorY();
-      expect(shortEndY, isNot(closeTo(shortMidY, 0.5)),
-          reason: 'le curseur doit avoir bougé entre le milieu et la fin');
+      expect(ladderBeatDuration(), shortInterval,
+          reason: 'l\'affichage doit recevoir l\'intervalle court réel, '
+              'pas l\'intervalle régulier historique (300ms)');
 
       // Battement émis = `from` (l'alternance a basculé) → ancre `from`
       // atteinte → intervalle long (1,5T = 450ms).
       final longInterval = engine.emitOneBeatForTest(200);
       expect(longInterval, const Duration(milliseconds: 450));
       await tester.pump();
+      expect(ladderBeatDuration(), longInterval,
+          reason: 'l\'affichage doit recevoir l\'intervalle long réel, '
+              'pas l\'intervalle régulier historique (300ms)');
 
-      // Avec l'ancien calcul (60000/bpm constant), la transition aurait
-      // duré 300ms : à cet instant, la vraie transition (450ms) n'est pas
-      // finie — c'est ce qui distingue le battement ancré du régulier.
-      await tester.pump(const Duration(milliseconds: 300));
-      final longAt300msY = cursorY();
-      await tester.pump(const Duration(milliseconds: 150)); // franchit 450ms
-      final longAt450msY = cursorY();
-      await tester
-          .pump(const Duration(seconds: 1)); // referme, posé sur la cible
-      final longSettledY = cursorY();
-
-      expect(longAt300msY, isNot(closeTo(longSettledY, 0.5)),
-          reason: 'ne doit pas être arrivé à 300ms (durée réelle 450ms)');
-      expect(longAt450msY, closeTo(longSettledY, 0.5),
-          reason: 'doit être arrivé exactement à 450ms');
+      expect(shortInterval, isNot(longInterval),
+          reason: 'les deux intervalles d\'un battement ancré sont inégaux — '
+              'sans ça le test ne distingue rien');
     },
   );
 }

@@ -86,6 +86,35 @@ void main() {
             'dans le temps');
   });
 
+  test(
+      'la courbe extrapolée alterne les deux intervalles du battement ancré '
+      '— la brique pure était testée, son usage dans `_computeFutureBeats` '
+      'ne l\'était pas', () {
+    // Battement ancré à 200 bpm, ratio 3:1 : `T = 300 ms`, le moteur vient
+    // de mesurer l'intervalle court (150 ms) et le suivant sera son
+    // complémentaire dans le cycle `2T` (450 ms).
+    final beats = computeFutureBeatsForTest(
+      mode: SessionMode.rhythm,
+      from: Position.head,
+      to: Position.mid,
+      beatDuration: const Duration(milliseconds: 150),
+      bpm: 200,
+      flipped: false,
+      lastBeatAt: DateTime.now(),
+    );
+    final gapsMs = [
+      for (var i = 2; i < beats.length; i++)
+        (beats[i].t - beats[i - 1].t) * 3000,
+    ];
+    expect(gapsMs.length, greaterThanOrEqualTo(4),
+        reason: 'la fenêtre de 3 s doit contenir plusieurs battements');
+    for (var i = 0; i < gapsMs.length; i++) {
+      expect(gapsMs[i], closeTo(i.isEven ? 450 : 150, 2),
+          reason: 'écart n°$i : la courbe doit alterner 450/150 ms, pas '
+              'répéter l\'intervalle mesuré (150 ms)');
+    }
+  });
+
   testWidgets(
       'le widget monté retient bien le BPM interpolé du beat pour peindre '
       'sa courbe de prévision — round 3, réserve gênante : le fil '
