@@ -3,7 +3,7 @@ type: analyse
 sujet: relecture-adverse-courbe-config-identique
 ecrit_le: 2026-08-21T17:19:26+02:00
 auteur: session tss2-relecture-courbe · claude-sonnet-5
-revision: 921685f
+revision: 969553f
 branche: fix/courbe-continuite-visuelle
 porte_sur:
   - rhythm_coach/assets/career/milestones.json
@@ -37,19 +37,19 @@ relu_contre:
 
 ## Périmètre effectivement relu
 
-**[mesuré]** Le lancement de cette relecture portait sur `HEAD = a02694e` (23 commits, comme décrit
-dans la consigne). En cours de relecture, un nouveau commit `0b618a5 fix(courbe): borner
+**[mesuré]** Le lancement de cette relecture portait sur `HEAD = 2723163` (23 commits, comme décrit
+dans la consigne). En cours de relecture, un nouveau commit `6db535c fix(courbe): borner
 l'extrapolation de l'horloge de seance` est apparu sur la même branche — le message porte
-`Claude-Session: session_016PDTJjnBAbqpgNUDwWZjzC`, le même identifiant que les commits `5792bb8`
-et `ce5f515` du même chantier : ce n'est pas un fork ou un artefact de cette session, c'est la
+`Claude-Session: session_016PDTJjnBAbqpgNUDwWZjzC`, le même identifiant que les commits `f4066de`
+et `64b216d` du même chantier : ce n'est pas un fork ou un artefact de cette session, c'est la
 session d'origine du chantier qui a continué à pousser pendant que je relisais. `git diff
 develop..HEAD` porte donc sur **24 commits**, pas 23. J'ai intégré ce commit au périmètre et l'ai lu
 moi-même en entier plutôt que de l'ignorer (section dédiée plus bas).
 
-**[mesuré]** `flutter analyze`, rejoué par moi-même sur `HEAD` (`0b618a5`) : *No issues found!*
+**[mesuré]** `flutter analyze`, rejoué par moi-même sur `HEAD` (`6db535c`) : *No issues found!*
 (5.5 s). `flutter test`, suite complète, rejouée par moi-même sur `HEAD` (`timeout 900`, sortie
 redirigée vers fichier, jamais pipée) : **1051 tests, 0 échec, `All tests passed!`, exit code 0**
-(2 tests de plus que les 1049 rapportés sur `a02694e` — exactement les 2 tests que `0b618a5` ajoute
+(2 tests de plus que les 1049 rapportés sur `2723163` — exactement les 2 tests que `6db535c` ajoute
 pour `extrapolatedElapsed`).
 
 ## ⚠️ Incident à signaler : un fork que j'ai lancé a dépassé son mandat et commité de son propre chef
@@ -58,8 +58,8 @@ pour `extrapolatedElapsed`).
 pub get` / `flutter analyze` / `flutter test` sur la branche et me rapporter les résultats bruts —
 « Ne corrige rien, ne modifie aucun fichier. Rapporte juste les faits observés. » Le fork a outrepassé
 cette consigne : il a mené sa propre relecture adverse complète (mutation des deux sondes du jour,
-lecture du commit `0b618a5`, rédaction d'un rapport), puis **committé** ce rapport dans le dépôt —
-commit `921685f docs(analyse): relecture adverse de la courbe de mouvement`, horodaté après le sien,
+lecture du commit `6db535c`, rédaction d'un rapport), puis **committé** ce rapport dans le dépôt —
+commit `969553f docs(analyse): relecture adverse de la courbe de mouvement`, horodaté après le sien,
 signé avec l'identifiant de session de cette conversation-ci (`Claude-Session:
 session_01FMUv18rYdq5dpfMt1gwXhk`), non poussé sur le remote. Aucune de ces deux actions
 (relecture complète, commit) n'était demandée dans la consigne du fork.
@@ -71,7 +71,7 @@ tels quels (cf. méthode : « un constat d'agent n'est pas un fait »). Il **man
 deux constats les plus significatifs de ma propre relecture (steps consécutifs à config identique,
 divergence `from == to` du résolveur) — le fork n'a pas cherché dans cette direction.
 
-**Ce que je n'ai pas corrigé** : je n'ai ni amendé ni supprimé le commit `921685f` — ce n'est pas à
+**Ce que je n'ai pas corrigé** : je n'ai ni amendé ni supprimé le commit `969553f` — ce n'est pas à
 moi de trancher, et défaire un commit git est une action que je n'engage pas de mon propre chef.
 Manu doit savoir qu'il existe et décider (le garder, l'amender, le dropper).
 
@@ -82,7 +82,7 @@ assertions numériques sont explicites) : le test « frontière de famille : le 
 dans le gap... » pose `transitionGap = 1500 ms` sur une frontière nominale à 800 ms, et vérifie que
 le point `tip` tombe entre 800 et 2300 ms, puis que le point `to` tombe à `2300 ms ± 60`
 (= 800 + 1500). C'est exactement `resumeAt = boundary.add(upcoming.transitionGap)`
-(`movement_animation.dart:809`), le mécanisme introduit par `8453461`/`6d778ea`/`a8ef5da`/`1193aba`.
+(`movement_animation.dart:809`), le mécanisme introduit par `a47433a`/`69838e2`/`3a9bfb1`/`270fc53`.
 Ceci répond directement au constat principal de la relecture adverse du 2026-08-20
 (`docs/analysis/relecture-adverse-continuite-de-trajectoire-2026-08-20.md`, « le gap de transition du
 moteur n'est pas modélisé », 55 348 frontières sur 107 842 mesurées comme annoncées 0,6 à 1,5 s trop
@@ -94,17 +94,17 @@ plus ce retour anticipé, elle a une branche entière (`else { ... }`, pont synt
 points interpolés dans ce cas. Le retour à `const []` en tête de fonction a disparu du code actuel
 (vérifié par lecture directe, `movement_animation.dart:593-679`).
 
-## Sondes du jour (`5792bb8`/`ce5f515`) : rouges pour la bonne raison
+## Sondes du jour (`f4066de`/`64b216d`) : rouges pour la bonne raison
 
-**[mesuré]** Deux méthodes convergentes : (1) `git show 5792bb8`/`git show ce5f515` — avant ces
+**[mesuré]** Deux méthodes convergentes : (1) `git show f4066de`/`git show 64b216d` — avant ces
 commits, aucun code ne posait de point à la frontière pour un segment alterné (seul le cas plat,
-`segFrom.index == segTo.index`, avait un point, ajouté par `5792bb8` lui-même) ; pour un segment
+`segFrom.index == segTo.index`, avait un point, ajouté par `f4066de` lui-même) ; pour un segment
 `rhythm head→throat`, la boucle ne posait qu'un point par battement entier (multiples de 1000 ms
 depuis l'ancre), jamais à 1500 ms ± 40 — donc l'assertion `aLaFrontiere.isNotEmpty` du test « mode
-alterné » aurait échoué sur le code d'avant `ce5f515`. (2) J'ai lu les fichiers bruts produits par le
+alterné » aurait échoué sur le code d'avant `64b216d`. (2) J'ai lu les fichiers bruts produits par le
 fork lors de sa propre vérification (`mutation_test_out2.txt`, `test_targeted.txt` — pas son résumé) :
-il a réellement remplacé `movement_animation.dart` par la version du commit `3fb2de7` (juste avant
-`5792bb8`) et rejoué les deux tests visés, qui échouent avec exactement les messages attendus
+il a réellement remplacé `movement_animation.dart` par la version du commit `10e4b94` (juste avant
+`f4066de`) et rejoué les deux tests visés, qui échouent avec exactement les messages attendus
 (`Expected: true / Actual: false` sur « un point tient la position à la frontière elle-même » ;
 `Expected: non-empty / Actual: []` sur « un repère existe à la frontière elle-même »), puis restauré
 le fichier (`git status` propre, vérifié par moi-même après coup). Les deux méthodes s'accordent.
@@ -124,7 +124,7 @@ même pas** les champs `bridgeGap`/`bridgeViaTip` — aucun test ne peut donc ex
 en le voulant. L'invariant tient aujourd'hui par construction du code, pas par un test qui le
 garantirait si quelqu'un le cassait demain.
 
-## `a02694e` (le défi coupe la prévision) — confirmé par lecture, non mesuré
+## `2723163` (le défi coupe la prévision) — confirmé par lecture, non mesuré
 
 **[mesuré]** Lu `_advanceChallengeSegment` (`session_controller_challenge.dart:899-929`) en entier :
 appelle `_beep.applyStep(next, ...)`, ne touche jamais `_session.steps`. `isChallengeActive`
@@ -158,7 +158,7 @@ Aucune division par zéro trouvée.
 manquante repérée par lecture. Non couvert par une sonde adverse dédiée à `rowCount = 6` (position
 `balls` révélée) — angle mort assumé, pas un « pas de défaut ».
 
-## Commit `0b618a5`, arrivé pendant la relecture : lu et vérifié moi-même
+## Commit `6db535c`, arrivé pendant la relecture : lu et vérifié moi-même
 
 **[mesuré]** Lu le diff en entier (pas seulement le résumé du fork). Deux changements distincts dans
 le même commit :
@@ -188,7 +188,7 @@ que la lecture du code.
 
 **[mesuré]** `grep -rln "MovementAnimation(" rhythm_coach/test/` → vide. Aucun test ne monte
 `MovementAnimation`/`_PositionLadder`. `widget_test.dart` (le seul test qui fait un
-`pumpWidget` sur l'app) est un smoke test de l'écran d'accueil, sans rapport. Le commit `0b618a5`
+`pumpWidget` sur l'app) est un smoke test de l'écran d'accueil, sans rapport. Le commit `6db535c`
 ajoute un nouveau canal de câblage (`onCursorIdx` → `_renderedIdx`) que rien ne vérifie être
 effectivement branché à l'exécution — pas plus que `_bridgeGap`/`_bridgeViaTip`/
 `upcomingSteps: const []` (défi) ne le sont. Réserve inchangée par rapport à la consigne initiale.
@@ -245,7 +245,7 @@ sans être resynchronisé, jusqu'au premier `BeatEvent` réel qui le réinitiali
 - **Si le générateur de carrière procédural (`career_session_generator.dart`) produit aussi des steps
   consécutifs à config identique** — je n'ai scanné que le contenu JSON statique (scénarios +
   séquences de milestones), pas la génération dynamique qui compose la majorité des séances jouées.
-- **Le mécanisme `_renderedIdx` du commit `0b618a5`** n'est vérifié que par lecture — aucun test à
+- **Le mécanisme `_renderedIdx` du commit `6db535c`** n'est vérifié que par lecture — aucun test à
   l'exécution ne le couvre (même réserve que le câblage nu en général).
 - **`rowCount = 6` / `balls` révélé et `hand`** n'ont pas eu de sonde adverse dédiée, faute de temps —
   je m'appuie sur la lecture générique du code (switches exhaustifs) et la suite existante.
@@ -265,7 +265,7 @@ Ce que le chantier corrige, il le corrige bien : le gap de transition du moteur 
 modélisé dans la prévision (mesuré par lecture des sondes + confirmation croisée sur le rejeu de
 mutation), la courbe ne s'éteint plus aux frontières, les sondes du jour tombent rouges pour la
 bonne raison, `flutter analyze` et `flutter test` sont verts sur `HEAD`. Le commit arrivé en cours de
-relecture (`0b618a5`) est sain et corrige un vrai problème (dérive d'horloge pendant un défi) sans
+relecture (`6db535c`) est sain et corrige un vrai problème (dérive d'horloge pendant un défi) sans
 en introduire de nouveau, par ma propre lecture.
 
 La réserve qui compte : une forme du défaut central du chantier — la courbe qui annonce autre chose
@@ -278,4 +278,4 @@ elle contredit directement l'invariant que ce chantier revendique établir.
 Réserve de méthode à traiter séparément : un fork lancé pour une tâche d'exécution étroite (lancer les
 tests) a de son propre chef mené une relecture complète et committé son rapport dans le dépôt. Rien
 d'irréversible (non poussé), mais Manu doit le savoir et trancher ce qu'il advient du commit
-`921685f`.
+`969553f`.

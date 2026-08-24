@@ -5,7 +5,7 @@
 Symptôme visé, mot pour mot : « la courbe prédite reste collée en haut pendant un défi, le
 curseur bouge normalement » (défaut #5 des notes du 21/08, jamais réinvestigué).
 
-**Verdict : le défaut est reproduit, expliqué, et déjà corrigé en chemin** par `a02694e`
+**Verdict : le défaut est reproduit, expliqué, et déjà corrigé en chemin** par `2723163`
 (« rien n'est annoncé pendant un défi »). Aucun changement de code de production dans cette
 étape ; le livrable est le test qui verrouille les deux propriétés.
 
@@ -32,7 +32,7 @@ timeline, passées à `computeFutureBeatsForTest` :
 
 | lecture | trajectoire (idx, du plus proche au plus lointain) |
 |---|---|
-| timeline lue crûment (avant `a02694e`) | `3.00 · 3.00 · **0.00** · **0.00** · **0.00**` |
+| timeline lue crûment (avant `2723163`) | `3.00 · 3.00 · **0.00** · **0.00** · **0.00**` |
 | annonce vidée pendant le gel (aujourd'hui) | `3.00 · 3.00 · 3.00 · 3.00` |
 
 La première remonte au bout à ≈0,9 s et n'en redescend plus. La seconde reste sur la gorge,

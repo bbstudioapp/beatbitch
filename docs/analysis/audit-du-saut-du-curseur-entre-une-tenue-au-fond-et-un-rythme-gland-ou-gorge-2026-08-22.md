@@ -3,7 +3,7 @@ type: analyse
 sujet: audit-du-saut-du-curseur-entre-une-tenue-au-fond-et-un-rythme-gland-ou-gorge
 ecrit_le: 2026-08-22T21:15:54+02:00
 auteur: session tss2-audit-saut-tenue · claude-fable-5
-revision: 8f69949
+revision: 86a3739
 branche: fix/courbe-continuite-visuelle
 porte_sur:
   - rhythm_coach/lib/controllers/session_controller.dart
@@ -124,4 +124,4 @@ Pourquoi le curseur saute-t-il, à l'œil sur le téléphone, quand une tenue `t
 
 ## État de reprise
 
-[mesuré] Aucune modification de `lib/` ni de `test/` ; l'arbre est celui de `8f69949`. Compteur à la rédaction : ~175 000 jetons sur 250 000.
+[mesuré] Aucune modification de `lib/` ni de `test/` ; l'arbre est celui de `86a3739`. Compteur à la rédaction : ~175 000 jetons sur 250 000.

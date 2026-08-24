@@ -3,7 +3,7 @@ type: analyse
 sujet: relecture-adverse-du-filet-de-securite-sur-la-garde-de-gel-d-horloge-pendant-une-attente-de-posture
 ecrit_le: 2026-08-23T00:48:47+02:00
 auteur: session tss2-relecture-posture · claude-sonnet-5
-revision: bfac958
+revision: 450d7db
 branche: fix/courbe-continuite-visuelle
 porte_sur:
   - docs/analysis/filet-de-securite-sur-la-garde-de-gel-d-horloge-pendant-une-attente-de-posture-2026-08-23.md

@@ -3,7 +3,7 @@ type: analyse
 sujet: relecture-adverse-de-la-reparation-du-saut-du-curseur-en-sortie-de-tenue
 ecrit_le: 2026-08-22T22:27:21+02:00
 auteur: session tss2-relecture-saut-tenue · claude-sonnet-5
-revision: 35e8a3c
+revision: 7ad5e6f
 branche: fix/courbe-continuite-visuelle
 porte_sur:
   - rhythm_coach/lib/screens/session_screen.dart
@@ -31,18 +31,18 @@ relu_contre:
 
 ## 1. Ce que j'ai rejoué
 
-[mesuré] Périmètre confirmé par `git diff 6743744..HEAD --stat` : trois fichiers touchés —
+[mesuré] Périmètre confirmé par `git diff dc4a602..HEAD --stat` : trois fichiers touchés —
 `rhythm_coach/lib/widgets/movement_animation.dart` (37 lignes), `rhythm_coach/test/movement_trajectory_hold_exit_test.dart`
 (95 lignes), et le rapport `docs/analysis/reparation-du-saut-du-curseur-en-sortie-de-tenue-2026-08-22.md`.
 `beep_engine.dart` n'apparaît dans aucun des quatre commits du périmètre.
 
-[mesuré] J'ai isolé la correction sans casser la compilation du test : `git checkout 6743744 --
+[mesuré] J'ai isolé la correction sans casser la compilation du test : `git checkout dc4a602 --
 movement_animation.dart` efface aussi le câblage `elapsed`/`upcomingSteps` de `anchorAfterScrollForTest`
 qu'utilisent les deux sondes, ce qui empêcherait le fichier de test de compiler. J'ai donc retiré à la
 main les quatre hunks de la correction (déclaration `pastAt`/`pastIdx`, la branche `else` de
 `addBridgePoint`, la branche `dtMs < 0` de `addPoint`, le bloc de substitution de `beats[0]` en fin de
 fonction) en gardant intact le reste du fichier, `git diff` à l'appui pour vérifier que le retrait
-correspond exactement à l'inverse de `a41dc29` moins le câblage de test.
+correspond exactement à l'inverse de `33c2f25` moins le câblage de test.
 
 ## 2. Les deux sondes sont rouges pour la bonne raison
 
@@ -137,7 +137,7 @@ sonde.
 
 ## 6. Le moteur de bips
 
-[mesuré] `git diff 6743744..HEAD --stat -- rhythm_coach/lib/services/beep_engine.dart` ne rend aucune
+[mesuré] `git diff dc4a602..HEAD --stat -- rhythm_coach/lib/services/beep_engine.dart` ne rend aucune
 ligne — le fichier n'apparaît pas dans les quatre commits du périmètre. Confirmé indépendamment de
 l'affirmation du rapport.
 

@@ -3,7 +3,7 @@ type: analyse
 sujet: filet-de-securite-sur-la-garde-de-gel-d-horloge-pendant-une-attente-de-posture
 ecrit_le: 2026-08-23T00:14:15+02:00
 auteur: session tss2-filet-gel-posture · claude-opus-5
-revision: e583f80
+revision: e6b1b2b
 branche: fix/courbe-continuite-visuelle
 porte_sur:
   - rhythm_coach/lib/career/services/generation/career_session_generator.dart

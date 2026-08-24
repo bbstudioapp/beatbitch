@@ -3,7 +3,7 @@ type: analyse
 sujet: relecture-adverse-la-courbe-pendant-un-defi-etape-4-de-la-timeline
 ecrit_le: 2026-08-21T22:58:26+02:00
 auteur: session tss2-relecture-etape4 · claude-sonnet-5
-revision: 67aa2c3
+revision: 8971efd
 branche: fix/courbe-continuite-visuelle
 porte_sur:
   - docs/analysis/la-courbe-pendant-un-defi-etape-4-de-la-timeline-2026-08-21.md
@@ -30,7 +30,7 @@ relu_contre:
   - rhythm_coach/lib/widgets/movement_trajectory_forecast.dart:54
 ---
 
-Consigne reçue : réfuter la thèse de l'auteur (`claude-opus-5`) — « le défaut est mort, corrigé en amont par `a02694e` ; ce travail n'est qu'un garde-fou ». Périmètre : trois commits — `38b814e` · `6bac1be` · `5f30d62` — un seul fichier de code, `rhythm_coach/test/challenge_timeline_forecast_test.dart`. Relecture unique (§15.1) : aucune ligne de production dans le diff `52893b5..HEAD` [document — vérifié aussi moi-même, `git diff 52893b5..67aa2c3 -- ':!*test*' ':!docs'` ne touche que des fichiers de l'étape 6 en cours à côté, jamais les miens].
+Consigne reçue : réfuter la thèse de l'auteur (`claude-opus-5`) — « le défaut est mort, corrigé en amont par `2723163` ; ce travail n'est qu'un garde-fou ». Périmètre : trois commits — `1f13b21` · `9b600ac` · `3e7502c` — un seul fichier de code, `rhythm_coach/test/challenge_timeline_forecast_test.dart`. Relecture unique (§15.1) : aucune ligne de production dans le diff `cbbb282..HEAD` [document — vérifié aussi moi-même, `git diff cbbb282..8971efd -- ':!*test*' ':!docs'` ne touche que des fichiers de l'étape 6 en cours à côté, jamais les miens].
 
 ## 1. Le défaut est-il vraiment mort ?
 
@@ -44,7 +44,7 @@ Chemins explorés au-delà de celui que le test couvre (armement → live → at
 
 ## 2. Le test est-il rouge pour la bonne raison ?
 
-Les trois mutations annoncées, rejouées une à une sur `HEAD=5f30d62`, chacune restaurée avant la suivante :
+Les trois mutations annoncées, rejouées une à une sur `HEAD=3e7502c`, chacune restaurée avant la suivante :
 
 | mutation | fichier:ligne | résultat |
 |---|---|---|
@@ -52,11 +52,11 @@ Les trois mutations annoncées, rejouées une à une sur `HEAD=5f30d62`, chacune
 | excision sans `s.rebased(s.time - shift)` | `session_controller_challenge.dart:1004` | rouge sur *« les survivants ont reculé de 18 s »* — `Expected: [3, 33]`, `Actual: [21, 51]` [mesuré] |
 | `breath` sorti du groupe `tip/tip` de `_ladderPositionsFor` | `movement_animation.dart:289` | rouge sur *« et y reste — la courbe collée en haut pendant le défi »* [mesuré] |
 
-Les trois tombent exactement sur l'assertion que l'auteur annonce, aucune sur une autre. Relecture des 8 `expect()` restants du test : je n'ai pas trouvé de deuxième assertion non discriminante du genre `contains(tip)` — celle-là a déjà été remplacée par `6bac1be` (`skipWhile` + `everyElement`, contre l'ancienne paire `contains` + `.last == tip` qui ne prouvait pas la persistance).
+Les trois tombent exactement sur l'assertion que l'auteur annonce, aucune sur une autre. Relecture des 8 `expect()` restants du test : je n'ai pas trouvé de deuxième assertion non discriminante du genre `contains(tip)` — celle-là a déjà été remplacée par `9b600ac` (`skipWhile` + `everyElement`, contre l'ancienne paire `contains` + `.last == tip` qui ne prouvait pas la persistance).
 
 ## 3. La limite annoncée est-elle la seule ?
 
-L'auteur signale que le test resterait vert si le ternaire `ctrl.isTimelineFrozen ? const [] : …` de `session_screen.dart` disparaissait. Vérifié **par lecture**, pas par mutation : le fichier de test n'importe pas `screens/session_screen.dart` (liste d'imports complète, lignes 17-35) [mesuré] — structurellement, aucune mutation de ce fichier ne peut faire échouer ce test. Je n'ai **pas** rejoué cette mutation en pratique : `session_screen.dart` est actuellement sous édition active de l'autre session (`git status` le montrait modifié, non commité, au moment de ma relecture — commité depuis dans `67aa2c3`, étape 6), et l'éditer même transitoirement présentait un risque de collision que j'ai choisi de ne pas prendre. Ce que je n'ai donc **pas pu établir** : que le test échoue réellement dans ce cas, seulement qu'il ne peut structurellement pas y réagir.
+L'auteur signale que le test resterait vert si le ternaire `ctrl.isTimelineFrozen ? const [] : …` de `session_screen.dart` disparaissait. Vérifié **par lecture**, pas par mutation : le fichier de test n'importe pas `screens/session_screen.dart` (liste d'imports complète, lignes 17-35) [mesuré] — structurellement, aucune mutation de ce fichier ne peut faire échouer ce test. Je n'ai **pas** rejoué cette mutation en pratique : `session_screen.dart` est actuellement sous édition active de l'autre session (`git status` le montrait modifié, non commité, au moment de ma relecture — commité depuis dans `8971efd`, étape 6), et l'éditer même transitoirement présentait un risque de collision que j'ai choisi de ne pas prendre. Ce que je n'ai donc **pas pu établir** : que le test échoue réellement dans ce cas, seulement qu'il ne peut structurellement pas y réagir.
 
 Un deuxième morceau non gardé, que l'auteur ne mentionne pas : ce test n'est pas un `testWidgets` — aucun `MovementAnimation` ni `SessionScreen` n'est jamais monté. Le mécanisme de mémoïsation qui décide si le ladder recalcule sa géométrie (`_sameGeometry` / `_sameUpcomingSteps`, `movement_animation.dart:1036-1066`) n'est donc jamais exercé par ce test — les valeurs `duringChallenge`/`const []` sont passées directement à `computeFutureBeatsForTest`, en cour-circuitant tout `didUpdateWidget`. `_sameUpcomingSteps` compare la longueur des deux listes en premier (ligne 1052) : la transition `[]` ↔ liste réelle est donc triviale à détecter comme « différente » et déclenche bien un recalcul [déduit]. Je n'ai pas trouvé de défaut là, mais c'est une portion réelle du chemin que ce test ne garde pas.
 
@@ -68,7 +68,7 @@ Le tableau « La mesure » (`3.00 · 3.00 · 0.00 · 0.00 · 0.00` / `3.00 · 3.
 
 ## Vérifications d'environnement
 
-Contre `HEAD=5f30d62` (avant que l'autre session committe `67aa2c3`, étape 6, qui ne touche aucun de mes fichiers) :
+Contre `HEAD=3e7502c` (avant que l'autre session committe `8971efd`, étape 6, qui ne touche aucun de mes fichiers) :
 - `flutter pub get` : OK.
 - `flutter analyze` : *No issues found!* [mesuré]
 - `flutter test test/challenge_timeline_forecast_test.dart` : vert en baseline et après chaque restauration de mutation [mesuré].

@@ -3,7 +3,7 @@ type: analyse
 sujet: relecture-adverse-courbe
 ecrit_le: 2026-08-21T17:13:47+02:00
 auteur: session tss2-relecture-courbe · claude-sonnet-5
-revision: 0b618a5
+revision: 6db535c
 branche: fix/courbe-continuite-visuelle
 porte_sur:
   - rhythm_coach/lib/controllers/session_controller.dart
@@ -30,9 +30,9 @@ relu_contre:
 
 ## Périmètre effectivement relu
 
-**[mesuré]** Le périmètre a bougé pendant la relecture. Au lancement, `HEAD` était `a02694e`
+**[mesuré]** Le périmètre a bougé pendant la relecture. Au lancement, `HEAD` était `2723163`
 (8 commits du jour, comme décrit dans la consigne). Vers la fin de la session, un nouveau commit
-`0b618a5 fix(courbe): borner l'extrapolation de l'horloge de seance` est apparu sur la même branche
+`6db535c fix(courbe): borner l'extrapolation de l'horloge de seance` est apparu sur la même branche
 (auteur BB Studio, référence `Claude-Session: session_016PDTJjnBAbqpgNUDwWZjzC` — une session
 Claude distincte). `git diff develop..HEAD` porte donc sur **24 commits** (1266 → ~1327 lignes),
 pas 23. Ce commit corrige exactement la classe de défaut que cette relecture était en train
@@ -40,16 +40,16 @@ d'établir par lecture de code (cf. section suivante) — je l'ai donc intégré
 de l'ignorer, et je documente la coïncidence explicitement : un défaut trouvé de façon indépendante
 pendant la relecture, corrigé de façon concurrente par une autre session pendant que je l'établissais.
 
-**[mesuré]** `flutter analyze` : *No issues found!* — rejoué une fois sur `a02694e`, une fois sur
-`0b618a5` (HEAD final).
+**[mesuré]** `flutter analyze` : *No issues found!* — rejoué une fois sur `2723163`, une fois sur
+`6db535c` (HEAD final).
 
-**[mesuré]** `flutter test` (suite complète, `timeout 900`) sur `a02694e` : **1049 tests, 0 échec**,
+**[mesuré]** `flutter test` (suite complète, `timeout 900`) sur `2723163` : **1049 tests, 0 échec**,
 *All tests passed!*. Suite ciblée (`movement_trajectory_continuity_test.dart` +
-`movement_trajectory_scroll_test.dart`, 31 tests) rejouée sur `0b618a5` : **0 échec**.
+`movement_trajectory_scroll_test.dart`, 31 tests) rejouée sur `6db535c` : **0 échec**.
 
 ## Trouvaille principale : dérive de l'ancre `elapsed` pendant un défi (déjà corrigée pendant la relecture)
 
-**[déduit]** En lisant `_MovementAnimationState` (avant `0b618a5`) : `_elapsedAnchorAt`/
+**[déduit]** En lisant `_MovementAnimationState` (avant `6db535c`) : `_elapsedAnchorAt`/
 `_elapsedAnchorValue` ne sont réarmés que si `oldWidget.elapsed != widget.elapsed`
 (`didUpdateWidget`, comparaison stricte de `Duration`). Or pendant un défi intra-séance, `_onTick`
 gèle la timeline en décrémentant `_timelineOffset` de exactement `_tickInterval` à chaque tick
@@ -71,7 +71,7 @@ steps à venir dont la frontière calculée semble déjà dépassée. Risque con
 réapparaît juste après un défi peut annoncer une position/segment qui n'est pas celui réellement en
 train de se jouer, contredisant l'invariant central du chantier.
 
-**[mesuré]** Le commit `0b618a5`, arrivé pendant cette relecture, corrige précisément ce mécanisme :
+**[mesuré]** Le commit `6db535c`, arrivé pendant cette relecture, corrige précisément ce mécanisme :
 `extrapolatedElapsed()` (nouvelle fonction pure, `@visibleForTesting`) plafonne l'extrapolation à
 `_kElapsedExtrapolationCap = 250 ms` au lieu de laisser `since` (l'écart d'horloge murale) courir sans
 borne. Vérifié en relisant le code du commit ET son test (`extrapolatedElapsed` avec un ancrage vieux
@@ -101,10 +101,10 @@ qui retourneraient la même valeur (horloge basse résolution / appels très rap
 la détection sur `frozenAt` — je n'ai pas trouvé de scénario où cela se produit en pratique côté
 Flutter/Dart (résolution microseconde), et je ne l'ai pas mesuré.
 
-## Sondes du jour (`5792bb8`/`ce5f515`, position à la frontière) : rejouées, tombent rouges pour la bonne raison
+## Sondes du jour (`f4066de`/`64b216d`, position à la frontière) : rejouées, tombent rouges pour la bonne raison
 
 **[mesuré]** Rejeu réel (pas un raisonnement) : `lib/widgets/movement_animation.dart` remplacé par la
-version du commit `3fb2de7` (juste avant `5792bb8`), test file gardé à HEAD (groupe `horloge de
+version du commit `10e4b94` (juste avant `f4066de`), test file gardé à HEAD (groupe `horloge de
 séance` retiré temporairement car il référence `extrapolatedElapsed`, absent à cette révision — pas
 de rapport avec les 2 sondes visées). Les deux tests ciblés :
 - *« une tenue garde sa position jusqu'à la frontière »* → **rouge**, `Expected: true / Actual: false`
@@ -118,12 +118,12 @@ chose. Fichiers restaurés à l'identique après coup (`git status` vérifié pr
 ## Câblage nu — toujours vrai après le nouveau commit
 
 **[mesuré]** `grep -rln "MovementAnimation(" rhythm_coach/test/` → toujours vide, y compris après
-`0b618a5` qui pourtant ajoute un nouveau canal de câblage (`onCursorIdx`, `_renderedIdx`) entre
+`6db535c` qui pourtant ajoute un nouveau canal de câblage (`onCursorIdx`, `_renderedIdx`) entre
 `_PositionLadderState` et son parent. Rien ne vérifie que ce callback est bien branché à l'exécution,
 ni que `_bridgeGap`/`_bridgeViaTip`/`upcomingSteps: const []` (défi) sont bien ceux reçus par le
 widget monté dans l'arbre réel. Réserve inchangée par rapport à la consigne initiale.
 
-## `a02694e` (défi coupe la prévision) — confirmé par lecture, non mesuré par test dédié
+## `2723163` (défi coupe la prévision) — confirmé par lecture, non mesuré par test dédié
 
 **[déduit]** Lu `_advanceChallengeSegment` (session_controller_challenge.dart) en entier : appelle
 `_beep.applyStep(next, ...)`, ne touche jamais `_session.steps`. `isChallengeActive` couvre bien
@@ -167,7 +167,7 @@ cette relecture, pas comme un « pas de défaut ».
 
 ## Verdict
 
-**Publiable avec réserves.** Aucun défaut actif trouvé sur le code à `HEAD` (`0b618a5`) : le seul
+**Publiable avec réserves.** Aucun défaut actif trouvé sur le code à `HEAD` (`6db535c`) : le seul
 défaut réel identifié pendant cette relecture (dérive de l'ancre `elapsed` pendant un défi) a été
 corrigé de façon concurrente par un commit arrivé pendant la session, et son correctif a été vérifié
 sain. Les réserves restantes sont des angles morts de test (câblage widget jamais monté,

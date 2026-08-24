@@ -3,7 +3,7 @@ type: analyse
 sujet: reparation-du-saut-du-curseur-en-sortie-de-tenue
 ecrit_le: 2026-08-22T21:56:08+02:00
 auteur: session tss2-fix-saut-tenue · claude-opus-5
-revision: 75524e8
+revision: 863b624
 branche: fix/courbe-continuite-visuelle
 porte_sur:
   - rhythm_coach/lib/controllers/session_controller.dart

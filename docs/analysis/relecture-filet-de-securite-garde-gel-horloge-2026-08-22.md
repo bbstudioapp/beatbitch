@@ -3,7 +3,7 @@ type: analyse
 sujet: relecture-filet-de-securite-garde-gel-horloge
 ecrit_le: 2026-08-22T23:32:03+02:00
 auteur: session tss2-relecture-filet · claude-sonnet-5
-revision: f825160
+revision: 544fa1e
 branche: fix/courbe-continuite-visuelle
 porte_sur:
   - docs/analysis/filet-de-securite-sur-la-garde-de-gel-d-horloge-apres-un-defi-2026-08-22.md

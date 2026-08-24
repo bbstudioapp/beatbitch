@@ -3,7 +3,7 @@ type: analyse
 sujet: relecture-adverse-etapes-5-et-7-de-la-timeline-derniere-avant-fusion
 ecrit_le: 2026-08-22T00:26:41+02:00
 auteur: session tss2-relecture-etapes5-7 · claude-sonnet-5
-revision: c17950b
+revision: c9543b1
 branche: fix/courbe-continuite-visuelle
 porte_sur:
   - rhythm_coach/assets/sessions/session_advanced_demo_orig.json
@@ -38,16 +38,16 @@ relu_contre:
 ---
 
 *Relecture par `claude-sonnet-5` du travail de `claude-opus-5`. Consigne : chercher à réfuter, pas à
-valider. Périmètre strict : les commits `2a26f98` (étape 5, sonde des plateaux) et `0b7fcfe` (étape 7,
-retrait de `currentTo`), plus le relevé des `fix(...)` de la branche livré par `c17950b` (effectif :
+valider. Périmètre strict : les commits `4315c67` (étape 5, sonde des plateaux) et `2b5b9a3` (étape 7,
+retrait de `currentTo`), plus le relevé des `fix(...)` de la branche livré par `c9543b1` (effectif :
 cf. § 3). Dernière relecture du chantier « timeline source unique » avant fusion par Manu.*
 
 ## Verdict
 
 **Publiable avec réserves.** Aucun bug trouvé dans le périmètre strict : le retrait de `currentTo`
 est structurellement et empiriquement inoffensif, les trois sondes de plateau tombent rouges pour la
-bonne raison, et les trois entrées du relevé rejouées par mutation (`52893b5`, et le duo `a02694e` /
-`22a6cd8`) confirment exactement le verdict que l'auteur leur donnait. **Rien, selon moi, ne devrait
+bonne raison, et les trois entrées du relevé rejouées par mutation (`cbbb282`, et le duo `2723163` /
+`c498420`) confirment exactement le verdict que l'auteur leur donnait. **Rien, selon moi, ne devrait
 être bloqué avant fusion.** Les réserves portent sur deux points déjà honnêtement disclosés par
 l'auteur lui-même, que je n'ai fait que confirmer sans les combler (mandat explicite : pas de nouvelle
 sonde) : le trou de couverture sur la garde de gel de `session_screen.dart`, et les deux entrées du
@@ -73,7 +73,7 @@ d'héritage mode/bpm, un hold, une chaîne de trois transitions de mode) croisé
 supprimée après lecture.
 
 **[mesuré]** `beep_engine.dart:394` confirme que le moteur audio applique la même règle sans
-inheritance : `_to = resolved.to;` est également inconditionnel. La docstring corrigée par `0b7fcfe`
+inheritance : `_to = resolved.to;` est également inconditionnel. La docstring corrigée par `2b5b9a3`
 (« `to` n'est jamais hérité ») décrit donc bien le son, pas seulement l'affichage — l'ancienne
 docstring (« hérite mode/from/to/bpm ») était fausse avant le refactor autant qu'après.
 
@@ -120,11 +120,11 @@ de Manu). Sonde jetable, jamais commitée.
 ## 3. Le relevé des `fix(...)` — contrôle par sondage
 
 **[document]** Le rapport porte sur les `fix(...)` de `git log origin/develop..HEAD` (23 au total) et
-annonce 16 entrées « gardé », 2 « sans objet » (révertées par `6bb44f8`), 2 « incertain », et 3
-« non gardé »/« à moitié » — dont le duo `a02694e`/`22a6cd8` qui corrige la même ligne, la garde
+annonce 16 entrées « gardé », 2 « sans objet » (révertées par `3be2722`), 2 « incertain », et 3
+« non gardé »/« à moitié » — dont le duo `2723163`/`c498420` qui corrige la même ligne, la garde
 `ctrl.isTimelineFrozen ? const [] : resolveUpcomingMovementSteps(…)` de `session_screen.dart:1134`.
 
-**[mesuré]** *Échantillon 1 — un « gardé ».* `52893b5` (contenu : remplacer `head→head` par `tip→head`
+**[mesuré]** *Échantillon 1 — un « gardé ».* `cbbb282` (contenu : remplacer `head→head` par `tip→head`
 dans deux sessions JSON, deux steps où le moteur relevait déjà `from`). J'ai réintroduit `from: "head"`
 au step `t=0` de `session_advanced_demo_orig.json` (annulant le fix). `content_from_equals_to_test.dart`
 tombe immédiatement : le `Set` trouvé contient une entrée en trop
@@ -132,13 +132,13 @@ tombe immédiatement : le `Set` trouvé contient une entrée en trop
 parcourt tout le contenu écrit à la main, pas seulement les deux fichiers touchés par ce commit — elle
 aurait attrapé une régression n'importe où. Restauré, `git diff` vide confirmé.
 
-**[mesuré]** *Échantillon 2 — le duo `a02694e`/`22a6cd8`.* J'ai supprimé le ternaire de
+**[mesuré]** *Échantillon 2 — le duo `2723163`/`c498420`.* J'ai supprimé le ternaire de
 `session_screen.dart:1134` (toujours appeler `resolveUpcomingMovementSteps`, même horloge gelée) et
 lancé la suite complète (`flutter test`, sans filtre). Résultat : **`All tests passed!`, 1097 tests
 verts** — aucun test ne rougit. Ceci confirme exactement l'affirmation du rapport : « supprimer le
 ternaire ne ferait rougir aucun test ». Restauré immédiatement, `git diff` vide confirmé.
 
-**[mesuré]** Le rapport précise que `22a6cd8` est « à moitié » couvert parce qu'il a aussi introduit le
+**[mesuré]** Le rapport précise que `c498420` est « à moitié » couvert parce qu'il a aussi introduit le
 getter `isTimelineFrozen` dans `session_controller.dart`, séparément asserté. `grep -n
 isTimelineFrozen test/` confirme trois `expect(ctrl.isTimelineFrozen, ...)` dans
 `challenge_timeline_forecast_test.dart` (lignes 118, 124, 183) — le getter est bien gardé, seul son
@@ -146,13 +146,13 @@ câblage dans `session_screen.dart` ne l'est pas. Le rapport ne surclasse pas sa
 
 **[déduit]** Ces deux échantillons — un « gardé » qui tombe bien rouge, un « non gardé » qui reste bien
 vert après mutation — vont dans le sens du relevé plutôt que contre lui. Je n'ai pas échantillonné les
-deux entrées « incertain » (`05b25cd`, `44df1e1`) : hors du périmètre de sondage fixé par la consigne
+deux entrées « incertain » (`d49ceda`, `d95a5ae`) : hors du périmètre de sondage fixé par la consigne
 (trois entrées), je ne me prononce pas dessus au-delà de ce que le rapport dit lui-même.
 
 ## Ce que je n'ai pas pu établir
 
-- **[déduit]** Je n'ai vérifié par mutation que trois entrées du relevé de 23 commits (`52893b5`,
-  `a02694e`, `22a6cd8`) — les 20 autres, y compris les deux « incertain » (`05b25cd`, `44df1e1`),
+- **[déduit]** Je n'ai vérifié par mutation que trois entrées du relevé de 23 commits (`cbbb282`,
+  `2723163`, `c498420`) — les 20 autres, y compris les deux « incertain » (`d49ceda`, `d95a5ae`),
   reposent uniquement sur la lecture de l'auteur, non recontrôlée ici.
 - Je n'ai pas cherché à combler le trou de couverture sur la garde de `session_screen.dart:1134` — ni
   en écrivant un test montant l'écran, ni en jugeant si le coût d'un tel test serait justifié : hors

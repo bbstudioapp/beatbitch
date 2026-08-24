@@ -3,7 +3,7 @@ type: analyse
 sujet: relecture-adverse-etape-3-de-la-timeline-resolution-partagee-mode-from-to-bpm
 ecrit_le: 2026-08-21T21:30:42+02:00
 auteur: session tss2-relecture-etape3 · claude-sonnet-5
-revision: 97649b6
+revision: c90af95
 branche: fix/courbe-continuite-visuelle
 porte_sur:
   - rhythm_coach/lib/services/beep_engine.dart
@@ -23,8 +23,8 @@ relu_contre:
 ---
 
 *Relecture par `claude-sonnet-5` du travail de `claude-opus-5`. Consigne : chercher à réfuter, pas à
-valider. Périmètre : `git diff d25b80b..97649b6` hors `docs/` — deux commits, `ec27f8f` (tests de
-caractérisation) et `6dcdd2c` (extraction `resolveStepConfig`). Le cas `from == to` n'a pas été
+valider. Périmètre : `git diff 1cb1627..c90af95` hors `docs/` — deux commits, `51a9b72` (tests de
+caractérisation) et `1ca2ca6` (extraction `resolveStepConfig`). Le cas `from == to` n'a pas été
 tranché — ce n'est pas mon mandat, je vérifie seulement ce que le rapport du 2026-08-21 affirme à
 son sujet.*
 
@@ -54,7 +54,7 @@ mutée, jamais au hasard ni par une erreur de compilation — la caractérisatio
 vraiment.
 
 **[mesuré]** Geste le plus dur : rejouer la caractérisation sur le code d'AVANT l'extraction.
-Worktree sur `d25b80b`, copie du fichier de test neuf (`ec27f8f`/`6dcdd2c` n'existaient pas encore
+Worktree sur `1cb1627`, copie du fichier de test neuf (`51a9b72`/`1ca2ca6` n'existaient pas encore
 à ce commit), `flutter pub get`, `flutter test` : **25/25 verts**, mêmes valeurs attendues que sur
 le code d'après (`+25: All tests passed!` dans les deux cas, aucune divergence de contenu entre
 les deux runs). Le code d'avant l'extraction satisfait donc la même caractérisation que le code
@@ -67,7 +67,7 @@ chiffrée du document, et elle est fausse.
 
 ## 2. Reste-t-il deux implémentations ?
 
-**[mesuré]** Comparaison ligne à ligne de `applyStep` avant/après (`git show d25b80b:...` vs le
+**[mesuré]** Comparaison ligne à ligne de `applyStep` avant/après (`git show 1cb1627:...` vs le
 fichier actuel) : l'ordre des opérations est identique. `_bpm` est écrit au même endroit relatif
 (juste après `_mode = mode`, avant le calcul de rampe `_bpmEnd`/`_loopDurationMs`) ; `_from`/`_to`
 sont écrits au même endroit relatif (après ce calcul de rampe, avant le bloc `from == to`). Le
@@ -116,7 +116,7 @@ précise que la sonde qui a produit ce chiffre a été **jetée** (« elle embar
 l'ancien code »). Je n'ai pas pu rejouer cette mesure telle quelle : elle n'existe plus. J'ai
 reconstruit une preuve équivalente autrement — un test temporaire (non conservé, supprimé après
 coup) qui réimplémente l'ancien corps de `resolveUpcomingMovementSteps` (copié de
-`d25b80b`) et le compare au nouveau sur une exploration **systématique** (pas aléatoire) de tous
+`1cb1627`) et le compare au nouveau sur une exploration **systématique** (pas aléatoire) de tous
 les couples mode × from × to (y compris toutes les égalités from==to) × bpm — **214 326 steps
 comparés, 0 différence**, sauf sur les valeurs de BPM hors `[20, 300]` où j'ai délibérément vérifié
 que le nouveau clampe et l'ancien non (seul changement de comportement reconnu par le rapport,
@@ -144,7 +144,7 @@ bug, juste une remarque de conception qui n'engage aucune action.
 **[mesuré]** Depuis `rhythm_coach/` : `flutter pub get` (OK), `timeout 300 flutter analyze` → *No
 issues found!* (3.8s), `timeout 900 flutter test` (sortie redirigée vers fichier, jamais pipée) →
 **1083 tests, `All tests passed!`, exit 0** — conforme au chiffre annoncé par l'auteur. Dépôt
-propre après la relecture (`git status --short` vide, worktree de comparaison sur `d25b80b`
+propre après la relecture (`git status --short` vide, worktree de comparaison sur `1cb1627`
 supprimé).
 
 ## Résumé

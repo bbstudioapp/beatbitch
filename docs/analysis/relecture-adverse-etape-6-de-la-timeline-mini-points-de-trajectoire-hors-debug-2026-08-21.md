@@ -3,7 +3,7 @@ type: analyse
 sujet: relecture-adverse-etape-6-de-la-timeline-mini-points-de-trajectoire-hors-debug
 ecrit_le: 2026-08-21T23:42:22+02:00
 auteur: session tss2-relecture-etape6 · claude-sonnet-5
-revision: 3f80a9c
+revision: 9d23cd0
 branche: fix/courbe-continuite-visuelle
 porte_sur:
   - rhythm_coach/android/app/build.gradle.kts
@@ -28,8 +28,8 @@ relu_contre:
 ---
 
 *Relecture par `claude-sonnet-5` du travail de `claude-opus-5`. Consigne : chercher à réfuter, pas à
-valider. Périmètre strict : le commit `67aa2c3` (`feat(animation): masquer les mini-points de
-trajectoire hors debug`), `git diff 5f30d62..67aa2c3`. Choix esthétique tranché par Manu (« c'est
+valider. Périmètre strict : le commit `8971efd` (`feat(animation): masquer les mini-points de
+trajectoire hors debug`), `git diff 3e7502c..8971efd`. Choix esthétique tranché par Manu (« c'est
 carrément plus joli », APK testé) — non rediscuté.*
 
 ## Verdict
@@ -73,7 +73,7 @@ existe déjà pour un getter voisin du même service (`scripted_breaks_enabled_t
 `test/debug_settings_trajectory_dots_default_test.dart` (3 cas : défaut vierge, valeur explicite
 prioritaire, setter écrit sous la bonne clé), confirmé le rouge sur la bonne assertion (`Expected:
 <true> / Actual: <false>`), puis restauré le code de production et confirmé le vert. Commit
-`3f80a9c`.
+`9d23cd0`.
 
 ## 2. La courbe est-elle bien tracée dans les deux cas ?
 
@@ -159,7 +159,7 @@ familles :
   dans les paramètres du widget enfant plutôt que constater sa présence, ce qui exige soit le
   harness lourd ci-dessus, soit un refactor (extraire la lecture du paramètre dans un point testable
   isolément). **Aucun des 3 n'a de sonde de bout en bout à ce jour** — ni ceux des commits
-  précédents, ni celui de ce commit. Pas un défaut spécifique à `67aa2c3` : un point aveugle
+  précédents, ni celui de ce commit. Pas un défaut spécifique à `8971efd` : un point aveugle
   structurel de `session_screen.dart`, déjà signalé deux fois cette semaine sur d'autres fils
   (`feedback_new_field_lost_at_copy_sites`, `feedback_pure_function_tested_wiring_not`) — je ne rouvre
   pas de fiche sas, je consigne l'inventaire ici comme demandé.
@@ -194,4 +194,4 @@ après reformatage automatique du nouveau fichier). Tout redirigé vers fichier,
 
 **[mesuré]** `test/debug_settings_trajectory_dots_default_test.dart` (30 lignes, 3 cas) — verrouille le défaut
 `?? kDebugMode` de `getShowTrajectoryDots()`, seul comportement du périmètre trouvé sans aucune
-garde et à coût de sonde négligeable. Commit `3f80a9c` sur `fix/courbe-continuite-visuelle`.
+garde et à coût de sonde négligeable. Commit `9d23cd0` sur `fix/courbe-continuite-visuelle`.

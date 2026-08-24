@@ -3,7 +3,7 @@ type: analyse
 sujet: relecture-adverse-des-trois-commits-ecrits-par-l-orchestrateur-stepserial-commentaire-istimelinefrozen-contenu-tip-vers-head
 ecrit_le: 2026-08-21T22:30:59+02:00
 auteur: session tss2-relecture-mode-direct · claude-sonnet-5
-revision: 52893b5
+revision: cbbb282
 branche: fix/courbe-continuite-visuelle
 porte_sur:
   - rhythm_coach/assets/career/milestones.json
@@ -38,9 +38,9 @@ relu_contre:
 
 *Relecture par `claude-sonnet-5` du travail de `claude-opus-5`. Consigne : chercher à réfuter, pas à
 valider. Périmètre strict : trois commits, écrits par l'orchestrateur en mode direct et jamais
-relus — `030170b` (sonde `stepSerial`), `d25b80b` (commentaire `isTimelineFrozen`), `52893b5`
+relus — `bd3406a` (sonde `stepSerial`), `1cb1627` (commentaire `isTimelineFrozen`), `cbbb282`
 (contenu `tip→head` + sonde `content_from_equals_to_test.dart`). Relus par SHA, pas par `HEAD` :
-`HEAD` était exactement `52893b5` au début comme à la fin de cette relecture (`git rev-parse HEAD`
+`HEAD` était exactement `cbbb282` au début comme à la fin de cette relecture (`git rev-parse HEAD`
 vérifié avant et après le run complet de la suite), donc aucune dérive de branche à signaler ici.
 
 **[mesuré]** Une autre session travaille en parallèle sur cette branche et a laissé un fichier non
@@ -49,14 +49,14 @@ non touché, mais présent dans l'arbre de travail pendant mon run `flutter test
 
 ## Verdict
 
-**Publiable avec réserves.** Aucune des trois affirmations centrales ne cède : la sonde `030170b`
-prouve bien ce qu'elle prétend prouver, le son ne bouge pas dans `52893b5`, et le commentaire
-réécrit dans `d25b80b` est vrai dans les deux sens. Les réserves portent sur la robustesse de la
+**Publiable avec réserves.** Aucune des trois affirmations centrales ne cède : la sonde `bd3406a`
+prouve bien ce qu'elle prétend prouver, le son ne bouge pas dans `cbbb282`, et le commentaire
+réécrit dans `1cb1627` est vrai dans les deux sens. Les réserves portent sur la robustesse de la
 sonde de contenu (`content_from_equals_to_test.dart`) et sur l'hygiène de la sonde `stepSerial` —
 aucune des deux ne fait actuellement mentir un résultat, mais toutes deux peuvent laisser passer
 une régression future sans le dire.
 
-## 1. `030170b` — la sonde `stepSerial` prouve-t-elle quelque chose ?
+## 1. `bd3406a` — la sonde `stepSerial` prouve-t-elle quelque chose ?
 
 **[mesuré]** `applyStep` est une fonction `async` ; `_stepSerial++` (ligne 364) est placé avant le
 premier `await` de la fonction (`await init()`, ligne 365). En Dart, le corps d'une fonction `async`
@@ -84,7 +84,7 @@ de canal — rien n'a débordé sur un autre test dans ce run. C'est une ressour
 pollution démontrée : je ne l'ai pas vue casser quoi que ce soit, mais le test aurait dû `stop()`/
 `dispose()` le moteur.
 
-## 2. `52893b5` — le son a-t-il bougé ?
+## 2. `cbbb282` — le son a-t-il bougé ?
 
 **[déduit]** Non, sur les 8 sites. `Position` est `tip(0) < head(1) < mid(2) < throat(3) <
 full(4) < balls(5)`. Avant le fix (`from: head, to: head`), `resolveStepConfig` renvoie
@@ -131,7 +131,7 @@ c'est la question que j'ai le plus cherché à casser :
 - **Sérialisation** : `SessionStep.toJson()` réécrit `from`/`to` tels quels ; pas de perte ni de
   transformation trouvée.
 
-## 3. `52893b5` — le balayage est-il exhaustif ?
+## 3. `cbbb282` — le balayage est-il exhaustif ?
 
 **[mesuré]** `grep -l '"from"' assets -r` (tous les JSON du dépôt, pas seulement les fichiers cités
 par le test) renvoie exactement la liste des fichiers déjà couverts par
@@ -144,7 +144,7 @@ identiques à `_assumes`. Je n'ai pas trouvé de neuvième site.
 - **Collision de clé.** `_walk` identifie chaque occurrence par `path#(id ?? time)`. Deux milestones
   *différentes* dans `milestones.json` ont chacune un step à `time=10` (`intro_encore` et
   `intro_surprise_notifs`) — vérifié en restaurant temporairement le contenu d'avant le fix
-  (`git checkout 52893b5^ -- …` puis restauration, `git status --short` vide après coup) : le test
+  (`git checkout cbbb282^ -- …` puis restauration, `git status --short` vide après coup) : le test
   tombe bien rouge, mais son `Actual` ne liste que **5** entrées pour `milestones.json` (`#38, #28,
   #10, #44, #40`) alors que **6** sites réels y existaient avant le fix — les deux `#10` fusionnent
   en un seul élément de `Set`. Sans conséquence aujourd'hui (les deux sont corrigés, 0 site restant
@@ -160,16 +160,16 @@ identiques à `_assumes`. Je n'ai pas trouvé de neuvième site.
   résout depuis `to`, pas depuis `step.from`) et un step sans `mode` avec `from == to` écrit en dur,
   la sonde le compterait comme un site rhythm/lick alors qu'il n'en est pas un.
 
-## 4. `52893b5` — la sonde neuve garde-t-elle l'acquis ?
+## 4. `cbbb282` — la sonde neuve garde-t-elle l'acquis ?
 
-**[mesuré]** Rejoué telle quelle : `git checkout 52893b5^ -- rhythm_coach/assets/career/
+**[mesuré]** Rejoué telle quelle : `git checkout cbbb282^ -- rhythm_coach/assets/career/
 milestones.json rhythm_coach/assets/sessions/session_advanced_demo_orig.json rhythm_coach/assets/
 sessions/session_advanced_demo_ps1.json`, puis `flutter test test/content_from_equals_to_test.dart`
 → rouge, `Actual` plus grand que `_assumes` de 7 éléments (les 6 occurrences milestones — 5 à cause
 de la collision ci-dessus — plus les 2 sessions démo, moins celle déjà attendue à t=210). Restauré
 ensuite (`git checkout HEAD -- …`), `git status --short` vide.
 
-## 5. `d25b80b` — le commentaire est-il vrai maintenant ?
+## 5. `1cb1627` — le commentaire est-il vrai maintenant ?
 
 **[mesuré]** Les deux moitiés vérifiées séparément par grep exhaustif de `_timelineOffset` dans
 `session_controller.dart` (seulement deux sites de décrément trouvés dans tout le fichier) :
@@ -205,7 +205,7 @@ l'isolat). Absence de preuve de nuisance, pas preuve d'absence.
 
 ## Exécution
 
-**[mesuré]** Depuis `rhythm_coach/`, contre `HEAD=52893b5` (vérifié identique avant et après) :
+**[mesuré]** Depuis `rhythm_coach/`, contre `HEAD=cbbb282` (vérifié identique avant et après) :
 `flutter pub get` (OK), `timeout 300 flutter analyze` → *No issues found!* (4.2s), `timeout 900
 flutter test` (sortie redirigée vers fichier, jamais pipée) → **1085 tests, `All tests passed!`,
 exit 0** — pas 1084 comme annoncé par l'auteur. Écart expliqué : l'arbre de travail contenait le
@@ -220,6 +220,6 @@ après la relecture (`git status --short` ne montre que ce fichier non suivi, no
 (mutation rejouée, rouge exact), le son ne bouge pas sur les 8 sites `tip→head` (déterministe, pas
 aléatoire, aucune divergence trouvée en aval), et le commentaire de `isTimelineFrozen` est vrai dans
 les deux sens. Les réserves sont mineures et non fonctionnelles : un timer de `BeepEngine` jamais
-arrêté dans la sonde `030170b` (sans nuisance observée), et deux angles morts dans la sonde de
-contenu `52893b5` (collision de clé `path#time`, filtre de mode qui ignore `defaultMode`) qui ne
+arrêté dans la sonde `bd3406a` (sans nuisance observée), et deux angles morts dans la sonde de
+contenu `cbbb282` (collision de clé `path#time`, filtre de mode qui ignore `defaultMode`) qui ne
 faussent rien aujourd'hui mais pourraient laisser passer une régression future sans le signaler.

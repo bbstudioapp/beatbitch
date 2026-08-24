@@ -1,11 +1,11 @@
 # Étape 3 de la timeline unique — le cas `from == to` reste hors de la fonction pure
 
 *Session du 2026-08-21, branche `fix/courbe-continuite-visuelle`. L'extraction demandée par
-l'étape 3 est livrée (commits `ec27f8f` et `6dcdd2c`) ; ce document ne traite que le point laissé
+l'étape 3 est livrée (commits `51a9b72` et `1ca2ca6`) ; ce document ne traite que le point laissé
 ouvert : le relèvement aléatoire de `from` quand `from == to`. Aucune ligne n'a été écrite pour
 ce point — c'est une décision de Manu.*
 
-**Provenance** : **[mesuré]** = lu ou exécuté par cette session dans le dépôt à `6dcdd2c`.
+**Provenance** : **[mesuré]** = lu ou exécuté par cette session dans le dépôt à `1ca2ca6`.
 **[déduit]** = raisonnement à partir de ce qui précède, non rejoué en séance.
 
 ## Ce qui est déjà unifié
@@ -87,7 +87,7 @@ fait juste après l'appel, l'affichage ne le fait pas.
 
 *Variante à un cran, si Manu veut du visible sans toucher au son* : **ne rien annoncer plutôt
 qu'annoncer faux** — le résolveur signale ces steps comme indécis et la courbe ne trace rien pour
-eux, comme elle ne trace déjà rien quand l'horloge de séance est gelée (`d25b80b`). Ça ne remplace
+eux, comme elle ne trace déjà rien quand l'horloge de séance est gelée (`1cb1627`). Ça ne remplace
 pas une décision sur les trois issues, ça borne juste le mensonge en attendant.
 
 ### B — rendre le tirage déterministe des deux côtés

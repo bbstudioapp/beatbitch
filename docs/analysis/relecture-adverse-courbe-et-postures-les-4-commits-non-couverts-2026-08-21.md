@@ -3,7 +3,7 @@ type: analyse
 sujet: relecture-adverse-courbe-et-postures-les-4-commits-non-couverts
 ecrit_le: 2026-08-21T20:01:20+02:00
 auteur: session tss2-relecture-courbe-fin · claude-sonnet-5
-revision: 4f92c0c
+revision: e684c3f
 branche: fix/courbe-continuite-visuelle
 porte_sur:
   - /home/emmanuel/.claude/orchestration/sas/tss2/awaitready-perdu-aux-rebases-de-timeline.md
@@ -43,9 +43,9 @@ relu_contre:
 
 ## Périmètre effectivement relu
 
-**[mesuré]** Diff rejoué : `git diff 0b618a5..4f92c0c -- ':!docs'` — 9 fichiers, 284 insertions,
+**[mesuré]** Diff rejoué : `git diff 6db535c..e684c3f -- ':!docs'` — 9 fichiers, 284 insertions,
 48 suppressions, conforme au tableau de la consigne. Les deux commits de documentation intercalés
-(`921685f`, `aa36394`) ne touchent aucun fichier de ce diff — hors périmètre confirmé.
+(`969553f`, `9b4f9d1`) ne touchent aucun fichier de ce diff — hors périmètre confirmé.
 
 **[mesuré]** Rejoué moi-même depuis `rhythm_coach/` : `flutter pub get` (OK, 65 paquets ont une
 version plus récente disponible, sans rapport), `timeout 300 flutter analyze` → *No issues found!*
@@ -69,8 +69,8 @@ entre « l'horloge est gelée » et « le getter le dit ». Cette garantie est f
 Le second, dans `_checkSteps` (ligne 1558), décrémente `_timelineOffset` pour différer un step dont
 le texte chevauche un TTS en cours (« anti-coupure des phrases random »), jusqu'à
 `_maxTtsDeferTicks = 25 × _tickInterval (200 ms) = 5 s`. Ce site est **préexistant** au diff relu —
-`git show 0b618a5:...` le montre déjà présent en ligne 1549 avant les quatre commits — donc ni
-introduit ni corrigé par `22a6cd8`. Pendant cette fenêtre de différé, l'horloge de séance est bel et
+`git show 6db535c:...` le montre déjà présent en ligne 1549 avant les quatre commits — donc ni
+introduit ni corrigé par `c498420`. Pendant cette fenêtre de différé, l'horloge de séance est bel et
 bien gelée (le stopwatch réel avance, `_timelineOffset` compense) sans qu'aucune des trois conditions
 de `isTimelineFrozen` ne soit vraie : c'est le chemin demandé par la consigne, « l'horloge gelée sans
 que le getter le dise ».
@@ -78,7 +78,7 @@ que le getter le dise ».
 **[déduit]** `posture_gate.dart` (fichier non touché par ce diff) nomme explicitement ce second site
 dans sa propre documentation — « un gel ne fait que le décrémenter (un tick par battement, **comme le
 report TTS**) » (ligne 49) — donc l'auteur du mécanisme de gel de posture avait connaissance de ce
-chemin analogue avant même `22a6cd8`. Le comparateur `stillHolds` (`timelineOffset >
+chemin analogue avant même `c498420`. Le comparateur `stillHolds` (`timelineOffset >
 this.timelineOffset`) n'y est pas sensible : un décrément, quelle qu'en soit la source, ne fait jamais
 tomber le gel de posture. Ce n'est donc pas une régression du gel de posture lui-même — seulement du
 périmètre que `isTimelineFrozen` prétend couvrir.
@@ -105,7 +105,7 @@ actuelle n'exploite ce chemin — le défaut est réel mais dormant dans le cont
 
 **[document]** Ce constat recoupe exactement la fiche déjà présente dans le sas
 (`~/.claude/orchestration/sas/tss2/awaitready-perdu-aux-rebases-de-timeline.md`, verdict CONFIRMÉ
-2026-08-21 contre `4f92c0c`), qui note « recopie bien `awaitReady` mais laisse tomber `chainAction`
+2026-08-21 contre `e684c3f`), qui note « recopie bien `awaitReady` mais laisse tomber `chainAction`
 et `background` » et précise que ce 4ᵉ site n'est pas traité par ce commit. Conforme à la consigne :
 non corrigé, pas de nouvelle fiche déposée (celle-ci existe déjà et porte le bon verdict).
 
@@ -134,7 +134,7 @@ de `session_screen.dart` qui vérifierait `stepSerial: widget.beep.stepSerial` (
 
 **[déduit]** Par lecture, le câblage semble correct : `_stepSerial++` s'exécute pour tout step
 `!isTextOnly` appliqué (y compris les réapplications à configuration identique, cas visé par
-`b2ec4fe`), et `session_screen.dart:1128` relit `widget.beep.stepSerial` à chaque `build()` — donc à
+`c5aa1e6`), et `session_screen.dart:1128` relit `widget.beep.stepSerial` à chaque `build()` — donc à
 chaque `notifyListeners()` qui suit un `applyStep`. Je n'ai pas trouvé de chemin où `applyStep`
 s'exécuterait sans qu'un `notifyListeners()` ultérieur ne rafraîchisse l'écran avant le prochain step.
 Mais c'est une lecture, pas une mesure : le grep ci-dessus confirme qu'aucune sonde ne peut le
@@ -182,7 +182,7 @@ sur les trois mêmes conditions.
 - **Le câblage `stepSerial` en conditions réelles** (réserve 3) : établi qu'aucun test ne le couvre,
   pas qu'il est cassé — je n'ai pas monté `SessionScreen` complet avec un `BeepEngine` réel pour
   observer le compteur traverser jusqu'au widget à l'exécution.
-- **[déduit]** **Les 25 autres commits de la branche** (`develop..0b618a5`) : hors périmètre de cette
+- **[déduit]** **Les 25 autres commits de la branche** (`develop..6db535c`) : hors périmètre de cette
   relecture, non rejoués ici — la relecture précédente
   (`relecture-adverse-courbe-config-identique-2026-08-21.md`) les couvre.
 
@@ -190,10 +190,10 @@ sur les trois mêmes conditions.
 
 **Publiable avec réserves.**
 
-`flutter analyze` et `flutter test` sont verts sur `HEAD` (`4f92c0c`), mesurés par moi-même. Les trois
+`flutter analyze` et `flutter test` sont verts sur `HEAD` (`e684c3f`), mesurés par moi-même. Les trois
 sites de rebase perdant `awaitReady` (défaut réel, préexistant, confirmé par une session antérieure)
 sont effectivement corrigés et gardés par une sonde qui tombe rouge à la bonne raison sous mutation.
-La détection du gap de transition sur step réappliqué (`b2ec4fe`) est elle aussi gardée par une sonde
+La détection du gap de transition sur step réappliqué (`c5aa1e6`) est elle aussi gardée par une sonde
 qui tombe rouge à la bonne raison.
 
 Trois réserves, aucune ne bloque à mon sens la publication :

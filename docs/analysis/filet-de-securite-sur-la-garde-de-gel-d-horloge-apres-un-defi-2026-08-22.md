@@ -3,7 +3,7 @@ type: analyse
 sujet: filet-de-securite-sur-la-garde-de-gel-d-horloge-apres-un-defi
 ecrit_le: 2026-08-22T23:04:33+02:00
 auteur: session tss2-filet-garde-gel · claude-opus-5
-revision: cdacdce
+revision: deeb593
 branche: fix/courbe-continuite-visuelle
 porte_sur:
   - rhythm_coach/lib/controllers/session_controller.dart
