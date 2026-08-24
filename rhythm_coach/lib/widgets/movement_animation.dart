@@ -7,6 +7,7 @@ import '../models/session.dart';
 import '../models/session_step.dart';
 import '../services/beep_engine.dart';
 import '../theme/app_theme.dart';
+import 'movement_trajectory_forecast.dart';
 
 /// Visualisation animée du mouvement courant. Remplace le timer pendant
 /// la séance pour donner un repère visuel du tempo et de la position
@@ -14,11 +15,15 @@ import '../theme/app_theme.dart';
 ///
 /// L'axe vertical (tip en haut, full en bas) représente la **position le
 /// long de la verge** — sémantique partagée par tous les modes :
-/// - rhythm / hold / beg : position des lèvres (orbe pleine).
-/// - lick                : position de la langue (pastille horizontale).
-/// - hand                : position de la main (anneau, qui entoure la verge).
-/// - biffle              : pas de position (gros pulse central, coups au visage).
-/// - breath / freestyle  : pas de position (orbe respirante).
+/// - rhythm / hand : alterne from/to à chaque beat.
+/// - lick          : comme rhythm (pastille horizontale).
+/// - hold / beg / suckle : tenue sur `from` — courbe plate.
+/// - biffle / breath / freestyle : pas de position — ligne plate en haut.
+///
+/// Un seul widget (`_PositionLadder`) reste monté pour tous les modes : la
+/// courbe (silhouette, graduations, trajectoire) ne se démonte jamais d'une
+/// consigne à l'autre, seule sa forme change (alternance, plateau tenu, ou
+/// ligne du haut) — cf. `_MovementAnimationState._buildForMode`.
 ///
 /// Cet axe partagé est volontaire : à terme, un step combo (hand+rhythm,
 /// hand+lick) pourra superposer **plusieurs curseurs** sur la même
@@ -46,6 +51,26 @@ class MovementAnimation extends StatefulWidget {
   /// passe la valeur calculée à partir du contexte joueuse.
   final int positionRowCount;
 
+  /// Temps écoulé de la séance, corrélé à l'instant présent (précision ms).
+  /// Sert d'ancrage pour situer les `upcomingSteps` (exprimés en secondes
+  /// depuis le début de séance) sur l'horloge murale de la trajectoire.
+  final Duration elapsed;
+
+  /// Compteur de steps appliqués au moteur (`BeepEngine.stepSerial`). Deux
+  /// steps de configuration identique laissent toutes les autres propriétés
+  /// inchangées alors que le moteur se tait pendant son gap : ce compteur est
+  /// le seul signal qui les distingue.
+  final int stepSerial;
+
+  /// Suite des steps de bip à venir, déjà résolus (mode/from/to/bpm hérités
+  /// — cf. `resolveUpcomingMovementSteps`). Vide = comportement historique
+  /// (extrapolation indéfinie de la consigne courante).
+  final List<UpcomingMovementStep> upcomingSteps;
+
+  /// Quand true, la trajectoire pose une pastille sur chaque beat à venir.
+  /// Off en séance : seules la courbe lissée et le curseur restent visibles.
+  final bool showTrajectoryDots;
+
   const MovementAnimation({
     super.key,
     required this.mode,
@@ -55,6 +80,10 @@ class MovementAnimation extends StatefulWidget {
     this.height = 160,
     this.beepEngine,
     this.positionRowCount = 5,
+    this.stepSerial = 0,
+    this.elapsed = Duration.zero,
+    this.upcomingSteps = const [],
+    this.showTrajectoryDots = false,
   });
 
   @override
@@ -78,7 +107,8 @@ class _MovementAnimationState extends State<MovementAnimation>
   /// Timestamp du dernier beat reçu (rhythm/lick/hand). Sert à extrapoler
   /// la fenêtre future de la trajectoire : à partir de cet instant, les
   /// beats suivants tombent à `_lastBeatAt + n × beatDuration` en alternant
-  /// from↔to. Null tant qu'aucun beat n'a été reçu.
+  /// from↔to. Null tant qu'aucun beat n'a été reçu (ou juste après une
+  /// transition de step, cf. `_frozenIdx`).
   DateTime? _lastBeatAt;
 
   /// BPM ayant servi à calculer l'intervalle du dernier beat reçu
@@ -88,6 +118,38 @@ class _MovementAnimationState extends State<MovementAnimation>
   /// tant qu'aucun beat n'a été reçu.
   double? _lastBeatBpm;
 
+  /// Position visuelle gelée juste avant une transition de step (mode/tempo/
+  /// position), point de départ du pont synthétique que dessine la courbe
+  /// pendant le court intervalle sans beat réel (cf.
+  /// `_PositionLadder._computeFutureBeats`) — sans lui la courbe entière
+  /// disparaissait le temps que le 1er bip du nouveau step arrive.
+  double? _frozenIdx;
+  DateTime? _frozenAt;
+
+  /// Dernière position que le ladder a réellement affichée. Le gel part de
+  /// là et non d'un recalcul théorique : le step s'applique jusqu'à un tick
+  /// après l'instant où la courbe l'avait annoncé, et la courbe a donc déjà
+  /// entamé le mouvement quand le gel tombe.
+  double? _renderedIdx;
+
+  /// Gap réel que `BeepEngine.applyStep` insère avant le 1er bip du step
+  /// courant, et passage par `tip` imposé par un franchissement de famille :
+  /// la durée et la forme du pont synthétique, pour qu'il parcoure la
+  /// trajectoire que la prévision avait annoncée (cf.
+  /// `_PositionLadder._computeFutureBeats`).
+  Duration? _bridgeGap;
+  bool _bridgeViaTip = false;
+
+  /// Ancrage horloge murale du `elapsed` de séance (rafraîchi au tick
+  /// ~200 ms du `SessionController`, alors que ce widget se redessine à
+  /// 60 fps). Sert à extrapoler un elapsed continu entre deux ticks au lieu
+  /// d'utiliser la valeur figée telle quelle — sans ça, la position calculée
+  /// d'une frontière de step à venir dérive en dents de scie (jusqu'à
+  /// ~200 ms d'erreur, remise à zéro à chaque tick), visible comme une
+  /// vibration horizontale de la courbe à l'approche du prochain step.
+  DateTime? _elapsedAnchorAt;
+  Duration? _elapsedAnchorValue;
+
   @override
   void initState() {
     super.initState();
@@ -95,6 +157,13 @@ class _MovementAnimationState extends State<MovementAnimation>
       vsync: this,
       duration: _durationFor(widget.mode, widget.bpm),
     );
+    _elapsedAnchorAt = DateTime.now();
+    _elapsedAnchorValue = widget.elapsed;
+    _frozenIdx = _ladderPositionsFor(widget.mode, widget.from, widget.to)
+        .$2
+        .index
+        .toDouble();
+    _frozenAt = DateTime.now();
     _startController();
     _maybeSubscribeBeats(widget.beepEngine);
   }
@@ -107,6 +176,11 @@ class _MovementAnimationState extends State<MovementAnimation>
     final positionChanged =
         oldWidget.from != widget.from || oldWidget.to != widget.to;
     final engineChanged = oldWidget.beepEngine != widget.beepEngine;
+
+    if (oldWidget.elapsed != widget.elapsed) {
+      _elapsedAnchorAt = DateTime.now();
+      _elapsedAnchorValue = widget.elapsed;
+    }
 
     if (modeChanged) {
       _controller.removeStatusListener(_onStatus);
@@ -141,16 +215,90 @@ class _MovementAnimationState extends State<MovementAnimation>
     // l'audio annonce `to` — c'est le décalage « quasiment inversé » observé.
     // Il se recalait au bout d'un beat, mais à BPM bas ça reste très visible.
     //
-    // On reset aussi l'ancrage de la courbe future (`_lastBeatAt`) : sinon
-    // l'extrapolation continue avec un `_lastBeatAt` calé sur l'ancien step
-    // mais les nouveaux from/to/BPM. `AnimatedOpacity` fait le fade-out, le
-    // prochain `BeatEvent` recale et fade-in.
-    if (modeChanged || tempoChanged || positionChanged) {
+    // On gèle la position visuelle courante (calculée avec les ANCIENS
+    // from/to/mode/bpm/flipped) avant de réinitialiser `_lastBeatAt` : la
+    // courbe s'en sert comme point de départ du pont synthétique vers `to`
+    // pendant le court intervalle sans beat réel (cf.
+    // `_PositionLadder._computeFutureBeats`). Sans ce gel, la courbe entière
+    // disparaissait jusqu'au prochain `BeatEvent` (`beats.length < 2` →
+    // `AnimatedOpacity` à 0).
+    final stepReapplied = oldWidget.stepSerial != widget.stepSerial;
+    if (modeChanged || tempoChanged || positionChanged || stepReapplied) {
+      final (oldLadderFrom, oldLadderTo) =
+          _ladderPositionsFor(oldWidget.mode, oldWidget.from, oldWidget.to);
+      _frozenIdx = _renderedIdx ??
+          _visualIdxNow(
+            from: oldLadderFrom,
+            to: oldLadderTo,
+            flipped: _flipped,
+            lastBeatAt: _lastBeatAt,
+            beatDuration: _durationFor(oldWidget.mode, oldWidget.bpm),
+            now: DateTime.now(),
+          );
+      _frozenAt = DateTime.now();
+      _bridgeGap = BeepEngine.transitionGap(
+        incoming: widget.mode,
+        previous: oldWidget.mode,
+        incomingTo: widget.to,
+      );
+      _bridgeViaTip = _familyOf(widget.mode, widget.from) !=
+          _familyOf(oldWidget.mode, oldWidget.from);
       _flipped = false;
       _lastBeatAt = null;
       _lastBeatBpm = null;
     }
   }
+
+  /// Position visuelle courante du curseur, même formule que
+  /// `_PositionLadder._computeFutureBeats` — dupliquée en pure/statique ici
+  /// pour geler un point de départ cohérent juste avant une transition
+  /// (les anciens from/to/beatDuration ne sont plus disponibles une fois la
+  /// transition appliquée).
+  static double _visualIdxNow({
+    required Position from,
+    required Position to,
+    required bool flipped,
+    required DateTime? lastBeatAt,
+    required Duration beatDuration,
+    required DateTime now,
+  }) {
+    if (lastBeatAt == null) return (flipped ? from : to).index.toDouble();
+    final beatMs = beatDuration.inMilliseconds.toDouble();
+    if (beatMs <= 0) return (flipped ? from : to).index.toDouble();
+    final sinceBeatMs = now.difference(lastBeatAt).inMilliseconds.toDouble();
+    final lastPosIdx = (flipped ? to : from).index.toDouble();
+    final nextPosIdx = (flipped ? from : to).index.toDouble();
+    final progress = (sinceBeatMs / beatMs).clamp(0.0, 1.0);
+    final eased = Curves.easeInOutCubic.transform(progress);
+    return lastPosIdx + (nextPosIdx - lastPosIdx) * eased;
+  }
+
+  /// Position affichée sur le ladder selon le mode : alternance réelle
+  /// (rhythm/lick/hand), tenue plate sur `from` (hold/beg/suckle), ou
+  /// ligne plate en haut pour les modes sans notion de position (Manu :
+  /// « pour les respirations ou les biffles, on peut mettre une ligne
+  /// droite en haut »). Utilisée pour ce qui est réellement affiché ET pour
+  /// geler l'ancre de transition sur la même valeur (cf. `didUpdateWidget`) —
+  /// sinon `_frozenIdx` capture une position brute jamais montrée à l'écran.
+  static (Position, Position) _ladderPositionsFor(
+    SessionMode mode,
+    Position from,
+    Position? to,
+  ) =>
+      switch (mode) {
+        SessionMode.rhythm || SessionMode.lick || SessionMode.hand => (
+            from,
+            to ?? from
+          ),
+        SessionMode.hold || SessionMode.beg || SessionMode.suckle => (
+            from,
+            from
+          ),
+        SessionMode.biffle || SessionMode.breath || SessionMode.freestyle => (
+            Position.tip,
+            Position.tip
+          ),
+      };
 
   @override
   void dispose() {
@@ -270,40 +418,35 @@ class _MovementAnimationState extends State<MovementAnimation>
     // il reste celui posé par `_durationFor` en fallback.
     final beatDuration =
         _controller.duration ?? _durationFor(widget.mode, widget.bpm);
-    return switch (widget.mode) {
-      SessionMode.rhythm ||
-      SessionMode.lick ||
-      SessionMode.hand =>
-        _PositionLadder(
-          from: widget.from,
-          to: widget.to ?? widget.from,
-          beatDuration: beatDuration,
-          bpm: (_lastBeatBpm ?? widget.bpm.toDouble()).round(),
-          flipped: _flipped,
-          color: color,
-          cursorStyle: cursorStyle,
-          lastBeatAt: _lastBeatAt,
-          rowCount: widget.positionRowCount,
-        ),
-      SessionMode.biffle => _Pulse(t: t, color: color),
-      // Suckle : la position est tenue (head ou balls), le curseur orb
-      // pulse au rythme imposé par `_durationFor(suckle)` (~1.2s) en
-      // mode `repeat(reverse: true)` côté AnimationController. Le visuel
-      // d'aspiration émerge naturellement du pulse sans logique dédiée.
-      SessionMode.hold ||
-      SessionMode.beg ||
-      SessionMode.suckle =>
-        _StaticPosition(
-          position: widget.from,
-          t: t,
-          color: color,
-          cursorStyle: cursorStyle,
-          rowCount: widget.positionRowCount,
-        ),
-      SessionMode.breath ||
-      SessionMode.freestyle =>
-        _Breath(t: t, color: color),
-    };
+    final (ladderFrom, ladderTo) =
+        _ladderPositionsFor(widget.mode, widget.from, widget.to);
+    final elapsedNow = extrapolatedElapsed(
+      anchorValue: _elapsedAnchorValue,
+      anchorAt: _elapsedAnchorAt,
+      fallback: widget.elapsed,
+      now: DateTime.now(),
+    );
+    return _PositionLadder(
+      mode: widget.mode,
+      from: ladderFrom,
+      to: ladderTo,
+      beatDuration: beatDuration,
+      bpm: (_lastBeatBpm ?? widget.bpm.toDouble()).round(),
+      flipped: _flipped,
+      color: color,
+      cursorStyle: cursorStyle,
+      lastBeatAt: _lastBeatAt,
+      frozenIdx: _frozenIdx,
+      frozenAt: _frozenAt,
+      onCursorIdx: (idx) => _renderedIdx = idx,
+      bridgeGap: _bridgeGap,
+      bridgeViaTip: _bridgeViaTip,
+      rowCount: widget.positionRowCount,
+      elapsed: elapsedNow,
+      upcomingSteps: widget.upcomingSteps,
+      showTrajectoryDots: widget.showTrajectoryDots,
+      pulseT: t,
+    );
   }
 
   static Color _modeColor(SessionMode m) => switch (m) {
@@ -333,14 +476,34 @@ class _MovementAnimationState extends State<MovementAnimation>
         SessionMode.lick => _CursorStyle.tongue,
         // main → anneau ouvert (la main entoure la verge, ne la "remplit" pas)
         SessionMode.hand => _CursorStyle.ring,
-        // modes sans position → fallback orbe (jamais consommé en pratique
-        // car biffle/breath/freestyle utilisent des widgets dédiés)
+        // modes sans position → orbe, affiché en ligne plate en haut du
+        // ladder (`_buildForMode` fixe from=to=tip) avec le pulse dédié de
+        // `_CursorVisual`
         SessionMode.biffle ||
         SessionMode.breath ||
         SessionMode.freestyle =>
           _CursorStyle.orb,
       };
+
+  /// Famille d'organe engagé — la trajectoire remonte à `tip` au
+  /// franchissement d'une frontière de famille (cf. `_PositionLadder`).
+  static _ModeFamily _familyOf(SessionMode m, Position p) => switch (m) {
+        SessionMode.rhythm ||
+        SessionMode.hold ||
+        SessionMode.beg =>
+          _ModeFamily.mouth,
+        SessionMode.suckle =>
+          p == Position.head ? _ModeFamily.mouth : _ModeFamily.other,
+        SessionMode.lick ||
+        SessionMode.hand ||
+        SessionMode.biffle ||
+        SessionMode.breath ||
+        SessionMode.freestyle =>
+          _ModeFamily.other,
+      };
 }
+
+enum _ModeFamily { mouth, other }
 
 // ─── Sous-widgets ────────────────────────────────────────────────────────
 
@@ -350,28 +513,6 @@ class _MovementAnimationState extends State<MovementAnimation>
 /// - [tongue] : pastille horizontale (langue qui lèche).
 enum _CursorStyle { orb, ring, tongue }
 
-/// Échelle verticale de positions (tip en haut, dernière en bas) avec
-/// un curseur (orbe / anneau / langue) qui glisse entre `from` et `to`
-/// à chaque battement. Le nombre de lignes est paramétré par [rowCount]
-/// — par défaut 5 (`tip..full`), 6 quand `Position.balls` est révélée
-/// (anatomie + milestone). Quand `from == to`, le curseur pulse
-/// simplement sur cette position.
-///
-/// Le curseur **glisse** vers la prochaine cible avec une courbe d'easing
-/// (`Curves.easeInOutCubic`) sur la durée d'un beat. Anticipation : départ
-/// doux, accélération, arrivée freinée → l'utilisatrice voit où le curseur
-/// va avant qu'il arrive, et à l'instant du prochain bip il est pile dessus.
-///
-/// L'audio reste maître : la cible de l'AnimatedAlign change à l'instant
-/// même où le bip courant sonne (cf. `_onBeatEvent`), ce qui garantit que
-/// le curseur visible *est* à `event.position` à ce moment précis (fin de
-/// l'animation précédente) et que la suivante glissera pendant exactement
-/// un beat. Pas de drift visuel/audio.
-///
-/// En cas de transition de step (from/to changent), `AnimatedAlign` glisse
-/// naturellement de l'ancienne position visible vers la nouvelle cible
-/// pendant un beat — pas de saut sec.
-///
 /// Intervalle complémentaire d'un battement ancré, pour l'extrapolation de
 /// la trajectoire future : le cycle nominal `2T` (déduit de [bpm]) moins
 /// l'intervalle réel [lastIntervalMs] déjà mesuré par le moteur. Sans
@@ -386,7 +527,29 @@ int complementaryBeatIntervalMs({
 }) =>
     (120000 / bpm).round() - lastIntervalMs;
 
-class _PositionLadder extends StatelessWidget {
+/// Échelle verticale de positions (tip en haut, dernière en bas) avec
+/// un curseur (orbe / anneau / langue) qui glisse entre `from` et `to`
+/// à chaque battement. Le nombre de lignes est paramétré par [rowCount]
+/// — par défaut 5 (`tip..full`), 6 quand `Position.balls` est révélée
+/// (anatomie + milestone). Quand `from == to`, le curseur pulse
+/// simplement sur cette position.
+///
+/// Le curseur **est** le point d'ancrage `t=0` de `_computeFutureBeats`
+/// (cf. `_BeatPoint.isAnchor`) : sa position vient de `_visualIdxNow`, la
+/// même interpolation `Curves.easeInOutCubic` sur la durée d'un beat,
+/// recalculée à chaque frame via `DateTime.now()` — la même formule qui
+/// trace la trajectoire future. Une seule source pour les deux, ils ne
+/// peuvent plus diverger.
+///
+/// L'audio reste maître : `lastBeatAt`/`flipped` ne changent qu'à la
+/// réception d'un vrai `BeatEvent` (cf. `_onBeatEvent`), jamais par une
+/// horloge murale libre.
+///
+/// En cas de transition de step (from/to changent), `_frozenIdx` gèle la
+/// position visuelle d'avant-transition — point de départ du pont
+/// synthétique tracé par `_computeFutureBeats` — pas de saut sec.
+class _PositionLadder extends StatefulWidget {
+  final SessionMode mode;
   final Position from;
   final Position to;
   final Duration beatDuration;
@@ -402,12 +565,39 @@ class _PositionLadder extends StatelessWidget {
   final _CursorStyle cursorStyle;
   final DateTime? lastBeatAt;
 
+  /// Position visuelle gelée juste avant la transition de step courante et
+  /// instant de ce gel — point de départ et ancre temporelle du pont
+  /// synthétique tracé par `_computeFutureBeats` tant qu'aucun beat réel
+  /// n'est encore arrivé (`lastBeatAt == null`), cf.
+  /// `_MovementAnimationState._frozenIdx`.
+  final double? frozenIdx;
+  final DateTime? frozenAt;
+
+  /// Appelé à chaque frame avec la position réellement affichée, pour que le
+  /// gel de transition parte de là.
+  final void Function(double idx)? onCursorIdx;
+
+  /// Cf. `_MovementAnimationState._bridgeGap` / `._bridgeViaTip`.
+  final Duration? bridgeGap;
+  final bool bridgeViaTip;
+
+  /// Phase du `AnimationController` (0..1), consommée par `_CursorVisual`
+  /// pour les pulses propres à biffle/breath/hold/beg/suckle.
+  final double pulseT;
+
   /// Nombre de positions affichées (5 = sans balls, 6 = avec balls).
   /// Borne `_toAlign` pour que les positions visibles restent espacées
   /// uniformément dans la hauteur disponible quel que soit le rowCount.
   final int rowCount;
 
+  /// Cf. `MovementAnimation.elapsed` / `.upcomingSteps` /
+  /// `.showTrajectoryDots`.
+  final Duration elapsed;
+  final List<UpcomingMovementStep> upcomingSteps;
+  final bool showTrajectoryDots;
+
   const _PositionLadder({
+    required this.mode,
     required this.from,
     required this.to,
     required this.beatDuration,
@@ -416,8 +606,20 @@ class _PositionLadder extends StatelessWidget {
     required this.color,
     required this.cursorStyle,
     required this.lastBeatAt,
+    required this.frozenIdx,
+    required this.frozenAt,
+    this.onCursorIdx,
+    this.bridgeGap,
+    this.bridgeViaTip = false,
+    required this.pulseT,
     required this.rowCount,
+    required this.elapsed,
+    required this.upcomingSteps,
+    this.showTrajectoryDots = false,
   });
+
+  @override
+  State<_PositionLadder> createState() => _PositionLadderState();
 
   /// Fenêtre de prévision de la trajectoire future. Volontairement plus longue
   /// que les 2 s perçues : les ~1 s supplémentaires servent de réserve dans
@@ -425,6 +627,10 @@ class _PositionLadder extends StatelessWidget {
   /// au lieu d'apparaître brutalement à l'extrémité droite. À BPM bas (60-90)
   /// la marge est cruciale — un beat entier rentrerait sec sans elle.
   static const Duration _trajectoryWindow = Duration(milliseconds: 3000);
+
+  /// Durée du pont synthétique quand le gap réel du moteur n'est pas connu
+  /// (`bridgeGap` nul : premier step de la séance, aucune transition avant).
+  static const int _bridgeMs = 260;
 
   /// Fraction de la zone visible à droite consacrée au fade-out (apparition
   /// douce des beats les plus lointains). 0.50 = la moitié droite de la zone
@@ -440,28 +646,398 @@ class _PositionLadder extends StatelessWidget {
   /// le shader ET la zone utile du painter (cohérence garantie).
   static const double _kRightPaddingFraction = 0.20;
 
+  /// Convertit un index de position en y d'Alignment (-1..1) sur un
+  /// ladder de [rowCount] lignes. Avec [rowCount] = 5, l'index 4 (full)
+  /// tombe en bas (y=1) ; avec [rowCount] = 6, l'index 5 (balls) tombe
+  /// en bas et full remonte à 0.6.
+  static double _toAlign(num index, int rowCount) =>
+      rowCount <= 1 ? 0 : index / (rowCount - 1) * 2 - 1;
+
+  /// Calcule les points de la trajectoire future :
+  /// - point 0 : position visible courante du curseur (interpolée easeInOutCubic).
+  /// - points suivants : prochains beats, en alternant from↔to au sein du
+  ///   step courant puis, à chaque frontière connue via `upcomingSteps`, du
+  ///   step suivant — avec un point de passage par `tip` quand la frontière
+  ///   franchit une famille de mode (`_MovementAnimationState._familyOf`),
+  ///   décalé du gap de transition réel du moteur (`upcoming.transitionGap`).
+  /// La fenêtre temporelle est `_trajectoryWindow`. `upcomingSteps` vide =
+  /// comportement historique (extrapolation indéfinie du step courant).
+  List<_BeatPoint> _computeFutureBeats() {
+    final beatMs = beatDuration.inMilliseconds.toDouble();
+    if (beatMs <= 0) return const [];
+    final now = DateTime.now();
+    final windowMs = _trajectoryWindow.inMilliseconds.toDouble();
+
+    final DateTime last;
+    final double yNow;
+    final Position afterAnchorPos;
+    double? bridgeTargetIdx;
+    DateTime? bridgeViaAt;
+    DateTime? originAt;
+    double? originIdx;
+    if (lastBeatAt != null) {
+      // À l'instant `lastBeatAt`, le bip de `flipped ? to : from` vient de
+      // sonner — la position visuelle au moment du beat est cette position,
+      // qui glisse ensuite vers la prochaine cible (`flipped ? from : to`).
+      yNow = _MovementAnimationState._visualIdxNow(
+        from: from,
+        to: to,
+        flipped: flipped,
+        lastBeatAt: lastBeatAt,
+        beatDuration: beatDuration,
+        now: now,
+      );
+      last = lastBeatAt!;
+      afterAnchorPos = flipped ? from : to;
+      originAt = lastBeatAt;
+      originIdx = (flipped ? to : from).index.toDouble();
+    } else {
+      // Pont synthétique : aucun beat réel n'est encore arrivé pour ce step
+      // (juste après une transition). On glisse de la position gelée
+      // (`frozenIdx`/`frozenAt`) vers la cible que la prévision avait
+      // annoncée pour l'instant de reprise — `tip` au franchissement d'une
+      // famille, `to` sinon — sur la durée du gap réel du moteur, puis on
+      // prétend qu'un beat vient de sonner dessus pour rebrancher
+      // l'alternance normale derrière.
+      final anchorAt = frozenAt ?? now;
+      final anchorIdx = frozenIdx ?? to.index.toDouble();
+      final bridgeMs = (bridgeGap?.inMilliseconds ?? _bridgeMs).toDouble();
+      // Le 1er bip réel du step tombe sur `to` à la fin du gap : le passage
+      // par `tip` du franchissement de famille tient donc DANS le gap, il ne
+      // décale pas `to` d'un battement.
+      last = anchorAt.add(Duration(milliseconds: bridgeMs.round()));
+      final viaAt = bridgeViaTip
+          ? anchorAt.add(Duration(milliseconds: (bridgeMs / 2).round()))
+          : null;
+      double leg(DateTime start, DateTime end, double fromIdx, double toIdx) {
+        final spanMs = end.difference(start).inMilliseconds.toDouble();
+        if (spanMs <= 0) return toIdx;
+        final p = (now.difference(start).inMilliseconds.toDouble() / spanMs)
+            .clamp(0.0, 1.0);
+        return fromIdx + (toIdx - fromIdx) * Curves.easeInOutCubic.transform(p);
+      }
+
+      // Hors rhythm/lick/hand, aucun `BeatEvent` ne vient jamais relever
+      // `lastBeatAt` : le pont reste la seule source de position pour tout le
+      // step. Passé son arrivée, il enchaîne donc lui-même sur le bip
+      // synthétique de `last`, sinon le curseur reste collé à la cible du
+      // pont et y retombe à chaque recalcul.
+      final tipIdx = Position.tip.index.toDouble();
+      final toIdx = to.index.toDouble();
+      if (now.isAfter(last) || now.isAtSameMomentAs(last)) {
+        yNow = _MovementAnimationState._visualIdxNow(
+          from: to,
+          to: from,
+          flipped: false,
+          lastBeatAt: last,
+          beatDuration: beatDuration,
+          now: now,
+        );
+        originAt = last;
+        originIdx = toIdx;
+      } else if (viaAt != null && now.isBefore(viaAt)) {
+        yNow = leg(anchorAt, viaAt, anchorIdx, tipIdx);
+        originAt = anchorAt;
+        originIdx = anchorIdx;
+      } else {
+        yNow = leg(
+            viaAt ?? anchorAt, last, viaAt == null ? anchorIdx : tipIdx, toIdx);
+        originAt = viaAt ?? anchorAt;
+        originIdx = viaAt == null ? anchorIdx : tipIdx;
+      }
+      afterAnchorPos = from;
+      bridgeTargetIdx = toIdx;
+      bridgeViaAt = viaAt;
+    }
+
+    final anchorOrigin = originAt;
+    final beats = <_BeatPoint>[
+      _BeatPoint(
+        t: 0,
+        idx: yNow,
+        isAnchor: true,
+        originT: anchorOrigin == null
+            ? null
+            : anchorOrigin.difference(now).inMilliseconds.toDouble() / windowMs,
+        originIdx: originIdx,
+      ),
+    ];
+
+    // Dernier repère de la trajectoire déjà tombé dans le passé. Un point
+    // passé n'est pas posé, mais il reste l'origine légitime du curseur :
+    // sans lui, `_scrollBeats` re-dérive l'ancre depuis `originAt`, qui pour
+    // un plateau a l'âge du plateau entier, et pose le curseur sur une corde
+    // qui le traverse d'un bout à l'autre.
+    DateTime? pastAt;
+    double? pastIdx;
+
+    // L'arrivée du pont est un point de la courbe, pas seulement une cible du
+    // curseur : sans elle, la géométrie mémoïsée relie l'ancre au beat
+    // suivant en ligne droite et le défilement fait glisser le curseur sur
+    // cette droite, jusqu'à ce qu'un recalcul le remette sur le pont — un
+    // saut par recalcul.
+    if (bridgeTargetIdx != null) {
+      void addBridgePoint(DateTime at, double idx) {
+        final dtMs = at.difference(now).inMilliseconds.toDouble();
+        if (dtMs > 0) {
+          beats.add(_BeatPoint(t: dtMs / windowMs, idx: idx, isAnchor: false));
+        } else {
+          pastAt = at;
+          pastIdx = idx;
+        }
+      }
+
+      if (bridgeViaAt != null) {
+        addBridgePoint(bridgeViaAt, Position.tip.index.toDouble());
+      }
+      addBridgePoint(last, bridgeTargetIdx);
+    }
+
+    // Ancrage horloge murale ↔ horloge de séance : `elapsed` est réputé
+    // valable à `now` (rafraîchi à chaque tick du SessionController,
+    // 200 ms — dérive bornée à cette fenêtre, cf. `MovementAnimation.elapsed`).
+    final elapsedMs = elapsed.inMilliseconds;
+    DateTime? boundaryAt(int index) {
+      if (index >= upcomingSteps.length) return null;
+      final offsetMs = upcomingSteps[index].startSecond * 1000 - elapsedMs;
+      return now.add(Duration(milliseconds: offsetMs));
+    }
+
+    // On génère aussi UN point hors-fenêtre par segment (`_extraBeatsBeyondWindow`) :
+    // sa pastille tombera à x > endX (masquée par le ShaderMask), mais le
+    // segment cubique qui le relie au précédent traverse la zone de fade et
+    // arrive jusqu'au bord droit. Sans lui, la courbe s'arrêtait sec au
+    // dernier point dans la fenêtre, laissant une portion vide à droite.
+    //
+    var extraAdded = 0;
+    // Dernier repère posé — sert à situer la position réellement atteinte à
+    // une frontière de step, qui tombe presque toujours entre deux battements.
+    var lastPointAt = last;
+    var lastPointIdx = lastBeatAt != null
+        ? (flipped ? to : from).index.toDouble()
+        : (bridgeTargetIdx ?? to.index.toDouble());
+    bool addPoint(DateTime at, double idx) {
+      final dtMs = at.difference(now).inMilliseconds.toDouble();
+      lastPointAt = at;
+      lastPointIdx = idx;
+      if (dtMs < 0) {
+        pastAt = at;
+        pastIdx = idx;
+        return true;
+      }
+      if (dtMs > windowMs) {
+        if (extraAdded >= _extraBeatsBeyondWindow) return false;
+        extraAdded++;
+      }
+      beats.add(_BeatPoint(t: dtMs / windowMs, idx: idx, isAnchor: false));
+      return true;
+    }
+
+    var segFamily = _MovementAnimationState._familyOf(mode, from);
+    var segFrom = from;
+    var segTo = to;
+    var segBeatMs = beatMs;
+    var upcomingIdx = 0;
+    var nextBoundary = boundaryAt(0);
+    var nextTime = last.add(beatDuration);
+    var nextPos = afterAnchorPos;
+
+    // Sous ancrage (cf. `BeepEngine._intervalAfter`), l'intervalle réel du
+    // step courant alterne d'un battement à l'autre : `beatDuration` porte
+    // celui qui vient de s'écouler, le suivant est son complémentaire dans
+    // le cycle nominal `2T`. L'extrapoler en répétant `beatDuration`
+    // dessinerait toute la fenêtre à l'échelle d'un seul des deux. Bornée au
+    // segment courant : `UpcomingMovementStep` ne porte ni `anchor` ni
+    // `ratio`, les segments à venir restent donc sur leur tempo nominal.
+    final alternates = _MovementAnimationState._isBeatSynced(mode) &&
+        from.index != to.index &&
+        beatMs > 0;
+    final otherMs = alternates
+        ? complementaryBeatIntervalMs(
+                lastIntervalMs: beatDuration.inMilliseconds, bpm: bpm)
+            .toDouble()
+        : beatMs;
+    var useOther = true;
+    double advanceMs() {
+      if (upcomingIdx > 0 || !alternates) return segBeatMs;
+      final ms = useOther ? otherMs : beatMs;
+      useOther = !useOther;
+      return ms;
+    }
+
+    while (true) {
+      // Segment plat (hold/beg/suckle/biffle/breath/freestyle) tenu depuis
+      // longtemps sans frontière à franchir : `nextTime` peut être resté
+      // ancré loin dans le passé (aucun beat réel ne le rafraîchit hors
+      // rhythm/lick/hand). Sans ce rattrapage, la boucle itérerait à petits
+      // pas de `segBeatMs` depuis cette ancre jusqu'à `now` — des centaines
+      // d'itérations à vide sur un hold/biffle long à BPM élevé.
+      if (segFrom.index == segTo.index && nextTime.isBefore(now)) {
+        // Avancer par multiples entiers du battement, pas jusqu'à `now` :
+        // deux recalculs successifs doivent poser leurs points aux mêmes
+        // instants, sinon un plateau voit ses points se recréer ailleurs et
+        // la courbe saute.
+        final lateMs = now.difference(nextTime).inMilliseconds.toDouble();
+        final steps = (lateMs / segBeatMs).ceil();
+        nextTime = nextTime.add(
+          Duration(milliseconds: (steps * segBeatMs).round()),
+        );
+      }
+      if (nextBoundary != null && !nextBoundary.isAfter(nextTime)) {
+        final boundary = nextBoundary;
+        // Position réellement atteinte à la frontière : sans ce point, le
+        // segment part de son dernier battement et la courbe commence à
+        // rejoindre le step suivant avant même qu'il ait commencé — le gel
+        // de transition ramène alors le curseur en arrière.
+        final legMs =
+            nextTime.difference(lastPointAt).inMilliseconds.toDouble();
+        final atBoundaryIdx = legMs <= 0
+            ? lastPointIdx
+            : lastPointIdx +
+                (nextPos.index.toDouble() - lastPointIdx) *
+                    Curves.easeInOutCubic.transform(
+                      (boundary
+                                  .difference(lastPointAt)
+                                  .inMilliseconds
+                                  .toDouble() /
+                              legMs)
+                          .clamp(0.0, 1.0),
+                    );
+        if (!addPoint(boundary, atBoundaryIdx)) break;
+        final upcoming = upcomingSteps[upcomingIdx];
+        final newFamily =
+            _MovementAnimationState._familyOf(upcoming.mode, upcoming.from);
+        final (newFrom, newTo) = _MovementAnimationState._ladderPositionsFor(
+            upcoming.mode, upcoming.from, upcoming.to);
+        segBeatMs =
+            _MovementAnimationState._durationFor(upcoming.mode, upcoming.bpm)
+                .inMilliseconds
+                .toDouble();
+        // Le premier bip réel du step suivant n'arrive pas à `boundary`
+        // (instant nominal du step) mais après le gap que
+        // `BeepEngine.applyStep` insère avant de démarrer le nouveau mode.
+        final resumeAt = boundary.add(upcoming.transitionGap);
+        if (newFamily != segFamily) {
+          final viaAt = boundary.add(Duration(
+              milliseconds: upcoming.transitionGap.inMilliseconds ~/ 2));
+          if (!addPoint(viaAt, Position.tip.index.toDouble())) break;
+          nextTime = resumeAt;
+          nextPos = newTo;
+        } else {
+          nextTime = resumeAt;
+          // `applyStep` réarme l'alternance et `_pickPosition` rend `to` en
+          // premier : le 1er bip d'un step tombe toujours dessus. Viser autre
+          // chose ferait osciller la courbe entre deux géométries selon
+          // l'instant du calcul.
+          nextPos = newTo;
+        }
+        segFamily = newFamily;
+        segFrom = newFrom;
+        segTo = newTo;
+        upcomingIdx++;
+        nextBoundary = boundaryAt(upcomingIdx);
+        continue;
+      }
+      if (!addPoint(nextTime, nextPos.index.toDouble())) break;
+      nextTime = nextTime.add(Duration(milliseconds: advanceMs().round()));
+      nextPos = (nextPos == segFrom) ? segTo : segFrom;
+    }
+
+    final freshAt = pastAt;
+    final freshIdx = pastIdx;
+    if (freshAt != null &&
+        freshIdx != null &&
+        (anchorOrigin == null || freshAt.isAfter(anchorOrigin))) {
+      beats[0] = _BeatPoint(
+        t: 0,
+        idx: beats[0].idx,
+        isAnchor: true,
+        originT: freshAt.difference(now).inMilliseconds.toDouble() / windowMs,
+        originIdx: freshIdx,
+      );
+    }
+    return beats;
+  }
+
+  /// Nombre de beats à extrapoler au-delà de `_trajectoryWindow`. Un seul
+  /// suffit : le segment cubique qui le relie au dernier beat dans la
+  /// fenêtre couvre toute la zone de fade jusqu'au bord droit.
+  static const int _extraBeatsBeyondWindow = 1;
+}
+
+class _PositionLadderState extends State<_PositionLadder> {
+  List<_BeatPoint>? _rawBeats;
+  DateTime? _computedAt;
+
+  /// Vrai quand le dernier recalcul n'a pas réussi à remplir la fenêtre
+  /// jusqu'au bord droit — fin de séance, ou plus aucun step à venir. Sans
+  /// ce drapeau, la garde de remplissage relancerait un recalcul à chaque
+  /// frame pour une fenêtre qu'aucun recalcul ne peut compléter.
+  bool _windowUnfillable = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _recompute();
+  }
+
+  @override
+  void didUpdateWidget(covariant _PositionLadder oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_sameGeometry(oldWidget, widget)) {
+      _recompute();
+    }
+  }
+
+  void _recompute() {
+    _rawBeats = widget._computeFutureBeats();
+    _computedAt = DateTime.now();
+    _windowUnfillable = _rawBeats!.isEmpty || _rawBeats!.last.t < 1.0;
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Cible courante du curseur : flipped=false → `to`, flipped=true → `from`.
-    final target = flipped ? from : to;
-    final targetAlignment =
-        Alignment(_kCursorX, _toAlign(target.index, rowCount));
+    final windowMs =
+        _PositionLadder._trajectoryWindow.inMilliseconds.toDouble();
+    final deltaT =
+        DateTime.now().difference(_computedAt!).inMilliseconds / windowMs;
+    var beats = _scrollBeats(_rawBeats!, deltaT);
+    // Le défilement décale les points, il n'en fabrique aucun : sans cette
+    // garde, la fenêtre se viderait par la droite jusqu'à n'avoir plus rien,
+    // et la courbe réapparaîtrait par blocs au recalcul suivant.
+    if (beats != null &&
+        !_windowUnfillable &&
+        (beats.isEmpty || beats.last.t < 1.0)) {
+      _recompute();
+      beats = _scrollBeats(_rawBeats!, 0.0);
+    }
+    if (beats == null) {
+      // La mémoïsation ne peut plus répondre à la frame courante (plus aucun
+      // point au-delà de t=0) : on force un recalcul plutôt que d'afficher
+      // une courbe tronquée.
+      _recompute();
+      beats = _scrollBeats(_rawBeats!, 0.0) ?? const [];
+    }
 
-    final activeIndices = {from.index, to.index};
-    final beats = _computeFutureBeats();
+    final activeIndices = {widget.from.index, widget.to.index};
+    // Le curseur EST le point d'ancrage t=0 de la trajectoire décalée (cf.
+    // _BeatPoint.isAnchor) — une seule source pour la position affichée,
+    // curseur et courbe ne peuvent plus diverger (acquis de 86ec18d).
+    final cursorIdx = beats.isNotEmpty
+        ? beats.first.idx
+        : (widget.flipped ? widget.from : widget.to).index.toDouble();
+    widget.onCursorIdx?.call(cursorIdx);
+    final cursorAlignment = Alignment(
+        _kCursorX, _PositionLadder._toAlign(cursorIdx, widget.rowCount));
 
     return Stack(
       alignment: Alignment.center,
       children: [
-        // Silhouette discrète de la verge derrière les graduations.
-        // Donne le contexte anatomique (la position ce n'est pas dans le vide,
-        // c'est sur la verge) → utile pour tous les modes mais surtout pour
-        // hand qui sinon évoque le même axe que la bouche sans repère.
         const _ShaftBackdrop(),
-        // Lignes horizontales fines pour repérer les positions visibles.
-        for (var i = 0; i < rowCount; i++)
+        for (var i = 0; i < widget.rowCount; i++)
           Align(
-            alignment: Alignment(0, _toAlign(i, rowCount)),
+            alignment:
+                Alignment(0, _PositionLadder._toAlign(i, widget.rowCount)),
             child: FractionallySizedBox(
               widthFactor: 0.55,
               child: Container(
@@ -470,19 +1046,6 @@ class _PositionLadder extends StatelessWidget {
               ),
             ),
           ),
-        // Trajectoire future : courbe qui montre les `_trajectoryWindow` à
-        // venir. Dessinée DERRIÈRE le curseur dans le Stack pour que l'orbe
-        // masque proprement le t=0 de la courbe (sinon double-affichage).
-        //
-        // Deux mécaniques de douceur :
-        // 1. ShaderMask horizontal → la moitié droite de la zone utile fade
-        //    progressivement vers transparent, et la zone des labels (à
-        //    partir de `1 - _kRightPaddingFraction`) est totalement masquée.
-        //    La courbe ne peut donc jamais traverser les libellés Bout/
-        //    Gland/Milieu/Gorge/Tout ni ressortir à leur droite.
-        // 2. AnimatedOpacity → fade-in/out de la courbe entière quand elle
-        //    apparaît ou disparaît (transition entre modes synced/non-synced,
-        //    reset après mode change). Évite le blink.
         Positioned.fill(
           child: IgnorePointer(
             child: AnimatedOpacity(
@@ -492,9 +1055,11 @@ class _PositionLadder extends StatelessWidget {
                 blendMode: BlendMode.dstIn,
                 shaderCallback: (rect) {
                   const cursorX = (_kCursorX + 1) / 2;
-                  const rightEdge = 1.0 - _kRightPaddingFraction;
+                  const rightEdge =
+                      1.0 - _PositionLadder._kRightPaddingFraction;
                   const usable = rightEdge - cursorX;
-                  const fadeStart = rightEdge - usable * _kFadeFraction;
+                  const fadeStart =
+                      rightEdge - usable * _PositionLadder._kFadeFraction;
                   return const LinearGradient(
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
@@ -510,20 +1075,22 @@ class _PositionLadder extends StatelessWidget {
                 child: CustomPaint(
                   painter: _TrajectoryPainter(
                     beats: beats.length >= 2 ? beats : const [],
-                    color: color,
+                    color: widget.color,
                     cursorXFraction: (_kCursorX + 1) / 2,
-                    rightPaddingFraction: _kRightPaddingFraction,
-                    rowCount: rowCount,
+                    rightPaddingFraction:
+                        _PositionLadder._kRightPaddingFraction,
+                    rowCount: widget.rowCount,
+                    showDots: widget.showTrajectoryDots,
                   ),
                 ),
               ),
             ),
           ),
         ),
-        // Labels de position à droite. Mis en avant pour from / to.
-        for (var i = 0; i < rowCount; i++)
+        for (var i = 0; i < widget.rowCount; i++)
           Align(
-            alignment: Alignment(0.92, _toAlign(i, rowCount)),
+            alignment:
+                Alignment(0.92, _PositionLadder._toAlign(i, widget.rowCount)),
             child: Text(
               Position.values[i].localizedLabel(context),
               style: TextStyle(
@@ -533,123 +1100,286 @@ class _PositionLadder extends StatelessWidget {
                     : FontWeight.w400,
                 letterSpacing: 1,
                 color: activeIndices.contains(i)
-                    ? color.withValues(alpha: 0.85)
+                    ? widget.color.withValues(alpha: 0.85)
                     : AppTheme.textMuted.withValues(alpha: 0.45),
               ),
             ),
           ),
-        AnimatedAlign(
-          alignment: targetAlignment,
-          // En régime établi : glisse vers la prochaine cible sur exactement
-          // un beat (anticipation easeInOutCubic, arrivée pile sur le bip).
-          // Juste après une bascule de step (lastBeatAt == null, on attend le
-          // 1er bip pendant le gap de transition silencieux du BeepEngine) :
-          // on rejoint `to` plus vite (≈ le gap mini de 300 ms) pour être en
-          // place quand ce 1er bip — toujours sur `to` — tombe. Le curseur
-          // bouge quand même (pas de saut sec), il se cale juste plus tôt.
-          duration: lastBeatAt == null
-              ? const Duration(milliseconds: 260)
-              : beatDuration,
-          curve: Curves.easeInOutCubic,
-          child: _Cursor(style: cursorStyle, color: color),
+        Align(
+          alignment: cursorAlignment,
+          child: _CursorVisual(
+            mode: widget.mode,
+            cursorStyle: widget.cursorStyle,
+            color: widget.color,
+            pulseT: widget.pulseT,
+          ),
         ),
       ],
     );
   }
+}
 
-  /// Convertit un index de position en y d'Alignment (-1..1) sur un
-  /// ladder de [rowCount] lignes. Avec [rowCount] = 5, l'index 4 (full)
-  /// tombe en bas (y=1) ; avec [rowCount] = 6, l'index 5 (balls) tombe
-  /// en bas et full remonte à 0.6.
-  static double _toAlign(int index, int rowCount) =>
-      rowCount <= 1 ? 0 : index / (rowCount - 1) * 2 - 1;
+/// Vrai si `a` et `b` décrivent la même géométrie de trajectoire — clé de
+/// recalcul de `_PositionLadderState`. Volontairement **sans** `pulseT` (ce
+/// qui fait avancer les frames, pas la géométrie) ni `elapsed` (dérivé en
+/// continu de l'horloge murale comme `now`, déjà pris en compte par le
+/// défilement entre deux calculs).
+bool _sameGeometry(_PositionLadder a, _PositionLadder b) {
+  return a.mode == b.mode &&
+      a.from == b.from &&
+      a.to == b.to &&
+      a.beatDuration == b.beatDuration &&
+      a.flipped == b.flipped &&
+      a.lastBeatAt == b.lastBeatAt &&
+      a.frozenIdx == b.frozenIdx &&
+      a.frozenAt == b.frozenAt &&
+      a.rowCount == b.rowCount &&
+      _sameUpcomingSteps(a.upcomingSteps, b.upcomingSteps);
+}
 
-  /// Calcule les points de la trajectoire future :
-  /// - point 0 : position visible courante du curseur (interpolée easeInOutCubic).
-  /// - points suivants : prochains beats du step courant, en alternant from↔to.
-  /// La fenêtre temporelle est `_trajectoryWindow`.
-  ///
-  /// Pas de prédiction au-delà du step courant (on n'a pas la timeline future
-  /// dans ce widget — il faudrait remonter au SessionController). La courbe
-  /// s'arrête naturellement à la fenêtre, et se recale au prochain beat émis
-  /// dans le nouveau step le cas échéant.
-  ///
-  /// Sous ancrage, `beatDuration` (l'intervalle réel du dernier beat, cf.
-  /// `BeatEvent.nextInterval`) alterne d'un beat à l'autre — extrapoler en le
-  /// répétant dessinerait toute la fenêtre à l'échelle d'un seul des deux
-  /// intervalles. On alterne donc `beatDuration` et son complémentaire
-  /// ([complementaryBeatIntervalMs]), déduit du cycle nominal `2T` plutôt que
-  /// de dupliquer la formule d'ancrage de `BeepEngine` (que ce widget ne
-  /// connaît pas : ni `anchor` ni `ratio` ne lui sont passés).
-  List<_BeatPoint> _computeFutureBeats() {
-    final last = lastBeatAt;
-    if (last == null) return const [];
-    final beatMs = beatDuration.inMilliseconds.toDouble();
-    if (beatMs <= 0) return const [];
-    final otherMs = complementaryBeatIntervalMs(
-            lastIntervalMs: beatDuration.inMilliseconds, bpm: bpm)
-        .toDouble();
-    Duration intervalAfter(bool wasLastInterval) =>
-        Duration(milliseconds: (wasLastInterval ? beatMs : otherMs).round());
-
-    final now = DateTime.now();
-    final windowMs = _trajectoryWindow.inMilliseconds.toDouble();
-    final elapsed = now.difference(last).inMilliseconds.toDouble();
-
-    // Avant le refactor : à l'instant `lastBeatAt`, le bip de
-    // `flipped ? to : from` vient de sonner — donc la position visuelle au
-    // moment du beat est cette position. Elle glisse ensuite vers la
-    // prochaine cible (`flipped ? from : to`) sur beatDuration ms.
-    final lastPosIdx = (flipped ? to : from).index.toDouble();
-    final nextPosIdx = (flipped ? from : to).index.toDouble();
-
-    final progress = (elapsed / beatMs).clamp(0.0, 1.0);
-    final eased = Curves.easeInOutCubic.transform(progress);
-    final yNow = lastPosIdx + (nextPosIdx - lastPosIdx) * eased;
-
-    final beats = <_BeatPoint>[
-      _BeatPoint(t: 0, idx: yNow, isAnchor: true),
-    ];
-
-    // Prochains beats : à partir du premier qui tombe ≥ now, alterner from↔to
-    // ET alterner l'intervalle utilisé (`beatMs` était celui qui a amené à
-    // `nextTime` ; l'ajout suivant utilise donc le complémentaire).
-    var nextTime = last.add(beatDuration);
-    var nextPos = (flipped ? from : to);
-    var wasLastInterval = false;
-    while (nextTime.isBefore(now)) {
-      nextTime = nextTime.add(intervalAfter(wasLastInterval));
-      nextPos = (nextPos == from) ? to : from;
-      wasLastInterval = !wasLastInterval;
+bool _sameUpcomingSteps(
+    List<UpcomingMovementStep> a, List<UpcomingMovementStep> b) {
+  if (identical(a, b)) return true;
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    final sa = a[i];
+    final sb = b[i];
+    if (sa.mode != sb.mode ||
+        sa.from != sb.from ||
+        sa.to != sb.to ||
+        sa.bpm != sb.bpm ||
+        sa.startSecond != sb.startSecond ||
+        sa.transitionGap != sb.transitionGap) {
+      return false;
     }
-    // On génère aussi UN beat hors-fenêtre (`_extraBeatsBeyondWindow`) : sa
-    // pastille tombera à x > endX (masquée par le ShaderMask), mais le segment
-    // cubique qui le relie à l'avant-dernier beat traverse la zone de fade et
-    // arrive jusqu'au bord droit. Sans ce beat extra, la courbe s'arrêtait sec
-    // au dernier point dans la fenêtre, laissant une portion vide à droite.
-    var extraAdded = 0;
-    while (true) {
-      final dtMs = nextTime.difference(now).inMilliseconds.toDouble();
-      if (dtMs > windowMs) {
-        if (extraAdded >= _extraBeatsBeyondWindow) break;
-        extraAdded++;
-      }
-      beats.add(_BeatPoint(
-        t: dtMs / windowMs,
-        idx: nextPos.index.toDouble(),
-        isAnchor: false,
-      ));
-      nextTime = nextTime.add(intervalAfter(wasLastInterval));
-      nextPos = (nextPos == from) ? to : from;
-      wasLastInterval = !wasLastInterval;
-    }
-    return beats;
   }
+  return true;
+}
 
-  /// Nombre de beats à extrapoler au-delà de `_trajectoryWindow`. Un seul
-  /// suffit : le segment cubique qui le relie au dernier beat dans la
-  /// fenêtre couvre toute la zone de fade jusqu'au bord droit.
-  static const int _extraBeatsBeyondWindow = 1;
+/// Décale une géométrie mémoïsée de `deltaT` (fraction de `_trajectoryWindow`
+/// écoulée depuis son calcul) : tous les `t` glissent de `-deltaT`, les
+/// points sortis par la gauche (`t <= 0`) disparaissent de la trajectoire
+/// affichée mais servent à interpoler le nouvel ancrage à `t = 0` — avec la
+/// même easing que le pont synthétique (`Curves.easeInOutCubic`, cf.
+/// `_PositionLadder._computeFutureBeats`). Renvoie `null` quand plus aucun
+/// point ne dépasse `t = 0` : la mémoïsation ne peut plus répondre à la
+/// frame courante, il faut recalculer.
+List<_BeatPoint>? _scrollBeats(List<_BeatPoint> raw, double deltaT) {
+  if (raw.isEmpty) return const [];
+  _BeatPoint? prev;
+  final future = <_BeatPoint>[];
+  for (final b in raw) {
+    final t = b.t - deltaT;
+    if (t <= 0) {
+      prev = _BeatPoint(
+        t: t,
+        idx: b.idx,
+        isAnchor: false,
+        originT: b.originT,
+        originIdx: b.originIdx,
+      );
+    } else {
+      future.add(_BeatPoint(t: t, idx: b.idx, isAnchor: false));
+    }
+  }
+  if (future.isEmpty) return null;
+  final next = future.first;
+  final double anchorIdx;
+  if (prev == null) {
+    anchorIdx = next.idx;
+  } else {
+    final prevT = prev.originT == null ? prev.t : prev.originT! - deltaT;
+    final prevIdx = prev.originIdx ?? prev.idx;
+    final span = next.t - prevT;
+    final frac = span <= 0 ? 1.0 : ((0 - prevT) / span).clamp(0.0, 1.0);
+    // L'amortissement ne vaut que pour un vrai changement de sens : appliqué
+    // à chaque point, il fait ralentir le curseur jusqu'à l'arrêt entre deux
+    // points alignés, ce qui se voit comme une saccade.
+    final after = future.length > 1 ? future[1] : null;
+    final incoming = (next.idx - prevIdx).sign;
+    final outgoing = after == null ? incoming : (after.idx - next.idx).sign;
+    final turns = incoming != 0 && outgoing != incoming;
+    final eased = turns ? Curves.easeInOutCubic.transform(frac) : frac;
+    anchorIdx = prevIdx + (next.idx - prevIdx) * eased;
+  }
+  return [
+    _BeatPoint(t: 0, idx: anchorIdx, isAnchor: true),
+    ...future,
+  ];
+}
+
+/// Sonde de test pour `_scrollBeats` — même convention de records que
+/// `computeFutureBeatsForTest` (le type privé `_BeatPoint` n'est pas
+/// exposable).
+@visibleForTesting
+List<({double t, double idx, bool isAnchor})>? scrollBeatsForTest({
+  required List<({double t, double idx, bool isAnchor})> raw,
+  required double deltaT,
+}) {
+  final beats = _scrollBeats(
+    [for (final b in raw) _BeatPoint(t: b.t, idx: b.idx, isAnchor: b.isAnchor)],
+    deltaT,
+  );
+  if (beats == null) return null;
+  return [for (final b in beats) (t: b.t, idx: b.idx, isAnchor: b.isAnchor)];
+}
+
+/// BPM implicite d'un intervalle régulier — le [bpm] que les sondes de test
+/// passent au ladder quand elles n'en imposent pas : il rend
+/// [complementaryBeatIntervalMs] neutre, donc l'extrapolation régulière.
+int _bpmOfRegularInterval(Duration beatDuration) {
+  final ms = beatDuration.inMilliseconds;
+  return ms <= 0 ? 60 : (60000 / ms).round();
+}
+
+/// Jeu de paramètres décrivant une géométrie de trajectoire, pour
+/// [sameGeometryForTest].
+typedef GeometryKeyForTest = ({
+  SessionMode mode,
+  Position from,
+  Position to,
+  Duration beatDuration,
+  bool flipped,
+  DateTime? lastBeatAt,
+  double? frozenIdx,
+  DateTime? frozenAt,
+  int rowCount,
+  List<UpcomingMovementStep> upcomingSteps,
+});
+
+/// Sonde de test pour `_sameGeometry` (clé de recalcul de
+/// `_PositionLadderState`) — construit deux `_PositionLadder` (type privé,
+/// non exposable) et compare via la fonction réellement utilisée par le
+/// `State`, pour ne pas dupliquer la logique testée.
+@visibleForTesting
+bool sameGeometryForTest(GeometryKeyForTest a, GeometryKeyForTest b) {
+  _PositionLadder build(GeometryKeyForTest k) => _PositionLadder(
+        mode: k.mode,
+        from: k.from,
+        to: k.to,
+        beatDuration: k.beatDuration,
+        bpm: _bpmOfRegularInterval(k.beatDuration),
+        flipped: k.flipped,
+        color: const Color(0xFFFFFFFF),
+        cursorStyle: _CursorStyle.orb,
+        lastBeatAt: k.lastBeatAt,
+        frozenIdx: k.frozenIdx,
+        frozenAt: k.frozenAt,
+        pulseT: 0,
+        rowCount: k.rowCount,
+        elapsed: Duration.zero,
+        upcomingSteps: k.upcomingSteps,
+      );
+  return _sameGeometry(build(a), build(b));
+}
+
+/// Sonde de test pour `_PositionLadder._computeFutureBeats`. Passe par des
+/// records (pas `_BeatPoint`, privé) pour rester compatible avec
+/// `library_private_types_in_public_api`.
+@visibleForTesting
+List<({double t, double idx, bool isAnchor})> computeFutureBeatsForTest({
+  required SessionMode mode,
+  required Position from,
+  required Position to,
+  required Duration beatDuration,
+  required bool flipped,
+  int? bpm,
+  DateTime? lastBeatAt,
+  double? frozenIdx,
+  DateTime? frozenAt,
+  Duration? bridgeGap,
+  bool bridgeViaTip = false,
+  Duration elapsed = Duration.zero,
+  List<UpcomingMovementStep> upcomingSteps = const [],
+}) {
+  final beats = _PositionLadder(
+    mode: mode,
+    from: from,
+    to: to,
+    beatDuration: beatDuration,
+    bpm: bpm ?? _bpmOfRegularInterval(beatDuration),
+    flipped: flipped,
+    color: const Color(0xFFFFFFFF),
+    cursorStyle: _CursorStyle.orb,
+    lastBeatAt: lastBeatAt,
+    frozenIdx: frozenIdx,
+    frozenAt: frozenAt,
+    bridgeGap: bridgeGap,
+    bridgeViaTip: bridgeViaTip,
+    pulseT: 0,
+    rowCount: 5,
+    elapsed: elapsed,
+    upcomingSteps: upcomingSteps,
+  )._computeFutureBeats();
+  return [for (final b in beats) (t: b.t, idx: b.idx, isAnchor: b.isAnchor)];
+}
+
+/// Sonde de test : position du curseur après un défilement de
+/// [elapsedSinceCompute] appliqué à une géométrie calculée maintenant.
+/// Sert à vérifier qu'elle coïncide avec celle qu'un recalcul au même
+/// instant aurait donnée.
+@visibleForTesting
+double? anchorAfterScrollForTest({
+  required SessionMode mode,
+  required Position from,
+  required Position to,
+  required Duration beatDuration,
+  required bool flipped,
+  int? bpm,
+  required Duration elapsedSinceCompute,
+  DateTime? lastBeatAt,
+  double? frozenIdx,
+  DateTime? frozenAt,
+  Duration? bridgeGap,
+  bool bridgeViaTip = false,
+  Duration elapsed = Duration.zero,
+  List<UpcomingMovementStep> upcomingSteps = const [],
+}) {
+  final raw = _PositionLadder(
+    mode: mode,
+    from: from,
+    to: to,
+    beatDuration: beatDuration,
+    bpm: bpm ?? _bpmOfRegularInterval(beatDuration),
+    flipped: flipped,
+    color: const Color(0xFFFFFFFF),
+    cursorStyle: _CursorStyle.orb,
+    lastBeatAt: lastBeatAt,
+    frozenIdx: frozenIdx,
+    frozenAt: frozenAt,
+    bridgeGap: bridgeGap,
+    bridgeViaTip: bridgeViaTip,
+    pulseT: 0,
+    rowCount: 5,
+    elapsed: elapsed,
+    upcomingSteps: upcomingSteps,
+  )._computeFutureBeats();
+  final windowMs = _PositionLadder._trajectoryWindow.inMilliseconds.toDouble();
+  final scrolled = _scrollBeats(
+      raw, elapsedSinceCompute.inMilliseconds.toDouble() / windowMs);
+  return scrolled?.first.idx;
+}
+
+/// Épaisseur d'un tick du `SessionController` (200 ms), majorée d'une marge.
+/// Borne l'extrapolation de `elapsed` : la timeline de séance se **fige**
+/// pendant un défi (`_timelineOffset` décrémenté à chaque tick), donc
+/// `widget.elapsed` cesse d'avancer et l'ancre n'est jamais réarmée — sans
+/// borne, l'extrapolation dérive de toute la durée du défi et la courbe
+/// situe les frontières à venir dans le passé.
+const Duration _kElapsedExtrapolationCap = Duration(milliseconds: 250);
+
+/// `elapsed` interpolé entre deux ticks du contrôleur, borné à un tick.
+@visibleForTesting
+Duration extrapolatedElapsed({
+  required Duration? anchorValue,
+  required DateTime? anchorAt,
+  required Duration fallback,
+  required DateTime now,
+}) {
+  if (anchorValue == null || anchorAt == null) return fallback;
+  final since = now.difference(anchorAt);
+  return anchorValue +
+      (since > _kElapsedExtrapolationCap ? _kElapsedExtrapolationCap : since);
 }
 
 /// Point sur la courbe future. `t` ∈ [0,1] = fraction de la fenêtre temporelle
@@ -660,8 +1390,20 @@ class _BeatPoint {
   final double t;
   final double idx;
   final bool isAnchor;
-  const _BeatPoint(
-      {required this.t, required this.idx, required this.isAnchor});
+
+  /// Début du segment dont l'ancre est un point intermédiaire (`t` négatif,
+  /// même unité que `t`). Le défilement interpole depuis là plutôt que depuis
+  /// l'ancre : sans ça, chaque recalcul redémarre l'easing au milieu du
+  /// mouvement et sa vitesse se casse — l'à-coup qu'on « sent ».
+  final double? originT;
+  final double? originIdx;
+  const _BeatPoint({
+    required this.t,
+    required this.idx,
+    required this.isAnchor,
+    this.originT,
+    this.originIdx,
+  });
 }
 
 /// Trace la trajectoire future dans la zone à droite du curseur.
@@ -689,12 +1431,16 @@ class _TrajectoryPainter extends CustomPainter {
   /// (et balls tombait carrément sous le canvas).
   final int rowCount;
 
+  /// Cf. `MovementAnimation.showTrajectoryDots`.
+  final bool showDots;
+
   _TrajectoryPainter({
     required this.beats,
     required this.color,
     required this.cursorXFraction,
     required this.rightPaddingFraction,
     required this.rowCount,
+    required this.showDots,
   });
 
   /// Marge verticale (en pixels) entre le tracé et les bords du canvas.
@@ -743,6 +1489,8 @@ class _TrajectoryPainter extends CustomPainter {
       ..strokeJoin = StrokeJoin.round;
     canvas.drawPath(path, stroke);
 
+    if (!showDots) return;
+
     // Pastille sur chaque beat futur. Plus le beat est lointain, plus la
     // pastille est pâle → repère visuel d'horizon temporel. Skip les beats
     // hors fenêtre (`t > 1`) : ils existent uniquement pour que le segment
@@ -760,6 +1508,7 @@ class _TrajectoryPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _TrajectoryPainter old) {
     if (old.color != color ||
+        old.showDots != showDots ||
         old.beats.length != beats.length ||
         old.cursorXFraction != cursorXFraction ||
         old.rightPaddingFraction != rightPaddingFraction ||
@@ -779,140 +1528,53 @@ class _TrajectoryPainter extends CustomPainter {
 /// décalé à gauche pour laisser respirer les labels à droite.
 const double _kCursorX = -0.1;
 
-/// Pulse central calé sur le BPM (utilisé par biffle). L'orbe pleine est
-/// vive au début du battement (t≈0) puis décroît jusqu'au prochain.
-class _Pulse extends StatelessWidget {
-  final double t;
-  final Color color;
-  const _Pulse({required this.t, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    final decay = Curves.easeOutQuad.transform(t);
-    final scale = 1.0 - 0.45 * decay;
-    final alpha = 1.0 - 0.6 * decay;
-    return Center(
-      child: Transform.scale(
-        scale: scale,
-        child: Container(
-          width: 90,
-          height: 90,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: color.withValues(alpha: alpha),
-            boxShadow: [
-              BoxShadow(
-                color: color.withValues(alpha: 0.55 * alpha),
-                blurRadius: 28,
-                spreadRadius: 6,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Curseur statique sur une position donnée, avec un glow doux qui
-/// respire lentement. Utilisé pour hold / beg : pas de tempo, juste
-/// un ancrage. Style du curseur paramétrable (orb pour les lèvres,
-/// éventuellement étendu plus tard).
-class _StaticPosition extends StatelessWidget {
-  final Position position;
-  final double t;
-  final Color color;
+/// Curseur du ladder avec le pulse propre à chaque mode — remplace les
+/// anciens `_Pulse`/`_Breath`/pulse inline de `_StaticPosition`, tous
+/// centrés plein écran (90-110 px) et pensés pour un widget démonté à
+/// chaque changement de mode. Ici le ladder reste monté en permanence
+/// (cf. doc de classe de `MovementAnimation`) : la taille de base reste
+/// celle de `_OrbShape`/`_RingShape`/`_TongueShape` (28-32 px) pour tenir
+/// dans une ligne, seuls l'échelle et l'alpha du curseur varient.
+class _CursorVisual extends StatelessWidget {
+  final SessionMode mode;
   final _CursorStyle cursorStyle;
+  final Color color;
+  final double pulseT;
 
-  /// Nombre de positions visibles sur le ladder (cf. `_PositionLadder`).
-  final int rowCount;
-
-  const _StaticPosition({
-    required this.position,
-    required this.t,
-    required this.color,
+  const _CursorVisual({
+    required this.mode,
     required this.cursorStyle,
-    required this.rowCount,
+    required this.color,
+    required this.pulseT,
   });
 
   @override
   Widget build(BuildContext context) {
-    final pulse = 0.85 + 0.15 * Curves.easeInOut.transform(t);
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        const _ShaftBackdrop(),
-        // Repères des positions visibles, plus discrets que pour rhythm.
-        for (var i = 0; i < rowCount; i++)
-          Align(
-            alignment: Alignment(0, _PositionLadder._toAlign(i, rowCount)),
-            child: FractionallySizedBox(
-              widthFactor: 0.4,
-              child: Container(
-                height: 1,
-                color: AppTheme.textMuted.withValues(alpha: 0.12),
-              ),
-            ),
-          ),
-        Align(
-          alignment: Alignment(
-              0.92, _PositionLadder._toAlign(position.index, rowCount)),
-          child: Text(
-            position.localizedLabel(context),
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1,
-              color: color.withValues(alpha: 0.9),
-            ),
-          ),
-        ),
-        Align(
-          alignment: Alignment(
-              _kCursorX, _PositionLadder._toAlign(position.index, rowCount)),
-          child: Transform.scale(
-            scale: pulse,
-            child: _Cursor(style: cursorStyle, color: color),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Orbe qui respire lentement pour le mode breath. Pas synchronisée au
-/// BPM — vise juste à indiquer « phase de récupération ».
-class _Breath extends StatelessWidget {
-  final double t;
-  final Color color;
-  const _Breath({required this.t, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    // t va 0..1..0 grâce au repeat(reverse: true) appelant.
-    final eased = Curves.easeInOut.transform(t);
-    final scale = 0.6 + 0.4 * eased;
-    final alpha = 0.55 + 0.35 * eased;
-    return Center(
-      child: Transform.scale(
-        scale: scale,
-        child: Container(
-          width: 110,
-          height: 110,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: color.withValues(alpha: alpha * 0.85),
-            boxShadow: [
-              BoxShadow(
-                color: color.withValues(alpha: 0.4 * alpha),
-                blurRadius: 30,
-                spreadRadius: 8,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    final cursor = _Cursor(style: cursorStyle, color: color);
+    switch (mode) {
+      case SessionMode.biffle:
+        final decay = Curves.easeOutQuad.transform(pulseT);
+        return Opacity(
+          opacity: 1.0 - 0.5 * decay,
+          child: Transform.scale(scale: 1.0 - 0.35 * decay, child: cursor),
+        );
+      case SessionMode.breath:
+      case SessionMode.freestyle:
+        final eased = Curves.easeInOut.transform(pulseT);
+        return Opacity(
+          opacity: 0.65 + 0.35 * eased,
+          child: Transform.scale(scale: 0.75 + 0.25 * eased, child: cursor),
+        );
+      case SessionMode.hold:
+      case SessionMode.beg:
+      case SessionMode.suckle:
+        final pulse = 0.85 + 0.15 * Curves.easeInOut.transform(pulseT);
+        return Transform.scale(scale: pulse, child: cursor);
+      case SessionMode.rhythm:
+      case SessionMode.lick:
+      case SessionMode.hand:
+        return cursor;
+    }
   }
 }
 

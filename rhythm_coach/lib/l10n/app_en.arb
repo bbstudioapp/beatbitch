@@ -646,6 +646,8 @@
   "soundsDebugShowSessionControlsSubtitle": "Debug only: in prod the session runs without interaction (phone down), only the FAIL button stays useful.",
   "soundsDebugShowModeBadge": "Show mode / BPM / position",
   "soundsDebugShowModeBadgeSubtitle": "Debug only: in prod the animation is enough to indicate what's happening.",
+  "soundsDebugShowTrajectoryDots": "Show trajectory dots",
+  "soundsDebugShowTrajectoryDotsSubtitle": "Debug only: during a session, only the curve and the cursor stay visible.",
   "debugBarLabelHumiliation": "HUMIL.",
   "debugBarLabelObedience": "OBED.",
   "debugBarLabelSaliva": "SALIVA",

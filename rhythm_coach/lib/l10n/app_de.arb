@@ -646,6 +646,8 @@
   "soundsDebugShowSessionControlsSubtitle": "Nur Debug: im Produktivbetrieb läuft die Session ohne Interaktion (Handy weggelegt), nur der FAIL-Knopf bleibt nützlich.",
   "soundsDebugShowModeBadge": "Modus / BPM / Position anzeigen",
   "soundsDebugShowModeBadgeSubtitle": "Nur Debug: im Produktivbetrieb reicht die Animation, um anzuzeigen, was passiert.",
+  "soundsDebugShowTrajectoryDots": "Trajektorienpunkte anzeigen",
+  "soundsDebugShowTrajectoryDotsSubtitle": "Nur Debug: In der Sitzung bleiben nur die Kurve und der Cursor sichtbar.",
   "debugBarLabelHumiliation": "ERNIEDR.",
   "debugBarLabelObedience": "GEHORS.",
   "debugBarLabelSaliva": "SPEICHEL",

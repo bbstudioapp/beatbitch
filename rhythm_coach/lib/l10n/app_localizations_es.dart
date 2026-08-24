@@ -1323,6 +1323,14 @@ class AppLocalizationsEs extends AppLocalizations {
       'Solo debug: en prod la animación basta para indicar lo que pasa.';
 
   @override
+  String get soundsDebugShowTrajectoryDots =>
+      'Mostrar los puntos de trayectoria';
+
+  @override
+  String get soundsDebugShowTrajectoryDotsSubtitle =>
+      'Solo debug: en sesión, solo la curva y el cursor siguen visibles.';
+
+  @override
   String get debugBarLabelHumiliation => 'HUMIL.';
 
   @override

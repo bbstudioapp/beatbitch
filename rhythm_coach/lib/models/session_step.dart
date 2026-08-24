@@ -143,6 +143,28 @@ class SessionStep {
     this.ratio = 1,
   });
 
+  /// Le même step, replacé à [time]. Les rebases de timeline (supplication
+  /// insistante, régénération et excision d'un défi) passent par ici plutôt
+  /// que de relister les champs : une liste recopiée à la main perd le champ
+  /// qu'on vient d'ajouter, et `awaitReady` — la gate de posture — l'a été
+  /// trois fois.
+  SessionStep rebased(int time) => SessionStep(
+        time: time,
+        text: text,
+        from: from,
+        to: to,
+        bpm: bpm,
+        bpmEnd: bpmEnd,
+        duration: duration,
+        mode: mode,
+        chainAction: chainAction,
+        swallowMode: swallowMode,
+        background: background,
+        awaitReady: awaitReady,
+        anchor: anchor,
+        ratio: ratio,
+      );
+
   /// True quand l'étape ne fait QUE déclencher une phrase TTS et n'apporte
   /// aucune configuration de bip — le loop courant continue intact.
   ///

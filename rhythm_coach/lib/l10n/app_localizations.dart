@@ -2334,6 +2334,18 @@ abstract class AppLocalizations {
   /// **'Réservé au debug : en prod l\'animation suffit à indiquer ce qui se passe.'**
   String get soundsDebugShowModeBadgeSubtitle;
 
+  /// No description provided for @soundsDebugShowTrajectoryDots.
+  ///
+  /// In fr, this message translates to:
+  /// **'Afficher les mini-points de trajectoire'**
+  String get soundsDebugShowTrajectoryDots;
+
+  /// No description provided for @soundsDebugShowTrajectoryDotsSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réservé au debug : en séance, seules la courbe et le curseur restent visibles.'**
+  String get soundsDebugShowTrajectoryDotsSubtitle;
+
   /// No description provided for @debugBarLabelHumiliation.
   ///
   /// In fr, this message translates to:

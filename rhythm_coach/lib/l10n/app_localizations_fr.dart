@@ -1326,6 +1326,14 @@ class AppLocalizationsFr extends AppLocalizations {
       'Réservé au debug : en prod l\'animation suffit à indiquer ce qui se passe.';
 
   @override
+  String get soundsDebugShowTrajectoryDots =>
+      'Afficher les mini-points de trajectoire';
+
+  @override
+  String get soundsDebugShowTrajectoryDotsSubtitle =>
+      'Réservé au debug : en séance, seules la courbe et le curseur restent visibles.';
+
+  @override
   String get debugBarLabelHumiliation => 'HUMIL.';
 
   @override

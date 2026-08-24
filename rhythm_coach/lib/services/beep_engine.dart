@@ -9,6 +9,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import '../models/final_category.dart';
 import '../models/session.dart';
 import '../models/session_step.dart';
+import 'step_resolution.dart';
 
 /// Moteur audio des bips de guidage rythmique.
 ///
@@ -216,6 +217,7 @@ class BeepEngine {
   /// Stream broadcast des beats (rhythm/lick/biffle/hand). Permet à plusieurs
   /// consommateurs (UI animation, debug overlays) de réagir à chaque bip
   /// sans monopoliser [onBeat]. Émis exactement au même instant que [onBeat].
+  int _stepSerial = 0;
   final StreamController<BeatEvent> _beatController =
       StreamController<BeatEvent>.broadcast();
   Stream<BeatEvent> get beatStream => _beatController.stream;
@@ -333,7 +335,7 @@ class BeepEngine {
   /// Modes pour lesquels l'arrivée demande un changement physique audible
   /// → on prend la grosse pause. Beg sans `to` (libre) en fait partie ;
   /// beg avec `to` (gardé en position) reste sur la pause courte.
-  bool _needsBigGap(SessionMode incoming, Position? incomingTo) {
+  static bool _needsBigGap(SessionMode incoming, Position? incomingTo) {
     switch (incoming) {
       case SessionMode.lick:
       case SessionMode.hand:
@@ -350,6 +352,20 @@ class BeepEngine {
     }
   }
 
+  /// Pause appliquée par [applyStep] avant de démarrer `incoming`, exposée
+  /// en lecture seule pour que l'affichage (prévision de trajectoire) situe
+  /// ses propres points sur le même calage sans dupliquer cette règle.
+  static Duration transitionGap({
+    required SessionMode incoming,
+    required SessionMode? previous,
+    Position? incomingTo,
+  }) {
+    if (incoming == previous) return _sameModeTransitionGap;
+    return _needsBigGap(incoming, incomingTo)
+        ? _modeTransitionGapBig
+        : _modeTransitionGap;
+  }
+
   /// Applique une étape au moteur. Les étapes text-only sont ignorées
   /// (elles ne touchent pas au loop courant).
   ///
@@ -363,14 +379,21 @@ class BeepEngine {
     SessionMode sessionMode,
   ) async {
     if (step.isTextOnly) return;
+    _stepSerial++;
     if (!_initialized) await init();
 
-    final mode = step.mode ?? sessionMode;
+    final resolved = resolveStepConfig(
+      step: step,
+      defaultMode: sessionMode,
+      currentFrom: _from,
+      currentBpm: _bpm,
+    );
+    final mode = resolved.mode;
     final previousMode = _mode;
     _mode = mode;
     _anchor = step.anchor;
     _ratio = step.ratio;
-    if (step.bpm != null) _bpm = step.bpm!.clamp(kMinBpm, kMaxBpm);
+    _bpm = resolved.bpm;
     // Rampe BPM intra-step : on n'arme `_bpmEnd` / `_loopDurationMs` que
     // si la valeur cible est explicitement différente du BPM de départ ET
     // qu'on a une durée connue. Sinon on retombe en mode constant — un
@@ -387,23 +410,8 @@ class BeepEngine {
       _loopDurationMs = null;
     }
 
-    // Hold / beg / suckle : la position cible vient de `step.to` (sémantique
-    // « tenir / aspirer à ce point »). On la stocke dans `_from` pour rester
-    // compatible avec les consommateurs UI (`currentFrom`, badge, ladder du
-    // `MovementAnimation` qui s'aligne sur `widget.from` pour les modes
-    // statiques). Sans cette ligne pour suckle, `_from` héritait de la
-    // position du step rythmé précédent → le ladder affichait « tip » /
-    // « head » selon le from précédent malgré un suckle to=head ou balls.
-    // Pour rhythm/lick/hand/biffle : `_from` = step.from (point de départ
-    // de l'alternance).
-    if (mode == SessionMode.hold ||
-        mode == SessionMode.beg ||
-        mode == SessionMode.suckle) {
-      if (step.to != null) _from = step.to!;
-    } else if (step.from != null) {
-      _from = step.from!;
-    }
-    _to = step.to;
+    _from = resolved.from;
+    _to = resolved.to;
 
     // En rythme/lick avec from == to (ex: throat/throat), on relève `from`
     // vers une position plus haute au hasard pour créer une alternance.
@@ -421,32 +429,18 @@ class BeepEngine {
     _suckleTimer?.cancel();
     _suckleTimer = null;
 
-    // Gap de transition : silence avant le démarrage du nouveau mode pour
-    // fluidifier l'enchaînement et laisser le temps physique de changer
-    // (sortir la langue, passer à la main, respirer). Deux durées :
-    // - Modes qui demandent un changement de geste (lick/hand/biffle/
-    //   breath/freestyle/beg-libre) : 1.5 s.
-    // - Modes en continuité (rythme/hold/beg-non-libre) : 600 ms — juste
-    //   le décay du sample précédent.
-    // Pas de pause si on reste sur le même mode (changements bpm/position
-    // doivent rester continus). Le TTS du step a été lancé en parallèle
-    // par le contrôleur, donc cette pause ne le bloque pas — elle ne fait
-    // que retarder les bips, ce qui laisse l'annonce vocale en clair.
-    if (mode != previousMode) {
-      final gap = _needsBigGap(mode, step.to)
-          ? _modeTransitionGapBig
-          : _modeTransitionGap;
-      await Future<void>.delayed(gap);
-      // Si un autre `applyStep` a passé entretemps (changement de mode très
-      // rapide), c'est lui qui doit gagner — on abandonne ce démarrage.
-      if (_mode != mode) return;
-    } else {
-      // Même mode : petite respiration pour démarquer la nouvelle config
-      // (ex: rhythm 80 BPM head→mid → rhythm 100 BPM mid→throat). Sans
-      // ce gap, le passage est mécanique et on entend le tempo « sauter ».
-      await Future<void>.delayed(_sameModeTransitionGap);
-      if (_mode != mode) return;
-    }
+    // Gap de transition avant le démarrage du nouveau mode — cf.
+    // `transitionGap` pour le détail des durées. Le TTS du step a été lancé
+    // en parallèle par le contrôleur, donc cette pause ne le bloque pas —
+    // elle ne fait que retarder les bips, ce qui laisse l'annonce vocale en
+    // clair.
+    await Future<void>.delayed(
+      transitionGap(
+          incoming: mode, previous: previousMode, incomingTo: step.to),
+    );
+    // Si un autre `applyStep` a passé entretemps (changement de mode très
+    // rapide), c'est lui qui doit gagner — on abandonne ce démarrage.
+    if (_mode != mode) return;
 
     switch (mode) {
       case SessionMode.rhythm:
@@ -1088,6 +1082,13 @@ class BeepEngine {
   // ─── État courant exposé pour l'affichage UI ───────────────────────────
 
   SessionMode get currentMode => _mode;
+
+  /// Nombre de steps réellement appliqués au moteur. Une réapplication à
+  /// configuration identique passe quand même par le gap de transition
+  /// (mesuré : 301 ms) : sans ce compteur, rien ne distingue ce silence pour
+  /// un affichage qui ne regarde que mode/positions/tempo.
+  int get stepSerial => _stepSerial;
+
   Position get currentFrom => _from;
   Position? get currentTo => _to;
   int get currentBpm => _bpm;

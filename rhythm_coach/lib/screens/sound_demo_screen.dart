@@ -55,6 +55,7 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
   bool _showSalivaBar = false;
   bool _showSessionControls = false;
   bool _showModeBadge = false;
+  bool _showTrajectoryDots = false;
   bool _showBackgroundMedia = true;
   bool _cameraHoldCheck = false;
   bool _skipSessionButton = false;
@@ -77,6 +78,7 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
       final showSaliva = await _debug.getShowSalivaBar();
       final showControls = await _debug.getShowSessionControls();
       final showBadge = await _debug.getShowModeBadge();
+      final showDots = await _debug.getShowTrajectoryDots();
       final showBgMedia = await _debug.getShowBackgroundMedia();
       final camCheck = await _debug.getCameraHoldCheck();
       final skipSession = await _debug.getSkipSessionButton();
@@ -90,6 +92,7 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
         _showSalivaBar = showSaliva;
         _showSessionControls = showControls;
         _showModeBadge = showBadge;
+        _showTrajectoryDots = showDots;
         _showBackgroundMedia = showBgMedia;
         _cameraHoldCheck = camCheck;
         _skipSessionButton = skipSession;
@@ -487,6 +490,29 @@ class _SoundDemoScreenState extends State<SoundDemoScreen> {
                           await _debug.setShowModeBadge(v);
                           if (!mounted) return;
                           setState(() => _showModeBadge = v);
+                        },
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          t.soundsDebugShowTrajectoryDots,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                        subtitle: Text(
+                          t.soundsDebugShowTrajectoryDotsSubtitle,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.textMuted,
+                          ),
+                        ),
+                        value: _showTrajectoryDots,
+                        onChanged: (v) async {
+                          await _debug.setShowTrajectoryDots(v);
+                          if (!mounted) return;
+                          setState(() => _showTrajectoryDots = v);
                         },
                       ),
                       SwitchListTile(
