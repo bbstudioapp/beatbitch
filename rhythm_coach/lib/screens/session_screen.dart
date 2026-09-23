@@ -1062,7 +1062,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                     _StateBadge(state: ctrl.state),
                     SizedBox(height: showBar ? 6 : 12),
                   ],
-                  if (ctrl.isFailing)
+                  if (ctrl.isFailing || ctrl.isMusicBreathing)
                     _FailPhaseIndicator(controller: ctrl)
                   else if (ctrl.hasConfig)
                     ModeBadgeRow(
@@ -1249,6 +1249,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                       widget.tts.setVolume(v);
                     },
                     onAmbienceVolume: ctrl.setAmbienceVolume,
+                    showAmbience: !ctrl.isMusical,
                   ),
                 ],
               ),
@@ -2104,12 +2105,14 @@ class _VolumesBlock extends StatelessWidget {
   final double ambienceVolume;
   final ValueChanged<double> onTtsVolume;
   final ValueChanged<double> onAmbienceVolume;
+  final bool showAmbience;
 
   const _VolumesBlock({
     required this.ttsVolume,
     required this.ambienceVolume,
     required this.onTtsVolume,
     required this.onAmbienceVolume,
+    required this.showAmbience,
   });
 
   @override
@@ -2124,14 +2127,16 @@ class _VolumesBlock extends StatelessWidget {
           max: 1.0,
           onChanged: onTtsVolume,
         ),
-        const SizedBox(height: 4),
-        _LabeledSlider(
-          label: t.sessionAmbienceLabel,
-          value: ambienceVolume,
-          min: 0.0,
-          max: AmbienceEngine.maxVolume,
-          onChanged: onAmbienceVolume,
-        ),
+        if (showAmbience) ...[
+          const SizedBox(height: 4),
+          _LabeledSlider(
+            label: t.sessionAmbienceLabel,
+            value: ambienceVolume,
+            min: 0.0,
+            max: AmbienceEngine.maxVolume,
+            onChanged: onAmbienceVolume,
+          ),
+        ],
       ],
     );
   }
