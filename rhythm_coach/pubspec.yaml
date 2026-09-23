@@ -57,6 +57,7 @@ flutter:
     - assets/sessions/
     - assets/audio/
     - assets/audio/ambience/
+    - assets/audio/music/
     - assets/audio/finale/
     - assets/audio/finale_chimes.json
     - assets/career/
