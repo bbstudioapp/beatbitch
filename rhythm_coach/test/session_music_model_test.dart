@@ -73,12 +73,20 @@ void main() {
       }
     });
 
-    test('le volume par défaut n\'est pas écrit, un volume explicite oui', () {
+    test('les réglages par défaut ne sont pas écrits, un réglage explicite oui',
+        () {
       expect(_track.toJson().containsKey('volume'), isFalse);
-      const quiet =
-          SessionMusic(asset: 'a', bpm: 120, firstBeatSeconds: 0, volume: 0.4);
+      expect(_track.toJson().containsKey('beep_gain'), isFalse);
+      const quiet = SessionMusic(
+        asset: 'a',
+        bpm: 120,
+        firstBeatSeconds: 0,
+        volume: 0.4,
+        beepGain: 0.2,
+      );
       expect(quiet.toJson()['volume'], 0.4);
-      expect(SessionMusic.tryParse(quiet.toJson())?.volume, 0.4);
+      expect(quiet.toJson()['beep_gain'], 0.2);
+      expect(SessionMusic.tryParse(quiet.toJson()), quiet);
     });
   });
 

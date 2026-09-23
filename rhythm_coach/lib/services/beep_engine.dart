@@ -8,6 +8,7 @@ import 'package:flutter/services.dart' show rootBundle;
 
 import '../models/final_category.dart';
 import '../models/session.dart';
+import '../models/session_music.dart';
 import '../models/session_step.dart';
 import 'step_resolution.dart';
 
@@ -184,6 +185,10 @@ class BeepEngine {
   bool _handStrokeFallbackDown = true;
 
   Timer? _loopTimer;
+
+  SessionMusic? _music;
+  Duration Function()? _musicPosition;
+  double _beepGain = 1.0;
 
   /// Token incrémenté par [_stopLoop] : sert à invalider les callbacks
   /// en vol des loops qui se replanifient eux-mêmes (cf. `_startBeatLoop` /
@@ -500,6 +505,10 @@ class BeepEngine {
   /// Le visuel (orbe) est piloté par `beatStream` → si l'audio est régulier,
   /// le visuel l'est aussi.
   void _startBeatLoop({required double volume}) {
+    if (_music != null) {
+      _startGridLoop(volume: volume);
+      return;
+    }
     final myGen = ++_loopGen;
     final startMs = DateTime.now().millisecondsSinceEpoch;
     _emitPositionBeat(volume);
@@ -519,6 +528,78 @@ class BeepEngine {
           max(1, lastTargetMs - DateTime.now().millisecondsSinceEpoch);
       _loopTimer = Timer(Duration(milliseconds: delayMs), () {
         if (myGen != _loopGen) return;
+        _emitPositionBeat(volume);
+        scheduleNext();
+      });
+    }
+
+    scheduleNext();
+  }
+
+  /// Un bip en retard de moins que ça sur son temps est joué quand même ;
+  /// au-delà il est sauté plutôt que de sonner à côté du temps.
+  static const Duration _gridLateTolerance = Duration(milliseconds: 40);
+
+  static const Duration _gridHopMin = Duration(milliseconds: 20);
+
+  /// Un timer qui sonne avant son temps (position de lecture ré-ancrée ou plus
+  /// lente que l'horloge murale) se reprogramme ; en dessous de cet écart le bip
+  /// part.
+  static const Duration _gridEarlyTolerance = Duration(milliseconds: 1);
+
+  /// Cale les loops rythmés sur les temps d'un morceau : chaque bip tombe sur un
+  /// temps de sa grille, lu sur [position] (position de lecture du morceau), et
+  /// non sur un intervalle déduit du BPM du step. [music] fixe aussi le gain des
+  /// bips.
+  void attachMusic(SessionMusic music, Duration Function() position) {
+    _music = music;
+    _musicPosition = position;
+    _beepGain = music.beepGain;
+  }
+
+  /// Observe chaque déclenchement de sample avec son volume final.
+  @visibleForTesting
+  void Function(String asset, double volume)? debugOnTrigger;
+
+  void detachMusic() {
+    _music = null;
+    _musicPosition = null;
+    _beepGain = 1.0;
+  }
+
+  /// **Anti-drift** : le temps visé de chaque bip est calculé depuis son index
+  /// sur la grille du morceau puis comparé à la position de lecture relue à
+  /// chaque bip — ni l'intervalle entier d'un BPM arrondi, ni le retard d'un
+  /// timer précédent ne s'accumulent. Un step à `bpm` moitié du tempo du
+  /// morceau joue un temps sur deux (cf. [SessionMusic.strideForStepBpm]).
+  void _startGridLoop({required double volume}) {
+    final music = _music!;
+    final position = _musicPosition!;
+    final stride = music.strideForStepBpm(_bpm);
+    final myGen = ++_loopGen;
+    var lastBeat = -1;
+
+    void scheduleNext() {
+      if (myGen != _loopGen) return;
+      final now = position();
+      var index =
+          music.beatIndexAtOrAfter(now - _gridLateTolerance, stride: stride);
+      final justPlayed = lastBeat >= 0 &&
+          index <= lastBeat &&
+          music.beatTime(lastBeat) - now < music.beatPeriod;
+      if (justPlayed) index = lastBeat + stride;
+      final wait = music.beatTime(index) - now;
+      // Le timer est en temps mural, la position en temps de lecture : on
+      // n'attend que l'essentiel de l'écart puis on relit la position, jusqu'à
+      // tomber sur le temps.
+      final hop = wait > _gridHopMin ? wait * 0.85 : wait;
+      _loopTimer = Timer(hop > Duration.zero ? hop : Duration.zero, () {
+        if (myGen != _loopGen) return;
+        if (music.beatTime(index) - position() > _gridEarlyTolerance) {
+          scheduleNext();
+          return;
+        }
+        lastBeat = index;
         _emitPositionBeat(volume);
         scheduleNext();
       });
@@ -648,7 +729,9 @@ class BeepEngine {
 
   /// Déclenche un sample en utilisant le prochain player du pool round-robin.
   /// Fire-and-forget : le ticker n'attend pas la fin de l'opération audio.
-  void _trigger(String assetName, double volume) {
+  void _trigger(String assetName, double baseVolume) {
+    final volume = baseVolume * _beepGain;
+    debugOnTrigger?.call(assetName, volume);
     final pool = _pools[assetName];
     if (pool == null) return;
     final picked = pool.next(volume);

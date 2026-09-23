@@ -3,6 +3,7 @@ import 'dart:math' as math;
 /// Morceau joué en fond d'une séance, avec la grille de ses temps.
 class SessionMusic {
   static const double defaultVolume = 0.85;
+  static const double defaultBeepGain = 0.4;
 
   /// Relatif à `assets/`, comme un `AssetSource`.
   final String asset;
@@ -12,12 +13,18 @@ class SessionMusic {
   final double firstBeatSeconds;
   final double volume;
 
+  /// Facteur appliqué au volume des bips pendant la séance.
+  final double beepGain;
+
   const SessionMusic({
     required this.asset,
     required this.bpm,
     required this.firstBeatSeconds,
     this.volume = defaultVolume,
+    this.beepGain = defaultBeepGain,
   });
+
+  Duration get beatPeriod => Duration(microseconds: (60e6 / bpm).round());
 
   /// Chaque temps est calculé depuis son index : additionner des périodes
   /// arrondies dériverait.
@@ -44,6 +51,7 @@ class SessionMusic {
     final bpm = raw['bpm'];
     final firstBeat = raw['first_beat'];
     final volume = raw['volume'];
+    final beepGain = raw['beep_gain'];
     if (asset is! String || asset.isEmpty) return null;
     if (bpm is! num || bpm <= 0) return null;
     if (firstBeat is! num || firstBeat < 0) return null;
@@ -52,6 +60,9 @@ class SessionMusic {
       bpm: bpm.toDouble(),
       firstBeatSeconds: firstBeat.toDouble(),
       volume: volume is num ? volume.toDouble().clamp(0.0, 1.0) : defaultVolume,
+      beepGain: beepGain is num
+          ? beepGain.toDouble().clamp(0.0, 1.0)
+          : defaultBeepGain,
     );
   }
 
@@ -60,6 +71,7 @@ class SessionMusic {
         'bpm': bpm,
         'first_beat': firstBeatSeconds,
         if (volume != defaultVolume) 'volume': volume,
+        if (beepGain != defaultBeepGain) 'beep_gain': beepGain,
       };
 
   @override
@@ -68,8 +80,10 @@ class SessionMusic {
       other.asset == asset &&
       other.bpm == bpm &&
       other.firstBeatSeconds == firstBeatSeconds &&
-      other.volume == volume;
+      other.volume == volume &&
+      other.beepGain == beepGain;
 
   @override
-  int get hashCode => Object.hash(asset, bpm, firstBeatSeconds, volume);
+  int get hashCode =>
+      Object.hash(asset, bpm, firstBeatSeconds, volume, beepGain);
 }
