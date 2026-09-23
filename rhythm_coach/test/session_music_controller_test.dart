@@ -423,6 +423,25 @@ void main() {
     t.ctrl.dispose();
   }, timeout: const Timeout(Duration(seconds: 20)));
 
+  test('detachAudio et dispose libèrent le morceau et détachent les bips',
+      () async {
+    final a = build();
+    await a.ctrl.start();
+    final stopsA = a.port.stops;
+    await a.ctrl.detachAudio();
+    expect(a.beep.attachedTrack, isNull);
+    expect(a.port.stops, greaterThan(stopsA));
+    a.ctrl.dispose();
+
+    final b = build();
+    await b.ctrl.start();
+    final stopsB = b.port.stops;
+    b.ctrl.dispose();
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(b.beep.attachedTrack, isNull);
+    expect(b.port.stops, greaterThan(stopsB));
+  }, timeout: const Timeout(Duration(seconds: 20)));
+
   test(
       'une séance ordinaire qui démarre détache le morceau resté sur le '
       'BeepEngine partagé', () async {
