@@ -9,6 +9,7 @@ import 'music_clock.dart';
 /// Ce que [MusicEngine] attend d'un lecteur audio.
 abstract class MusicPlayerPort {
   Stream<Duration> get positions;
+  Stream<void> get completions;
   Future<void> load(String asset, {required double volume});
   Future<void> play();
   Future<void> pause();
@@ -21,6 +22,9 @@ class AudioplayersMusicPort implements MusicPlayerPort {
 
   @override
   Stream<Duration> get positions => _player.onPositionChanged;
+
+  @override
+  Stream<void> get completions => _player.onPlayerComplete;
 
   @override
   Future<void> load(String asset, {required double volume}) async {
@@ -77,6 +81,8 @@ class MusicEngine {
   MusicPlayerPort? _createdPort;
   final MusicClock _clock;
   StreamSubscription<Duration>? _subscription;
+  StreamSubscription<void>? _completion;
+  Duration _peak = Duration.zero;
 
   MusicPlayerPort get _port =>
       _portOrNull ?? (_createdPort ??= AudioplayersMusicPort());
@@ -94,11 +100,14 @@ class MusicEngine {
   Future<bool> start(SessionMusic music) async {
     await _release();
     _clock.start();
+    _peak = Duration.zero;
     final firstReport = Completer<void>();
     _subscription = _port.positions.listen((p) {
+      if (p > _peak) _peak = p;
       _clock.report(p);
       if (!firstReport.isCompleted) firstReport.complete();
     });
+    _completion = _port.completions.listen((_) => _clock.end(_peak));
     try {
       await _port.load(music.asset, volume: music.volume).timeout(_loadTimeout);
       await _port.play().timeout(_loadTimeout);
@@ -121,7 +130,7 @@ class MusicEngine {
   Future<void> resume() async {
     _clock.resume();
     final port = _existingPort;
-    if (port != null) await _bounded(port.play, 'resume');
+    if (port != null && !_clock.isEnded) await _bounded(port.play, 'resume');
   }
 
   Future<void> stop() async {
@@ -138,6 +147,8 @@ class MusicEngine {
   Future<void> _release() async {
     unawaited(_subscription?.cancel());
     _subscription = null;
+    unawaited(_completion?.cancel());
+    _completion = null;
     final port = _existingPort;
     if (port != null) await _bounded(port.stop, 'stop');
   }

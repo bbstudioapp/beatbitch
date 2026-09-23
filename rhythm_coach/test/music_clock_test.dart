@@ -105,4 +105,45 @@ void main() {
     advance(5000);
     expect(clock.position, ms(1500));
   });
+
+  test('après la fin, la position court seule et ne croit plus le lecteur', () {
+    clock.start();
+    clock.report(ms(178800));
+    advance(50);
+    clock.end(ms(178800));
+    clock.report(Duration.zero);
+    expect(clock.position, ms(178850));
+    advance(300);
+    expect(clock.position, ms(179150));
+    expect(clock.isEnded, isTrue);
+  });
+
+  test('un rapport à 0 arrivé avant la fin ne fait pas reculer la position',
+      () {
+    clock.start();
+    clock.report(ms(178800));
+    advance(50);
+    clock.report(Duration.zero);
+    clock.end(ms(178800));
+    expect(clock.position, ms(178800));
+    advance(300);
+    expect(clock.position, ms(179100));
+  });
+
+  test('la fin survit à une pause et à sa reprise, start la remet à zéro', () {
+    clock.start();
+    clock.report(ms(178800));
+    clock.end(ms(178800));
+    advance(100);
+    clock.pause();
+    advance(3000);
+    clock.resume();
+    clock.report(Duration.zero);
+    expect(clock.position, ms(178900));
+
+    clock.start();
+    expect(clock.isEnded, isFalse);
+    clock.report(ms(20));
+    expect(clock.position, ms(20));
+  });
 }

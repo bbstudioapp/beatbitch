@@ -19,13 +19,16 @@ class _FakePort implements MusicPlayerPort {
   _FakePort(this.async,
       {this.startupLatency = Duration.zero,
       this.audioRate = 1.0,
-      this.hangOnTransport = false});
+      this.hangOnTransport = false,
+      this.trackLength});
 
   final FakeAsync async;
   final Duration startupLatency;
   final double audioRate;
   final bool hangOnTransport;
+  final Duration? trackLength;
   final _controller = StreamController<Duration>.broadcast();
+  final _completed = StreamController<void>.broadcast();
   Timer? _ticker;
   Duration _audio = Duration.zero;
   Duration? _lastTick;
@@ -41,6 +44,9 @@ class _FakePort implements MusicPlayerPort {
 
   @override
   Stream<Duration> get positions => _controller.stream;
+
+  @override
+  Stream<void> get completions => _completed.stream;
 
   @override
   Future<void> load(String asset, {required double volume}) async {
@@ -66,6 +72,14 @@ class _FakePort implements MusicPlayerPort {
       _advance();
       final started = _lastTick != null && async.elapsed >= _lastTick!;
       if (_running && started && !silent) _controller.add(_audio);
+      final length = trackLength;
+      if (_running && length != null && _audio >= length) {
+        _running = false;
+        _lastTick = null;
+        _audio = Duration.zero;
+        _completed.add(null);
+        _controller.add(_audio);
+      }
     });
   }
 
@@ -233,6 +247,43 @@ void main() {
       engine.start(_track);
       async.elapse(const Duration(milliseconds: 100));
       expect(engine.position.inMilliseconds, lessThan(200));
+    });
+  });
+
+  test(
+      'fin du morceau : le lecteur retombe à 0, la position continue au-delà '
+      'de la fin', () {
+    fakeAsync((async) {
+      final port = _FakePort(async, trackLength: const Duration(seconds: 3));
+      final engine =
+          MusicEngine(port: port, clock: MusicClock(now: () => async.elapsed));
+      engine.start(_track);
+      async.elapse(const Duration(seconds: 4));
+
+      expect(port.audioPosition, Duration.zero,
+          reason: 'le lecteur est retombé');
+      expect(engine.position.inMilliseconds, closeTo(4000, 40));
+      async.elapse(const Duration(seconds: 2));
+      expect(engine.position.inMilliseconds, closeTo(6000, 40));
+    });
+  });
+
+  test('reprise après la fin du morceau : le lecteur n\'est pas relancé', () {
+    fakeAsync((async) {
+      final port = _FakePort(async, trackLength: const Duration(seconds: 3));
+      final engine =
+          MusicEngine(port: port, clock: MusicClock(now: () => async.elapsed));
+      engine.start(_track);
+      async.elapse(const Duration(seconds: 4));
+
+      engine.pause();
+      async.flushMicrotasks();
+      final frozen = engine.position;
+      engine.resume();
+      async.elapse(const Duration(seconds: 1));
+
+      expect(port.plays, 1);
+      expect((engine.position - frozen).inMilliseconds, closeTo(1000, 40));
     });
   });
 }

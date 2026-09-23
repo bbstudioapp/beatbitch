@@ -21,9 +21,13 @@ class MusicClock {
   Duration _anchorWall = Duration.zero;
   Duration _frozen = Duration.zero;
   bool _synced = false;
+  bool _ended = false;
 
   /// Vrai dès que le lecteur a rapporté une position depuis [start].
   bool get isSynced => _synced;
+
+  /// Vrai une fois le morceau fini : plus aucun rapport n'est cru.
+  bool get isEnded => _ended;
 
   Duration get position => switch (_state) {
         _ClockState.idle || _ClockState.waiting => Duration.zero,
@@ -36,14 +40,28 @@ class MusicClock {
   void start() {
     _state = _ClockState.waiting;
     _synced = false;
+    _ended = false;
     _frozen = Duration.zero;
   }
 
   void report(Duration position) {
+    if (_ended) return;
     if (_state != _ClockState.waiting && _state != _ClockState.playing) return;
     _anchor(position);
     _synced = true;
     _state = _ClockState.playing;
+  }
+
+  /// Le morceau est fini : les lecteurs remettent alors leur position à 0.
+  /// L'horloge court seule depuis la fin, sans jamais reculer sous [atLeast],
+  /// la plus grande position déjà rapportée.
+  void end(Duration atLeast) {
+    if (_state != _ClockState.playing && _state != _ClockState.paused) return;
+    if (_state == _ClockState.playing) {
+      final current = position;
+      _anchor(current > atLeast ? current : atLeast);
+    }
+    _ended = true;
   }
 
   /// Le lecteur ne rapportera rien : l'horloge court seule à partir de zéro.

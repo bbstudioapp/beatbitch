@@ -192,6 +192,7 @@ void main() {
     RandomCommentsBundle? randomComments,
     PhraseBank? phraseBank,
     double miniPunishmentRate = 0.0,
+    Duration Function()? wall,
   }) {
     final port = _Port()..startupLatency = startupLatency;
     final beep = sharedBeep ?? _Beep();
@@ -214,7 +215,7 @@ void main() {
           ),
       music: MusicEngine(
         port: port,
-        clock: MusicClock(now: () => Duration.zero),
+        clock: MusicClock(now: wall ?? () => Duration.zero),
       ),
     );
     return (ctrl: ctrl, port: port, beep: beep, amb: amb);
@@ -423,6 +424,141 @@ void main() {
     t.ctrl.dispose();
   }, timeout: const Timeout(Duration(seconds: 20)));
 
+  test(
+      'fin du morceau : le lecteur retombe à 0, la séance court sur l\'horloge '
+      'murale jusqu\'à sa durée puis se termine', () async {
+    var wall = Duration.zero;
+    final t = build(wall: () => wall);
+    await t.ctrl.start();
+    await at(t.port, t.ctrl, 99.8);
+
+    t.port.finish();
+    await Future<void>.delayed(Duration.zero);
+    wall += const Duration(milliseconds: 100);
+    t.ctrl.debugTick();
+    expect(t.ctrl.state, SessionState.running);
+    expect(t.ctrl.elapsed, greaterThanOrEqualTo(const Duration(seconds: 99)),
+        reason: 'la position du lecteur retombée à 0 ne fait pas reculer la '
+            'séance');
+
+    wall += const Duration(milliseconds: 300);
+    t.ctrl.debugTick();
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    expect(t.ctrl.state, SessionState.finished);
+    expect(t.beep.attachedTrack, isNull);
+    expect(t.ctrl.elapsedSeconds, greaterThanOrEqualTo(100));
+
+    t.ctrl.dispose();
+  }, timeout: const Timeout(Duration(seconds: 20)));
+
+  test(
+      'fin du morceau : le rapport à 0 arrivé avant l\'événement de fin ne '
+      'fait pas reculer la séance', () async {
+    var wall = Duration.zero;
+    final t = build(wall: () => wall);
+    await t.ctrl.start();
+    await at(t.port, t.ctrl, 99.8);
+
+    t.port.finish(zeroFirst: true);
+    await Future<void>.delayed(Duration.zero);
+    wall += const Duration(milliseconds: 100);
+    t.ctrl.debugTick();
+    expect(t.ctrl.elapsed, greaterThanOrEqualTo(const Duration(seconds: 99)));
+
+    wall += const Duration(milliseconds: 300);
+    t.ctrl.debugTick();
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    expect(t.ctrl.state, SessionState.finished);
+
+    t.ctrl.dispose();
+  }, timeout: const Timeout(Duration(seconds: 20)));
+
+  test(
+      'JE PEUX PAS dont le souffle déborde la fin du morceau : la séance se '
+      'termine à sa durée, souffle coupé', () async {
+    var wall = Duration.zero;
+    final t = build(wall: () => wall);
+    await t.ctrl.start();
+    await at(t.port, t.ctrl, 92);
+    await t.ctrl.triggerFail();
+    expect(t.ctrl.isMusicBreathing, isTrue);
+
+    await at(t.port, t.ctrl, 99.8);
+    t.port.finish();
+    await Future<void>.delayed(Duration.zero);
+    wall += const Duration(milliseconds: 100);
+    t.ctrl.debugTick();
+    expect(t.ctrl.state, SessionState.running);
+    expect(t.ctrl.elapsed, greaterThanOrEqualTo(const Duration(seconds: 99)));
+
+    wall += const Duration(milliseconds: 300);
+    t.ctrl.debugTick();
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    expect(t.ctrl.state, SessionState.finished);
+    expect(t.ctrl.isMusicBreathing, isFalse);
+    expect(t.ctrl.hadFailThisSession, isTrue);
+
+    t.ctrl.dispose();
+  }, timeout: const Timeout(Duration(seconds: 20)));
+
+  test(
+      'stop pendant la queue qui suit la fin du morceau : séance à l\'arrêt, '
+      'jamais terminée, morceau libéré', () async {
+    var wall = Duration.zero;
+    final t = build(wall: () => wall);
+    final states = <SessionState>[];
+    t.ctrl.addListener(() {
+      if (states.isEmpty || states.last != t.ctrl.state) {
+        states.add(t.ctrl.state);
+      }
+    });
+    await t.ctrl.start();
+    await at(t.port, t.ctrl, 99.8);
+    t.port.finish();
+    await Future<void>.delayed(Duration.zero);
+    wall += const Duration(milliseconds: 100);
+    t.ctrl.debugTick();
+    expect(t.ctrl.elapsed, greaterThanOrEqualTo(const Duration(seconds: 99)));
+    final stops = t.port.stops;
+
+    await t.ctrl.stop();
+    expect(t.ctrl.state, SessionState.idle);
+    expect(t.port.stops, greaterThan(stops));
+    expect(t.beep.attachedTrack, isNull);
+
+    wall += const Duration(seconds: 5);
+    t.ctrl.debugTick();
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    expect(states, isNot(contains(SessionState.finished)));
+    expect(t.ctrl.state, SessionState.idle);
+
+    t.ctrl.dispose();
+  }, timeout: const Timeout(Duration(seconds: 20)));
+
+  test(
+      'pause puis reprise dans la queue qui suit la fin du morceau : le '
+      'lecteur n\'est pas relancé', () async {
+    var wall = Duration.zero;
+    final t = build(wall: () => wall);
+    await t.ctrl.start();
+    await at(t.port, t.ctrl, 99.8);
+    t.port.finish();
+    await Future<void>.delayed(Duration.zero);
+    final plays = t.port.plays;
+
+    await t.ctrl.pause();
+    await t.ctrl.resume();
+    expect(t.port.plays, plays,
+        reason: 'un lecteur terminé qu\'on reprend repartirait du début');
+
+    wall += const Duration(milliseconds: 400);
+    t.ctrl.debugTick();
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    expect(t.ctrl.state, SessionState.finished);
+
+    t.ctrl.dispose();
+  }, timeout: const Timeout(Duration(seconds: 20)));
+
   test('detachAudio et dispose libèrent le morceau et détachent les bips',
       () async {
     final a = build();
@@ -553,6 +689,24 @@ class _Port implements MusicPlayerPort {
   void seek(Duration to) {
     _audio = to;
     _controller.add(to);
+  }
+
+  final _completed = StreamController<void>.broadcast();
+
+  @override
+  Stream<void> get completions => _completed.stream;
+
+  /// Fin de lecture des plugins audioplayers : l'événement de fin, puis la
+  /// position remise à 0 ; [zeroFirst] inverse cet ordre.
+  void finish({bool zeroFirst = false}) {
+    _audio = Duration.zero;
+    if (zeroFirst) {
+      _controller.add(Duration.zero);
+      _completed.add(null);
+    } else {
+      _completed.add(null);
+      _controller.add(Duration.zero);
+    }
   }
 
   @override
