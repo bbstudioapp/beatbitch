@@ -1,0 +1,102 @@
+{
+  "lang": "fr",
+  "id": "montee_en_puissance",
+  "name": "Montée en Puissance",
+  "description": "Une séance calée sur un morceau : le rythme monte et la musique ne s'arrête jamais.",
+  "duration_seconds": 179,
+  "mode": "rhythm",
+  "intro": "Mets le son. Les bips suivent le rythme du morceau, les consignes suivent sa montée. Si tu craques, appuie sur le bouton rouge : la musique continue, tu respires, et tu reprends là où elle en est.",
+  "music": {
+    "asset": "audio/music/montee_en_puissance.mp3",
+    "bpm": 121.96,
+    "first_beat": 16.934
+  },
+  "steps": [
+    {
+      "time": 0,
+      "text": "Écoute… ça va monter.",
+      "mode": "breath",
+      "duration": 16
+    },
+    {
+      "time": 16,
+      "mode": "rhythm",
+      "from": "tip",
+      "to": "head",
+      "bpm": 61
+    },
+    {
+      "time": 55,
+      "text": "Ça monte.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 61
+    },
+    {
+      "time": 78,
+      "text": "Suis la musique.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 122
+    },
+    {
+      "time": 94,
+      "text": "Tiens… attends qu'elle revienne.",
+      "mode": "hold",
+      "to": "throat",
+      "duration": 16
+    },
+    {
+      "time": 110,
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 122
+    },
+    {
+      "time": 126,
+      "mode": "rhythm",
+      "from": "head",
+      "to": "throat",
+      "bpm": 122
+    },
+    {
+      "time": 141,
+      "text": "Voilà le sommet. Encaisse.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 122
+    },
+    {
+      "time": 152,
+      "text": "Encore un peu.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 61
+    },
+    {
+      "time": 163,
+      "text": "Tiens au fond.",
+      "mode": "hold",
+      "to": "full",
+      "duration": 12
+    },
+    {
+      "time": 175,
+      "text": "Voilà, bonne fille."
+    },
+    {
+      "time": 176,
+      "mode": "breath",
+      "duration": 3
+    },
+    {
+      "time": 177,
+      "text": "Remonte. Respire."
+    }
+  ]
+}

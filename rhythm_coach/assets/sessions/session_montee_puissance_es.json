@@ -1,0 +1,102 @@
+{
+  "lang": "es",
+  "id": "montee_en_puissance",
+  "name": "Subida de Potencia",
+  "description": "Una sesión al ritmo de un tema: el ritmo sube y la música nunca se detiene.",
+  "duration_seconds": 179,
+  "mode": "rhythm",
+  "intro": "Pon el sonido. Los pitidos siguen el compás del tema y las órdenes siguen su subida. Si no puedes más, pulsa el botón rojo: la música sigue, respiras y continúas por donde va.",
+  "music": {
+    "asset": "audio/music/montee_en_puissance.mp3",
+    "bpm": 121.96,
+    "first_beat": 16.934
+  },
+  "steps": [
+    {
+      "time": 0,
+      "text": "Escucha… ahora sube.",
+      "mode": "breath",
+      "duration": 16
+    },
+    {
+      "time": 16,
+      "mode": "rhythm",
+      "from": "tip",
+      "to": "head",
+      "bpm": 61
+    },
+    {
+      "time": 55,
+      "text": "Está subiendo.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 61
+    },
+    {
+      "time": 78,
+      "text": "Sigue la música.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 122
+    },
+    {
+      "time": 94,
+      "text": "Aguanta… espera a que vuelva.",
+      "mode": "hold",
+      "to": "throat",
+      "duration": 16
+    },
+    {
+      "time": 110,
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 122
+    },
+    {
+      "time": 126,
+      "mode": "rhythm",
+      "from": "head",
+      "to": "throat",
+      "bpm": 122
+    },
+    {
+      "time": 141,
+      "text": "Esta es la cima. Sigue así.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 122
+    },
+    {
+      "time": 152,
+      "text": "Un poquito más.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 61
+    },
+    {
+      "time": 163,
+      "text": "Mantenlo al fondo.",
+      "mode": "hold",
+      "to": "full",
+      "duration": 12
+    },
+    {
+      "time": 175,
+      "text": "Así, buena chica."
+    },
+    {
+      "time": 176,
+      "mode": "breath",
+      "duration": 3
+    },
+    {
+      "time": 177,
+      "text": "Sube. Respira."
+    }
+  ]
+}

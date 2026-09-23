@@ -46,6 +46,10 @@ class SessionLoader {
     'assets/sessions/session_initiation_es.json',
     'assets/sessions/session_intense_es.json',
     'assets/sessions/session_advanced_demo_es.json',
+    'assets/sessions/session_montee_puissance.json',
+    'assets/sessions/session_montee_puissance_en.json',
+    'assets/sessions/session_montee_puissance_de.json',
+    'assets/sessions/session_montee_puissance_es.json',
   ];
 
   /// Charge toutes les sessions intégrées et filtre par locale active.
