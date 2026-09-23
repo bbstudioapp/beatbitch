@@ -103,7 +103,7 @@ void main() {
             expect(_holdVerbs.hasMatch(step.text), isFalse, reason: where);
           }
         }
-        expect(_holdVerbs.hasMatch(session.intro ?? ''), isFalse,
+        expect(_holdVerbs.hasMatch(session.intro), isFalse,
             reason: '$lang intro');
       }
     });
