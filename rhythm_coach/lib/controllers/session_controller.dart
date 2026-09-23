@@ -713,7 +713,6 @@ class SessionController extends ChangeNotifier {
   /// le tick précédent et le courant. Tire une seule phrase par tick pour
   /// éviter d'enchaîner deux annonces.
   void _checkProgressMarkers() {
-    if (_music != null) return;
     final total = session.durationSeconds;
     if (total <= 0) return;
     // Step final entamé → on a déjà déclenché le chime (climax). Les paliers
