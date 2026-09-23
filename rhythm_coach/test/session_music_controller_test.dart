@@ -13,6 +13,7 @@ import 'package:beat_bitch/services/music_clock.dart';
 import 'package:beat_bitch/services/music_engine.dart';
 import 'package:beat_bitch/services/punishment_loader.dart';
 import 'package:beat_bitch/services/random_comments_loader.dart';
+import 'package:beat_bitch/services/step_resolution.dart';
 import 'package:beat_bitch/services/stats_service.dart';
 import 'package:beat_bitch/services/tts_service.dart';
 import 'package:flutter/foundation.dart';
@@ -160,6 +161,31 @@ void main() {
     durationSeconds: 300,
     defaultMode: SessionMode.rhythm,
     steps: steps,
+    music: track,
+  );
+
+  const fullHoldMusical = Session(
+    id: 'musique-test-tenue-full',
+    name: 'musique-test-tenue-full',
+    description: '',
+    durationSeconds: 100,
+    defaultMode: SessionMode.rhythm,
+    steps: [
+      SessionStep(
+          time: 0, text: 'ouverture', mode: SessionMode.breath, duration: 1),
+      SessionStep(
+          time: 10,
+          text: 'au fond',
+          mode: SessionMode.hold,
+          to: Position.full,
+          duration: 20),
+      SessionStep(
+          time: 30,
+          mode: SessionMode.rhythm,
+          from: Position.head,
+          to: Position.mid,
+          bpm: 122),
+    ],
     music: track,
   );
 
@@ -559,6 +585,35 @@ void main() {
     t.ctrl.dispose();
   }, timeout: const Timeout(Duration(seconds: 20)));
 
+  test(
+      'JE PEUX PAS pendant une tenue full : le record Iron Lungs ne compte que '
+      'la tenue reprise après le souffle', () async {
+    final t = build(session: fullHoldMusical);
+    await t.ctrl.start();
+    for (final second in [10, 11, 12, 13]) {
+      await at(t.port, t.ctrl, second + 0.2);
+    }
+    expect(t.beep.currentMode, SessionMode.hold);
+    expect(t.beep.currentFrom, Position.full);
+
+    await t.ctrl.triggerFail();
+    expect(t.beep.currentMode, SessionMode.breath);
+
+    for (var second = 22; second <= 29; second++) {
+      await at(t.port, t.ctrl, second + 0.2);
+    }
+    expect(t.beep.currentMode, SessionMode.hold,
+        reason: 'la tenue reprend après le souffle');
+    await at(t.port, t.ctrl, 30.2);
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+
+    expect((await StatsService().snapshot()).maxHoldFullAtomic, 8,
+        reason: 'les 4 s d\'avant le FAIL et les 8 s d\'après ne font pas une '
+            'tenue de 12 s');
+
+    await t.ctrl.stop();
+  }, timeout: const Timeout(Duration(seconds: 30)));
+
   test('detachAudio et dispose libèrent le morceau et détachent les bips',
       () async {
     final a = build();
@@ -733,6 +788,19 @@ class _Beep extends BeepEngine {
   final List<SessionStep> appliedSteps = [];
   SessionMusic? attachedTrack;
   Duration Function()? attachedPosition;
+  SessionMode _mode = SessionMode.rhythm;
+  Position _from = Position.head;
+  Position? _to;
+  int _bpm = 60;
+
+  @override
+  SessionMode get currentMode => _mode;
+  @override
+  Position get currentFrom => _from;
+  @override
+  Position? get currentTo => _to;
+  @override
+  int get currentBpm => _bpm;
 
   @override
   void attachMusic(SessionMusic music, Duration Function() position) {
@@ -753,6 +821,17 @@ class _Beep extends BeepEngine {
   @override
   Future<void> applyStep(SessionStep step, SessionMode sessionMode) async {
     appliedSteps.add(step);
+    if (step.isTextOnly) return;
+    final resolved = resolveStepConfig(
+      step: step,
+      defaultMode: sessionMode,
+      currentFrom: _from,
+      currentBpm: _bpm,
+    );
+    _mode = resolved.mode;
+    _bpm = resolved.bpm;
+    _from = resolved.from;
+    _to = resolved.to;
   }
 
   @override
