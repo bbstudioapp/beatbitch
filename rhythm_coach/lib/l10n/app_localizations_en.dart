@@ -2283,6 +2283,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'The coach enforces a posture (kneeling, on all fours…) and inserts active breaks on long sessions. Postures unlock as you progress through career milestones.';
 
   @override
+  String get profileMusicBeepAdvanceSection => 'Beeps on music';
+
+  @override
+  String get profileMusicBeepAdvanceTitle => 'Beep lead';
+
+  @override
+  String get profileMusicBeepAdvanceSubtitle =>
+      'Music sessions. If the beeps land after the music, increase the lead.';
+
+  @override
   String sessionRemainingTimeLabel(String time) {
     return 'Left: $time';
   }

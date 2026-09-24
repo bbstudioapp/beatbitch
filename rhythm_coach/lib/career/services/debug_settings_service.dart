@@ -196,9 +196,11 @@ class DebugSettingsService {
     await prefs.setBool(_kShowTrajectoryDots, value);
   }
 
+  static const int defaultMusicBeepAdvanceMs = 150;
+
   Future<int> getMusicBeepAdvanceMs() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(_kMusicBeepAdvanceMs) ?? 0;
+    return prefs.getInt(_kMusicBeepAdvanceMs) ?? defaultMusicBeepAdvanceMs;
   }
 
   Future<void> setMusicBeepAdvanceMs(int value) async {

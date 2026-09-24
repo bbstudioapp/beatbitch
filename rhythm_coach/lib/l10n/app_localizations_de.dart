@@ -2295,6 +2295,16 @@ class AppLocalizationsDe extends AppLocalizations {
       'Die Domina gibt eine Pose vor (kniend, auf allen vieren …) und baut in langen Sitzungen aktive Pausen ein. Die Posen werden nach und nach über die Karriere-Meilensteine freigeschaltet.';
 
   @override
+  String get profileMusicBeepAdvanceSection => 'Beeps zur Musik';
+
+  @override
+  String get profileMusicBeepAdvanceTitle => 'Beep-Vorlauf';
+
+  @override
+  String get profileMusicBeepAdvanceSubtitle =>
+      'Sitzungen mit Musik. Kommen die Beeps nach der Musik, erhöhe den Vorlauf.';
+
+  @override
   String sessionRemainingTimeLabel(String time) {
     return 'Rest: $time';
   }

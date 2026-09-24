@@ -4044,6 +4044,24 @@ abstract class AppLocalizations {
   /// **'La coach impose une posture (à genoux, à quatre pattes…) et insère des pauses actives sur les séances longues. Les postures se débloquent au fil des paliers de carrière.'**
   String get profileScriptedBreaksSubtitle;
 
+  /// No description provided for @profileMusicBeepAdvanceSection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bips sur la musique'**
+  String get profileMusicBeepAdvanceSection;
+
+  /// No description provided for @profileMusicBeepAdvanceTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Avance des bips'**
+  String get profileMusicBeepAdvanceTitle;
+
+  /// No description provided for @profileMusicBeepAdvanceSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Séances avec musique. Si les bips arrivent après la musique, augmente l\'avance.'**
+  String get profileMusicBeepAdvanceSubtitle;
+
   /// No description provided for @sessionRemainingTimeLabel.
   ///
   /// In fr, this message translates to:

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:beat_bitch/career/models/phrase_bank.dart';
 import 'package:beat_bitch/controllers/session_controller.dart';
@@ -336,8 +337,9 @@ void main() {
     await t.ctrl.stop();
   }, timeout: const Timeout(Duration(seconds: 20)));
 
-  test('avance à 0 : l\'horloge de séance est la position du morceau',
+  test('avance réglée à 0 : l\'horloge de séance est la position du morceau',
       () async {
+    SharedPreferences.setMockInitialValues({'debug.music_beep_advance_ms': 0});
     final t = build();
     await t.ctrl.start();
     t.port.seek(const Duration(seconds: 42));
@@ -345,6 +347,51 @@ void main() {
     expect(t.beep.musicBeepAdvance, Duration.zero);
     expect(t.ctrl.elapsed, const Duration(seconds: 42));
 
+    await t.ctrl.stop();
+  }, timeout: const Timeout(Duration(seconds: 20)));
+
+  test(
+      'sans valeur mémorisée, une séance musicale applique 150 ms d\'avance '
+      '(aucune dépendance à kDebugMode dans ce chemin)', () async {
+    final t = build();
+    await t.ctrl.start();
+    t.port.seek(const Duration(seconds: 42));
+    await Future<void>.delayed(Duration.zero);
+    expect(t.beep.musicBeepAdvance, const Duration(milliseconds: 150));
+    expect(t.ctrl.musicBeepAdvanceMs, 150);
+    expect(t.ctrl.elapsed, const Duration(milliseconds: 42150));
+
+    await t.ctrl.stop();
+
+    // `flutter test` tourne en debug : `kDebugMode` ne se bascule pas ici. Ce
+    // qui prouve l'indépendance, c'est qu'aucun `kDebugMode` ne touche le code
+    // de l'avance (lecture de la préférence, contrôleur, grille).
+    for (final path in [
+      'lib/controllers/session_controller.dart',
+      'lib/services/beep_engine.dart',
+      'lib/career/services/debug_settings_service.dart',
+    ]) {
+      final lines = File(path).readAsLinesSync();
+      var advanceLines = 0;
+      for (var i = 0; i < lines.length; i++) {
+        if (lines[i].contains('eepAdvance')) advanceLines++;
+        if (!lines[i].contains('kDebugMode')) continue;
+        final near = lines.sublist(
+            i < 4 ? 0 : i - 4, i + 5 > lines.length ? lines.length : i + 5);
+        expect(near.where((l) => l.contains('eepAdvance')), isEmpty,
+            reason: '$path:${i + 1} : kDebugMode près du code de l\'avance');
+      }
+      expect(advanceLines, greaterThan(0),
+          reason: '$path : garde-fou anti-vide');
+    }
+  }, timeout: const Timeout(Duration(seconds: 20)));
+
+  test('une valeur mémorisée à 0 reste respectée malgré le défaut à 150',
+      () async {
+    SharedPreferences.setMockInitialValues({'debug.music_beep_advance_ms': 0});
+    final t = build();
+    await t.ctrl.start();
+    expect(t.ctrl.musicBeepAdvanceMs, 0);
     await t.ctrl.stop();
   }, timeout: const Timeout(Duration(seconds: 20)));
 
@@ -516,6 +563,72 @@ void main() {
   }, timeout: const Timeout(Duration(seconds: 20)));
 
   test(
+      'fin de séance à 150 ms d\'avance : le morceau (99,848 s pour 100 s de '
+      'séance, comme 178,848 s pour 179 s) finit avant la séance, l\'événement '
+      'de fin reste le juge', () async {
+    var wall = Duration.zero;
+    final t = build(wall: () => wall);
+    await t.ctrl.start();
+    expect(t.ctrl.musicBeepAdvanceMs, 150);
+    await at(t.port, t.ctrl, 99.848);
+    expect(t.ctrl.state, SessionState.running,
+        reason: 'à 150 ms la séance n\'est pas finie avant la fin du morceau');
+
+    t.port.finish();
+    await Future<void>.delayed(Duration.zero);
+    wall += const Duration(milliseconds: 10);
+    t.ctrl.debugTick();
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    expect(t.ctrl.state, SessionState.finished);
+    expect(t.beep.attachedTrack, isNull);
+    expect(t.beep.finaleChimes, 0);
+
+    t.ctrl.dispose();
+  }, timeout: const Timeout(Duration(seconds: 20)));
+
+  test(
+      'fin de séance à 400 ms d\'avance (maximum) : la séance se termine '
+      'proprement, 248 ms avant la fin du morceau, sans attendre son '
+      'événement de fin', () async {
+    SharedPreferences.setMockInitialValues(
+        {'debug.music_beep_advance_ms': 400});
+    final t = build();
+    await t.ctrl.start();
+    await at(t.port, t.ctrl, 99.6);
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+
+    expect(t.ctrl.state, SessionState.finished);
+    expect(t.beep.attachedTrack, isNull);
+    expect(t.beep.finaleChimes, 0);
+    expect(t.port.stops, greaterThanOrEqualTo(1));
+
+    t.ctrl.dispose();
+  }, timeout: const Timeout(Duration(seconds: 20)));
+
+  test(
+      'séance ordinaire : aucune avance, ni sur le moteur de bips ni sur '
+      'l\'horloge, et rien n\'est écrit dans les préférences', () async {
+    final shared = _Beep();
+    final t = build(session: plain, sharedBeep: shared);
+    await t.ctrl.start();
+    expect(t.ctrl.isMusical, isFalse);
+    expect(t.ctrl.musicBeepAdvanceMs, 0);
+    expect(shared.musicBeepAdvance, Duration.zero);
+    expect(t.ctrl.elapsed, lessThan(const Duration(milliseconds: 150)),
+        reason: 'l\'horloge est le chronomètre, sans les 150 ms du morceau');
+
+    await t.ctrl.setMusicBeepAdvanceMs(300);
+    expect(t.ctrl.musicBeepAdvanceMs, 0);
+    expect(shared.musicBeepAdvance, Duration.zero);
+    expect(
+        (await SharedPreferences.getInstance())
+            .containsKey('debug.music_beep_advance_ms'),
+        isFalse);
+
+    await t.ctrl.stop();
+  }, timeout: const Timeout(Duration(seconds: 20)));
+
+  test(
       'fin du morceau : le rapport à 0 arrivé avant l\'événement de fin ne '
       'fait pas reculer la séance', () async {
     var wall = Duration.zero;
@@ -577,7 +690,7 @@ void main() {
       }
     });
     await t.ctrl.start();
-    await at(t.port, t.ctrl, 99.8);
+    await at(t.port, t.ctrl, 99.6);
     t.port.finish();
     await Future<void>.delayed(Duration.zero);
     wall += const Duration(milliseconds: 100);

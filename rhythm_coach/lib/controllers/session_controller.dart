@@ -953,7 +953,7 @@ class SessionController extends ChangeNotifier {
 
   static const int musicBeepAdvanceMaxMs = 400;
   static const int musicBeepAdvanceStepMs = 10;
-  int _musicBeepAdvanceMs = 0;
+  int _musicBeepAdvanceMs = DebugSettingsService.defaultMusicBeepAdvanceMs;
 
   /// Avance des bips sur le morceau, en ms ; 0 hors séance musicale.
   int get musicBeepAdvanceMs => _music == null ? 0 : _musicBeepAdvanceMs;

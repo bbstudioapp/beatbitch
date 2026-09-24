@@ -1113,6 +1113,9 @@
   "profileSessionFlowSection": "Session flow",
   "profileScriptedBreaks": "Enforced postures and breaks",
   "profileScriptedBreaksSubtitle": "The coach enforces a posture (kneeling, on all fours…) and inserts active breaks on long sessions. Postures unlock as you progress through career milestones.",
+  "profileMusicBeepAdvanceSection": "Beeps on music",
+  "profileMusicBeepAdvanceTitle": "Beep lead",
+  "profileMusicBeepAdvanceSubtitle": "Music sessions. If the beeps land after the music, increase the lead.",
   "sessionRemainingTimeLabel": "Left: {time}",
   "@sessionRemainingTimeLabel": {
     "placeholders": {

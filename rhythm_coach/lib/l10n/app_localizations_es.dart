@@ -2296,6 +2296,16 @@ class AppLocalizationsEs extends AppLocalizations {
       'La coach impone una postura (de rodillas, a cuatro patas…) e inserta pausas activas en las sesiones largas. Las posturas se desbloquean a medida que avanzas por los hitos de carrera.';
 
   @override
+  String get profileMusicBeepAdvanceSection => 'Pitidos con la música';
+
+  @override
+  String get profileMusicBeepAdvanceTitle => 'Adelanto de los pitidos';
+
+  @override
+  String get profileMusicBeepAdvanceSubtitle =>
+      'Sesiones con música. Si los pitidos llegan después de la música, aumenta el adelanto.';
+
+  @override
   String sessionRemainingTimeLabel(String time) {
     return 'Quedan: $time';
   }
