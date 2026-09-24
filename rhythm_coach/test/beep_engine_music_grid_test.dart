@@ -254,4 +254,57 @@ void main() {
       });
     });
   });
+
+  test(
+      'avance de 120 ms : chaque bip part 120 ms avant son temps de grille, '
+      'sans temps sauté ni doublé', () {
+    fakeAsync((async) {
+      const advance = Duration(milliseconds: 120);
+      final h = _Harness(async, (wall) => wall);
+      h.beep.musicBeepAdvance = advance;
+      h.beep.applyStep(_rhythm(122), SessionMode.rhythm);
+      h.elapse(_seconds(60));
+
+      expect(h.beats, isNotEmpty);
+      for (var i = 0; i < h.beats.length; i++) {
+        expect(h.beats[i].position, _music.beatTime(i) - advance,
+            reason: 'bip n°$i à la position ${h.beats[i].position}, temps de '
+                'grille ${_music.beatTime(i)}');
+      }
+    });
+  });
+
+  test('avance = 0 : les bips tombent exactement sur les temps, comme avant',
+      () {
+    fakeAsync((async) {
+      final h = _Harness(async, (wall) => wall);
+      expect(h.beep.musicBeepAdvance, Duration.zero);
+      h.beep.applyStep(_rhythm(122), SessionMode.rhythm);
+      h.elapse(_seconds(60));
+
+      expect(h.beats, isNotEmpty);
+      for (var i = 0; i < h.beats.length; i++) {
+        expect(h.beats[i].position, _music.beatTime(i));
+      }
+    });
+  });
+
+  test('l\'avance se règle en cours de séance : le bip suivant la prend', () {
+    fakeAsync((async) {
+      final h = _Harness(async, (wall) => wall);
+      h.beep.applyStep(_rhythm(122), SessionMode.rhythm);
+      h.elapse(_seconds(30));
+      final before = h.beats.length;
+      h.beep.musicBeepAdvance = const Duration(milliseconds: 200);
+      h.elapse(_seconds(30));
+
+      final after = h.beats.skip(before + 1).toList();
+      expect(after, isNotEmpty);
+      for (final b in after) {
+        final k = _music.beatIndexAtOrAfter(b.position);
+        expect(
+            _music.beatTime(k) - b.position, const Duration(milliseconds: 200));
+      }
+    });
+  });
 }

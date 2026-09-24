@@ -311,6 +311,44 @@ void main() {
   }, timeout: const Timeout(Duration(seconds: 20)));
 
   test(
+      'avance des bips : lue des préférences, appliquée à la grille et à '
+      'l\'horloge de séance, bornée et mémorisée', () async {
+    SharedPreferences.setMockInitialValues(
+        {'debug.music_beep_advance_ms': 120});
+    final t = build();
+    await t.ctrl.start();
+    expect(t.beep.musicBeepAdvance, const Duration(milliseconds: 120));
+    t.port.seek(const Duration(seconds: 42));
+    await Future<void>.delayed(Duration.zero);
+    expect(t.beep.attachedPosition!(), const Duration(seconds: 42),
+        reason: 'le morceau ne bouge pas');
+    expect(t.ctrl.elapsed, const Duration(milliseconds: 42120),
+        reason: 'le curseur suit les bips');
+
+    await t.ctrl.setMusicBeepAdvanceMs(999);
+    expect(t.ctrl.musicBeepAdvanceMs, 400);
+    expect(t.beep.musicBeepAdvance, const Duration(milliseconds: 400));
+    expect(
+        (await SharedPreferences.getInstance())
+            .getInt('debug.music_beep_advance_ms'),
+        400);
+
+    await t.ctrl.stop();
+  }, timeout: const Timeout(Duration(seconds: 20)));
+
+  test('avance à 0 : l\'horloge de séance est la position du morceau',
+      () async {
+    final t = build();
+    await t.ctrl.start();
+    t.port.seek(const Duration(seconds: 42));
+    await Future<void>.delayed(Duration.zero);
+    expect(t.beep.musicBeepAdvance, Duration.zero);
+    expect(t.ctrl.elapsed, const Duration(seconds: 42));
+
+    await t.ctrl.stop();
+  }, timeout: const Timeout(Duration(seconds: 20)));
+
+  test(
       'JE PEUX PAS : la musique ne s\'arrête pas, ni punition ni phrase, les '
       'consignes du souffle sont perdues et la séance reprend sur le step '
       'atteint', () async {

@@ -1367,6 +1367,17 @@ class AppLocalizationsFr extends AppLocalizations {
   String get sessionDebugFinishButton => 'DEBUG : terminer en succès';
 
   @override
+  String get sessionDebugMusicBeepAdvanceLabel => 'DEBUG : avance des bips';
+
+  @override
+  String get sessionDebugMusicBeepAdvanceDecrease =>
+      'Diminuer l\'avance des bips';
+
+  @override
+  String get sessionDebugMusicBeepAdvanceIncrease =>
+      'Augmenter l\'avance des bips';
+
+  @override
   String get soundsDebugScenarioButton => 'Debug — scénario carrière';
 
   @override

@@ -16,6 +16,7 @@ import '../main.dart' show milestoneService;
 import '../models/punishment.dart';
 import '../models/posture.dart';
 import '../models/session.dart';
+import '../career/services/debug_settings_service.dart';
 import '../services/ambience_engine.dart';
 import '../services/backgrounds_service.dart';
 import '../services/badge_service.dart';
@@ -942,11 +943,28 @@ class SessionController extends ChangeNotifier {
   SessionState get state => _state;
   Duration get elapsed {
     final music = _music;
-    if (music != null && _state != SessionState.idle) return music.position;
+    if (music != null && _state != SessionState.idle) {
+      return music.position + Duration(milliseconds: _musicBeepAdvanceMs);
+    }
     return _stopwatch.elapsed + _timelineOffset;
   }
 
   bool get isMusical => _music != null;
+
+  static const int musicBeepAdvanceMaxMs = 400;
+  static const int musicBeepAdvanceStepMs = 10;
+  int _musicBeepAdvanceMs = 0;
+
+  /// Avance des bips sur le morceau, en ms ; 0 hors séance musicale.
+  int get musicBeepAdvanceMs => _music == null ? 0 : _musicBeepAdvanceMs;
+
+  Future<void> setMusicBeepAdvanceMs(int ms) async {
+    if (_music == null) return;
+    _musicBeepAdvanceMs = ms.clamp(0, musicBeepAdvanceMaxMs);
+    _beep.musicBeepAdvance = Duration(milliseconds: _musicBeepAdvanceMs);
+    notifyListeners();
+    await DebugSettingsService().setMusicBeepAdvanceMs(_musicBeepAdvanceMs);
+  }
 
   /// Vrai pendant le souffle d'un « JE PEUX PAS » sur une séance à morceau :
   /// la séance reste `running`, la musique continue.
@@ -1156,8 +1174,14 @@ class SessionController extends ChangeNotifier {
       final music = _music;
       final track = _session.music;
       if (music != null && track != null) {
+        try {
+          _musicBeepAdvanceMs =
+              (await DebugSettingsService().getMusicBeepAdvanceMs())
+                  .clamp(0, musicBeepAdvanceMaxMs);
+        } catch (_) {}
         await music.start(track);
         _beep.attachMusic(track, () => music.position);
+        _beep.musicBeepAdvance = Duration(milliseconds: _musicBeepAdvanceMs);
         _musicAttached = true;
       } else {
         _beep.detachMusic();

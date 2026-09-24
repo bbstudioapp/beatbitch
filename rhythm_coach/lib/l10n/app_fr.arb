@@ -661,6 +661,9 @@
   "soundsShowBackgroundMedia": "Fonds média en séance",
   "soundsShowBackgroundMediaSubtitle": "Affiche les images/GIF présents dans assets/backgrounds/ en arrière-plan, avec rotation à chaque step. Désactive pour ne voir que le dégradé d'ambiance.",
   "sessionDebugFinishButton": "DEBUG : terminer en succès",
+  "sessionDebugMusicBeepAdvanceLabel": "DEBUG : avance des bips",
+  "sessionDebugMusicBeepAdvanceDecrease": "Diminuer l'avance des bips",
+  "sessionDebugMusicBeepAdvanceIncrease": "Augmenter l'avance des bips",
 
   "soundsDebugScenarioButton": "Debug — scénario carrière",
   "soundsDebugScenarioSubtitle": "Visualise une session générée sans la jouer : niveau, humil, obéi, milestones, unlocks, et simulation Supplier / fail.",

@@ -107,6 +107,15 @@ void main() {
     expect(find.text(t.sessionVoiceLabel), findsOneWidget,
         reason: 'le curseur de voix reste');
     expect(find.text(t.sessionAmbienceLabel), findsNothing);
+    expect(find.text(t.sessionDebugMusicBeepAdvanceLabel), findsOneWidget,
+        reason: 'réglage debug de l\'avance des bips');
+    expect(find.text('0 ms'), findsOneWidget);
+    final plus = find.byTooltip(t.sessionDebugMusicBeepAdvanceIncrease);
+    await tester.ensureVisible(plus);
+    await tester.tap(plus);
+    await tester.pump();
+    expect(ctrl.musicBeepAdvanceMs, 10);
+    expect(find.text('10 ms'), findsOneWidget);
     expect(find.text(t.sessionFailPhaseBreath.toUpperCase()), findsNothing);
 
     await tester.tap(find.text(t.sessionFailButton));
@@ -135,6 +144,7 @@ void main() {
 
     expect(ctrl.isMusical, isFalse);
     expect(find.text(t.sessionAmbienceLabel), findsOneWidget);
+    expect(find.text(t.sessionDebugMusicBeepAdvanceLabel), findsNothing);
     expect(find.text(t.sessionFailPhaseBreath.toUpperCase()), findsNothing);
 
     await ctrl.stop();

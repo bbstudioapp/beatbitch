@@ -561,6 +561,11 @@ class BeepEngine {
   @visibleForTesting
   void Function(String asset, double volume)? debugOnTrigger;
 
+  /// Avance des bips sur le morceau (séance musicale seulement) : chaque bip
+  /// part ce délai avant son temps de grille. Relue à chaque bip, réglable en
+  /// cours de séance.
+  Duration musicBeepAdvance = Duration.zero;
+
   void detachMusic() {
     _music = null;
     _musicPosition = null;
@@ -578,10 +583,11 @@ class BeepEngine {
     final stride = music.strideForStepBpm(_bpm);
     final myGen = ++_loopGen;
     var lastBeat = -1;
+    Duration lead() => position() + musicBeepAdvance;
 
     void scheduleNext() {
       if (myGen != _loopGen) return;
-      final now = position();
+      final now = lead();
       var index =
           music.beatIndexAtOrAfter(now - _gridLateTolerance, stride: stride);
       final justPlayed = lastBeat >= 0 &&
@@ -595,7 +601,7 @@ class BeepEngine {
       final hop = wait > _gridHopMin ? wait * 0.85 : wait;
       _loopTimer = Timer(hop > Duration.zero ? hop : Duration.zero, () {
         if (myGen != _loopGen) return;
-        if (music.beatTime(index) - position() > _gridEarlyTolerance) {
+        if (music.beatTime(index) - lead() > _gridEarlyTolerance) {
           scheduleNext();
           return;
         }

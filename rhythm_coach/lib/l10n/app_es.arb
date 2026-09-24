@@ -658,6 +658,9 @@
   "soundsShowBackgroundMedia": "Medios de fondo en sesión",
   "soundsShowBackgroundMediaSubtitle": "Muestra imágenes/GIFs de assets/backgrounds/ en el fondo, rotando con cada paso. Desactívalo para ver solo el degradado de ambiente.",
   "sessionDebugFinishButton": "DEBUG: terminar como éxito",
+  "sessionDebugMusicBeepAdvanceLabel": "DEBUG: adelanto de los pitidos",
+  "sessionDebugMusicBeepAdvanceDecrease": "Reducir el adelanto de los pitidos",
+  "sessionDebugMusicBeepAdvanceIncrease": "Aumentar el adelanto de los pitidos",
 
   "soundsDebugScenarioButton": "Debug — escenario de carrera",
   "soundsDebugScenarioSubtitle": "Visualiza una sesión generada sin jugarla: nivel, humil, obed, hitos, desbloqueos y simulación de Súplica / fallo.",

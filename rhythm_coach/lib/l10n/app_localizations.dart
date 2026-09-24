@@ -2406,6 +2406,24 @@ abstract class AppLocalizations {
   /// **'DEBUG : terminer en succès'**
   String get sessionDebugFinishButton;
 
+  /// No description provided for @sessionDebugMusicBeepAdvanceLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'DEBUG : avance des bips'**
+  String get sessionDebugMusicBeepAdvanceLabel;
+
+  /// No description provided for @sessionDebugMusicBeepAdvanceDecrease.
+  ///
+  /// In fr, this message translates to:
+  /// **'Diminuer l\'avance des bips'**
+  String get sessionDebugMusicBeepAdvanceDecrease;
+
+  /// No description provided for @sessionDebugMusicBeepAdvanceIncrease.
+  ///
+  /// In fr, this message translates to:
+  /// **'Augmenter l\'avance des bips'**
+  String get sessionDebugMusicBeepAdvanceIncrease;
+
   /// No description provided for @soundsDebugScenarioButton.
   ///
   /// In fr, this message translates to:

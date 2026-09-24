@@ -658,6 +658,9 @@
   "soundsShowBackgroundMedia": "Hintergrundmedien in der Session",
   "soundsShowBackgroundMediaSubtitle": "Zeigt die Bilder/GIFs aus assets/backgrounds/ im Hintergrund, mit Wechsel bei jedem Step. Deaktivieren, um nur den Ambiente-Verlauf zu sehen.",
   "sessionDebugFinishButton": "DEBUG: als Erfolg beenden",
+  "sessionDebugMusicBeepAdvanceLabel": "DEBUG: Beep-Vorlauf",
+  "sessionDebugMusicBeepAdvanceDecrease": "Beep-Vorlauf verringern",
+  "sessionDebugMusicBeepAdvanceIncrease": "Beep-Vorlauf erhöhen",
 
   "soundsDebugScenarioButton": "Debug — Karriere-Szenario",
   "soundsDebugScenarioSubtitle": "Visualisiere eine generierte Session, ohne sie zu spielen: Stufe, Erniedr., Gehors., Meilensteine, Unlocks und Bettel-/Fail-Simulation.",

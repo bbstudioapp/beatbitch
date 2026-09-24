@@ -1364,6 +1364,18 @@ class AppLocalizationsEs extends AppLocalizations {
   String get sessionDebugFinishButton => 'DEBUG: terminar como éxito';
 
   @override
+  String get sessionDebugMusicBeepAdvanceLabel =>
+      'DEBUG: adelanto de los pitidos';
+
+  @override
+  String get sessionDebugMusicBeepAdvanceDecrease =>
+      'Reducir el adelanto de los pitidos';
+
+  @override
+  String get sessionDebugMusicBeepAdvanceIncrease =>
+      'Aumentar el adelanto de los pitidos';
+
+  @override
   String get soundsDebugScenarioButton => 'Debug — escenario de carrera';
 
   @override
