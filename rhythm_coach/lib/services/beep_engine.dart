@@ -25,7 +25,7 @@ class BeepEngine {
   static const String _midAsset = 'mid_beep';
   static const String _throatAsset = 'throat_beep';
   static const String _fullAsset = 'full_beep';
-  // Zone latérale (testicules). Sample plus grave que `full` (~180Hz)
+  // Zone latérale (testicules). Sample plus grave que `full`
   // pour évoquer une zone "en-dessous" anatomiquement, sans interférer
   // avec la rampe `tip→full` qui reste la zone verge.
   static const String _ballsAsset = 'balls_beep';
@@ -99,7 +99,7 @@ class BeepEngine {
   /// si le sample n'a pas fini — c'est la « superposition de canaux ». 4 (vs 3
   /// historique) donne de la marge en haut du spectre BPM (boosts carrière
   /// jusqu'à 180) et quand un step combine deux samples (hold = position +
-  /// hold_beep ~450 ms) : sans cette marge des bips manquaient par moments.
+  /// hold_beep ~550 ms) : sans cette marge des bips manquaient par moments.
   static const int _poolSize = 4;
 
   /// Samples joués en boucle pour lesquels on force un `seek(Duration.zero)`
