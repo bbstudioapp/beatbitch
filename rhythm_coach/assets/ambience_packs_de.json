@@ -36,6 +36,36 @@
         "hold": null,
         "breath": null
       }
+    },
+    {
+      "id": "voix_homme",
+      "name": "Stimmen — er",
+      "description": "Er stöhnt unter deinem Mund: mal feuchtere, mal trockenere Sauggeräusche im Rhythmus, Würgen beim Halten, Luftschnappen.",
+      "tracks": {
+        "rhythm": "audio/ambience/homme_rythme.mp3",
+        "lick": "audio/ambience/homme_lick.mp3",
+        "biffle": "audio/ambience/homme_biffle.mp3",
+        "hold": "audio/ambience/elle_tenue.mp3",
+        "breath": "audio/ambience/elle_souffle.mp3",
+        "hand": "audio/ambience/homme_main.mp3",
+        "suckle": "audio/ambience/homme_lick.mp3",
+        "freestyle": "audio/ambience/homme_rythme.mp3"
+      }
+    },
+    {
+      "id": "voix_femme",
+      "name": "Stimmen — sie",
+      "description": "Sie stöhnt unter deinem Mund: mal feuchtere, mal trockenere Sauggeräusche im Rhythmus, Würgen beim Halten, Luftschnappen.",
+      "tracks": {
+        "rhythm": "audio/ambience/femme_rythme.mp3",
+        "lick": "audio/ambience/femme_lick.mp3",
+        "biffle": "audio/ambience/femme_biffle.mp3",
+        "hold": "audio/ambience/elle_tenue.mp3",
+        "breath": "audio/ambience/elle_souffle.mp3",
+        "hand": "audio/ambience/femme_main.mp3",
+        "suckle": "audio/ambience/femme_lick.mp3",
+        "freestyle": "audio/ambience/femme_rythme.mp3"
+      }
     }
   ]
 }
