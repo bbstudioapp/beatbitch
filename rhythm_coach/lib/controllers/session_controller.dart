@@ -1010,10 +1010,16 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Aligne l'ambiance lue sur le mode courant du BeepEngine d'après le
-  /// pack actif (porté par AmbienceEngine). Appelé après chaque step de config.
+  /// Aligne l'ambiance lue sur le mode et la profondeur courants du
+  /// BeepEngine d'après le pack actif (porté par AmbienceEngine). Appelé après
+  /// chaque step de config.
   Future<void> _syncAmbienceToCurrentMode() async {
-    await _ambience.playForMode(_beep.currentMode);
+    final from = _beep.currentFrom;
+    final to = _beep.currentTo;
+    await _ambience.playForMode(
+      _beep.currentMode,
+      depth: to != null && to.index > from.index ? to : from,
+    );
   }
 
   // ─── Cycle principal ───────────────────────────────────────────────────

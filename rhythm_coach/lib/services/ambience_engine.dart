@@ -1,8 +1,11 @@
+import 'dart:math';
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/ambience_pack.dart';
 import '../models/session.dart';
+import '../models/session_step.dart';
 
 /// Lecteur d'ambiance sonore en arrière-plan : un seul AudioPlayer en
 /// `ReleaseMode.loop`, volume volontairement bas pour rester sous les
@@ -44,7 +47,12 @@ class AmbienceEngine {
   /// retentative).
   static const Duration _startTimeout = Duration(seconds: 3);
 
+  AmbienceEngine({Random? random}) : _random = random ?? Random();
+
+  final Random _random;
   final AudioPlayer _player = AudioPlayer(playerId: 'ambience_loop');
+  (SessionMode, bool)? _currentSlot;
+  String? _slotAsset;
 
   String? _currentAsset;
   double _volume = defaultVolume;
@@ -157,10 +165,32 @@ class AmbienceEngine {
     _pack = pack;
   }
 
-  /// Joue l'ambiance correspondant à [mode] selon le pack courant.
-  /// Si le pack n'a pas de track pour ce mode, coupe l'ambiance.
-  Future<void> playForMode(SessionMode mode) async {
-    await play(_pack.assetFor(mode));
+  /// Joue l'ambiance correspondant à [mode] selon le pack courant, en tirant
+  /// une variante du palier de [depth]. Tant que le mode et le palier ne
+  /// changent pas, la variante en cours continue. Si le pack n'a pas de
+  /// track pour ce mode, coupe l'ambiance.
+  Future<void> playForMode(SessionMode mode, {Position? depth}) async {
+    final deep = depth != null && depth.index >= Position.throat.index;
+    final candidates = _pack.candidatesFor(mode, deep: deep);
+    if (candidates.isEmpty) {
+      _currentSlot = null;
+      _slotAsset = null;
+      await stop();
+      return;
+    }
+    final slot = (mode, deep);
+    final kept = _slotAsset;
+    if (slot == _currentSlot && kept != null && candidates.contains(kept)) {
+      await play(kept);
+      return;
+    }
+    final fresh = candidates.length > 1
+        ? candidates.where((a) => a != kept).toList()
+        : candidates;
+    final picked = fresh[_random.nextInt(fresh.length)];
+    _currentSlot = slot;
+    _slotAsset = picked;
+    await play(picked);
   }
 
   Future<void> setVolume(double v) async {
