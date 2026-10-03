@@ -61,6 +61,15 @@ class AmbienceEngine {
 
   Future<void> _ensureInit() async {
     if (_initialized) return;
+    // Un player qui tient le focus Android est mis en pause par audioplayers
+    // dès qu'un bip le réclame. Android seul : sur iOS la session est globale
+    // et écraserait le mixWithOthers du mode Music.
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      final ctx = AudioContextConfig().build();
+      await _player.setAudioContext(ctx.copy(
+        android: ctx.android.copy(audioFocus: AndroidAudioFocus.none),
+      ));
+    }
     await _player.setReleaseMode(ReleaseMode.loop);
     await _player.setVolume(_volume);
     _initialized = true;
