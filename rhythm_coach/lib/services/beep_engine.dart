@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
 import '../models/final_category.dart';
+import '../models/hold_move.dart';
 import '../models/session.dart';
 import '../models/session_step.dart';
 import 'step_resolution.dart';
@@ -185,6 +186,16 @@ class BeepEngine {
   /// Force de l'ancrage — cf. [_intervalAfter]. `1` = régulier quel que
   /// soit `_anchor`.
   int _ratio = 1;
+
+  /// Observe chaque déclenchement de sample avec son volume final.
+  @visibleForTesting
+  void Function(String asset, double volume)? debugOnTrigger;
+
+  /// Mouvements de la tenue en cours et temps déjà écoulé dans la tenue,
+  /// pauses exclues : une reprise replanifie les mouvements restants.
+  List<HoldMove> _moves = const [];
+  int _holdElapsedMs = 0;
+  int? _holdResumedAtMs;
 
   /// Hand : alternance down/up indépendante du toggle de position.
   /// Utilisé seulement quand `_to` est null ou égal à `_from` (pas
@@ -393,6 +404,8 @@ class BeepEngine {
     _mode = mode;
     _anchor = step.anchor;
     _ratio = step.ratio;
+    _moves = step.moves;
+    _holdResumedAtMs = null;
     _bpm = resolved.bpm;
     // Rampe BPM intra-step : on n'arme `_bpmEnd` / `_loopDurationMs` que
     // si la valeur cible est explicitement différente du BPM de départ ET
@@ -465,6 +478,8 @@ class BeepEngine {
           _startHoldSwingLoop(_to!);
         } else {
           _playHoldOneShot(_from);
+          _holdElapsedMs = 0;
+          _startHoldMoves();
         }
       case SessionMode.breath:
         _playBreathOneShot();
@@ -853,6 +868,7 @@ class BeepEngine {
   /// Déclenche un sample en utilisant le prochain player du pool round-robin.
   /// Fire-and-forget : le ticker n'attend pas la fin de l'opération audio.
   void _trigger(String assetName, double volume) {
+    debugOnTrigger?.call(assetName, volume);
     final pool = _pools[assetName];
     if (pool == null) return;
     final picked = pool.next(volume);
@@ -911,6 +927,37 @@ class BeepEngine {
         Position.full => _fullAsset,
         Position.balls => _ballsAsset,
       };
+
+  /// Joue les bips des mouvements de la tenue restant après
+  /// [_holdElapsedMs], aux instants de [holdKeyframes] — les mêmes que ceux
+  /// que dessine la courbe.
+  void _startHoldMoves() {
+    final frames = holdKeyframes(_from, _moves).where((k) => k.beep).toList();
+    if (frames.isEmpty) return;
+    final myGen = ++_loopGen;
+    final originMs = DateTime.now().millisecondsSinceEpoch - _holdElapsedMs;
+    _holdResumedAtMs = originMs;
+    void scheduleFrom(int i) {
+      if (myGen != _loopGen) return;
+      while (
+          i < frames.length && frames[i].at.inMilliseconds < _holdElapsedMs) {
+        i++;
+      }
+      if (i >= frames.length) return;
+      final delayMs = max(
+          0,
+          originMs +
+              frames[i].at.inMilliseconds -
+              DateTime.now().millisecondsSinceEpoch);
+      _loopTimer = Timer(Duration(milliseconds: delayMs), () {
+        if (myGen != _loopGen) return;
+        _trigger(_assetForPosition(frames[i].position), _rhythmVolume);
+        scheduleFrom(i + 1);
+      });
+    }
+
+    scheduleFrom(0);
+  }
 
   void _stopLoop() {
     _loopTimer?.cancel();
@@ -1098,6 +1145,11 @@ class BeepEngine {
   /// Met en pause la lecture : on stoppe le ticker. On stoppe aussi tous
   /// les players du pool pour couper net (utile en pause/stop session).
   Future<void> pause() async {
+    final resumedAt = _holdResumedAtMs;
+    if (_mode == SessionMode.hold && resumedAt != null) {
+      _holdElapsedMs = DateTime.now().millisecondsSinceEpoch - resumedAt;
+      _holdResumedAtMs = null;
+    }
     _stopLoop();
     _freestyleEndTimer?.cancel();
     _freestyleEndTimer = null;
@@ -1127,6 +1179,7 @@ class BeepEngine {
       case SessionMode.biffle:
         _startBiffleLoop();
       case SessionMode.hold:
+        _startHoldMoves();
       case SessionMode.breath:
       case SessionMode.beg:
       case SessionMode.freestyle:
