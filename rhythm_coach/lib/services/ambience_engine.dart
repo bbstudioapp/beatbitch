@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/ambience_pack.dart';
 import '../models/session.dart';
@@ -186,12 +187,28 @@ class AmbienceEngine {
     _isPlaying = false;
   }
 
+  static const String _packPrefsKey = 'ambience.pack';
+  static const String _volumePrefsKey = 'ambience.volume';
+
+  /// Reprend le pack et le volume choisis au lancement précédent. Un pack qui
+  /// n'est plus au catalogue retombe sur [AmbiencePack.none].
+  Future<void> restore(List<AmbiencePack> packs) async {
+    final prefs = await SharedPreferences.getInstance();
+    final id = prefs.getString(_packPrefsKey);
+    _pack =
+        packs.firstWhere((p) => p.id == id, orElse: () => AmbiencePack.none);
+    final v = prefs.getDouble(_volumePrefsKey);
+    if (v != null) await _applyVolume(v);
+  }
+
   /// Change le pack actif. Si une lecture est en cours, ne touche pas
   /// directement à l'asset courant — l'appelant fait `playForMode` ensuite
   /// si besoin (typiquement après un changement de mode). Pour un test
   /// d'écoute (page SONS), passer par [playForMode] directement.
   void setPack(AmbiencePack pack) {
     _pack = pack;
+    SharedPreferences.getInstance()
+        .then((prefs) => prefs.setString(_packPrefsKey, pack.id));
   }
 
   /// Joue l'ambiance correspondant à [mode] selon le pack courant, en tirant
@@ -223,6 +240,12 @@ class AmbienceEngine {
   }
 
   Future<void> setVolume(double v) async {
+    await _applyVolume(v);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_volumePrefsKey, _volume);
+  }
+
+  Future<void> _applyVolume(double v) async {
     _volume = v.clamp(0.0, maxVolume);
     if (!_initialized) return;
     try {

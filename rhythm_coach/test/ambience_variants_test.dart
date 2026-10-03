@@ -6,6 +6,7 @@ import 'package:beat_bitch/models/session_step.dart';
 import 'package:beat_bitch/services/ambience_engine.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -62,6 +63,7 @@ void main() {
     late _RecordingAmbienceEngine engine;
 
     setUp(() {
+      SharedPreferences.setMockInitialValues({});
       for (final c in const [
         MethodChannel('xyz.luan/audioplayers.global'),
         MethodChannel('xyz.luan/audioplayers'),

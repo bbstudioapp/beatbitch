@@ -66,7 +66,10 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
     // expose un `notifyListeners` et la résolution `{name}` se contente du
     // fallback tant que le load n'est pas terminé.
     _userProfile.load();
-    _ambiencePacksFuture = AmbiencePackLoader().load();
+    _ambiencePacksFuture = AmbiencePackLoader().load().then((packs) async {
+      await _ambience.restore(packs);
+      return packs;
+    });
     // Catalogue des fonds média poussé dans le singleton dédié. Bundle
     // vide possible (= JSON sans entrées) → le widget retombe sur le
     // placeholder animé. Pas d'attente côté UI.

@@ -512,7 +512,7 @@ class _SessionScreenContent extends StatefulWidget {
 }
 
 class _SessionScreenContentState extends State<_SessionScreenContent> {
-  double _volume = 1.0;
+  late double _volume = widget.tts.volume;
   bool _showStaminaBar = false;
   bool _showTimer = false;
   bool _showHumiliationBar = false;
