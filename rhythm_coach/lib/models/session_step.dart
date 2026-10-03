@@ -1,4 +1,5 @@
 import '../services/saliva_engine.dart';
+import 'hold_move.dart';
 import 'session.dart';
 
 /// Position cible d'une étape. Détermine la tonalité du bip joué.
@@ -126,6 +127,9 @@ class SessionStep {
   /// régulier quel que soit [anchor], pour la même raison de compatibilité.
   final int ratio;
 
+  /// Mouvements ponctuels pendant une tenue (cf. [HoldMove]). Vide hors hold.
+  final List<HoldMove> moves;
+
   const SessionStep({
     required this.time,
     this.text = '',
@@ -141,6 +145,7 @@ class SessionStep {
     this.awaitReady = false,
     this.anchor = BeatAnchor.none,
     this.ratio = 1,
+    this.moves = const [],
   });
 
   /// Le même step, replacé à [time]. Les rebases de timeline (supplication
@@ -163,6 +168,7 @@ class SessionStep {
         awaitReady: awaitReady,
         anchor: anchor,
         ratio: ratio,
+        moves: moves,
       );
 
   /// True quand l'étape ne fait QUE déclencher une phrase TTS et n'apporte
@@ -210,6 +216,11 @@ class SessionStep {
       awaitReady: json['awaitReady'] == true || json['await_ready'] == true,
       anchor: BeatAnchor.fromString(_asString(json['anchor'])),
       ratio: _asInt(json['ratio']) ?? 1,
+      moves: [
+        if (json['moves'] is List)
+          for (final m in json['moves'] as List)
+            if (HoldMove.tryParse(m) case final move?) move,
+      ],
     );
   }
 
@@ -252,6 +263,7 @@ class SessionStep {
         if (awaitReady) 'awaitReady': true,
         if (anchor != BeatAnchor.none) 'anchor': anchor.serialized,
         if (ratio != 1) 'ratio': ratio,
+        if (moves.isNotEmpty) 'moves': [for (final m in moves) m.toJson()],
       };
 
   /// Sérialisation `chainAction` : on omet `time` (recalculé par le
@@ -267,5 +279,6 @@ class SessionStep {
         if (mode != null) 'mode': mode!.serialized,
         if (anchor != BeatAnchor.none) 'anchor': anchor.serialized,
         if (ratio != 1) 'ratio': ratio,
+        if (moves.isNotEmpty) 'moves': [for (final m in moves) m.toJson()],
       };
 }
