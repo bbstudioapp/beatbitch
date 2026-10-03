@@ -42,14 +42,47 @@
       "name": "Voix — lui",
       "description": "Il gémit sous ta bouche : bruits de succion plus ou moins humides sur le rythme, étouffements en tenue, reprises de souffle.",
       "tracks": {
-        "rhythm": "audio/ambience/homme_rythme.mp3",
-        "lick": "audio/ambience/homme_lick.mp3",
+        "rhythm": {
+          "shallow": [
+            "audio/ambience/homme_rythme_leger_1.mp3",
+            "audio/ambience/homme_rythme_leger_2.mp3"
+          ],
+          "deep": [
+            "audio/ambience/homme_rythme_profond_1.mp3",
+            "audio/ambience/homme_rythme_profond_2.mp3"
+          ]
+        },
+        "lick": [
+          "audio/ambience/homme_lick_1.mp3",
+          "audio/ambience/homme_lick_2.mp3"
+        ],
         "biffle": "audio/ambience/homme_biffle.mp3",
-        "hold": "audio/ambience/elle_tenue.mp3",
+        "hold": {
+          "shallow": [
+            "audio/ambience/tenue_legere_1.mp3",
+            "audio/ambience/tenue_legere_2.mp3"
+          ],
+          "deep": [
+            "audio/ambience/tenue_profonde_1.mp3",
+            "audio/ambience/tenue_profonde_2.mp3"
+          ]
+        },
         "breath": "audio/ambience/elle_souffle.mp3",
         "hand": "audio/ambience/homme_main.mp3",
-        "suckle": "audio/ambience/homme_lick.mp3",
-        "freestyle": "audio/ambience/homme_rythme.mp3"
+        "suckle": [
+          "audio/ambience/homme_lick_1.mp3",
+          "audio/ambience/homme_lick_2.mp3"
+        ],
+        "freestyle": {
+          "shallow": [
+            "audio/ambience/homme_rythme_leger_1.mp3",
+            "audio/ambience/homme_rythme_leger_2.mp3"
+          ],
+          "deep": [
+            "audio/ambience/homme_rythme_profond_1.mp3",
+            "audio/ambience/homme_rythme_profond_2.mp3"
+          ]
+        }
       }
     },
     {
@@ -57,14 +90,47 @@
       "name": "Voix — elle",
       "description": "Elle gémit sous ta bouche : bruits de succion plus ou moins humides sur le rythme, étouffements en tenue, reprises de souffle.",
       "tracks": {
-        "rhythm": "audio/ambience/femme_rythme.mp3",
-        "lick": "audio/ambience/femme_lick.mp3",
+        "rhythm": {
+          "shallow": [
+            "audio/ambience/femme_rythme_leger_1.mp3",
+            "audio/ambience/femme_rythme_leger_2.mp3"
+          ],
+          "deep": [
+            "audio/ambience/femme_rythme_profond_1.mp3",
+            "audio/ambience/femme_rythme_profond_2.mp3"
+          ]
+        },
+        "lick": [
+          "audio/ambience/femme_lick_1.mp3",
+          "audio/ambience/femme_lick_2.mp3"
+        ],
         "biffle": "audio/ambience/femme_biffle.mp3",
-        "hold": "audio/ambience/elle_tenue.mp3",
+        "hold": {
+          "shallow": [
+            "audio/ambience/tenue_legere_1.mp3",
+            "audio/ambience/tenue_legere_2.mp3"
+          ],
+          "deep": [
+            "audio/ambience/tenue_profonde_1.mp3",
+            "audio/ambience/tenue_profonde_2.mp3"
+          ]
+        },
         "breath": "audio/ambience/elle_souffle.mp3",
         "hand": "audio/ambience/femme_main.mp3",
-        "suckle": "audio/ambience/femme_lick.mp3",
-        "freestyle": "audio/ambience/femme_rythme.mp3"
+        "suckle": [
+          "audio/ambience/femme_lick_1.mp3",
+          "audio/ambience/femme_lick_2.mp3"
+        ],
+        "freestyle": {
+          "shallow": [
+            "audio/ambience/femme_rythme_leger_1.mp3",
+            "audio/ambience/femme_rythme_leger_2.mp3"
+          ],
+          "deep": [
+            "audio/ambience/femme_rythme_profond_1.mp3",
+            "audio/ambience/femme_rythme_profond_2.mp3"
+          ]
+        }
       }
     }
   ]

@@ -33,22 +33,18 @@ code nécessaire.
 | studio  | rhythm  | `drone_low.mp3`          |
 | studio  | lick    | `drone_low.mp3`          |
 | studio  | biffle  | `drone_low.mp3`          |
-| voix_homme | rhythm | `homme_rythme.mp3` |
-| voix_homme | lick | `homme_lick.mp3` |
+| voix_homme | rhythm, freestyle | peu profond `homme_rythme_leger_1/2.mp3`, profond `homme_rythme_profond_1/2.mp3` |
+| voix_homme | lick, suckle | `homme_lick_1/2.mp3` |
 | voix_homme | biffle | `homme_biffle.mp3` |
-| voix_homme | hold | `elle_tenue.mp3` |
+| voix_homme | hold | peu profond `tenue_legere_1/2.mp3`, profond `tenue_profonde_1/2.mp3` |
 | voix_homme | breath | `elle_souffle.mp3` |
 | voix_homme | hand | `homme_main.mp3` |
-| voix_homme | suckle | `homme_lick.mp3` |
-| voix_homme | freestyle | `homme_rythme.mp3` |
-| voix_femme | rhythm | `femme_rythme.mp3` |
-| voix_femme | lick | `femme_lick.mp3` |
+| voix_femme | rhythm, freestyle | peu profond `femme_rythme_leger_1/2.mp3`, profond `femme_rythme_profond_1/2.mp3` |
+| voix_femme | lick, suckle | `femme_lick_1/2.mp3` |
 | voix_femme | biffle | `femme_biffle.mp3` |
-| voix_femme | hold | `elle_tenue.mp3` |
+| voix_femme | hold | peu profond `tenue_legere_1/2.mp3`, profond `tenue_profonde_1/2.mp3` |
 | voix_femme | breath | `elle_souffle.mp3` |
 | voix_femme | hand | `femme_main.mp3` |
-| voix_femme | suckle | `femme_lick.mp3` |
-| voix_femme | freestyle | `femme_rythme.mp3` |
 
 Le pack `intime` est généré synthétiquement par
 `tools/generate_ambience.sh` (sinusoïdes harmoniques + filtres ffmpeg,
@@ -57,6 +53,10 @@ régénérer ou pour ajuster les fréquences/durées.
 
 Les packs `voix_homme` et `voix_femme` sont des boucles de ~48 s montées
 à partir de sons générés par ElevenLabs.
+
+Une piste peut lister plusieurs variantes, tirées au hasard, et les séparer
+par palier de profondeur : `{"shallow": [...], "deep": [...]}` (profond =
+throat, full, balls).
 
 Si un fichier manque, le pack reste sélectionnable dans l'UI mais le
 mode concerné jouera en silence. C'est volontaire (fail-safe).
