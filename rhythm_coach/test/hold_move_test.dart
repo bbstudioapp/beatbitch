@@ -1,6 +1,7 @@
 import 'package:beat_bitch/models/hold_move.dart';
 import 'package:beat_bitch/models/session.dart';
 import 'package:beat_bitch/models/session_step.dart';
+import 'package:beat_bitch/widgets/movement_trajectory_forecast.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -86,5 +87,26 @@ void main() {
       ]);
       expect(k, hasLength(3));
     });
+  });
+
+  test('les mouvements d\'une tenue à venir arrivent jusqu\'à la courbe', () {
+    final upcoming = resolveUpcomingMovementSteps(
+      steps: const [
+        SessionStep(
+          time: 30,
+          mode: SessionMode.hold,
+          to: Position.throat,
+          moves: [
+            HoldMove(kind: HoldMoveKind.excursion, at: 2, to: Position.tip),
+          ],
+        ),
+      ],
+      defaultMode: SessionMode.rhythm,
+      afterSecond: 20,
+      currentMode: SessionMode.rhythm,
+      currentFrom: Position.head,
+      currentBpm: 60,
+    );
+    expect(upcoming.single.moves.single.to, Position.tip);
   });
 }

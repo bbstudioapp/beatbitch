@@ -1,8 +1,10 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
 import '../l10n/enum_labels.dart';
+import '../models/hold_move.dart';
 import '../models/session.dart';
 import '../models/session_step.dart';
 import '../services/beep_engine.dart';
@@ -71,6 +73,9 @@ class MovementAnimation extends StatefulWidget {
   /// Off en séance : seules la courbe lissée et le curseur restent visibles.
   final bool showTrajectoryDots;
 
+  /// Mouvements ponctuels de la tenue courante (cf. [HoldMove]).
+  final List<HoldMove> moves;
+
   const MovementAnimation({
     super.key,
     required this.mode,
@@ -84,6 +89,7 @@ class MovementAnimation extends StatefulWidget {
     this.elapsed = Duration.zero,
     this.upcomingSteps = const [],
     this.showTrajectoryDots = false,
+    this.moves = const [],
   });
 
   @override
@@ -140,6 +146,11 @@ class _MovementAnimationState extends State<MovementAnimation>
   Duration? _bridgeGap;
   bool _bridgeViaTip = false;
 
+  /// Début réel de la tenue courante en temps de séance (application du step
+  /// + gap) : origine de ses mouvements, comme pour le moteur. Le temps de
+  /// séance ne court pas pendant une pause, le moteur non plus.
+  Duration? _movesOrigin;
+
   /// Ancrage horloge murale du `elapsed` de séance (rafraîchi au tick
   /// ~200 ms du `SessionController`, alors que ce widget se redessine à
   /// 60 fps). Sert à extrapoler un elapsed continu entre deux ticks au lieu
@@ -164,6 +175,7 @@ class _MovementAnimationState extends State<MovementAnimation>
         .index
         .toDouble();
     _frozenAt = DateTime.now();
+    _movesOrigin = widget.elapsed;
     _startController();
     _maybeSubscribeBeats(widget.beepEngine);
   }
@@ -243,6 +255,7 @@ class _MovementAnimationState extends State<MovementAnimation>
       );
       _bridgeViaTip = _familyOf(widget.mode, widget.from) !=
           _familyOf(oldWidget.mode, oldWidget.from);
+      _movesOrigin = widget.elapsed + _bridgeGap!;
       _flipped = false;
       _lastBeatAt = null;
       _lastBeatBpm = null;
@@ -445,6 +458,8 @@ class _MovementAnimationState extends State<MovementAnimation>
       elapsed: elapsedNow,
       upcomingSteps: widget.upcomingSteps,
       showTrajectoryDots: widget.showTrajectoryDots,
+      moves: widget.mode == SessionMode.hold ? widget.moves : const [],
+      movesOrigin: _movesOrigin,
       pulseT: t,
     );
   }
@@ -595,6 +610,8 @@ class _PositionLadder extends StatefulWidget {
   final Duration elapsed;
   final List<UpcomingMovementStep> upcomingSteps;
   final bool showTrajectoryDots;
+  final List<HoldMove> moves;
+  final Duration? movesOrigin;
 
   const _PositionLadder({
     required this.mode,
@@ -616,6 +633,8 @@ class _PositionLadder extends StatefulWidget {
     required this.elapsed,
     required this.upcomingSteps,
     this.showTrajectoryDots = false,
+    this.moves = const [],
+    this.movesOrigin,
   });
 
   @override
@@ -669,7 +688,7 @@ class _PositionLadder extends StatefulWidget {
     final windowMs = _trajectoryWindow.inMilliseconds.toDouble();
 
     final DateTime last;
-    final double yNow;
+    double yNow;
     final Position afterAnchorPos;
     double? bridgeTargetIdx;
     DateTime? bridgeViaAt;
@@ -748,6 +767,35 @@ class _PositionLadder extends StatefulWidget {
       afterAnchorPos = from;
       bridgeTargetIdx = toIdx;
       bridgeViaAt = viaAt;
+    }
+
+    // Mouvements de la tenue courante, en horloge murale. Pendant un
+    // aller-retour, le curseur suit ses instants clés.
+    final elapsedMs0 = elapsed.inMilliseconds;
+    List<(DateTime, double)> keyframesAt(
+            Position hold, List<HoldMove> moves, DateTime origin) =>
+        [
+          for (final k in holdKeyframes(hold, moves))
+            (origin.add(k.at), k.position.index.toDouble()),
+        ];
+    var segKf = movesOrigin == null || moves.isEmpty
+        ? const <(DateTime, double)>[]
+        : keyframesAt(
+            from,
+            moves,
+            now.add(Duration(
+                milliseconds: movesOrigin!.inMilliseconds - elapsedMs0)));
+    for (var j = 0; j + 1 < segKf.length; j++) {
+      if (j % 3 == 2) continue;
+      final (aAt, aIdx) = segKf[j];
+      final (bAt, bIdx) = segKf[j + 1];
+      if (now.isBefore(aAt) || !now.isBefore(bAt)) continue;
+      final spanMs = bAt.difference(aAt).inMilliseconds.toDouble();
+      final p = now.difference(aAt).inMilliseconds.toDouble() / spanMs;
+      yNow = aIdx + (bIdx - aIdx) * Curves.easeInOutCubic.transform(p);
+      originAt = aAt;
+      originIdx = aIdx;
+      break;
     }
 
     final anchorOrigin = originAt;
@@ -865,6 +913,16 @@ class _PositionLadder extends StatefulWidget {
       return ms;
     }
 
+    var kfI = 0;
+    bool insideMove(DateTime t) {
+      for (var j = 0; j + 2 < segKf.length; j += 3) {
+        if (t.isAfter(segKf[j].$1) && t.isBefore(segKf[j + 2].$1)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
     while (true) {
       // Segment plat (hold/beg/suckle/biffle/breath/freestyle) tenu depuis
       // longtemps sans frontière à franchir : `nextTime` peut être resté
@@ -883,6 +941,18 @@ class _PositionLadder extends StatefulWidget {
           Duration(milliseconds: (steps * segBeatMs).round()),
         );
       }
+      final kfLimit = nextBoundary != null && nextBoundary.isBefore(nextTime)
+          ? nextBoundary
+          : nextTime;
+      var stopped = false;
+      while (kfI < segKf.length && !segKf[kfI].$1.isAfter(kfLimit)) {
+        if (!addPoint(segKf[kfI].$1, segKf[kfI].$2)) {
+          stopped = true;
+          break;
+        }
+        kfI++;
+      }
+      if (stopped) break;
       if (nextBoundary != null && !nextBoundary.isAfter(nextTime)) {
         final boundary = nextBoundary;
         // Position réellement atteinte à la frontière : sans ce point, le
@@ -934,11 +1004,18 @@ class _PositionLadder extends StatefulWidget {
         segFamily = newFamily;
         segFrom = newFrom;
         segTo = newTo;
+        segKf = upcoming.mode == SessionMode.hold && upcoming.moves.isNotEmpty
+            ? keyframesAt(newFrom, upcoming.moves, resumeAt)
+            : const <(DateTime, double)>[];
+        kfI = 0;
         upcomingIdx++;
         nextBoundary = boundaryAt(upcomingIdx);
         continue;
       }
-      if (!addPoint(nextTime, nextPos.index.toDouble())) break;
+      if (!insideMove(nextTime) &&
+          !addPoint(nextTime, nextPos.index.toDouble())) {
+        break;
+      }
       nextTime = nextTime.add(Duration(milliseconds: advanceMs().round()));
       nextPos = (nextPos == segFrom) ? segTo : segFrom;
     }
@@ -1134,6 +1211,8 @@ bool _sameGeometry(_PositionLadder a, _PositionLadder b) {
       a.frozenIdx == b.frozenIdx &&
       a.frozenAt == b.frozenAt &&
       a.rowCount == b.rowCount &&
+      a.movesOrigin == b.movesOrigin &&
+      listEquals(a.moves, b.moves) &&
       _sameUpcomingSteps(a.upcomingSteps, b.upcomingSteps);
 }
 
@@ -1149,7 +1228,8 @@ bool _sameUpcomingSteps(
         sa.to != sb.to ||
         sa.bpm != sb.bpm ||
         sa.startSecond != sb.startSecond ||
-        sa.transitionGap != sb.transitionGap) {
+        sa.transitionGap != sb.transitionGap ||
+        !listEquals(sa.moves, sb.moves)) {
       return false;
     }
   }
