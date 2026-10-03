@@ -304,13 +304,13 @@ class BeepEngine {
 
   /// Pause minimale entre deux modes distincts (cas continuité corporelle :
   /// rythme/hold/beg-non-libre — la salope reste en place, le bip enchaîne
-  /// sans temps mort). Laisse juste au sample précédent le temps de finir
-  /// son décay.
+  /// sans temps mort — et breath, dont le son est le signal de libération).
+  /// Laisse juste au sample précédent le temps de finir son décay.
   static const Duration _modeTransitionGap = Duration(milliseconds: 600);
 
   /// Pause de transition « grosse » : appliquée quand le nouveau mode
   /// requiert un changement physique côté utilisatrice (sortir la langue,
-  /// passer à la main, respirer, lâcher pour supplier librement). 1.5 s
+  /// passer à la main, lâcher pour supplier librement). 1.5 s
   /// — assez pour que le TTS de l'annonce ait posé l'instruction et que
   /// le geste change avant le premier bip. Le TTS lui-même ne dépend pas
   /// de cette pause (le contrôleur speak en parallèle d'`applyStep`).
@@ -331,7 +331,6 @@ class BeepEngine {
       case SessionMode.lick:
       case SessionMode.hand:
       case SessionMode.biffle:
-      case SessionMode.breath:
       case SessionMode.freestyle:
       case SessionMode.suckle:
         return true;
@@ -339,6 +338,7 @@ class BeepEngine {
         return incomingTo == null;
       case SessionMode.rhythm:
       case SessionMode.hold:
+      case SessionMode.breath:
         return false;
     }
   }
