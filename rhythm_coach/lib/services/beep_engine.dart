@@ -1139,6 +1139,7 @@ class BeepEngine {
   Position get currentFrom => _from;
   Position? get currentTo => _to;
   int get currentBpm => _bpm;
+  List<HoldMove> get currentMoves => _moves;
 
   // ─── Cycle de vie ──────────────────────────────────────────────────────
 
