@@ -61,6 +61,7 @@ class AmbienceEngine {
   final Random _random;
   final AudioPlayer _player = AudioPlayer(playerId: 'ambience_loop');
   AudioPlayer? _finishPlayer;
+  AudioPlayer? _climaxPlayer;
   (SessionMode, bool)? _currentSlot;
   bool _finishInitialized = false;
   bool _finishPlaying = false;
@@ -185,6 +186,30 @@ class AmbienceEngine {
       await _player.stop().timeout(_callTimeout);
     } catch (_) {}
     _isPlaying = false;
+  }
+
+  /// Joue un des clips de climax du pack, une fois, par-dessus l'ambiance.
+  Future<void> playClimax() async {
+    final clips = _pack.climax;
+    if (clips.isEmpty) return;
+    try {
+      await startClimaxPlayback(clips[_random.nextInt(clips.length)])
+          .timeout(_startTimeout);
+    } catch (e) {
+      if (kDebugMode) debugPrint('[AmbienceEngine] climax error : $e');
+    }
+  }
+
+  /// Ne pas appeler directement en production : surchargée par les tests,
+  /// comme [startPlayback].
+  @visibleForTesting
+  Future<void> startClimaxPlayback(String asset) async {
+    final player = _climaxPlayer ??= AudioPlayer(playerId: 'ambience_climax');
+    await _withoutFocus(player);
+    await player.setReleaseMode(ReleaseMode.stop);
+    await player.setSource(AssetSource(asset));
+    await player.setVolume((_volume / maxVolume).clamp(0.0, 1.0));
+    await player.resume();
   }
 
   static const String _packPrefsKey = 'ambience.pack';
@@ -326,6 +351,7 @@ class AmbienceEngine {
     _finishPlaying = false;
     try {
       await _finishPlayer?.dispose();
+      await _climaxPlayer?.dispose();
     } catch (_) {}
     try {
       await _player.dispose();

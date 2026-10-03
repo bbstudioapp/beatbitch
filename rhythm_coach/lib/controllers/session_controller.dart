@@ -1823,6 +1823,7 @@ class SessionController extends ChangeNotifier {
     // accroche pour démarrer le halo pile sur le son).
     _finaleChimeStarted = true;
     notifyListeners();
+    unawaited(_ambience.playClimax());
     await _beep.playFinaleChime(category: session.finalCategory);
   }
 
@@ -2030,6 +2031,7 @@ class SessionController extends ChangeNotifier {
         }
       }
       if (!_released) {
+        unawaited(_ambience.playClimax());
         await _beep.playFinaleChime(category: session.finalCategory);
         _finalChimePlayed = true;
       }

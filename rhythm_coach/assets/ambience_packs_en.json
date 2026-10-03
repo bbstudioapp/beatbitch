@@ -40,23 +40,23 @@
     {
       "id": "voix_homme",
       "name": "Voices — him",
-      "description": "He moans under your mouth: wetter or drier sucking sounds on the rhythm, gagging on holds, catching your breath.",
+      "description": "Wetter or drier sucking sounds on the rhythm, gagging on holds, catching your breath — and he comes at the finale.",
       "tracks": {
         "rhythm": {
           "shallow": [
-            "audio/ambience/homme_rythme_leger_1.mp3",
-            "audio/ambience/homme_rythme_leger_2.mp3"
+            "audio/ambience/rythme_leger_1.mp3",
+            "audio/ambience/rythme_leger_2.mp3"
           ],
           "deep": [
-            "audio/ambience/homme_rythme_profond_1.mp3",
-            "audio/ambience/homme_rythme_profond_2.mp3"
+            "audio/ambience/rythme_profond_1.mp3",
+            "audio/ambience/rythme_profond_2.mp3"
           ]
         },
         "lick": [
-          "audio/ambience/homme_lick_1.mp3",
-          "audio/ambience/homme_lick_2.mp3"
+          "audio/ambience/lick_1.mp3",
+          "audio/ambience/lick_2.mp3"
         ],
-        "biffle": "audio/ambience/homme_biffle.mp3",
+        "biffle": null,
         "hold": {
           "shallow": [
             "audio/ambience/tenue_legere_1.mp3",
@@ -68,43 +68,48 @@
           ]
         },
         "breath": "audio/ambience/elle_souffle.mp3",
-        "hand": "audio/ambience/homme_main.mp3",
+        "hand": null,
         "suckle": [
-          "audio/ambience/homme_lick_1.mp3",
-          "audio/ambience/homme_lick_2.mp3"
+          "audio/ambience/lick_1.mp3",
+          "audio/ambience/lick_2.mp3"
         ],
         "freestyle": {
           "shallow": [
-            "audio/ambience/homme_rythme_leger_1.mp3",
-            "audio/ambience/homme_rythme_leger_2.mp3"
+            "audio/ambience/rythme_leger_1.mp3",
+            "audio/ambience/rythme_leger_2.mp3"
           ],
           "deep": [
-            "audio/ambience/homme_rythme_profond_1.mp3",
-            "audio/ambience/homme_rythme_profond_2.mp3"
+            "audio/ambience/rythme_profond_1.mp3",
+            "audio/ambience/rythme_profond_2.mp3"
           ]
         }
-      }
+      },
+      "climax": [
+        "audio/ambience/homme_climax_1.mp3",
+        "audio/ambience/homme_climax_2.mp3",
+        "audio/ambience/homme_climax_3.mp3"
+      ]
     },
     {
       "id": "voix_femme",
       "name": "Voices — her",
-      "description": "She moans under your mouth: wetter or drier sucking sounds on the rhythm, gagging on holds, catching your breath.",
+      "description": "Wetter or drier sucking sounds on the rhythm, gagging on holds, catching your breath — and she comes at the finale.",
       "tracks": {
         "rhythm": {
           "shallow": [
-            "audio/ambience/femme_rythme_leger_1.mp3",
-            "audio/ambience/femme_rythme_leger_2.mp3"
+            "audio/ambience/rythme_leger_1.mp3",
+            "audio/ambience/rythme_leger_2.mp3"
           ],
           "deep": [
-            "audio/ambience/femme_rythme_profond_1.mp3",
-            "audio/ambience/femme_rythme_profond_2.mp3"
+            "audio/ambience/rythme_profond_1.mp3",
+            "audio/ambience/rythme_profond_2.mp3"
           ]
         },
         "lick": [
-          "audio/ambience/femme_lick_1.mp3",
-          "audio/ambience/femme_lick_2.mp3"
+          "audio/ambience/lick_1.mp3",
+          "audio/ambience/lick_2.mp3"
         ],
-        "biffle": "audio/ambience/femme_biffle.mp3",
+        "biffle": null,
         "hold": {
           "shallow": [
             "audio/ambience/tenue_legere_1.mp3",
@@ -116,22 +121,27 @@
           ]
         },
         "breath": "audio/ambience/elle_souffle.mp3",
-        "hand": "audio/ambience/femme_main.mp3",
+        "hand": null,
         "suckle": [
-          "audio/ambience/femme_lick_1.mp3",
-          "audio/ambience/femme_lick_2.mp3"
+          "audio/ambience/lick_1.mp3",
+          "audio/ambience/lick_2.mp3"
         ],
         "freestyle": {
           "shallow": [
-            "audio/ambience/femme_rythme_leger_1.mp3",
-            "audio/ambience/femme_rythme_leger_2.mp3"
+            "audio/ambience/rythme_leger_1.mp3",
+            "audio/ambience/rythme_leger_2.mp3"
           ],
           "deep": [
-            "audio/ambience/femme_rythme_profond_1.mp3",
-            "audio/ambience/femme_rythme_profond_2.mp3"
+            "audio/ambience/rythme_profond_1.mp3",
+            "audio/ambience/rythme_profond_2.mp3"
           ]
         }
-      }
+      },
+      "climax": [
+        "audio/ambience/femme_climax_1.mp3",
+        "audio/ambience/femme_climax_2.mp3",
+        "audio/ambience/femme_climax_3.mp3"
+      ]
     }
   ]
 }

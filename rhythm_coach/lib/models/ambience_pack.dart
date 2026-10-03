@@ -15,12 +15,16 @@ class AmbiencePack {
   /// absent d'ici se rabat sur [tracksByMode].
   final Map<SessionMode, AmbienceVariants> variantsByMode;
 
+  /// Clips joués une fois, au moment du chime du final.
+  final List<String> climax;
+
   const AmbiencePack({
     required this.id,
     required this.name,
     this.description,
     required this.tracksByMode,
     this.variantsByMode = const {},
+    this.climax = const [],
   });
 
   /// Pack vide (silence total), toujours disponible en tête de liste.
@@ -74,6 +78,7 @@ class AmbiencePack {
       description: json['description'] as String?,
       tracksByMode: tracks,
       variantsByMode: variants,
+      climax: _assetList(json['climax']),
     );
   }
 
