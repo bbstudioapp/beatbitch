@@ -47,11 +47,24 @@ class AmbienceEngine {
   /// retentative).
   static const Duration _startTimeout = Duration(seconds: 3);
 
+  static const String finishMusicAsset = 'audio/finish_music.mp3';
+
+  /// Instant du fichier où la musique de finish atteint son sommet, calé sur
+  /// le début du final.
+  static const Duration finishMusicPeak = Duration(seconds: 70);
+
+  static const double _finishMusicVolume = 0.35;
+
   AmbienceEngine({Random? random}) : _random = random ?? Random();
 
   final Random _random;
   final AudioPlayer _player = AudioPlayer(playerId: 'ambience_loop');
+  AudioPlayer? _finishPlayer;
   (SessionMode, bool)? _currentSlot;
+  bool _finishInitialized = false;
+  bool _finishPlaying = false;
+  bool _finishPaused = false;
+  int _finishGen = 0;
   String? _slotAsset;
 
   String? _currentAsset;
@@ -72,15 +85,19 @@ class AmbienceEngine {
     // Un player qui tient le focus Android est mis en pause par audioplayers
     // dès qu'un bip le réclame. Android seul : sur iOS la session est globale
     // et écraserait le mixWithOthers du mode Music.
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      final ctx = AudioContextConfig().build();
-      await _player.setAudioContext(ctx.copy(
-        android: ctx.android.copy(audioFocus: AndroidAudioFocus.none),
-      ));
-    }
+    await _withoutFocus(_player);
     await _player.setReleaseMode(ReleaseMode.loop);
     await _player.setVolume(_volume);
     _initialized = true;
+  }
+
+  static Future<void> _withoutFocus(AudioPlayer player) async {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      final ctx = AudioContextConfig().build();
+      await player.setAudioContext(ctx.copy(
+        android: ctx.android.copy(audioFocus: AndroidAudioFocus.none),
+      ));
+    }
   }
 
   /// Lance ou change l'ambiance. Asset relatif au dossier `assets/`
@@ -120,6 +137,12 @@ class AmbienceEngine {
   }
 
   Future<void> pause() async {
+    if (_finishPlaying && !_finishPaused) {
+      _finishPaused = true;
+      try {
+        await _finishPlayer?.pause().timeout(_callTimeout);
+      } catch (_) {}
+    }
     if (!_initialized || !_isPlaying) return;
     try {
       // `.timeout(300 ms)` : même garde-fou que `BeepEngine` (cf. 6ebdb84).
@@ -136,6 +159,12 @@ class AmbienceEngine {
   }
 
   Future<void> resume() async {
+    if (_finishPlaying && _finishPaused) {
+      _finishPaused = false;
+      try {
+        await _finishPlayer?.resume().timeout(_callTimeout);
+      } catch (_) {}
+    }
     if (!_initialized || _currentAsset == null || _isPlaying) return;
     try {
       // Borné comme [pause] / [stop] : commande de transport sur un player
@@ -203,7 +232,78 @@ class AmbienceEngine {
     }
   }
 
+  /// Démarre la musique de finish de façon que son sommet tombe dans
+  /// [untilPeak]. Joue par-dessus l'ambiance, indépendamment du pack.
+  Future<void> startFinishMusic(Duration untilPeak) async {
+    final offset = finishMusicPeak - untilPeak;
+    final gen = ++_finishGen;
+    try {
+      await startFinishPlayback(offset.isNegative ? Duration.zero : offset)
+          .timeout(_startTimeout);
+      if (gen != _finishGen) {
+        await _finishPlayer?.stop().timeout(_callTimeout);
+        return;
+      }
+      _finishPlaying = true;
+      _finishPaused = false;
+    } catch (e) {
+      if (kDebugMode) debugPrint('[AmbienceEngine] finish music error : $e');
+    }
+  }
+
+  /// Ne pas appeler directement en production : surchargée par les tests,
+  /// comme [startPlayback].
+  @visibleForTesting
+  Future<void> startFinishPlayback(Duration offset) async {
+    final player = _finishPlayer ??= AudioPlayer(playerId: 'finish_music');
+    if (!_finishInitialized) {
+      await _withoutFocus(player);
+      await player.setReleaseMode(ReleaseMode.stop);
+      _finishInitialized = true;
+    }
+    await player.setSource(AssetSource(finishMusicAsset));
+    await player.setVolume(_finishMusicVolume);
+    await player.seek(offset);
+    await player.resume();
+  }
+
+  bool get isFinishMusicPlaying => _finishPlaying;
+
+  Future<void> fadeOutFinishMusic(
+      {Duration duration = const Duration(seconds: 3)}) async {
+    if (!_finishPlaying) return;
+    final gen = ++_finishGen;
+    _finishPlaying = false;
+    _finishPaused = false;
+    const steps = 12;
+    try {
+      for (var i = steps - 1; i >= 0; i--) {
+        await Future<void>.delayed(duration ~/ steps);
+        if (gen != _finishGen) return;
+        await _finishPlayer
+            ?.setVolume(_finishMusicVolume * i / steps)
+            .timeout(_callTimeout);
+      }
+      await _finishPlayer?.stop().timeout(_callTimeout);
+    } catch (_) {}
+  }
+
+  Future<void> stopFinishMusic() async {
+    _finishGen++;
+    _finishPlaying = false;
+    _finishPaused = false;
+    if (!_finishInitialized) return;
+    try {
+      await _finishPlayer?.stop().timeout(_callTimeout);
+    } catch (_) {}
+  }
+
   Future<void> dispose() async {
+    _finishGen++;
+    _finishPlaying = false;
+    try {
+      await _finishPlayer?.dispose();
+    } catch (_) {}
     try {
       await _player.dispose();
     } catch (_) {}

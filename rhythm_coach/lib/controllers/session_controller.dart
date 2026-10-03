@@ -260,6 +260,8 @@ class SessionController extends ChangeNotifier {
   /// halo blanc crémeux pile sur le chime.
   bool _finaleChimeStarted = false;
 
+  bool _finishMusicStarted = false;
+
   // ─── État du flow fail ─────────────────────────────────────────────────
 
   FailPhase? _failPhase;
@@ -1047,6 +1049,7 @@ class SessionController extends ChangeNotifier {
         _hadFailThisSession = false;
         _finalChimePlayed = false;
         _finaleChimeStarted = false;
+        _finishMusicStarted = false;
         _sessionBadgeUnlocks = const [];
         _sessionMilestoneUnlocks = const [];
         _currentHoldFullDuration = 0;
@@ -1268,6 +1271,7 @@ class SessionController extends ChangeNotifier {
     await _stopTtsBounded();
     await _beep.stop();
     await _ambience.stop();
+    await _ambience.stopFinishMusic();
     // Borné comme le canal de synthèse : `_state` ne bascule qu'après, et le
     // ticker est déjà annulé. Un canal pigeon muet laissait la séance morte
     // sans jamais revenir à `idle` — même signature que l'issue #317.
@@ -1675,6 +1679,7 @@ class SessionController extends ChangeNotifier {
         _finalChimePlayed = true;
         unawaited(_playFinalChimeAfterAction(step.text));
       }
+      _updateFinishMusic(step);
 
       _nextStepIndex++;
 
@@ -1693,6 +1698,25 @@ class SessionController extends ChangeNotifier {
     if (modeChanged) {
       _syncAmbienceToCurrentMode();
     }
+  }
+
+  /// Musique de finish : démarre pendant la montée de façon que son sommet
+  /// tombe sur le final, s'éteint au premier step du post-final.
+  void _updateFinishMusic(SessionStep step) {
+    final finalT = session.finalStepTime;
+    final finishStart = session.silentFinishStartTime;
+    if (finalT == null || finishStart == null) return;
+    if (step.time > finalT) {
+      unawaited(_ambience.fadeOutFinishMusic());
+      return;
+    }
+    final peak = AmbienceEngine.finishMusicPeak.inSeconds;
+    if (_finishMusicStarted || step.time < max(finishStart, finalT - peak)) {
+      return;
+    }
+    _finishMusicStarted = true;
+    unawaited(
+        _ambience.startFinishMusic(Duration(seconds: finalT - step.time)));
   }
 
   /// Entre en gate de validation posture (issue #77) : la séance se fige
@@ -2411,6 +2435,7 @@ class SessionController extends ChangeNotifier {
           await _tts.stop();
           await _beep.stop();
           await _ambience.stop();
+          await _ambience.stopFinishMusic();
         } catch (_) {}
       }());
       WakelockPlus.disable();
