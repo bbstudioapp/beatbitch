@@ -46,7 +46,14 @@ void main() {
           .listSync()
           .whereType<File>()
           .where((f) => f.path.endsWith('.json'))
-          .where((f) => !f.path.contains('montee_puissance'))
+          .where((f) => !const [
+                'montee_puissance',
+                'fin_de_nuit',
+                'houle',
+                'ressac',
+                'rouleau_compresseur',
+                'sous_pression',
+              ].any(f.path.contains))
           .toList();
       expect(files, isNotEmpty);
       for (final f in files) {

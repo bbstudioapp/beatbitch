@@ -231,7 +231,17 @@ void main() {
         asked.add(key);
         return true;
       }).loadAll(locale: const Locale('fr'));
-      expect(asked.toSet(), {'assets/audio/music/montee_en_puissance.mp3'});
+      expect(asked.toSet(), {
+        for (final name in [
+          'montee_en_puissance',
+          'fin_de_nuit',
+          'houle',
+          'ressac',
+          'rouleau_compresseur',
+          'sous_pression',
+        ])
+          'assets/audio/music/$name.mp3',
+      });
     });
   });
 }

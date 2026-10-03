@@ -1,0 +1,135 @@
+{
+  "lang": "en",
+  "id": "sous_pression",
+  "name": "Under Pressure",
+  "description": "A session set to a 128 BPM techno track: it starts in slow motion, then the pressure never drops.",
+  "duration_seconds": 242,
+  "mode": "rhythm",
+  "intro": "Turn the sound on. The beeps follow the beat of the track, the orders follow its build. If you can't, press the red button: the music keeps going, you breathe, and you pick up where it is.",
+  "music": {
+    "asset": "audio/music/sous_pression.mp3",
+    "bpm": 128.024,
+    "first_beat": 0.247
+  },
+  "steps": [
+    {
+      "time": 0,
+      "text": "Slowly… very slowly.",
+      "mode": "rhythm",
+      "from": "tip",
+      "to": "head",
+      "bpm": 32
+    },
+    {
+      "time": 15,
+      "mode": "rhythm",
+      "from": "tip",
+      "to": "mid",
+      "bpm": 64
+    },
+    {
+      "time": 30,
+      "text": "On the beat.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 128
+    },
+    {
+      "time": 60,
+      "text": "Deeper.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 64
+    },
+    {
+      "time": 75,
+      "mode": "rhythm",
+      "from": "head",
+      "to": "throat",
+      "bpm": 128
+    },
+    {
+      "time": 90,
+      "text": "Keep going.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 128
+    },
+    {
+      "time": 105,
+      "text": "Hold… let the pressure build.",
+      "mode": "hold",
+      "to": "throat",
+      "duration": 15
+    },
+    {
+      "time": 120,
+      "text": "Breathe.",
+      "mode": "breath",
+      "duration": 7
+    },
+    {
+      "time": 127,
+      "text": "Start again, slowly.",
+      "mode": "rhythm",
+      "from": "tip",
+      "to": "head",
+      "bpm": 64
+    },
+    {
+      "time": 150,
+      "text": "The pressure is back.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 128
+    },
+    {
+      "time": 165,
+      "text": "All the way, every time.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "full",
+      "bpm": 64
+    },
+    {
+      "time": 180,
+      "text": "Keep going. All the way.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 128
+    },
+    {
+      "time": 210,
+      "text": "Even deeper.",
+      "mode": "rhythm",
+      "from": "throat",
+      "to": "full",
+      "bpm": 64
+    },
+    {
+      "time": 225,
+      "text": "Hold it deep.",
+      "mode": "hold",
+      "to": "full",
+      "duration": 11
+    },
+    {
+      "time": 236,
+      "text": "There, good girl."
+    },
+    {
+      "time": 237,
+      "mode": "breath",
+      "duration": 5
+    },
+    {
+      "time": 238,
+      "text": "Come up. Breathe."
+    }
+  ]
+}

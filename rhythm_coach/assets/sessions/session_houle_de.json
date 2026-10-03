@@ -1,0 +1,119 @@
+{
+  "lang": "de",
+  "id": "houle",
+  "name": "Dünung",
+  "description": "Eine Session zu einem Stück, das steigt und zurückweicht wie das Meer: Wellen der Anstrengung und eine echte Pause in der Mitte.",
+  "duration_seconds": 247,
+  "mode": "rhythm",
+  "intro": "Mach den Ton an. Die Beeps folgen dem Takt des Stücks, die Anweisungen seinem Aufbau. Wenn du nicht mehr kannst, drück den roten Knopf: Die Musik läuft weiter, du atmest und machst dort weiter, wo sie gerade ist.",
+  "music": {
+    "asset": "audio/music/houle.mp3",
+    "bpm": 119.001,
+    "first_beat": 0.183
+  },
+  "steps": [
+    {
+      "time": 0,
+      "text": "Hör auf die Dünung.",
+      "mode": "breath",
+      "duration": 18
+    },
+    {
+      "time": 18,
+      "text": "Langsam, im Takt der Wellen.",
+      "mode": "rhythm",
+      "from": "tip",
+      "to": "head",
+      "bpm": 60
+    },
+    {
+      "time": 34,
+      "text": "Los geht's. Auf jeden Schlag.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 119
+    },
+    {
+      "time": 66,
+      "text": "Langsamer… tiefer.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "throat",
+      "bpm": 60
+    },
+    {
+      "time": 82,
+      "text": "Nimm den Rhythmus.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 119
+    },
+    {
+      "time": 99,
+      "text": "Weiter.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "throat",
+      "bpm": 119
+    },
+    {
+      "time": 129,
+      "text": "Halt… die Welle zieht sich zurück.",
+      "mode": "hold",
+      "to": "throat",
+      "duration": 16
+    },
+    {
+      "time": 145,
+      "text": "Atme.",
+      "mode": "breath",
+      "duration": 8
+    },
+    {
+      "time": 153,
+      "text": "Langsam, fang wieder an.",
+      "mode": "rhythm",
+      "from": "tip",
+      "to": "head",
+      "bpm": 60
+    },
+    {
+      "time": 163,
+      "text": "Die Welle kommt zurück. Durchhalten.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 119
+    },
+    {
+      "time": 195,
+      "text": "Ganz runter, langsam.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "full",
+      "bpm": 60
+    },
+    {
+      "time": 211,
+      "text": "Halt ihn ganz unten.",
+      "mode": "hold",
+      "to": "full",
+      "duration": 15
+    },
+    {
+      "time": 226,
+      "text": "So ist's brav."
+    },
+    {
+      "time": 227,
+      "mode": "breath",
+      "duration": 20
+    },
+    {
+      "time": 228,
+      "text": "Komm hoch. Atme."
+    }
+  ]
+}

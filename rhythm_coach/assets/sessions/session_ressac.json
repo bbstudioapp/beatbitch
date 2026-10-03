@@ -1,0 +1,112 @@
+{
+  "lang": "fr",
+  "id": "ressac",
+  "name": "Ressac",
+  "description": "Une séance calée sur un morceau qui alterne vite et léger, lent et profond, jusqu'au fond.",
+  "duration_seconds": 216,
+  "mode": "rhythm",
+  "intro": "Mets le son. Les bips suivent le rythme du morceau, les consignes suivent sa montée. Si tu craques, appuie sur le bouton rouge : la musique continue, tu respires, et tu reprends là où elle en est.",
+  "music": {
+    "asset": "audio/music/ressac.mp3",
+    "bpm": 119.006,
+    "first_beat": 0.171
+  },
+  "steps": [
+    {
+      "time": 0,
+      "text": "Écoute… ça arrive.",
+      "mode": "breath",
+      "duration": 18
+    },
+    {
+      "time": 18,
+      "text": "Vite et léger.",
+      "mode": "rhythm",
+      "from": "tip",
+      "to": "head",
+      "bpm": 119
+    },
+    {
+      "time": 34,
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 119
+    },
+    {
+      "time": 50,
+      "text": "Lent et profond.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 60
+    },
+    {
+      "time": 66,
+      "text": "Reprends le rythme.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 119
+    },
+    {
+      "time": 82,
+      "text": "Encaisse.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 119
+    },
+    {
+      "time": 113,
+      "text": "Tiens… attends que ça revienne.",
+      "mode": "hold",
+      "to": "throat",
+      "duration": 18
+    },
+    {
+      "time": 131,
+      "text": "Doucement.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 60
+    },
+    {
+      "time": 147,
+      "text": "Plus fort.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 119
+    },
+    {
+      "time": 179,
+      "text": "Au fond, à chaque fois.",
+      "mode": "rhythm",
+      "from": "throat",
+      "to": "full",
+      "bpm": 60
+    },
+    {
+      "time": 197,
+      "text": "Tiens au fond.",
+      "mode": "hold",
+      "to": "full",
+      "duration": 14
+    },
+    {
+      "time": 211,
+      "text": "Voilà, bonne fille."
+    },
+    {
+      "time": 212,
+      "mode": "breath",
+      "duration": 4
+    },
+    {
+      "time": 213,
+      "text": "Remonte. Respire."
+    }
+  ]
+}
