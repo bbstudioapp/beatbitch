@@ -13,6 +13,7 @@ import '../../models/career_generation_inputs.dart';
 import '../../models/challenge.dart';
 import '../../../models/posture.dart';
 import '../../models/level_milestone.dart';
+import '../../../models/hold_move.dart';
 import '../../models/phrase_bank.dart';
 import '../../models/posture_unlock.dart';
 import '../../models/session_length_choice.dart';
@@ -327,6 +328,12 @@ class CareerSessionGenerator {
 
   final Random _rng;
 
+  /// Tirages des mouvements de tenue, à part de [_rng] : les ajouter ne
+  /// décale pas le reste de la séance générée.
+  final Random _movesRng;
+  PhraseBank? _bank;
+  bool _holdMovesAnnounced = false;
+
   // ─── PARAMÈTRES DE SESSION (figés par [generate]) ────────────────────────
   // 16 inputs immuables regroupés dans `SessionConfig`, re-posé en début
   // de chaque `generate()` / `generatePunishment()`. Toute lecture passe
@@ -406,6 +413,7 @@ class CareerSessionGenerator {
     int? seed,
     Map<SessionMode, ModeRules>? rules,
   })  : _rng = seed != null ? Random(seed) : Random(),
+        _movesRng = seed != null ? Random(seed ^ 0x7e9e) : Random(),
         _rules = rules ?? defaultModeRulesRegistry;
 
   // ─── Rôles sémantiques (cf. phase B du plan de refacto) ──────────────────
@@ -626,6 +634,8 @@ class CareerSessionGenerator {
     /// break. Cf. spec `specs/scripted_breaks.md`.
     bool scriptedBreaks = false,
   }) {
+    _bank = bank;
+    _holdMovesAnnounced = false;
     // Invariants `milestones` : on ne peut pas les déplacer dans le
     // constructeur de `MilestonePlan` car `.placement` n'est pas
     // const-eval-friendly (ce qui casserait `static const MilestonePlan.none`,
@@ -2127,9 +2137,22 @@ class CareerSessionGenerator {
       ratio = CareerLevelGates.holdFinalAnchorRatio;
       bpm = CareerLevelGates.holdFinalAnchorBpm;
     }
+    var stepText = text;
+    var moves = const <HoldMove>[];
+    if (isHold && anchor == BeatAnchor.none) {
+      moves = _holdMovesFor(draft);
+      if (moves.isNotEmpty && !_holdMovesAnnounced) {
+        final phrase =
+            _bank?.pickFor(SessionMode.hold, 'moves', _movesRng) ?? '';
+        if (phrase.isNotEmpty) {
+          stepText = text.isEmpty ? phrase : '$text $phrase';
+          _holdMovesAnnounced = true;
+        }
+      }
+    }
     return SessionStep(
       time: time,
-      text: text,
+      text: stepText,
       mode: draft.mode,
       bpm: bpm,
       bpmEnd: draft.bpmEnd,
@@ -2138,7 +2161,57 @@ class CareerSessionGenerator {
       duration: draft.duration,
       anchor: anchor,
       ratio: ratio,
+      moves: moves,
     );
+  }
+
+  /// Allers-retours d'une tenue (cf. [CareerLevelGates.holdMovesFloorLevel]).
+  /// Vers le bas, seulement jusqu'à `full` et si la capacité de profondeur
+  /// au rythme l'accepte ; vers le haut, n'importe quelle position.
+  List<HoldMove> _holdMovesFor(StepDraft d) {
+    final hold = d.to ?? d.from;
+    final dur = d.duration;
+    if (hold == null ||
+        dur == null ||
+        dur < CareerLevelGates.holdMovesMinDuration ||
+        _config.level < CareerLevelGates.holdMovesFloorLevel ||
+        _movesRng.nextDouble() >= CareerLevelGates.holdMovesProbability) {
+      return const [];
+    }
+    final canGoDown = hold.index < Position.full.index &&
+        _clampToCapability(StepDraft(
+              mode: SessionMode.rhythm,
+              bpm: 60,
+              from: hold,
+              to: Position.full,
+              duration: dur,
+            )).to ==
+            Position.full;
+    final above = Position.values.where((p) => p.index < hold.index).toList();
+    final maxCount = 1 +
+        (dur - CareerLevelGates.holdMovesMinDuration) ~/
+            CareerLevelGates.holdMovesSecondsPerExtra;
+    final count = 1 + _movesRng.nextInt(maxCount);
+    // Chaque aller-retour dans sa tranche, à distance du début et de la fin.
+    final slot = (dur - 2.5) / count;
+    final out = <HoldMove>[];
+    for (var i = 0; i < count; i++) {
+      final down = canGoDown &&
+          (above.isEmpty ||
+              _movesRng.nextDouble() <
+                  CareerLevelGates.holdMovesDownProbability);
+      if (!down && above.isEmpty) break;
+      final to = down ? Position.full : above[_movesRng.nextInt(above.length)];
+      final room = slot - excursionLeg(hold, to).inMilliseconds * 2 / 1000;
+      if (room <= 0) continue;
+      final at = 1.5 + i * slot + _movesRng.nextDouble() * room;
+      out.add(HoldMove(
+        kind: HoldMoveKind.excursion,
+        at: (at * 10).round() / 10,
+        to: to,
+      ));
+    }
+    return out;
   }
 
   /// Retourne l'`UnlockKey` requise pour jouer [draft], `null` si l'action

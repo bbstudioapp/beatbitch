@@ -96,6 +96,10 @@
     ]
   },
   "hold": {
+    "moves": [
+      "Aguanta la posición. En cada pitido, un ida y vuelta rápido, y vuelves enseguida.",
+      "Aguanta… y cuando pite, muévete de golpe y vuelve enseguida."
+    ],
     "soft": [
       "Quédate con ella al fondo. Buena chica.",
       "Quédate ahí, juguetito."

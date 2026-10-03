@@ -96,6 +96,10 @@
     ]
   },
   "hold": {
+    "moves": [
+      "Halt die Position. Bei jedem Beep ein schnelles Hin und Zurück, dann sofort zurück.",
+      "Halt… und wenn es piept, beweg dich mit einem Ruck und komm sofort zurück."
+    ],
     "soft": [
       "Halt ihn tief drin. Brav.",
       "Bleib da, kleines Spielzeug."

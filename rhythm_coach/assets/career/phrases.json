@@ -96,6 +96,10 @@
     ]
   },
   "hold": {
+    "moves": [
+      "Tiens la position. À chaque bip, un aller-retour éclair, puis tu reviens.",
+      "Tiens… et quand ça bipe, tu bouges d’un coup et tu reviens aussitôt."
+    ],
     "soft": [
       "Garde-le au fond. C’est bien.",
       "Reste là petit jouet."

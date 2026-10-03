@@ -112,6 +112,17 @@ class CareerLevelGates {
   /// chantier-aimant-étape-3.
   static const int rhythmAnchorToFloorLevel = 10;
 
+  /// Allers-retours pendant une tenue (cf. `HoldMove`) : à partir de ce
+  /// niveau, une tenue d'au moins [holdMovesMinDuration] s en reçoit avec la
+  /// probabilité [holdMovesProbability] ; un de plus par tranche de
+  /// [holdMovesSecondsPerExtra] s ; vers `full` dans
+  /// [holdMovesDownProbability] des cas quand la capacité le permet.
+  static const int holdMovesFloorLevel = 5;
+  static const int holdMovesMinDuration = 6;
+  static const int holdMovesSecondsPerExtra = 8;
+  static const double holdMovesProbability = 0.5;
+  static const double holdMovesDownProbability = 1 / 3;
+
   /// Force par défaut de l'aimant rythmé — schéma 3:1 de Manu (intervalle
   /// 1,5T sur la position ancrée, 0,5T sur l'autre).
   static const int rhythmAnchorDefaultRatio = 3;
