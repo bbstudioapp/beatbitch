@@ -204,7 +204,8 @@ class AmbienceEngine {
   /// comme [startPlayback].
   @visibleForTesting
   Future<void> startClimaxPlayback(String asset) async {
-    final player = _climaxPlayer ??= AudioPlayer(playerId: 'ambience_climax');
+    final player = _climaxPlayer ??= AudioPlayer(playerId: 'ambience_climax')
+      ..positionUpdater = null;
     await _withoutFocus(player);
     await player.setReleaseMode(ReleaseMode.stop);
     await player.setSource(AssetSource(asset));
@@ -303,7 +304,8 @@ class AmbienceEngine {
   /// comme [startPlayback].
   @visibleForTesting
   Future<void> startFinishPlayback(Duration offset) async {
-    final player = _finishPlayer ??= AudioPlayer(playerId: 'finish_music');
+    final player = _finishPlayer ??= AudioPlayer(playerId: 'finish_music')
+      ..positionUpdater = null;
     if (!_finishInitialized) {
       await _withoutFocus(player);
       await player.setReleaseMode(ReleaseMode.stop);
