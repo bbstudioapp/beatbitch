@@ -263,7 +263,10 @@ class BeepEngine {
           isFinaleVariant ? 'audio/finale/$name.mp3' : 'audio/$name.mp3';
       for (var i = 0; i < poolSize; i++) {
         try {
-          final p = AudioPlayer(playerId: 'beep_${name}_$i');
+          final p = AudioPlayer(playerId: 'beep_${name}_$i')
+            // Sans ça, audioplayers interroge la position de chaque lecteur
+            // à chaque image tant qu'il joue, via le canal natif.
+            ..positionUpdater = null;
           // ReleaseMode.stop : à la fin du sample, le player se met en pause
           // et la position revient à 0, prêt pour le prochain resume().
           await p.setReleaseMode(ReleaseMode.stop);

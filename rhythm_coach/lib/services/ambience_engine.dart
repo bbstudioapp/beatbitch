@@ -44,7 +44,8 @@ class AmbienceEngine {
   /// retentative).
   static const Duration _startTimeout = Duration(seconds: 3);
 
-  final AudioPlayer _player = AudioPlayer(playerId: 'ambience_loop');
+  final AudioPlayer _player = AudioPlayer(playerId: 'ambience_loop')
+    ..positionUpdater = null;
 
   String? _currentAsset;
   double _volume = defaultVolume;
