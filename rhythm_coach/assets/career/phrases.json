@@ -96,6 +96,10 @@
     ]
   },
   "hold": {
+    "micro": [
+      "Petits mouvements rapides, sans lâcher la position !",
+      "Bouge à peine, vite, vite… sans sortir !"
+    ],
     "moves": [
       "Tiens la position. À chaque bip, un aller-retour éclair, puis tu reviens.",
       "Tiens… et quand ça bipe, tu bouges d’un coup et tu reviens aussitôt."

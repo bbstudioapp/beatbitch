@@ -96,6 +96,10 @@
     ]
   },
   "hold": {
+    "micro": [
+      "Tiny quick movements, keep the position!",
+      "Barely move, fast, fast… don't pull out!"
+    ],
     "moves": [
       "Hold the position. On each beep, one quick back-and-forth, then come right back.",
       "Hold… and when it beeps, move in one go and come straight back."

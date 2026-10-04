@@ -76,14 +76,16 @@ class HoldMove {
 }
 
 /// Instant clé d'un mouvement de tenue, compté depuis le début réel de la
-/// tenue. [beep] : le moteur joue le bip de [position] à cet instant, quand
-/// le curseur y arrive.
+/// tenue. [idx] : position sur l'échelle (fractionnaire pour un
+/// micro-mouvement). [beep] : le moteur joue le bip de cette position à cet
+/// instant, au volume relatif [volume].
 class HoldKeyframe {
   final Duration at;
-  final Position position;
-  final bool beep;
+  final double idx;
+  final Position? beep;
+  final double volume;
 
-  const HoldKeyframe(this.at, this.position, {this.beep = false});
+  const HoldKeyframe(this.at, this.idx, {this.beep, this.volume = 1.0});
 }
 
 /// Durée d'un trajet d'aller-retour : assez court pour rester un à-coup,
@@ -91,10 +93,17 @@ class HoldKeyframe {
 Duration excursionLeg(Position from, Position to) =>
     Duration(milliseconds: 200 + 120 * (from.index - to.index).abs());
 
-/// Instants clés de tous les mouvements d'une tenue sur [hold], triés. Les
-/// mouvements qui se chevaucheraient sont ignorés (le premier gagne).
-List<HoldKeyframe> holdKeyframes(Position hold, List<HoldMove> moves) {
-  final out = <HoldKeyframe>[];
+/// Demi-période d'un micro-mouvement (~3 va-et-vient par seconde) et son
+/// amplitude, en crans.
+const Duration microHalfPeriod = Duration(milliseconds: 170);
+const double microAmplitude = 0.4;
+const double microTickVolume = 0.35;
+
+/// Instants clés de chaque mouvement d'une tenue sur [hold], un groupe par
+/// mouvement, triés. Un mouvement qui chevaucherait le précédent est ignoré.
+List<List<HoldKeyframe>> holdMoveGroups(Position hold, List<HoldMove> moves) {
+  final out = <List<HoldKeyframe>>[];
+  final h = hold.index.toDouble();
   var busyUntil = Duration.zero;
   final sorted = [...moves]..sort((a, b) => a.at.compareTo(b.at));
   for (final m in sorted) {
@@ -103,15 +112,36 @@ List<HoldKeyframe> holdKeyframes(Position hold, List<HoldMove> moves) {
     switch (m.kind) {
       case HoldMoveKind.excursion:
         final leg = excursionLeg(hold, m.to!);
-        out
-          ..add(HoldKeyframe(start, hold))
-          ..add(HoldKeyframe(start + leg, m.to!, beep: true))
-          ..add(HoldKeyframe(start + leg * 2, hold, beep: true));
+        out.add([
+          HoldKeyframe(start, h),
+          HoldKeyframe(start + leg, m.to!.index.toDouble(), beep: m.to),
+          HoldKeyframe(start + leg * 2, h, beep: hold),
+        ]);
         busyUntil = start + leg * 2;
       case HoldMoveKind.micro:
+        final duration =
+            Duration(microseconds: ((m.duration ?? 4) * 1e6).round());
+        final peak =
+            hold == Position.tip ? h + microAmplitude : h - microAmplitude;
+        final frames = <HoldKeyframe>[HoldKeyframe(start, h)];
+        var t = start;
+        var up = true;
+        while (t + microHalfPeriod <= start + duration || !up) {
+          t += microHalfPeriod;
+          frames.add(up
+              ? HoldKeyframe(t, peak, beep: hold, volume: microTickVolume)
+              : HoldKeyframe(t, h));
+          up = !up;
+        }
+        out.add(frames);
+        busyUntil = t;
       case HoldMoveKind.lickBalls:
         break;
     }
   }
   return out;
 }
+
+/// Tous les instants clés d'une tenue, à plat.
+List<HoldKeyframe> holdKeyframes(Position hold, List<HoldMove> moves) =>
+    [for (final g in holdMoveGroups(hold, moves)) ...g];

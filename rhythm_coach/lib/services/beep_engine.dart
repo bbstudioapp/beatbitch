@@ -932,7 +932,8 @@ class BeepEngine {
   /// [_holdElapsedMs], aux instants de [holdKeyframes] — les mêmes que ceux
   /// que dessine la courbe.
   void _startHoldMoves() {
-    final frames = holdKeyframes(_from, _moves).where((k) => k.beep).toList();
+    final frames =
+        holdKeyframes(_from, _moves).where((k) => k.beep != null).toList();
     if (frames.isEmpty) return;
     final myGen = ++_loopGen;
     final originMs = DateTime.now().millisecondsSinceEpoch - _holdElapsedMs;
@@ -951,7 +952,8 @@ class BeepEngine {
               DateTime.now().millisecondsSinceEpoch);
       _loopTimer = Timer(Duration(milliseconds: delayMs), () {
         if (myGen != _loopGen) return;
-        _trigger(_assetForPosition(frames[i].position), _rhythmVolume);
+        _trigger(_assetForPosition(frames[i].beep!),
+            _rhythmVolume * frames[i].volume);
         scheduleFrom(i + 1);
       });
     }

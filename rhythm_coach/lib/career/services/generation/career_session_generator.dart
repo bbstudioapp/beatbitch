@@ -14,6 +14,7 @@ import '../../models/challenge.dart';
 import '../../../models/posture.dart';
 import '../../models/level_milestone.dart';
 import '../../../models/hold_move.dart';
+import '../../../services/beep_engine.dart';
 import '../../models/phrase_bank.dart';
 import '../../models/posture_unlock.dart';
 import '../../models/session_length_choice.dart';
@@ -1795,7 +1796,7 @@ class CareerSessionGenerator {
         // la première clé du registry (= rhythm historiquement) ;
         // n'importe quelle clé donnerait le même résultat. Cf. C.PR6.
         defaultMode: _rules.keys.first,
-        steps: ctx.steps,
+        steps: _withMicroCues(ctx.steps),
         milestoneId:
             ctx.insertedBodies.isNotEmpty ? ctx.insertedBodies[0].id : null,
         milestoneStartTime: milestoneStartTime,
@@ -2141,7 +2142,8 @@ class CareerSessionGenerator {
     var moves = const <HoldMove>[];
     if (isHold && anchor == BeatAnchor.none) {
       moves = _holdMovesFor(draft);
-      if (moves.isNotEmpty && !_holdMovesAnnounced) {
+      if (moves.any((m) => m.kind == HoldMoveKind.excursion) &&
+          !_holdMovesAnnounced) {
         final phrase =
             _bank?.pickFor(SessionMode.hold, 'moves', _movesRng) ?? '';
         if (phrase.isNotEmpty) {
@@ -2165,6 +2167,37 @@ class CareerSessionGenerator {
     );
   }
 
+  /// Consigne vocale au début de chaque rafale de micro-mouvements : un step
+  /// de texte seul à l'instant où la rafale démarre (début du step + gap de
+  /// transition + `at`), sans toucher à la configuration en cours.
+  List<SessionStep> _withMicroCues(List<SessionStep> steps) {
+    final out = <SessionStep>[];
+    SessionMode? previous;
+    for (final step in steps) {
+      out.add(step);
+      if (step.isTextOnly) continue;
+      if (step.mode == SessionMode.hold) {
+        final gap = BeepEngine.transitionGap(
+            incoming: SessionMode.hold,
+            previous: previous,
+            incomingTo: step.to);
+        for (final m in step.moves.where((m) => m.kind == HoldMoveKind.micro)) {
+          final cue =
+              _bank?.pickFor(SessionMode.hold, 'micro', _movesRng) ?? '';
+          if (cue.isEmpty) continue;
+          out.add(SessionStep(
+            time:
+                step.time + ((gap.inMilliseconds + m.at * 1000) / 1000).floor(),
+            text: cue,
+          ));
+        }
+      }
+      previous = step.mode;
+    }
+    out.sort((a, b) => a.time.compareTo(b.time));
+    return out;
+  }
+
   /// Allers-retours d'une tenue (cf. [CareerLevelGates.holdMovesFloorLevel]).
   /// Vers le bas, seulement jusqu'à `full` et si la capacité de profondeur
   /// au rythme l'accepte ; vers le haut, n'importe quelle position.
@@ -2174,9 +2207,28 @@ class CareerSessionGenerator {
     if (hold == null ||
         dur == null ||
         dur < CareerLevelGates.holdMovesMinDuration ||
-        _config.level < CareerLevelGates.holdMovesFloorLevel ||
-        _movesRng.nextDouble() >= CareerLevelGates.holdMovesProbability) {
+        _config.level < CareerLevelGates.holdMovesFloorLevel) {
       return const [];
+    }
+    final roll = _movesRng.nextDouble();
+    if (roll >= CareerLevelGates.holdMovesProbability) {
+      if (roll >=
+          CareerLevelGates.holdMovesProbability +
+              CareerLevelGates.holdMicroProbability) {
+        return const [];
+      }
+      final maxBurst = min(CareerLevelGates.holdMicroMaxBurst, dur - 3);
+      if (maxBurst < CareerLevelGates.holdMicroMinBurst) return const [];
+      final burst = CareerLevelGates.holdMicroMinBurst +
+          _movesRng.nextInt(maxBurst - CareerLevelGates.holdMicroMinBurst + 1);
+      final at = 1.5 + _movesRng.nextDouble() * (dur - burst - 2.5);
+      return [
+        HoldMove(
+          kind: HoldMoveKind.micro,
+          at: (at * 10).round() / 10,
+          duration: burst.toDouble(),
+        ),
+      ];
     }
     final canGoDown = hold.index < Position.full.index &&
         _clampToCapability(StepDraft(

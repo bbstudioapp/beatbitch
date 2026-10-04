@@ -96,6 +96,10 @@
     ]
   },
   "hold": {
+    "micro": [
+      "Kleine schnelle Bewegungen, bleib in Position!",
+      "Kaum bewegen, schnell, schnell… nicht rausgehen!"
+    ],
     "moves": [
       "Halt die Position. Bei jedem Beep ein schnelles Hin und Zurück, dann sofort zurück.",
       "Halt… und wenn es piept, beweg dich mit einem Ruck und komm sofort zurück."

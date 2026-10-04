@@ -67,4 +67,37 @@ void main() {
     expect(tip, closeTo(500 + leg + 1000, 60),
         reason: 'le bip d\'arrivée tombe après la pause, pas pendant');
   });
+
+  test('une rafale de micro-mouvements sonne des tics légers', () async {
+    final beep = BeepEngine();
+    await beep.init();
+    final ticks = <(String, double)>[];
+    var started = false;
+    beep.debugOnTrigger = (asset, volume) {
+      if (started) ticks.add((asset, volume));
+      if (asset == 'hold_beep') started = true;
+    };
+    beep
+        .applyStep(
+            const SessionStep(
+              time: 0,
+              mode: SessionMode.hold,
+              to: Position.throat,
+              duration: 10,
+              moves: [
+                HoldMove(kind: HoldMoveKind.micro, at: 0.2, duration: 1.5),
+              ],
+            ),
+            SessionMode.rhythm)
+        .ignore();
+    await Future<void>.delayed(const Duration(milliseconds: 2800));
+    await beep.stop();
+    expect(ticks.length, closeTo(1500 / 340, 1.5));
+    expect(ticks.map((t) => t.$1).toSet(), {'throat_beep'});
+    final full = ticks.first.$2 / microTickVolume;
+    for (final t in ticks) {
+      expect(t.$2, closeTo(full * microTickVolume, 1e-9));
+    }
+    expect(full, greaterThan(ticks.first.$2), reason: 'tic plus doux');
+  });
 }

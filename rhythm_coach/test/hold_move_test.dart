@@ -63,10 +63,10 @@ void main() {
       ]);
       final leg = excursionLeg(Position.throat, Position.tip);
       expect(leg, const Duration(milliseconds: 560));
-      expect(k.map((e) => (e.at, e.position, e.beep)).toList(), [
-        (const Duration(seconds: 4), Position.throat, false),
-        (const Duration(seconds: 4) + leg, Position.tip, true),
-        (const Duration(seconds: 4) + leg * 2, Position.throat, true),
+      expect(k.map((e) => (e.at, e.idx, e.beep)).toList(), [
+        (const Duration(seconds: 4), 3.0, null),
+        (const Duration(seconds: 4) + leg, 0.0, Position.tip),
+        (const Duration(seconds: 4) + leg * 2, 3.0, Position.throat),
       ]);
     });
 
@@ -76,8 +76,8 @@ void main() {
         HoldMove(kind: HoldMoveKind.excursion, at: 3, to: Position.full),
       ]);
       expect(k.first.at, const Duration(seconds: 3));
-      expect(k[1].position, Position.full);
-      expect(k[4].position, Position.head);
+      expect(k[1].beep, Position.full);
+      expect(k[4].beep, Position.head);
     });
 
     test('un aller-retour qui chevauche le précédent est ignoré', () {
@@ -108,5 +108,42 @@ void main() {
       currentBpm: 60,
     );
     expect(upcoming.single.moves.single.to, Position.tip);
+  });
+
+  group('micro-mouvements', () {
+    test('rafale de petits va-et-vient, tic à chaque sommet, retour en place',
+        () {
+      final k = holdKeyframes(Position.throat, const [
+        HoldMove(kind: HoldMoveKind.micro, at: 2, duration: 3),
+      ]);
+      expect(k.first.at, const Duration(seconds: 2));
+      expect(k.first.idx, 3.0);
+      expect(k.last.idx, 3.0, reason: 'la rafale finit sur la position tenue');
+      final peaks = k.where((f) => f.beep != null).toList();
+      expect(peaks.length, closeTo(3000 / 340, 1.5), reason: '~3 par seconde');
+      for (final p in peaks) {
+        expect(p.idx, closeTo(3 - microAmplitude, 1e-9));
+        expect(p.volume, microTickVolume);
+        expect(p.beep, Position.throat);
+      }
+      expect((k.last.at - k.first.at).inMilliseconds,
+          inInclusiveRange(3000, 3340));
+    });
+
+    test('au bout, les micro-mouvements partent vers le bas', () {
+      final k = holdKeyframes(Position.tip, const [
+        HoldMove(kind: HoldMoveKind.micro, at: 0, duration: 1),
+      ]);
+      expect(k.where((f) => f.beep != null).first.idx, microAmplitude);
+    });
+
+    test('un groupe par mouvement', () {
+      final g = holdMoveGroups(Position.throat, const [
+        HoldMove(kind: HoldMoveKind.excursion, at: 1, to: Position.tip),
+        HoldMove(kind: HoldMoveKind.micro, at: 5, duration: 2),
+      ]);
+      expect(g, hasLength(2));
+      expect(g.first, hasLength(3));
+    });
   });
 }

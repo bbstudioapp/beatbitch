@@ -17,6 +17,7 @@ PhraseBank _bank() => PhraseBank(
             'boost': _p(['b']),
             'finale': _p(['f']),
             if (m == SessionMode.hold) 'moves': _p(['CONSIGNE']),
+            if (m == SessionMode.hold) 'micro': _p(['MICRO']),
           },
       },
       congrats: _p(['bravo']),
@@ -47,10 +48,11 @@ void main() {
         final hold = h.to ?? h.from!;
         expect(h.duration!, greaterThanOrEqualTo(6));
         final frames = holdKeyframes(hold, h.moves);
-        expect(frames, hasLength(h.moves.length * 3),
-            reason: 'aucun aller-retour ne chevauche le précédent');
+        expect(holdMoveGroups(hold, h.moves), hasLength(h.moves.length),
+            reason: 'aucun mouvement ne chevauche le précédent');
         expect(frames.last.at.inMilliseconds, lessThan(h.duration! * 1000),
             reason: 'le dernier retour tombe avant la fin de la tenue');
+        if (h.moves.first.kind == HoldMoveKind.micro) continue;
         for (final m in h.moves) {
           expect(m.kind, HoldMoveKind.excursion);
           if (m.to!.index > hold.index) {
@@ -69,7 +71,8 @@ void main() {
   test('la consigne est donnée à la première tenue qui en a, une seule fois',
       () {
     for (var seed = 1; seed <= 10; seed++) {
-      final holds = _holds(seed, 14).where((h) => h.moves.isNotEmpty);
+      final holds = _holds(seed, 14)
+          .where((h) => h.moves.any((m) => m.kind == HoldMoveKind.excursion));
       if (holds.isEmpty) continue;
       expect(holds.first.text, contains('CONSIGNE'), reason: 'seed $seed');
       expect(holds.skip(1).where((h) => h.text.contains('CONSIGNE')), isEmpty);
@@ -88,5 +91,38 @@ void main() {
   test('même graine, mêmes allers-retours', () {
     expect(_holds(7, 14).map((h) => h.moves).toList(),
         _holds(7, 14).map((h) => h.moves).toList());
+  });
+
+  test('des rafales de micro-mouvements, seules sur leur tenue, annoncées', () {
+    var bursts = 0;
+    for (var seed = 1; seed <= 20; seed++) {
+      final steps = CareerSessionGenerator(seed: seed)
+          .generate(
+            level: 14,
+            bank: _bank(),
+            durationSeconds: 20 * 60,
+            unlockedKeys: UnlockKey.values.toSet(),
+          )
+          .session
+          .steps;
+      for (var i = 0; i < steps.length; i++) {
+        final h = steps[i];
+        if (h.mode != SessionMode.hold) continue;
+        final micro = h.moves.where((m) => m.kind == HoldMoveKind.micro);
+        if (micro.isEmpty) continue;
+        bursts++;
+        expect(h.moves, hasLength(1), reason: 'jamais avec des A/R');
+        final m = micro.single;
+        expect(m.duration!, inInclusiveRange(3, 6));
+        expect(m.at + m.duration!, lessThanOrEqualTo(h.duration! - 0.5));
+        final cue = steps.where((s) =>
+            s.isTextOnly &&
+            s.text == 'MICRO' &&
+            s.time >= h.time &&
+            s.time <= h.time + 1 + m.at.ceil());
+        expect(cue, hasLength(1), reason: 'seed $seed t=${h.time}');
+      }
+    }
+    expect(bursts, greaterThan(0));
   });
 }

@@ -19,7 +19,11 @@ double? _cursorY(WidgetTester tester) {
   return null;
 }
 
-Widget _host(Duration elapsed) => MaterialApp(
+Widget _host(Duration elapsed,
+        {List<HoldMove> moves = const [
+          HoldMove(kind: HoldMoveKind.excursion, at: 0.4, to: Position.tip),
+        ]}) =>
+    MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
@@ -32,9 +36,7 @@ Widget _host(Duration elapsed) => MaterialApp(
             to: Position.throat,
             bpm: 60,
             elapsed: elapsed,
-            moves: const [
-              HoldMove(kind: HoldMoveKind.excursion, at: 0.4, to: Position.tip),
-            ],
+            moves: moves,
           ),
         ),
       ),
@@ -101,5 +103,31 @@ void main() {
     final afterTip = beats.where((b) => b.t > tip.single.t).first;
     expect(afterTip.idx, Position.throat.index.toDouble());
     expect(afterTip.t * 3000, closeTo(1300 + 2 * leg, 30));
+  });
+
+  testWidgets('pendant une rafale, le curseur vibre autour de la gorge',
+      (tester) async {
+    const start = Duration(seconds: 10);
+    const micro = [HoldMove(kind: HoldMoveKind.micro, at: 0.3, duration: 1.5)];
+    await tester.pumpWidget(_host(start, moves: micro));
+    final clock = Stopwatch()..start();
+    final ys = <(int, double)>[];
+    while (clock.elapsedMilliseconds < 2400) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)));
+      await tester.pumpWidget(_host(start + clock.elapsed, moves: micro));
+      ys.add((clock.elapsedMilliseconds, _cursorY(tester)!));
+    }
+    // 5 rangées : un cran = 0,5 en Align ; sommet = gorge − 0,4 cran.
+    final during = ys.where((e) => e.$1 > 350 && e.$1 < 1750).map((e) => e.$2);
+    final lows = during.where((y) => y < 0.5 - 0.15).length;
+    final highs = during.where((y) => y > 0.5 - 0.05).length;
+    expect(lows, greaterThan(5), reason: 'monte plusieurs fois');
+    expect(highs, greaterThan(5), reason: 'et revient entre deux');
+    expect(during.reduce((a, b) => a < b ? a : b), greaterThan(0.5 - 0.25),
+        reason: 'reste un petit mouvement, pas un aller-retour');
+    final after = ys.where((e) => e.$1 > 2100).map((e) => e.$2);
+    expect(after.every((y) => (y - 0.5).abs() < 0.03), isTrue,
+        reason: 'immobile après la rafale');
   });
 }

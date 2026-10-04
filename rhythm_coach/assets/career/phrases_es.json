@@ -96,6 +96,10 @@
     ]
   },
   "hold": {
+    "micro": [
+      "¡Movimientos pequeños y rápidos, sin soltar la posición!",
+      "Muévete apenas, rápido, rápido… ¡sin salir!"
+    ],
     "moves": [
       "Aguanta la posición. En cada pitido, un ida y vuelta rápido, y vuelves enseguida.",
       "Aguanta… y cuando pite, muévete de golpe y vuelve enseguida."

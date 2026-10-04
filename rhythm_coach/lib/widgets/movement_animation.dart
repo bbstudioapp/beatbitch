@@ -772,30 +772,35 @@ class _PositionLadder extends StatefulWidget {
     // Mouvements de la tenue courante, en horloge murale. Pendant un
     // aller-retour, le curseur suit ses instants clés.
     final elapsedMs0 = elapsed.inMilliseconds;
-    List<(DateTime, double)> keyframesAt(
+    // Un groupe par mouvement : le curseur n'interpole qu'à l'intérieur d'un
+    // groupe, entre deux mouvements il reste sur la position tenue.
+    List<List<(DateTime, double)>> groupsAt(
             Position hold, List<HoldMove> moves, DateTime origin) =>
         [
-          for (final k in holdKeyframes(hold, moves))
-            (origin.add(k.at), k.position.index.toDouble()),
+          for (final g in holdMoveGroups(hold, moves))
+            [for (final k in g) (origin.add(k.at), k.idx)],
         ];
-    var segKf = movesOrigin == null || moves.isEmpty
-        ? const <(DateTime, double)>[]
-        : keyframesAt(
+    var segGroups = movesOrigin == null || moves.isEmpty
+        ? const <List<(DateTime, double)>>[]
+        : groupsAt(
             from,
             moves,
             now.add(Duration(
                 milliseconds: movesOrigin!.inMilliseconds - elapsedMs0)));
-    for (var j = 0; j + 1 < segKf.length; j++) {
-      if (j % 3 == 2) continue;
-      final (aAt, aIdx) = segKf[j];
-      final (bAt, bIdx) = segKf[j + 1];
-      if (now.isBefore(aAt) || !now.isBefore(bAt)) continue;
-      final spanMs = bAt.difference(aAt).inMilliseconds.toDouble();
-      final p = now.difference(aAt).inMilliseconds.toDouble() / spanMs;
-      yNow = aIdx + (bIdx - aIdx) * Curves.easeInOutCubic.transform(p);
-      originAt = aAt;
-      originIdx = aIdx;
-      break;
+    var segKf = [for (final g in segGroups) ...g];
+    groups:
+    for (final g in segGroups) {
+      for (var j = 0; j + 1 < g.length; j++) {
+        final (aAt, aIdx) = g[j];
+        final (bAt, bIdx) = g[j + 1];
+        if (now.isBefore(aAt) || !now.isBefore(bAt)) continue;
+        final spanMs = bAt.difference(aAt).inMilliseconds.toDouble();
+        final p = now.difference(aAt).inMilliseconds.toDouble() / spanMs;
+        yNow = aIdx + (bIdx - aIdx) * Curves.easeInOutCubic.transform(p);
+        originAt = aAt;
+        originIdx = aIdx;
+        break groups;
+      }
     }
 
     final anchorOrigin = originAt;
@@ -915,10 +920,8 @@ class _PositionLadder extends StatefulWidget {
 
     var kfI = 0;
     bool insideMove(DateTime t) {
-      for (var j = 0; j + 2 < segKf.length; j += 3) {
-        if (t.isAfter(segKf[j].$1) && t.isBefore(segKf[j + 2].$1)) {
-          return true;
-        }
+      for (final g in segGroups) {
+        if (t.isAfter(g.first.$1) && t.isBefore(g.last.$1)) return true;
       }
       return false;
     }
@@ -1004,9 +1007,11 @@ class _PositionLadder extends StatefulWidget {
         segFamily = newFamily;
         segFrom = newFrom;
         segTo = newTo;
-        segKf = upcoming.mode == SessionMode.hold && upcoming.moves.isNotEmpty
-            ? keyframesAt(newFrom, upcoming.moves, resumeAt)
-            : const <(DateTime, double)>[];
+        segGroups =
+            upcoming.mode == SessionMode.hold && upcoming.moves.isNotEmpty
+                ? groupsAt(newFrom, upcoming.moves, resumeAt)
+                : const <List<(DateTime, double)>>[];
+        segKf = [for (final g in segGroups) ...g];
         kfI = 0;
         upcomingIdx++;
         nextBoundary = boundaryAt(upcomingIdx);
