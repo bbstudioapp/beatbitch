@@ -135,6 +135,7 @@ extension FailFlowOrchestrator on SessionController {
     // contrôle de séance visible en production (play/pause/stop sont derrière
     // le toggle debug `showSessionControls`, off par défaut).
     await _stopTtsBounded();
+    _dropPendingSpeech();
     await _beep.pause();
 
     _state = SessionState.failing;
@@ -389,6 +390,7 @@ extension FailFlowOrchestrator on SessionController {
     // `Coach.miniPunishmentRate`), donc la séance pourrait progresser
     // normalement puis se figer sans aucune action de l'utilisatrice.
     await _stopTtsBounded();
+    _dropPendingSpeech();
     await _beep.pause();
 
     _state = SessionState.failing;

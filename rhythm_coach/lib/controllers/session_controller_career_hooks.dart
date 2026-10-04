@@ -139,6 +139,7 @@ extension CareerHooksOrchestrator on SessionController {
     // désynchronisés du texte attendu), et l'écran garde `_upgradeInFlight`
     // à `true`, donc le bouton « Utilise-moi » durablement désactivé.
     await _stopTtsBounded();
+    _dropPendingSpeech();
 
     _nextStepIndex = 0;
     _lastConfigStep = null;
@@ -199,11 +200,7 @@ extension CareerHooksOrchestrator on SessionController {
 
     _nextStepIndex = 0;
     _lastConfigStep = null;
-    // `_checkSteps` sort tôt pendant tout le défi (`atSeuil` puis
-    // `_inPostChallengeBreath`) : sans ce reset, le compteur de report reste
-    // gelé à sa valeur d'avant le défi et la marge du premier step de la
-    // suite régénérée serait plus courte que prévu.
-    _ttsDeferredTicks = 0;
+    _dropPendingSpeech();
     // Reset de l'état break (issue #77), même raison que `requestUpgrade` :
     // la suite régénérée n'a pas de break, on évite un `_breakActive` coincé.
     _breakActive = false;

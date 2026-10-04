@@ -96,9 +96,8 @@ extension BreakSequencer on SessionController {
   /// changement de pose (ou de reprise neutre en récup pure), et relâche
   /// `_breakActive`. Le beep n'est PAS restauré ici : `_checkSteps` (appelé
   /// juste après dans `_onTick`) applique le step d'effort que le générateur
-  /// a posé à `break.endTime`, ce qui reconfigure et relance le loop. Tant
-  /// que la phrase de reprise parle, l'anti-coupure de `_checkSteps` diffère
-  /// ce step → silence propre pendant l'annonce.
+  /// a posé à `break.endTime`, ce qui reconfigure et relance le loop à
+  /// l'heure ; sa propre phrase attend la fin de la phrase de reprise.
   void _exitBreak(ScriptedBreak b) {
     _breakActive = false;
     _activeBreak = null;

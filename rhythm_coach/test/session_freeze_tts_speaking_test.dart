@@ -21,17 +21,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Non-régression du gel de séance signalé en 0.6.0 : « la première consigne
 /// reste affichée pour toujours, la seconde n'arrive jamais ».
 ///
-/// La progression d'une séance est portée par `_onTick` → `_checkSteps`. Ce
-/// dernier diffère tout step porteur de texte tant que `TtsService.isSpeaking`
-/// est vrai, en reculant l'horloge logique d'un tick à chaque passage. Le flag
-/// n'est remis à `false` que par un callback du moteur TTS
+/// La phrase d'un step attend que `TtsService.isSpeaking` repasse à faux. Le
+/// flag n'est remis à `false` que par un callback du moteur TTS
 /// (`speak.onComplete` / `onCancel` / `onError`). Si le moteur ne rappelle
 /// jamais — service TTS Android déconnecté, `onend` avalé par Safari/PWA — le
 /// flag reste collé à `true`.
 ///
-/// Trois gardes couvrent ce cas depuis `fix/session-freeze-tts-guard` :
-///  - le report d'un step est borné à `_maxTtsDeferTicks` (5 s), après quoi le
-///    step est consommé quoi qu'il arrive (au pire une phrase est coupée) ;
+/// Trois gardes couvrent ce cas :
+///  - l'attente d'une phrase est bornée à `_maxTtsDeferTicks` (5 s), après
+///    quoi elle part quoi qu'il arrive (au pire une phrase est coupée) ;
 ///  - tous les chemins qui coupent le TTS avant de basculer d'état passent par
 ///    `_stopTtsBounded()` — `pause()`, `stop()`, `triggerFail()`,
 ///    `_runMiniPunishmentFlow()` et `requestUpgrade()` — pour que la séance
@@ -67,17 +65,19 @@ void main() {
 
   /// Installe un faux moteur TTS. [completesUtterances] à `false` reproduit un
   /// moteur qui démarre l'énoncé (`speak.onStart`) et ne signale jamais sa fin.
-  void installFakeTtsEngine({required bool completesUtterances}) {
+  void installFakeTtsEngine({
+    required bool completesUtterances,
+    Duration utterance = const Duration(milliseconds: 120),
+    void Function(MethodCall call)? onCall,
+  }) {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
+      onCall?.call(call);
       switch (call.method) {
         case 'speak':
           unawaited(pushFromEngine('speak.onStart', true));
           if (completesUtterances) {
-            Timer(
-              const Duration(milliseconds: 120),
-              () => pushFromEngine('speak.onComplete', true),
-            );
+            Timer(utterance, () => pushFromEngine('speak.onComplete', true));
           }
           return 1;
         case 'stop':
@@ -177,18 +177,87 @@ void main() {
 
     await ctrl.start();
     // Déroulé attendu, `isSpeaking` restant collé à `true` après le premier
-    // énoncé : step `un` consommé à t=0 ; step `deux` (time=1) atteint à
-    // t≈1 s puis différé 5 s (borne) → consommé à t≈6 s ; step `trois`
-    // (time=2) atteint à t≈7 s (l'horloge logique a pris 5 s de retard) puis
-    // différé jusqu'à t≈12 s. À 8,5 s on est donc sur `deux`, avec ~2,5 s de
-    // marge avant et ~3,5 s après.
+    // énoncé : `un` prononcé à t=0 ; `deux` en attente dès t≈1 s, prononcé à
+    // la borne (t≈6 s) ; `trois`, en attente derrière lui, à t≈11 s. À 8,5 s
+    // on est donc sur `deux`, avec ~2,5 s de marge de chaque côté.
     await Future<void>.delayed(const Duration(milliseconds: 8500));
 
     expect(ctrl.currentDisplayText, 'deux',
         reason: 'la séance progresse malgré un moteur TTS muet');
     expect(ctrl.elapsedSeconds, greaterThanOrEqualTo(1),
-        reason: "l'horloge logique avance : le report est borné");
+        reason: "l'horloge de séance avance");
     expect(ctrl.isRunning, isTrue);
+
+    await ctrl.stop();
+  }, timeout: const Timeout(Duration(seconds: 30)));
+
+  test(
+      'une voix en cours ne retarde pas le changement de mode : seule la '
+      'phrase attend', () async {
+    final clock = Stopwatch();
+    final calls = <(int, String, Object?)>[];
+    installFakeTtsEngine(
+      completesUtterances: true,
+      utterance: const Duration(seconds: 3),
+      onCall: (c) =>
+          calls.add((clock.elapsedMilliseconds, c.method, c.arguments)),
+    );
+    final beep = _RecordingBeepEngine(clock);
+    final ctrl = _buildController(
+      beep: beep,
+      steps: const [
+        SessionStep(
+            time: 0, text: 'un', mode: SessionMode.hold, to: Position.throat),
+        SessionStep(time: 1, text: 'deux', mode: SessionMode.rhythm),
+      ],
+    );
+
+    clock.start();
+    await ctrl.start();
+    await Future<void>.delayed(const Duration(milliseconds: 4500));
+
+    final rhythm =
+        beep.applied.firstWhere((a) => a.$2 == SessionMode.rhythm).$1;
+    expect(rhythm, lessThan(1400),
+        reason: 'le rythme s\'applique à son heure, pas à la fin de la voix');
+    expect(ctrl.elapsedSeconds, greaterThanOrEqualTo(4),
+        reason: 'l\'horloge de séance n\'a pas calé');
+    final deux =
+        calls.firstWhere((c) => c.$2 == 'speak' && '${c.$3}'.contains('deux'));
+    expect(deux.$1, greaterThanOrEqualTo(2900),
+        reason: 'la phrase attend la fin de la précédente');
+    expect(calls.where((c) => c.$2 == 'stop' && c.$1 < 2900), isEmpty,
+        reason: 'la phrase en cours n\'est pas coupée');
+
+    await ctrl.stop();
+  }, timeout: const Timeout(Duration(seconds: 30)));
+
+  test('la phrase du step final part tout de suite, avant le chime', () async {
+    final clock = Stopwatch();
+    final calls = <(int, String, Object?)>[];
+    installFakeTtsEngine(
+      completesUtterances: true,
+      utterance: const Duration(seconds: 3),
+      onCall: (c) =>
+          calls.add((clock.elapsedMilliseconds, c.method, c.arguments)),
+    );
+    final ctrl = _buildController(
+      finalStepTime: 1,
+      steps: const [
+        SessionStep(time: 0, text: 'un', mode: SessionMode.rhythm),
+        SessionStep(
+            time: 1, text: 'avale', mode: SessionMode.hold, to: Position.full),
+      ],
+    );
+
+    clock.start();
+    await ctrl.start();
+    await Future<void>.delayed(const Duration(milliseconds: 2000));
+
+    final avale =
+        calls.where((c) => c.$2 == 'speak' && '${c.$3}'.contains('avale'));
+    expect(avale, hasLength(1), reason: 'pas mise en attente');
+    expect(avale.single.$1, lessThan(1600));
 
     await ctrl.stop();
   }, timeout: const Timeout(Duration(seconds: 30)));
@@ -567,24 +636,28 @@ SessionController _buildController({
   AmbienceEngine? ambience,
   List<double>? staminaProfile,
   PhraseBank? phraseBank,
+  BeepEngine? beep,
+  int? finalStepTime,
+  List<SessionStep> steps = const [
+    SessionStep(time: 0, text: 'un', mode: SessionMode.rhythm),
+    SessionStep(time: 1, text: 'deux', mode: SessionMode.rhythm),
+    SessionStep(time: 2, text: 'trois', mode: SessionMode.rhythm),
+  ],
 }) {
   return SessionController(
     staminaProfile: staminaProfile,
     phraseBank: phraseBank,
-    session: const Session(
+    session: Session(
       id: 'freeze',
       name: 'freeze',
       description: '',
       durationSeconds: 600,
       defaultMode: SessionMode.rhythm,
-      steps: [
-        SessionStep(time: 0, text: 'un', mode: SessionMode.rhythm),
-        SessionStep(time: 1, text: 'deux', mode: SessionMode.rhythm),
-        SessionStep(time: 2, text: 'trois', mode: SessionMode.rhythm),
-      ],
+      steps: steps,
+      finalStepTime: finalStepTime,
     ),
     tts: TtsService(),
-    beep: _SilentBeepEngine(),
+    beep: beep ?? _SilentBeepEngine(),
     ambience: ambience ?? _SilentAmbienceEngine(),
     punishmentBundle:
         punishments ?? const PunishmentBundle(failPhrases: [], punishments: []),
@@ -618,6 +691,18 @@ class _SilentBeepEngine extends BeepEngine {
 
   @override
   Future<void> dispose() async {}
+}
+
+class _RecordingBeepEngine extends _SilentBeepEngine {
+  _RecordingBeepEngine(this.clock);
+
+  final Stopwatch clock;
+  final applied = <(int, SessionMode)>[];
+
+  @override
+  Future<void> applyStep(SessionStep step, SessionMode sessionMode) async {
+    applied.add((clock.elapsedMilliseconds, step.mode ?? sessionMode));
+  }
 }
 
 class _SilentAmbienceEngine extends AmbienceEngine {

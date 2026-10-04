@@ -48,15 +48,14 @@ enum FailPhase { phrase, breath, punishment }
 class SessionController extends ChangeNotifier {
   static const Duration _tickInterval = Duration(milliseconds: 200);
 
-  /// Nombre maximal de ticks pendant lesquels `_checkSteps` diffère un step
-  /// porteur de texte au motif qu'une phrase est en cours (`_tts.isSpeaking`).
-  /// 25 × 200 ms = 5 s. Au-delà, le step est consommé quoi qu'il arrive.
+  /// Nombre maximal de ticks pendant lesquels une phrase attend que la voix en
+  /// cours se termine (`_tts.isSpeaking`). 25 × 200 ms = 5 s. Au-delà, elle
+  /// part quoi qu'il arrive.
   ///
   /// Sans cette borne, un moteur de synthèse qui démarre un énoncé sans jamais
   /// signaler sa fin (service TTS Android déconnecté, `onend` avalé par
-  /// Safari/PWA) colle `isSpeaking` à `true` : l'horloge logique recule alors
-  /// autant qu'elle avance et la séance est gelée **définitivement** sur sa
-  /// consigne courante.
+  /// Safari/PWA) colle `isSpeaking` à `true` : plus aucune phrase en attente
+  /// ne serait jamais prononcée.
   ///
   /// Valeur calibrée sur le contenu réel, pas sur le cas de panne : les 560
   /// commentaires aléatoires du projet (4 langues + overrides coachs) durent
@@ -222,9 +221,13 @@ class SessionController extends ChangeNotifier {
   /// gelés, saut de section post-fail) ne doivent pas bouger le temps joué.
   Duration _playedOffset = Duration.zero;
 
-  /// Nombre de ticks consécutifs pendant lesquels le step courant a été
-  /// différé par la garde `isSpeaking` de `_checkSteps`. Remis à zéro dès
-  /// qu'un step est consommé. Borné par [_maxTtsDeferTicks].
+  /// Phrases de steps déjà appliqués, en attente que la voix en cours se
+  /// termine. Seule la phrase attend : la configuration du step, elle,
+  /// s'applique à son heure.
+  final List<SessionStep> _pendingSpeech = [];
+
+  /// Nombre de ticks pendant lesquels la tête de [_pendingSpeech] a attendu.
+  /// Borné par [_maxTtsDeferTicks].
   int _ttsDeferredTicks = 0;
 
   final Random _random = Random();
@@ -931,9 +934,7 @@ class SessionController extends ChangeNotifier {
   /// l'affichage : les instants des steps à venir sont exprimés sur cette
   /// horloge, donc tant qu'elle ne tourne pas, ils ne situent plus rien.
   /// `_onTick` appelle ce getter plutôt que de réécrire l'expression, pour que
-  /// les deux ne puissent pas diverger sur ces trois conditions. Le report TTS
-  /// de `_checkSteps` décrémente lui aussi `_timelineOffset` et n'est pas
-  /// couvert ici.
+  /// les deux ne puissent pas diverger sur ces trois conditions.
   bool get isTimelineFrozen =>
       isChallengeActive || _inPostChallengeBreath || awaitingPostureReady;
   int get elapsedSeconds => elapsed.inSeconds;
@@ -1032,7 +1033,7 @@ class SessionController extends ChangeNotifier {
         _stopwatch.reset();
         _timelineOffset = Duration.zero;
         _playedOffset = Duration.zero;
-        _ttsDeferredTicks = 0;
+        _dropPendingSpeech();
         _nextStepIndex = 0;
         _lastSpoken = null;
         _lastSpokenResolvedText = null;
@@ -1268,6 +1269,7 @@ class SessionController extends ChangeNotifier {
     await WakelockPlus.disable().timeout(_wakelockTimeout, onTimeout: () {});
 
     _state = SessionState.idle;
+    _dropPendingSpeech();
     _nextStepIndex = 0;
     _lastSpoken = null;
     _lastSpokenResolvedText = null;
@@ -1361,6 +1363,7 @@ class SessionController extends ChangeNotifier {
     // comme un break. Après `_updateBreakPhase` — fenêtres disjointes.
     _updateMilestonePose();
     _checkSteps();
+    _speakPendingWhenFree();
     // Gel de l'effort pendant un break : pas de crédit hold/saliva/stamina/
     // mini-punition ni de marqueurs de progression (la pause est de la récup
     // mise en scène, pas de l'effort). L'horloge `elapsed`, elle, continue.
@@ -1534,34 +1537,6 @@ class SessionController extends ChangeNotifier {
         session.steps[_nextStepIndex].time <= s) {
       final step = session.steps[_nextStepIndex];
 
-      // Anti-coupure des phrases random : si une phrase TTS est en cours
-      // et que ce step a son propre texte, on diffère le step entier au
-      // tick suivant en reculant l'horloge logique de l'épaisseur d'un
-      // tick. Le step s'enclenchera dès que `_tts.isSpeaking` repasse à
-      // false. Acceptable pour quelques centaines de ms (la phrase random
-      // fait typiquement 2-4 s, 5,7 s au maximum du contenu) ; au-delà la
-      // session se prolonge un peu, ce que l'utilisatrice a explicitement
-      // validé.
-      //
-      // On défère pour TOUT step ayant du texte (incluant text-only) :
-      // sinon le seul cas effectivement utile (un text-only random qui
-      // arrive sur une phrase coach random) ne serait pas couvert.
-      // Steps sans texte → on ne diffère jamais : la bascule de mode/bip
-      // doit suivre le tempo logique, pas un commentaire vocal.
-      //
-      // Le report est borné à [_maxTtsDeferTicks] (5 s) : passé ce délai on
-      // consomme le step même si le moteur se dit encore en train de parler.
-      // Sans borne, un `isSpeaking` collé à `true` gèle la séance pour
-      // toujours (cf. la doc de la constante).
-      if (step.text.isNotEmpty &&
-          _tts.isSpeaking &&
-          _ttsDeferredTicks < _maxTtsDeferTicks) {
-        _ttsDeferredTicks++;
-        _timelineOffset -= _tickInterval;
-        break;
-      }
-      _ttsDeferredTicks = 0;
-
       // Toggle déglutition (sticky). Appliqué AVANT l'éventuelle config de
       // bip pour que le mode soit déjà à jour quand le tick suivant
       // s'exécute. Le forçage à `forbidden` est ignoré tant que l'unlock
@@ -1588,11 +1563,6 @@ class SessionController extends ChangeNotifier {
         }
       }
 
-      // Phase 1 défis — la machine d'états est désormais drivée par
-      // `_updateChallengePhase` (appelée dans `_onTick`) sur la base
-      // d'`elapsedSeconds` vs `session.challengeTriggerTimes`. Plus de
-      // transition basée sur la consommation de step (fragile au timing
-      // TTS / différé `_timelineOffset`).
       if (!step.isTextOnly) {
         // Avant de changer de mode : si on quittait un hold full, on crédite
         // sa durée pour le badge Iron Lungs (uniquement quand le hold est
@@ -1651,9 +1621,15 @@ class SessionController extends ChangeNotifier {
         BackgroundsService.instance.setById(step.background!);
       }
 
+      final finalT = session.finalStepTime;
+      final isFinal = finalT != null && step.time == finalT;
       if (step.text.isNotEmpty) {
-        _lastSpoken = step;
-        _speakScripted(step.text);
+        if (!isFinal && (_tts.isSpeaking || _pendingSpeech.isNotEmpty)) {
+          _pendingSpeech.add(step);
+        } else {
+          _lastSpoken = step;
+          _speakScripted(step.text);
+        }
       }
 
       // Step final identifié via `Session.finalStepTime` : on déclenche le
@@ -1664,8 +1640,7 @@ class SessionController extends ChangeNotifier {
       // ne pas bloquer le tick — `awaitSpeakCompletion(true)` côté TTS
       // garantit que le `await speak` du helper retourne après la fin de
       // la phrase, donc le chime ne chevauche pas la voix.
-      final finalT = session.finalStepTime;
-      if (finalT != null && step.time == finalT && !_finalChimePlayed) {
+      if (isFinal && !_finalChimePlayed) {
         _finalChimePlayed = true;
         unawaited(_playFinalChimeAfterAction(step.text));
       }
@@ -1687,6 +1662,26 @@ class SessionController extends ChangeNotifier {
     if (modeChanged) {
       _syncAmbienceToCurrentMode();
     }
+  }
+
+  /// Prononce la plus ancienne phrase en attente dès que la voix se libère.
+  /// Passé [_maxTtsDeferTicks], elle part quand même (au pire une phrase est
+  /// coupée).
+  void _speakPendingWhenFree() {
+    if (_pendingSpeech.isEmpty) return;
+    if (_tts.isSpeaking && _ttsDeferredTicks < _maxTtsDeferTicks) {
+      _ttsDeferredTicks++;
+      return;
+    }
+    _ttsDeferredTicks = 0;
+    final step = _pendingSpeech.removeAt(0);
+    _lastSpoken = step;
+    _speakScripted(step.text);
+  }
+
+  void _dropPendingSpeech() {
+    _pendingSpeech.clear();
+    _ttsDeferredTicks = 0;
   }
 
   /// Entre en gate de validation posture (issue #77) : la séance se fige
