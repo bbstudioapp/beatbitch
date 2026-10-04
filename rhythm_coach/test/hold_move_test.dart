@@ -146,4 +146,51 @@ void main() {
       expect(g.first, hasLength(3));
     });
   });
+
+  group('lick balls', () {
+    test('position tenue inchangée, coups de langue réguliers sur balls', () {
+      final k = holdKeyframes(Position.full, const [
+        HoldMove(kind: HoldMoveKind.lickBalls, at: 2, duration: 4),
+      ]);
+      expect(k.map((f) => f.idx).toSet(), {4.0},
+          reason: 'la courbe reste plate à full');
+      expect(k.first.at, const Duration(seconds: 2));
+      expect(k.last.at, const Duration(seconds: 6));
+      final licks = k.where((f) => f.beep != null).toList();
+      expect(licks.length, 4000 ~/ lickBallsPeriod.inMilliseconds);
+      for (final l in licks) {
+        expect(l.beep, Position.balls);
+        expect(l.volume, lickBallsVolume);
+      }
+      expect(k.every((f) => f.tongue), isTrue);
+    });
+
+    test('le groupe porte la langue, pas les autres mouvements', () {
+      final g = holdMoveGroups(Position.full, const [
+        HoldMove(kind: HoldMoveKind.micro, at: 0, duration: 2),
+        HoldMove(kind: HoldMoveKind.lickBalls, at: 4, duration: 3),
+      ]);
+      expect(g, hasLength(2));
+      expect(g.first.any((f) => f.tongue), isFalse);
+      expect(g.last.every((f) => f.tongue), isTrue);
+    });
+
+    test('lickingAt vrai seulement pendant le léchage', () {
+      const moves = [
+        HoldMove(kind: HoldMoveKind.lickBalls, at: 2, duration: 3),
+      ];
+      expect(holdLickingAt(Position.full, moves, const Duration(seconds: 1)),
+          isFalse);
+      expect(
+          holdLickingAt(
+              Position.full, moves, const Duration(milliseconds: 2100)),
+          isTrue);
+      expect(
+          holdLickingAt(
+              Position.full, moves, const Duration(milliseconds: 4900)),
+          isTrue);
+      expect(holdLickingAt(Position.full, moves, const Duration(seconds: 5)),
+          isFalse);
+    });
+  });
 }

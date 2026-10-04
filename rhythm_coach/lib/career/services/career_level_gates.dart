@@ -129,6 +129,13 @@ class CareerLevelGates {
   static const int holdMicroMinBurst = 3;
   static const int holdMicroMaxBurst = 6;
 
+  /// Sur une tenue `full`, lick balls avant tout autre mouvement avec la
+  /// probabilité [holdLickBallsProbability], de [holdLickBallsMin] à
+  /// [holdLickBallsMax] s.
+  static const double holdLickBallsProbability = 0.4;
+  static const int holdLickBallsMin = 3;
+  static const int holdLickBallsMax = 8;
+
   /// Force par défaut de l'aimant rythmé — schéma 3:1 de Manu (intervalle
   /// 1,5T sur la position ancrée, 0,5T sur l'autre).
   static const int rhythmAnchorDefaultRatio = 3;

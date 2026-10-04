@@ -1122,6 +1122,9 @@ class _PositionLadderState extends State<_PositionLadder> {
     widget.onCursorIdx?.call(cursorIdx);
     final cursorAlignment = Alignment(
         _kCursorX, _PositionLadder._toAlign(cursorIdx, widget.rowCount));
+    final movesOrigin = widget.movesOrigin;
+    final licking = movesOrigin != null &&
+        holdLickingAt(widget.from, widget.moves, widget.elapsed - movesOrigin);
 
     return Stack(
       alignment: Alignment.center,
@@ -1196,6 +1199,15 @@ class _PositionLadderState extends State<_PositionLadder> {
                     ? widget.color.withValues(alpha: 0.85)
                     : AppTheme.textMuted.withValues(alpha: 0.45),
               ),
+            ),
+          ),
+        if (licking)
+          Align(
+            key: const ValueKey('cursor-tongue'),
+            alignment: Alignment(_kCursorX + 0.16, cursorAlignment.y),
+            child: Transform.scale(
+              scale: 0.9 + 0.2 * Curves.easeInOut.transform(widget.pulseT),
+              child: const Text('👅', style: TextStyle(fontSize: 22)),
             ),
           ),
         Align(

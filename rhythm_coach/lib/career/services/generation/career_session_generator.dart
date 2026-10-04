@@ -1796,7 +1796,7 @@ class CareerSessionGenerator {
         // la première clé du registry (= rhythm historiquement) ;
         // n'importe quelle clé donnerait le même résultat. Cf. C.PR6.
         defaultMode: _rules.keys.first,
-        steps: _withMicroCues(ctx.steps),
+        steps: _withHoldMoveCues(ctx.steps),
         milestoneId:
             ctx.insertedBodies.isNotEmpty ? ctx.insertedBodies[0].id : null,
         milestoneStartTime: milestoneStartTime,
@@ -2167,10 +2167,11 @@ class CareerSessionGenerator {
     );
   }
 
-  /// Consigne vocale au début de chaque rafale de micro-mouvements : un step
-  /// de texte seul à l'instant où la rafale démarre (début du step + gap de
-  /// transition + `at`), sans toucher à la configuration en cours.
-  List<SessionStep> _withMicroCues(List<SessionStep> steps) {
+  /// Consigne vocale au début de chaque rafale de micro-mouvements et de
+  /// chaque lick balls : un step de texte seul à l'instant où le mouvement
+  /// démarre (début du step + gap de transition + `at`), sans toucher à la
+  /// configuration en cours.
+  List<SessionStep> _withHoldMoveCues(List<SessionStep> steps) {
     final out = <SessionStep>[];
     SessionMode? previous;
     for (final step in steps) {
@@ -2181,9 +2182,15 @@ class CareerSessionGenerator {
             incoming: SessionMode.hold,
             previous: previous,
             incomingTo: step.to);
-        for (final m in step.moves.where((m) => m.kind == HoldMoveKind.micro)) {
+        for (final m in step.moves) {
+          final category = switch (m.kind) {
+            HoldMoveKind.micro => 'micro',
+            HoldMoveKind.lickBalls => 'lick_balls',
+            HoldMoveKind.excursion => null,
+          };
+          if (category == null) continue;
           final cue =
-              _bank?.pickFor(SessionMode.hold, 'micro', _movesRng) ?? '';
+              _bank?.pickFor(SessionMode.hold, category, _movesRng) ?? '';
           if (cue.isEmpty) continue;
           out.add(SessionStep(
             time:
@@ -2196,6 +2203,32 @@ class CareerSessionGenerator {
     }
     out.sort((a, b) => a.time.compareTo(b.time));
     return out;
+  }
+
+  /// Lick balls sur une tenue `full`, avec le même déblocage que lécher les
+  /// couilles en mode lick.
+  List<HoldMove> _lickBallsFor(Position hold, int dur) {
+    if (hold != Position.full ||
+        !_isUnlocked(const StepDraft(
+            mode: SessionMode.lick,
+            bpm: 60,
+            from: Position.balls,
+            to: Position.balls,
+            duration: 10))) {
+      return const [];
+    }
+    final maxLen = min(CareerLevelGates.holdLickBallsMax, dur - 3);
+    if (maxLen < CareerLevelGates.holdLickBallsMin) return const [];
+    final len = CareerLevelGates.holdLickBallsMin +
+        _movesRng.nextInt(maxLen - CareerLevelGates.holdLickBallsMin + 1);
+    final at = 1.5 + _movesRng.nextDouble() * (dur - len - 2.5);
+    return [
+      HoldMove(
+        kind: HoldMoveKind.lickBalls,
+        at: (at * 10).round() / 10,
+        duration: len.toDouble(),
+      ),
+    ];
   }
 
   /// Allers-retours d'une tenue (cf. [CareerLevelGates.holdMovesFloorLevel]).
@@ -2211,6 +2244,10 @@ class CareerSessionGenerator {
       return const [];
     }
     final roll = _movesRng.nextDouble();
+    if (roll < CareerLevelGates.holdLickBallsProbability) {
+      final lick = _lickBallsFor(hold, dur);
+      if (lick.isNotEmpty) return lick;
+    }
     if (roll >= CareerLevelGates.holdMovesProbability) {
       if (roll >=
           CareerLevelGates.holdMovesProbability +

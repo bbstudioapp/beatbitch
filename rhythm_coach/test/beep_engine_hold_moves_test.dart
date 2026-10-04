@@ -100,4 +100,41 @@ void main() {
     }
     expect(full, greaterThan(ticks.first.$2), reason: 'tic plus doux');
   });
+
+  test('un lick balls sonne des coups de langue réguliers sur balls', () async {
+    final beep = BeepEngine();
+    await beep.init();
+    final clock = Stopwatch();
+    final licks = <(String, double, int)>[];
+    var started = false;
+    beep.debugOnTrigger = (asset, volume) {
+      if (started) licks.add((asset, volume, clock.elapsedMilliseconds));
+      if (asset == 'hold_beep') {
+        started = true;
+        clock.start();
+      }
+    };
+    beep
+        .applyStep(
+            const SessionStep(
+              time: 0,
+              mode: SessionMode.hold,
+              to: Position.full,
+              duration: 10,
+              moves: [
+                HoldMove(kind: HoldMoveKind.lickBalls, at: 0.3, duration: 1.8),
+              ],
+            ),
+            SessionMode.rhythm)
+        .ignore();
+    await Future<void>.delayed(const Duration(milliseconds: 2800));
+    await beep.stop();
+    expect(licks.map((l) => l.$1).toList(),
+        List.filled(1800 ~/ lickBallsPeriod.inMilliseconds, 'balls_beep'));
+    for (var i = 0; i < licks.length; i++) {
+      expect(licks[i].$3,
+          closeTo(300 + (i + 1) * lickBallsPeriod.inMilliseconds, 40));
+    }
+    expect(licks.map((l) => l.$2).toSet(), hasLength(1));
+  });
 }

@@ -78,14 +78,16 @@ class HoldMove {
 /// Instant clé d'un mouvement de tenue, compté depuis le début réel de la
 /// tenue. [idx] : position sur l'échelle (fractionnaire pour un
 /// micro-mouvement). [beep] : le moteur joue le bip de cette position à cet
-/// instant, au volume relatif [volume].
+/// instant, au volume relatif [volume]. [tongue] : instant d'un léchage.
 class HoldKeyframe {
   final Duration at;
   final double idx;
   final Position? beep;
   final double volume;
+  final bool tongue;
 
-  const HoldKeyframe(this.at, this.idx, {this.beep, this.volume = 1.0});
+  const HoldKeyframe(this.at, this.idx,
+      {this.beep, this.volume = 1.0, this.tongue = false});
 }
 
 /// Durée d'un trajet d'aller-retour : assez court pour rester un à-coup,
@@ -98,6 +100,10 @@ Duration excursionLeg(Position from, Position to) =>
 const Duration microHalfPeriod = Duration(milliseconds: 170);
 const double microAmplitude = 0.4;
 const double microTickVolume = 0.35;
+
+/// Intervalle entre deux coups de langue d'un lick balls, et leur volume.
+const Duration lickBallsPeriod = Duration(milliseconds: 450);
+const double lickBallsVolume = 0.5;
 
 /// Instants clés de chaque mouvement d'une tenue sur [hold], un groupe par
 /// mouvement, triés. Un mouvement qui chevaucherait le précédent est ignoré.
@@ -136,7 +142,18 @@ List<List<HoldKeyframe>> holdMoveGroups(Position hold, List<HoldMove> moves) {
         out.add(frames);
         busyUntil = t;
       case HoldMoveKind.lickBalls:
-        break;
+        final end =
+            start + Duration(microseconds: ((m.duration ?? 4) * 1e6).round());
+        final frames = <HoldKeyframe>[HoldKeyframe(start, h, tongue: true)];
+        for (var t = start + lickBallsPeriod; t <= end; t += lickBallsPeriod) {
+          frames.add(HoldKeyframe(t, h,
+              beep: Position.balls, volume: lickBallsVolume, tongue: true));
+        }
+        if (frames.last.at < end) {
+          frames.add(HoldKeyframe(end, h, tongue: true));
+        }
+        out.add(frames);
+        busyUntil = end;
     }
   }
   return out;
@@ -145,3 +162,8 @@ List<List<HoldKeyframe>> holdMoveGroups(Position hold, List<HoldMove> moves) {
 /// Tous les instants clés d'une tenue, à plat.
 List<HoldKeyframe> holdKeyframes(Position hold, List<HoldMove> moves) =>
     [for (final g in holdMoveGroups(hold, moves)) ...g];
+
+/// Vrai si l'instant [t] de la tenue tombe dans un lick balls.
+bool holdLickingAt(Position hold, List<HoldMove> moves, Duration t) =>
+    holdMoveGroups(hold, moves)
+        .any((g) => g.first.tongue && t >= g.first.at && t < g.last.at);

@@ -20,7 +20,8 @@ double? _cursorY(WidgetTester tester) {
 }
 
 Widget _host(Duration elapsed,
-        {List<HoldMove> moves = const [
+        {Position hold = Position.throat,
+        List<HoldMove> moves = const [
           HoldMove(kind: HoldMoveKind.excursion, at: 0.4, to: Position.tip),
         ]}) =>
     MaterialApp(
@@ -32,8 +33,8 @@ Widget _host(Duration elapsed,
           height: 200,
           child: MovementAnimation(
             mode: SessionMode.hold,
-            from: Position.throat,
-            to: Position.throat,
+            from: hold,
+            to: hold,
             bpm: 60,
             elapsed: elapsed,
             moves: moves,
@@ -129,5 +130,38 @@ void main() {
     final after = ys.where((e) => e.$1 > 2100).map((e) => e.$2);
     expect(after.every((y) => (y - 0.5).abs() < 0.03), isTrue,
         reason: 'immobile après la rafale');
+  });
+
+  testWidgets(
+      'pendant un lick balls, la langue s\'affiche, le curseur reste à '
+      'full', (tester) async {
+    const start = Duration(seconds: 10);
+    const lick = [
+      HoldMove(kind: HoldMoveKind.lickBalls, at: 0.4, duration: 1.2),
+    ];
+    final tongue = find.byKey(const ValueKey('cursor-tongue'));
+    await tester.pumpWidget(_host(start, hold: Position.full, moves: lick));
+    final clock = Stopwatch()..start();
+    final seen = <(int, bool, double)>[];
+    while (clock.elapsedMilliseconds < 2200) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 40)));
+      await tester.pumpWidget(
+          _host(start + clock.elapsed, hold: Position.full, moves: lick));
+      seen.add((
+        clock.elapsedMilliseconds,
+        tongue.evaluate().isNotEmpty,
+        _cursorY(tester)!,
+      ));
+    }
+    bool shown(bool Function(int ms) when) =>
+        seen.where((e) => when(e.$1)).every((e) => e.$2);
+    bool hidden(bool Function(int ms) when) =>
+        seen.where((e) => when(e.$1)).every((e) => !e.$2);
+    expect(hidden((ms) => ms < 350), isTrue, reason: 'pas avant');
+    expect(shown((ms) => ms > 450 && ms < 1550), isTrue, reason: 'pendant');
+    expect(hidden((ms) => ms > 1700), isTrue, reason: 'pas après');
+    expect(seen.every((e) => (e.$3 - 1).abs() < 0.01), isTrue,
+        reason: 'la langue ne déplace pas le curseur');
   });
 }
