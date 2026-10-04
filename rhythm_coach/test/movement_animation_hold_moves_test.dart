@@ -21,6 +21,7 @@ double? _cursorY(WidgetTester tester) {
 
 Widget _host(Duration elapsed,
         {Position hold = Position.throat,
+        int rows = 5,
         List<HoldMove> moves = const [
           HoldMove(kind: HoldMoveKind.excursion, at: 0.4, to: Position.tip),
         ]}) =>
@@ -38,6 +39,7 @@ Widget _host(Duration elapsed,
             bpm: 60,
             elapsed: elapsed,
             moves: moves,
+            positionRowCount: rows,
           ),
         ),
       ),
@@ -133,35 +135,52 @@ void main() {
   });
 
   testWidgets(
-      'pendant un lick balls, la langue s\'affiche, le curseur reste à '
-      'full', (tester) async {
+      'pendant un lick balls, une langue bleue fait full ↔ balls, le curseur '
+      'reste à full', (tester) async {
     const start = Duration(seconds: 10);
     const lick = [
       HoldMove(kind: HoldMoveKind.lickBalls, at: 0.4, duration: 1.2),
     ];
     final tongue = find.byKey(const ValueKey('cursor-tongue'));
-    await tester.pumpWidget(_host(start, hold: Position.full, moves: lick));
+    final curve = find.byKey(const ValueKey('tongue-curve'));
+    Widget host(Duration e) =>
+        _host(e, hold: Position.full, rows: 6, moves: lick);
+    await tester.pumpWidget(host(start));
     final clock = Stopwatch()..start();
-    final seen = <(int, bool, double)>[];
+    final seen = <(int, double?, bool, double)>[];
     while (clock.elapsedMilliseconds < 2200) {
       await tester.runAsync(
-          () => Future<void>.delayed(const Duration(milliseconds: 40)));
-      await tester.pumpWidget(
-          _host(start + clock.elapsed, hold: Position.full, moves: lick));
+          () => Future<void>.delayed(const Duration(milliseconds: 20)));
+      await tester.pumpWidget(host(start + clock.elapsed));
+      final t = tongue.evaluate();
       seen.add((
         clock.elapsedMilliseconds,
-        tongue.evaluate().isNotEmpty,
+        t.isEmpty
+            ? null
+            : ((t.single.widget as Align).alignment as Alignment).y,
+        curve.evaluate().isNotEmpty,
         _cursorY(tester)!,
       ));
     }
-    bool shown(bool Function(int ms) when) =>
-        seen.where((e) => when(e.$1)).every((e) => e.$2);
-    bool hidden(bool Function(int ms) when) =>
-        seen.where((e) => when(e.$1)).every((e) => !e.$2);
-    expect(hidden((ms) => ms < 350), isTrue, reason: 'pas avant');
-    expect(shown((ms) => ms > 450 && ms < 1550), isTrue, reason: 'pendant');
-    expect(hidden((ms) => ms > 1700), isTrue, reason: 'pas après');
-    expect(seen.every((e) => (e.$3 - 1).abs() < 0.01), isTrue,
-        reason: 'la langue ne déplace pas le curseur');
+    // 6 rangées : full = 0,6, balls = 1.
+    Iterable<(int, double?, bool, double)> at(bool Function(int) w) =>
+        seen.where((e) => w(e.$1));
+    expect(at((ms) => ms < 350).every((e) => e.$2 == null), isTrue,
+        reason: 'pas de langue avant');
+    expect(at((ms) => ms < 350).every((e) => e.$3), isTrue,
+        reason: 'mais sa courbe est annoncée');
+    final during = at((ms) => ms > 450 && ms < 1550).map((e) => e.$2);
+    expect(during.every((y) => y != null), isTrue, reason: 'langue pendant');
+    final ys = during.cast<double>();
+    expect(ys.where((y) => y > 0.9).length, greaterThan(3),
+        reason: 'descend jusqu\'à balls');
+    expect(ys.where((y) => y < 0.7).length, greaterThan(3),
+        reason: 'et remonte à full entre deux coups');
+    expect(ys.every((y) => y >= 0.59 && y <= 1.01), isTrue,
+        reason: 'entre full et balls seulement');
+    expect(at((ms) => ms > 1700).every((e) => e.$2 == null && !e.$3), isTrue,
+        reason: 'plus rien après');
+    expect(seen.every((e) => (e.$4 - 0.6).abs() < 0.01), isTrue,
+        reason: 'la langue ne déplace pas le curseur de la tenue');
   });
 }

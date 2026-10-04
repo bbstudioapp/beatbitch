@@ -1088,6 +1088,59 @@ class _PositionLadderState extends State<_PositionLadder> {
     _windowUnfillable = _rawBeats!.isEmpty || _rawBeats!.last.t < 1.0;
   }
 
+  static const Color _tongueColor = Color(0xFF4FC3F7);
+
+  /// Langue d'un lick balls de la tenue courante : sa courbe dans la fenêtre
+  /// (`full` ↔ `balls`, `balls` à chaque coup de langue du moteur) et sa
+  /// position à l'instant présent, nulle hors du léchage.
+  (List<_BeatPoint>, double?) _tongue() {
+    final origin = widget.movesOrigin;
+    if (origin == null ||
+        widget.moves.isEmpty ||
+        widget.rowCount <= Position.balls.index) {
+      return (const [], null);
+    }
+    final nowMs = (widget.elapsed - origin).inMilliseconds;
+    final windowMs = _PositionLadder._trajectoryWindow.inMilliseconds;
+    final full = Position.full.index.toDouble();
+    final balls = Position.balls.index.toDouble();
+    for (final g in holdMoveGroups(widget.from, widget.moves)) {
+      if (!g.first.tongue) continue;
+      final startMs = g.first.at.inMilliseconds;
+      final endMs = g.last.at.inMilliseconds;
+      if (endMs <= nowMs || startMs >= nowMs + windowMs) continue;
+      final keys = <(int, double)>[(startMs, full)];
+      for (final f in g.skip(1)) {
+        final ms = f.at.inMilliseconds;
+        if (f.beep == null) {
+          keys.add((ms, full));
+          continue;
+        }
+        final mid = (keys.last.$1 + ms) ~/ 2;
+        if (mid > keys.last.$1) keys.add((mid, full));
+        keys.add((ms, balls));
+      }
+      double? idxNow;
+      for (var i = 0; i + 1 < keys.length; i++) {
+        final (aMs, aIdx) = keys[i];
+        final (bMs, bIdx) = keys[i + 1];
+        if (nowMs < aMs || nowMs >= bMs) continue;
+        final p = (nowMs - aMs) / (bMs - aMs);
+        idxNow = aIdx + (bIdx - aIdx) * Curves.easeInOutCubic.transform(p);
+      }
+      return (
+        [
+          if (idxNow != null) _BeatPoint(t: 0, idx: idxNow, isAnchor: true),
+          for (final (ms, idx) in keys)
+            if (ms > nowMs)
+              _BeatPoint(t: (ms - nowMs) / windowMs, idx: idx, isAnchor: false),
+        ],
+        idxNow,
+      );
+    }
+    return (const [], null);
+  }
+
   @override
   Widget build(BuildContext context) {
     final windowMs =
@@ -1122,9 +1175,7 @@ class _PositionLadderState extends State<_PositionLadder> {
     widget.onCursorIdx?.call(cursorIdx);
     final cursorAlignment = Alignment(
         _kCursorX, _PositionLadder._toAlign(cursorIdx, widget.rowCount));
-    final movesOrigin = widget.movesOrigin;
-    final licking = movesOrigin != null &&
-        holdLickingAt(widget.from, widget.moves, widget.elapsed - movesOrigin);
+    final (tongueBeats, tongueIdx) = _tongue();
 
     return Stack(
       alignment: Alignment.center,
@@ -1201,14 +1252,29 @@ class _PositionLadderState extends State<_PositionLadder> {
               ),
             ),
           ),
-        if (licking)
+        if (tongueBeats.length >= 2)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(
+                key: const ValueKey('tongue-curve'),
+                painter: _TrajectoryPainter(
+                  beats: tongueBeats,
+                  color: _tongueColor,
+                  cursorXFraction: (_kCursorX + 1) / 2,
+                  rightPaddingFraction: _PositionLadder._kRightPaddingFraction,
+                  rowCount: widget.rowCount,
+                  showDots: false,
+                ),
+              ),
+            ),
+          ),
+        if (tongueIdx != null)
           Align(
             key: const ValueKey('cursor-tongue'),
-            alignment: Alignment(_kCursorX + 0.16, cursorAlignment.y),
-            child: Transform.scale(
-              scale: 0.9 + 0.2 * Curves.easeInOut.transform(widget.pulseT),
-              child: const Text('👅', style: TextStyle(fontSize: 22)),
-            ),
+            alignment: Alignment(_kCursorX,
+                _PositionLadder._toAlign(tongueIdx, widget.rowCount)),
+            child:
+                const _Cursor(style: _CursorStyle.tongue, color: _tongueColor),
           ),
         Align(
           alignment: cursorAlignment,

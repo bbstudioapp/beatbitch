@@ -162,8 +162,3 @@ List<List<HoldKeyframe>> holdMoveGroups(Position hold, List<HoldMove> moves) {
 /// Tous les instants clés d'une tenue, à plat.
 List<HoldKeyframe> holdKeyframes(Position hold, List<HoldMove> moves) =>
     [for (final g in holdMoveGroups(hold, moves)) ...g];
-
-/// Vrai si l'instant [t] de la tenue tombe dans un lick balls.
-bool holdLickingAt(Position hold, List<HoldMove> moves, Duration t) =>
-    holdMoveGroups(hold, moves)
-        .any((g) => g.first.tongue && t >= g.first.at && t < g.last.at);

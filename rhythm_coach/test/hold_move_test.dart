@@ -174,23 +174,5 @@ void main() {
       expect(g.first.any((f) => f.tongue), isFalse);
       expect(g.last.every((f) => f.tongue), isTrue);
     });
-
-    test('lickingAt vrai seulement pendant le léchage', () {
-      const moves = [
-        HoldMove(kind: HoldMoveKind.lickBalls, at: 2, duration: 3),
-      ];
-      expect(holdLickingAt(Position.full, moves, const Duration(seconds: 1)),
-          isFalse);
-      expect(
-          holdLickingAt(
-              Position.full, moves, const Duration(milliseconds: 2100)),
-          isTrue);
-      expect(
-          holdLickingAt(
-              Position.full, moves, const Duration(milliseconds: 4900)),
-          isTrue);
-      expect(holdLickingAt(Position.full, moves, const Duration(seconds: 5)),
-          isFalse);
-    });
   });
 }
