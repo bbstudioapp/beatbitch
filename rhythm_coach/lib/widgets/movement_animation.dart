@@ -681,7 +681,12 @@ class _PositionLadder extends StatefulWidget {
   ///   décalé du gap de transition réel du moteur (`upcoming.transitionGap`).
   /// La fenêtre temporelle est `_trajectoryWindow`. `upcomingSteps` vide =
   /// comportement historique (extrapolation indéfinie du step courant).
-  List<_BeatPoint> _computeFutureBeats() {
+  /// [pins] : instants déjà calculés des frontières à venir, par
+  /// `startSecond`. Une frontière ne recule jamais vers le futur : quand
+  /// l'horloge de séance cale (step reporté pendant que la voix parle,
+  /// pause), un recalcul la replacerait plus loin que la géométrie qui a
+  /// déjà défilé — la courbe « rembobinerait » à chaque recalcul.
+  List<_BeatPoint> _computeFutureBeats([Map<int, DateTime>? pins]) {
     final beatMs = beatDuration.inMilliseconds.toDouble();
     if (beatMs <= 0) return const [];
     final now = DateTime.now();
@@ -852,8 +857,12 @@ class _PositionLadder extends StatefulWidget {
     final elapsedMs = elapsed.inMilliseconds;
     DateTime? boundaryAt(int index) {
       if (index >= upcomingSteps.length) return null;
-      final offsetMs = upcomingSteps[index].startSecond * 1000 - elapsedMs;
-      return now.add(Duration(milliseconds: offsetMs));
+      final start = upcomingSteps[index].startSecond;
+      var at = now.add(Duration(milliseconds: start * 1000 - elapsedMs));
+      final pinned = pins?[start];
+      if (pinned != null && pinned.isBefore(at)) at = pinned;
+      pins?[start] = at;
+      return at;
     }
 
     // On génère aussi UN point hors-fenêtre par segment (`_extraBeatsBeyondWindow`) :
@@ -1071,8 +1080,10 @@ class _PositionLadderState extends State<_PositionLadder> {
     }
   }
 
+  final Map<int, DateTime> _boundaryPins = {};
+
   void _recompute() {
-    _rawBeats = widget._computeFutureBeats();
+    _rawBeats = widget._computeFutureBeats(_boundaryPins);
     _computedAt = DateTime.now();
     _windowUnfillable = _rawBeats!.isEmpty || _rawBeats!.last.t < 1.0;
   }
