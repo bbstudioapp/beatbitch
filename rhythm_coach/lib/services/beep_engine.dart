@@ -47,6 +47,7 @@ class BeepEngine {
   static const String _freestyleStartAsset = 'freestyle_start';
   static const String _freestyleEndAsset = 'freestyle_end';
   static const String _finaleChimeAsset = 'finale_chime';
+  static const String _lickBallsAsset = 'lick_balls_beep';
 
   static const List<String> _allAssets = [
     _tipAsset,
@@ -64,6 +65,7 @@ class BeepEngine {
     _freestyleStartAsset,
     _freestyleEndAsset,
     _finaleChimeAsset,
+    _lickBallsAsset,
   ];
 
   // Lick = volume réduit pour le ressenti « plus léger / wet ».
@@ -139,6 +141,7 @@ class BeepEngine {
     _handDownAsset,
     _handUpAsset,
     _suckleAsset,
+    _lickBallsAsset,
   };
 
   final Map<String, _PlayerPool> _pools = {};
@@ -952,7 +955,10 @@ class BeepEngine {
               DateTime.now().millisecondsSinceEpoch);
       _loopTimer = Timer(Duration(milliseconds: delayMs), () {
         if (myGen != _loopGen) return;
-        _trigger(_assetForPosition(frames[i].beep!),
+        _trigger(
+            frames[i].tongue
+                ? _lickBallsAsset
+                : _assetForPosition(frames[i].beep!),
             _rhythmVolume * frames[i].volume);
         scheduleFrom(i + 1);
       });

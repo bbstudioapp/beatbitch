@@ -148,7 +148,7 @@ void main() {
   });
 
   group('lick balls', () {
-    test('position tenue inchangée, coups de langue réguliers sur balls', () {
+    test('position tenue inchangée, coups de langue sur balls', () {
       final k = holdKeyframes(Position.full, const [
         HoldMove(kind: HoldMoveKind.lickBalls, at: 2, duration: 4),
       ]);
@@ -157,12 +157,46 @@ void main() {
       expect(k.first.at, const Duration(seconds: 2));
       expect(k.last.at, const Duration(seconds: 6));
       final licks = k.where((f) => f.beep != null).toList();
-      expect(licks.length, 4000 ~/ lickBallsPeriod.inMilliseconds);
+      expect(licks, isNotEmpty);
       for (final l in licks) {
         expect(l.beep, Position.balls);
-        expect(l.volume, lickBallsVolume);
+        expect(l.volume, 1.0);
       }
       expect(k.every((f) => f.tongue), isTrue);
+    });
+
+    test('intervalles tirés entre 700 ms et 3 s, identiques à chaque relecture',
+        () {
+      const moves = [
+        HoldMove(kind: HoldMoveKind.lickBalls, at: 1, duration: 60),
+      ];
+      List<Duration> gaps() {
+        final at = [
+          for (final f in holdKeyframes(Position.full, moves))
+            if (f.beep != null) f.at,
+        ];
+        return [
+          for (var i = 0; i + 1 < at.length; i++) at[i + 1] - at[i],
+        ];
+      }
+
+      final g = gaps();
+      expect(g.length, greaterThan(15));
+      for (final d in g) {
+        expect(d, greaterThanOrEqualTo(lickBallsMinGap));
+        expect(d, lessThanOrEqualTo(lickBallsMaxGap));
+      }
+      expect(g.toSet().length, greaterThan(10),
+          reason: 'pas un intervalle fixe');
+      expect(gaps(), g);
+    });
+
+    test('un lick balls plus court que le premier intervalle lèche quand même',
+        () {
+      final k = holdKeyframes(Position.full, const [
+        HoldMove(kind: HoldMoveKind.lickBalls, at: 0.4, duration: 0.5),
+      ]);
+      expect(k.where((f) => f.beep != null), hasLength(1));
     });
 
     test('le groupe porte la langue, pas les autres mouvements', () {

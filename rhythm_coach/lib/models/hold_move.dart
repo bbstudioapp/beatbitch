@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'session_step.dart';
 
 /// Mouvement ponctuel demandé pendant une tenue.
@@ -101,9 +103,12 @@ const Duration microHalfPeriod = Duration(milliseconds: 170);
 const double microAmplitude = 0.4;
 const double microTickVolume = 0.35;
 
-/// Intervalle entre deux coups de langue d'un lick balls, et leur volume.
-const Duration lickBallsPeriod = Duration(milliseconds: 450);
-const double lickBallsVolume = 0.5;
+/// Bornes de l'intervalle tiré entre deux coups de langue d'un lick balls.
+const Duration lickBallsMinGap = Duration(milliseconds: 700);
+const Duration lickBallsMaxGap = Duration(seconds: 3);
+
+Duration _lickBallsGap(Random rng) =>
+    lickBallsMinGap + (lickBallsMaxGap - lickBallsMinGap) * rng.nextDouble();
 
 /// Instants clés de chaque mouvement d'une tenue sur [hold], un groupe par
 /// mouvement, triés. Un mouvement qui chevaucherait le précédent est ignoré.
@@ -145,9 +150,13 @@ List<List<HoldKeyframe>> holdMoveGroups(Position hold, List<HoldMove> moves) {
         final end =
             start + Duration(microseconds: ((m.duration ?? 4) * 1e6).round());
         final frames = <HoldKeyframe>[HoldKeyframe(start, h, tongue: true)];
-        for (var t = start + lickBallsPeriod; t <= end; t += lickBallsPeriod) {
-          frames.add(HoldKeyframe(t, h,
-              beep: Position.balls, volume: lickBallsVolume, tongue: true));
+        // Graine tirée du mouvement : le moteur et la courbe relisent les mêmes instants.
+        final rng = Random(start.inMilliseconds);
+        final first = _lickBallsGap(rng);
+        for (var t = start + (first < end - start ? first : end - start);
+            t <= end;
+            t += _lickBallsGap(rng)) {
+          frames.add(HoldKeyframe(t, h, beep: Position.balls, tongue: true));
         }
         if (frames.last.at < end) {
           frames.add(HoldKeyframe(end, h, tongue: true));

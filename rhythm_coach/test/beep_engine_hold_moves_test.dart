@@ -129,11 +129,17 @@ void main() {
         .ignore();
     await Future<void>.delayed(const Duration(milliseconds: 2800));
     await beep.stop();
+    final expected = [
+      for (final f in holdKeyframes(Position.full, const [
+        HoldMove(kind: HoldMoveKind.lickBalls, at: 0.3, duration: 1.8),
+      ]))
+        if (f.beep != null) f.at.inMilliseconds,
+    ];
+    expect(expected, isNotEmpty);
     expect(licks.map((l) => l.$1).toList(),
-        List.filled(1800 ~/ lickBallsPeriod.inMilliseconds, 'balls_beep'));
+        List.filled(expected.length, 'lick_balls_beep'));
     for (var i = 0; i < licks.length; i++) {
-      expect(licks[i].$3,
-          closeTo(300 + (i + 1) * lickBallsPeriod.inMilliseconds, 40));
+      expect(licks[i].$3, closeTo(expected[i], 40));
     }
     expect(licks.map((l) => l.$2).toSet(), hasLength(1));
   });
