@@ -1125,6 +1125,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                       positionRowCount: widget.positionRowCount,
                       stepSerial: widget.beep.stepSerial,
                       elapsed: ctrl.elapsed,
+                      paused: ctrl.isPaused,
                       showTrajectoryDots: _showTrajectoryDots,
                       moves: ctrl.currentMoves,
                       // Un défi joue des segments produits en direct par son

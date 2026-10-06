@@ -436,12 +436,14 @@ class _MovementAnimationState extends State<MovementAnimation>
         _controller.duration ?? _durationFor(widget.mode, widget.bpm);
     final (ladderFrom, ladderTo) =
         _ladderPositionsFor(widget.mode, widget.from, widget.to);
-    final elapsedNow = extrapolatedElapsed(
-      anchorValue: _elapsedAnchorValue,
-      anchorAt: _elapsedAnchorAt,
-      fallback: widget.elapsed,
-      now: DateTime.now(),
-    );
+    final elapsedNow = widget.paused
+        ? widget.elapsed
+        : extrapolatedElapsed(
+            anchorValue: _elapsedAnchorValue,
+            anchorAt: _elapsedAnchorAt,
+            fallback: widget.elapsed,
+            now: DateTime.now(),
+          );
     return _PositionLadder(
       mode: widget.mode,
       from: ladderFrom,
@@ -464,6 +466,7 @@ class _MovementAnimationState extends State<MovementAnimation>
       moves: widget.mode == SessionMode.hold ? widget.moves : const [],
       movesOrigin: _movesOrigin,
       pulseT: t,
+      paused: widget.paused,
     );
   }
 
@@ -615,6 +618,7 @@ class _PositionLadder extends StatefulWidget {
   final bool showTrajectoryDots;
   final List<HoldMove> moves;
   final Duration? movesOrigin;
+  final bool paused;
 
   const _PositionLadder({
     required this.mode,
@@ -638,6 +642,7 @@ class _PositionLadder extends StatefulWidget {
     this.showTrajectoryDots = false,
     this.moves = const [],
     this.movesOrigin,
+    this.paused = false,
   });
 
   @override
@@ -686,8 +691,8 @@ class _PositionLadder extends StatefulWidget {
   /// comportement historique (extrapolation indéfinie du step courant).
   /// [pins] : instants déjà calculés des frontières à venir, par
   /// `startSecond`. Une frontière ne recule jamais vers le futur : quand
-  /// l'horloge de séance cale (step reporté pendant que la voix parle,
-  /// pause), un recalcul la replacerait plus loin que la géométrie qui a
+  /// l'horloge de séance cale (step reporté pendant que la voix parle), un
+  /// recalcul la replacerait plus loin que la géométrie qui a
   /// déjà défilé — la courbe « rembobinerait » à chaque recalcul.
   List<_BeatPoint> _computeFutureBeats([Map<int, DateTime>? pins]) {
     final beatMs = beatDuration.inMilliseconds.toDouble();
@@ -1069,6 +1074,10 @@ class _PositionLadderState extends State<_PositionLadder> {
   /// frame pour une fenêtre qu'aucun recalcul ne peut compléter.
   bool _windowUnfillable = false;
 
+  /// Instant mural où la géométrie a cessé de défiler : la séance est en
+  /// pause, son horloge ne court plus.
+  DateTime? _pausedAt;
+
   @override
   void initState() {
     super.initState();
@@ -1078,6 +1087,8 @@ class _PositionLadderState extends State<_PositionLadder> {
   @override
   void didUpdateWidget(covariant _PositionLadder oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.paused && !oldWidget.paused) _pausedAt = DateTime.now();
+    if (!widget.paused) _resumeClock();
     if (!_sameGeometry(oldWidget, widget)) {
       _recompute();
     }
@@ -1085,7 +1096,18 @@ class _PositionLadderState extends State<_PositionLadder> {
 
   final Map<int, DateTime> _boundaryPins = {};
 
+  void _resumeClock() {
+    final pausedAt = _pausedAt;
+    if (pausedAt == null) return;
+    final pause = DateTime.now().difference(pausedAt);
+    _computedAt = _computedAt!.add(pause);
+    _boundaryPins.updateAll((_, at) => at.add(pause));
+    _pausedAt = null;
+  }
+
   void _recompute() {
+    // Le moteur reprend (et émet un bip) avant que l'écran ne lève la pause.
+    _resumeClock();
     _rawBeats = widget._computeFutureBeats(_boundaryPins);
     _computedAt = DateTime.now();
     _windowUnfillable = _rawBeats!.isEmpty || _rawBeats!.last.t < 1.0;
@@ -1149,7 +1171,8 @@ class _PositionLadderState extends State<_PositionLadder> {
     final windowMs =
         _PositionLadder._trajectoryWindow.inMilliseconds.toDouble();
     final deltaT =
-        DateTime.now().difference(_computedAt!).inMilliseconds / windowMs;
+        (_pausedAt ?? DateTime.now()).difference(_computedAt!).inMilliseconds /
+            windowMs;
     var beats = _scrollBeats(_rawBeats!, deltaT);
     // Le défilement décale les points, il n'en fabrique aucun : sans cette
     // garde, la fenêtre se viderait par la droite jusqu'à n'avoir plus rien,
