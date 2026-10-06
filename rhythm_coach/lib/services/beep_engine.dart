@@ -46,6 +46,14 @@ class BeepEngine {
   static const String _freestyleStartAsset = 'freestyle_start';
   static const String _freestyleEndAsset = 'freestyle_end';
   static const String _finaleChimeAsset = 'finale_chime';
+  static const List<String> _lickAssets = [
+    'lick_tip_beep',
+    'lick_head_beep',
+    'lick_mid_beep',
+    'lick_throat_beep',
+    'lick_full_beep',
+    'lick_balls_beep',
+  ];
 
   static const List<String> _allAssets = [
     _tipAsset,
@@ -63,12 +71,11 @@ class BeepEngine {
     _freestyleStartAsset,
     _freestyleEndAsset,
     _finaleChimeAsset,
+    ..._lickAssets,
   ];
 
-  // Lick = volume réduit pour le ressenti « plus léger / wet ».
-  // Hand = volume médian (entre rhythm et lick).
   static const double _rhythmVolume = 1.0;
-  static const double _lickVolume = 0.65;
+  static const double _lickVolume = 1.0;
   static const double _handVolume = 0.85;
   static const double _holdLayerVolume = 0.9;
   static const double _breathVolume = 0.9;
@@ -138,7 +145,12 @@ class BeepEngine {
     _handDownAsset,
     _handUpAsset,
     _suckleAsset,
+    ..._lickAssets,
   };
+
+  /// Observe chaque déclenchement de sample avec son volume final.
+  @visibleForTesting
+  void Function(String asset, double volume)? debugOnTrigger;
 
   final Map<String, _PlayerPool> _pools = {};
   final Random _random = Random();
@@ -549,7 +561,11 @@ class BeepEngine {
       final (asset, vol) = _resolveHandBeat(pos, baseVolume);
       _trigger(asset, vol);
     } else {
-      _trigger(_assetForPosition(pos), baseVolume);
+      _trigger(
+          _mode == SessionMode.lick
+              ? _lickAssetForPosition(pos)
+              : _assetForPosition(pos),
+          baseVolume);
     }
     _notifyBeat(_mode, pos);
   }
@@ -649,6 +665,7 @@ class BeepEngine {
   /// Déclenche un sample en utilisant le prochain player du pool round-robin.
   /// Fire-and-forget : le ticker n'attend pas la fin de l'opération audio.
   void _trigger(String assetName, double volume) {
+    debugOnTrigger?.call(assetName, volume);
     final pool = _pools[assetName];
     if (pool == null) return;
     final picked = pool.next(volume);
@@ -708,6 +725,15 @@ class BeepEngine {
         Position.balls => _ballsAsset,
       };
 
+  String _lickAssetForPosition(Position p) => switch (p) {
+        Position.tip => 'lick_tip_beep',
+        Position.head => 'lick_head_beep',
+        Position.mid => 'lick_mid_beep',
+        Position.throat => 'lick_throat_beep',
+        Position.full => 'lick_full_beep',
+        Position.balls => 'lick_balls_beep',
+      };
+
   void _stopLoop() {
     _loopTimer?.cancel();
     _loopTimer = null;
@@ -750,7 +776,7 @@ class BeepEngine {
 
   void playLickPositionOnce(Position p) {
     if (!_initialized) return;
-    _trigger(_assetForPosition(p), _lickVolume);
+    _trigger(_lickAssetForPosition(p), _lickVolume);
   }
 
   void playHoldOnce(Position p) {
