@@ -2,7 +2,6 @@ import 'dart:math';
 
 import 'session_step.dart';
 
-/// Mouvement ponctuel demandé pendant une tenue.
 enum HoldMoveKind {
   /// Aller-retour rapide vers [HoldMove.to], plus haut ou plus profond, puis
   /// retour immédiat sur la position tenue.
@@ -97,21 +96,17 @@ class HoldKeyframe {
 Duration excursionLeg(Position from, Position to) =>
     Duration(milliseconds: 200 + 120 * (from.index - to.index).abs());
 
-/// Demi-période d'un micro-mouvement (~3 va-et-vient par seconde) et son
-/// amplitude, en crans.
 const Duration microHalfPeriod = Duration(milliseconds: 170);
 const double microAmplitude = 0.4;
 const double microTickVolume = 0.35;
 
-/// Bornes de l'intervalle tiré entre deux coups de langue d'un lick balls.
 const Duration lickBallsMinGap = Duration(milliseconds: 700);
 const Duration lickBallsMaxGap = Duration(seconds: 3);
 
 Duration _lickBallsGap(Random rng) =>
     lickBallsMinGap + (lickBallsMaxGap - lickBallsMinGap) * rng.nextDouble();
 
-/// Instants clés de chaque mouvement d'une tenue sur [hold], un groupe par
-/// mouvement, triés. Un mouvement qui chevaucherait le précédent est ignoré.
+/// Un mouvement qui chevaucherait le précédent est ignoré.
 List<List<HoldKeyframe>> holdMoveGroups(Position hold, List<HoldMove> moves) {
   final out = <List<HoldKeyframe>>[];
   final h = hold.index.toDouble();
@@ -168,6 +163,5 @@ List<List<HoldKeyframe>> holdMoveGroups(Position hold, List<HoldMove> moves) {
   return out;
 }
 
-/// Tous les instants clés d'une tenue, à plat.
 List<HoldKeyframe> holdKeyframes(Position hold, List<HoldMove> moves) =>
     [for (final g in holdMoveGroups(hold, moves)) ...g];
