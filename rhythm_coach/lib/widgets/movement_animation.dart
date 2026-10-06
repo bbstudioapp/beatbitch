@@ -76,6 +76,8 @@ class MovementAnimation extends StatefulWidget {
   /// Mouvements ponctuels de la tenue courante (cf. [HoldMove]).
   final List<HoldMove> moves;
 
+  final bool paused;
+
   const MovementAnimation({
     super.key,
     required this.mode,
@@ -90,6 +92,7 @@ class MovementAnimation extends StatefulWidget {
     this.upcomingSteps = const [],
     this.showTrajectoryDots = false,
     this.moves = const [],
+    this.paused = false,
   });
 
   @override
