@@ -57,175 +57,71 @@ class SessionScreen extends StatefulWidget {
   final PunishmentBundle punishmentBundle;
   final RandomCommentsBundle randomComments;
 
-  /// Vrai pour une session générée par le mode Carrière. Active la
-  /// persistance "session complétée" et l'overlay debug `StaminaBar`.
   final bool isCareer;
 
-  /// Vrai pour les sessions bâclées (toggle "Session bâclée" en Carrière).
-  /// À la fin, déclenche `StatsService.recordQuickieCompleted()` →
-  /// alimente le badge VideCouilles. N'a d'effet que si `isCareer = true`.
   final bool isQuickie;
 
-  /// Profil d'endurance projeté seconde par seconde, fourni par le
-  /// générateur. Consommé par l'overlay debug uniquement.
   final List<double>? staminaProfile;
 
-  /// Callback de l'action « Supplier » (mode Carrière). Reçoit le
-  /// controller pour pouvoir appeler `requestUpgrade(...)` après avoir
-  /// régénéré une suite plus dure. Si null, le bouton n'est pas affiché.
   final Future<void> Function(SessionController controller)? onRequestUpgrade;
 
-  /// Callback de l'action « Termine-moi » (mode Custom). Reçoit le
-  /// controller pour appeler `requestUpgrade(...)` avec une mini-session
-  /// « boosts + final » qui clôt la séance. Si null, le bouton n'est pas
-  /// affiché (carrière, scénario, …).
   final Future<void> Function(SessionController controller)? onRequestFinishNow;
 
-  /// Mode « non-stop » (Custom) : quand la séance se termine, on appelle
-  /// automatiquement [onRequestEncore] après un court délai (le temps que
-  /// le chime sonne) pour enchaîner le cycle suivant — sauf si l'utilisateur
-  /// a déclenché « Termine-moi ». Le bouton « encore » de l'écran de fin
-  /// reste là (= « continuer tout de suite »).
   final bool autoContinueOnFinish;
 
-  /// Texte d'introduction lu par la coach avant le démarrage effectif
-  /// (mode Carrière). Si non null, l'écran affiche d'abord la phase
-  /// d'intro avec un bouton « Je suis prête ».
   final String? introText;
 
-  /// Banque de phrases optionnelle (mode Carrière). Sert au TTS
-  /// d'annonce des seuils de progression. Null pour les sessions statiques.
   final PhraseBank? phraseBank;
 
-  /// Texte du bouton de fin (état finished). Si null, utilise la valeur
-  /// localisée par défaut (« Merci ! » en FR).
-  /// Permet de personnaliser pour les sessions statiques (« Retour »…).
   final String? endButtonLabel;
 
-  /// Callback déclenché par le bouton « J'en veux encore… » de l'écran
-  /// finished. Si null, le bouton n'apparaît pas (sessions statiques).
   final Future<void> Function(SessionController controller)? onRequestEncore;
 
-  /// Callback consommé par `SessionController.onMilestoneRetry` quand un
-  /// fail tombe dans la fenêtre milestone et qu'un retry est encore
-  /// disponible. Doit retourner `true` si le retry a été géré (le
-  /// controller saute alors le flow fail standard). Null = pas de retry,
-  /// flow fail standard à chaque fail.
+  /// Doit rendre `true` quand le retry est géré : le flow fail standard est
+  /// alors sauté.
   final Future<bool> Function(SessionController controller)? onMilestoneRetry;
 
-  /// Callback consommé par `SessionController.onPostChallengeRegen` quand
-  /// un défi vient d'élargir le set d'unlocks acquittés. Le caller régénère
-  /// le reste de la séance avec les nouveaux unlocks et appelle
-  /// `requestPostChallengeRegen`. Null = pas de régen (la timeline initiale
-  /// continue, les unlocks ne profiteront qu'à la séance suivante).
   final Future<void> Function(SessionController controller)?
       onPostChallengeRegen;
 
-  /// Callback consommé par `SessionController.onChallengeOutcome` à la fin
-  /// de tout défi. Le caller persiste un compteur d'essais par axe pour
-  /// faire monter la cible « franchissements » du défi suivant. Null = no-op.
   final void Function(Challenge challenge, ChallengeOutcome outcome)?
       onChallengeOutcome;
 
-  /// Si true, démarre la session automatiquement (sans bouton play et
-  /// sans décompte d'intro). Utilisé pour les sessions « encore » qui
-  /// enchaînent directement depuis l'écran finished précédent.
   final bool autoStart;
 
-  /// Vérification caméra des holds, optionnelle. Si fourni, le controller
-  /// s'en sert pour armer/désarmer pendant les steps `mode: hold`. Null =
-  /// fonctionnement classique.
   final HoldVerifier? holdVerifier;
 
-  /// Si true, l'écran finished affiche un bouton « Sauvegarder cette
-  /// séance » qui sérialise `controller.session` (donc avec d'éventuels
-  /// upgrades Supplier intégrés) en JSON dans Documents/saved_sessions/,
-  /// pour la rejouer plus tard depuis l'écran SCÉNARIO.
   final bool canSave;
 
-  /// Niveau de la session carrière (utilisé pour décider d'un éventuel
-  /// level-up à la complétion). Null pour sessions hors carrière.
   final int? careerLevel;
 
-  /// Axe de capacité surchargé sur cette séance (mode carrière). Null sinon.
-  /// Transmis tel quel au [SessionController] pour les phrases `record` du
-  /// coach (Phase 4 — on annonce l'exploit qu'on a poussé exprès).
   final CapabilityAxis? capabilityOverloadAxis;
 
-  /// Snapshot du profil de capacités au début de la séance (mode carrière).
-  /// Null sinon. Transmis au [SessionController] pour l'attribution du tap-out
-  /// (phrase `tapout`) et la détection des records (phrase `record`).
   final CapabilityProfile? capabilityProfile;
 
-  /// `UnlockKey` acquittés à l'ouverture de la séance — transmis tel quel au
-  /// [SessionController] qui les passe au `CareerSessionGenerator` pour
-  /// générer des punitions carrière contextuelles (Phase 5). Null hors
-  /// carrière → set vide côté contrôleur → pas de génération de punition.
   final Set<UnlockKey>? unlockedKeys;
 
-  /// Toggle joueuse « inclure le mode hand » — mirroir de la valeur passée au
-  /// `CareerSessionGenerator.generate(...)` pour le tirage initial. Transmis
-  /// tel quel au [SessionController] pour exclure les compositions de
-  /// punition impliquant la main (`biffle_burst`) quand la joueuse a
-  /// désactivé hand. Default `true` → comportement historique inchangé hors
-  /// carrière.
   final bool includeHand;
 
-  /// Si false, la session ne peut pas faire progresser le niveau global
-  /// même si toutes les autres conditions sont réunies. Utilisé pour
-  /// gater le level-up sur le système de coachs : seules les sessions
-  /// menées avec le Coach Principal du palier courant comptent.
-  /// Default true → comportement historique inchangé pour les écrans
-  /// (mode scénario, démos…) qui n'ont pas la notion de coach.
   final bool coachAdvancesTier;
 
-  /// Allocation de spécialisation. Consommée par le SessionController pour
-  /// la génération de punition carrière contextuelle. Null = hors carrière.
   final SpecializationAllocation? specialization;
 
-  /// Service spécialisation — propagé au SessionController pour permettre
-  /// la consume de la file showcase au `_finish` quand le défi a tourné
-  /// sur la branche fraîchement boostée (cf. spec § 5.1 cascade). Null
-  /// hors carrière.
   final SpecializationService? specializationService;
 
-  /// Probabilité par minute qu'une mini-punition inopinée se déclenche en
-  /// cours de séance (cf. `Coach.miniPunishmentRate`, dérivé de l'archétype
-  /// du coach). 0 = jamais — valeur des écrans sans notion de coach.
+  /// Probabilité par minute.
   final double miniPunishmentRate;
 
-  /// Slug court du coach actif (`lina`, `victoria`, …), extrait de l'`id`
-  /// `coach_NN_<slug>` par le caller. Sert à la sélection priorisée des
-  /// fonds taggés au nom de la coach (cf. `BackgroundsService.pickForContext`
-  /// et `BackgroundTagVocabulary`). Null = pas de coach (voix par défaut,
-  /// scénarios, démos).
   final String? coachTag;
 
-  /// Valeur initiale du `sessionScore` d'humiliation au start. Vaut 0
-  /// pour une session normale. Sur encore enchaîné, le caller transmet
-  /// le `sessionScore` final de la session précédente pour conserver
-  /// la chauffe accumulée (cf. modèle 2 thermomètres).
   final double seedHumiliationSession;
 
-  /// Si true, le bouton « Merci » de fin de session minimise l'app (via
-  /// `SystemNavigator.pop`) au lieu de revenir à l'écran précédent.
-  /// Utilisé pour les sessions surprise déclenchées par notif : la
-  /// joueuse a tapé pour une parenthèse — elle attend de retomber sur
-  /// son téléphone, pas sur l'arborescence carrière.
   final bool closeAppOnEnd;
 
-  /// Profil anatomique de la joueuse. Sert à révéler la 6ᵉ ligne du
-  /// ladder visuel (zone balls) seulement quand la joueuse a la zone
-  /// **et** qu'elle a acquitté la milestone d'introduction
-  /// (`UnlockKey.lickBalls`). `null` = profil hérité (tout disponible,
-  /// mais la zone reste masquée tant que l'unlock n'a pas été acquis).
   final AnatomyProfile? anatomy;
 
-  /// Si true, masque inconditionnellement le timer pendant la séance même
-  /// quand le toggle debug `DebugSettingsService.getShowTimer` est activé.
-  /// Utilisé par le palier de durée « aléatoire » (carrière) : la joueuse
-  /// a sciemment choisi la surprise — connaître la durée tirée casserait
-  /// l'effet recherché. Default false → comportement historique inchangé.
+  /// Prime sur le réglage debug : une durée tirée au hasard ne doit pas se
+  /// deviner.
   final bool hideTimerOverride;
 
   const SessionScreen({
@@ -277,11 +173,8 @@ class _SessionScreenState extends State<SessionScreen>
   late final SessionController _controller;
   bool _careerRecorded = false;
 
-  /// Nombre de lignes du ladder visuel (`MovementAnimation`). Snapshot
-  /// au start : on n'élargit pas dynamiquement si la milestone `lickBalls`
-  /// est acquittée pendant la séance (cf. PR2 plan balls — la révélation
-  /// vaut pour la **prochaine** séance). 6 lignes seulement quand la
-  /// joueuse a la zone ET a déjà appris à la lécher.
+  /// Figé au démarrage : un déblocage acquis en cours de séance vaut pour la
+  /// suivante.
   late final int _positionRowCount;
 
   @override
@@ -302,8 +195,6 @@ class _SessionScreenState extends State<SessionScreen>
       miniPunishmentRate: widget.miniPunishmentRate,
       coachTag: widget.coachTag,
       seedHumiliationSession: widget.seedHumiliationSession,
-      // Profil de capacités : suivi uniquement en carrière (Custom = sandbox,
-      // scénarios JSON = hors carrière).
       trackCapabilities: widget.isCareer,
       careerLevel: widget.careerLevel ?? 0,
       capabilityOverloadAxis: widget.capabilityOverloadAxis,
@@ -317,13 +208,7 @@ class _SessionScreenState extends State<SessionScreen>
     _controller.onChallengeOutcome = widget.onChallengeOutcome;
     _controller.onChallengeHaptic = _handleChallengeHaptic;
     final anatomy = widget.anatomy ?? AnatomyProfile.defaults;
-    // En carrière, la 6e ligne (balls) se révèle progressivement : il faut
-    // que la zone existe ET que la milestone `lickBalls` ait été acquittée
-    // pour ne pas spoiler la zone avant son introduction pédagogique.
-    // Hors carrière (Custom, scénarios JSON, debug), la convention « mode
-    // hérité = tout débloqué » s'applique : on suit l'anatomy uniquement
-    // — sinon une joueuse Custom qui active la zone dans son profil ne
-    // voyait jamais la ligne tant qu'elle n'avait pas avancé en carrière.
+    // Hors carrière, tout est débloqué : seule l'anatomie compte.
     final ballsRevealed = anatomy.hasBalls &&
         (!widget.isCareer ||
             milestoneService
@@ -334,11 +219,8 @@ class _SessionScreenState extends State<SessionScreen>
       _controller.addListener(_onCareerStateChanged);
     }
     WidgetsBinding.instance.addObserver(this);
-    // Si l'utilisatrice a activé le toggle « Vérif caméra des holds » mais
-    // que le caller n'a pas pu construire le verifier (perm refusée,
-    // calibration manquante, etc. — `buildVerifierIfEnabled` retourne null
-    // silencieusement), on l'avertit ici plutôt que de la laisser jouer
-    // une session sans le feedback qu'elle a explicitement demandé.
+    // `buildVerifierIfEnabled` rend null en silence (permission refusée,
+    // calibration absente).
     if (widget.holdVerifier == null) {
       _maybeShowCameraInactiveSnackbar();
     }
@@ -377,12 +259,8 @@ class _SessionScreenState extends State<SessionScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Pousse l'AppLocalizations dans le controller pour qu'il puisse
-    // résoudre une annonce TTS d'unlock par défaut depuis l'ARB côté
-    // _finish(). En initState le widget Localizations n'est pas encore
-    // accessible — didChangeDependencies est le 1er hook après le mount
-    // qui peut lire le contexte localisé, et il rejoue à chaque changement
-    // de locale (rebuild MaterialApp via LocaleService).
+    // Pas en initState : `Localizations` n'y est pas encore lisible. Rejoué à
+    // chaque changement de locale.
     _controller.setAppLocalizations(AppLocalizations.of(context));
   }
 
@@ -397,8 +275,6 @@ class _SessionScreenState extends State<SessionScreen>
   }
 
   void _handleChallengeHaptic(ChallengeHapticKind kind) {
-    // No-op silencieux hors Android — HapticFeedback ignore proprement
-    // sur Linux/Windows/Web.
     switch (kind) {
       case ChallengeHapticKind.light:
         HapticFeedback.lightImpact();
@@ -411,9 +287,7 @@ class _SessionScreenState extends State<SessionScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Quand l'app passe en arrière-plan (home, lock, autre app), on coupe
-    // bips/ambiance/TTS pour ne pas laisser tourner du son. La reprise est
-    // manuelle : à son retour, l'utilisatrice doit appuyer sur play.
+    // Reprise manuelle : le son ne repart jamais seul au retour dans l'app.
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive ||
         state == AppLifecycleState.hidden) {
@@ -424,12 +298,6 @@ class _SessionScreenState extends State<SessionScreen>
   void _onCareerStateChanged() {
     if (_controller.isFinished && !_careerRecorded) {
       _careerRecorded = true;
-      // Règle de level-up : il faut avoir terminé une session **standard**
-      // (pas bâclée) **au niveau max actuel**, **sans aucun fail**. Toute
-      // autre complétion (en dessous du max, ou bâclée, ou avec fail) ne
-      // débloque pas de palier mais reste comptée dans `completed`.
-      // Fire-and-forget : la prochaine ouverture de CareerScreen reload
-      // les prefs.
       _recordCareerCompletion();
       if (widget.isQuickie) {
         StatsService().recordQuickieCompleted();
@@ -438,11 +306,6 @@ class _SessionScreenState extends State<SessionScreen>
   }
 
   Future<void> _recordCareerCompletion() async {
-    // Phase 19.12 : plus de logique level-up — on incrémente seulement
-    // le compteur de sessions complétées. La progression de la joueuse
-    // est désormais portée par le temps cumulé (unlock coachs), le
-    // profil de capacités (difficulté) et les milestones acquittées
-    // (contenu pédagogique).
     await CareerProgressService().recordSessionCompleted();
   }
 
@@ -529,48 +392,32 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
   bool _finishNowInFlight = false;
   bool _finishNowDone = false;
 
-  /// Secondes restantes minimum pour que « Termine-moi » soit actif : en
-  /// dessous, la mini-session de finish n'aurait plus la place de jouer une
-  /// vraie apothéose (le contrôleur passe directement en `finished`).
+  /// En dessous, la mini-session de finish n'a plus la place de jouer.
   static const int _finishNowMinRemainingSeconds = 75;
 
-  /// Pointers actifs pendant la fenêtre défi (touch + clavier confondus).
-  /// Sentinel `-1` = touche espace. Quand le set passe à vide,
-  /// `onChallengeHoldEnd` est signalé au contrôleur. Permet de gérer le
-  /// multi-doigts (un release individuel n'arrête rien tant qu'un autre
-  /// doigt tient) et la combinaison touch + clavier.
+  /// Un doigt relâché n'arrête rien tant qu'un autre doigt ou la touche espace
+  /// tient.
   final Set<int> _challengeActivePointers = <int>{};
   static const int _challengeKeyboardPointerId = -1;
   late final FocusNode _challengeFocus =
       FocusNode(debugLabel: 'challenge-hold');
 
-  /// True tant que l'utilisateur n'a pas validé « Je suis prête » sur l'écran
-  /// d'intro. Reste à false si aucun introText n'a été fourni.
   bool _introPending = false;
 
-  /// Texte d'intro avec les `{name}` déjà résolus. Stocké au boot pour que
-  /// l'affichage corresponde exactement à ce qui sera lu — sinon, comme le
-  /// resolver retire un surnom à chaque appel, l'écrit et le TTS divergent.
+  /// Résolu une seule fois : le resolver retire un surnom à chaque appel,
+  /// l'écrit et le TTS divergeraient.
   String? _resolvedIntroText;
 
-  /// Compte à rebours en secondes affiché entre la validation de l'intro
-  /// et le démarrage effectif de la séance. `null` = pas de compte à
-  /// rebours en cours.
   int? _prepCountdown;
   Timer? _prepTimer;
 
   static const int _prepDurationSeconds = 7;
 
-  /// Délai après la fin de séance avant d'enchaîner le cycle suivant en
-  /// mode non-stop — laisse le `finale_chime` + le post-final sonner.
+  /// Laisse sonner le `finale_chime` et le post-final.
   static const Duration _autoContinueDelay = Duration(seconds: 4);
 
-  /// Controller mémorisé pour le listener d'auto-enchaînement (mode
-  /// non-stop). Null si `autoContinueOnFinish == false`.
   SessionController? _autoChainCtrl;
 
-  /// True dès qu'un auto-enchaînement a été programmé pour cette séance —
-  /// évite les doubles déclenchements.
   bool _autoChainScheduled = false;
 
   @override
@@ -589,9 +436,6 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     }
     debug.getShowTimer().then((value) {
       if (!mounted) return;
-      // `hideTimerOverride` force le masquage du timer (mode aléatoire en
-      // carrière : la joueuse a choisi la surprise sur la durée, on ne
-      // dévoile pas le tirage via un timer qui countdown).
       setState(() => _showTimer = value && !widget.hideTimerOverride);
     });
     debug.getShowHumiliationBar().then((value) {
@@ -628,8 +472,6 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     });
     debug.getShowSessionRemainingTime().then((value) {
       if (!mounted) return;
-      // Même rationale que `_showTimer` plus haut : on n'affiche pas le
-      // chip « temps restant » quand l'écran cache volontairement la durée.
       setState(() => _showRemainingTime = value && !widget.hideTimerOverride);
     });
     if (widget.introText != null && widget.introText!.trim().isNotEmpty) {
@@ -637,8 +479,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
       _resolvedIntroText = widget.tts.resolveText(widget.introText!);
       WidgetsBinding.instance.addPostFrameCallback((_) => _speakIntro());
     } else if (widget.autoStart) {
-      // Mode « encore » : on enchaîne directement sans intro ni décompte.
-      // L'opening phrase est déjà le texte du step #0 de la session.
+      // L'ouverture est déjà le texte du step 0.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         context.read<SessionController>().start();
@@ -657,15 +498,10 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
   void _handleChallengePointerDown(PointerDownEvent e) {
     final ctrl = context.read<SessionController>();
     if (!ctrl.isChallengeActive) return;
-    // Mode tap : l'input passe par les boutons GO/STOP explicites, pas par la
-    // présence du doigt. On ignore la capture globale pour ne pas qu'un tap
-    // n'importe où démarre/arrête le défi.
+    // Mode tap : seuls les boutons GO/STOP pilotent le défi.
     if (!ctrl.challengeUsesHoldInput) return;
     _challengeActivePointers.add(e.pointer);
-    // En `breath`, seul le bouton MAINTIENS (via son propre Listener) doit
-    // démarrer le countdown. Un tap n'importe où sur l'écran n'arme rien.
-    // En `countdown`/`live`/`atSeuil`, n'importe quel doigt suffit à
-    // maintenir le hold actif.
+    // En `breath`, seul le bouton MAINTIENS arme le décompte.
     if (ctrl.challengePhase != ChallengePhase.breath) {
       ctrl.onChallengeHoldStart();
     }
@@ -684,13 +520,10 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     }
     final ctrl = context.read<SessionController>();
     if (!ctrl.isChallengeActive) return KeyEventResult.ignored;
-    // Mode tap : pas de geste « doigt présent » au clavier non plus (les
-    // boutons GO/STOP se cliquent à la souris sur desktop).
     if (!ctrl.challengeUsesHoldInput) return KeyEventResult.ignored;
     if (e is KeyDownEvent) {
       if (_challengeActivePointers.add(_challengeKeyboardPointerId)) {
-        // Sur desktop, espace équivaut à un doigt sur l'écran — y compris
-        // en breath (matérialise « tu peux démarrer » au clavier).
+        // Au clavier, espace arme aussi en `breath`.
         ctrl.onChallengeHoldStart();
       }
       return KeyEventResult.handled;
@@ -705,9 +538,6 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     return KeyEventResult.ignored;
   }
 
-  /// Listener du controller en mode non-stop : à la fin de séance, programme
-  /// l'enchaînement automatique du cycle suivant via [onRequestEncore] —
-  /// sauf si l'utilisateur a tapé « Termine-moi » (`_finishNowDone`).
   void _maybeAutoChain() {
     final ctrl = _autoChainCtrl;
     if (ctrl == null || !ctrl.isFinished) return;
@@ -724,30 +554,18 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     final text = _resolvedIntroText;
     if (text == null || text.trim().isEmpty) return;
     await widget.tts.init();
-    // Le texte est déjà résolu (cf. initState) ; speak retombera sur un
-    // pass-through pour le placeholder absent. Garantit que ce qui est lu
-    // correspond exactement à ce qui est affiché.
     await widget.tts.speak(text);
   }
 
   Future<void> _onIntroReady() async {
     if (!_introPending) return;
-    // Bascule l'UI AVANT le await stop() : sur Linux, l'arrêt du TTS
-    // (kill piper/aplay + Process.run spd-say) peut prendre quelques
-    // centaines de ms. Si on attendait, l'utilisatrice cliquerait
-    // plusieurs fois pensant que le bouton ne répond pas (cf. issue
-    // #85). En posant l'état tout de suite, on garantit le passage au
-    // décompte de mise en place au premier clic, et on cancele l'intro
-    // en arrière-plan.
+    // L'UI bascule avant `stop()` : sur Linux, arrêter le TTS prend plusieurs
+    // centaines de ms et le bouton semblait ne pas répondre.
     setState(() {
       _introPending = false;
       _prepCountdown = _prepDurationSeconds;
     });
-    // Coupe l'intro en cours. Sur les autres plateformes, QUEUE_FLUSH
-    // ferait le job à elle seule au prochain speak — mais on stoppe
-    // explicitement pour rester cohérent et libérer les ressources.
     unawaited(widget.tts.stop());
-    // Annonce courte pour signaler le décompte sans avoir à regarder l'écran.
     widget.tts.speak(
       CoachPhrasesService.instance.current.prepCountdown(_prepDurationSeconds),
     );
@@ -771,9 +589,8 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
   Future<void> _startSessionAfterPrep() async {
     if (!mounted) return;
     setState(() => _prepCountdown = null);
-    // Pas de tts.stop() ici : le speak du step à t=0 lancé par start()
-    // flush automatiquement l'annonce du décompte via QUEUE_FLUSH. Un
-    // stop préalable fait perdre le speak suivant sur Android (race).
+    // Pas de `tts.stop()` : sur Android, un stop juste avant le speak du step 0
+    // le fait perdre ; QUEUE_FLUSH suffit.
     await context.read<SessionController>().start();
   }
 
@@ -812,11 +629,6 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     }
   }
 
-  /// Ouvre un dialog pour nommer la session, puis l'écrit sur disque.
-  /// Capture `controller.session` au moment du clic — donc avec un
-  /// éventuel upgrade Supplier déjà intégré (cf. requestUpgrade qui
-  /// remplace `_session` en place). Retourne le nom enregistré ou null
-  /// si l'utilisateur a annulé.
   Future<String?> _handleSave(SessionController ctrl) async {
     final t = AppLocalizations.of(context);
     final now = DateTime.now();
@@ -842,12 +654,8 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     final t = AppLocalizations.of(context);
     final shouldLeave = await showDialog<bool>(
       context: context,
-      // `barrierDismissible: false` : sur Linux, un clic mal placé sur
-      // « Arrêter » qui retombait sur la barrière modale dismissait le
-      // dialogue avec un résultat null → session reprise sans arrêt.
-      // L'utilisatrice voyait "Le bouton Arrêté fait continuer la
-      // session" (cf. issue #85). Forcer un choix explicite via les
-      // boutons supprime cette ambiguïté.
+      // Un clic sur la barrière rendrait null : la séance reprendrait sans
+      // arrêt.
       barrierDismissible: false,
       builder: (dialogCtx) => AlertDialog(
         title: Text(t.sessionStopTitle),
@@ -886,9 +694,6 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
         }
       },
       child: Scaffold(
-        // Pas d'AppBar pendant le décompte de mise en place : le visuel
-        // doit être vraiment centré sur l'écran (sans décalage du titre)
-        // et l'utilisatrice n'a aucune interaction à faire à ce moment.
         appBar: inPrep
             ? null
             : AppBar(
@@ -909,20 +714,12 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
           autofocus: true,
           onKeyEvent: _handleChallengeKeyEvent,
           child: Listener(
-            // `translucent` : on capte les events partout (y compris zones
-            // sans widget) sans bloquer la propagation vers les widgets
-            // enfants. Le bouton FAIL, les sliders volume etc. continuent
-            // de répondre normalement.
             behavior: HitTestBehavior.translucent,
             onPointerDown: _handleChallengePointerDown,
             onPointerUp: _handleChallengePointerUp,
             onPointerCancel: _handleChallengePointerUp,
             child: Stack(
               children: [
-                // Background d'ambiance derrière toute l'UI. Subtil, animé,
-                // n'intercepte aucun tap (IgnorePointer interne). Le toggle
-                // utilisateur `showBackgroundMedia` (page SONS) court-circuite
-                // les médias et ne rend que le dégradé.
                 Positioned.fill(
                     child:
                         SessionBackground(mediaEnabled: _showBackgroundMedia)),
@@ -938,13 +735,9 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                           ? _PrepCountdownPanel(seconds: _prepCountdown!)
                           : (ctrl.isFinished
                               ? (ctrl.hasPendingBadges
-                                  // Phase 1 : juste après le post-final. On garde
-                                  // l'écran de séance (animation, timer, ambiance)
-                                  // visible, et on superpose un overlay centré avec
-                                  // les boutons MERCI / ENCORE / SAUVEGARDER. Tap
-                                  // MERCI → révélation des badges → bascule sur le
-                                  // panel complet (phase 2) au prochain rebuild
-                                  // (notifyListeners de revealBadgeUnlocks).
+                                  // Phase 1 : l'écran de séance reste visible
+                                  // sous les boutons ; MERCI révèle les badges
+                                  // et bascule en phase 2.
                                   ? Stack(
                                       children: [
                                         Positioned.fill(
@@ -969,8 +762,6 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                                         ),
                                       ],
                                     )
-                                  // Phase 2 : badges révélés. Panel complet avec
-                                  // détails badges + points spé + bouton de sortie.
                                   : _FinishedPanel(
                                       badgeUnlocks: ctrl.sessionBadgeUnlocks,
                                       milestoneUnlocks:
@@ -996,10 +787,6 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                                   children: [
                                     Positioned.fill(
                                         child: _buildRunningView(ctrl)),
-                                    // Overlay flou + bouton play centré quand la
-                                    // séance est en pause. Couvre l'intégralité de
-                                    // l'écran de jeu, peu importe le mode prod /
-                                    // debug — la reprise est toujours à un tap.
                                     if (ctrl.isPaused)
                                       Positioned.fill(
                                         child: _PausedOverlay(
@@ -1009,15 +796,8 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                                   ],
                                 ))),
                 ),
-                // Halo blanc crémeux du final : par-dessus tout le reste (sauf
-                // l'AppBar), s'allume pile quand le `finale_chime` retentit et
-                // que la séance tourne encore — quelques giclées irrégulières +
-                // pulses de vibration, puis une brume qui se résorbe.
-                // Démonté dès qu'on bascule sur le panel de fin Phase 2 (badges
-                // révélés) : sinon les résidus blancs restent posés par-dessus
-                // et masquent le texte blanc du `_FinishedPanel` (issue #42).
-                // La Phase 1 (`_FinishedOverlay`) garde l'overlay : ses boutons
-                // ont déjà un voile sombre derrière eux et restent lisibles.
+                // Démonté en phase 2 : ses résidus blancs masqueraient le texte
+                // blanc de `_FinishedPanel`.
                 if (!ctrl.isFinished || ctrl.hasPendingBadges)
                   Positioned.fill(
                     child: SessionFinaleOverlay(
@@ -1034,14 +814,11 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
 
   Widget _buildRunningView(SessionController ctrl) {
     final showBar = _showStaminaBar && widget.staminaProfile != null;
-    // Quand la stamina bar est affichée, on compresse la mise en page
-    // pour absorber l'overflow bas (~19 px) sur les petits écrans.
-    // On rogne sur la hauteur de l'animation et les espacements
-    // verticaux — les Spacer absorbent l'élasticité.
+    // Sous la barre de stamina, on compresse : ~19 px d'overflow sur petit
+    // écran.
     final animHeight = showBar ? 130.0 : 160.0;
-    // Le contenu est wrappé dans un IntrinsicHeight pour qu'on puisse
-    // garder les Spacer + permettre un scroll si toutes les barres debug
-    // sont activées (sinon overflow ~50 px sur petits écrans).
+    // `IntrinsicHeight` garde les Spacer tout en permettant le scroll quand
+    // toutes les barres debug sont affichées.
     return LayoutBuilder(
       builder: (ctx, constraints) => SingleChildScrollView(
         physics: const ClampingScrollPhysics(),
@@ -1055,9 +832,6 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
               ),
               child: Column(
                 children: [
-                  // Badge d'état masqué en cours de séance : « EN COURS » est
-                  // du bruit (l'animation suffit). Pause / fail / fin gardent
-                  // leur badge, utile pour signaler l'état hors jeu actif.
                   if (ctrl.state != SessionState.running) ...[
                     _StateBadge(state: ctrl.state),
                     SizedBox(height: showBar ? 6 : 12),
@@ -1074,9 +848,6 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                     )
                   else
                     const SizedBox(height: 30),
-                  // Indicateur de posture imposée (issue #77) : permanent dès
-                  // qu'une pose est imposée (hors `free`). Reflète
-                  // `currentPose`, qui ne change qu'à l'intro et aux breaks.
                   if (ctrl.currentPose != Posture.free) ...[
                     SizedBox(height: showBar ? 4 : 8),
                     PostureIndicator(pose: ctrl.currentPose),
@@ -1111,9 +882,8 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                   if (_showTimer)
                     TimerDisplay(
                         elapsed: ctrl.elapsed, total: ctrl.session.duration)
-                  // Pendant un break (issue #77), on fige l'animation : l'orbe
-                  // en mouvement = effort, ce qui contredirait la bannière
-                  // PAUSE. Slot de même hauteur → pas de saut de layout.
+                  // Pas d'animation pendant un break : un curseur en mouvement
+                  // contredirait la bannière PAUSE.
                   else if (ctrl.hasConfig && !ctrl.breakActive)
                     MovementAnimation(
                       mode: ctrl.currentMode,
@@ -1128,11 +898,9 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                       paused: ctrl.isPaused,
                       showTrajectoryDots: _showTrajectoryDots,
                       moves: ctrl.currentMoves,
-                      // Un défi joue des segments produits en direct par son
-                      // builder et jamais insérés dans `session.steps`, et son
-                      // gel d'horloge se prolonge après lui : les instants des
-                      // steps à venir ne situent plus rien. On n'annonce rien
-                      // tant que l'horloge ne tourne pas.
+                      // Un défi joue des segments absents de `session.steps` et
+                      // gèle l'horloge après lui : rien à annoncer tant qu'elle
+                      // est figée.
                       upcomingSteps: ctrl.isTimelineFrozen
                           ? const []
                           : resolveUpcomingMovementSteps(
@@ -1147,17 +915,9 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                   else
                     SizedBox(height: animHeight),
                   SizedBox(height: showBar ? 12 : 24),
-                  // Pendant un défi, la carte `_ChallengeBanner` (plus bas)
-                  // porte déjà l'objectif + la consigne : afficher aussi
-                  // `currentDisplayText` ici doublonnait le texte et forçait
-                  // à scroller. On masque l'instruction centrale le temps du
-                  // défi.
+                  // Pendant un défi, `_ChallengeBanner` porte déjà la consigne.
                   if (!ctrl.isChallengeActive)
                     _CurrentInstruction(
-                      // `currentDisplayText` retourne déjà la version résolue
-                      // (`{name}` substitué) du dernier texte parlé / phrase de fail.
-                      // Le contrôleur résout une fois au speak, donc l'affichage reste
-                      // stable entre rebuilds et matche exactement la voix.
                       text: ctrl.currentDisplayText,
                     ),
                   const Spacer(),
@@ -1165,22 +925,14 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                     _ControlsRow(controller: ctrl),
                     SizedBox(height: showBar ? 10 : 16),
                   ],
-                  // L'état pause est signalé par l'overlay flou plein écran
-                  // monté un cran au-dessus (cf. `_PausedOverlay` dans `body`).
-                  // Masqué pendant un défi : le bouton tombe pile sous le texte
-                  // du défi, on cliquait dessus par réflexe et l'upgrade en
-                  // plein défi cassait l'enchaînement.
+                  // Masqué pendant un défi : il tombe sous le texte du défi et
+                  // un clic réflexe cassait l'enchaînement.
                   if (widget.isCareer &&
                       widget.onRequestUpgrade != null &&
                       !ctrl.isChallengeActive)
                     ListenableBuilder(
                       listenable: milestoneService,
                       builder: (context, _) {
-                        // Le bouton « Utilise-moi » (ex-Supplier) n'apparaît
-                        // qu'après que la milestone `intro_beg_libre` (niveau 3)
-                        // ait été acquittée — avant ça la joueuse n'a pas appris à
-                        // supplier. Le ChangeNotifier déclenche un rebuild quand le
-                        // déblocage arrive en cours de séance.
                         if (!milestoneService.hasUnlock(UnlockKey.begLibre)) {
                           return const SizedBox.shrink();
                         }
@@ -1296,8 +1048,6 @@ class _StateBadge extends StatelessWidget {
   }
 }
 
-/// Affiche la phase courante du flow fail (phrase / respiration / punition)
-/// avec le nom de la punition quand on y est.
 class _FailPhaseIndicator extends StatelessWidget {
   final SessionController controller;
   const _FailPhaseIndicator({required this.controller});
@@ -1397,8 +1147,6 @@ class _ControlsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isRunning = controller.isRunning;
-    // Pendant un fail le bouton play/pause est désactivé : le controller
-    // gère lui-même l'enchaînement.
     final disabledByFail = controller.isFailing;
     final mainIcon = isRunning ? Icons.pause : Icons.play_arrow;
     final mainAction = disabledByFail
@@ -1433,11 +1181,6 @@ class _ControlsRow extends StatelessWidget {
   }
 }
 
-/// Overlay plein écran affiché quand `SessionController.isPaused` est vrai.
-/// Combine un fond grisé + flou Gaussien sur l'écran de jeu (pour signaler
-/// sans ambiguïté que la séance est suspendue) avec un gros bouton play
-/// circulaire centré. Tap n'importe où → resume. Le `BackdropFilter` se
-/// nourrit du `Stack` parent (running view en `Positioned.fill` derrière).
 class _PausedOverlay extends StatelessWidget {
   final VoidCallback onResume;
   const _PausedOverlay({required this.onResume});
@@ -1499,8 +1242,6 @@ class _PausedOverlay extends StatelessWidget {
   }
 }
 
-/// Gros bouton rouge plein-largeur. Actif uniquement quand la session
-/// tourne et que les punitions sont chargées.
 class _FailButton extends StatelessWidget {
   static const Color _failColor = Color(0xFFEF5350);
   static const Color _failColorDark = Color(0xFF8A1A1A);
@@ -1548,8 +1289,6 @@ class _FailButton extends StatelessWidget {
   }
 }
 
-/// Bouton de validation posture (issue #77) : affiché quand la séance est
-/// gelée en attente que la joueuse confirme être en position. Tap → reprise.
 class _PostureReadyButton extends StatelessWidget {
   final SessionController controller;
   const _PostureReadyButton({required this.controller});
@@ -1589,16 +1328,6 @@ class _PostureReadyButton extends StatelessWidget {
   }
 }
 
-/// Boutons du système de défis intra-séance (gameplay hold-to-keep).
-/// Le widget choisit son rendu selon la phase courante du défi :
-/// - `breath` : `PASSE` (tap, gris) + `MAINTIENS` (hold-to-start, ambre) —
-///   le hold initial sur MAINTIENS démarre le countdown.
-/// - `countdown` / `live` : un seul gros bouton ambre « MAINTIENS ». La
-///   joueuse doit garder le doigt sur l'écran (n'importe où — la capture
-///   est globale via `_SessionScreenState._handlePointerDown`). Pendant
-///   la tolérance (1 s après release), le bouton pulse rouge.
-/// - `atSeuil` : un seul gros bouton vert « RELÂCHE QUAND TU VEUX » —
-///   relâcher = succès, continuer à tenir = +1 extension par tranche.
 class _ChallengeButtons extends StatelessWidget {
   static const Color _passColor = Color(0xFF757575);
   static const Color _goColor = Color(0xFFFFB300);
@@ -1615,10 +1344,7 @@ class _ChallengeButtons extends StatelessWidget {
     final isTap =
         controller.activeChallenge?.inputMode == ChallengeInputMode.tapToggle;
     if (phase == ChallengePhase.breath) {
-      // PASSE (tap) à gauche, démarrage à droite : hold-to-start (`MAINTIENS`)
-      // en mode hold, tap simple (`DÉMARRE`) en mode tap. Les deux passent par
-      // `onChallengeHoldStart` (= entrée en countdown) ; en mode tap on ne
-      // recâble jamais `onChallengeHoldEnd` derrière.
+      // En mode tap, `onChallengeHoldEnd` n'est jamais recâblé derrière.
       return Row(
         children: [
           Expanded(
@@ -1647,10 +1373,7 @@ class _ChallengeButtons extends StatelessWidget {
         ],
       );
     }
-    // Mode tap : bouton STOP plein largeur. Désactivé pendant le countdown
-    // (le défi démarre seul), rouge « abandon » en `live`, vert « valider » au
-    // seuil. L'extension bonus est implicite : ne pas taper = continuer (les
-    // extensions s'accumulent comme en tenant plus longtemps en mode hold).
+    // Ne pas taper = continuer : les extensions s'accumulent comme en tenant.
     if (isTap) {
       if (phase == ChallengePhase.countdown) {
         return _tapButton(
@@ -1679,8 +1402,6 @@ class _ChallengeButtons extends StatelessWidget {
       return const SizedBox.shrink();
     }
     if (phase == ChallengePhase.countdown || phase == ChallengePhase.live) {
-      // Un seul bouton plein-largeur. La couleur de fond suit la
-      // progression de la tolérance de release : ambre → rouge.
       return AnimatedBuilder(
         animation: controller,
         builder: (context, _) {
@@ -1729,10 +1450,7 @@ class _ChallengeButtons extends StatelessWidget {
     );
   }
 
-  /// Bouton hold-to-keep. `Listener` direct (pas `GestureDetector`) pour
-  /// avoir un onPointerDown immédiat et un onPointerUp/Cancel fiables —
-  /// `GestureDetector.onLongPress*` ajoute un délai de reconnaissance qui
-  /// rendrait le démarrage du countdown moins responsive.
+  /// `Listener` plutôt que `GestureDetector` : aucun délai de reconnaissance.
   Widget _holdButton({
     required Color color,
     required String label,
@@ -1775,16 +1493,6 @@ class _ChallengeButtons extends StatelessWidget {
   }
 }
 
-/// Banner d'instructions affiché au-dessus des boutons pendant la fenêtre
-/// défi. Deux rôles :
-/// 1. Annonce coach courante (`controller.challengeCurrentText`) — la
-///    phrase dite en TTS est aussi affichée pour les utilisatrices qui
-///    ratent le son ou jouent en silencieux. Masquée en mode tuto pour
-///    laisser respirer le cadre (la phrase d'attempt explicative tient
-///    en TTS, pas besoin de la dupliquer à l'écran).
-/// 2. Objectif chiffré (`controller.challengeObjectiveText()`) — rappel
-///    statique pendant la phase `live` (« tiens gorge 10 secondes »),
-///    bascule sur « seuil atteint » au moment `atSeuil`.
 class _ChallengeBanner extends StatelessWidget {
   static const Color _bg = Color(0xFF1F1F26);
   static const Color _border = Color(0xFFFFB300);
@@ -1798,7 +1506,6 @@ class _ChallengeBanner extends StatelessWidget {
     final phase = controller.challengePhase;
     final ch = controller.activeChallenge;
     final text = controller.challengeCurrentText;
-    // Phase countdown : gros chiffre central, pas d'autre texte.
     if (phase == ChallengePhase.countdown) {
       final digit = controller.challengeCountdownDigit;
       return Container(
@@ -1826,10 +1533,7 @@ class _ChallengeBanner extends StatelessWidget {
         ? t.challengeBannerThresholdReached
         : controller.challengeObjectiveText();
     final isTutorial = ch?.isTutorial ?? false;
-    // En tutoriel : le coach explique tout en TTS (phrase d'attempt riche +
-    // banner tuto déjà entendu). On garde le cadre noir minimal — juste
-    // l'objectif chiffré — pour éviter d'empiler 3 niveaux de texte sur un
-    // écran où la joueuse doit garder le doigt sur l'écran et écouter.
+    // En tutoriel, le TTS explique tout : seul l'objectif reste à l'écran.
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1868,11 +1572,7 @@ class _ChallengeBanner extends StatelessWidget {
   }
 }
 
-/// Bannière de break scénarisé (issue #77) : « PAUSE » + décompte mm:ss +
-/// posture à venir. Affichée pendant `controller.breakActive` pour signaler
-/// que le gel de l'effort est **voulu** (≠ freeze/bug). Pattern visuel calqué
-/// sur `_ChallengeBanner` (cadre sombre, accent ambre). L'ordre courant
-/// (« bois une gorgée »…) reste affiché par `_CurrentInstruction`.
+/// Signale que le gel de l'effort est voulu, pas un blocage.
 class _BreakBanner extends StatelessWidget {
   static const Color _bg = Color(0xFF14201A);
   static const Color _border = Color(0xFF66BB6A);
@@ -1933,8 +1633,6 @@ class _BreakBanner extends StatelessWidget {
   }
 }
 
-/// Bouton « SUPPLIER » du mode Carrière. Cliqué une seule fois par séance,
-/// déclenche un beg insistant + régénère la suite à un niveau supérieur.
 class _UseMeButton extends StatelessWidget {
   static const Color _color = Color(0xFFCE93D8);
   static const Color _colorMuted = Color(0xFF4A2C5C);
@@ -1990,8 +1688,6 @@ class _UseMeButton extends StatelessWidget {
   }
 }
 
-/// Bouton « TERMINE-MOI » du mode Custom. Régénère une mini-session de
-/// finition (boosts + final + chime) qui clôt la séance pour de bon.
 class _FinishNowButton extends StatelessWidget {
   static const Color _color = Color(0xFFE8B33A);
   static const Color _colorMuted = Color(0xFF5A4715);
@@ -2099,8 +1795,6 @@ class _CircleButton extends StatelessWidget {
   }
 }
 
-/// Bloc volumes de l'écran de jeu : TTS + ambiance. Le reste (vitesse,
-/// voix, sélection d'ambiance) est dans l'écran SONS.
 class _VolumesBlock extends StatelessWidget {
   final double ttsVolume;
   final double ambienceVolume;
@@ -2182,15 +1876,9 @@ class _LabeledSlider extends StatelessWidget {
   }
 }
 
-/// Panneau d'introduction affiché avant le démarrage d'une séance Carrière.
-/// Pendant l'affichage, le TTS lit le texte ; l'utilisateur valide via le
-/// bouton « JE SUIS PRÊTE » pour enchaîner sur la séance.
 class _IntroPanel extends StatelessWidget {
   final String text;
 
-  /// Posture imposée au démarrage (issue #77), ou `Posture.free` si aucune.
-  /// Affichée sur l'écran d'intro pour que l'utilisatrice se mette en place
-  /// avant de valider « Je suis prête ».
   final Posture pose;
   final VoidCallback onReady;
   final Future<void> Function() onReplay;
@@ -2305,9 +1993,6 @@ class _IntroHeader extends StatelessWidget {
   }
 }
 
-/// Compte à rebours visuel entre la validation de l'intro et le démarrage
-/// effectif de la séance. Donne le temps de poser le téléphone et de se
-/// mettre en position.
 class _PrepCountdownPanel extends StatelessWidget {
   final int seconds;
   const _PrepCountdownPanel({required this.seconds});
@@ -2362,14 +2047,6 @@ class _PrepCountdownPanel extends StatelessWidget {
   }
 }
 
-/// Overlay affiché en phase 1 (juste après `_finish`, badges encore
-/// cachés). Ne couvre pas l'écran : il se superpose à l'animation /
-/// timer / ambiance qui restent visibles dessous. Volontairement
-/// minimaliste — on veut que la dramaturgie de fin (chime + dernière
-/// phrase) s'enchaîne sans rupture visuelle, et que les boutons
-/// MERCI / ENCORE soient juste là, en plein milieu, pour valider la
-/// sortie quand l'utilisatrice est prête. Tap MERCI → révélation des
-/// badges → bascule sur le `_FinishedPanel` complet.
 class _FinishedOverlay extends StatefulWidget {
   final String endButtonLabel;
   final Future<void> Function() onThanks;
@@ -2435,9 +2112,6 @@ class _FinishedOverlayState extends State<_FinishedOverlay> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Voile sombre derrière les boutons : laisse l'animation visible
-            // mais améliore la lisibilité — sinon le texte des boutons se
-            // fond dans la silhouette / orbe en arrière-plan.
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
               decoration: BoxDecoration(
@@ -2548,11 +2222,6 @@ class _FinishedOverlayState extends State<_FinishedOverlay> {
   }
 }
 
-/// Panneau affiché quand la séance est terminée. Deux boutons :
-/// fermeture (« Merci ! » ou un libellé custom) et, si fourni en
-/// callback, relance d'une nouvelle session-encore plus intense
-/// (« J'en veux encore… »). Affiche aussi les nouveaux paliers de
-/// badges débloqués pendant la séance.
 class _FinishedPanel extends StatefulWidget {
   final List<BadgeUnlock> badgeUnlocks;
   final List<LevelMilestone> milestoneUnlocks;
@@ -2562,12 +2231,8 @@ class _FinishedPanel extends StatefulWidget {
   final VoidCallback onEnd;
   final Future<void> Function()? onEncore;
 
-  /// Si non null, affiche un bouton « Sauvegarder cette séance ». Le
-  /// callback retourne le nom donné, ou null si l'utilisateur a annulé.
   final Future<String?> Function()? onSave;
 
-  /// Temps réellement passé en séance, pauses exclues
-  /// (`SessionController.playedSeconds`). Affiché en haut du panel.
   final int elapsedSeconds;
 
   const _FinishedPanel({
@@ -2592,12 +2257,6 @@ class _FinishedPanelState extends State<_FinishedPanel> {
   bool _saved = false;
   int _availableSpecPoints = 0;
 
-  /// True tant que l'utilisateur n'a pas tapé MERCI : on cache les
-  /// badges. Au tap, on déclenche `onRevealBadges` qui annonce les
-  /// paliers via TTS et fait passer le panel en mode « affichage des
-  /// badges + boutons de sortie/encore ». Initialisé d'après l'état
-  /// du controller : pas de badges en attente → on est déjà en post-
-  /// merci, on affiche directement la suite.
   late bool _badgesHidden = widget.hasPendingBadges;
 
   @override
@@ -2607,12 +2266,7 @@ class _FinishedPanelState extends State<_FinishedPanel> {
   }
 
   Future<void> _refreshSpecPoints() async {
-    // `availablePoints` attend des **secondes cumulées** (cf. retour playtest
-    // 0.6 — attribution des points basée sur le temps, pas sur le nombre
-    // de sessions). Passer `getCompletedSessions()` ici donnait toujours 0
-    // (premier seuil = 300 s, soit 300 sessions pour atteindre le 1ᵉʳ point)
-    // → la prompt automatique post-séance d'attribution était silencieusement
-    // morte.
+    // `availablePoints` attend des secondes cumulées, pas un nombre de séances.
     final totalSeconds = await StatsService().getTotalSeconds();
     final available =
         await SpecializationService().availablePoints(totalSeconds);
@@ -2626,11 +2280,7 @@ class _FinishedPanelState extends State<_FinishedPanel> {
       await widget.onRevealBadges();
       return;
     }
-    // Tant que des points de spécialisation restent à attribuer, on ne
-    // laisse pas quitter l'écran : tap suivant = écran d'attribution.
-    // L'utilisateur revient ici (panel finished) une fois les points
-    // alloués → `_refreshSpecPoints` rafraîchit le state et `setState`
-    // rebuild le bouton (qui devient le bouton de sortie).
+    // Tant que des points restent à attribuer, on ne quitte pas l'écran de fin.
     if (_availableSpecPoints > 0) {
       await _openSpecializationScreen();
       return;
@@ -2739,10 +2389,6 @@ class _FinishedPanelState extends State<_FinishedPanel> {
           ),
           const SizedBox(height: 16),
           () {
-            // En phase 2 (badges révélés) avec des points en attente, on
-            // remplace le bouton de sortie par un CTA d'attribution. Tant
-            // que les points ne sont pas tous alloués, l'utilisateur ne
-            // peut pas quitter l'écran de fin (ni enchaîner un encore).
             final pendingAllocation =
                 !_badgesHidden && _availableSpecPoints > 0;
             if (pendingAllocation) {
@@ -2854,9 +2500,6 @@ class _FinishedPanelState extends State<_FinishedPanel> {
   }
 }
 
-/// Bloc affiché sur l'écran de fin : liste les nouveaux paliers de badges
-/// débloqués pendant la séance. Si aucun, affiche un message neutre — pas
-/// de honte, c'est juste qu'il n'y a rien de neuf à célébrer.
 class _BadgeUnlocksBlock extends StatelessWidget {
   final List<BadgeUnlock> unlocks;
   const _BadgeUnlocksBlock({required this.unlocks});
@@ -2961,9 +2604,6 @@ class _BadgeUnlockTile extends StatelessWidget {
   }
 }
 
-/// Bloc affiché sur l'écran de fin : liste les milestones acquittées
-/// pendant cette séance. Caché si la liste est vide (pas d'état neutre :
-/// les apprentissages sont des événements, l'absence n'est pas notable).
 class _MilestoneUnlocksBlock extends StatelessWidget {
   final List<LevelMilestone> unlocks;
   const _MilestoneUnlocksBlock({required this.unlocks});
@@ -3051,8 +2691,6 @@ class _MilestoneUnlockTile extends StatelessWidget {
   }
 }
 
-/// Dialog modal pour saisir le nom d'une session sauvegardée. Renvoie le
-/// nom (chaîne non vide trimmée) ou null si annulé.
 class _SaveSessionDialog extends StatefulWidget {
   final String initialName;
   const _SaveSessionDialog({required this.initialName});
