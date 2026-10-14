@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../l10n/enum_labels.dart';
 import '../models/session.dart';
@@ -548,8 +549,6 @@ class _PositionLadder extends StatefulWidget {
   final double pulseT;
 
   /// Nombre de positions affichées (5 = sans balls, 6 = avec balls).
-  /// Borne `_toAlign` pour que les positions visibles restent espacées
-  /// uniformément dans la hauteur disponible quel que soit le rowCount.
   final int rowCount;
 
   /// Cf. `MovementAnimation.elapsed` / `.upcomingSteps` /
@@ -965,22 +964,26 @@ class _PositionLadderState extends State<_PositionLadder> {
         ? beats.first.idx
         : (widget.flipped ? widget.from : widget.to).index.toDouble();
     widget.onCursorIdx?.call(cursorIdx);
-    final cursorAlignment = Alignment(
-        _kCursorX, _PositionLadder._toAlign(cursorIdx, widget.rowCount));
+    final cursorAlignment =
+        Alignment(_kCursorX, _PositionLadder._toAlign(cursorIdx, _kLevelSlots));
 
     return Stack(
       alignment: Alignment.center,
       children: [
-        const _ShaftBackdrop(),
+        const _Shaft(),
         for (var i = 0; i < widget.rowCount; i++)
           Align(
-            alignment:
-                Alignment(0, _PositionLadder._toAlign(i, widget.rowCount)),
-            child: FractionallySizedBox(
-              widthFactor: 0.55,
-              child: Container(
-                height: 1,
-                color: AppTheme.textMuted.withValues(alpha: 0.18),
+            alignment: Alignment(0, _PositionLadder._toAlign(i, _kLevelSlots)),
+            child: SizedBox(
+              height: _kLevelBox,
+              child: FractionallySizedBox(
+                widthFactor: 0.55,
+                child: Center(
+                  child: Container(
+                    height: 1,
+                    color: AppTheme.textMuted.withValues(alpha: 0.18),
+                  ),
+                ),
               ),
             ),
           ),
@@ -1017,7 +1020,6 @@ class _PositionLadderState extends State<_PositionLadder> {
                     cursorXFraction: (_kCursorX + 1) / 2,
                     rightPaddingFraction:
                         _PositionLadder._kRightPaddingFraction,
-                    rowCount: widget.rowCount,
                     showDots: widget.showTrajectoryDots,
                   ),
                 ),
@@ -1028,28 +1030,40 @@ class _PositionLadderState extends State<_PositionLadder> {
         for (var i = 0; i < widget.rowCount; i++)
           Align(
             alignment:
-                Alignment(0.92, _PositionLadder._toAlign(i, widget.rowCount)),
-            child: Text(
-              Position.values[i].localizedLabel(context),
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: activeIndices.contains(i)
-                    ? FontWeight.w700
-                    : FontWeight.w400,
-                letterSpacing: 1,
-                color: activeIndices.contains(i)
-                    ? widget.color.withValues(alpha: 0.85)
-                    : AppTheme.textMuted.withValues(alpha: 0.45),
+                Alignment(0.92, _PositionLadder._toAlign(i, _kLevelSlots)),
+            child: SizedBox(
+              height: _kLevelBox,
+              child: Align(
+                widthFactor: 1,
+                child: Text(
+                  Position.values[i].localizedLabel(context),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: activeIndices.contains(i)
+                        ? FontWeight.w700
+                        : FontWeight.w400,
+                    letterSpacing: 1,
+                    color: activeIndices.contains(i)
+                        ? widget.color.withValues(alpha: 0.85)
+                        : AppTheme.textMuted.withValues(alpha: 0.45),
+                  ),
+                ),
               ),
             ),
           ),
         Align(
           alignment: cursorAlignment,
-          child: _CursorVisual(
-            mode: widget.mode,
-            cursorStyle: widget.cursorStyle,
-            color: widget.color,
-            pulseT: widget.pulseT,
+          child: SizedBox(
+            height: _kLevelBox,
+            child: Align(
+              widthFactor: 1,
+              child: _CursorVisual(
+                mode: widget.mode,
+                cursorStyle: widget.cursorStyle,
+                color: widget.color,
+                pulseT: widget.pulseT,
+              ),
+            ),
           ),
         ),
       ],
@@ -1348,14 +1362,6 @@ class _TrajectoryPainter extends CustomPainter {
   final double cursorXFraction;
   final double rightPaddingFraction;
 
-  /// Nombre de positions visibles sur le ladder (5 sans balls, 6 avec).
-  /// Sert à mapper `p.idx` → y absolu de la même façon que
-  /// `_PositionLadder._toAlign` mappe l'index → coordonnée d'`Alignment`.
-  /// Sans ce param, le painter divisait par 4 (hardcodé pour 5 lignes),
-  /// ce qui décalait toutes les pastilles dès qu'on passait à 6 lignes
-  /// (et balls tombait carrément sous le canvas).
-  final int rowCount;
-
   /// Cf. `MovementAnimation.showTrajectoryDots`.
   final bool showDots;
 
@@ -1364,16 +1370,11 @@ class _TrajectoryPainter extends CustomPainter {
     required this.color,
     required this.cursorXFraction,
     required this.rightPaddingFraction,
-    required this.rowCount,
     required this.showDots,
   });
 
-  /// Marge verticale (en pixels) entre le tracé et les bords du canvas.
-  /// Sans elle, à idx=0 (tip) ou idx=4 (full), le contour de la stroke
-  /// (2.5 px) et la pastille (radius 3.5 px) dépassent le canvas, et il
-  /// reste une fine ligne d'~1 px visible collée au bord supérieur ou
-  /// inférieur (clip Flutter par défaut). 5 px = stroke + radius pastille.
-  static const double _verticalInset = 5.0;
+  /// Le tracé passe par le centre des boîtes de niveau, donc par le curseur.
+  static const double _verticalInset = _kLevelBox / 2;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1386,7 +1387,7 @@ class _TrajectoryPainter extends CustomPainter {
     final span = endX - startX;
     if (span <= 0) return;
 
-    final maxIdx = (rowCount - 1).clamp(1, 99);
+    final maxIdx = _kLevelSlots - 1;
     Offset toOffset(_BeatPoint p) =>
         Offset(startX + p.t * span, _verticalInset + p.idx / maxIdx * usableH);
 
@@ -1436,8 +1437,7 @@ class _TrajectoryPainter extends CustomPainter {
         old.showDots != showDots ||
         old.beats.length != beats.length ||
         old.cursorXFraction != cursorXFraction ||
-        old.rightPaddingFraction != rightPaddingFraction ||
-        old.rowCount != rowCount) {
+        old.rightPaddingFraction != rightPaddingFraction) {
       return true;
     }
     for (var i = 0; i < beats.length; i++) {
@@ -1452,6 +1452,16 @@ class _TrajectoryPainter extends CustomPainter {
 /// X (Alignment) où vivent le curseur et la silhouette de verge. Légèrement
 /// décalé à gauche pour laisser respirer les labels à droite.
 const double _kCursorX = -0.1;
+
+/// Hauteur commune des boîtes centrées sur un niveau (lignes, libellés,
+/// curseur) : un `Align` ne place le centre d'un enfant sur la même ordonnée
+/// que si tous les enfants ont la même hauteur. Égale au plus grand curseur,
+/// et demi-hauteur reprise comme marge par la trajectoire.
+const double _kLevelBox = 28;
+
+/// Le niveau `balls` garde toujours sa place, affiché ou non : la piste en
+/// image descend jusqu'aux bourses.
+final int _kLevelSlots = Position.values.length;
 
 /// Curseur du ladder avec le pulse propre à chaque mode — remplace les
 /// anciens `_Pulse`/`_Breath`/pulse inline de `_StaticPosition`, tous
@@ -1500,6 +1510,61 @@ class _CursorVisual extends StatelessWidget {
       case SessionMode.hand:
         return cursor;
     }
+  }
+}
+
+/// L'image est un asset externalisé (R2) : absente d'un build local ou de
+/// test, la silhouette dessinée la remplace.
+class _Shaft extends StatelessWidget {
+  const _Shaft();
+
+  static const String asset = 'assets/courbe/piste_penis.png';
+  static const double _assetW = 58;
+  static const double _assetH = 201;
+  static const double _assetTipY = 3;
+  static const double _assetFullY = 149;
+  static const double _opacity = 0.85;
+
+  static final Future<bool> _available =
+      rootBundle.load(asset).then((_) => true, onError: (_) => false);
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: _available,
+      builder: (context, snapshot) =>
+          snapshot.data == true ? _image() : const _ShaftBackdrop(),
+    );
+  }
+
+  Widget _image() {
+    return LayoutBuilder(builder: (context, box) {
+      final usable = box.maxHeight - _kLevelBox;
+      double levelY(Position p) =>
+          _kLevelBox / 2 + p.index / (_kLevelSlots - 1) * usable;
+      final scale = (levelY(Position.full) - levelY(Position.tip)) /
+          (_assetFullY - _assetTipY);
+      final width = _assetW * scale;
+      return Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: (_kCursorX + 1) / 2 * box.maxWidth - width / 2,
+            top: levelY(Position.tip) - _assetTipY * scale,
+            width: width,
+            height: _assetH * scale,
+            child: Opacity(
+              opacity: _opacity,
+              child: Image.asset(
+                asset,
+                fit: BoxFit.fill,
+                excludeFromSemantics: true,
+              ),
+            ),
+          ),
+        ],
+      );
+    });
   }
 }
 

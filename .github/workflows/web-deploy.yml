@@ -51,7 +51,7 @@ jobs:
           export AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY"
           export AWS_DEFAULT_REGION="auto"
 
-          mkdir -p assets/backgrounds assets/audio/ambience assets/career/coaches/portraits
+          mkdir -p assets/backgrounds assets/audio/ambience assets/career/coaches/portraits assets/courbe
 
           echo "Fetching backgrounds from s3://$R2_BUCKET/backgrounds/v1/ ..."
           aws s3 sync "s3://$R2_BUCKET/backgrounds/v1/" assets/backgrounds/ \
@@ -67,6 +67,11 @@ jobs:
           aws s3 sync "s3://$R2_BUCKET/coach-portraits/v1/" assets/career/coaches/portraits/ \
             --endpoint-url "$R2_ENDPOINT" \
             --no-progress || echo "(coach-portraits prefix empty or missing, continuing)"
+
+          echo "Fetching curve shaft image from s3://$R2_BUCKET/courbe/v1/ ..."
+          aws s3 sync "s3://$R2_BUCKET/courbe/v1/" assets/courbe/ \
+            --endpoint-url "$R2_ENDPOINT" \
+            --no-progress || echo "(courbe prefix empty or missing, continuing)"
 
       - name: Build Flutter web release
         run: flutter build web --release --no-wasm-dry-run
