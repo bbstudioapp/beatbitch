@@ -542,7 +542,11 @@ extension FailFlowOrchestrator on SessionController {
   Future<void> _restorePreviousLoop() async {
     final last = _lastConfigStep;
     if (last == null) return;
-    await _beep.applyStep(last, session.defaultMode);
+    final applying = _beep.applyStep(last, session.defaultMode);
+    // Le moteur prend son mode avant son délai de transition : l'écran le
+    // suit tout de suite, pas à la fin du délai.
+    _notify();
+    await applying;
     _capabilityTracker?.onStepApplied(
       mode: last.mode ?? session.defaultMode,
       from: last.from,

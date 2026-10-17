@@ -154,6 +154,27 @@ void main() {
         reason: 'la reprise doit repartir de l\'instant du défi');
     _expectNoHoldAhead(run.samples);
   }, timeout: const Timeout(Duration(seconds: 120)));
+
+  testWidgets(
+      'mini-punition : l\'écran montre le rythme de la séance dès que le '
+      'moteur le reprend', (tester) async {
+    final lag = await _screenLagAtResume(tester,
+        session: _session,
+        punish: (ctrl) => ctrl.debugRunMiniPunishment(_holdPunishment));
+    expect(lag, lessThan(_lagToleranceMs),
+        reason: 'l\'écran a montré le rythme ${lag.inMilliseconds} ms après '
+            'le moteur');
+  }, timeout: const Timeout(Duration(seconds: 120)));
+
+  testWidgets(
+      'FAIL sans section suivante : l\'écran montre le rythme de la séance '
+      'dès que le moteur le reprend', (tester) async {
+    final lag = await _screenLagAtResume(tester,
+        session: _singleSection, punish: (ctrl) => ctrl.triggerFail());
+    expect(lag, lessThan(_lagToleranceMs),
+        reason: 'l\'écran a montré le rythme ${lag.inMilliseconds} ms après '
+            'le moteur');
+  }, timeout: const Timeout(Duration(seconds: 120)));
 }
 
 void _expectNoHoldAhead(List<_CurveSample> samples) {
@@ -208,16 +229,10 @@ Duration _holdAt(SessionController ctrl) => Duration(
     seconds:
         ctrl.session.steps.firstWhere((s) => s.mode == SessionMode.hold).time);
 
-/// Lance [punish] à 2,5 s de séance s'il est fourni, laisse passer le gel
-/// décrit par [frozen], puis lit la courbe pendant [_settleMs, _windowEndMs)
-/// après la reprise, tant que la tenue est à plus d'une demi-seconde.
-Future<_Resumed> _playResume(
-  WidgetTester tester, {
-  required Session session,
-  Future<void> Function(SessionController ctrl)? punish,
-  required bool Function(SessionController ctrl) frozen,
-  void Function(SessionController ctrl, Duration frozenFor)? whileFrozen,
-}) async {
+/// Écran de séance monté sur [session] ; la tranche rendue avance l'horloge
+/// simulée du temps réel écoulé.
+Future<(SessionController, Future<void> Function())> _mount(
+    WidgetTester tester, Session session, Punishment punishment) async {
   tester.view.physicalSize = const Size(400, 1400);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
@@ -231,9 +246,9 @@ Future<_Resumed> _playResume(
       tts: TtsService(),
       beep: _StateBeepEngine(),
       ambience: _SilentAmbienceEngine(),
-      punishmentBundle: const PunishmentBundle(
-        failPhrases: ['raté'],
-        punishments: [_rhythmPunishment],
+      punishmentBundle: PunishmentBundle(
+        failPhrases: const ['raté'],
+        punishments: [punishment],
       ),
       randomComments: const RandomCommentsBundle(
         comments: [],
@@ -261,6 +276,71 @@ Future<_Resumed> _playResume(
     await tester.pump(now.difference(sliceEnd));
     sliceEnd = now;
   }
+
+  return (ctrl, slice);
+}
+
+/// Une tranche de banc et sa marge : en deçà du plus petit délai de
+/// transition entre deux modes (600 ms).
+const _lagToleranceMs = Duration(milliseconds: 400);
+
+/// Écart entre le moteur qui reprend le rythme de la séance à la sortie d'une
+/// punition de tenue et l'écran qui le montre.
+Future<Duration> _screenLagAtResume(
+  WidgetTester tester, {
+  required Session session,
+  required Future<void> Function(SessionController ctrl) punish,
+}) async {
+  final (ctrl, slice) = await _mount(tester, session, _holdPunishment);
+  var guard = 0;
+  while (!(ctrl.isRunning &&
+      ctrl.hasConfig &&
+      ctrl.elapsed >= const Duration(milliseconds: 2500))) {
+    if (++guard > 100) fail('la séance ne démarre pas');
+    await slice();
+  }
+  unawaited(punish(ctrl));
+
+  var punished = false;
+  DateTime? engineAt;
+  DateTime? screenAt;
+  final deadline = DateTime.now().add(const Duration(seconds: 40));
+  while (DateTime.now().isBefore(deadline) && screenAt == null) {
+    await slice();
+    if (ctrl.failPhase == FailPhase.punishment &&
+        ctrl.currentMode == SessionMode.hold) {
+      punished = true;
+    }
+    if (!punished) continue;
+    final now = DateTime.now();
+    if (ctrl.currentMode == SessionMode.rhythm) engineAt ??= now;
+    final shown =
+        tester.widget<MovementAnimation>(find.byType(MovementAnimation)).mode;
+    if (shown == SessionMode.rhythm) screenAt ??= now;
+  }
+  expect(punished, isTrue, reason: 'la punition de tenue ne démarre pas');
+  expect(engineAt, isNotNull, reason: 'le moteur ne reprend pas le rythme');
+  expect(screenAt, isNotNull, reason: 'l\'écran ne montre jamais le rythme');
+
+  ctrl.stop();
+  await tester.pump(const Duration(seconds: 2));
+  await tester.pumpWidget(const SizedBox());
+  await tester
+      .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+  return screenAt!.difference(engineAt!);
+}
+
+/// Lance [punish] à 2,5 s de séance s'il est fourni, laisse passer le gel
+/// décrit par [frozen], puis lit la courbe pendant [_settleMs, _windowEndMs)
+/// après la reprise, tant que la tenue est à plus d'une demi-seconde.
+Future<_Resumed> _playResume(
+  WidgetTester tester, {
+  required Session session,
+  Future<void> Function(SessionController ctrl)? punish,
+  required bool Function(SessionController ctrl) frozen,
+  void Function(SessionController ctrl, Duration frozenFor)? whileFrozen,
+}) async {
+  final (ctrl, slice) = await _mount(tester, session, _rhythmPunishment);
 
   if (punish != null) {
     var guard = 0;
@@ -491,6 +571,39 @@ const _rhythmPunishment = Punishment(
       bpm: 90,
       from: Position.tip,
       to: Position.full,
+    ),
+  ],
+);
+
+/// Aucune section après le FAIL : la reprise restaure le loop d'avant.
+const _singleSection = Session(
+  id: 'reprise-sans-section',
+  name: 'reprise-sans-section',
+  description: '',
+  durationSeconds: 600,
+  defaultMode: SessionMode.rhythm,
+  steps: [
+    SessionStep(
+      time: 0,
+      mode: SessionMode.rhythm,
+      bpm: 60,
+      from: Position.head,
+      to: Position.throat,
+    ),
+  ],
+);
+
+const _holdPunishment = Punishment(
+  id: 'tenue',
+  name: 'tenue',
+  durationSeconds: 3,
+  steps: [
+    SessionStep(
+      time: 0,
+      mode: SessionMode.hold,
+      from: Position.full,
+      to: Position.full,
+      duration: 3,
     ),
   ],
 );
