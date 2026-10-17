@@ -1,3 +1,4 @@
+import '../models/hold_move.dart';
 import '../models/session.dart';
 import '../models/session_step.dart';
 import '../services/beep_engine.dart';
@@ -21,6 +22,9 @@ class UpcomingMovementStep {
   /// les `UpcomingMovementStep` construits hors résolveur.
   final Duration transitionGap;
 
+  /// Mouvements ponctuels si le step est une tenue (cf. [HoldMove]).
+  final List<HoldMove> moves;
+
   const UpcomingMovementStep({
     required this.mode,
     required this.from,
@@ -28,6 +32,7 @@ class UpcomingMovementStep {
     required this.bpm,
     required this.startSecond,
     this.transitionGap = Duration.zero,
+    this.moves = const [],
   });
 }
 
@@ -75,6 +80,7 @@ List<UpcomingMovementStep> resolveUpcomingMovementSteps({
         previous: previousMode,
         incomingTo: to,
       ),
+      moves: mode == SessionMode.hold ? step.moves : const [],
     ));
   }
   return result;

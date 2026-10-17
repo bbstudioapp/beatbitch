@@ -1126,6 +1126,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                       stepSerial: widget.beep.stepSerial,
                       elapsed: ctrl.elapsed,
                       showTrajectoryDots: _showTrajectoryDots,
+                      moves: ctrl.currentMoves,
                       // Un défi joue des segments produits en direct par son
                       // builder et jamais insérés dans `session.steps`, et son
                       // gel d'horloge se prolonge après lui : les instants des

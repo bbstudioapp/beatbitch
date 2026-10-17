@@ -112,6 +112,30 @@ class CareerLevelGates {
   /// chantier-aimant-étape-3.
   static const int rhythmAnchorToFloorLevel = 10;
 
+  /// Allers-retours pendant une tenue (cf. `HoldMove`) : à partir de ce
+  /// niveau, une tenue d'au moins [holdMovesMinDuration] s en reçoit avec la
+  /// probabilité [holdMovesProbability] ; un de plus par tranche de
+  /// [holdMovesSecondsPerExtra] s ; vers `full` dans
+  /// [holdMovesDownProbability] des cas quand la capacité le permet.
+  static const int holdMovesFloorLevel = 5;
+  static const int holdMovesMinDuration = 6;
+  static const int holdMovesSecondsPerExtra = 8;
+  static const double holdMovesProbability = 0.5;
+  static const double holdMovesDownProbability = 1 / 3;
+
+  /// Sinon, rafale de micro-mouvements avec la probabilité
+  /// [holdMicroProbability], de [holdMicroMinBurst] à [holdMicroMaxBurst] s.
+  static const double holdMicroProbability = 0.3;
+  static const int holdMicroMinBurst = 3;
+  static const int holdMicroMaxBurst = 6;
+
+  /// Sur une tenue `full`, lick balls avant tout autre mouvement avec la
+  /// probabilité [holdLickBallsProbability], de [holdLickBallsMin] à
+  /// [holdLickBallsMax] s.
+  static const double holdLickBallsProbability = 0.4;
+  static const int holdLickBallsMin = 3;
+  static const int holdLickBallsMax = 8;
+
   /// Force par défaut de l'aimant rythmé — schéma 3:1 de Manu (intervalle
   /// 1,5T sur la position ancrée, 0,5T sur l'autre).
   static const int rhythmAnchorDefaultRatio = 3;

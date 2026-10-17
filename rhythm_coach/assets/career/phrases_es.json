@@ -96,6 +96,18 @@
     ]
   },
   "hold": {
+    "lick_balls": [
+      "¡Quédate hasta el fondo, saca la lengua y lámeme los huevos!",
+      "Hasta el fondo… y tu lengua en mis huevos, ¡lame!"
+    ],
+    "micro": [
+      "¡Movimientos pequeños y rápidos, sin soltar la posición!",
+      "Muévete apenas, rápido, rápido… ¡sin salir!"
+    ],
+    "moves": [
+      "Aguanta la posición. En cada pitido, un ida y vuelta rápido, y vuelves enseguida.",
+      "Aguanta… y cuando pite, muévete de golpe y vuelve enseguida."
+    ],
     "soft": [
       "Quédate con ella al fondo. Buena chica.",
       "Quédate ahí, juguetito."

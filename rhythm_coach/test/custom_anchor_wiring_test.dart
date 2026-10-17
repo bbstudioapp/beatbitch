@@ -135,8 +135,10 @@ void main() {
         anchorStrength: AnchorStrength.hard,
       );
       for (final seed in _seeds) {
-        final before = _customSession(off, seed: seed).steps;
-        final after = _customSession(on, seed: seed).steps;
+        // Les consignes de micro-mouvements sont des steps de texte seul : une
+        // tenue ancrée n'en reçoit pas, le nombre de steps n'est pas comparable.
+        final before = _configSteps(_customSession(off, seed: seed));
+        final after = _configSteps(_customSession(on, seed: seed));
         expect(after.length, before.length,
             reason: 'l\'aimant ne doit pas déplacer le tirage (seed $seed)');
         for (var i = 0; i < before.length; i++) {
@@ -173,8 +175,8 @@ void main() {
           final expectedRatio = on.resolveAnchor()!.$2;
           var piloted = 0;
           for (final seed in _seeds) {
-            final before = _customSession(off, seed: seed).steps;
-            final after = _customSession(on, seed: seed).steps;
+            final before = _configSteps(_customSession(off, seed: seed));
+            final after = _configSteps(_customSession(on, seed: seed));
             for (var i = 0; i < after.length; i++) {
               final a = after[i], b = before[i];
               if (a.mode != SessionMode.rhythm) continue;
@@ -279,3 +281,6 @@ void main() {
     });
   });
 }
+
+List<SessionStep> _configSteps(Session s) =>
+    s.steps.where((st) => !st.isTextOnly).toList();

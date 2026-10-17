@@ -13,6 +13,7 @@ import '../career/services/generation/career_session_generator.dart';
 import '../career/services/specialization_service.dart';
 import '../l10n/app_localizations.dart';
 import '../main.dart' show milestoneService;
+import '../models/hold_move.dart';
 import '../models/punishment.dart';
 import '../models/posture.dart';
 import '../models/session.dart';
@@ -973,6 +974,7 @@ class SessionController extends ChangeNotifier {
   Position get currentFrom => _beep.currentFrom;
   Position? get currentTo => _beep.currentTo;
   int get currentBpm => _beep.currentBpm;
+  List<HoldMove> get currentMoves => _beep.currentMoves;
 
   double get progress {
     if (session.durationSeconds == 0) return 0;
