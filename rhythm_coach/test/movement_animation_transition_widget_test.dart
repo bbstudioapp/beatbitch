@@ -38,7 +38,7 @@ void main() {
         elapsed: Duration(seconds: 10),
       )));
       await tester.pump(const Duration(milliseconds: 16));
-      expect(cursorY(tester), closeTo(1.0, 0.01), reason: 'tenue au fond');
+      expect(cursorY(tester), closeTo(0.6, 0.01), reason: 'tenue au fond');
 
       await tester.pumpWidget(wrap(const MovementAnimation(
         mode: SessionMode.rhythm,

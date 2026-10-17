@@ -60,6 +60,7 @@ assets/career/coaches/portraits/*.png
 assets/career/coaches/portraits/*.jpg
 assets/career/coaches/portraits/*.jpeg
 assets/career/coaches/portraits/*.webp
+assets/courbe/**/*.png
 
 # Captures marketing — pèsent et changent souvent, hors historique code.
 screenshots/

@@ -54,12 +54,12 @@ void main() {
       expect(justeApres, closeTo(avant, 0.05),
           reason: 'le gel part de la position affichée, pas d\'un saut');
 
-      // Pendant le gap (300 ms), le curseur rejoint `to` (gorge → 0.5) au
+      // Pendant le gap (300 ms), le curseur rejoint `to` (gorge → 0.2) au
       // lieu de poursuivre l'alternance de l'ancien step.
       await tester.runAsync(
           () => Future<void>.delayed(const Duration(milliseconds: 320)));
       await tester.pump(const Duration(milliseconds: 16));
-      expect(cursorY(tester)!, closeTo(0.5, 0.06));
+      expect(cursorY(tester)!, closeTo(0.2, 0.06));
     },
   );
 }

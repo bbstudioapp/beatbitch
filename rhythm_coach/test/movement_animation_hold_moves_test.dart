@@ -64,11 +64,11 @@ void main() {
         .reduce((a, b) => (a.$1 - ms).abs() < (b.$1 - ms).abs() ? a : b)
         .$2;
 
-    // 5 rangées : gorge = +0,5, bout = -1.
-    expect(at(200), closeTo(0.5, 0.05), reason: 'immobile avant le départ');
+    // 6 places, balls compris : gorge = +0,2, bout = -1.
+    expect(at(200), closeTo(0.2, 0.05), reason: 'immobile avant le départ');
     expect(at(400 + leg), closeTo(-1, 0.15),
         reason: 'au bout au moment du bip d\'arrivée');
-    expect(at(400 + 2 * leg + 300), closeTo(0.5, 0.05),
+    expect(at(400 + 2 * leg + 300), closeTo(0.2, 0.05),
         reason: 'revenu en gorge après le bip de retour');
     final minY = samples.map((s) => s.$2).reduce((a, b) => a < b ? a : b);
     expect(minY, lessThan(-0.85), reason: 'monte vraiment jusqu\'au bout');
@@ -121,16 +121,19 @@ void main() {
       await tester.pumpWidget(_host(start + clock.elapsed, moves: micro));
       ys.add((clock.elapsedMilliseconds, _cursorY(tester)!));
     }
-    // 5 rangées : un cran = 0,5 en Align ; sommet = gorge − 0,4 cran.
+    // 6 places : un cran = 0,4 en Align ; sommet = gorge − 0,4 cran.
+    const gorge = 0.2;
+    const cran = 0.4;
     final during = ys.where((e) => e.$1 > 350 && e.$1 < 1750).map((e) => e.$2);
-    final lows = during.where((y) => y < 0.5 - 0.15).length;
-    final highs = during.where((y) => y > 0.5 - 0.05).length;
+    final lows = during.where((y) => y < gorge - 0.3 * cran).length;
+    final highs = during.where((y) => y > gorge - 0.1 * cran).length;
     expect(lows, greaterThan(5), reason: 'monte plusieurs fois');
     expect(highs, greaterThan(5), reason: 'et revient entre deux');
-    expect(during.reduce((a, b) => a < b ? a : b), greaterThan(0.5 - 0.25),
+    expect(
+        during.reduce((a, b) => a < b ? a : b), greaterThan(gorge - 0.5 * cran),
         reason: 'reste un petit mouvement, pas un aller-retour');
     final after = ys.where((e) => e.$1 > 2100).map((e) => e.$2);
-    expect(after.every((y) => (y - 0.5).abs() < 0.03), isTrue,
+    expect(after.every((y) => (y - gorge).abs() < 0.06 * cran), isTrue,
         reason: 'immobile après la rafale');
   });
 
