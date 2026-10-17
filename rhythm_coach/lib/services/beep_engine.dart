@@ -327,9 +327,9 @@ class BeepEngine {
       case SessionMode.biffle:
         _startBiffleLoop();
       case SessionMode.hold:
-        // En hold, `_to` porte la position tenue ; sans position plus aiguë,
-        // pas d'aller-retour possible.
-        if (_anchor == BeatAnchor.to && _to != null && _to!.index > 0) {
+        if (_holdSwings) {
+          _playHoldOneShot(_to!);
+          _holdElapsedMs = 0;
           _startHoldSwingLoop(_to!);
         } else {
           _playHoldOneShot(_from);
@@ -673,8 +673,14 @@ class BeepEngine {
     return out;
   }
 
+  /// En hold, `_to` porte la position tenue ; sans position plus aiguë,
+  /// pas d'aller-retour possible.
+  bool get _holdSwings =>
+      _anchor == BeatAnchor.to && _to != null && _to!.index > 0;
+
+  /// Reprend à [_holdElapsedMs] : les allers-retours déjà joués ne
+  /// rejouent pas.
   void _startHoldSwingLoop(Position anchorPos) {
-    _playHoldOneShot(anchorPos);
     final sequence = _holdSwingSequence(
       anchorPos: anchorPos,
       bpm: _bpm.toDouble(),
@@ -682,7 +688,15 @@ class BeepEngine {
       swings: _holdFinalAnchorSwings,
     );
     final myGen = ++_loopGen;
-    var lastTargetMs = DateTime.now().millisecondsSinceEpoch;
+    final originMs = DateTime.now().millisecondsSinceEpoch - _holdElapsedMs;
+    _holdResumedAtMs = originMs;
+    var lastTargetMs = originMs;
+    var first = 0;
+    while (first < sequence.length &&
+        lastTargetMs + sequence[first].$2 - originMs < _holdElapsedMs) {
+      lastTargetMs += sequence[first].$2;
+      first++;
+    }
     void scheduleAt(int i) {
       if (myGen != _loopGen || i >= sequence.length) return;
       final (pos, intervalMs) = sequence[i];
@@ -696,7 +710,7 @@ class BeepEngine {
       });
     }
 
-    scheduleAt(0);
+    scheduleAt(first);
   }
 
   @visibleForTesting
@@ -993,7 +1007,11 @@ class BeepEngine {
       case SessionMode.biffle:
         _startBiffleLoop();
       case SessionMode.hold:
-        _startHoldMoves();
+        if (_holdSwings) {
+          _startHoldSwingLoop(_to!);
+        } else {
+          _startHoldMoves();
+        }
       case SessionMode.breath:
       case SessionMode.beg:
       case SessionMode.freestyle:
