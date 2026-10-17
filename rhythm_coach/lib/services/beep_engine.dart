@@ -62,7 +62,6 @@ class BeepEngine {
   static const double _handVolume = 0.85;
   static const double _holdLayerVolume = 0.9;
   static const double _breathVolume = 0.9;
-  // Plus doux que rhythm : la bouche aspire, elle ne frappe pas.
   static const double _suckleVolume = 0.75;
 
   static const Duration _sucklePulse = Duration(milliseconds: 1200);
@@ -112,15 +111,12 @@ class BeepEngine {
 
   int? _loopDurationMs;
 
-  /// À `true` : le premier beat tombe sur la profondeur cible `to`, pas sur
-  /// le point de départ.
   bool _alternateToggle = true;
 
   BeatAnchor _anchor = BeatAnchor.none;
 
   int _ratio = 1;
 
-  /// Temps écoulé hors pauses : une reprise replanifie les mouvements restants.
   List<HoldMove> _moves = const [];
   int _holdElapsedMs = 0;
   int? _holdResumedAtMs;
@@ -408,23 +404,15 @@ class BeepEngine {
   /// part.
   static const Duration _gridEarlyTolerance = Duration(milliseconds: 1);
 
-  /// Cale les loops rythmés sur les temps d'un morceau : chaque bip tombe sur un
-  /// temps de sa grille, lu sur [position] (position de lecture du morceau), et
-  /// non sur un intervalle déduit du BPM du step. [music] fixe aussi le gain des
-  /// bips.
   void attachMusic(SessionMusic music, Duration Function() position) {
     _music = music;
     _musicPosition = position;
     _beepGain = music.beepGain;
   }
 
-  /// Observe chaque déclenchement de sample avec son volume final.
   @visibleForTesting
   void Function(String asset, double volume)? debugOnTrigger;
 
-  /// Avance des bips sur le morceau (séance musicale seulement) : chaque bip
-  /// part ce délai avant son temps de grille. Relue à chaque bip, réglable en
-  /// cours de séance.
   Duration musicBeepAdvance = Duration.zero;
 
   void detachMusic() {
@@ -648,8 +636,6 @@ class BeepEngine {
     _trigger(_holdAsset, _holdLayerVolume);
   }
 
-  /// Fixe et non tiré au hasard : le hasard appartient au générateur, pas à
-  /// ce moteur de lecture.
   static const int _holdFinalAnchorSwings = 4;
 
   /// Arithmétique de [_intervalAfter] dupliquée, pas réutilisée : lui lit
@@ -673,13 +659,9 @@ class BeepEngine {
     return out;
   }
 
-  /// En hold, `_to` porte la position tenue ; sans position plus aiguë,
-  /// pas d'aller-retour possible.
   bool get _holdSwings =>
       _anchor == BeatAnchor.to && _to != null && _to!.index > 0;
 
-  /// Reprend à [_holdElapsedMs] : les allers-retours déjà joués ne
-  /// rejouent pas.
   void _startHoldSwingLoop(Position anchorPos) {
     final sequence = _holdSwingSequence(
       anchorPos: anchorPos,
