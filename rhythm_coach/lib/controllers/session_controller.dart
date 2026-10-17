@@ -1086,12 +1086,29 @@ class SessionController extends ChangeNotifier {
   // ─── Cycle principal ───────────────────────────────────────────────────
 
   bool _starting = false;
+  bool _appInBackground = false;
+  bool _backgroundedDuringStart = false;
+
+  bool get appInBackground => _appInBackground;
+
+  void onAppBackgrounded() {
+    _appInBackground = true;
+    if (_starting) _backgroundedDuringStart = true;
+    notifyListeners();
+    unawaited(pause());
+  }
+
+  void onAppForegrounded() {
+    _appInBackground = false;
+    notifyListeners();
+  }
 
   Future<void> start() async {
     // Synchrone : un double-clic entre deux fois avant que `_state` ne bascule.
     if (_starting) return;
     if (_state == SessionState.running) return;
     _starting = true;
+    _backgroundedDuringStart = _appInBackground;
     try {
       if (_state == SessionState.idle || _state == SessionState.finished) {
         _stopwatch.reset();
@@ -1199,6 +1216,13 @@ class SessionController extends ChangeNotifier {
 
       BackgroundsService.instance.clear();
 
+      if (_backgroundedDuringStart) {
+        await _music?.pause();
+        _state = SessionState.paused;
+        notifyListeners();
+        return;
+      }
+
       _stopwatch.start();
       _state = SessionState.running;
       _startTicker();
@@ -1296,8 +1320,12 @@ class SessionController extends ChangeNotifier {
     // appelle `pause()`/`resume()` sur une notification ou un écran verrouillé,
     // sans passer par les contrôles de séance de debug. Même paire de gardes
     // que le gel d'accrual dans `_onTick`. L'ambiance, elle, n'est pas coupée
-    // par le break : elle reprend inconditionnellement.
-    if (!_breakActive && !awaitingPostureReady) await _beep.resume();
+    // par le break : elle reprend inconditionnellement. Avant le premier step
+    // de config le moteur n'a rien à reprendre : sa config par défaut ferait
+    // battre un rythme fantôme.
+    if (_configApplied && !_breakActive && !awaitingPostureReady) {
+      await _beep.resume();
+    }
     await musicResumed;
     if (_music == null) await _ambience.resume();
     notifyListeners();

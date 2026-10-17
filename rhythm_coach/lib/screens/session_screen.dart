@@ -289,10 +289,15 @@ class _SessionScreenState extends State<SessionScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Reprise manuelle : le son ne repart jamais seul au retour dans l'app.
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.hidden) {
-      _controller.pause();
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.hidden:
+        _controller.onAppBackgrounded();
+      case AppLifecycleState.resumed:
+        _controller.onAppForegrounded();
+      case AppLifecycleState.detached:
+        break;
     }
   }
 
@@ -421,9 +426,14 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
 
   bool _autoChainScheduled = false;
 
+  late final SessionController _lifecycleCtrl;
+  bool _wasInBackground = false;
+
   @override
   void initState() {
     super.initState();
+    _lifecycleCtrl = context.read<SessionController>()
+      ..addListener(_onAppLifecycleChanged);
     if (widget.autoContinueOnFinish) {
       _autoChainCtrl = context.read<SessionController>();
       _autoChainCtrl!.addListener(_maybeAutoChain);
@@ -491,6 +501,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
   @override
   void dispose() {
     _prepTimer?.cancel();
+    _lifecycleCtrl.removeListener(_onAppLifecycleChanged);
     _autoChainCtrl?.removeListener(_maybeAutoChain);
     _challengeFocus.dispose();
     super.dispose();
@@ -558,8 +569,25 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     await widget.tts.speak(text);
   }
 
+  void _onAppLifecycleChanged() {
+    final inBackground = _lifecycleCtrl.appInBackground;
+    if (inBackground == _wasInBackground) return;
+    _wasInBackground = inBackground;
+    if (_prepCountdown == null) return;
+    if (inBackground) {
+      _prepTimer?.cancel();
+      unawaited(widget.tts.stop());
+    } else {
+      _startPrepCountdown();
+    }
+  }
+
   Future<void> _onIntroReady() async {
     if (!_introPending) return;
+    _startPrepCountdown();
+  }
+
+  void _startPrepCountdown() {
     // L'UI bascule avant `stop()` : sur Linux, arrêter le TTS prend plusieurs
     // centaines de ms et le bouton semblait ne pas répondre.
     setState(() {
