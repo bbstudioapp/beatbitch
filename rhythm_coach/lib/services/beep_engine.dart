@@ -175,7 +175,10 @@ class BeepEngine {
           isFinaleVariant ? 'audio/finale/$name.mp3' : 'audio/$name.mp3';
       for (var i = 0; i < poolSize; i++) {
         try {
-          final p = AudioPlayer(playerId: 'beep_${name}_$i');
+          final p = AudioPlayer(playerId: 'beep_${name}_$i')
+            // Sans ça, audioplayers interroge la position de chaque lecteur
+            // à chaque image tant qu'il joue, via le canal natif.
+            ..positionUpdater = null;
           await p.setReleaseMode(ReleaseMode.stop);
           await p.setSource(AssetSource(assetPath));
           players.add(p);
