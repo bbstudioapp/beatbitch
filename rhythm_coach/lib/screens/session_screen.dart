@@ -121,8 +121,7 @@ class SessionScreen extends StatefulWidget {
 
   final AnatomyProfile? anatomy;
 
-  /// Prime sur le réglage debug : une durée tirée au hasard ne doit pas se
-  /// deviner.
+  /// Prime sur le réglage debug.
   final bool hideTimerOverride;
 
   const SessionScreen({
@@ -209,7 +208,6 @@ class _SessionScreenState extends State<SessionScreen>
     _controller.onChallengeOutcome = widget.onChallengeOutcome;
     _controller.onChallengeHaptic = _handleChallengeHaptic;
     final anatomy = widget.anatomy ?? AnatomyProfile.defaults;
-    // Hors carrière, tout est débloqué : seule l'anatomie compte.
     final ballsRevealed = anatomy.hasBalls &&
         (!widget.isCareer ||
             milestoneService
@@ -398,11 +396,8 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
   bool _finishNowInFlight = false;
   bool _finishNowDone = false;
 
-  /// En dessous, la mini-session de finish n'a plus la place de jouer.
   static const int _finishNowMinRemainingSeconds = 75;
 
-  /// Un doigt relâché n'arrête rien tant qu'un autre doigt ou la touche espace
-  /// tient.
   final Set<int> _challengeActivePointers = <int>{};
   static const int _challengeKeyboardPointerId = -1;
   late final FocusNode _challengeFocus =
@@ -419,7 +414,6 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
 
   static const int _prepDurationSeconds = 7;
 
-  /// Laisse sonner le `finale_chime` et le post-final.
   static const Duration _autoContinueDelay = Duration(seconds: 4);
 
   SessionController? _autoChainCtrl;
@@ -490,7 +484,6 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
       _resolvedIntroText = widget.tts.resolveText(widget.introText!);
       WidgetsBinding.instance.addPostFrameCallback((_) => _speakIntro());
     } else if (widget.autoStart) {
-      // L'ouverture est déjà le texte du step 0.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         context.read<SessionController>().start();
@@ -510,10 +503,8 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
   void _handleChallengePointerDown(PointerDownEvent e) {
     final ctrl = context.read<SessionController>();
     if (!ctrl.isChallengeActive) return;
-    // Mode tap : seuls les boutons GO/STOP pilotent le défi.
     if (!ctrl.challengeUsesHoldInput) return;
     _challengeActivePointers.add(e.pointer);
-    // En `breath`, seul le bouton MAINTIENS arme le décompte.
     if (ctrl.challengePhase != ChallengePhase.breath) {
       ctrl.onChallengeHoldStart();
     }
@@ -589,7 +580,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
 
   void _startPrepCountdown() {
     // L'UI bascule avant `stop()` : sur Linux, arrêter le TTS prend plusieurs
-    // centaines de ms et le bouton semblait ne pas répondre.
+    // centaines de ms.
     setState(() {
       _introPending = false;
       _prepCountdown = _prepDurationSeconds;
@@ -764,9 +755,6 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                           ? _PrepCountdownPanel(seconds: _prepCountdown!)
                           : (ctrl.isFinished
                               ? (ctrl.hasPendingBadges
-                                  // Phase 1 : l'écran de séance reste visible
-                                  // sous les boutons ; MERCI révèle les badges
-                                  // et bascule en phase 2.
                                   ? Stack(
                                       children: [
                                         Positioned.fill(
@@ -825,8 +813,8 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                                   ],
                                 ))),
                 ),
-                // Démonté en phase 2 : ses résidus blancs masqueraient le texte
-                // blanc de `_FinishedPanel`.
+                // Ses résidus blancs masqueraient le texte blanc de
+                // `_FinishedPanel`.
                 if (!ctrl.isFinished || ctrl.hasPendingBadges)
                   Positioned.fill(
                     child: SessionFinaleOverlay(
@@ -843,8 +831,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
 
   Widget _buildRunningView(SessionController ctrl) {
     final showBar = _showStaminaBar && widget.staminaProfile != null;
-    // Sous la barre de stamina, on compresse : ~19 px d'overflow sur petit
-    // écran.
+    // Sous la barre de stamina, on compresse : overflow sur petit écran.
     final animHeight = showBar ? 130.0 : 160.0;
     // `IntrinsicHeight` garde les Spacer tout en permettant le scroll quand
     // toutes les barres debug sont affichées.
@@ -911,8 +898,6 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                   if (_showTimer)
                     TimerDisplay(
                         elapsed: ctrl.elapsed, total: ctrl.session.duration)
-                  // Pas d'animation pendant un break : un curseur en mouvement
-                  // contredirait la bannière PAUSE.
                   else if (ctrl.hasConfig && !ctrl.breakActive)
                     MovementAnimation(
                       mode: ctrl.currentMode,
@@ -945,7 +930,6 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                   else
                     SizedBox(height: animHeight),
                   SizedBox(height: showBar ? 12 : 24),
-                  // Pendant un défi, `_ChallengeBanner` porte déjà la consigne.
                   if (!ctrl.isChallengeActive)
                     _CurrentInstruction(
                       text: ctrl.currentDisplayText,
@@ -955,8 +939,6 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                     _ControlsRow(controller: ctrl),
                     SizedBox(height: showBar ? 10 : 16),
                   ],
-                  // Masqué pendant un défi : il tombe sous le texte du défi et
-                  // un clic réflexe cassait l'enchaînement.
                   if (widget.isCareer &&
                       widget.onRequestUpgrade != null &&
                       !ctrl.isChallengeActive)
@@ -1568,7 +1550,6 @@ class _ChallengeBanner extends StatelessWidget {
         ? t.challengeBannerThresholdReached
         : controller.challengeObjectiveText();
     final isTutorial = ch?.isTutorial ?? false;
-    // En tutoriel, le TTS explique tout : seul l'objectif reste à l'écran.
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1607,7 +1588,6 @@ class _ChallengeBanner extends StatelessWidget {
   }
 }
 
-/// Signale que le gel de l'effort est voulu, pas un blocage.
 class _BreakBanner extends StatelessWidget {
   static const Color _bg = Color(0xFF14201A);
   static const Color _border = Color(0xFF66BB6A);
@@ -1830,7 +1810,6 @@ class _CircleButton extends StatelessWidget {
   }
 }
 
-/// Réglage debug de l'avance des bips sur le morceau, ajustable à l'écoute.
 class _MusicBeepAdvanceRow extends StatelessWidget {
   final SessionController controller;
 
@@ -2352,7 +2331,6 @@ class _FinishedPanelState extends State<_FinishedPanel> {
       await widget.onRevealBadges();
       return;
     }
-    // Tant que des points restent à attribuer, on ne quitte pas l'écran de fin.
     if (_availableSpecPoints > 0) {
       await _openSpecializationScreen();
       return;
