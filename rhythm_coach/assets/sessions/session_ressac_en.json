@@ -1,0 +1,112 @@
+{
+  "lang": "en",
+  "id": "ressac",
+  "name": "Undertow",
+  "description": "A session set to a track that switches between fast and light, slow and deep, all the way down.",
+  "duration_seconds": 216,
+  "mode": "rhythm",
+  "intro": "Turn the sound on. The beeps follow the beat of the track, the orders follow its build. If you can't, press the red button: the music keeps going, you breathe, and you pick up where it is.",
+  "music": {
+    "asset": "audio/music/ressac.mp3",
+    "bpm": 119.006,
+    "first_beat": 0.171
+  },
+  "steps": [
+    {
+      "time": 0,
+      "text": "Listen… here it comes.",
+      "mode": "breath",
+      "duration": 18
+    },
+    {
+      "time": 18,
+      "text": "Fast and light.",
+      "mode": "rhythm",
+      "from": "tip",
+      "to": "head",
+      "bpm": 119
+    },
+    {
+      "time": 34,
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 119
+    },
+    {
+      "time": 50,
+      "text": "Slow and deep.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 60
+    },
+    {
+      "time": 66,
+      "text": "Pick the rhythm back up.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 119
+    },
+    {
+      "time": 82,
+      "text": "Keep going.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 119
+    },
+    {
+      "time": 113,
+      "text": "Hold… wait for it to come back.",
+      "mode": "hold",
+      "to": "throat",
+      "duration": 18
+    },
+    {
+      "time": 131,
+      "text": "Slowly.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 60
+    },
+    {
+      "time": 147,
+      "text": "Harder.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 119
+    },
+    {
+      "time": 179,
+      "text": "All the way, every time.",
+      "mode": "rhythm",
+      "from": "throat",
+      "to": "full",
+      "bpm": 60
+    },
+    {
+      "time": 197,
+      "text": "Hold it deep.",
+      "mode": "hold",
+      "to": "full",
+      "duration": 14
+    },
+    {
+      "time": 211,
+      "text": "There, good girl."
+    },
+    {
+      "time": 212,
+      "mode": "breath",
+      "duration": 4
+    },
+    {
+      "time": 213,
+      "text": "Come up. Breathe."
+    }
+  ]
+}

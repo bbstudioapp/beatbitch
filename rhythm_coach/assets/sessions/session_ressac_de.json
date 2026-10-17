@@ -1,0 +1,112 @@
+{
+  "lang": "de",
+  "id": "ressac",
+  "name": "Brandung",
+  "description": "Eine Session zu einem Stück, das zwischen schnell und leicht, langsam und tief wechselt, bis ganz unten.",
+  "duration_seconds": 216,
+  "mode": "rhythm",
+  "intro": "Mach den Ton an. Die Beeps folgen dem Takt des Stücks, die Anweisungen seinem Aufbau. Wenn du nicht mehr kannst, drück den roten Knopf: Die Musik läuft weiter, du atmest und machst dort weiter, wo sie gerade ist.",
+  "music": {
+    "asset": "audio/music/ressac.mp3",
+    "bpm": 119.006,
+    "first_beat": 0.171
+  },
+  "steps": [
+    {
+      "time": 0,
+      "text": "Hör zu… gleich kommt's.",
+      "mode": "breath",
+      "duration": 18
+    },
+    {
+      "time": 18,
+      "text": "Schnell und leicht.",
+      "mode": "rhythm",
+      "from": "tip",
+      "to": "head",
+      "bpm": 119
+    },
+    {
+      "time": 34,
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 119
+    },
+    {
+      "time": 50,
+      "text": "Langsam und tief.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 60
+    },
+    {
+      "time": 66,
+      "text": "Nimm den Rhythmus wieder auf.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 119
+    },
+    {
+      "time": 82,
+      "text": "Durchhalten.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 119
+    },
+    {
+      "time": 113,
+      "text": "Halt… warte, bis es zurückkommt.",
+      "mode": "hold",
+      "to": "throat",
+      "duration": 18
+    },
+    {
+      "time": 131,
+      "text": "Langsam.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 60
+    },
+    {
+      "time": 147,
+      "text": "Fester.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 119
+    },
+    {
+      "time": 179,
+      "text": "Ganz unten, jedes Mal.",
+      "mode": "rhythm",
+      "from": "throat",
+      "to": "full",
+      "bpm": 60
+    },
+    {
+      "time": 197,
+      "text": "Halt ihn ganz unten.",
+      "mode": "hold",
+      "to": "full",
+      "duration": 14
+    },
+    {
+      "time": 211,
+      "text": "So ist's brav."
+    },
+    {
+      "time": 212,
+      "mode": "breath",
+      "duration": 4
+    },
+    {
+      "time": 213,
+      "text": "Komm hoch. Atme."
+    }
+  ]
+}

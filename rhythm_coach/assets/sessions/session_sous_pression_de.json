@@ -1,0 +1,135 @@
+{
+  "lang": "de",
+  "id": "sous_pression",
+  "name": "Unter Druck",
+  "description": "Eine Session zu einem Techno-Track mit 128 BPM: Es beginnt in Zeitlupe, dann lässt der Druck nicht mehr nach.",
+  "duration_seconds": 242,
+  "mode": "rhythm",
+  "intro": "Mach den Ton an. Die Beeps folgen dem Takt des Stücks, die Anweisungen seinem Aufbau. Wenn du nicht mehr kannst, drück den roten Knopf: Die Musik läuft weiter, du atmest und machst dort weiter, wo sie gerade ist.",
+  "music": {
+    "asset": "audio/music/sous_pression.mp3",
+    "bpm": 128.024,
+    "first_beat": 0.247
+  },
+  "steps": [
+    {
+      "time": 0,
+      "text": "Langsam… ganz langsam.",
+      "mode": "rhythm",
+      "from": "tip",
+      "to": "head",
+      "bpm": 32
+    },
+    {
+      "time": 15,
+      "mode": "rhythm",
+      "from": "tip",
+      "to": "mid",
+      "bpm": 64
+    },
+    {
+      "time": 30,
+      "text": "Auf den Schlag.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 128
+    },
+    {
+      "time": 60,
+      "text": "Tiefer.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 64
+    },
+    {
+      "time": 75,
+      "mode": "rhythm",
+      "from": "head",
+      "to": "throat",
+      "bpm": 128
+    },
+    {
+      "time": 90,
+      "text": "Durchhalten.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 128
+    },
+    {
+      "time": 105,
+      "text": "Halt… lass den Druck steigen.",
+      "mode": "hold",
+      "to": "throat",
+      "duration": 15
+    },
+    {
+      "time": 120,
+      "text": "Atme.",
+      "mode": "breath",
+      "duration": 7
+    },
+    {
+      "time": 127,
+      "text": "Fang langsam wieder an.",
+      "mode": "rhythm",
+      "from": "tip",
+      "to": "head",
+      "bpm": 64
+    },
+    {
+      "time": 150,
+      "text": "Der Druck ist zurück.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 128
+    },
+    {
+      "time": 165,
+      "text": "Ganz unten, jedes Mal.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "full",
+      "bpm": 64
+    },
+    {
+      "time": 180,
+      "text": "Durchhalten. Bis zum Ende.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 128
+    },
+    {
+      "time": 210,
+      "text": "Noch tiefer.",
+      "mode": "rhythm",
+      "from": "throat",
+      "to": "full",
+      "bpm": 64
+    },
+    {
+      "time": 225,
+      "text": "Halt ihn ganz unten.",
+      "mode": "hold",
+      "to": "full",
+      "duration": 11
+    },
+    {
+      "time": 236,
+      "text": "So ist's brav."
+    },
+    {
+      "time": 237,
+      "mode": "breath",
+      "duration": 5
+    },
+    {
+      "time": 238,
+      "text": "Komm hoch. Atme."
+    }
+  ]
+}

@@ -1,0 +1,135 @@
+{
+  "lang": "fr",
+  "id": "rouleau_compresseur",
+  "name": "Rouleau Compresseur",
+  "description": "Une séance calée sur un morceau techno à 128 : pas d'échauffement, un rythme qui ne lâche jamais.",
+  "duration_seconds": 224,
+  "mode": "rhythm",
+  "intro": "Mets le son. Les bips suivent le rythme du morceau, les consignes suivent sa montée. Si tu craques, appuie sur le bouton rouge : la musique continue, tu respires, et tu reprends là où elle en est.",
+  "music": {
+    "asset": "audio/music/rouleau_compresseur.mp3",
+    "bpm": 128.002,
+    "first_beat": 0.241
+  },
+  "steps": [
+    {
+      "time": 0,
+      "text": "Pas d'échauffement. On y va.",
+      "mode": "rhythm",
+      "from": "tip",
+      "to": "head",
+      "bpm": 64
+    },
+    {
+      "time": 30,
+      "text": "Sur chaque temps.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 128
+    },
+    {
+      "time": 60,
+      "text": "Profond.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 64
+    },
+    {
+      "time": 75,
+      "text": "Encaisse.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "throat",
+      "bpm": 128
+    },
+    {
+      "time": 97,
+      "text": "Tiens.",
+      "mode": "hold",
+      "to": "throat",
+      "duration": 8
+    },
+    {
+      "time": 105,
+      "text": "Reprends.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 128
+    },
+    {
+      "time": 127,
+      "text": "Respire.",
+      "mode": "breath",
+      "duration": 8
+    },
+    {
+      "time": 135,
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 128
+    },
+    {
+      "time": 150,
+      "text": "Encore.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 128
+    },
+    {
+      "time": 165,
+      "text": "Jusqu'au bout.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "full",
+      "bpm": 64
+    },
+    {
+      "time": 180,
+      "text": "Encore. Ne lâche rien.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 128
+    },
+    {
+      "time": 187,
+      "text": "Tiens au fond.",
+      "mode": "hold",
+      "to": "full",
+      "duration": 8
+    },
+    {
+      "time": 195,
+      "text": "Dernière ligne droite. Encaisse.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 128
+    },
+    {
+      "time": 210,
+      "text": "Tiens au fond.",
+      "mode": "hold",
+      "to": "full",
+      "duration": 9
+    },
+    {
+      "time": 219,
+      "text": "Voilà, bonne fille."
+    },
+    {
+      "time": 220,
+      "mode": "breath",
+      "duration": 4
+    },
+    {
+      "time": 221,
+      "text": "Remonte. Respire."
+    }
+  ]
+}

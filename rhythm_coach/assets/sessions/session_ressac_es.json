@@ -1,0 +1,112 @@
+{
+  "lang": "es",
+  "id": "ressac",
+  "name": "Resaca",
+  "description": "Una sesión al ritmo de un tema que alterna rápido y ligero, lento y hondo, hasta el fondo.",
+  "duration_seconds": 216,
+  "mode": "rhythm",
+  "intro": "Pon el sonido. Los pitidos siguen el compás del tema y las órdenes siguen su subida. Si no puedes más, pulsa el botón rojo: la música sigue, respiras y continúas por donde va.",
+  "music": {
+    "asset": "audio/music/ressac.mp3",
+    "bpm": 119.006,
+    "first_beat": 0.171
+  },
+  "steps": [
+    {
+      "time": 0,
+      "text": "Escucha… ya llega.",
+      "mode": "breath",
+      "duration": 18
+    },
+    {
+      "time": 18,
+      "text": "Rápido y ligero.",
+      "mode": "rhythm",
+      "from": "tip",
+      "to": "head",
+      "bpm": 119
+    },
+    {
+      "time": 34,
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 119
+    },
+    {
+      "time": 50,
+      "text": "Lento y hondo.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 60
+    },
+    {
+      "time": 66,
+      "text": "Retoma el ritmo.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 119
+    },
+    {
+      "time": 82,
+      "text": "Sigue así.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 119
+    },
+    {
+      "time": 113,
+      "text": "Aguanta… espera a que vuelva.",
+      "mode": "hold",
+      "to": "throat",
+      "duration": 18
+    },
+    {
+      "time": 131,
+      "text": "Despacio.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 60
+    },
+    {
+      "time": 147,
+      "text": "Más fuerte.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 119
+    },
+    {
+      "time": 179,
+      "text": "Al fondo, cada vez.",
+      "mode": "rhythm",
+      "from": "throat",
+      "to": "full",
+      "bpm": 60
+    },
+    {
+      "time": 197,
+      "text": "Mantenlo al fondo.",
+      "mode": "hold",
+      "to": "full",
+      "duration": 14
+    },
+    {
+      "time": 211,
+      "text": "Así, buena chica."
+    },
+    {
+      "time": 212,
+      "mode": "breath",
+      "duration": 4
+    },
+    {
+      "time": 213,
+      "text": "Sube. Respira."
+    }
+  ]
+}

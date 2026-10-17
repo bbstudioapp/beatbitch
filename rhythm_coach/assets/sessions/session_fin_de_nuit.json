@@ -1,0 +1,112 @@
+{
+  "lang": "fr",
+  "id": "fin_de_nuit",
+  "name": "Fin de Nuit",
+  "description": "Une séance calée sur un morceau house lent et chaud : tout en douceur, puis de plus en plus profond.",
+  "duration_seconds": 214,
+  "mode": "rhythm",
+  "intro": "Mets le son. Les bips suivent le rythme du morceau, les consignes suivent sa montée. Si tu craques, appuie sur le bouton rouge : la musique continue, tu respires, et tu reprends là où elle en est.",
+  "music": {
+    "asset": "audio/music/fin_de_nuit.mp3",
+    "bpm": 102.948,
+    "first_beat": 0.176
+  },
+  "steps": [
+    {
+      "time": 0,
+      "text": "Écoute… laisse-toi porter.",
+      "mode": "breath",
+      "duration": 21
+    },
+    {
+      "time": 21,
+      "mode": "rhythm",
+      "from": "tip",
+      "to": "head",
+      "bpm": 51
+    },
+    {
+      "time": 39,
+      "text": "Doucement… suis le son.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 51
+    },
+    {
+      "time": 58,
+      "text": "Maintenant, sur chaque temps.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 103
+    },
+    {
+      "time": 77,
+      "text": "Plus profond, plus lent.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 51
+    },
+    {
+      "time": 93,
+      "text": "Tiens… pendant que ça redescend.",
+      "mode": "hold",
+      "to": "throat",
+      "duration": 21
+    },
+    {
+      "time": 114,
+      "text": "Ça repart.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 103
+    },
+    {
+      "time": 133,
+      "text": "Encaisse.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 103
+    },
+    {
+      "time": 149,
+      "text": "Jusqu'au bout, lentement.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "full",
+      "bpm": 51
+    },
+    {
+      "time": 170,
+      "text": "Encore. Ne lâche rien.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 103
+    },
+    {
+      "time": 189,
+      "text": "Tiens au fond.",
+      "mode": "hold",
+      "to": "full",
+      "duration": 16
+    },
+    {
+      "time": 205,
+      "text": "Voilà, bonne fille."
+    },
+    {
+      "time": 206,
+      "mode": "breath",
+      "duration": 8
+    },
+    {
+      "time": 207,
+      "text": "Remonte. Respire."
+    }
+  ]
+}

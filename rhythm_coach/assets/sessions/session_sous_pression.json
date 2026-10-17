@@ -1,0 +1,135 @@
+{
+  "lang": "fr",
+  "id": "sous_pression",
+  "name": "Sous Pression",
+  "description": "Une séance calée sur un morceau techno à 128 : ça commence au ralenti, puis la pression ne redescend plus.",
+  "duration_seconds": 242,
+  "mode": "rhythm",
+  "intro": "Mets le son. Les bips suivent le rythme du morceau, les consignes suivent sa montée. Si tu craques, appuie sur le bouton rouge : la musique continue, tu respires, et tu reprends là où elle en est.",
+  "music": {
+    "asset": "audio/music/sous_pression.mp3",
+    "bpm": 128.024,
+    "first_beat": 0.247
+  },
+  "steps": [
+    {
+      "time": 0,
+      "text": "Lentement… très lentement.",
+      "mode": "rhythm",
+      "from": "tip",
+      "to": "head",
+      "bpm": 32
+    },
+    {
+      "time": 15,
+      "mode": "rhythm",
+      "from": "tip",
+      "to": "mid",
+      "bpm": 64
+    },
+    {
+      "time": 30,
+      "text": "Sur le temps.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 128
+    },
+    {
+      "time": 60,
+      "text": "Plus profond.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 64
+    },
+    {
+      "time": 75,
+      "mode": "rhythm",
+      "from": "head",
+      "to": "throat",
+      "bpm": 128
+    },
+    {
+      "time": 90,
+      "text": "Encaisse.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 128
+    },
+    {
+      "time": 105,
+      "text": "Tiens… laisse monter la pression.",
+      "mode": "hold",
+      "to": "throat",
+      "duration": 15
+    },
+    {
+      "time": 120,
+      "text": "Respire.",
+      "mode": "breath",
+      "duration": 7
+    },
+    {
+      "time": 127,
+      "text": "Reprends doucement.",
+      "mode": "rhythm",
+      "from": "tip",
+      "to": "head",
+      "bpm": 64
+    },
+    {
+      "time": 150,
+      "text": "La pression revient.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 128
+    },
+    {
+      "time": 165,
+      "text": "Au fond, à chaque fois.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "full",
+      "bpm": 64
+    },
+    {
+      "time": 180,
+      "text": "Encaisse. Jusqu'au bout.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 128
+    },
+    {
+      "time": 210,
+      "text": "Encore plus profond.",
+      "mode": "rhythm",
+      "from": "throat",
+      "to": "full",
+      "bpm": 64
+    },
+    {
+      "time": 225,
+      "text": "Tiens au fond.",
+      "mode": "hold",
+      "to": "full",
+      "duration": 11
+    },
+    {
+      "time": 236,
+      "text": "Voilà, bonne fille."
+    },
+    {
+      "time": 237,
+      "mode": "breath",
+      "duration": 5
+    },
+    {
+      "time": 238,
+      "text": "Remonte. Respire."
+    }
+  ]
+}

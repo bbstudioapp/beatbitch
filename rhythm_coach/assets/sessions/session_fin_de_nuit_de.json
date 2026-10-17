@@ -1,0 +1,112 @@
+{
+  "lang": "de",
+  "id": "fin_de_nuit",
+  "name": "Spät in der Nacht",
+  "description": "Eine Session zu einem langsamen, warmen House-Track: erst sanft, dann immer tiefer.",
+  "duration_seconds": 214,
+  "mode": "rhythm",
+  "intro": "Mach den Ton an. Die Beeps folgen dem Takt des Stücks, die Anweisungen seinem Aufbau. Wenn du nicht mehr kannst, drück den roten Knopf: Die Musik läuft weiter, du atmest und machst dort weiter, wo sie gerade ist.",
+  "music": {
+    "asset": "audio/music/fin_de_nuit.mp3",
+    "bpm": 102.948,
+    "first_beat": 0.176
+  },
+  "steps": [
+    {
+      "time": 0,
+      "text": "Hör zu… lass dich tragen.",
+      "mode": "breath",
+      "duration": 21
+    },
+    {
+      "time": 21,
+      "mode": "rhythm",
+      "from": "tip",
+      "to": "head",
+      "bpm": 51
+    },
+    {
+      "time": 39,
+      "text": "Langsam… folge dem Klang.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 51
+    },
+    {
+      "time": 58,
+      "text": "Jetzt auf jeden Schlag.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 103
+    },
+    {
+      "time": 77,
+      "text": "Tiefer, langsamer.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 51
+    },
+    {
+      "time": 93,
+      "text": "Halt… während es abklingt.",
+      "mode": "hold",
+      "to": "throat",
+      "duration": 21
+    },
+    {
+      "time": 114,
+      "text": "Es geht wieder los.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 103
+    },
+    {
+      "time": 133,
+      "text": "Durchhalten.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 103
+    },
+    {
+      "time": 149,
+      "text": "Bis zum Ende, langsam.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "full",
+      "bpm": 51
+    },
+    {
+      "time": 170,
+      "text": "Weiter. Lass nicht nach.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 103
+    },
+    {
+      "time": 189,
+      "text": "Halt ihn ganz unten.",
+      "mode": "hold",
+      "to": "full",
+      "duration": 16
+    },
+    {
+      "time": 205,
+      "text": "So ist's brav."
+    },
+    {
+      "time": 206,
+      "mode": "breath",
+      "duration": 8
+    },
+    {
+      "time": 207,
+      "text": "Komm hoch. Atme."
+    }
+  ]
+}

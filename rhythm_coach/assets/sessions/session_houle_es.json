@@ -1,0 +1,119 @@
+{
+  "lang": "es",
+  "id": "houle",
+  "name": "Marejada",
+  "description": "Una sesión al ritmo de un tema que sube y se retira como el mar: olas de esfuerzo y una verdadera calma en medio.",
+  "duration_seconds": 247,
+  "mode": "rhythm",
+  "intro": "Pon el sonido. Los pitidos siguen el compás del tema y las órdenes siguen su subida. Si no puedes más, pulsa el botón rojo: la música sigue, respiras y continúas por donde va.",
+  "music": {
+    "asset": "audio/music/houle.mp3",
+    "bpm": 119.001,
+    "first_beat": 0.183
+  },
+  "steps": [
+    {
+      "time": 0,
+      "text": "Escucha el oleaje.",
+      "mode": "breath",
+      "duration": 18
+    },
+    {
+      "time": 18,
+      "text": "Despacio, al ritmo de las olas.",
+      "mode": "rhythm",
+      "from": "tip",
+      "to": "head",
+      "bpm": 60
+    },
+    {
+      "time": 34,
+      "text": "Vamos. En cada tiempo.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 119
+    },
+    {
+      "time": 66,
+      "text": "Más lento… más hondo.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "throat",
+      "bpm": 60
+    },
+    {
+      "time": 82,
+      "text": "Sigue el ritmo.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 119
+    },
+    {
+      "time": 99,
+      "text": "Más.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "throat",
+      "bpm": 119
+    },
+    {
+      "time": 129,
+      "text": "Aguanta… la ola se retira.",
+      "mode": "hold",
+      "to": "throat",
+      "duration": 16
+    },
+    {
+      "time": 145,
+      "text": "Respira.",
+      "mode": "breath",
+      "duration": 8
+    },
+    {
+      "time": 153,
+      "text": "Despacio, retoma.",
+      "mode": "rhythm",
+      "from": "tip",
+      "to": "head",
+      "bpm": 60
+    },
+    {
+      "time": 163,
+      "text": "La ola vuelve. Sigue así.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 119
+    },
+    {
+      "time": 195,
+      "text": "Hasta el fondo, despacio.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "full",
+      "bpm": 60
+    },
+    {
+      "time": 211,
+      "text": "Mantenlo al fondo.",
+      "mode": "hold",
+      "to": "full",
+      "duration": 15
+    },
+    {
+      "time": 226,
+      "text": "Así, buena chica."
+    },
+    {
+      "time": 227,
+      "mode": "breath",
+      "duration": 20
+    },
+    {
+      "time": 228,
+      "text": "Sube. Respira."
+    }
+  ]
+}
