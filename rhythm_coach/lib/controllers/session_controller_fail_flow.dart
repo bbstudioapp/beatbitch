@@ -23,7 +23,7 @@ extension FailFlowOrchestrator on SessionController {
     _activeBreak = null;
 
     // Les plafonds de session sont figés AVANT le callback : la régénération
-    // lit des `capabilitySessionCeilings` à jour.
+    // lit des `capabilitySessionCeilings` à jour (`onFail` est idempotent).
     if (_isInMilestoneWindow() && onMilestoneRetry != null) {
       _capabilityTracker?.onFail();
       final handled = await onMilestoneRetry!(this);
