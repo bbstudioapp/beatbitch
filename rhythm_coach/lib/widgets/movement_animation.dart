@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../l10n/enum_labels.dart';
 import '../models/hold_move.dart';
@@ -1465,15 +1464,14 @@ class _Shaft extends StatelessWidget {
   static const double _assetFullY = 149;
   static const double _opacity = 0.85;
 
-  // flutter_test sans asset : `load` lève avant de rendre un Future.
-  static final Future<bool> _available = Future.sync(
-    () => rootBundle.load(asset),
-  ).then((_) => true, onError: (_) => false);
+  static final _probes = Expando<_ShaftProbe>();
 
   @override
   Widget build(BuildContext context) {
+    final bundle = DefaultAssetBundle.of(context);
+    final probe = _probes[bundle] ??= _ShaftProbe(bundle);
     return FutureBuilder<bool>(
-      future: _available,
+      future: probe.available,
       builder: (context, snapshot) =>
           snapshot.data == true ? _image() : const _ShaftBackdrop(),
     );
@@ -1507,6 +1505,16 @@ class _Shaft extends StatelessWidget {
         ],
       );
     });
+  }
+}
+
+class _ShaftProbe {
+  late final Future<bool> available;
+
+  _ShaftProbe(AssetBundle bundle) {
+    // flutter_test sans asset : `load` lève avant de rendre un Future.
+    available = Future.sync(() => bundle.load(_Shaft.asset))
+        .then((_) => true, onError: (_) => false);
   }
 }
 
