@@ -149,6 +149,7 @@ void main() {
       await tester.tap(find.byType(FilledButton));
       await elapse(tester, const Duration(seconds: 2));
       final speaks = b.tts.speaks.length;
+      final stops = b.tts.stops;
 
       lifecycle(tester, AppLifecycleState.inactive);
       lifecycle(tester, AppLifecycleState.hidden);
@@ -162,6 +163,8 @@ void main() {
       expect(b.beep.applied, isEmpty, reason: 'applyStep en arrière-plan');
       expect(b.tts.speaks.length, speaks,
           reason: 'le coach parle en arrière-plan');
+      expect(b.tts.stops, greaterThan(stops),
+          reason: 'la voix du décompte n’est pas coupée');
       expect(await statsKeys(), isEmpty,
           reason: 'une séance jamais jouée a écrit dans le profil');
     });
@@ -209,6 +212,19 @@ void main() {
       expect(b.ctrl.elapsed, Duration.zero, reason: 'l’horloge a démarré');
       expect(await statsKeys(), isEmpty,
           reason: 'une séance jamais jouée a écrit dans le profil');
+    });
+
+    testWidgets(
+        'start() appelé alors que l’appli est déjà en arrière-plan : en pause',
+        (tester) async {
+      final b = await mount(tester);
+      lifecycle(tester, AppLifecycleState.paused);
+
+      unawaited(b.ctrl.start());
+      await elapse(tester, const Duration(seconds: 2));
+
+      expect(b.ctrl.state, SessionState.paused);
+      expect(b.beep.applied, isEmpty);
     });
 
     testWidgets(
@@ -281,8 +297,9 @@ class _RecordingTts extends TtsService {
   Future<void> init() async {}
   @override
   Future<void> speak(String text) async => speaks.add(text);
+  int stops = 0;
   @override
-  Future<void> stop() async {}
+  Future<void> stop() async => stops++;
 }
 
 class _RecordingBeep extends BeepEngine {
