@@ -524,10 +524,10 @@ class SessionController extends ChangeNotifier {
   /// reporte le commentaire aléatoire pour éviter le chevauchement.
   DateTime _lastScriptedSpeakAt = DateTime.fromMillisecondsSinceEpoch(0);
 
-  /// True quand le controller a été détaché des services audio partagés
-  /// (cf. [detachAudio]). Empêche `dispose()` de relancer un `tts.stop()`
-  /// ou `beep.stop()` qui couperait le démarrage d'une nouvelle session
-  /// en train de prendre la main (race observée sur le bouton « encore »).
+  /// Posé par [detachAudio] et [dispose], jamais rebaissé. `dispose()` ne
+  /// relance alors ni `tts.stop()` ni `beep.stop()` (ils couperaient la séance
+  /// suivante) ; `start()` et `_finish()` ne repartent pas d'un contrôleur
+  /// libéré.
   bool _released = false;
 
   /// `AppLocalizations` poussé depuis le screen via [setAppLocalizations]
@@ -1088,9 +1088,7 @@ class SessionController extends ChangeNotifier {
   bool _starting = false;
 
   Future<void> start() async {
-    // Guard synchrone : un double-clic peut entrer ici deux fois avant
-    // que le premier `await _tts.init()` rende la main et que `_state`
-    // bascule à `running`. Le drapeau ferme cette fenêtre.
+    // Synchrone : un double-clic entre deux fois avant que `_state` ne bascule.
     if (_starting) return;
     if (_state == SessionState.running) return;
     _starting = true;
@@ -1117,8 +1115,6 @@ class SessionController extends ChangeNotifier {
         _miniPunishmentTickAccumulator = 0;
         _miniPunishmentsTriggered = 0;
         _announcedProgressMarkers.clear();
-        // Break scénarisé (issue #77) : repart de la posture initiale tirée
-        // par le générateur (`free` hors carrière / flag off).
         _breakActive = false;
         _activeBreak = null;
         _nextBreakIndex = 0;
@@ -1128,20 +1124,11 @@ class SessionController extends ChangeNotifier {
         _readyTimeout?.cancel();
         _readyTimeout = null;
         _capabilityTracker?.onSessionStart();
-        // Seed neutre : remplacé par les valeurs persistées dès que la
-        // lecture async (plus bas) revient. `seedHumiliationSession`
-        // transporte la chauffe d'une session précédente lors d'un
-        // encore enchaîné (sinon 0 = pas de chauffe initiale).
         _humiliation.seed(career: 0, session: _seedHumiliationSession);
         _obedience.seed(0);
         _saliva.reset();
         _swallowMode = SwallowMode.allowed;
         _salivaOverflowsThisSession = 0;
-        // Application des compétences sloppy sur les multiplicateurs de
-        // l'engine et le plafond de la barre. Cohérent avec le pattern
-        // "compétence acquise = effet immédiat dès la séance suivante".
-        // - sloppyDroolBasic : production lick ×1.5, plafond 100
-        // - sloppyBiffleSlow : production biffle ×3
         if (milestoneService.hasUnlock(UnlockKey.sloppyDroolBasic)) {
           _saliva.setLickProductionMultiplier(1.5);
           _saliva.setMax(SalivaEngine.sloppyBaseMax);
@@ -1152,12 +1139,7 @@ class SessionController extends ChangeNotifier {
           _saliva.setBiffleProductionMultiplier(3.0);
         }
         _stamina.reset();
-        // Lectures async tolérées : si pas finies au premier beat, on est
-        // juste à valeur neutre (humiliation 0, obédiance 0). Pas critique —
-        // les bumps en cours de session s'appliqueront aux valeurs neutres
-        // puis seront remplacés à la première lecture async. La career
-        // est seed sur la valeur persistée ; le session conserve sa
-        // valeur de seed (encore enchaîné).
+        // Lectures async : valeurs neutres tant qu'elles n'ont pas répondu.
         _stats.getHumiliationLevel().then(
               (h) => _humiliation.seed(
                 career: h,
@@ -1167,19 +1149,11 @@ class SessionController extends ChangeNotifier {
         _stats.getObedienceLevel().then(_obedience.seed);
       }
 
-      // Inits best-effort : aucun de ces appels n'est un prérequis du passage
-      // en `running`. Un échec (typiquement iOS Safari/PWA — voir ci-dessous)
-      // ne doit JAMAIS avorter `start()` : sinon `_state` reste `idle` et,
-      // en prod, l'écran de jeu n'a aucun bouton play (gated derrière le
-      // toggle debug `showSessionControls`) → soft-lock total (cf. retour
-      // iOS « pas de bouton pour commencer », v0.4.0).
+      // Inits best-effort : un échec ne doit jamais avorter `start()` (iOS
+      // Safari/PWA : `_state` resterait `idle`, sans bouton play en prod).
       try {
-        // Le `try/catch` n'attrape que les exceptions : un canal de synthèse
-        // qui ne répond plus (plugin Android en file d'attente après une perte
-        // de connexion au service TTS) rend un Future qui ne se complète
-        // jamais, et `start()` resterait bloqué avant le passage en `running`.
-        // Même garde-fou que l'audio en 0.6.0 : on borne l'attente, la voix
-        // reste best-effort.
+        // Le `try/catch` n'attrape que les exceptions : un canal muet rend un
+        // Future qui ne se complète jamais, d'où la borne.
         await _tts.init().timeout(const Duration(seconds: 2), onTimeout: () {});
       } catch (e) {
         debugPrint('start(): _tts.init() a échoué (non bloquant) : $e');
@@ -1208,15 +1182,9 @@ class SessionController extends ChangeNotifier {
         _beep.detachMusic();
       }
       try {
-        // Wakelock = garder l'écran allumé (confort, non essentiel). Sur iOS
-        // Safari/PWA la Wake Lock API exige un contexte de geste utilisateur ;
-        // appelée depuis le Timer de prep (7 s après « JE SUIS PRÊTE »), elle
-        // peut lever `NotAllowedError`.
-        // Borné pour la même raison que `_tts.init()` juste au-dessus : le
-        // `try/catch` n'attrape que les exceptions. Un canal pigeon qui ne
-        // répond plus laisserait `start()` bloquée avant `_state = running`,
-        // avec `_starting` collé à `true` — la séance ne démarre jamais et
-        // le bouton play est masqué en prod (`showSessionControls`).
+        // Sur iOS Safari/PWA la Wake Lock API exige un geste utilisateur et
+        // peut lever `NotAllowedError`. Borné comme `_tts.init()` : un canal
+        // muet laisserait `_starting` collé à `true`.
         await WakelockPlus.enable().timeout(_wakelockTimeout);
       } catch (e) {
         debugPrint(
@@ -1228,10 +1196,6 @@ class SessionController extends ChangeNotifier {
         return;
       }
 
-      // Reset du fond média : on repart sur le placeholder animé tant que
-      // le premier step de config n'a pas tiré une entrée. Évite qu'une
-      // session précédente garde son dernier fond visible le temps du
-      // premier tick.
       BackgroundsService.instance.clear();
 
       _stopwatch.start();
