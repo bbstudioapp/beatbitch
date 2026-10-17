@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:beat_bitch/controllers/session_controller.dart';
 import 'package:beat_bitch/l10n/app_localizations.dart';
+import 'package:beat_bitch/models/punishment.dart';
 import 'package:beat_bitch/models/session.dart';
 import 'package:beat_bitch/models/session_step.dart';
 import 'package:beat_bitch/screens/session_screen.dart';
@@ -17,9 +18,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Appli en arrière-plan pendant le décompte de mise en place ou pendant les
-/// `await` de `start()` : la séance n'est ni lancée ni inscrite au profil, et
-/// le retour dans l'appli ne fait jamais repartir le son seul.
+/// Appli en arrière-plan pendant le décompte de mise en place, pendant les
+/// `await` de `start()`, pendant un fail / une punition, ou écran monté déjà en
+/// arrière-plan : la séance n'est ni lancée ni relancée, rien n'est inscrit au
+/// profil, et le retour dans l'appli ne fait jamais repartir le son seul.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -83,6 +85,10 @@ void main() {
     String? introText,
     bool autoStart = false,
     bool holdBeepInit = false,
+    Session session = _shortSession,
+    PunishmentBundle punishments =
+        const PunishmentBundle(failPhrases: [], punishments: []),
+    List<double>? staminaProfile,
   }) async {
     final b = _Bench();
     if (holdBeepInit) b.beep.gate = Completer<void>();
@@ -92,22 +98,12 @@ void main() {
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: SessionScreen(
-        session: const Session(
-          id: 'arriere-plan',
-          name: 'arriere-plan',
-          description: '',
-          durationSeconds: 3,
-          defaultMode: SessionMode.rhythm,
-          steps: [
-            SessionStep(
-                time: 0, mode: SessionMode.rhythm, bpm: 40, duration: 3),
-          ],
-        ),
+        session: session,
         tts: b.tts,
         beep: b.beep,
-        ambience: _SilentAmbienceEngine(),
-        punishmentBundle:
-            const PunishmentBundle(failPhrases: [], punishments: []),
+        ambience: b.ambience,
+        punishmentBundle: punishments,
+        staminaProfile: staminaProfile,
         randomComments: const RandomCommentsBundle(
           comments: [],
           minIntervalSeconds: 999,
@@ -140,6 +136,73 @@ void main() {
           .getKeys()
           .where((k) => k.startsWith('stats.'))
           .toSet();
+
+  Future<Map<String, Object?>> statsMap() async {
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      for (final k in prefs.getKeys().where((k) => k.startsWith('stats.')))
+        k: prefs.get(k),
+    };
+  }
+
+  Future<_Mark> markOf(_Bench b) async => _Mark(
+        applied: b.beep.applied.length,
+        elapsed: b.ctrl.elapsed,
+        stats: await statsMap(),
+        beepPauses: b.beep.pauses,
+        ambiencePauses: b.ambience.pauses,
+        ttsStops: b.tts.stops,
+      );
+
+  /// Ce qui a bougé depuis [since] alors que la séance devait attendre le
+  /// bouton de reprise ; vide = elle attend.
+  Future<List<String>> leaks(_Bench b, _Mark since) async {
+    final out = <String>[];
+    if (b.ctrl.state != SessionState.paused) {
+      out.add('état ${b.ctrl.state.name} au lieu de paused');
+    }
+    final steps = b.beep.applied.length - since.applied;
+    if (steps != 0) out.add('applyStep ×$steps');
+    if (b.ctrl.elapsed != since.elapsed) {
+      out.add('horloge ${since.elapsed} → ${b.ctrl.elapsed}');
+    }
+    final stats = await statsMap();
+    final written = stats.entries
+        .where((e) => since.stats[e.key] != e.value)
+        .map((e) => e.key)
+        .toList();
+    if (written.isNotEmpty) out.add('profil écrit : $written');
+    return out;
+  }
+
+  /// Ce que la sortie d'un fail en pause devait couper et n'a pas coupé.
+  List<String> notCut(_Bench b, _Mark since) => [
+        if (b.tts.stops == since.ttsStops) 'voix non coupée',
+        if (b.ambience.pauses == since.ambiencePauses) 'ambiance non coupée',
+        if (b.beep.pauses == since.beepPauses) 'bips non coupés',
+      ];
+
+  /// Temps réel, au rythme des timers simulés : le `Stopwatch` du contrôleur
+  /// et les attentes des flows de fail ne sont pas simulés.
+  Future<void> realElapse(WidgetTester tester, Duration d) async {
+    for (var ms = 0; ms < d.inMilliseconds; ms += 100) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 100)));
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+  }
+
+  Future<void> until(
+    WidgetTester tester,
+    bool Function() condition,
+    String what, {
+    Duration limit = const Duration(seconds: 15),
+  }) async {
+    for (var ms = 0; ms < limit.inMilliseconds && !condition(); ms += 100) {
+      await realElapse(tester, const Duration(milliseconds: 100));
+    }
+    expect(condition(), isTrue, reason: 'jamais atteint : $what');
+  }
 
   group('décompte de mise en place', () {
     testWidgets(
@@ -282,11 +345,315 @@ void main() {
         reason: 'le retour dans l’appli a relancé la séance seul');
     expect(b.beep.applied.length, applied);
   });
+  group('fail / punition pendant l’absence', () {
+    Future<_Bench> inMiniPunishment(
+      WidgetTester tester, {
+      bool background = true,
+    }) async {
+      final b = await mount(tester, autoStart: true, punishments: _punishments);
+      await realElapse(tester, const Duration(seconds: 1));
+      expect(b.ctrl.state, SessionState.running,
+          reason: 'le banc n’a pas lancé la séance');
+      unawaited(b.ctrl.debugRunMiniPunishment(_punishment));
+      await until(
+          tester, () => b.ctrl.failPhase == FailPhase.punishment, 'punition');
+      if (background) lifecycle(tester, AppLifecycleState.paused);
+      return b;
+    }
+
+    testWidgets(
+        'mini-punition : à la sortie la séance arrive en pause, ni horloge, ni '
+        'step, ni profil, voix et ambiance coupées', (tester) async {
+      final b = await inMiniPunishment(tester);
+      final since = await markOf(b);
+
+      await until(tester, () => !b.ctrl.isFailFlowActive, 'sortie du flow');
+      await realElapse(tester, const Duration(seconds: 3));
+
+      expect([...await leaks(b, since), ...notCut(b, since)], isEmpty,
+          reason: 'la séance a quitté l’attente alors que la joueuse est '
+              'partie');
+    });
+
+    testWidgets(
+        'mini-punition : le retour dans l’appli ne relance rien, le bouton '
+        'rejoue la boucle d’avant la punition', (tester) async {
+      final b = await inMiniPunishment(tester);
+      final since = await markOf(b);
+      await until(tester, () => !b.ctrl.isFailFlowActive, 'sortie du flow');
+
+      lifecycle(tester, AppLifecycleState.resumed);
+      await realElapse(tester, const Duration(seconds: 2));
+      expect(b.ctrl.state, SessionState.paused,
+          reason: 'le retour dans l’appli a relancé la séance seul');
+      expect(b.beep.applied.length, since.applied);
+
+      await tester.tap(find.byIcon(Icons.play_arrow).last);
+      await realElapse(tester, const Duration(milliseconds: 500));
+
+      expect(b.ctrl.state, SessionState.running);
+      expect(b.beep.applied.skip(since.applied), [same(_step0)],
+          reason: 'la boucle d’avant la punition n’est pas rejouée');
+      expect(b.beep.resumes, 0,
+          reason: 'le moteur a repris le dernier mode de la punition');
+      expect(b.ctrl.elapsed, greaterThan(since.elapsed),
+          reason: 'l’horloge ne repart pas');
+    });
+
+    testWidgets('témoin : mini-punition au premier plan → la séance repart',
+        (tester) async {
+      final b = await inMiniPunishment(tester, background: false);
+      final since = await markOf(b);
+
+      await until(tester, () => !b.ctrl.isFailFlowActive, 'sortie du flow');
+      await realElapse(tester, const Duration(milliseconds: 500));
+
+      expect(b.ctrl.state, SessionState.running);
+      expect(b.beep.applied.skip(since.applied), [same(_step0)]);
+      expect(b.ctrl.elapsed, greaterThan(since.elapsed));
+    });
+
+    testWidgets(
+        'fail complet (phrase, respiration, punition) : le saut de section est '
+        'différé, la séance arrive en pause', (tester) async {
+      final b = await mount(tester,
+          autoStart: true,
+          session: _jumpSession,
+          punishments: _punishments,
+          staminaProfile: List<double>.filled(120, 100));
+      await realElapse(tester, const Duration(milliseconds: 500));
+      expect(b.ctrl.state, SessionState.running,
+          reason: 'le banc n’a pas lancé la séance');
+
+      unawaited(b.ctrl.triggerFail());
+      await until(
+          tester, () => b.ctrl.failPhase == FailPhase.breath, 'respiration');
+      lifecycle(tester, AppLifecycleState.inactive);
+      lifecycle(tester, AppLifecycleState.hidden);
+      lifecycle(tester, AppLifecycleState.paused);
+      await until(
+          tester, () => b.ctrl.failPhase == FailPhase.punishment, 'punition');
+      final since = await markOf(b);
+
+      await until(tester, () => !b.ctrl.isFailFlowActive, 'sortie du flow');
+      await realElapse(tester, const Duration(seconds: 2));
+
+      expect([...await leaks(b, since), ...notCut(b, since)], isEmpty,
+          reason: 'la séance a quitté l’attente alors que la joueuse est '
+              'partie');
+
+      lifecycle(tester, AppLifecycleState.resumed);
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.play_arrow).last);
+      await realElapse(tester, const Duration(milliseconds: 500));
+
+      expect(b.ctrl.state, SessionState.running);
+      expect(b.ctrl.elapsed, greaterThanOrEqualTo(const Duration(seconds: 6)),
+          reason: 'le saut de section différé n’est pas rejoué à la reprise');
+      expect(b.beep.applied.skip(since.applied), [same(_sectionStep)]);
+    }, timeout: const Timeout(Duration(seconds: 40)));
+
+    testWidgets(
+        'témoin : fail complet au premier plan → saut de section, la séance '
+        'repart', (tester) async {
+      final b = await mount(tester,
+          autoStart: true,
+          session: _jumpSession,
+          punishments: _punishments,
+          staminaProfile: List<double>.filled(120, 100));
+      await realElapse(tester, const Duration(milliseconds: 500));
+
+      unawaited(b.ctrl.triggerFail());
+      await until(
+          tester, () => b.ctrl.failPhase == FailPhase.punishment, 'punition');
+      final since = await markOf(b);
+      await until(tester, () => !b.ctrl.isFailFlowActive, 'sortie du flow');
+      await realElapse(tester, const Duration(milliseconds: 300));
+
+      expect(b.ctrl.state, SessionState.running);
+      expect(b.ctrl.elapsed, greaterThanOrEqualTo(const Duration(seconds: 6)));
+      expect(b.beep.applied.skip(since.applied), [same(_sectionStep)]);
+    }, timeout: const Timeout(Duration(seconds: 40)));
+
+    testWidgets(
+        'départ pendant la restauration de la boucle : la séance arrive en '
+        'pause', (tester) async {
+      final b = await mount(tester, autoStart: true, punishments: _punishments);
+      await realElapse(tester, const Duration(seconds: 1));
+      final beforeFlow = b.beep.applied.length;
+      b.beep
+        ..holdApplyOf = _step0
+        ..applyGate = Completer<void>();
+
+      unawaited(b.ctrl.debugRunMiniPunishment(_punishment));
+      await until(tester, () => b.beep.applied.length == beforeFlow + 2,
+          'restauration de la boucle en vol');
+      lifecycle(tester, AppLifecycleState.paused);
+      final since = await markOf(b);
+      b.beep.applyGate!.complete();
+      await until(tester, () => !b.ctrl.isFailFlowActive, 'sortie du flow');
+      await realElapse(tester, const Duration(seconds: 3));
+
+      expect([...await leaks(b, since), ...notCut(b, since)], isEmpty,
+          reason: 'l’événement d’arrière-plan reçu pendant la restauration '
+              'a été perdu');
+
+      lifecycle(tester, AppLifecycleState.resumed);
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.play_arrow).last);
+      await realElapse(tester, const Duration(milliseconds: 500));
+      expect(b.ctrl.state, SessionState.running);
+      expect(b.beep.resumes, 1,
+          reason: 'la boucle déjà restaurée se reprend, elle ne se rejoue pas');
+      expect(b.beep.applied.length, since.applied);
+    });
+
+    group('sortie différée périmée', () {
+      Future<void> restartAndPauseResume(WidgetTester tester, _Bench b) async {
+        lifecycle(tester, AppLifecycleState.resumed);
+        await b.ctrl.start();
+        expect(b.ctrl.state, SessionState.running,
+            reason: 'le banc n’a pas relancé la séance');
+        final applied = b.beep.applied.length;
+        final resumes = b.beep.resumes;
+        await b.ctrl.pause();
+        await b.ctrl.resume();
+        expect(b.beep.resumes, resumes + 1,
+            reason: 'une pause ordinaire doit reprendre le moteur');
+        expect(b.beep.applied.length, applied,
+            reason: 'la sortie de fail d’une séance précédente a été '
+                'rejouée à la reprise');
+      }
+
+      testWidgets('stop() l’abandonne', (tester) async {
+        final b = await inMiniPunishment(tester);
+        await until(tester, () => !b.ctrl.isFailFlowActive, 'sortie du flow');
+        expect(b.ctrl.state, SessionState.paused,
+            reason: 'le banc n’a pas amené la séance en pause');
+
+        unawaited(b.ctrl.stop());
+        await realElapse(tester, const Duration(milliseconds: 500));
+        expect(b.ctrl.state, SessionState.idle);
+        await restartAndPauseResume(tester, b);
+      });
+
+      testWidgets('un nouveau départ après la fin l’abandonne', (tester) async {
+        final b = await inMiniPunishment(tester);
+        await until(tester, () => !b.ctrl.isFailFlowActive, 'sortie du flow');
+        expect(b.ctrl.state, SessionState.paused,
+            reason: 'le banc n’a pas amené la séance en pause');
+
+        unawaited(b.ctrl.debugFinishSuccess());
+        await realElapse(tester, const Duration(seconds: 1));
+        expect(b.ctrl.state, SessionState.finished);
+        await restartAndPauseResume(tester, b);
+      });
+    });
+  });
+
+  group('écran monté appli déjà en arrière-plan', () {
+    testWidgets('autoStart : la séance ne démarre pas seule, rien au profil',
+        (tester) async {
+      lifecycle(tester, AppLifecycleState.paused);
+      final b = await mount(tester, autoStart: true);
+      await realElapse(tester, const Duration(seconds: 4));
+
+      expect(await leaks(b, _Mark.zero), isEmpty,
+          reason: 'l’écran poussé pendant l’absence a lancé la séance');
+
+      lifecycle(tester, AppLifecycleState.resumed);
+      await realElapse(tester, const Duration(seconds: 2));
+      expect(b.ctrl.state, SessionState.paused,
+          reason: 'le retour dans l’appli a relancé la séance seul');
+
+      await tester.tap(find.byIcon(Icons.play_arrow).last);
+      await realElapse(tester, const Duration(seconds: 1));
+      expect(b.ctrl.state, SessionState.running);
+      expect(b.beep.resumes, 0,
+          reason: 'le moteur a repris sa config par défaut avant le step 0');
+      expect(b.beep.applied, [same(_step0)]);
+    });
+
+    testWidgets('témoin : monté après le retour dans l’appli → démarre',
+        (tester) async {
+      lifecycle(tester, AppLifecycleState.paused);
+      lifecycle(tester, AppLifecycleState.resumed);
+      final b = await mount(tester, autoStart: true);
+      await realElapse(tester, const Duration(seconds: 1));
+
+      expect(b.ctrl.state, SessionState.running);
+      expect(b.beep.applied, [same(_step0)]);
+    });
+  });
+}
+
+const _step0 =
+    SessionStep(time: 0, mode: SessionMode.rhythm, bpm: 40, duration: 3);
+
+const _shortSession = Session(
+  id: 'arriere-plan',
+  name: 'arriere-plan',
+  description: '',
+  durationSeconds: 3,
+  defaultMode: SessionMode.rhythm,
+  steps: [_step0],
+);
+
+/// Un step de section à t=6 : la sortie d'un fail y saute au lieu de rejouer la
+/// boucle d'avant.
+const _sectionStep =
+    SessionStep(time: 6, mode: SessionMode.rhythm, bpm: 60, duration: 1);
+
+const _jumpSession = Session(
+  id: 'arriere-plan-saut',
+  name: 'arriere-plan-saut',
+  description: '',
+  durationSeconds: 8,
+  defaultMode: SessionMode.rhythm,
+  steps: [_step0, _sectionStep],
+);
+
+const _punishment = Punishment(
+  id: 'p',
+  name: 'p',
+  durationSeconds: 1,
+  steps: [SessionStep(time: 0, mode: SessionMode.breath, duration: 1)],
+);
+
+const _punishments =
+    PunishmentBundle(failPhrases: ['tu craques'], punishments: [_punishment]);
+
+class _Mark {
+  final int applied;
+  final Duration elapsed;
+  final Map<String, Object?> stats;
+  final int beepPauses;
+  final int ambiencePauses;
+  final int ttsStops;
+
+  const _Mark({
+    required this.applied,
+    required this.elapsed,
+    required this.stats,
+    required this.beepPauses,
+    required this.ambiencePauses,
+    required this.ttsStops,
+  });
+
+  static const zero = _Mark(
+    applied: 0,
+    elapsed: Duration.zero,
+    stats: {},
+    beepPauses: 0,
+    ambiencePauses: 0,
+    ttsStops: 0,
+  );
 }
 
 class _Bench {
   final tts = _RecordingTts();
   final beep = _RecordingBeep();
+  final ambience = _SilentAmbienceEngine();
   late final SessionController ctrl;
 }
 
@@ -307,7 +674,13 @@ class _RecordingBeep extends BeepEngine {
   Completer<void>? gate;
   int initCalls = 0;
   int resumes = 0;
+  int pauses = 0;
   final List<SessionStep> applied = [];
+
+  /// Tient l'`applyStep` de ce step précis (identité) jusqu'à la complétion de
+  /// [applyGate] : la restauration de la boucle à la sortie d'un fail.
+  SessionStep? holdApplyOf;
+  Completer<void>? applyGate;
 
   @override
   Future<void> init() async {
@@ -318,10 +691,11 @@ class _RecordingBeep extends BeepEngine {
   @override
   Future<void> applyStep(SessionStep step, SessionMode sessionMode) async {
     applied.add(step);
+    if (identical(step, holdApplyOf)) await applyGate?.future;
   }
 
   @override
-  Future<void> pause() async {}
+  Future<void> pause() async => pauses++;
   @override
   Future<void> resume() async {
     resumes++;
@@ -334,12 +708,14 @@ class _RecordingBeep extends BeepEngine {
 }
 
 class _SilentAmbienceEngine extends AmbienceEngine {
+  int pauses = 0;
+
   @override
   Future<void> play(String? assetPath) async {}
   @override
   Future<void> playForMode(SessionMode mode, {Position? depth}) async {}
   @override
-  Future<void> pause() async {}
+  Future<void> pause() async => pauses++;
   @override
   Future<void> resume() async {}
   @override
