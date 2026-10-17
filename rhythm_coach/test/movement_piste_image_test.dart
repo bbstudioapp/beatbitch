@@ -17,8 +17,6 @@ final _png = ByteData.sublistView(base64Decode(
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA'
     '60e6kgAAAABJRU5ErkJggg=='));
 
-/// Seule la piste est fournie par le test ; le reste (manifeste) vient du
-/// bundle de flutter_test.
 class _PisteBundle extends CachingAssetBundle {
   final Future<ByteData> Function() piste;
 
@@ -33,7 +31,6 @@ class _PisteBundle extends CachingAssetBundle {
   factory _PisteBundle.absenteLeveeSynchrone() =>
       _PisteBundle(() => throw FlutterError('Unable to load asset: $_asset'));
 
-  /// Comme sur appareil : l'erreur passe par le Future.
   factory _PisteBundle.absenteLeveeAsynchrone() => _PisteBundle(
       () => Future<ByteData>.error(FlutterError('Unable to load asset')));
 
@@ -82,7 +79,6 @@ List<double> levelLineYs(WidgetTester tester) => [
         tester.getCenter(find.byWidget(e.widget)).dy
     ]..sort();
 
-/// Les niveaux occupent toujours les six places, affichés ou non.
 double levelY(WidgetTester tester, Position p) {
   final top = tester.getTopLeft(find.byType(MovementAnimation)).dy;
   const box = 28.0;
