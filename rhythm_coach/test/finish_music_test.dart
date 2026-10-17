@@ -75,6 +75,22 @@ void main() {
           AmbienceEngine.finishMusicPeak + const Duration(seconds: 30));
       expect(engine.offsets.single, Duration.zero);
     });
+
+    test('un fondu demandé pendant le démarrage empêche la musique de jouer',
+        () async {
+      final engine = _SlowStartEngine();
+      final starting = engine.startFinishMusic(const Duration(seconds: 25));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(engine.inFlight, isTrue,
+          reason: 'le fondu doit tomber pendant le démarrage');
+      await engine.fadeOutFinishMusic(
+          duration: const Duration(milliseconds: 60));
+      await starting;
+      expect(engine.inFlight, isFalse);
+      expect(engine.isFinishMusicPlaying, isFalse,
+          reason: 'un FAIL tombé pendant le démarrage laissait la musique '
+              'jouer pendant la punition');
+    });
   });
 
   test(
@@ -147,6 +163,19 @@ class _OffsetRecordingEngine extends AmbienceEngine {
   @override
   Future<void> startFinishPlayback(Duration offset) async {
     offsets.add(offset);
+  }
+}
+
+/// Démarrage du lecteur qui prend 300 ms, comme `setSource + seek + resume`
+/// sur un appareil lent.
+class _SlowStartEngine extends AmbienceEngine {
+  bool inFlight = false;
+
+  @override
+  Future<void> startFinishPlayback(Duration offset) async {
+    inFlight = true;
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    inFlight = false;
   }
 }
 

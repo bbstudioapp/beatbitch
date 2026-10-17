@@ -68,6 +68,10 @@ class AmbienceEngine {
   bool _finishPlaying = false;
   bool _finishPaused = false;
   int _finishGen = 0;
+
+  /// Un fondu qui suit directement un démarrage encore en vol doit l'annuler :
+  /// sinon la musique part après le fondu.
+  int? _finishStartGen;
   String? _slotAsset;
 
   String? _currentAsset;
@@ -287,6 +291,7 @@ class AmbienceEngine {
   Future<void> startFinishMusic(Duration untilPeak) async {
     final offset = finishMusicPeak - untilPeak;
     final gen = ++_finishGen;
+    _finishStartGen = gen;
     try {
       await startFinishPlayback(offset.isNegative ? Duration.zero : offset)
           .timeout(_startTimeout);
@@ -322,7 +327,10 @@ class AmbienceEngine {
 
   Future<void> fadeOutFinishMusic(
       {Duration duration = const Duration(seconds: 3)}) async {
-    if (!_finishPlaying) return;
+    if (!_finishPlaying) {
+      if (_finishStartGen == _finishGen) _finishGen++;
+      return;
+    }
     final gen = ++_finishGen;
     _finishPlaying = false;
     _finishPaused = false;
