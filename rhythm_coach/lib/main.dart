@@ -21,43 +21,23 @@ import 'services/surprise_lifecycle_observer.dart';
 import 'services/surprise_notifications_bootstrap.dart';
 import 'theme/app_theme.dart';
 
-/// Singleton CoachService partagé entre les écrans Carrière. Instancié à
-/// l'init pour que `MaterialApp` puisse écouter ses changements (badge
-/// "Hors palier" mis à jour quand un nouveau Principal est débloqué).
 final CoachService coachService = CoachService();
 
-/// Singleton MilestoneService : catalogue des milestones et set des
-/// unlocks acquittés. Consommé par le générateur (gating) et le controller
-/// (markCompleted en fin de session).
 final MilestoneService milestoneService = MilestoneService();
 
-/// Navigator global. Permet au callback de notification (top-level,
-/// hors arbre Widget) de déclencher des push depuis n'importe où.
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await LocaleService.instance.init();
-  // Ramène dans le jouable les profils dérivés par la boucle des défis BPM
-  // (cf. docs/analysis/2026-08-07-challenge-bpm-target-runaway.md). Passe
-  // unique et idempotente : sur un profil sain comme aux lancements
-  // suivants, c'est une lecture de booléen.
   await ProfileReconciliation.runIfNeeded();
   await AdultConsentService.instance.init();
   await OnboardingService.instance.init();
   await CoachPhrasesService.instance.ensureLoaded();
-  // Charge le catalogue puis greffe les packs de phrases par coach
-  // (assets/career/coaches/<id>_<lang>.json). Tout asset manquant est
-  // toléré : le coach reste utilisable, ses phrases retomberont sur la
-  // PhraseBank globale via Coach.toPhraseBank.
   await coachService.load();
   final coachesWithPhrases = await CoachLoader().load();
   coachService.attachPhrases(coachesWithPhrases);
   await milestoneService.ensureLoaded();
-  // Rebrancher les services dépendants de la locale quand celle-ci change
-  // à chaud (sélecteur dans SoundDemoScreen). MaterialApp rebuild son UI
-  // via AnimatedBuilder ; ce listener s'occupe du contenu éditorial caché
-  // dans les singletons (phrases coach, overrides milestone, packs coach).
   LocaleService.instance.addListener(() {
     unawaited(() async {
       await CoachPhrasesService.instance.ensureLoaded();
@@ -78,22 +58,12 @@ Future<void> main() async {
     await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   }
 
-  // Bootstrap notifications surprise — uniquement sur les plateformes qui
-  // supportent `flutter_local_notifications` + `zonedSchedule` avec alarme
-  // exacte (Android pour l'instant). Sur desktop/web, on saute entièrement
-  // l'init et l'écran de réglages affichera l'état "indisponible".
   if (PlatformCapabilities.supportsSurpriseNotifications) {
-    // Le titre par défaut sera remplacé dynamiquement par la valeur
-    // localisée au moment de chaque arming via SurpriseRouter
-    // .resolveBodyVariants — mais on en initialise un de fallback ici pour
-    // les notifs déjà programmées avant un éventuel changement de locale.
+    // Titre de secours des notifs programmées avant un changement de locale.
     await SurpriseNotificationsBootstrap.init(
       localizedTitle: "C'est l'heure",
       onTap: surpriseNotificationTapHandler,
     );
-    // Au cold start (app lancée par tap d'une notif), pose le flag d'intent
-    // que `_ModeSelectionScreenState` consommera dans son
-    // addPostFrameCallback.
     final coldStartPayload =
         await SurpriseNotificationsBootstrap.consumeColdStartPayload();
     if (coldStartPayload != null) {
