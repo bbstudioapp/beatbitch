@@ -10,7 +10,7 @@ porte_sur:
   - rhythm_coach/test/session_start_after_dispose_test.dart
 provenance:
   mesure: 7
-  deduit: 3
+  deduit: 4
   document: 4
   sans_marqueur: 0
 sources_citees: []
@@ -66,7 +66,7 @@ relu_contre:
 
 ## Ce que je n'ai pas pu établir
 
-- [déduit] La lecture du réglage d'avance des bips (`getMusicBeepAdvanceMs`) n'avait pas de garde propre, et la garde après `music.start` ne faisait que `return` : en production le `MusicEngine` crée son lecteur à la demande, un `dispose()` tombé pendant cette lecture n'avait donc rien à libérer, et `start()` lançait ensuite un lecteur que personne n'arrêtait. Corrigé après la relecture (`59835a6`) : garde avant `music.start`, libération du lecteur sur la branche libérée après `music.start`. [mesuré] Banc rouge avant (« morceau laissé en lecture sans propriétaire »), vert après ; la fenêtre se retient par un store de préférences à porte. La libération après `music.start` n'a pas de test qui la tienne seule : la garde d'avant ferme la seule fenêtre atteignable.
+- [déduit] La lecture du réglage d'avance des bips (`getMusicBeepAdvanceMs`) n'avait pas de garde propre, et la garde après `music.start` ne faisait que `return` : en production le `MusicEngine` crée son lecteur à la demande, un `dispose()` tombé pendant cette lecture n'avait donc rien à libérer, et `start()` lançait ensuite un lecteur que personne n'arrêtait. Corrigé après la relecture : garde avant `music.start` (`59835a6`). [mesuré] Banc rouge avant (« morceau laissé en lecture sans propriétaire »), vert après ; la fenêtre se retient par un store de préférences à porte. [déduit] La garde d'avant ferme la seule fenêtre atteignable. Après `music.start`, la branche libérée ne fait que `return` : le lecteur réel est déjà libéré par le `dispose()` du contrôleur, et un second `dispose()` audioplayers enverrait un `stop` natif tardif sur l'id fixe `'session_music'` (`tss2-015`). La libération ajoutée par `59835a6` à cet endroit est retirée.
 - [déduit] Le wakelock est relâché sans condition à l'abandon tardif, y compris après `detachAudio()`, alors que `dispose()` ne le relâche pas quand le contrôleur est déjà détaché. Course théorique avec la séance suivante ; le chemin « encore » ne la produit pas (`start()` est terminé quand `detachAudio()` est appelé).
 - [document] `_finish()` est gardé à l'entrée seulement. Un `dispose()` en cours de clôture continue d'écrire : une séance réellement jouée reste comptée, comme les autres usages de `_released` dans `_finish`.
 - [non vérifié] `stop()` pendant `start()` en vol : même fenêtre, non examinée.
