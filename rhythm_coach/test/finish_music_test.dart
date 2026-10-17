@@ -1,4 +1,5 @@
 import 'package:beat_bitch/controllers/session_controller.dart';
+import 'package:beat_bitch/models/punishment.dart';
 import 'package:beat_bitch/models/session.dart';
 import 'package:beat_bitch/models/session_step.dart';
 import 'package:beat_bitch/services/ambience_engine.dart';
@@ -111,7 +112,79 @@ void main() {
     expect(fades, isNotEmpty);
     expect(fades.first.$2, 11, reason: 'premier step du post-final');
   }, timeout: const Timeout(Duration(seconds: 60)));
+
+  test('un FAIL pendant la montée relance la musique à la reprise', () async {
+    final starts = await _startsAroundPunishment((ctrl) => ctrl.triggerFail());
+    expect(starts, ['start 16s', 'start 12s'],
+        reason: 'le fondu du FAIL éteint la musique ; le step de 8 s qui suit '
+            'la punition doit la relancer, calée sur le final');
+  }, timeout: const Timeout(Duration(seconds: 60)));
+
+  test('une mini-punition pendant la montée relance la musique à la reprise',
+      () async {
+    final starts = await _startsAroundPunishment(
+        (ctrl) => ctrl.debugRunMiniPunishment(_shortPunishment));
+    expect(starts, ['start 16s', 'start 12s'],
+        reason: 'le fondu de la mini-punition éteint la musique ; le step de '
+            '8 s qui suit doit la relancer, calée sur le final');
+  }, timeout: const Timeout(Duration(seconds: 60)));
 }
+
+/// Démarrages de la musique de finish autour de [punish], lancé dès le
+/// premier démarrage (step de 4 s).
+Future<List<String>> _startsAroundPunishment(
+    Future<void> Function(SessionController ctrl) punish) async {
+  final ambience = _FinishRecordingAmbience();
+  ambience.onEvent = (e) => ambience.events.add((e, 0));
+  final ctrl = SessionController(
+    session: const Session(
+      id: 'finish-fail',
+      name: 'finish-fail',
+      description: '',
+      durationSeconds: 40,
+      defaultMode: SessionMode.rhythm,
+      silentFinishStartTime: 4,
+      finalStepTime: 20,
+      steps: [
+        SessionStep(time: 0, mode: SessionMode.rhythm, bpm: 40),
+        SessionStep(time: 4, mode: SessionMode.rhythm, bpm: 60),
+        SessionStep(time: 8, mode: SessionMode.rhythm, bpm: 90),
+        SessionStep(time: 20, mode: SessionMode.hold, to: Position.full),
+        SessionStep(time: 24, mode: SessionMode.breath, duration: 2),
+      ],
+    ),
+    tts: TtsService(),
+    beep: _SilentBeepEngine(),
+    ambience: ambience,
+    // Endurance haute : respiration d'avant-punition courte.
+    staminaProfile: List<double>.filled(120, 100),
+    punishmentBundle: const PunishmentBundle(
+        failPhrases: ['raté'], punishments: [_shortPunishment]),
+    randomComments: const RandomCommentsBundle(
+      comments: [],
+      minIntervalSeconds: 999,
+      maxIntervalSeconds: 999,
+      scriptedCooldownSeconds: 4,
+    ),
+  );
+  await ctrl.start();
+  await _waitUntil(() => ambience.events.isNotEmpty);
+  await punish(ctrl);
+  await _waitUntil(() => ctrl.elapsedSeconds >= 9);
+  await ctrl.stop();
+  ctrl.dispose();
+  return [
+    for (final (e, _) in ambience.events)
+      if (e.startsWith('start')) e,
+  ];
+}
+
+const _shortPunishment = Punishment(
+  id: 'courte',
+  name: 'courte',
+  durationSeconds: 1,
+  steps: [SessionStep(time: 0, mode: SessionMode.rhythm, bpm: 60)],
+);
 
 Future<void> _waitUntil(
   bool Function() predicate, {

@@ -260,6 +260,32 @@ void main() {
       Duration(milliseconds: (fromSeconds * 1000).round());
 
   test(
+      'séance musicale avec un final : la musique de finish ne joue pas '
+      'par-dessus le morceau', () async {
+    final t = build(
+      session: const Session(
+        id: 'musique-finale',
+        name: 'musique-finale',
+        description: '',
+        durationSeconds: 100,
+        defaultMode: SessionMode.rhythm,
+        steps: steps,
+        music: track,
+        silentFinishStartTime: 30,
+        finalStepTime: 80,
+      ),
+    );
+    await t.ctrl.start();
+    for (final s in [31.0, 46.0, 61.0]) {
+      await at(t.port, t.ctrl, s);
+    }
+    expect(t.beep.appliedSteps.map((s) => s.bpm), contains(122),
+        reason: 'les steps de la montée doivent être passés');
+    expect(t.amb.finishStarts, isEmpty);
+    await t.ctrl.stop();
+  });
+
+  test(
       'les steps partent sur la position du morceau, pas sur le chronomètre : '
       'un lecteur qui tarde ne fait avancer aucune consigne', () async {
     final t = build(startupLatency: const Duration(milliseconds: 500));
@@ -1006,6 +1032,11 @@ class _Beep extends BeepEngine {
 
 class _SilentAmbienceEngine extends AmbienceEngine {
   int playForModeCalls = 0;
+  final List<Duration> finishStarts = [];
+
+  @override
+  Future<void> startFinishMusic(Duration untilPeak) async =>
+      finishStarts.add(untilPeak);
 
   @override
   Future<void> play(String? assetPath) async {}
