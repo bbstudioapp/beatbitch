@@ -128,16 +128,26 @@ void main() {
   testWidgets(
       'punition : la courbe dessine le rythme de la punition, pas la '
       'respiration qui suit dans la séance', (tester) async {
-    final samples = await _playCurve(tester);
-
-    expect(samples, isNotEmpty, reason: 'aucune image du rythme de punition');
-    final flat = samples.where((s) => s.aheadMax < Position.throat.index);
-    expect(flat, isEmpty,
-        reason: 'pendant le rythme tip→full de la punition, la courbe doit '
-            'monter jusqu\'en bas entre 1 et 3 s devant le curseur. Images '
-            'restées en haut (ms depuis le début de la punition : max) : '
-            '${flat.map((s) => '${s.ms}: ${s.aheadMax.toStringAsFixed(2)}').join(', ')}');
+    _expectCurveFollowsPunishment(
+        await _playCurve(tester, (ctrl) => ctrl.triggerFail()));
   }, timeout: const Timeout(Duration(seconds: 120)));
+
+  testWidgets(
+      'mini-punition : la courbe dessine le rythme de la punition, pas la '
+      'respiration qui suit dans la séance', (tester) async {
+    _expectCurveFollowsPunishment(await _playCurve(
+        tester, (ctrl) => ctrl.debugRunMiniPunishment(_rhythmPunishment)));
+  }, timeout: const Timeout(Duration(seconds: 120)));
+}
+
+void _expectCurveFollowsPunishment(List<_CurveSample> samples) {
+  expect(samples, isNotEmpty, reason: 'aucune image du rythme de punition');
+  final flat = samples.where((s) => s.aheadMax < Position.throat.index);
+  expect(flat, isEmpty,
+      reason: 'pendant le rythme tip→full de la punition, la courbe doit '
+          'monter jusqu\'en bas entre 1 et 3 s devant le curseur. Images '
+          'restées en haut (ms depuis le début de la punition : max) : '
+          '${flat.map((s) => '${s.ms}: ${s.aheadMax.toStringAsFixed(2)}').join(', ')}');
 }
 
 /// Image de la courbe pendant le rythme de la punition.
@@ -154,10 +164,12 @@ class _CurveSample {
 const _curveSettleMs = 800;
 const _curveWindowEndMs = 4000;
 
-/// FAIL à 2,5 s d'une séance dont le step suivant est une respiration à 4 s,
-/// puis lecture de la courbe pendant les premières secondes d'une punition
-/// rythmée. Rend les images prises dans [_curveSettleMs, _curveWindowEndMs).
-Future<List<_CurveSample>> _playCurve(WidgetTester tester) async {
+/// [punish] à 2,5 s d'une séance dont le step suivant est une respiration à
+/// 4 s, puis lecture de la courbe pendant les premières secondes d'une
+/// punition rythmée. Rend les images prises dans
+/// [_curveSettleMs, _curveWindowEndMs).
+Future<List<_CurveSample>> _playCurve(WidgetTester tester,
+    Future<void> Function(SessionController ctrl) punish) async {
   tester.view.physicalSize = const Size(400, 1400);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
@@ -204,8 +216,8 @@ Future<List<_CurveSample>> _playCurve(WidgetTester tester) async {
     await slice();
   }
   expect(ctrl.elapsed, lessThan(const Duration(seconds: 4)),
-      reason: 'le FAIL doit tomber avant la respiration de la séance');
-  unawaited(ctrl.triggerFail());
+      reason: 'la punition doit tomber avant la respiration de la séance');
+  unawaited(punish(ctrl));
 
   DateTime? startedAt;
   final samples = <_CurveSample>[];
@@ -232,6 +244,9 @@ Future<List<_CurveSample>> _playCurve(WidgetTester tester) async {
   for (var i = 0; i < 50 && ctrl.failPhase != null; i++) {
     await slice();
   }
+  // Le saut de section relance un step sans l'attendre : son délai de
+  // transition est une minuterie simulée, à écouler avant le démontage.
+  await tester.pump(const Duration(seconds: 2));
   await tester.pumpWidget(const SizedBox());
   await tester
       .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));

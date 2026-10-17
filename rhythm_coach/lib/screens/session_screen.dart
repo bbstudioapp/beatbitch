@@ -899,10 +899,10 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                       paused: ctrl.isPaused,
                       showTrajectoryDots: _showTrajectoryDots,
                       moves: ctrl.currentMoves,
-                      // Un défi joue des segments absents de `session.steps` et
-                      // gèle l'horloge après lui : rien à annoncer tant qu'elle
-                      // est figée.
-                      upcomingSteps: ctrl.isTimelineFrozen
+                      // Un défi ou un flow fail joue des segments absents de
+                      // `session.steps` sur une horloge de séance figée : rien
+                      // à annoncer tant qu'elle l'est.
+                      upcomingSteps: ctrl.isTimelineFrozen || ctrl.isFailing
                           ? const []
                           : resolveUpcomingMovementSteps(
                               steps: ctrl.session.steps,
