@@ -303,6 +303,8 @@ extension FailFlowOrchestrator on SessionController {
       }
       if (modeChanged) {
         _syncAmbienceToCurrentMode();
+        // L'écran ne relit le moteur que sur notification.
+        _notify();
       }
 
       if (s >= p.durationSeconds) {
