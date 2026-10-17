@@ -94,6 +94,24 @@ void main() {
     });
   });
 
+  test('un fondu demandé pendant un autre fondu le laisse aller à son terme',
+      () async {
+    final engine = _OffsetRecordingEngine();
+    await engine.startFinishMusic(const Duration(seconds: 25));
+
+    final clock = Stopwatch()..start();
+    final first =
+        engine.fadeOutFinishMusic(duration: const Duration(milliseconds: 600));
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    await engine.fadeOutFinishMusic(
+        duration: const Duration(milliseconds: 600));
+    await first;
+
+    expect(clock.elapsedMilliseconds, greaterThan(500),
+        reason: 'le second fondu a interrompu le premier à mi-volume : la '
+            'musique reste audible');
+  });
+
   test(
       'la musique démarre au début de la montée, calée sur le final, et '
       "s'éteint au post-final", () async {
