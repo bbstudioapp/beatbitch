@@ -350,7 +350,8 @@ void main() {
       WidgetTester tester, {
       bool background = true,
     }) async {
-      final b = await mount(tester, autoStart: true, punishments: _punishments);
+      final b = await mount(tester,
+          autoStart: true, session: _jumpSession, punishments: _punishments);
       await realElapse(tester, const Duration(seconds: 1));
       expect(b.ctrl.state, SessionState.running,
           reason: 'le banc n’a pas lancé la séance');
