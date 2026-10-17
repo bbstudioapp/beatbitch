@@ -139,6 +139,106 @@ void main() {
     _expectCurveFollowsPunishment(await _playCurve(
         tester, (ctrl) => ctrl.debugRunMiniPunishment(_rhythmPunishment)));
   }, timeout: const Timeout(Duration(seconds: 120)));
+
+  testWidgets(
+      'FAIL : pendant la phrase et la respiration d\'avant-punition, l\'écran '
+      'n\'annonce pas la suite de la séance', (tester) async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('flutter_tts'),
+            (call) async {
+      if (call.method == 'getVoices') return <dynamic>[];
+      // Une phrase de fail qui dure : sinon la phase `phrase` passe entre
+      // deux images.
+      if (call.method == 'speak') {
+        await Future<void>.delayed(const Duration(milliseconds: 1500));
+      }
+      return 1;
+    });
+    tester.view.physicalSize = const Size(400, 1400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(MaterialApp(
+      locale: const Locale('fr'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: SessionScreen(
+        session: _breathNextSession,
+        tts: TtsService(),
+        beep: _StateBeepEngine(),
+        ambience: _SilentAmbienceEngine(),
+        punishmentBundle: const PunishmentBundle(
+          failPhrases: ['raté'],
+          punishments: [_rhythmPunishment],
+        ),
+        randomComments: const RandomCommentsBundle(
+          comments: [],
+          minIntervalSeconds: 999,
+          maxIntervalSeconds: 999,
+          scriptedCooldownSeconds: 4,
+        ),
+        autoStart: true,
+        staminaProfile: List<double>.filled(700, 100.0),
+      ),
+    ));
+    await tester.pump();
+    final ctrl = Provider.of<SessionController>(
+        tester.element(find.byType(MovementAnimation)),
+        listen: false);
+    MovementAnimation anim() =>
+        tester.widget<MovementAnimation>(find.byType(MovementAnimation));
+
+    Future<void> slice() async {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 100)));
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    var guard = 0;
+    while (!(ctrl.isRunning &&
+        ctrl.hasConfig &&
+        ctrl.elapsed >= const Duration(milliseconds: 2500))) {
+      if (++guard > 100) fail('la séance ne démarre pas');
+      await slice();
+    }
+    expect(anim().upcomingSteps, isNotEmpty,
+        reason: 'hors FAIL, la séance annonce sa suite : sans cela le vide '
+            'mesuré ensuite ne prouverait rien');
+    unawaited(ctrl.triggerFail());
+
+    final seen = {FailPhase.phrase: 0, FailPhase.breath: 0};
+    final announced = <String>[];
+    final deadline = DateTime.now().add(const Duration(seconds: 30));
+    while (DateTime.now().isBefore(deadline) &&
+        ctrl.failPhase != FailPhase.punishment) {
+      await slice();
+      final phase = ctrl.failPhase;
+      if (phase == null || !seen.containsKey(phase)) continue;
+      seen[phase] = seen[phase]! + 1;
+      final upcoming = anim().upcomingSteps;
+      if (upcoming.isNotEmpty) {
+        announced.add('${phase.name} : '
+            '${upcoming.map((u) => '${u.startSecond} s').join(', ')}');
+      }
+    }
+    expect(seen[FailPhase.phrase], greaterThanOrEqualTo(3),
+        reason: 'aucune image pendant la phrase de fail');
+    expect(seen[FailPhase.breath], greaterThanOrEqualTo(3),
+        reason: 'aucune image pendant la respiration d\'avant-punition');
+    expect(announced, isEmpty,
+        reason: 'l\'horloge de séance est arrêtée pendant le FAIL : la courbe '
+            'ne doit recevoir aucun instant de la séance. Images fautives : '
+            '${announced.take(3).join(' | ')}');
+
+    unawaited(ctrl.triggerFail());
+    for (var i = 0; i < 50 && ctrl.failPhase != null; i++) {
+      await slice();
+    }
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpWidget(const SizedBox());
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)));
+  }, timeout: const Timeout(Duration(seconds: 120)));
 }
 
 void _expectCurveFollowsPunishment(List<_CurveSample> samples) {
