@@ -37,9 +37,10 @@ class _PisteBundle extends CachingAssetBundle {
   factory _PisteBundle.absenteLeveeAsynchrone() => _PisteBundle(
       () => Future<ByteData>.error(FlutterError('Unable to load asset')));
 
+  /// `AssetImage` choisit parmi les variantes (`3.0x/…`) du manifeste.
   @override
   Future<ByteData> load(String key) =>
-      key == _asset ? piste() : rootBundle.load(key);
+      key.endsWith('piste_penis.png') ? piste() : rootBundle.load(key);
 }
 
 Widget host(AssetBundle bundle,
