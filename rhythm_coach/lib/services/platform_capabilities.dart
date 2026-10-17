@@ -30,4 +30,19 @@ class PlatformCapabilities {
     if (kIsWeb) return false;
     return defaultTargetPlatform == TargetPlatform.android;
   }
+
+  /// Seuil Material entre téléphone et tablette, en pixels logiques.
+  static const double phoneMaxShortestSide = 600;
+
+  static bool locksPortrait({
+    required bool isWeb,
+    required TargetPlatform platform,
+    required double shortestSide,
+  }) {
+    if (isWeb) return false;
+    if (platform != TargetPlatform.android && platform != TargetPlatform.iOS) {
+      return false;
+    }
+    return shortestSide < phoneMaxShortestSide;
+  }
 }

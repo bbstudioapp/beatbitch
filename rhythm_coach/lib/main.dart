@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -68,6 +69,14 @@ Future<void> main() async {
   SystemChrome.setEnabledSystemUIMode(
     SystemUiMode.edgeToEdge,
   );
+  final view = WidgetsBinding.instance.platformDispatcher.views.first;
+  if (PlatformCapabilities.locksPortrait(
+    isWeb: kIsWeb,
+    platform: defaultTargetPlatform,
+    shortestSide: view.physicalSize.shortestSide / view.devicePixelRatio,
+  )) {
+    await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  }
 
   // Bootstrap notifications surprise — uniquement sur les plateformes qui
   // supportent `flutter_local_notifications` + `zonedSchedule` avec alarme
