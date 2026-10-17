@@ -61,6 +61,43 @@ void main() {
     _expectSwingContinues(played);
   });
 
+  test(
+      'moteur : une tenue ancrée qui suit une tenue mise en pause joue ses '
+      'premiers allers-retours', () async {
+    final beep = BeepEngine();
+    await beep.init();
+    final clock = Stopwatch();
+    final played = <int>[];
+    beep.debugOnTrigger = (_, __) {
+      if (clock.isRunning) played.add(clock.elapsedMilliseconds);
+    };
+    beep.applyStep(_swing, SessionMode.rhythm).ignore();
+    await Future<void>.delayed(_pauseAfter + const Duration(milliseconds: 800));
+    await beep.pause();
+
+    // Un nouvel `applyStep` sans `resume()` : la punition d'un FAIL.
+    beep.debugOnTrigger = (_, __) {
+      if (!clock.isRunning) clock.start();
+      played.add(clock.elapsedMilliseconds);
+    };
+    played.clear();
+    beep.applyStep(_swing, SessionMode.rhythm).ignore();
+    for (var i = 0; i < 60 && !clock.isRunning; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
+    expect(clock.isRunning, isTrue, reason: 'la seconde tenue ne sonne pas');
+    await Future<void>.delayed(const Duration(milliseconds: 2500));
+    await beep.stop();
+
+    final early = _swingOffsets().where((ms) => ms < 2000);
+    expect(early, isNotEmpty);
+    for (final ms in early) {
+      expect(played.any((at) => (at - ms).abs() < 120), isTrue,
+          reason: 'aller-retour attendu à $ms ms après le début de la '
+              'seconde tenue. Bips : $played');
+    }
+  });
+
   test('séance : les allers-retours reprennent après pause() / resume()',
       () async {
     late SessionController ctrl;
