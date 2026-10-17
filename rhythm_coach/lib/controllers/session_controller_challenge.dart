@@ -326,7 +326,7 @@ extension ChallengeOrchestrator on SessionController {
   /// Tick de mise à jour de la machine d'états défi. Drivée par
   /// `elapsedSeconds` vs `session.challengeTriggerTimes` (fenêtre du step
   /// breath de countdown) : ne dépend plus de la consommation des steps
-  /// (qui peut être différée par le TTS ou interrompue par un fail), ce
+  /// (qui peut être interrompue par un fail), ce
   /// qui rendait la transition `breath → live` peu fiable. Appelée dans
   /// `_onTick` à chaque tick (200 ms).
   ///
