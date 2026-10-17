@@ -1468,8 +1468,10 @@ class _Shaft extends StatelessWidget {
   static const double _assetFullY = 149;
   static const double _opacity = 0.85;
 
-  static final Future<bool> _available =
-      rootBundle.load(asset).then((_) => true, onError: (_) => false);
+  // flutter_test sans asset : `load` lève avant de rendre un Future.
+  static final Future<bool> _available = Future.sync(
+    () => rootBundle.load(asset),
+  ).then((_) => true, onError: (_) => false);
 
   @override
   Widget build(BuildContext context) {
