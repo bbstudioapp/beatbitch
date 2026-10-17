@@ -14,6 +14,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
 // Horloge réelle : le ticker est un `Timer.periodic`, et les `await` de
 // `start()` ne se tiennent qu'avec des portes que le test ouvre à la main.
@@ -166,6 +167,37 @@ void main() {
       expectNoPhantomSession(b, errors);
       expect(b.beep.attachedTrack, isNull,
           reason: 'grille du morceau laissée sur le BeepEngine partagé');
+      expect(b.port.playing, isFalse,
+          reason: 'morceau laissé en lecture après dispose()');
+      expect(wakelock.enables, 0, reason: 'wakelock enclenché après dispose()');
+    });
+
+    test(
+        'séance à morceau, pendant la lecture du réglage d’avance : aucun '
+        'lecteur lancé', () async {
+      final prefs = _GatedPrefsStore();
+      SharedPreferencesStorePlatform.instance = prefs;
+      prefs.gate.hold();
+      final b = _Bench(music: true);
+      final errors = await _guarded((errors) async {
+        final started = b.ctrl.start().catchError((Object e) {
+          errors.add(e);
+        });
+        await b.beep.gate.reached;
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        b.ctrl.dispose();
+        prefs.gate.open();
+        await started;
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+      });
+
+      expectNoPhantomSession(b, errors);
+      expect(b.port.playing, isFalse,
+          reason: 'morceau laissé en lecture sans propriétaire');
+      expect(b.port.created, isFalse,
+          reason: 'lecteur natif non libéré après dispose()');
+      expect(b.port.loads, 0,
+          reason: 'morceau chargé pour un contrôleur libéré');
       expect(wakelock.enables, 0, reason: 'wakelock enclenché après dispose()');
     });
   });
@@ -366,29 +398,65 @@ class _GatedBeep extends BeepEngine {
   Future<void> dispose() async {}
 }
 
+/// Création paresseuse, comme `MusicEngine._createdPort` : un `dispose()` qui
+/// précède la première demande de `positions` n'a rien à libérer.
 class _GatedPort implements MusicPlayerPort {
   final gate = _Gate();
   final _positions = StreamController<Duration>.broadcast();
+  bool created = false;
+  bool playing = false;
+  int loads = 0;
 
   @override
-  Stream<Duration> get positions => _positions.stream;
+  Stream<Duration> get positions {
+    created = true;
+    return _positions.stream;
+  }
+
   @override
   Stream<void> get completions => const Stream<void>.empty();
 
   @override
-  Future<void> load(String asset, {required double volume}) async {}
+  Future<void> load(String asset, {required double volume}) async {
+    loads++;
+  }
+
   @override
   Future<void> play() async {
     await gate.pass();
+    if (created) playing = true;
     _positions.add(Duration.zero);
   }
 
   @override
-  Future<void> pause() async {}
+  Future<void> pause() async {
+    playing = false;
+  }
+
   @override
-  Future<void> stop() async {}
+  Future<void> stop() async {
+    playing = false;
+  }
+
   @override
-  Future<void> dispose() async {}
+  Future<void> dispose() async {
+    created = false;
+    playing = false;
+  }
+}
+
+/// `getInstance()` met la première lecture en cache : seul moyen de tenir
+/// `getMusicBeepAdvanceMs()`.
+class _GatedPrefsStore extends InMemorySharedPreferencesStore {
+  _GatedPrefsStore() : super.empty();
+
+  final gate = _Gate();
+
+  @override
+  Future<Map<String, Object>> getAll() async {
+    await gate.pass();
+    return super.getAll();
+  }
 }
 
 class _SilentAmbienceEngine extends AmbienceEngine {

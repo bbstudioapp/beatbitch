@@ -1173,8 +1173,12 @@ class SessionController extends ChangeNotifier {
               (await DebugSettingsService().getMusicBeepAdvanceMs())
                   .clamp(0, musicBeepAdvanceMaxMs);
         } catch (_) {}
-        await music.start(track);
         if (_released) return;
+        await music.start(track);
+        if (_released) {
+          await music.dispose();
+          return;
+        }
         _beep.attachMusic(track, () => music.position);
         _beep.musicBeepAdvance = Duration(milliseconds: _musicBeepAdvanceMs);
         _musicAttached = true;
