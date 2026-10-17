@@ -8,7 +8,7 @@
 /// `free` (« confort, au choix ») est toujours disponible et n'a pas de
 /// milestone : c'est le défaut bas niveau, aucune contrainte. Les autres
 /// postures se débloquent via leur milestone d'introduction dédiée
-/// (`intro_posture_*`) — cf. spec locale `specs/scripted_breaks.md`.
+/// (`intro_posture_*`).
 enum Posture {
   /// Aucune posture imposée — l'utilisatrice s'installe comme elle veut.
   free,

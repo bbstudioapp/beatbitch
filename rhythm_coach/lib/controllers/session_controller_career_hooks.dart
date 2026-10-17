@@ -18,7 +18,7 @@ part of 'session_controller.dart';
 //   - hasPendingBadges (getter): consommé par `_FinishedPanel`.
 //
 // Plus deux helpers privés très liés à `_finish` :
-//   - _tapoutPhraseOrNull      : phrase « limite reconnue » Phase 4
+//   - _tapoutPhraseOrNull      : phrase « limite reconnue »
 //                                consommée par `triggerFail`.
 //   - _detectCapabilityRecord  : détecte si la séance vient de battre
 //                                le `best` de l'axe surchargé.
@@ -35,7 +35,7 @@ extension CareerHooksOrchestrator on SessionController {
   /// le bouton MERCI avant la grille de badges.
   bool get hasPendingBadges => _pendingBadgeUnlocks.isNotEmpty;
 
-  /// Phrase « limite reconnue » Phase 4 — variante DOUCE des phrases de
+  /// Phrase « limite reconnue » — variante DOUCE des phrases de
   /// fail, dite par le coach quand le « je peux pas » est imputable à un
   /// axe poussé au-delà de sa zone de confort (§6, attribution non ambiguë
   /// grâce à la surcharge isolée), et que le dé ∝ niveau tombe juste.
@@ -143,7 +143,7 @@ extension CareerHooksOrchestrator on SessionController {
 
     _nextStepIndex = 0;
     _lastConfigStep = null;
-    // Reset de l'état break (issue #77) : la session régénérée n'a pas de
+    // Reset de l'état break : la session régénérée n'a pas de
     // break (`scriptedBreaks` non propagé aux régens mi-séance). Si un break
     // était actif au moment du Supplier, on le clôt ici — sinon `_breakActive`
     // resterait coincé à true (la nouvelle `breaks` vide fait sortir
@@ -202,7 +202,7 @@ extension CareerHooksOrchestrator on SessionController {
     _nextStepIndex = 0;
     _lastConfigStep = null;
     _dropPendingSpeech();
-    // Reset de l'état break (issue #77), même raison que `requestUpgrade` :
+    // Reset de l'état break, même raison que `requestUpgrade` :
     // la suite régénérée n'a pas de break, on évite un `_breakActive` coincé.
     _breakActive = false;
     _activeBreak = null;

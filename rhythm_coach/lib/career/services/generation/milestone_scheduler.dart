@@ -20,13 +20,6 @@
 //
 // Le bookkeeping `bodyStartTime` / `bodyDurationSeconds` (1ʳᵉ et 2ᵉ)
 // est exposé en getters, consommé par `_assembleResult` côté caller.
-//
-// Sortie du `part of 'career_session_generator.dart'` historique en
-// D.PR6 du plan de refacto. Les 2 dépendances d'instance (mutation de
-// `_state.unlockedKeys` + appel à `_pushMilestoneSequence`) sont
-// threadées par référence et callback au constructeur. D.PR7-2 a
-// migré les compteurs `time`/`stamina` sur `ctx` — le callback mute
-// le ctx au lieu de retourner un tuple.
 
 import 'dart:math';
 

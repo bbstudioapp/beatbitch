@@ -213,7 +213,7 @@ class CareerSessionGenerator {
     });
   }
 
-  /// Bornes de durée d'un break scénarisé (issue #77). Tirées uniformément
+  /// Bornes de durée d'un break scénarisé. Tirées uniformément
   /// par `_pickBreakDuration`. Le break consomme cette durée comme *trou
   /// d'effort* dans l'enveloppe (cf. réservation dans `generate`).
   static const int _breakMinDurationSeconds = 60;
@@ -620,9 +620,9 @@ class CareerSessionGenerator {
     /// sont insérés vers 60 % du temps planifié (cf. spec § 4.3).
     ChallengeInputs challenge = ChallengeInputs.none,
 
-    /// Active les postures imposées + breaks scénarisés (issue #77, préférence
-    /// utilisateur `pref.scripted_breaks`). `false` = posture `free`, aucun
-    /// break. Cf. spec `specs/scripted_breaks.md`.
+    /// Active les postures imposées, changements de position et breaks
+    /// scénarisés (préférence utilisateur `pref.scripted_breaks`). `false` =
+    /// posture `free`, aucun changement ni break.
     bool scriptedBreaks = false,
   }) {
     _bank = bank;
@@ -1137,7 +1137,7 @@ class CareerSessionGenerator {
     // archétypal mais respecte le ban. L'éditeur Custom garantit qu'au
     // moins un mode bouche reste actif, donc lick est presque toujours dispo.
     //
-    // Dose Custom rare/normal/frequent (cf. issue #68) : quand les poids
+    // Dose Custom rare/normal/frequent : quand les poids
     // hand/rhythm sont **strictement asymétriques** (cas Custom où la
     // joueuse a explicitement biaisé une dose), on bascule sur le ratio
     // brut des poids comme proba. Le pivot dramaturgique 25/75 vs 70/30
@@ -1732,7 +1732,7 @@ class CareerSessionGenerator {
   /// `_assembleResult`. `free` tant que `_config.scriptedBreaks` est off.
   Posture _initialPose = Posture.free;
 
-  /// Tire la posture imposée au démarrage (issue #77). [Posture.free] tant
+  /// Tire la posture imposée au démarrage. [Posture.free] tant
   /// que `_config.scriptedBreaks` est off ; sinon tirage uniforme
   /// parmi les postures débloquées (`free` incluse dans le pool). Bas niveau
   /// / rien de débloqué ⇒ `free` de toute façon. Déterministe sous seed via

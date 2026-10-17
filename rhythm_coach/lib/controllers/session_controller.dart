@@ -205,7 +205,7 @@ class SessionController extends ChangeNotifier {
   static const double _breathSkipStaminaThreshold = 60.0;
 
   /// Intervalle aléatoire borné (s) entre deux ordres énoncés pendant un break
-  /// scénarisé (issue #77). Tiré dans [min, max] après chaque ordre (et à
+  /// scénarisé. Tiré dans [min, max] après chaque ordre (et à
   /// l'entrée) plutôt que fixe — une cadence régulière sonne mécanique, un peu
   /// d'irrégularité est plus naturel (cf. variété des cycles de séance). ~1
   /// ordre toutes les ~25 s en moyenne sur une pause de 60-120 s.
@@ -445,7 +445,7 @@ class SessionController extends ChangeNotifier {
   /// timeout atSeuil) indépendamment du gel du timer session.
   double get _realSec => _stopwatch.elapsedMilliseconds / 1000.0;
 
-  // ─── État du break scénarisé (issue #77) ──────────────────────────────
+  // ─── État du break scénarisé ──────────────────────────────
   // Pause active de récup sur les sessions longues (cf. spec
   // `specs/scripted_breaks.md`). Contrairement au flow fail, l'horloge
   // `elapsed` continue (le générateur a laissé un trou d'effort dans
@@ -476,7 +476,7 @@ class SessionController extends ChangeNotifier {
   /// l'entrée du break et après chaque ordre (cadence irrégulière).
   int _breakOrderInterval = _breakOrderMinIntervalSeconds;
 
-  /// Posture courante imposée (issue #77). Initialisée à
+  /// Posture courante imposée. Initialisée à
   /// `session.initialPose` au `start()`, mise à jour à la reprise de chaque
   /// break qui change de pose. Exposée pour l'indicateur de posture (PR5).
   Posture _currentPose = Posture.free;
@@ -484,12 +484,12 @@ class SessionController extends ChangeNotifier {
 
   int _nextPostureChangeIndex = 0;
 
-  /// Posture imposée au démarrage (issue #77), lisible **avant** `start()`
+  /// Posture imposée au démarrage, lisible **avant** `start()`
   /// (qui seul initialise `_currentPose`). Sert à l'écran d'intro pour
   /// afficher la pose à prendre avant validation. `free` si aucune.
   Posture get initialPose => _session.initialPose;
 
-  /// Gate de validation posture (issue #77) : ce qui justifie le gel courant,
+  /// Gate de validation posture : ce qui justifie le gel courant,
   /// `null` s'il n'y en a pas. Armé par un step `awaitReady` (milestone
   /// posture) ou une sortie de break qui change de pose. Gel identique au défi
   /// (`elapsedSeconds` figé via `_timelineOffset` dans `_onTick`,
@@ -730,7 +730,7 @@ class SessionController extends ChangeNotifier {
     // pré-orgasme (« je vais décharger », « prépare ta gorge ») n'ont plus
     // de sens à ce moment-là : marquer le palier comme annoncé mais ne pas
     // parler. Cas typique : final hold long en custom, où le 90 % du temps
-    // écoulé tombe en plein dans la tenue post-chime (issue #65).
+    // écoulé tombe en plein dans la tenue post-chime.
     if (_finalChimePlayed) {
       final percent = (elapsedSeconds * 100 / total).floor();
       for (final marker in _progressMarkers) {
@@ -1120,7 +1120,7 @@ class SessionController extends ChangeNotifier {
         _miniPunishmentTickAccumulator = 0;
         _miniPunishmentsTriggered = 0;
         _announcedProgressMarkers.clear();
-        // Break scénarisé (issue #77) : repart de la posture initiale tirée
+        // Break scénarisé : repart de la posture initiale tirée
         // par le générateur (`free` hors carrière / flag off).
         _breakActive = false;
         _activeBreak = null;
@@ -1320,7 +1320,7 @@ class SessionController extends ChangeNotifier {
     _state = SessionState.running;
     _startTicker();
     _startRandomComments();
-    // Pendant une pause scénarisée ou l'attente de mise en place (issue #77),
+    // Pendant une pause scénarisée ou l'attente de mise en place,
     // le loop d'effort a été coupé et c'est le step posé après le trou qui le
     // reconfigure : le reprendre ici ferait repartir l'effort en pleine pause.
     // Chemin atteignable par tout le monde — `didChangeAppLifecycleState`
@@ -1349,8 +1349,7 @@ class SessionController extends ChangeNotifier {
     _ticker?.cancel();
     _ticker = null;
     // Borné, comme dans `pause()` : un canal de synthèse muet ne doit pas
-    // empêcher la séance de revenir à `idle` (bouton STOP sans effet, cf.
-    // issue #317).
+    // empêcher la séance de revenir à `idle` (bouton STOP sans effet).
     await _stopTtsBounded();
     await _beep.stop();
     await _releaseMusic();
@@ -1358,7 +1357,7 @@ class SessionController extends ChangeNotifier {
     await _ambience.stopFinishMusic();
     // Borné comme le canal de synthèse : `_state` ne bascule qu'après, et le
     // ticker est déjà annulé. Un canal pigeon muet laissait la séance morte
-    // sans jamais revenir à `idle` — même signature que l'issue #317.
+    // sans jamais revenir à `idle`.
     await WakelockPlus.disable().timeout(_wakelockTimeout, onTimeout: () {});
 
     _state = SessionState.idle;
@@ -1449,12 +1448,12 @@ class SessionController extends ChangeNotifier {
     // on enchaîne sur autre chose (rythme → hold head…) alors que l'UI
     // attend toujours la décision joueuse au seuil.
     _updateChallengePhase();
-    // Break scénarisé (issue #77) : entrée/sortie + ordres espacés, AVANT
+    // Break scénarisé : entrée/sortie + ordres espacés, AVANT
     // `_checkSteps`. À l'entrée d'un break la machine pause le beep ; à la
     // sortie elle relâche `_breakActive` → `_checkSteps` (ci-dessous) applique
     // alors le step d'effort posé par le générateur juste après le trou.
     _updateBreakPhase();
-    // Milestone posture (issue #77) : fixe `_currentPose` sur la pose
+    // Milestone posture : fixe `_currentPose` sur la pose
     // enseignée pendant sa fenêtre pour que l'indicateur en séance l'affiche,
     // comme un break. Après `_updateBreakPhase` — fenêtres disjointes.
     _updateMilestonePose();
@@ -1637,7 +1636,7 @@ class SessionController extends ChangeNotifier {
     // un breath, le coach fait son rapport, la joueuse souffle. Le step
     // suivant attend.
     if (_inPostChallengeBreath) return;
-    // Gate posture (issue #77) : tant que la joueuse n'a pas validé sa
+    // Gate posture : tant que la joueuse n'a pas validé sa
     // position, on ne consomme aucun step — l'horloge est gelée dans `_onTick`
     // et le step d'effort qui suit attend la confirmation.
     if (awaitingPostureReady) return;
@@ -1769,7 +1768,7 @@ class SessionController extends ChangeNotifier {
 
       _nextStepIndex++;
 
-      // Gate posture (issue #77) : ce step vient d'annoncer une position
+      // Gate posture : ce step vient d'annoncer une position
       // imposée (`awaitReady`, 1er step d'une milestone posture). On gèle la
       // séance jusqu'à la validation joueuse et on arrête de consommer les
       // steps suivants ce tick.
@@ -1825,7 +1824,7 @@ class SessionController extends ChangeNotifier {
     _ttsDeferredTicks = 0;
   }
 
-  /// Entre en gate de validation posture (issue #77) : la séance se fige
+  /// Entre en gate de validation posture : la séance se fige
   /// (`elapsedSeconds` gelé dans `_onTick`) et on arme le timeout de sécurité.
   /// L'annonce de la posture a déjà été prononcée par le step qui déclenche la
   /// gate ; ici on ne fait qu'attendre.
@@ -2415,7 +2414,7 @@ class SessionController extends ChangeNotifier {
       return;
     }
 
-    // Pas de random pendant un break scénarisé (issue #77) : la dramaturgie
+    // Pas de random pendant un break scénarisé : la dramaturgie
     // est pilotée par le séquenceur du break (phrase d'entrée + ordres
     // espacés + reprise). On reporte de 3 s ; la fenêtre se referme d'elle-
     // même à la fin du break.

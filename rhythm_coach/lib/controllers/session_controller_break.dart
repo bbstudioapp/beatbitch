@@ -1,6 +1,6 @@
 part of 'session_controller.dart';
 
-// ─── Break scénarisé (issue #77) ──────────────────────────────────────────
+// ─── Break scénarisé ──────────────────────────────────────────────────────
 //
 // Pause active de récup. Le générateur a déjà laissé un *trou d'effort*
 // dans l'enveloppe (aucun step entre `break.time` et `break.endTime`) ; le
@@ -15,10 +15,8 @@ part of 'session_controller.dart';
 //
 // Contrairement au flow fail, l'horloge `elapsed` continue de tourner : la
 // machine est donc pilotée par tick (`_updateBreakPhase`, appelée dans
-// `_onTick`), sans flow async ni manipulation du `_timelineOffset`. Les
-// champs d'état (`_breakActive`, `_activeBreak`, `_nextBreakIndex`,
-// `_breakOrderLastAtSec`, `_currentPose`) vivent sur `SessionController` (les
-// extensions Dart ne portent pas de champs).
+// `_onTick`), sans flow async. Les extensions Dart ne portant pas de champs,
+// l'état vit sur `SessionController`.
 
 extension BreakSequencer on SessionController {
   /// Pilote la machine du break à chaque tick. Entrée dans la fenêtre du
@@ -142,7 +140,7 @@ extension BreakSequencer on SessionController {
             bank?.pickBreakResume(_random))
         : bank?.pickBreakResume(_random);
     if (resume != null) _speakScripted(resume);
-    // Gate posture (issue #77) : si le break impose une nouvelle posture
+    // Gate posture : si le break impose une nouvelle posture
     // physique, on gèle la reprise jusqu'à ce que la joueuse s'y mette (comme
     // le 1er step des milestones posture). `free` = pas de repositionnement,
     // pas de gate.
@@ -153,7 +151,7 @@ extension BreakSequencer on SessionController {
   }
 
   /// Met à jour `_currentPose` quand la fenêtre d'une **milestone posture**
-  /// (issue #77) est active : la séquence enseigne la pose (« mets-toi à
+  /// est active : la séquence enseigne la pose (« mets-toi à
   /// genoux… ») et l'`unlock` la débloque, mais rien ne posait la pose sur
   /// l'écran de jeu. On la fixe dès l'entrée dans la fenêtre — et on la
   /// **garde** ensuite (le script dit « reste à genoux »), comme un break qui

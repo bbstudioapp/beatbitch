@@ -25,7 +25,7 @@ extension PostureUnlock on Posture {
 /// Postures que l'utilisatrice peut se voir imposer, compte tenu des unlocks
 /// acquis. [Posture.free] est toujours incluse (jamais débloquée). L'ordre
 /// suit `Posture.values` (déterministe). Sert au tirage de la posture d'intro
-/// et des postures de break (cf. spec `specs/scripted_breaks.md`).
+/// et des postures de break.
 List<Posture> availablePostures(Set<UnlockKey> unlockedKeys) => [
       Posture.free,
       for (final p in Posture.values)
