@@ -4,12 +4,8 @@ part of 'session_controller.dart';
 // Dart ne portent pas de champs d'instance.
 
 extension FailFlowOrchestrator on SessionController {
-  /// Faux dès que `stop()` ou un nouveau `triggerFail` a repris la main pendant
-  /// un await long.
   bool _isFailFlowAlive(int gen) => _failActive && _failGen == gen;
 
-  /// Le bouton appelant doit vérifier [canTriggerFail] pour ne pas appeler
-  /// cette méthode hors d'un état running.
   Future<void> triggerFail() async {
     if (!canTriggerFail) return;
 
@@ -18,19 +14,16 @@ extension FailFlowOrchestrator on SessionController {
       return;
     }
 
-    // Défi : la sortie est pilotée par `_updateChallengePhase`, pas par ce flow.
     if (isChallengeActive) {
       return;
     }
 
-    // Ce qui suit rebat la timeline sans passer par `_exitBreak` : le break est
-    // annulé ici ; le gel de posture tombe de lui-même (`PostureGate`).
+    // Ce qui suit rebat la timeline sans passer par `_exitBreak`.
     _breakActive = false;
     _activeBreak = null;
 
-    // Retry milestone : les plafonds de session sont figés AVANT le callback pour
-    // que la régénération lise des `capabilitySessionCeilings` à jour (`onFail`
-    // est idempotent).
+    // Les plafonds de session sont figés AVANT le callback : la régénération
+    // lit des `capabilitySessionCeilings` à jour.
     if (_isInMilestoneWindow() && onMilestoneRetry != null) {
       _capabilityTracker?.onFail();
       final handled = await onMilestoneRetry!(this);
@@ -146,8 +139,6 @@ extension FailFlowOrchestrator on SessionController {
     }
   }
 
-  /// Appli hors de l'avant-plan : la séance arrive en pause et la sortie
-  /// attend le bouton de reprise.
   Future<void> _leaveFailFlow({required bool mayJump}) async {
     if (_appInBackground) {
       _deferredFailExit = () => _completeFailExit(mayJump: mayJump);
@@ -187,8 +178,6 @@ extension FailFlowOrchestrator on SessionController {
     _notify();
   }
 
-  /// « JE PEUX PAS » sur une séance à morceau : ni phrase ni punition, la musique
-  /// ne s'arrête jamais.
   Future<void> _triggerMusicalFail() async {
     final track = session.music!;
     _hadFailThisSession = true;
@@ -252,7 +241,6 @@ extension FailFlowOrchestrator on SessionController {
   }
 
   Future<void> _runPunishment(Punishment p) async {
-    // Pas de ré-entrée : un appel concurrent est un état incohérent.
     final previous = _punishmentCompleter;
     if (previous != null && !previous.isCompleted) {
       if (kDebugMode) {
@@ -319,7 +307,7 @@ extension FailFlowOrchestrator on SessionController {
     if (_punishmentCompleter == completer) {
       _punishmentCompleter = null;
     }
-    await _beep.stop(); // coupe les bips de la punition avant de continuer
+    await _beep.stop();
   }
 
   void _abandonPunishment() {
@@ -335,8 +323,6 @@ extension FailFlowOrchestrator on SessionController {
     }
   }
 
-  /// Pas de garde sur `_state == running` : `_accrueHoldSecond` ne s'appelle que
-  /// sous le ticker.
   void _accrueMiniPunishmentTick() {
     if (_music != null) return;
     _miniPunishmentTickAccumulator++;
@@ -401,7 +387,6 @@ extension FailFlowOrchestrator on SessionController {
     }
   }
 
-  /// Renvoie `null` hors carrière : le caller retombe sur le tirage statique.
   Punishment? _generateCareerPunishmentOrNull() {
     final profile = _capabilityProfile;
     final bank = _phraseBank;
@@ -443,12 +428,10 @@ extension FailFlowOrchestrator on SessionController {
     await _syncAmbienceToCurrentMode();
   }
 
-  /// Retourne false si aucune section ne suit **ou** si le saut enjamberait la
-  /// fenêtre d'armement d'un défi encore à jouer.
   bool _skipToNextSection() {
     final currentSec = elapsedSeconds;
-    // Un défi ne s'arme que si l'horloge traverse `[trigger, trigger + 13)` sous
-    // un tick : le saut est borné à l'ouverture de cette fenêtre.
+    // Un défi ne s'arme que si l'horloge traverse sa fenêtre d'armement sous un
+    // tick : le saut est borné à l'ouverture de cette fenêtre.
     final pendingTrigger = _nextPendingChallengeTrigger(currentSec);
     for (var i = _nextStepIndex; i < session.steps.length; i++) {
       final step = session.steps[i];
@@ -463,8 +446,6 @@ extension FailFlowOrchestrator on SessionController {
     return false;
   }
 
-  /// Trigger time du premier défi encore armable à [fromSec] ou après (sa
-  /// fenêtre est ouverte ou à venir), ou null s'il n'en reste aucun.
   int? _nextPendingChallengeTrigger(int fromSec) {
     final armable =
         min(session.challenges.length, session.challengeTriggerTimes.length);
@@ -478,9 +459,6 @@ extension FailFlowOrchestrator on SessionController {
     return earliest;
   }
 
-  /// Délai annulable : si [_failActive] passe à false pendant l'attente
-  /// — ou si la génération a changé (un nouveau flow fail nous a remplacés)
-  /// — on retourne immédiatement.
   Future<void> _waitInterruptible(Duration total, {required int gen}) async {
     final elapsed = Stopwatch()..start();
     while (elapsed.elapsed < total) {

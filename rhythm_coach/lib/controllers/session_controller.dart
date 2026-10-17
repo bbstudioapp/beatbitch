@@ -211,8 +211,6 @@ class SessionController extends ChangeNotifier {
   Completer<void>? _punishmentCompleter;
   bool _punishmentAbandoned = false;
 
-  /// Reste de la sortie d'un flow fail interrompue par l'arrière-plan : rejouée
-  /// par `resume()`, abandonnée par un nouveau départ.
   Future<void> Function()? _deferredFailExit;
 
   // ─── État du défi intra-séance ────────────────────────────────────────
