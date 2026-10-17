@@ -3,7 +3,7 @@ type: analyse
 sujet: correctif-tss2-031-et-tss2-030-la-sortie-d-un-fail-en-arriere-plan-attend-le-bouton-l-ecran-lit-le-cycle-de-vie-au-montage
 ecrit_le: 2026-10-17T19:48:15+02:00
 auteur: session tss2-arriere-plan-2 · claude-sonnet-5-5
-revision: d6c2816
+revision: a0587b9
 branche: fix/arriere-plan-punition-enchainement
 porte_sur:
   - rhythm_coach/lib/controllers/session_controller.dart
@@ -12,9 +12,9 @@ porte_sur:
   - rhythm_coach/test/session_arriere_plan_demarrage_test.dart
   - rhythm_coach/test/session_music_controller_test.dart
 provenance:
-  mesure: 8
-  deduit: 3
-  document: 7
+  mesure: 11
+  deduit: 4
+  document: 10
   sans_marqueur: 0
 sources_citees: []
 relu_contre:
@@ -51,6 +51,14 @@ relu_contre:
 [document] `session_controller.dart:966` `resume()` rejoue la sortie retenue avant son chemin ordinaire ; `:798` `start()` l'abandonne à la remise à zéro. `pause()` n'est pas modifié. Un nettoyage équivalent dans `stop()` a été retiré : sa mutation restait verte, le nouveau départ couvre déjà ce cas.
 [document] `session_screen.dart:221` et `:292` `_relayLifecycle(WidgetsBinding.instance.lifecycleState)` à l'`initState`, même aiguillage que `didChangeAppLifecycleState` ; `null` et `detached` ne font rien. Un `start()` sur un contrôleur déjà marqué arrière-plan finit en `paused` par le mécanisme de tss2-027.
 
+## Fenêtre du rejeu (relecture adverse, R1) — `cbce790`, `c81d564`, `a0587b9`
+
+[mesuré] Constat de la relecture reproduit au banc (`rejeu de la sortie différée`, 3 tests rouges sur le code de `34503fe`) : `resume()` rejouait la sortie retenue après le `finally` du flow, donc sans `_failActive` ni contrôle de génération. Pendant les `await` de `_restorePreviousLoop`, un nouveau fail démarrait (`failPhase` = `breath` au lieu de `null`), `pause()` était acceptée (`paused` au lieu de `running`), `stop()` était annulé par la fin du rejeu (`running` au lieu de `idle`, « la fin du rejeu a relancé une séance arrêtée »). Mon premier rapport ne disait rien de cette fenêtre.
+[document] `session_controller_fail_flow.dart` `_replayDeferredFailExit` : `resume()` réarme `_failActive` et une génération neuve (`++_failGen`) avant de rejouer la sortie, puis les relâche au `finally` si la génération est encore la sienne. `_leaveFailFlow` et `_completeFailExit` portent la génération ; `_completeFailExit` sort après la restauration quand `_isFailFlowAlive(gen)` est faux (`stop()`, `dispose()`). Même garde que la sortie au premier plan : `isFailFlowActive` vrai (boutons désactivés), `canTriggerFail` faux, `pause()` ignorée. La garde porte sur l'état, pas sur un nom de méthode.
+[mesuré] Mutations, une à la fois, copie et `cmp` : `_failActive` non réarmé → 2 rouges (nouveau fail, `pause()`) ; contrôle de génération retiré après la restauration → 1 rouge (`stop()`).
+[mesuré] R3 : le banc de la mini-punition différée joue sur `_jumpSession` (section à t=6) ; la mutation `mayJump: true` sur `_runMiniPunishmentFlow` rougit 4 tests, dont « le bouton rejoue la boucle d'avant la punition » et le témoin au premier plan (`_sectionStep` appliqué au lieu de `_step0`).
+[document] R6 : `a0587b9` rétablit « (`onFail` est idempotent) » sur le double appel `_capabilityTracker?.onFail()`.
+
 ## Chemins vérifiés sans correctif
 
 [mesuré] `_triggerMusicalFail` ne pose pas `_failActive` et laisse l'état en `running` : `pause()` s'applique. Test permanent `e7ab84f` (fail musical, arrière-plan, position du morceau poussée au-delà du souffle, retour) : la séance reste en pause, le souffle ne se termine pas, aucun `applyStep`, aucun `play` ; la suppression de `unawaited(pause())` dans `onAppBackgrounded` le rougit.
@@ -75,6 +83,9 @@ relu_contre:
 - [déduit] tss2-030 sur téléphone : en arrière-plan aucune frame ne se produit, l'écran poussé par l'enchaînement ne se construit probablement qu'au retour ; son `lifecycleState` serait alors déjà `resumed` et la séance enchaînée partirait seule au premier plan, sans que le correctif y change quoi que ce soit. Le correctif ne ferme que le cas d'un écran réellement monté hors de l'avant-plan (banc, autres plateformes). À trancher par Manu.
 - [déduit] `inactive` compte comme arrière-plan, comme pour la pause existante : une joueuse qui tire le volet de notifications pendant une punition arrive en pause à sa sortie.
 - [document] Hors mandat, inchangés : le déroulé de la punition en arrière-plan, le texte d'introduction toujours lu en arrière-plan, tss2-022, le volet de notifications qui relance le décompte, `music.pause()` du chemin en pause.
+
+- [déduit] `dispose()` pendant le rejeu n'a pas de test propre : il passe par la même garde que `stop()` (`_failActive` retombe, la génération n'est plus vivante). Un fond re-saisi pendant le rejeu mène à `_pauseAfterFail`, dont les `await` ne sont pas gardés contre un `stop()` en vol ; la sortie au premier plan a la même limite.
+- [document] R2 et R4 de la relecture (tss2-030 sur appareil, `inactive` au montage), tss2-022 et le volet de notifications : hors mandat de cette finition, inchangés.
 
 ## Ce que je n'ai pas pu établir
 
