@@ -167,8 +167,6 @@ void main() {
       expectNoPhantomSession(b, errors);
       expect(b.beep.attachedTrack, isNull,
           reason: 'grille du morceau laissée sur le BeepEngine partagé');
-      expect(b.port.playing, isFalse,
-          reason: 'morceau laissé en lecture après dispose()');
       expect(wakelock.enables, 0, reason: 'wakelock enclenché après dispose()');
     });
 

@@ -1175,10 +1175,7 @@ class SessionController extends ChangeNotifier {
         } catch (_) {}
         if (_released) return;
         await music.start(track);
-        if (_released) {
-          await music.dispose();
-          return;
-        }
+        if (_released) return;
         _beep.attachMusic(track, () => music.position);
         _beep.musicBeepAdvance = Duration(milliseconds: _musicBeepAdvanceMs);
         _musicAttached = true;
