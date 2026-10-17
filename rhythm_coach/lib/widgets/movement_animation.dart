@@ -11,8 +11,6 @@ import '../services/beep_engine.dart';
 import '../theme/app_theme.dart';
 import 'movement_trajectory_forecast.dart';
 
-/// Un seul `_PositionLadder` reste monté pour tous les modes : la courbe ne
-/// se démonte jamais d'une consigne à l'autre, seule sa forme change.
 class MovementAnimation extends StatefulWidget {
   final SessionMode mode;
   final Position from;
@@ -521,7 +519,6 @@ class _PositionLadder extends StatefulWidget {
       originAt = lastBeatAt;
       originIdx = (flipped ? to : from).index.toDouble();
     } else {
-      // Pont : il rejoue la trajectoire que la prévision avait annoncée.
       final anchorAt = frozenAt ?? now;
       final anchorIdx = frozenIdx ?? to.index.toDouble();
       final bridgeMs = (bridgeGap?.inMilliseconds ?? _bridgeMs).toDouble();
@@ -570,7 +567,6 @@ class _PositionLadder extends StatefulWidget {
     }
 
     final elapsedMs0 = elapsed.inMilliseconds;
-    // Entre deux groupes, le curseur reste sur la position tenue.
     List<List<(DateTime, double)>> groupsAt(
             Position hold, List<HoldMove> moves, DateTime origin) =>
         [
@@ -1145,7 +1141,6 @@ List<({double t, double idx, bool isAnchor})>? scrollBeatsForTest({
   return [for (final b in beats) (t: b.t, idx: b.idx, isAnchor: b.isAnchor)];
 }
 
-/// Rend [complementaryBeatIntervalMs] neutre : extrapolation régulière.
 int _bpmOfRegularInterval(Duration beatDuration) {
   final ms = beatDuration.inMilliseconds;
   return ms <= 0 ? 60 : (60000 / ms).round();
