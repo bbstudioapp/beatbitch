@@ -891,6 +891,8 @@ class SessionController extends ChangeNotifier {
       }
 
       BackgroundsService.instance.clear();
+      _lastBackgroundContext = null;
+      _failBackgroundShown = false;
 
       if (_backgroundedDuringStart) {
         await _music?.pause();
@@ -1093,6 +1095,7 @@ class SessionController extends ChangeNotifier {
     // Après `_updateBreakPhase` : fenêtres disjointes.
     _updateMilestonePose();
     _checkSteps();
+    _refreshBackgroundTier();
     _speakPendingWhenFree();
     // Gel de l'effort pendant un break : pas de crédit hold/saliva/stamina/
     // mini-punition ni de marqueurs de progression.
@@ -1187,6 +1190,61 @@ class SessionController extends ChangeNotifier {
     return mode == SessionMode.hold && step.anchor != BeatAnchor.to;
   }
 
+  /// Palier de nudité du fond (`nu1`, `nu2`, `null` = lingerie) à [seconds] :
+  /// un tiers de la durée chacun, la montée et ce qui suit toujours en `nu2`.
+  @visibleForTesting
+  static String? backgroundTierFor(int seconds, Session session) {
+    final finish = session.silentFinishStartTime ?? session.finalStepTime;
+    final total = session.durationSeconds;
+    if ((finish != null && seconds >= finish) || seconds * 3 >= total * 2) {
+      return 'nu2';
+    }
+    return seconds * 3 >= total ? 'nu1' : null;
+  }
+
+  BackgroundContext? _lastBackgroundContext;
+  bool _failBackgroundShown = false;
+
+  void _pickBackground(BackgroundContext ctx) {
+    _lastBackgroundContext = ctx;
+    BackgroundsService.instance.pickForContext(ctx);
+  }
+
+  /// Le palier monte avec l'horloge, pas seulement aux changements de step.
+  void _refreshBackgroundTier() {
+    final last = _lastBackgroundContext;
+    if (last == null) return;
+    final tier = backgroundTierFor(elapsedSeconds, _session);
+    if (tier == null ||
+        (last.tier != null && tier.compareTo(last.tier!) <= 0)) {
+      return;
+    }
+    _pickBackground(BackgroundContext(
+      mode: last.mode,
+      position: last.position,
+      coach: last.coach,
+      phase: last.phase,
+      tier: tier,
+    ));
+  }
+
+  // Dérivé de l'état : tous les chemins d'échec (JE PEUX PAS, mini-punition,
+  // séance musicale) passent par `failing`.
+  @override
+  void notifyListeners() {
+    final failing = _state == SessionState.failing;
+    if (failing != _failBackgroundShown) {
+      if (failing) {
+        _failBackgroundShown = BackgroundsService.instance.pickFail(_coachTag);
+      } else {
+        _failBackgroundShown = false;
+        final last = _lastBackgroundContext;
+        if (last != null) BackgroundsService.instance.pickForContext(last);
+      }
+    }
+    super.notifyListeners();
+  }
+
   BackgroundContext _buildBackgroundContext(
     SessionStep step,
     SessionMode resolvedMode,
@@ -1206,6 +1264,7 @@ class SessionController extends ChangeNotifier {
       position: pos?.name,
       coach: _coachTag,
       phase: phase,
+      tier: backgroundTierFor(elapsedSeconds, _session),
     );
   }
 
@@ -1287,9 +1346,7 @@ class SessionController extends ChangeNotifier {
           duration: step.duration,
         );
         _armHoldVerifierIfHoldStep(step);
-        BackgroundsService.instance.pickForContext(
-          _buildBackgroundContext(step, resolvedMode),
-        );
+        _pickBackground(_buildBackgroundContext(step, resolvedMode));
         if (_music == null && step.text.isEmpty && previousConfig != null) {
           _maybeFireTransitionPhrase(previousConfig, step);
         }

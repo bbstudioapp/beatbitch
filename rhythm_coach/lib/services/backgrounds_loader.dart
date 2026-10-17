@@ -16,7 +16,7 @@ enum BackgroundMediaType {
 /// fermé : tout segment du basename qui n'appartient à aucune catégorie
 /// fait partie de l'`id`, pas des tags. Cela permet à l'`id` de contenir
 /// des `_` sans casser le parsing.
-enum BackgroundTagCategory { mode, position, coach, phase }
+enum BackgroundTagCategory { mode, position, coach, phase, tier }
 
 /// Vocabulaire de tags reconnus dans les noms de fichiers de fond.
 ///
@@ -61,6 +61,10 @@ class BackgroundTagVocabulary {
     // `post-final` = ce qui vient après (giclées résiduelles, MERCI).
     'final': BackgroundTagCategory.phase,
     'post-final': BackgroundTagCategory.phase,
+    'fail': BackgroundTagCategory.phase,
+    // Paliers de nudité : `nu1` = seins nus, `nu2` = nue. Sans tag = lingerie.
+    'nu1': BackgroundTagCategory.tier,
+    'nu2': BackgroundTagCategory.tier,
   };
 
   static BackgroundTagCategory? categorize(String tag) => _byTag[tag];
@@ -94,6 +98,16 @@ class BackgroundEntry {
   });
 
   bool get hasTags => tags.isNotEmpty;
+
+  /// Palier (`nu1` / `nu2`) porté par l'entrée, `null` en lingerie.
+  String? get tier => tagsByCategory[BackgroundTagCategory.tier]?.first;
+
+  // Le pack nomme ses transitions sans tag propre : palier + coach seuls.
+  bool get isTierTransition =>
+      tier != null &&
+      !tagsByCategory.containsKey(BackgroundTagCategory.mode) &&
+      !tagsByCategory.containsKey(BackgroundTagCategory.position) &&
+      !tagsByCategory.containsKey(BackgroundTagCategory.phase);
 }
 
 /// Bundle des fonds bundlés dans l'APK. Liste vide → fallback gracieux côté

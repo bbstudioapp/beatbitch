@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/backgrounds_loader.dart';
 import '../services/backgrounds_service.dart';
 import '../theme/app_theme.dart';
+import 'play_once_image.dart';
 
 /// Arrière-plan de `SessionScreen`. Affiche soit un média (image / GIF)
 /// fourni par `BackgroundsService.instance.current`, soit le placeholder
@@ -80,6 +81,11 @@ class _MediaBackground extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         switch (entry.type) {
+          _ when entry.isTierTransition => PlayOnceImage(
+              path: entry.path,
+              onDone: () =>
+                  BackgroundsService.instance.transitionFinished(entry),
+            ),
           BackgroundMediaType.image || BackgroundMediaType.gif => Image.asset(
               entry.path,
               fit: BoxFit.cover,
