@@ -96,8 +96,9 @@ void main() {
             expect(e.tags, isNot(contains(other)));
             expect(e.tier, tier, reason: '${e.path} @ $tier');
             if (c.phase != null) expect(e.tags, contains(c.phase));
-            if (c.position != null && c.phase == null)
+            if (c.position != null && c.phase == null) {
               expect(e.tags, contains(c.position));
+            }
           }
         }
       }
