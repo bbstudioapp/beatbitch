@@ -48,7 +48,7 @@ class AmbienceEngine {
   /// retentative).
   static const Duration _startTimeout = Duration(seconds: 3);
 
-  static const String finishMusicAsset = 'audio/finish_music.mp3';
+  static const String finishMusicAsset = 'audio/music/finish_music.mp3';
 
   /// Instant du fichier où la musique de finish atteint son sommet, calé sur
   /// le début du final.

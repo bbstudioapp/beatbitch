@@ -13,3 +13,5 @@ le préfixe R2 `music/v1/` est synchronisé ici avant chaque build.
 | `sous_pression` | `sous_pression.mp3` | 128,024 BPM | 0,247 s |
 
 Sans le fichier, la séance est absente de la liste — rien d'autre ne change.
+
+`finish_music.mp3` : musique de la montée finale (hors séance musicale), même préfixe R2.
