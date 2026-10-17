@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:beat_bitch/career/models/phrase_bank.dart';
 import 'package:beat_bitch/career/models/unlock_key.dart';
@@ -22,12 +23,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Entre deux tenues d'une punition, le curseur **affiché** remonte pendant la
-/// respiration : la lecture se fait sur ce que `MovementAnimation` dessine, pas
-/// sur l'état du moteur de bips.
+/// Ce que l'écran **dessine** pendant une punition, lu sur `MovementAnimation`
+/// et non sur l'état du moteur de bips : le curseur remonte pendant la
+/// respiration entre deux tenues, et la courbe dessine la punition, pas la
+/// suite de la séance.
 ///
-/// Deux routes portent la même chaîne de tenues : la punition générée en
-/// carrière (`deep_hold_chain` du `PunishmentBuilder`) et celle tirée dans
+/// La chaîne de tenues passe par deux routes : la punition générée en carrière
+/// (`deep_hold_chain` du `PunishmentBuilder`) et celle tirée dans
 /// `punishments.json` (Custom, scénarios). Le prix : temps réel, `Stopwatch`
 /// n'étant pas simulé par `flutter_test`.
 void main() {
@@ -123,7 +125,187 @@ void main() {
     expect(run.punishment.id, 'deep_hold_chain');
     _expectHoldBreathHold(run);
   }, timeout: const Timeout(Duration(seconds: 180)));
+
+  testWidgets(
+      'punition : la courbe dessine le rythme de la punition, pas la '
+      'respiration qui suit dans la séance', (tester) async {
+    _expectCurveFollowsPunishment(
+        await _playCurve(tester, (ctrl) => ctrl.triggerFail()));
+  }, timeout: const Timeout(Duration(seconds: 120)));
+
+  testWidgets(
+      'mini-punition : la courbe dessine le rythme de la punition, pas la '
+      'respiration qui suit dans la séance', (tester) async {
+    _expectCurveFollowsPunishment(await _playCurve(
+        tester, (ctrl) => ctrl.debugRunMiniPunishment(_rhythmPunishment)));
+  }, timeout: const Timeout(Duration(seconds: 120)));
 }
+
+void _expectCurveFollowsPunishment(List<_CurveSample> samples) {
+  expect(samples, isNotEmpty, reason: 'aucune image du rythme de punition');
+  final flat = samples.where((s) => s.aheadMax < Position.throat.index);
+  expect(flat, isEmpty,
+      reason: 'pendant le rythme tip→full de la punition, la courbe doit '
+          'monter jusqu\'en bas entre 1 et 3 s devant le curseur. Images '
+          'restées en haut (ms depuis le début de la punition : max) : '
+          '${flat.map((s) => '${s.ms}: ${s.aheadMax.toStringAsFixed(2)}').join(', ')}');
+}
+
+/// Image de la courbe pendant le rythme de la punition.
+class _CurveSample {
+  final int ms;
+
+  /// Point le plus profond peint entre 1 et 3 s devant le curseur.
+  final double aheadMax;
+  const _CurveSample(this.ms, this.aheadMax);
+}
+
+/// Le temps de la transition respiration → rythme : la courbe n'est pas
+/// jugée pendant le pont.
+const _curveSettleMs = 800;
+const _curveWindowEndMs = 4000;
+
+/// Lance [punish] juste avant la respiration de [_breathNextSession], puis lit
+/// la courbe pendant les premières secondes de [_rhythmPunishment]. Rend les
+/// images prises dans [_curveSettleMs, _curveWindowEndMs).
+Future<List<_CurveSample>> _playCurve(WidgetTester tester,
+    Future<void> Function(SessionController ctrl) punish) async {
+  tester.view.physicalSize = const Size(400, 1400);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+
+  await tester.pumpWidget(MaterialApp(
+    locale: const Locale('fr'),
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: SessionScreen(
+      session: _breathNextSession,
+      tts: TtsService(),
+      beep: _StateBeepEngine(),
+      ambience: _SilentAmbienceEngine(),
+      punishmentBundle: const PunishmentBundle(
+        failPhrases: ['raté'],
+        punishments: [_rhythmPunishment],
+      ),
+      randomComments: const RandomCommentsBundle(
+        comments: [],
+        minIntervalSeconds: 999,
+        maxIntervalSeconds: 999,
+        scriptedCooldownSeconds: 4,
+      ),
+      autoStart: true,
+      staminaProfile: List<double>.filled(700, 100.0),
+    ),
+  ));
+  await tester.pump();
+  final ctrl = Provider.of<SessionController>(
+      tester.element(find.byType(MovementAnimation)),
+      listen: false);
+
+  Future<void> slice() async {
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 100)));
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+
+  var guard = 0;
+  while (!(ctrl.isRunning &&
+      ctrl.hasConfig &&
+      ctrl.elapsed >= const Duration(milliseconds: 2500))) {
+    if (++guard > 100) fail('la séance ne démarre pas');
+    await slice();
+  }
+  expect(ctrl.elapsed, lessThan(const Duration(seconds: 4)),
+      reason: 'la punition doit tomber avant la respiration de la séance');
+  unawaited(punish(ctrl));
+
+  DateTime? startedAt;
+  final samples = <_CurveSample>[];
+  final deadline = DateTime.now().add(const Duration(seconds: 40));
+  while (DateTime.now().isBefore(deadline)) {
+    await slice();
+    if (ctrl.failPhase != FailPhase.punishment) {
+      if (startedAt != null) break;
+      continue;
+    }
+    final now = DateTime.now();
+    startedAt ??= now;
+    final ms = now.difference(startedAt).inMilliseconds;
+    if (ms >= _curveWindowEndMs) break;
+    if (ms < _curveSettleMs) continue;
+    expect(ctrl.currentMode, SessionMode.rhythm);
+    final ahead = _curve(tester).where((b) => b.$1 >= 1 / 3 && b.$1 <= 1);
+    samples.add(_CurveSample(
+        ms, ahead.isEmpty ? double.nan : ahead.map((b) => b.$2).reduce(max)));
+  }
+  expect(startedAt, isNotNull, reason: 'la punition ne démarre pas');
+
+  unawaited(ctrl.triggerFail());
+  for (var i = 0; i < 50 && ctrl.failPhase != null; i++) {
+    await slice();
+  }
+  // Le saut de section relance un step sans l'attendre : son délai de
+  // transition est une minuterie simulée, à écouler avant le démontage.
+  await tester.pump(const Duration(seconds: 2));
+  await tester.pumpWidget(const SizedBox());
+  await tester
+      .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+  return samples;
+}
+
+/// Points de la courbe peinte : (t ∈ [0,1] de la fenêtre de 3 s, idx).
+List<(double, double)> _curve(WidgetTester tester) {
+  for (final cp in tester.widgetList<CustomPaint>(find.byType(CustomPaint))) {
+    final p = cp.painter;
+    if (p != null && p.runtimeType.toString() == '_TrajectoryPainter') {
+      return [
+        for (final b in (p as dynamic).beats as List)
+          ((b as dynamic).t as double, b.idx as double),
+      ];
+    }
+  }
+  return const [];
+}
+
+const _breathNextSession = Session(
+  id: 'respiration-ensuite',
+  name: 'respiration-ensuite',
+  description: '',
+  durationSeconds: 600,
+  defaultMode: SessionMode.rhythm,
+  steps: [
+    SessionStep(
+      time: 0,
+      mode: SessionMode.rhythm,
+      bpm: 60,
+      from: Position.head,
+      to: Position.throat,
+    ),
+    SessionStep(time: 4, mode: SessionMode.breath),
+    SessionStep(
+      time: 60,
+      mode: SessionMode.rhythm,
+      bpm: 60,
+      from: Position.head,
+      to: Position.throat,
+    ),
+  ],
+);
+
+const _rhythmPunishment = Punishment(
+  id: 'rythme',
+  name: 'rythme',
+  durationSeconds: 8,
+  steps: [
+    SessionStep(
+      time: 0,
+      mode: SessionMode.rhythm,
+      bpm: 90,
+      from: Position.tip,
+      to: Position.full,
+    ),
+  ],
+);
 
 const _unusedPunishment = Punishment(
   id: 'unused',
@@ -221,7 +403,7 @@ Future<_Played> _play(
       ),
       autoStart: true,
       // Profil d'endurance haut : la respiration qui précède la punition
-      // dure 3 à 5 s au lieu de 8 à 15 s.
+      // prend sa durée courte.
       staminaProfile: List<double>.filled(700, 100.0),
       // Sans phrase bank ni profil de capacités, `triggerFail` retombe sur
       // `punishments.json` : c'est la seule différence entre les deux routes.
@@ -337,8 +519,7 @@ PhraseBank _bank() => PhraseBank(
       intros: _entries(['intro']),
     );
 
-/// Confort de 3 s sur les deux tenues profondes : la chaîne dure 10 s au lieu
-/// de 26 s.
+/// Confort court sur les deux tenues profondes : la chaîne en est raccourcie.
 CapabilityProfile _profile() => const CapabilityProfile({
       CapabilityAxis.holdThroatStreak: CapabilityAxisState(best: 3, comfort: 3),
       CapabilityAxis.holdFullStreak: CapabilityAxisState(best: 3, comfort: 3),
