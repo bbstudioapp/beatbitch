@@ -243,6 +243,27 @@ void main() {
       expect(await profileKeys(), before,
           reason: 'la clôture a écrit dans le profil après dispose()');
     });
+
+    test('ne coupe ni le BeepEngine, ni le morceau, ni le wakelock partagés',
+        () async {
+      final b = _Bench(music: true);
+      await b.ctrl.start();
+      b.ctrl.dispose();
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      final beepStops = b.beep.stops;
+      final musicStops = b.port.stops;
+      final wakelockDisables = wakelock.disables;
+
+      await _guarded((_) => b.ctrl.debugFinishSuccess());
+
+      expect(b.beep.stops - beepStops, 1,
+          reason: "seul l'arrêt de la porte de debug : _finish ne coupe pas le "
+              'BeepEngine de la séance suivante');
+      expect(b.port.stops, musicStops,
+          reason: 'la clôture a arrêté un morceau après dispose()');
+      expect(wakelock.disables, wakelockDisables,
+          reason: 'la clôture a relâché le wakelock après dispose()');
+    });
   });
 }
 
@@ -298,6 +319,7 @@ class _Gate {
 class _Wakelock {
   final gate = _Gate();
   int enables = 0;
+  int disables = 0;
   bool on = false;
 
   /// `on` suit l'ordre de **résolution** des appels : un `enable` lent qui
@@ -306,6 +328,8 @@ class _Wakelock {
     if (enable) {
       enables++;
       await gate.pass();
+    } else {
+      disables++;
     }
     on = enable;
   }
@@ -362,6 +386,7 @@ class _GatedTts extends TtsService {
 class _GatedBeep extends BeepEngine {
   final gate = _Gate();
   int initCalls = 0;
+  int stops = 0;
   final List<SessionStep> applied = [];
   SessionMusic? attachedTrack;
 
@@ -393,7 +418,10 @@ class _GatedBeep extends BeepEngine {
   @override
   Future<void> resume() async {}
   @override
-  Future<void> stop() async {}
+  Future<void> stop() async {
+    stops++;
+  }
+
   @override
   Future<void> dispose() async {}
 }
@@ -406,6 +434,7 @@ class _GatedPort implements MusicPlayerPort {
   bool created = false;
   bool playing = false;
   int loads = 0;
+  int stops = 0;
 
   @override
   Stream<Duration> get positions {
@@ -435,6 +464,7 @@ class _GatedPort implements MusicPlayerPort {
 
   @override
   Future<void> stop() async {
+    stops++;
     playing = false;
   }
 
