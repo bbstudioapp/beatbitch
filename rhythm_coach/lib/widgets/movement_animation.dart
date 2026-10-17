@@ -1472,8 +1472,12 @@ class _Shaft extends StatelessWidget {
     final probe = _probes[bundle] ??= _ShaftProbe(bundle);
     return FutureBuilder<bool>(
       future: probe.available,
-      builder: (context, snapshot) =>
-          snapshot.data == true ? _image() : const _ShaftBackdrop(),
+      initialData: probe.known,
+      builder: (context, snapshot) => switch (snapshot.data) {
+        true => _image(),
+        false => const _ShaftBackdrop(),
+        null => const SizedBox.shrink(),
+      },
     );
   }
 
@@ -1509,12 +1513,13 @@ class _Shaft extends StatelessWidget {
 }
 
 class _ShaftProbe {
+  bool? known;
   late final Future<bool> available;
 
   _ShaftProbe(AssetBundle bundle) {
     // flutter_test sans asset : `load` lève avant de rendre un Future.
     available = Future.sync(() => bundle.load(_Shaft.asset))
-        .then((_) => true, onError: (_) => false);
+        .then((_) => known = true, onError: (_) => known = false);
   }
 }
 
