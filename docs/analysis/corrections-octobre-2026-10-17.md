@@ -178,3 +178,22 @@ passer d'instant de séance à la courbe. Mutation M2 (garde réduite à `FailPh
 - [déduit] Réserve `_recompute` / `_pausedAt` : non sondée (§1).
 - [mesuré] Le saut de section garde la fraction de seconde du FAIL (`_skipToNextSection` avance de
   secondes entières : reprise à 4,5 s pour un step à 4 s). Préexistant, sans effet mesuré ici.
+
+## Finition
+
+[mesuré] Suite complète : 1377 verts (1374 + 3 tests neufs), `flutter analyze` « No issues found! », `dart format` sans écart.
+
+**`fecf23d`, option B (décision de Manu, 17/10).** Le bandeau « Punition — <nom> » et l'état *failing* tombent à l'instant où le moteur reprend le loop, pas 600 ms après.
+- Rouge sur l'état d'avant, deux routes (mini-punition, FAIL sans section suivante) : 4 images où l'écran montre le rythme alors que le contrôleur est encore en `failing`.
+- Correctif : `_restorePreviousLoop` pose `_failPhase = null`, `_currentPunishment = null`, `_state = running` avant `_notify()` et avant d'attendre `applyStep`.
+- [déduit] Lecteurs de l'état vérifiés : la bascule ouvre une fenêtre de ~600 ms où `isRunning` est vrai alors que l'horloge est gelée. `isFailFlowActive` (dérivé de `_failActive`, qui tombe au `finally`) ferme cette fenêtre pour : la garde `upcomingSteps` de la courbe (sinon les épingles de `8b10083` reposeraient sur une horloge gelée), `pause()`, `canTriggerFail`, le bouton principal, « Utilise-moi » et « terminer maintenant ».
+- [mesuré] La garde de courbe est tenue : remplacée par `isFailing`, le banc devient rouge (4 images où la courbe annonce la suite).
+- Effet de bord assumé : `pause()` et `canTriggerFail` refusent aussi dans l'intervalle qui précède `failing` (arrêt du TTS borné), jusque-là ouvert.
+- Le banc `session_punishment_breath_screen_test` attendait la fin du flow sur `failPhase != null` ; il attend `isFailFlowActive` (la phase tombe désormais au début du délai).
+
+**Trois trous de test** (aucun changement de comportement), chacun vu rouge sous sa mutation, restaurée par copie, `cmp` vert :
+- `8b10083` : `movement_epingles_frontiere_test.dart`, mutation « épingles vidées seulement si liste vide » → 1482 ms au lieu de 2600 ms.
+- `c96bbe4` : `beep_engine_hold_swing_pause_test.dart`, mutation « `_holdElapsedMs = 0` retiré de la branche swing » → aller-retour attendu à 1500 ms absent (bips à 801 et 1301 ms).
+- `1ef5068` : `finish_music_test.dart`, mutation « bump de génération inconditionnel » → le premier fondu rend la main après 102 ms au lieu de ≥ 500 ms.
+
+**Commentaires.** Comparaison du code hors lignes de commentaire entières, avant/après : identique pour les quatre fichiers. `session_controller_fail_flow.dart` : ~150 lignes de récit retirées (diagramme d'en-tête, références `issue #77`, `Phase 4/5`, `§3/§6`, `§7`, décisions). `ambience_engine.dart` : paragraphes de justification ramenés à une ou deux lignes. `beep_engine.dart`, `movement_animation.dart` : déjà presque tous des « pourquoi » d'une ligne ; seuls les *quoi* retirés. Le `removeWhere` de `8b10083` n'était pas formaté (la CI aurait échoué sur `--set-exit-if-changed`) : commit `style` séparé.
