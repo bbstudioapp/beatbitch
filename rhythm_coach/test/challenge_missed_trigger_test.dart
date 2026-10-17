@@ -190,7 +190,10 @@ class _LoggingBeepEngine extends BeepEngine {
   @override
   Future<void> init() async {}
   @override
-  Future<void> applyStep(SessionStep step, SessionMode sessionMode) async {
+  Future<void> applyStep(
+    SessionStep step,
+    SessionMode sessionMode,
+  ) async {
     applied.add(step);
   }
 

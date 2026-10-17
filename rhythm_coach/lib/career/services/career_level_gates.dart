@@ -104,6 +104,62 @@ class CareerLevelGates {
   /// [defaultMaxDepthIndex] (= full ouvert) — `_clampToCapability` côté
   /// générateur évite que le tirage déborde, le profil se remplira sur
   /// les premières séances.
+  /// Chantier aimant (2026-08-20) : niveau de carrière à partir duquel
+  /// l'ancre du geste rythmé peut se poser sur `to` plutôt que rester
+  /// systématiquement sur `from`. Aucun seuil n'a été chiffré par Manu
+  /// (« de base les from, mais sur les niveaux plus élevés sur les to ») —
+  /// valeur interprétée, à valider par lui. Cf. rapport
+  /// chantier-aimant-étape-3.
+  static const int rhythmAnchorToFloorLevel = 10;
+
+  /// Force par défaut de l'aimant rythmé — schéma 3:1 de Manu (intervalle
+  /// 1,5T sur la position ancrée, 0,5T sur l'autre).
+  static const int rhythmAnchorDefaultRatio = 3;
+
+  /// BPM à partir duquel un step rythmé généré compte comme « difficile
+  /// dans l'instant » pour la bascule d'ancre au-dessus du plancher —
+  /// milieu de la plage `[60,140]` tirée par `RhythmRules.build`.
+  static const int rhythmAnchorHarderBpmThreshold = 100;
+
+  /// Décide l'ancrage d'un step rythmé généré. Sous
+  /// [rhythmAnchorToFloorLevel], l'ancre reste toujours `from`. Au-dessus,
+  /// elle bascule sur `to` pour les steps dont le bpm dépasse
+  /// [rhythmAnchorHarderBpmThreshold] (proxy de la difficulté du moment
+  /// dans la séance) — donc elle alterne d'un step à l'autre au sein d'une
+  /// même séance. Interprétation de la consigne de Manu, cf. rapport
+  /// chantier-aimant-étape-3 : les deux conditions cumulées (plancher +
+  /// alternance par difficulté) ne sont pas sa parole telle quelle.
+  static BeatAnchor rhythmAnchorFor({required int level, required int? bpm}) {
+    if (level < rhythmAnchorToFloorLevel) return BeatAnchor.from;
+    return (bpm ?? 0) >= rhythmAnchorHarderBpmThreshold
+        ? BeatAnchor.to
+        : BeatAnchor.from;
+  }
+
+  /// Force de l'aimant du final `hold` ancré (chantier aimant étape 4,
+  /// 2026-08-21) — Manu : « ok très dur dans ce cas ». Reprend telle quelle
+  /// l'illustration montrée à Manu à 60 bpm (~1,8 s sur l'ancre, ~0,2 s sur
+  /// l'autre ⇒ 9:1) : le chiffre n'a pas été validé à l'oreille, cf. rapport.
+  static const int holdFinalAnchorRatio = 9;
+
+  /// BPM qui cadence les allers-retours du final `hold` ancré — repris de
+  /// la même illustration que [holdFinalAnchorRatio], pas confirmé comme
+  /// valeur de production.
+  static const int holdFinalAnchorBpm = 60;
+
+  /// Vrai quand le final `hold` de la séance peut recevoir l'ancrage « très
+  /// dur » sur `to` (chantier aimant étape 4). Réutilise le même plancher
+  /// que [rhythmAnchorToFloorLevel] plutôt qu'un nouveau chiffre : Manu n'a
+  /// jamais levé la restriction « l'ancrage au fond » pour les profils
+  /// débutants, et c'est la même restriction ici — le final n'est qu'une
+  /// deuxième source qui la déclenche. Faux quand [to] est `tip` (index 0) :
+  /// il n'existe pas de position plus aiguë pour l'aller-retour.
+  static bool holdFinalAnchorEligible({
+    required int level,
+    required Position? to,
+  }) =>
+      level >= rhythmAnchorToFloorLevel && to != null && to.index > 0;
+
   static int maxDepthIndexForProfile(CapabilityProfile? profile) {
     if (profile == null) return defaultMaxDepthIndex();
     final comfort = profile.comfortOf(CapabilityAxis.rhythmDepthMax);

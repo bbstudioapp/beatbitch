@@ -198,7 +198,10 @@ class _SilentBeepEngine extends BeepEngine {
   @override
   Future<void> init() async {}
   @override
-  Future<void> applyStep(SessionStep step, SessionMode sessionMode) async {}
+  Future<void> applyStep(
+    SessionStep step,
+    SessionMode sessionMode,
+  ) async {}
   @override
   Future<void> pause() async {}
   @override

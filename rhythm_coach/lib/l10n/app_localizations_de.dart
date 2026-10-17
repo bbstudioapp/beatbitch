@@ -2215,6 +2215,34 @@ class AppLocalizationsDe extends AppLocalizations {
       'Begrenzt die Dauer von Holds und gehaltenen Bitten.';
 
   @override
+  String get customAnchorLabel => 'Magnet';
+
+  @override
+  String get customAnchorHint =>
+      'Der Schlag verweilt auf einer Position und schnellt zur anderen zurück. Aus bleibt das Metronom gleichmäßig.';
+
+  @override
+  String get customAnchorStrengthLabel => 'Stärke';
+
+  @override
+  String get customAnchorStrengthLight => 'Leicht';
+
+  @override
+  String get customAnchorStrengthMedium => 'Mittel';
+
+  @override
+  String get customAnchorStrengthHard => 'Hart';
+
+  @override
+  String get customAnchorPointLabel => 'Gehaltene Position';
+
+  @override
+  String get customAnchorPointFrom => 'Anfang';
+
+  @override
+  String get customAnchorPointTo => 'Ende';
+
+  @override
   String get customSaveAndLaunch => 'Speichern und starten';
 
   @override

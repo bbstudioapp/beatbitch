@@ -199,6 +199,31 @@ void main() {
       // négatif imputé de plein droit, §5.3).
       expect(report.sessionCeilings[CapabilityAxis.noswallowStreak], 10.0);
     });
+
+    test(
+        'hold.full.streak et hold.throat.streak s\'alimentent encore quand '
+        'le hold porte un bpm (final ancré, chantier aimant étape 4)', () {
+      // Un final `hold` ancré (CareerLevelGates.holdFinalAnchorEligible)
+      // porte désormais un bpm non-null (holdFinalAnchorBpm) — chose qu'un
+      // hold ordinaire ne fait jamais. `onStepApplied`/`onTickSecond` ne
+      // doivent pas s'appuyer sur `bpm == null` pour reconnaître un hold :
+      // Manu a été explicite (« oui ça compte ») sur le fait que ces deux
+      // axes pilotants restent alimentés même quand la tenue n'est plus
+      // strictement immobile.
+      final full = CapabilityTracker()..onSessionStart();
+      full.onStepApplied(
+          mode: SessionMode.hold, to: Position.full, bpm: 60, duration: 20);
+      _tick(full, 20);
+      final fullReport = full.finalizeReport();
+      expect(fullReport.reached[CapabilityAxis.holdFullStreak], 20.0);
+
+      final throat = CapabilityTracker()..onSessionStart();
+      throat.onStepApplied(
+          mode: SessionMode.hold, to: Position.throat, bpm: 60, duration: 15);
+      _tick(throat, 15);
+      final throatReport = throat.finalizeReport();
+      expect(throatReport.reached[CapabilityAxis.holdThroatStreak], 15.0);
+    });
   });
 
   group('CapabilityService', () {

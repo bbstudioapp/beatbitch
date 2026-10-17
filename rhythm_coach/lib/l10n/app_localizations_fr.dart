@@ -2215,6 +2215,34 @@ class AppLocalizationsFr extends AppLocalizations {
       'Borne la durée des holds et des supplications tenues.';
 
   @override
+  String get customAnchorLabel => 'Aimant';
+
+  @override
+  String get customAnchorHint =>
+      'Le battement retient une position et repart vite vers l\'autre. Éteint, le métronome reste régulier.';
+
+  @override
+  String get customAnchorStrengthLabel => 'Force';
+
+  @override
+  String get customAnchorStrengthLight => 'Léger';
+
+  @override
+  String get customAnchorStrengthMedium => 'Moyen';
+
+  @override
+  String get customAnchorStrengthHard => 'Dur';
+
+  @override
+  String get customAnchorPointLabel => 'Position retenue';
+
+  @override
+  String get customAnchorPointFrom => 'Départ';
+
+  @override
+  String get customAnchorPointTo => 'Arrivée';
+
+  @override
   String get customSaveAndLaunch => 'Enregistrer et lancer';
 
   @override

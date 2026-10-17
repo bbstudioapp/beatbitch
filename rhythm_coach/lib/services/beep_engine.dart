@@ -177,6 +177,15 @@ class BeepEngine {
   /// `applyStep` / `startRhythmDemo` / `startLickDemo`.
   bool _alternateToggle = true;
 
+  /// Point d'ancrage du loop rythmé courant. `none` = intervalles réguliers.
+  /// Réglé par [applyStep] depuis `step.anchor`, ou remis à `none` par
+  /// [startRhythmDemo] / [startLickDemo].
+  BeatAnchor _anchor = BeatAnchor.none;
+
+  /// Force de l'ancrage — cf. [_intervalAfter]. `1` = régulier quel que
+  /// soit `_anchor`.
+  int _ratio = 1;
+
   /// Hand : alternance down/up indépendante du toggle de position.
   /// Utilisé seulement quand `_to` est null ou égal à `_from` (pas
   /// d'amplitude → on dérive le sens du stroke d'un compteur dédié).
@@ -359,7 +368,16 @@ class BeepEngine {
 
   /// Applique une étape au moteur. Les étapes text-only sont ignorées
   /// (elles ne touchent pas au loop courant).
-  Future<void> applyStep(SessionStep step, SessionMode sessionMode) async {
+  ///
+  /// Ancrage du loop rythmé (cf. [_intervalAfter]) : porté par `step.anchor`
+  /// / `step.ratio` plutôt qu'en paramètre — l'info doit survivre à la
+  /// sérialisation et aux chemins de reprise (fail flow, défis), qui
+  /// rejouent un `SessionStep` déjà construit sans repasser par l'appelant
+  /// d'origine.
+  Future<void> applyStep(
+    SessionStep step,
+    SessionMode sessionMode,
+  ) async {
     if (step.isTextOnly) return;
     _stepSerial++;
     if (!_initialized) await init();
@@ -373,6 +391,8 @@ class BeepEngine {
     final mode = resolved.mode;
     final previousMode = _mode;
     _mode = mode;
+    _anchor = step.anchor;
+    _ratio = step.ratio;
     _bpm = resolved.bpm;
     // Rampe BPM intra-step : on n'arme `_bpmEnd` / `_loopDurationMs` que
     // si la valeur cible est explicitement différente du BPM de départ ET
@@ -435,7 +455,17 @@ class BeepEngine {
       case SessionMode.biffle:
         _startBiffleLoop();
       case SessionMode.hold:
-        _playHoldOneShot(_from);
+        // Final ancré (chantier aimant étape 4) : `_to` porte la position
+        // tenue (convention hold), `_anchor == to` signale que le
+        // générateur a choisi d'y poser l'aimant très dur. `_to!.index > 0`
+        // exclu par construction côté générateur (`holdFinalAnchorEligible`)
+        // mais revérifié ici : sans position plus aiguë, pas d'aller-retour
+        // possible.
+        if (_anchor == BeatAnchor.to && _to != null && _to!.index > 0) {
+          _startHoldSwingLoop(_to!);
+        } else {
+          _playHoldOneShot(_from);
+        }
       case SessionMode.breath:
         _playBreathOneShot();
       case SessionMode.freestyle:
@@ -502,29 +532,23 @@ class BeepEngine {
   void _startBeatLoop({required double volume}) {
     final myGen = ++_loopGen;
     final startMs = DateTime.now().millisecondsSinceEpoch;
-    _emitPositionBeat(volume);
-    // `lastTargetMs` accumule les intervalles idéaux successifs. Sans
-    // rampe, `currentInterval` est constant et on retrouve le calcul
-    // historique `startMs + n × intervalMs`. Avec rampe, l'intervalle
-    // change à chaque tick (cf. `_currentInterpolatedBpm`), donc on cumule
-    // explicitement plutôt que d'utiliser `n * intervalMs`.
+    // `lastTargetMs` accumule les intervalles réels successifs plutôt que
+    // `startMs + n × intervalMs` : la rampe BPM et l'ancrage font tous deux
+    // varier l'intervalle tick à tick (cf. `_currentInterpolatedBpm`,
+    // `_intervalAfter`), donc la formule à pas constant ne tient plus.
     var lastTargetMs = startMs;
-    void scheduleNext() {
+    void tick() {
       if (myGen != _loopGen) return;
       final elapsedMs = lastTargetMs - startMs;
       final currentBpm = _currentInterpolatedBpm(elapsedMs);
-      final intervalMs = (60000 / currentBpm).round();
+      final intervalMs = _emitPositionBeat(volume, currentBpm);
       lastTargetMs += intervalMs;
       final delayMs =
           max(1, lastTargetMs - DateTime.now().millisecondsSinceEpoch);
-      _loopTimer = Timer(Duration(milliseconds: delayMs), () {
-        if (myGen != _loopGen) return;
-        _emitPositionBeat(volume);
-        scheduleNext();
-      });
+      _loopTimer = Timer(Duration(milliseconds: delayMs), tick);
     }
 
-    scheduleNext();
+    tick();
   }
 
   /// BPM courant à `elapsedMs` du démarrage du loop. Retourne `_bpm`
@@ -543,15 +567,102 @@ class BeepEngine {
     return _bpm + (bpmEnd - _bpm) * t;
   }
 
-  void _emitPositionBeat(double baseVolume) {
+  /// Émet un battement de position (rhythm/lick/hand) et renvoie
+  /// l'intervalle jusqu'au prochain, en ms — cf. [_intervalAfter].
+  int _emitPositionBeat(double baseVolume, double currentBpm) {
     final pos = _pickPosition();
+    final intervalMs = _intervalAfter(pos, currentBpm);
     if (_mode == SessionMode.hand) {
       final (asset, vol) = _resolveHandBeat(pos, baseVolume);
       _trigger(asset, vol);
     } else {
       _trigger(_assetForPosition(pos), baseVolume);
     }
-    _notifyBeat(_mode, pos);
+    _notifyBeat(_mode, pos, Duration(milliseconds: intervalMs), currentBpm);
+    return intervalMs;
+  }
+
+  /// Intervalle régulier `T = 60000/bpm` — comportement historique, sans
+  /// ancrage.
+  int _regularInterval(double bpm) => (60000 / bpm).round();
+
+  /// Intervalle jusqu'au prochain battement sachant que celui-ci vient de
+  /// jouer [emittedPos]. Sans ancrage (ou `ratio == 1`) : intervalle
+  /// régulier. Avec ancrage : l'intervalle qui suit la position ancrée est
+  /// le long (`2T × ratio/(ratio+1)`) ; le court se déduit du long par
+  /// soustraction plutôt qu'un arrondi indépendant, pour que leur somme
+  /// reste exactement `2T` arrondi.
+  int _intervalAfter(Position emittedPos, double bpm) {
+    final to = _to;
+    // Sans amplitude, `_pickPosition` renvoie toujours `_from` : ancrer
+    // rendrait *tous* les intervalles longs (ou tous courts) et le cycle ne
+    // vaudrait plus `2T`. Un `ratio` ≤ 1 donnerait un intervalle nul ou
+    // négatif.
+    if (_anchor == BeatAnchor.none ||
+        _ratio <= 1 ||
+        to == null ||
+        to == _from) {
+      return _regularInterval(bpm);
+    }
+    final fullCycle = 2 * 60000 / bpm;
+    final fullCycleMs = fullCycle.round();
+    final longMs = (fullCycle * _ratio / (_ratio + 1)).round();
+    final isAnchored = (_anchor == BeatAnchor.from && emittedPos == _from) ||
+        (_anchor == BeatAnchor.to && emittedPos == _to);
+    return isAnchored ? longMs : fullCycleMs - longMs;
+  }
+
+  /// Sonde de test : configure le loop rythmé (from/to/mode/ancrage) sans
+  /// démarrer de Timer, pour piloter les battements un à un via
+  /// [emitOneBeatForTest].
+  @visibleForTesting
+  void configureBeatSourceForTest({
+    required SessionMode mode,
+    required Position from,
+    required Position? to,
+    BeatAnchor anchor = BeatAnchor.none,
+    int ratio = 1,
+  }) {
+    _mode = mode;
+    _from = from;
+    _to = to;
+    _anchor = anchor;
+    _ratio = ratio;
+    _alternateToggle = true;
+  }
+
+  /// Sonde de test : émet un battement via le même `_emitPositionBeat` que
+  /// la boucle réelle, sans audio (les pools ne sont pas chargées tant que
+  /// `init()` n'a pas tourné, donc `_trigger` ne fait rien) — sur
+  /// `beatStream` comme sur `onBeat`. Renvoie l'intervalle jusqu'au
+  /// prochain.
+  @visibleForTesting
+  Duration emitOneBeatForTest(double bpm) =>
+      Duration(milliseconds: _emitPositionBeat(_rhythmVolume, bpm));
+
+  /// Sonde de test : simule [count] battements du loop rythmé d'un coup.
+  /// Renvoie les `BeatEvent` produits, dans l'ordre — capturés via `onBeat`
+  /// (synchrone), pas `beatStream` (broadcast asynchrone).
+  @visibleForTesting
+  List<BeatEvent> simulateBeatsForTest({
+    required SessionMode mode,
+    required Position from,
+    required Position? to,
+    required double bpm,
+    BeatAnchor anchor = BeatAnchor.none,
+    int ratio = 1,
+    required int count,
+  }) {
+    configureBeatSourceForTest(
+        mode: mode, from: from, to: to, anchor: anchor, ratio: ratio);
+    final events = <BeatEvent>[];
+    final previousOnBeat = onBeat;
+    onBeat = events.add;
+    for (var i = 0; i < count; i++) {
+      emitOneBeatForTest(bpm);
+    }
+    onBeat = previousOnBeat;
+    return events;
   }
 
   /// Choisit le sample (down/up) et son volume pour un beat de hand.
@@ -584,11 +695,19 @@ class BeepEngine {
     return (_handUpAsset, baseVolume * 0.85);
   }
 
-  void _notifyBeat(SessionMode mode, Position pos) {
+  void _notifyBeat(
+      SessionMode mode, Position pos, Duration nextInterval, double bpm) {
     // Pour rhythm/lick/hand : pos = la position effectivement jouée ce beat
     // (alternance from/to). Pour biffle : on fournit `to` si dispo, sinon
     // `from`, à titre informatif (pas de notion de profondeur acoustique).
-    final event = BeatEvent(mode: mode, position: pos, from: _from, to: _to);
+    final event = BeatEvent(
+      mode: mode,
+      position: pos,
+      from: _from,
+      to: _to,
+      nextInterval: nextInterval,
+      bpm: bpm,
+    );
     onBeat?.call(event);
     if (!_beatController.isClosed) _beatController.add(event);
   }
@@ -612,35 +731,120 @@ class BeepEngine {
   void _startBiffleLoop() {
     final myGen = ++_loopGen;
     final startMs = DateTime.now().millisecondsSinceEpoch;
-    _trigger(_biffleAsset, _rhythmVolume);
-    _notifyBeat(SessionMode.biffle, _to ?? _from);
     // Cumul des intervalles successifs (cf. `_startBeatLoop`) — supporte
     // la rampe BPM intra-step quand `_bpmEnd` / `_loopDurationMs` sont
-    // armés. Comportement strictement identique sans rampe.
+    // armés. Comportement strictement identique sans rampe. Biffle ne
+    // connaît pas l'ancrage : toujours l'intervalle régulier.
     var lastTargetMs = startMs;
-    void scheduleNext() {
+    void tick() {
       if (myGen != _loopGen) return;
       final elapsedMs = lastTargetMs - startMs;
       final currentBpm = _currentInterpolatedBpm(elapsedMs);
-      final intervalMs = (60000 / currentBpm).round();
+      final intervalMs = _regularInterval(currentBpm);
+      _trigger(_biffleAsset, _rhythmVolume);
+      _notifyBeat(SessionMode.biffle, _to ?? _from,
+          Duration(milliseconds: intervalMs), currentBpm);
       lastTargetMs += intervalMs;
       final delayMs =
           max(1, lastTargetMs - DateTime.now().millisecondsSinceEpoch);
-      _loopTimer = Timer(Duration(milliseconds: delayMs), () {
-        if (myGen != _loopGen) return;
-        _trigger(_biffleAsset, _rhythmVolume);
-        _notifyBeat(SessionMode.biffle, _to ?? _from);
-        scheduleNext();
-      });
+      _loopTimer = Timer(Duration(milliseconds: delayMs), tick);
     }
 
-    scheduleNext();
+    tick();
   }
 
   void _playHoldOneShot(Position position) {
     _trigger(_assetForPosition(position), _rhythmVolume);
     _trigger(_holdAsset, _holdLayerVolume);
   }
+
+  /// Nombre d'allers-retours joués par un final `hold` ancré avant que la
+  /// tenue ne redevienne immobile pour le reste de sa durée (chantier
+  /// aimant étape 4). Manu : « seulement 3 ou 4 ensuite on reste sur le
+  /// hold normal » — fourchette jamais tranchée par lui à l'oreille ;
+  /// fixé au haut de la fourchette plutôt que tiré au hasard (RNG côté
+  /// génération, hors de portée de ce moteur de lecture). Cf. rapport.
+  static const int _holdFinalAnchorSwings = 4;
+
+  /// Séquence pure (position, intervalle en ms jusqu'à ce beat) d'un final
+  /// `hold` ancré : [swings] allers-retours entre [anchorPos] et la
+  /// position un cran plus aiguë. Même arithmétique long/court que
+  /// [_intervalAfter] (le court se déduit du long par soustraction — cf.
+  /// doc de [_intervalAfter] pour l'invariant `2T`), mais **volontairement
+  /// dupliquée plutôt que réutilisée** : [_intervalAfter] lit les champs
+  /// globaux `_from`/`_to`/`_anchor`, qu'on ne veut pas dévier le temps du
+  /// swing — `_from` reste égal à la position tenue pendant tout le step
+  /// (c'est lui que lisent les ticks stats/capacités via [currentFrom]),
+  /// jamais la position haute du swing.
+  ///
+  /// Pure — aucun Timer, aucun état mutable lu ou écrit. Exposée via
+  /// [holdSwingSequenceForTest] pour être pilotée sans horloge réelle.
+  List<(Position, int)> _holdSwingSequence({
+    required Position anchorPos,
+    required double bpm,
+    required int ratio,
+    required int swings,
+  }) {
+    final upPos = Position.values[anchorPos.index - 1];
+    final fullCycle = 2 * 60000 / bpm;
+    final longMs = (fullCycle * ratio / (ratio + 1)).round();
+    final shortMs = fullCycle.round() - longMs;
+    final out = <(Position, int)>[];
+    for (var i = 0; i < swings; i++) {
+      // On vient de sonner `anchorPos` (one-shot ou retour précédent) :
+      // l'ancre retient, l'intervalle avant de la quitter est le long.
+      out.add((upPos, longMs));
+      // On vient de sonner la position haute : retour rapide, court.
+      out.add((anchorPos, shortMs));
+    }
+    return out;
+  }
+
+  /// Lance le final `hold` ancré : one-shot d'arrivée sur [anchorPos]
+  /// (identique à [_playHoldOneShot] — un final non ancré ne change pas de
+  /// comportement), puis [_holdFinalAnchorSwings] allers-retours cadencés
+  /// par `_bpm`/`_ratio`. S'arrête de lui-même après le dernier retour :
+  /// pas de Timer à annuler pour « geler » le hold, il n'y en a
+  /// simplement plus — le hold redevient silencieux et immobile, comme un
+  /// hold classique.
+  void _startHoldSwingLoop(Position anchorPos) {
+    _playHoldOneShot(anchorPos);
+    final sequence = _holdSwingSequence(
+      anchorPos: anchorPos,
+      bpm: _bpm.toDouble(),
+      ratio: _ratio,
+      swings: _holdFinalAnchorSwings,
+    );
+    final myGen = ++_loopGen;
+    var lastTargetMs = DateTime.now().millisecondsSinceEpoch;
+    void scheduleAt(int i) {
+      if (myGen != _loopGen || i >= sequence.length) return;
+      final (pos, intervalMs) = sequence[i];
+      lastTargetMs += intervalMs;
+      final delayMs =
+          max(1, lastTargetMs - DateTime.now().millisecondsSinceEpoch);
+      _loopTimer = Timer(Duration(milliseconds: delayMs), () {
+        if (myGen != _loopGen) return;
+        _trigger(_assetForPosition(pos), _rhythmVolume);
+        scheduleAt(i + 1);
+      });
+    }
+
+    scheduleAt(0);
+  }
+
+  /// Sonde de test : expose [_holdSwingSequence] sans Timer réel, pour
+  /// piloter le compte de swings et l'arithmétique long/court d'un final
+  /// `hold` ancré.
+  @visibleForTesting
+  List<(Position, int)> holdSwingSequenceForTest({
+    required Position anchorPos,
+    required double bpm,
+    required int ratio,
+    int swings = _holdFinalAnchorSwings,
+  }) =>
+      _holdSwingSequence(
+          anchorPos: anchorPos, bpm: bpm, ratio: ratio, swings: swings);
 
   void _playBreathOneShot() {
     _trigger(_breathAsset, _breathVolume);
@@ -789,6 +993,8 @@ class BeepEngine {
       _from = _pickShallowerThan(_from);
     }
     _alternateToggle = true;
+    _anchor = BeatAnchor.none;
+    _ratio = 1;
     _stopLoop();
     _startBeatLoop(volume: _rhythmVolume);
   }
@@ -807,6 +1013,8 @@ class BeepEngine {
       _from = _pickShallowerThan(_from);
     }
     _alternateToggle = true;
+    _anchor = BeatAnchor.none;
+    _ratio = 1;
     _stopLoop();
     _startBeatLoop(volume: _lickVolume);
   }
@@ -960,11 +1168,22 @@ class BeatEvent {
   final Position from;
   final Position? to;
 
+  /// Durée jusqu'au prochain battement de ce loop.
+  final Duration nextInterval;
+
+  /// BPM ayant servi à calculer [nextInterval] — le BPM interpolé au moment
+  /// de ce beat sous rampe intra-step, `_bpm` constant sinon. Permet à un
+  /// consommateur externe (le widget d'animation) de déduire le cycle
+  /// nominal réel plutôt que de supposer le BPM de départ du step.
+  final double bpm;
+
   const BeatEvent({
     required this.mode,
     required this.position,
     required this.from,
     required this.to,
+    required this.nextInterval,
+    required this.bpm,
   });
 }
 

@@ -2213,6 +2213,34 @@ class AppLocalizationsEs extends AppLocalizations {
       'Acota la duración de holds y súplicas mantenidas.';
 
   @override
+  String get customAnchorLabel => 'Imán';
+
+  @override
+  String get customAnchorHint =>
+      'El pulso se detiene en una posición y vuelve rápido a la otra. Apagado, el metrónomo sigue regular.';
+
+  @override
+  String get customAnchorStrengthLabel => 'Fuerza';
+
+  @override
+  String get customAnchorStrengthLight => 'Ligera';
+
+  @override
+  String get customAnchorStrengthMedium => 'Media';
+
+  @override
+  String get customAnchorStrengthHard => 'Dura';
+
+  @override
+  String get customAnchorPointLabel => 'Posición retenida';
+
+  @override
+  String get customAnchorPointFrom => 'Inicio';
+
+  @override
+  String get customAnchorPointTo => 'Final';
+
+  @override
   String get customSaveAndLaunch => 'Guardar y lanzar';
 
   @override

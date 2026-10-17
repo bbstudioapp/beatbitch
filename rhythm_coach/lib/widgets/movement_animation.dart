@@ -111,6 +111,13 @@ class _MovementAnimationState extends State<MovementAnimation>
   /// transition de step, cf. `_frozenIdx`).
   DateTime? _lastBeatAt;
 
+  /// BPM ayant servi à calculer l'intervalle du dernier beat reçu
+  /// (`BeatEvent.bpm`) — le BPM interpolé sous rampe, `widget.bpm` sinon.
+  /// Remplace `widget.bpm` (BPM de départ, constant pendant toute la rampe)
+  /// pour déduire le cycle nominal `2T` dans `_computeFutureBeats`. Null
+  /// tant qu'aucun beat n'a été reçu.
+  double? _lastBeatBpm;
+
   /// Position visuelle gelée juste avant une transition de step (mode/tempo/
   /// position), point de départ du pont synthétique que dessine la courbe
   /// pendant le court intervalle sans beat réel (cf.
@@ -238,6 +245,7 @@ class _MovementAnimationState extends State<MovementAnimation>
           _familyOf(oldWidget.mode, oldWidget.from);
       _flipped = false;
       _lastBeatAt = null;
+      _lastBeatBpm = null;
     }
   }
 
@@ -319,14 +327,17 @@ class _MovementAnimationState extends State<MovementAnimation>
       // À l'instant du bip de `event.position`, le curseur EST visuellement à
       // cette position (l'AnimatedAlign du beat précédent vient juste de l'y
       // déposer). On programme immédiatement l'animation vers la PROCHAINE
-      // position : durée = beatDuration, courbe d'anticipation easeInOutCubic
-      // → le curseur arrivera pile sur la cible à l'instant du prochain bip.
-      // L'audio reste maître : le bip déclenche le mouvement visuel, jamais
-      // l'inverse.
+      // position : durée = `event.nextInterval` (l'intervalle réel jusqu'au
+      // prochain bip — pas forcément `60000/bpm`, cf. `BeepEngine.
+      // _intervalAfter`), courbe d'anticipation easeInOutCubic → le curseur
+      // arrivera pile sur la cible à l'instant du prochain bip. L'audio
+      // reste maître : le bip déclenche le mouvement visuel, jamais l'inverse.
       final nextIsFrom = event.position == widget.to;
+      _controller.duration = event.nextInterval;
       setState(() {
         _flipped = nextIsFrom;
         _lastBeatAt = DateTime.now();
+        _lastBeatBpm = event.bpm;
       });
       _controller.forward(from: 0);
     } else if (event.mode == SessionMode.biffle) {
@@ -401,7 +412,12 @@ class _MovementAnimationState extends State<MovementAnimation>
 
   Widget _buildForMode(double t, Color color) {
     final cursorStyle = _cursorStyleFor(widget.mode);
-    final beatDuration = _durationFor(widget.mode, widget.bpm);
+    // Pour rhythm/lick/hand, `_controller.duration` est tenu à jour par
+    // `_onBeatEvent` sur chaque bip (intervalle réel, pas forcément
+    // `60000/bpm`) ; les autres modes ne reçoivent jamais de BeatEvent donc
+    // il reste celui posé par `_durationFor` en fallback.
+    final beatDuration =
+        _controller.duration ?? _durationFor(widget.mode, widget.bpm);
     final (ladderFrom, ladderTo) =
         _ladderPositionsFor(widget.mode, widget.from, widget.to);
     final elapsedNow = extrapolatedElapsed(
@@ -415,6 +431,7 @@ class _MovementAnimationState extends State<MovementAnimation>
       from: ladderFrom,
       to: ladderTo,
       beatDuration: beatDuration,
+      bpm: (_lastBeatBpm ?? widget.bpm.toDouble()).round(),
       flipped: _flipped,
       color: color,
       cursorStyle: cursorStyle,
@@ -496,6 +513,20 @@ enum _ModeFamily { mouth, other }
 /// - [tongue] : pastille horizontale (langue qui lèche).
 enum _CursorStyle { orb, ring, tongue }
 
+/// Intervalle complémentaire d'un battement ancré, pour l'extrapolation de
+/// la trajectoire future : le cycle nominal `2T` (déduit de [bpm]) moins
+/// l'intervalle réel [lastIntervalMs] déjà mesuré par le moteur. Sans
+/// ancrage, `lastIntervalMs` est déjà l'intervalle régulier et le résultat
+/// lui est égal à 1 ms d'arrondi près (même construction par soustraction
+/// que `BeepEngine._intervalAfter`, dont c'est ici l'inverse arithmétique
+/// côté visuel — ce widget ne reçoit ni `anchor` ni `ratio`).
+@visibleForTesting
+int complementaryBeatIntervalMs({
+  required int lastIntervalMs,
+  required int bpm,
+}) =>
+    (120000 / bpm).round() - lastIntervalMs;
+
 /// Échelle verticale de positions (tip en haut, dernière en bas) avec
 /// un curseur (orbe / anneau / langue) qui glisse entre `from` et `to`
 /// à chaque battement. Le nombre de lignes est paramétré par [rowCount]
@@ -522,6 +553,13 @@ class _PositionLadder extends StatefulWidget {
   final Position from;
   final Position to;
   final Duration beatDuration;
+
+  /// BPM du dernier beat reçu (interpolé sous rampe, cf. `BeatEvent.bpm`) —
+  /// sert uniquement à `_computeFutureBeats` pour déduire le cycle nominal
+  /// `2T` (cf. `BeepEngine._intervalAfter`) et extrapoler l'intervalle
+  /// complémentaire d'un battement ancré.
+  final int bpm;
+
   final bool flipped;
   final Color color;
   final _CursorStyle cursorStyle;
@@ -563,6 +601,7 @@ class _PositionLadder extends StatefulWidget {
     required this.from,
     required this.to,
     required this.beatDuration,
+    required this.bpm,
     required this.flipped,
     required this.color,
     required this.cursorStyle,
@@ -803,6 +842,29 @@ class _PositionLadder extends StatefulWidget {
     var nextTime = last.add(beatDuration);
     var nextPos = afterAnchorPos;
 
+    // Sous ancrage (cf. `BeepEngine._intervalAfter`), l'intervalle réel du
+    // step courant alterne d'un battement à l'autre : `beatDuration` porte
+    // celui qui vient de s'écouler, le suivant est son complémentaire dans
+    // le cycle nominal `2T`. L'extrapoler en répétant `beatDuration`
+    // dessinerait toute la fenêtre à l'échelle d'un seul des deux. Bornée au
+    // segment courant : `UpcomingMovementStep` ne porte ni `anchor` ni
+    // `ratio`, les segments à venir restent donc sur leur tempo nominal.
+    final alternates = _MovementAnimationState._isBeatSynced(mode) &&
+        from.index != to.index &&
+        beatMs > 0;
+    final otherMs = alternates
+        ? complementaryBeatIntervalMs(
+                lastIntervalMs: beatDuration.inMilliseconds, bpm: bpm)
+            .toDouble()
+        : beatMs;
+    var useOther = true;
+    double advanceMs() {
+      if (upcomingIdx > 0 || !alternates) return segBeatMs;
+      final ms = useOther ? otherMs : beatMs;
+      useOther = !useOther;
+      return ms;
+    }
+
     while (true) {
       // Segment plat (hold/beg/suckle/biffle/breath/freestyle) tenu depuis
       // longtemps sans frontière à franchir : `nextTime` peut être resté
@@ -877,7 +939,7 @@ class _PositionLadder extends StatefulWidget {
         continue;
       }
       if (!addPoint(nextTime, nextPos.index.toDouble())) break;
-      nextTime = nextTime.add(Duration(milliseconds: segBeatMs.round()));
+      nextTime = nextTime.add(Duration(milliseconds: advanceMs().round()));
       nextPos = (nextPos == segFrom) ? segTo : segFrom;
     }
 
@@ -1162,6 +1224,14 @@ List<({double t, double idx, bool isAnchor})>? scrollBeatsForTest({
   return [for (final b in beats) (t: b.t, idx: b.idx, isAnchor: b.isAnchor)];
 }
 
+/// BPM implicite d'un intervalle régulier — le [bpm] que les sondes de test
+/// passent au ladder quand elles n'en imposent pas : il rend
+/// [complementaryBeatIntervalMs] neutre, donc l'extrapolation régulière.
+int _bpmOfRegularInterval(Duration beatDuration) {
+  final ms = beatDuration.inMilliseconds;
+  return ms <= 0 ? 60 : (60000 / ms).round();
+}
+
 /// Jeu de paramètres décrivant une géométrie de trajectoire, pour
 /// [sameGeometryForTest].
 typedef GeometryKeyForTest = ({
@@ -1188,6 +1258,7 @@ bool sameGeometryForTest(GeometryKeyForTest a, GeometryKeyForTest b) {
         from: k.from,
         to: k.to,
         beatDuration: k.beatDuration,
+        bpm: _bpmOfRegularInterval(k.beatDuration),
         flipped: k.flipped,
         color: const Color(0xFFFFFFFF),
         cursorStyle: _CursorStyle.orb,
@@ -1212,6 +1283,7 @@ List<({double t, double idx, bool isAnchor})> computeFutureBeatsForTest({
   required Position to,
   required Duration beatDuration,
   required bool flipped,
+  int? bpm,
   DateTime? lastBeatAt,
   double? frozenIdx,
   DateTime? frozenAt,
@@ -1225,6 +1297,7 @@ List<({double t, double idx, bool isAnchor})> computeFutureBeatsForTest({
     from: from,
     to: to,
     beatDuration: beatDuration,
+    bpm: bpm ?? _bpmOfRegularInterval(beatDuration),
     flipped: flipped,
     color: const Color(0xFFFFFFFF),
     cursorStyle: _CursorStyle.orb,
@@ -1252,6 +1325,7 @@ double? anchorAfterScrollForTest({
   required Position to,
   required Duration beatDuration,
   required bool flipped,
+  int? bpm,
   required Duration elapsedSinceCompute,
   DateTime? lastBeatAt,
   double? frozenIdx,
@@ -1266,6 +1340,7 @@ double? anchorAfterScrollForTest({
     from: from,
     to: to,
     beatDuration: beatDuration,
+    bpm: bpm ?? _bpmOfRegularInterval(beatDuration),
     flipped: flipped,
     color: const Color(0xFFFFFFFF),
     cursorStyle: _CursorStyle.orb,
