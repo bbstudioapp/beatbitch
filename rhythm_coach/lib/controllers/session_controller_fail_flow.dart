@@ -124,7 +124,7 @@ extension FailFlowOrchestrator on SessionController {
       }
       if (!_isFailFlowAlive(myGen)) return;
 
-      await _leaveFailFlow(mayJump: true);
+      await _leaveFailFlow(mayJump: true, gen: myGen);
     } finally {
       // Ne nettoie le state global que si on est toujours owner du flow —
       // sinon on écraserait celui d'un nouveau triggerFail qui aurait pris
@@ -139,19 +139,39 @@ extension FailFlowOrchestrator on SessionController {
     }
   }
 
-  Future<void> _leaveFailFlow({required bool mayJump}) async {
+  Future<void> _leaveFailFlow({required bool mayJump, required int gen}) async {
     if (_appInBackground) {
-      _deferredFailExit = () => _completeFailExit(mayJump: mayJump);
+      _deferredFailExit =
+          (replayGen) => _completeFailExit(mayJump: mayJump, gen: replayGen);
       await _pauseAfterFail();
       return;
     }
-    await _completeFailExit(mayJump: mayJump);
+    await _completeFailExit(mayJump: mayJump, gen: gen);
   }
 
-  Future<void> _completeFailExit({required bool mayJump}) async {
+  /// Rejoue la sortie retenue sous la garde d'un flow de fail : jusqu'à la fin
+  /// de la restauration, `pause()` et un nouveau fail sont refusés.
+  Future<void> _replayDeferredFailExit(
+      Future<void> Function(int gen) exit) async {
+    _failActive = true;
+    final myGen = ++_failGen;
+    _notify();
+    try {
+      await exit(myGen);
+    } finally {
+      if (_failGen == myGen) {
+        _failActive = false;
+        _notify();
+      }
+    }
+  }
+
+  Future<void> _completeFailExit(
+      {required bool mayJump, required int gen}) async {
     final jumped = mayJump && _skipToNextSection();
     if (!jumped) {
       await _restorePreviousLoop();
+      if (!_isFailFlowAlive(gen)) return;
       // `pause()` ignore l'arrière-plan tant que `_failActive` est vrai.
       if (_appInBackground) {
         await _pauseAfterFail();
@@ -375,7 +395,7 @@ extension FailFlowOrchestrator on SessionController {
         _obedience.onPunishmentCompleted();
       }
       if (!_isFailFlowAlive(myGen)) return;
-      await _leaveFailFlow(mayJump: false);
+      await _leaveFailFlow(mayJump: false, gen: myGen);
     } finally {
       if (_failGen == myGen) {
         _failPhase = null;

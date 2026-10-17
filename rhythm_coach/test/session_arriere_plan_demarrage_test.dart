@@ -508,6 +508,75 @@ void main() {
       expect(b.beep.applied.length, since.applied);
     });
 
+    group('rejeu de la sortie différée', () {
+      /// Sortie différée, retour dans l'appli, bouton de reprise : la
+      /// restauration de la boucle est en vol, tenue par `applyGate`.
+      Future<_Bench> inReplayWindow(WidgetTester tester) async {
+        final b = await inMiniPunishment(tester);
+        await until(tester, () => !b.ctrl.isFailFlowActive, 'sortie du flow');
+        lifecycle(tester, AppLifecycleState.resumed);
+        await tester.pump();
+        expect(b.ctrl.state, SessionState.paused,
+            reason: 'le banc n’a pas amené la séance en pause');
+        b.beep
+          ..holdApplyOf = _step0
+          ..applyGate = Completer<void>();
+        final before = b.beep.applied.length;
+        await tester.tap(find.byIcon(Icons.play_arrow).last);
+        await until(tester, () => b.beep.applied.length == before + 1,
+            'restauration de la boucle en vol');
+        return b;
+      }
+
+      testWidgets('un nouveau fail est refusé, comme au premier plan',
+          (tester) async {
+        final b = await inReplayWindow(tester);
+
+        unawaited(b.ctrl.triggerFail());
+        await realElapse(tester, const Duration(milliseconds: 500));
+        expect(b.ctrl.failPhase, isNull,
+            reason: 'un fail a démarré pendant le rejeu de la sortie différée');
+        expect(b.ctrl.isFailFlowActive, isTrue,
+            reason: 'le rejeu n’est pas gardé comme une sortie de fail');
+
+        b.beep.applyGate!.complete();
+        await until(tester, () => !b.ctrl.isFailFlowActive, 'fin du rejeu');
+        await realElapse(tester, const Duration(milliseconds: 500));
+        expect(b.ctrl.state, SessionState.running);
+        expect(b.ctrl.failPhase, isNull);
+      });
+
+      testWidgets('pause() est refusée, comme au premier plan', (tester) async {
+        final b = await inReplayWindow(tester);
+
+        await b.ctrl.pause();
+        expect(b.ctrl.state, SessionState.running,
+            reason: 'une pause a été acceptée pendant le rejeu');
+
+        b.beep.applyGate!.complete();
+        await until(tester, () => !b.ctrl.isFailFlowActive, 'fin du rejeu');
+        await realElapse(tester, const Duration(milliseconds: 300));
+        final at = b.ctrl.elapsed;
+        await realElapse(tester, const Duration(milliseconds: 500));
+        expect(b.ctrl.state, SessionState.running);
+        expect(b.ctrl.elapsed, greaterThan(at));
+      });
+
+      testWidgets('stop() pendant le rejeu : la séance reste arrêtée',
+          (tester) async {
+        final b = await inReplayWindow(tester);
+
+        await b.ctrl.stop();
+        expect(b.ctrl.state, SessionState.idle);
+
+        b.beep.applyGate!.complete();
+        await realElapse(tester, const Duration(milliseconds: 500));
+        expect(b.ctrl.state, SessionState.idle,
+            reason: 'la fin du rejeu a relancé une séance arrêtée');
+        expect(b.ctrl.elapsed, Duration.zero);
+      });
+    });
+
     group('sortie différée périmée', () {
       Future<void> restartAndPauseResume(WidgetTester tester, _Bench b) async {
         lifecycle(tester, AppLifecycleState.resumed);

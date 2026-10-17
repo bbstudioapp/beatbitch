@@ -211,7 +211,7 @@ class SessionController extends ChangeNotifier {
   Completer<void>? _punishmentCompleter;
   bool _punishmentAbandoned = false;
 
-  Future<void> Function()? _deferredFailExit;
+  Future<void> Function(int gen)? _deferredFailExit;
 
   // ─── État du défi intra-séance ────────────────────────────────────────
 
@@ -966,7 +966,7 @@ class SessionController extends ChangeNotifier {
     final failExit = _deferredFailExit;
     if (failExit != null) {
       _deferredFailExit = null;
-      await failExit();
+      await _replayDeferredFailExit(failExit);
       notifyListeners();
       return;
     }
