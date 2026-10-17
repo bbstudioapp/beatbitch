@@ -1,6 +1,7 @@
 import '../career/models/challenge.dart';
 import 'final_category.dart';
 import 'posture.dart';
+import 'session_music.dart';
 import 'session_step.dart';
 
 /// Mode global de la session. Peut être surchargé par étape.
@@ -181,6 +182,10 @@ class Session {
   /// sessions courtes / hors carrière). Transient comme [challenges].
   final List<ScriptedBreak> breaks;
 
+  /// Morceau en fond : quand il est posé, sa position de lecture est l'horloge
+  /// de la séance (cf. `SessionController.elapsed`). `null` = séance ordinaire.
+  final SessionMusic? music;
+
   const Session({
     required this.id,
     required this.name,
@@ -207,6 +212,7 @@ class Session {
     this.challengeTriggerTimes = const [],
     this.initialPose = Posture.free,
     this.breaks = const [],
+    this.music,
   });
 
   Duration get duration => Duration(seconds: durationSeconds);
@@ -231,6 +237,7 @@ class Session {
         intro: (json['intro'] as String?) ?? '',
         lang: (json['lang'] as String?) ?? 'fr',
         noStats: (json['no_stats'] as bool?) ?? false,
+        music: SessionMusic.tryParse(json['music']),
       );
 
   Map<String, dynamic> toJson() => {
@@ -242,6 +249,7 @@ class Session {
         'mode': defaultMode.serialized,
         if (intro.isNotEmpty) 'intro': intro,
         if (noStats) 'no_stats': true,
+        if (music != null) 'music': music!.toJson(),
         'steps': steps.map((s) => s.toJson()).toList(),
       };
 }

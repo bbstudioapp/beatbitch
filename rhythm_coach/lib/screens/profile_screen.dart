@@ -24,6 +24,7 @@ import '../widgets/coach_voice_section.dart';
 import '../widgets/diagnostic_export_section.dart';
 import '../widgets/identity_section.dart';
 import '../widgets/language_picker_row.dart';
+import '../widgets/music_beep_advance_section.dart';
 import '../widgets/voice_settings_section.dart';
 
 /// Écran Profil : affiche le score de réputation, les stats cumulées,
@@ -217,6 +218,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ],
               ],
+              const SizedBox(height: 24),
+              _SectionLabel(t.profileMusicBeepAdvanceSection),
+              const SizedBox(height: 8),
+              const MusicBeepAdvanceSection(),
               const SizedBox(height: 24),
               _SectionLabel(t.profileSessionDisplaySection),
               const SizedBox(height: 8),

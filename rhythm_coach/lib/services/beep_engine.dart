@@ -9,6 +9,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import '../models/final_category.dart';
 import '../models/hold_move.dart';
 import '../models/session.dart';
+import '../models/session_music.dart';
 import '../models/session_step.dart';
 import 'step_resolution.dart';
 
@@ -123,6 +124,10 @@ class BeepEngine {
   bool _handStrokeFallbackDown = true;
 
   Timer? _loopTimer;
+
+  SessionMusic? _music;
+  Duration Function()? _musicPosition;
+  double _beepGain = 1.0;
 
   /// Invalide la continuation d'un callback de loop déjà en cours
   /// d'exécution, que `cancel()` ne peut plus arrêter.
@@ -362,6 +367,10 @@ class BeepEngine {
   /// Chaque beat planifie le suivant sur un temps cible absolu, pas via
   /// `Timer.periodic` qui dérive de quelques ms par tick.
   void _startBeatLoop({required double volume}) {
+    if (_music != null) {
+      _startGridLoop(volume: volume);
+      return;
+    }
     final myGen = ++_loopGen;
     final startMs = DateTime.now().millisecondsSinceEpoch;
     // Cumul plutôt que `startMs + n × intervalMs` : rampe et ancrage font
@@ -381,8 +390,8 @@ class BeepEngine {
     tick();
   }
 
-  /// Clampé à `_bpmEnd` : un step peut durer plus que prévu (fail, pause),
-  /// on n'extrapole pas.
+  void _trigger(String assetName, double baseVolume) {
+    final volume = baseVolume * _beepGain;
   double _currentInterpolatedBpm(int elapsedMs) {
     final bpmEnd = _bpmEnd;
     final dur = _loopDurationMs;
@@ -613,7 +622,10 @@ class BeepEngine {
     _trigger(_breathAsset, _breathVolume);
   }
 
-  void _trigger(String assetName, double volume) {
+  /// Déclenche un sample en utilisant le prochain player du pool round-robin.
+  /// Fire-and-forget : le ticker n'attend pas la fin de l'opération audio.
+  void _trigger(String assetName, double baseVolume) {
+    final volume = baseVolume * _beepGain;
     debugOnTrigger?.call(assetName, volume);
     final pool = _pools[assetName];
     if (pool == null) return;

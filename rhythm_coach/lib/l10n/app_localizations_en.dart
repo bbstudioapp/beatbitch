@@ -1357,6 +1357,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionDebugFinishButton => 'DEBUG: finish as success';
 
   @override
+  String get sessionDebugMusicBeepAdvanceLabel => 'DEBUG: beep lead';
+
+  @override
+  String get sessionDebugMusicBeepAdvanceDecrease => 'Decrease beep lead';
+
+  @override
+  String get sessionDebugMusicBeepAdvanceIncrease => 'Increase beep lead';
+
+  @override
   String get soundsDebugScenarioButton => 'Debug — career scenario';
 
   @override
@@ -2300,6 +2309,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get profileScriptedBreaksSubtitle =>
       'The coach enforces a posture (kneeling, on all fours…) and inserts active breaks on long sessions. Postures unlock as you progress through career milestones.';
+
+  @override
+  String get profileMusicBeepAdvanceSection => 'Beeps on music';
+
+  @override
+  String get profileMusicBeepAdvanceTitle => 'Beep lead';
+
+  @override
+  String get profileMusicBeepAdvanceSubtitle =>
+      'Music sessions. If the beeps land after the music, increase the lead.';
 
   @override
   String sessionRemainingTimeLabel(String time) {

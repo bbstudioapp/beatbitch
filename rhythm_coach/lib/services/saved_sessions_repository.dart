@@ -59,6 +59,7 @@ class SavedSessionsRepository {
           ? source.lang
           : LocaleService.instance.languageCode,
       noStats: source.noStats,
+      music: source.music,
     );
     final payload = json.encode(saved.toJson());
     if (kIsWeb) {

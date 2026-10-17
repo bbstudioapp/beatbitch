@@ -1364,6 +1364,18 @@ class AppLocalizationsEs extends AppLocalizations {
   String get sessionDebugFinishButton => 'DEBUG: terminar como éxito';
 
   @override
+  String get sessionDebugMusicBeepAdvanceLabel =>
+      'DEBUG: adelanto de los pitidos';
+
+  @override
+  String get sessionDebugMusicBeepAdvanceDecrease =>
+      'Reducir el adelanto de los pitidos';
+
+  @override
+  String get sessionDebugMusicBeepAdvanceIncrease =>
+      'Aumentar el adelanto de los pitidos';
+
+  @override
   String get soundsDebugScenarioButton => 'Debug — escenario de carrera';
 
   @override
@@ -2310,6 +2322,16 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get profileScriptedBreaksSubtitle =>
       'La coach impone una postura (de rodillas, a cuatro patas…) e inserta pausas activas en las sesiones largas. Las posturas se desbloquean a medida que avanzas por los hitos de carrera.';
+
+  @override
+  String get profileMusicBeepAdvanceSection => 'Pitidos con la música';
+
+  @override
+  String get profileMusicBeepAdvanceTitle => 'Adelanto de los pitidos';
+
+  @override
+  String get profileMusicBeepAdvanceSubtitle =>
+      'Sesiones con música. Si los pitidos llegan después de la música, aumenta el adelanto.';
 
   @override
   String sessionRemainingTimeLabel(String time) {

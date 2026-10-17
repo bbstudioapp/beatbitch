@@ -658,6 +658,9 @@
   "soundsShowBackgroundMedia": "Hintergrundmedien in der Session",
   "soundsShowBackgroundMediaSubtitle": "Zeigt die Bilder/GIFs aus assets/backgrounds/ im Hintergrund, mit Wechsel bei jedem Step. Deaktivieren, um nur den Ambiente-Verlauf zu sehen.",
   "sessionDebugFinishButton": "DEBUG: als Erfolg beenden",
+  "sessionDebugMusicBeepAdvanceLabel": "DEBUG: Beep-Vorlauf",
+  "sessionDebugMusicBeepAdvanceDecrease": "Beep-Vorlauf verringern",
+  "sessionDebugMusicBeepAdvanceIncrease": "Beep-Vorlauf erhöhen",
 
   "soundsDebugScenarioButton": "Debug — Karriere-Szenario",
   "soundsDebugScenarioSubtitle": "Visualisiere eine generierte Session, ohne sie zu spielen: Stufe, Erniedr., Gehors., Meilensteine, Unlocks und Bettel-/Fail-Simulation.",
@@ -1119,6 +1122,9 @@
   "profileSessionFlowSection": "Sitzungsablauf",
   "profileScriptedBreaks": "Vorgegebene Posen und Pausen",
   "profileScriptedBreaksSubtitle": "Die Domina gibt eine Pose vor (kniend, auf allen vieren …) und baut in langen Sitzungen aktive Pausen ein. Die Posen werden nach und nach über die Karriere-Meilensteine freigeschaltet.",
+  "profileMusicBeepAdvanceSection": "Beeps zur Musik",
+  "profileMusicBeepAdvanceTitle": "Beep-Vorlauf",
+  "profileMusicBeepAdvanceSubtitle": "Sitzungen mit Musik. Kommen die Beeps nach der Musik, erhöhe den Vorlauf.",
   "sessionRemainingTimeLabel": "Rest: {time}",
   "@sessionRemainingTimeLabel": {
     "placeholders": {

@@ -41,6 +41,11 @@ extension FailFlowOrchestrator on SessionController {
   Future<void> triggerFail() async {
     if (!canTriggerFail) return;
 
+    if (_music != null) {
+      await _triggerMusicalFail();
+      return;
+    }
+
     // Phase 1 défis — pendant un défi, le bouton FAIL classique est masqué
     // côté UI (cf. _ChallengeButtons remplace _FailButton). La sortie est
     // pilotée par le release du doigt : tolérance épuisée pendant
@@ -250,6 +255,76 @@ extension FailFlowOrchestrator on SessionController {
     }
   }
 
+  /// « JE PEUX PAS » sur une séance à morceau : la musique ne s'arrête jamais et
+  /// il n'y a ni phrase, ni punition, ni saut de section. La joueuse souffle
+  /// pendant [SessionController._musicBreathBeats] temps du morceau ; les steps
+  /// qui tombent dans ce souffle sont perdus, et la séance reprend sur le step
+  /// que le morceau a atteint (cf. [_endMusicBreath]).
+  Future<void> _triggerMusicalFail() async {
+    final track = session.music!;
+    _hadFailThisSession = true;
+    _stamina.onFail();
+    _saliva.onFail();
+    _currentHoldFullDuration = 0;
+    _disarmHoldVerifier();
+    final breath = track.beatPeriod * SessionController._musicBreathBeats;
+    _musicBreathUntil = elapsed + breath;
+    _failPhase = FailPhase.breath;
+    _notify();
+    await _beep.applyStep(
+      SessionStep(
+        time: 0,
+        mode: SessionMode.breath,
+        duration: (breath.inMilliseconds / 1000).ceil(),
+      ),
+      session.defaultMode,
+    );
+  }
+
+  /// Fin du souffle : le loop de bips repart sur le dernier step de config dont
+  /// l'heure est passée, là où le morceau est rendu. Sans phrase (les consignes
+  /// manquées sont perdues) ; une tenue ne reprend que pour sa durée restante.
+  void _endMusicBreath(int seconds) {
+    _musicBreathUntil = null;
+    _failPhase = null;
+    SessionStep? last;
+    for (final step in session.steps) {
+      if (step.time > seconds) break;
+      if (!step.isTextOnly) last = step;
+    }
+    if (last == null) return;
+    final duration = last.duration;
+    _lastConfigStep = last;
+    _beep.applyStep(
+      SessionStep(
+        time: seconds,
+        from: last.from,
+        to: last.to,
+        bpm: last.bpm,
+        bpmEnd: last.bpmEnd,
+        mode: last.mode,
+        duration:
+            duration == null ? null : max(1, last.time + duration - seconds),
+      ),
+      session.defaultMode,
+    );
+  }
+
+  Future<void> _releaseMusic() async {
+    _musicBreathUntil = null;
+    final music = _music;
+    if (music == null) return;
+    _failPhase = null;
+    await music.stop();
+    _detachMusicFromBeep();
+  }
+
+  void _detachMusicFromBeep() {
+    if (!_musicAttached) return;
+    _musicAttached = false;
+    _beep.detachMusic();
+  }
+
   /// Joue toutes les étapes d'une punition selon leur `time` relatif,
   /// jusqu'à atteindre [Punishment.durationSeconds]. Interruptible via
   /// `_abandonPunishment()` (qui complète `_punishmentCompleter`).
@@ -351,6 +426,7 @@ extension FailFlowOrchestrator on SessionController {
   /// — `_accrueHoldSecond` ne s'appelle que sous le ticker, qui ne tourne
   /// que pendant `running`.
   void _accrueMiniPunishmentTick() {
+    if (_music != null) return;
     _miniPunishmentTickAccumulator++;
     if (_miniPunishmentTickAccumulator < 60) return;
     _miniPunishmentTickAccumulator = 0;

@@ -17,6 +17,7 @@ import '../models/hold_move.dart';
 import '../models/punishment.dart';
 import '../models/posture.dart';
 import '../models/session.dart';
+import '../career/services/debug_settings_service.dart';
 import '../models/session_step.dart' show BeatAnchor;
 import '../services/ambience_engine.dart';
 import '../services/backgrounds_service.dart';
@@ -27,6 +28,7 @@ import '../services/capability_service.dart';
 import '../services/capability_tracker.dart';
 import '../services/hold_verifier.dart';
 import '../services/humiliation_engine.dart';
+import '../services/music_engine.dart';
 import '../services/obedience_engine.dart';
 import '../services/punishment_loader.dart';
 import '../services/random_comments_loader.dart';
@@ -247,6 +249,19 @@ class SessionController extends ChangeNotifier {
   /// Dernière étape avec configuration de bip qui a été appliquée.
   /// Sert à restaurer le loop courant après un fail.
   SessionStep? _lastConfigStep;
+
+  /// Non nul pour une séance à morceau : sa position de lecture est l'horloge
+  /// de séance, le chronomètre ne sert plus qu'au temps joué.
+  final MusicEngine? _music;
+  bool _musicAttached = false;
+
+  /// Position du morceau à laquelle le souffle d'un « JE PEUX PAS » musical
+  /// prend fin. Nul hors souffle.
+  Duration? _musicBreathUntil;
+
+  /// Durée du souffle d'un « JE PEUX PAS » musical, en temps du morceau : un
+  /// demi-bloc de 8 mesures.
+  static const int _musicBreathBeats = 16;
 
   /// True dès que le `finale_chime` a été déclenché (par `_checkSteps` au
   /// passage du step final si `Session.finalStepTime` est défini, sinon par
@@ -649,7 +664,9 @@ class SessionController extends ChangeNotifier {
     bool includeHand = true,
     bool isQuickie = false,
     String? coachTag,
+    MusicEngine? music,
   })  : _session = session,
+        _music = session.music == null ? null : (music ?? MusicEngine()),
         _tts = tts,
         _beep = beep,
         _ambience = ambience,
@@ -926,7 +943,34 @@ class SessionController extends ChangeNotifier {
 
   Session get session => _session;
   SessionState get state => _state;
-  Duration get elapsed => _stopwatch.elapsed + _timelineOffset;
+  Duration get elapsed {
+    final music = _music;
+    if (music != null && _state != SessionState.idle) {
+      return music.position + Duration(milliseconds: _musicBeepAdvanceMs);
+    }
+    return _stopwatch.elapsed + _timelineOffset;
+  }
+
+  bool get isMusical => _music != null;
+
+  static const int musicBeepAdvanceMaxMs = 400;
+  static const int musicBeepAdvanceStepMs = 10;
+  int _musicBeepAdvanceMs = DebugSettingsService.defaultMusicBeepAdvanceMs;
+
+  /// Avance des bips sur le morceau, en ms ; 0 hors séance musicale.
+  int get musicBeepAdvanceMs => _music == null ? 0 : _musicBeepAdvanceMs;
+
+  Future<void> setMusicBeepAdvanceMs(int ms) async {
+    if (_music == null) return;
+    _musicBeepAdvanceMs = ms.clamp(0, musicBeepAdvanceMaxMs);
+    _beep.musicBeepAdvance = Duration(milliseconds: _musicBeepAdvanceMs);
+    notifyListeners();
+    await DebugSettingsService().setMusicBeepAdvanceMs(_musicBeepAdvanceMs);
+  }
+
+  /// Vrai pendant le souffle d'un « JE PEUX PAS » sur une séance à morceau :
+  /// la séance reste `running`, la musique continue.
+  bool get isMusicBreathing => _musicBreathUntil != null;
 
   /// Vrai tant que `_onTick` gèle l'horloge de séance sur un défi, sa
   /// respiration de récupération ou une attente de posture. Lu par
@@ -1000,9 +1044,14 @@ class SessionController extends ChangeNotifier {
 
   /// True si le bouton FAIL doit être actif. Actif aussi pendant la phase
   /// punishment d'un fail en cours pour permettre d'abandonner la punition.
-  bool get canTriggerFail =>
-      (_state == SessionState.running && _punishmentBundle.isEmpty == false) ||
-      (_state == SessionState.failing && _failPhase == FailPhase.punishment);
+  bool get canTriggerFail {
+    if (_music != null) {
+      return _state == SessionState.running && _musicBreathUntil == null;
+    }
+    return (_state == SessionState.running &&
+            _punishmentBundle.isEmpty == false) ||
+        (_state == SessionState.failing && _failPhase == FailPhase.punishment);
+  }
 
   // ─── Ambiance ──────────────────────────────────────────────────────────
 
@@ -1016,6 +1065,7 @@ class SessionController extends ChangeNotifier {
   /// Aligne l'ambiance lue sur le mode courant du BeepEngine d'après le
   /// pack actif (porté par AmbienceEngine). Appelé après chaque step de config.
   Future<void> _syncAmbienceToCurrentMode() async {
+    if (_music != null) return;
     await _ambience.playForMode(_beep.currentMode);
   }
 
@@ -1042,7 +1092,8 @@ class SessionController extends ChangeNotifier {
         _lastConfigStep = null;
         _configApplied = false;
         _hadFailThisSession = false;
-        _finalChimePlayed = false;
+        _finalChimePlayed = _music != null;
+        _musicBreathUntil = null;
         _finaleChimeStarted = false;
         _sessionBadgeUnlocks = const [];
         _sessionMilestoneUnlocks = const [];
@@ -1122,6 +1173,21 @@ class SessionController extends ChangeNotifier {
         await _beep.init();
       } catch (e) {
         debugPrint('start(): _beep.init() a échoué (non bloquant) : $e');
+      }
+      final music = _music;
+      final track = _session.music;
+      if (music != null && track != null) {
+        try {
+          _musicBeepAdvanceMs =
+              (await DebugSettingsService().getMusicBeepAdvanceMs())
+                  .clamp(0, musicBeepAdvanceMaxMs);
+        } catch (_) {}
+        await music.start(track);
+        _beep.attachMusic(track, () => music.position);
+        _beep.musicBeepAdvance = Duration(milliseconds: _musicBeepAdvanceMs);
+        _musicAttached = true;
+      } else {
+        _beep.detachMusic();
       }
       try {
         // Wakelock = garder l'écran allumé (confort, non essentiel). Sur iOS
@@ -1210,6 +1276,7 @@ class SessionController extends ChangeNotifier {
 
   Future<void> pause() async {
     if (_state != SessionState.running) return;
+    final musicPaused = _music?.pause();
     _stopwatch.stop();
     _ticker?.cancel();
     _ticker = null;
@@ -1221,6 +1288,7 @@ class SessionController extends ChangeNotifier {
     // séance était arrêtée sans être en pause.
     await _stopTtsBounded();
     await _beep.pause();
+    await musicPaused;
     await _ambience.pause();
     _state = SessionState.paused;
     notifyListeners();
@@ -1228,6 +1296,7 @@ class SessionController extends ChangeNotifier {
 
   Future<void> resume() async {
     if (_state != SessionState.paused) return;
+    final musicResumed = _music?.resume();
     _stopwatch.start();
     _state = SessionState.running;
     _startTicker();
@@ -1241,7 +1310,8 @@ class SessionController extends ChangeNotifier {
     // que le gel d'accrual dans `_onTick`. L'ambiance, elle, n'est pas coupée
     // par le break : elle reprend inconditionnellement.
     if (!_breakActive && !awaitingPostureReady) await _beep.resume();
-    await _ambience.resume();
+    await musicResumed;
+    if (_music == null) await _ambience.resume();
     notifyListeners();
   }
 
@@ -1264,6 +1334,7 @@ class SessionController extends ChangeNotifier {
     // issue #317).
     await _stopTtsBounded();
     await _beep.stop();
+    await _releaseMusic();
     await _ambience.stop();
     // Borné comme le canal de synthèse : `_state` ne bascule qu'après, et le
     // ticker est déjà annulé. Un canal pigeon muet laissait la séance morte
@@ -1342,6 +1413,9 @@ class SessionController extends ChangeNotifier {
     _hadFailThisSession = false;
     await _finish();
   }
+
+  @visibleForTesting
+  void debugTick() => _onTick();
 
   void _onTick() {
     // Gel de posture : enterre une ancre dont la justification est tombée
@@ -1546,6 +1620,15 @@ class SessionController extends ChangeNotifier {
     if (awaitingPostureReady) return;
     final s = elapsedSeconds;
     var modeChanged = false;
+    final breathUntil = _musicBreathUntil;
+    if (breathUntil != null) {
+      while (_nextStepIndex < session.steps.length &&
+          session.steps[_nextStepIndex].time <= s) {
+        _nextStepIndex++;
+      }
+      if (elapsed < breathUntil) return;
+      _endMusicBreath(s);
+    }
     while (_nextStepIndex < session.steps.length &&
         session.steps[_nextStepIndex].time <= s) {
       final step = session.steps[_nextStepIndex];
@@ -1569,7 +1652,8 @@ class SessionController extends ChangeNotifier {
       // consomme le step même si le moteur se dit encore en train de parler.
       // Sans borne, un `isSpeaking` collé à `true` gèle la séance pour
       // toujours (cf. la doc de la constante).
-      if (step.text.isNotEmpty &&
+      if (_music == null &&
+          step.text.isNotEmpty &&
           _tts.isSpeaking &&
           _ttsDeferredTicks < _maxTtsDeferTicks) {
         _ttsDeferredTicks++;
@@ -1654,7 +1738,7 @@ class SessionController extends ChangeNotifier {
         // de transition (« plus vite », « plus profond »…). Ça ne joue
         // que si on est resté dans le même mode et qu'un paramètre clé a
         // bougé suffisamment, et seulement si le TTS n'est pas occupé.
-        if (step.text.isEmpty && previousConfig != null) {
+        if (_music == null && step.text.isEmpty && previousConfig != null) {
           _maybeFireTransitionPhrase(previousConfig, step);
         }
       }
@@ -1841,6 +1925,7 @@ class SessionController extends ChangeNotifier {
     // la session ne passait jamais en `finished` (écran de fin absent). On
     // borne l'attente — au pire quelques players se coupent en arrière-plan.
     await _beep.stop().timeout(const Duration(seconds: 2), onTimeout: () {});
+    await _releaseMusic();
     // Même garde-fou : toute la clôture de séance (stats, badges, apothéose,
     // `_state = finished`) est en aval de cet appel. Un wakelock muet
     // laisserait la séance sans écran de fin, ticker déjà arrêté.
@@ -1868,7 +1953,7 @@ class SessionController extends ChangeNotifier {
       _humiliation.applyEndOfSessionDelta(
         clean: !_hadFailThisSession,
         encoresAsked: 0,
-        failsCount: _hadFailThisSession ? 1 : 0,
+        failsCount: _hadFailThisSession && _music == null ? 1 : 0,
       );
       if (!_hadFailThisSession) {
         _obedience.onSessionCleanFinish();
@@ -2243,7 +2328,7 @@ class SessionController extends ChangeNotifier {
   /// Idempotent : annule un éventuel timer existant avant d'en poser un nouveau.
   void _startRandomComments() {
     _randomCommentTimer?.cancel();
-    if (_randomComments.isEmpty) return;
+    if (_music != null || _randomComments.isEmpty) return;
     _randomCommentTimer = Timer(_nextRandomDelay(), _fireRandomComment);
   }
 
@@ -2395,6 +2480,7 @@ class SessionController extends ChangeNotifier {
     _ticker?.cancel();
     _stopwatch.stop();
     await _tts.stop();
+    await _releaseMusic();
   }
 
   @override
@@ -2410,6 +2496,8 @@ class SessionController extends ChangeNotifier {
     _readyTimeout?.cancel();
     _ticker?.cancel();
     _stopwatch.stop();
+    _detachMusicFromBeep();
+    unawaited(_music?.dispose());
     if (!wasAlreadyReleased) {
       // Chaînage séquentiel : si l'écran est démonté juste avant qu'un
       // nouveau controller prenne la main (cas pushReplacement non capturé

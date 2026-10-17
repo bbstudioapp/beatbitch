@@ -1364,6 +1364,15 @@ class AppLocalizationsDe extends AppLocalizations {
   String get sessionDebugFinishButton => 'DEBUG: als Erfolg beenden';
 
   @override
+  String get sessionDebugMusicBeepAdvanceLabel => 'DEBUG: Beep-Vorlauf';
+
+  @override
+  String get sessionDebugMusicBeepAdvanceDecrease => 'Beep-Vorlauf verringern';
+
+  @override
+  String get sessionDebugMusicBeepAdvanceIncrease => 'Beep-Vorlauf erhöhen';
+
+  @override
   String get soundsDebugScenarioButton => 'Debug — Karriere-Szenario';
 
   @override
@@ -2312,6 +2321,16 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get profileScriptedBreaksSubtitle =>
       'Die Domina gibt eine Pose vor (kniend, auf allen vieren …) und baut in langen Sitzungen aktive Pausen ein. Die Posen werden nach und nach über die Karriere-Meilensteine freigeschaltet.';
+
+  @override
+  String get profileMusicBeepAdvanceSection => 'Beeps zur Musik';
+
+  @override
+  String get profileMusicBeepAdvanceTitle => 'Beep-Vorlauf';
+
+  @override
+  String get profileMusicBeepAdvanceSubtitle =>
+      'Sitzungen mit Musik. Kommen die Beeps nach der Musik, erhöhe den Vorlauf.';
 
   @override
   String sessionRemainingTimeLabel(String time) {

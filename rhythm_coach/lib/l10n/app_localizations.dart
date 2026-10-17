@@ -2406,6 +2406,24 @@ abstract class AppLocalizations {
   /// **'DEBUG : terminer en succès'**
   String get sessionDebugFinishButton;
 
+  /// No description provided for @sessionDebugMusicBeepAdvanceLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'DEBUG : avance des bips'**
+  String get sessionDebugMusicBeepAdvanceLabel;
+
+  /// No description provided for @sessionDebugMusicBeepAdvanceDecrease.
+  ///
+  /// In fr, this message translates to:
+  /// **'Diminuer l\'avance des bips'**
+  String get sessionDebugMusicBeepAdvanceDecrease;
+
+  /// No description provided for @sessionDebugMusicBeepAdvanceIncrease.
+  ///
+  /// In fr, this message translates to:
+  /// **'Augmenter l\'avance des bips'**
+  String get sessionDebugMusicBeepAdvanceIncrease;
+
   /// No description provided for @soundsDebugScenarioButton.
   ///
   /// In fr, this message translates to:
@@ -4079,6 +4097,24 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'La coach impose une posture (à genoux, à quatre pattes…) et insère des pauses actives sur les séances longues. Les postures se débloquent au fil des paliers de carrière.'**
   String get profileScriptedBreaksSubtitle;
+
+  /// No description provided for @profileMusicBeepAdvanceSection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bips sur la musique'**
+  String get profileMusicBeepAdvanceSection;
+
+  /// No description provided for @profileMusicBeepAdvanceTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Avance des bips'**
+  String get profileMusicBeepAdvanceTitle;
+
+  /// No description provided for @profileMusicBeepAdvanceSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Séances avec musique. Si les bips arrivent après la musique, augmente l\'avance.'**
+  String get profileMusicBeepAdvanceSubtitle;
 
   /// No description provided for @sessionRemainingTimeLabel.
   ///

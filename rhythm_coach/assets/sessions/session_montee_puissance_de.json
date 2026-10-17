@@ -1,0 +1,102 @@
+{
+  "lang": "de",
+  "id": "montee_en_puissance",
+  "name": "Kraftanstieg",
+  "description": "Eine Session zu einem Musikstück: Der Rhythmus steigt und die Musik hört nie auf.",
+  "duration_seconds": 179,
+  "mode": "rhythm",
+  "intro": "Mach den Ton an. Die Beeps folgen dem Takt des Stücks, die Anweisungen seinem Aufbau. Wenn du nicht mehr kannst, drück den roten Knopf: Die Musik läuft weiter, du atmest und machst dort weiter, wo sie gerade ist.",
+  "music": {
+    "asset": "audio/music/montee_en_puissance.mp3",
+    "bpm": 121.96,
+    "first_beat": 16.934
+  },
+  "steps": [
+    {
+      "time": 0,
+      "text": "Hör zu… gleich geht's hoch.",
+      "mode": "breath",
+      "duration": 16
+    },
+    {
+      "time": 16,
+      "mode": "rhythm",
+      "from": "tip",
+      "to": "head",
+      "bpm": 61
+    },
+    {
+      "time": 55,
+      "text": "Es steigt.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 61
+    },
+    {
+      "time": 78,
+      "text": "Folge der Musik.",
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 122
+    },
+    {
+      "time": 94,
+      "text": "Halt… warte, bis sie zurückkommt.",
+      "mode": "hold",
+      "to": "throat",
+      "duration": 16
+    },
+    {
+      "time": 110,
+      "mode": "rhythm",
+      "from": "head",
+      "to": "mid",
+      "bpm": 122
+    },
+    {
+      "time": 126,
+      "mode": "rhythm",
+      "from": "head",
+      "to": "throat",
+      "bpm": 122
+    },
+    {
+      "time": 141,
+      "text": "Das ist der Gipfel. Durchhalten.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 122
+    },
+    {
+      "time": 152,
+      "text": "Noch ein bisschen.",
+      "mode": "rhythm",
+      "from": "mid",
+      "to": "throat",
+      "bpm": 61
+    },
+    {
+      "time": 163,
+      "text": "Halt ihn ganz unten.",
+      "mode": "hold",
+      "to": "full",
+      "duration": 12
+    },
+    {
+      "time": 175,
+      "text": "So ist's brav."
+    },
+    {
+      "time": 176,
+      "mode": "breath",
+      "duration": 3
+    },
+    {
+      "time": 177,
+      "text": "Komm hoch. Atme."
+    }
+  ]
+}

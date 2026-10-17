@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -836,7 +837,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                     _StateBadge(state: ctrl.state),
                     SizedBox(height: showBar ? 6 : 12),
                   ],
-                  if (ctrl.isFailing)
+                  if (ctrl.isFailing || ctrl.isMusicBreathing)
                     _FailPhaseIndicator(controller: ctrl)
                   else if (ctrl.hasConfig)
                     ModeBadgeRow(
@@ -1003,7 +1004,10 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                       widget.tts.setVolume(v);
                     },
                     onAmbienceVolume: ctrl.setAmbienceVolume,
+                    showAmbience: !ctrl.isMusical,
                   ),
+                  if (kDebugMode && ctrl.isMusical)
+                    _MusicBeepAdvanceRow(controller: ctrl),
                 ],
               ),
             ),
@@ -1795,17 +1799,52 @@ class _CircleButton extends StatelessWidget {
   }
 }
 
+/// Réglage debug de l'avance des bips sur le morceau, ajustable à l'écoute.
+class _MusicBeepAdvanceRow extends StatelessWidget {
+  final SessionController controller;
+
+  const _MusicBeepAdvanceRow({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final ms = controller.musicBeepAdvanceMs;
+    const step = SessionController.musicBeepAdvanceStepMs;
+    return Row(
+      children: [
+        Expanded(
+          child: Text(t.sessionDebugMusicBeepAdvanceLabel,
+              style: const TextStyle(fontSize: 12)),
+        ),
+        IconButton(
+          tooltip: t.sessionDebugMusicBeepAdvanceDecrease,
+          icon: const Icon(Icons.remove),
+          onPressed: () => controller.setMusicBeepAdvanceMs(ms - step),
+        ),
+        Text('$ms ms', key: const Key('musicBeepAdvanceValue')),
+        IconButton(
+          tooltip: t.sessionDebugMusicBeepAdvanceIncrease,
+          icon: const Icon(Icons.add),
+          onPressed: () => controller.setMusicBeepAdvanceMs(ms + step),
+        ),
+      ],
+    );
+  }
+}
+
 class _VolumesBlock extends StatelessWidget {
   final double ttsVolume;
   final double ambienceVolume;
   final ValueChanged<double> onTtsVolume;
   final ValueChanged<double> onAmbienceVolume;
+  final bool showAmbience;
 
   const _VolumesBlock({
     required this.ttsVolume,
     required this.ambienceVolume,
     required this.onTtsVolume,
     required this.onAmbienceVolume,
+    required this.showAmbience,
   });
 
   @override
@@ -1820,14 +1859,16 @@ class _VolumesBlock extends StatelessWidget {
           max: 1.0,
           onChanged: onTtsVolume,
         ),
-        const SizedBox(height: 4),
-        _LabeledSlider(
-          label: t.sessionAmbienceLabel,
-          value: ambienceVolume,
-          min: 0.0,
-          max: AmbienceEngine.maxVolume,
-          onChanged: onAmbienceVolume,
-        ),
+        if (showAmbience) ...[
+          const SizedBox(height: 4),
+          _LabeledSlider(
+            label: t.sessionAmbienceLabel,
+            value: ambienceVolume,
+            min: 0.0,
+            max: AmbienceEngine.maxVolume,
+            onChanged: onAmbienceVolume,
+          ),
+        ],
       ],
     );
   }
