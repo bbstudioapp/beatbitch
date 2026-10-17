@@ -849,6 +849,10 @@ class _PositionLadderState extends State<_PositionLadder> {
   void _recompute() {
     // Le moteur reprend (et émet un bip) avant que l'écran ne lève la pause.
     _resumeClock();
+    // Une épingle ne vaut que pour une frontière encore annoncée : revenue
+    // après un trou dans la liste, elle serait dans le passé.
+    _boundaryPins.removeWhere((start, _) =>
+        !widget.upcomingSteps.any((s) => s.startSecond == start));
     _rawBeats = widget._computeFutureBeats(_boundaryPins);
     _computedAt = DateTime.now();
     _windowUnfillable = _rawBeats!.isEmpty || _rawBeats!.last.t < 1.0;
