@@ -23,12 +23,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Entre deux tenues d'une punition, le curseur **affiché** remonte pendant la
-/// respiration : la lecture se fait sur ce que `MovementAnimation` dessine, pas
-/// sur l'état du moteur de bips.
+/// Ce que l'écran **dessine** pendant une punition, lu sur `MovementAnimation`
+/// et non sur l'état du moteur de bips : le curseur remonte pendant la
+/// respiration entre deux tenues, et la courbe dessine la punition, pas la
+/// suite de la séance.
 ///
-/// Deux routes portent la même chaîne de tenues : la punition générée en
-/// carrière (`deep_hold_chain` du `PunishmentBuilder`) et celle tirée dans
+/// La chaîne de tenues passe par deux routes : la punition générée en carrière
+/// (`deep_hold_chain` du `PunishmentBuilder`) et celle tirée dans
 /// `punishments.json` (Custom, scénarios). Le prix : temps réel, `Stopwatch`
 /// n'étant pas simulé par `flutter_test`.
 void main() {
@@ -164,10 +165,9 @@ class _CurveSample {
 const _curveSettleMs = 800;
 const _curveWindowEndMs = 4000;
 
-/// [punish] à 2,5 s d'une séance dont le step suivant est une respiration à
-/// 4 s, puis lecture de la courbe pendant les premières secondes d'une
-/// punition rythmée. Rend les images prises dans
-/// [_curveSettleMs, _curveWindowEndMs).
+/// Lance [punish] juste avant la respiration de [_breathNextSession], puis lit
+/// la courbe pendant les premières secondes de [_rhythmPunishment]. Rend les
+/// images prises dans [_curveSettleMs, _curveWindowEndMs).
 Future<List<_CurveSample>> _playCurve(WidgetTester tester,
     Future<void> Function(SessionController ctrl) punish) async {
   tester.view.physicalSize = const Size(400, 1400);
@@ -403,7 +403,7 @@ Future<_Played> _play(
       ),
       autoStart: true,
       // Profil d'endurance haut : la respiration qui précède la punition
-      // dure 3 à 5 s au lieu de 8 à 15 s.
+      // prend sa durée courte.
       staminaProfile: List<double>.filled(700, 100.0),
       // Sans phrase bank ni profil de capacités, `triggerFail` retombe sur
       // `punishments.json` : c'est la seule différence entre les deux routes.
@@ -519,8 +519,7 @@ PhraseBank _bank() => PhraseBank(
       intros: _entries(['intro']),
     );
 
-/// Confort de 3 s sur les deux tenues profondes : la chaîne dure 10 s au lieu
-/// de 26 s.
+/// Confort court sur les deux tenues profondes : la chaîne en est raccourcie.
 CapabilityProfile _profile() => const CapabilityProfile({
       CapabilityAxis.holdThroatStreak: CapabilityAxisState(best: 3, comfort: 3),
       CapabilityAxis.holdFullStreak: CapabilityAxisState(best: 3, comfort: 3),
