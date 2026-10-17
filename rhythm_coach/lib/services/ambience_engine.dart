@@ -1,8 +1,12 @@
+import 'dart:math';
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/ambience_pack.dart';
 import '../models/session.dart';
+import '../models/session_step.dart';
 
 /// Lecteur d'ambiance sonore en arrière-plan : un seul AudioPlayer en
 /// `ReleaseMode.loop`, volume volontairement bas pour rester sous les
@@ -44,8 +48,27 @@ class AmbienceEngine {
   /// retentative).
   static const Duration _startTimeout = Duration(seconds: 3);
 
+  static const String finishMusicAsset = 'audio/finish_music.mp3';
+
+  /// Instant du fichier où la musique de finish atteint son sommet, calé sur
+  /// le début du final.
+  static const Duration finishMusicPeak = Duration(seconds: 70);
+
+  static const double _finishMusicVolume = 0.35;
+
+  AmbienceEngine({Random? random}) : _random = random ?? Random();
+
+  final Random _random;
   final AudioPlayer _player = AudioPlayer(playerId: 'ambience_loop')
     ..positionUpdater = null;
+  AudioPlayer? _finishPlayer;
+  AudioPlayer? _climaxPlayer;
+  (SessionMode, bool)? _currentSlot;
+  bool _finishInitialized = false;
+  bool _finishPlaying = false;
+  bool _finishPaused = false;
+  int _finishGen = 0;
+  String? _slotAsset;
 
   String? _currentAsset;
   double _volume = defaultVolume;
@@ -62,9 +85,22 @@ class AmbienceEngine {
 
   Future<void> _ensureInit() async {
     if (_initialized) return;
+    // Un player qui tient le focus Android est mis en pause par audioplayers
+    // dès qu'un bip le réclame. Android seul : sur iOS la session est globale
+    // et écraserait le mixWithOthers du mode Music.
+    await _withoutFocus(_player);
     await _player.setReleaseMode(ReleaseMode.loop);
     await _player.setVolume(_volume);
     _initialized = true;
+  }
+
+  static Future<void> _withoutFocus(AudioPlayer player) async {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      final ctx = AudioContextConfig().build();
+      await player.setAudioContext(ctx.copy(
+        android: ctx.android.copy(audioFocus: AndroidAudioFocus.none),
+      ));
+    }
   }
 
   /// Lance ou change l'ambiance. Asset relatif au dossier `assets/`
@@ -104,6 +140,12 @@ class AmbienceEngine {
   }
 
   Future<void> pause() async {
+    if (_finishPlaying && !_finishPaused) {
+      _finishPaused = true;
+      try {
+        await _finishPlayer?.pause().timeout(_callTimeout);
+      } catch (_) {}
+    }
     if (!_initialized || !_isPlaying) return;
     try {
       // `.timeout(300 ms)` : même garde-fou que `BeepEngine` (cf. 6ebdb84).
@@ -120,6 +162,12 @@ class AmbienceEngine {
   }
 
   Future<void> resume() async {
+    if (_finishPlaying && _finishPaused) {
+      _finishPaused = false;
+      try {
+        await _finishPlayer?.resume().timeout(_callTimeout);
+      } catch (_) {}
+    }
     if (!_initialized || _currentAsset == null || _isPlaying) return;
     try {
       // Borné comme [pause] / [stop] : commande de transport sur un player
@@ -141,21 +189,90 @@ class AmbienceEngine {
     _isPlaying = false;
   }
 
+  /// Joue un des clips de climax du pack, une fois, par-dessus l'ambiance.
+  Future<void> playClimax() async {
+    final clips = _pack.climax;
+    if (clips.isEmpty) return;
+    try {
+      await startClimaxPlayback(clips[_random.nextInt(clips.length)])
+          .timeout(_startTimeout);
+    } catch (e) {
+      if (kDebugMode) debugPrint('[AmbienceEngine] climax error : $e');
+    }
+  }
+
+  /// Ne pas appeler directement en production : surchargée par les tests,
+  /// comme [startPlayback].
+  @visibleForTesting
+  Future<void> startClimaxPlayback(String asset) async {
+    final player = _climaxPlayer ??= AudioPlayer(playerId: 'ambience_climax')
+      ..positionUpdater = null;
+    await _withoutFocus(player);
+    await player.setReleaseMode(ReleaseMode.stop);
+    await player.setSource(AssetSource(asset));
+    await player.setVolume((_volume / maxVolume).clamp(0.0, 1.0));
+    await player.resume();
+  }
+
+  static const String _packPrefsKey = 'ambience.pack';
+  static const String _volumePrefsKey = 'ambience.volume';
+
+  /// Reprend le pack et le volume choisis au lancement précédent. Un pack qui
+  /// n'est plus au catalogue retombe sur [AmbiencePack.none].
+  Future<void> restore(List<AmbiencePack> packs) async {
+    final prefs = await SharedPreferences.getInstance();
+    final id = prefs.getString(_packPrefsKey);
+    _pack =
+        packs.firstWhere((p) => p.id == id, orElse: () => AmbiencePack.none);
+    final v = prefs.getDouble(_volumePrefsKey);
+    if (v != null) await _applyVolume(v);
+  }
+
   /// Change le pack actif. Si une lecture est en cours, ne touche pas
   /// directement à l'asset courant — l'appelant fait `playForMode` ensuite
   /// si besoin (typiquement après un changement de mode). Pour un test
   /// d'écoute (page SONS), passer par [playForMode] directement.
   void setPack(AmbiencePack pack) {
     _pack = pack;
+    SharedPreferences.getInstance()
+        .then((prefs) => prefs.setString(_packPrefsKey, pack.id));
   }
 
-  /// Joue l'ambiance correspondant à [mode] selon le pack courant.
-  /// Si le pack n'a pas de track pour ce mode, coupe l'ambiance.
-  Future<void> playForMode(SessionMode mode) async {
-    await play(_pack.assetFor(mode));
+  /// Joue l'ambiance correspondant à [mode] selon le pack courant, en tirant
+  /// une variante du palier de [depth]. Tant que le mode et le palier ne
+  /// changent pas, la variante en cours continue. Si le pack n'a pas de
+  /// track pour ce mode, coupe l'ambiance.
+  Future<void> playForMode(SessionMode mode, {Position? depth}) async {
+    final deep = depth != null && depth.index >= Position.throat.index;
+    final candidates = _pack.candidatesFor(mode, deep: deep);
+    if (candidates.isEmpty) {
+      _currentSlot = null;
+      _slotAsset = null;
+      await stop();
+      return;
+    }
+    final slot = (mode, deep);
+    final kept = _slotAsset;
+    if (slot == _currentSlot && kept != null && candidates.contains(kept)) {
+      await play(kept);
+      return;
+    }
+    final fresh = candidates.length > 1
+        ? candidates.where((a) => a != kept).toList()
+        : candidates;
+    final picked = fresh[_random.nextInt(fresh.length)];
+    _currentSlot = slot;
+    _slotAsset = picked;
+    await play(picked);
   }
 
   Future<void> setVolume(double v) async {
+    await _applyVolume(v);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_volumePrefsKey, _volume);
+  }
+
+  Future<void> _applyVolume(double v) async {
     _volume = v.clamp(0.0, maxVolume);
     if (!_initialized) return;
     try {
@@ -165,7 +282,80 @@ class AmbienceEngine {
     }
   }
 
+  /// Démarre la musique de finish de façon que son sommet tombe dans
+  /// [untilPeak]. Joue par-dessus l'ambiance, indépendamment du pack.
+  Future<void> startFinishMusic(Duration untilPeak) async {
+    final offset = finishMusicPeak - untilPeak;
+    final gen = ++_finishGen;
+    try {
+      await startFinishPlayback(offset.isNegative ? Duration.zero : offset)
+          .timeout(_startTimeout);
+      if (gen != _finishGen) {
+        await _finishPlayer?.stop().timeout(_callTimeout);
+        return;
+      }
+      _finishPlaying = true;
+      _finishPaused = false;
+    } catch (e) {
+      if (kDebugMode) debugPrint('[AmbienceEngine] finish music error : $e');
+    }
+  }
+
+  /// Ne pas appeler directement en production : surchargée par les tests,
+  /// comme [startPlayback].
+  @visibleForTesting
+  Future<void> startFinishPlayback(Duration offset) async {
+    final player = _finishPlayer ??= AudioPlayer(playerId: 'finish_music')
+      ..positionUpdater = null;
+    if (!_finishInitialized) {
+      await _withoutFocus(player);
+      await player.setReleaseMode(ReleaseMode.stop);
+      _finishInitialized = true;
+    }
+    await player.setSource(AssetSource(finishMusicAsset));
+    await player.setVolume(_finishMusicVolume);
+    await player.seek(offset);
+    await player.resume();
+  }
+
+  bool get isFinishMusicPlaying => _finishPlaying;
+
+  Future<void> fadeOutFinishMusic(
+      {Duration duration = const Duration(seconds: 3)}) async {
+    if (!_finishPlaying) return;
+    final gen = ++_finishGen;
+    _finishPlaying = false;
+    _finishPaused = false;
+    const steps = 12;
+    try {
+      for (var i = steps - 1; i >= 0; i--) {
+        await Future<void>.delayed(duration ~/ steps);
+        if (gen != _finishGen) return;
+        await _finishPlayer
+            ?.setVolume(_finishMusicVolume * i / steps)
+            .timeout(_callTimeout);
+      }
+      await _finishPlayer?.stop().timeout(_callTimeout);
+    } catch (_) {}
+  }
+
+  Future<void> stopFinishMusic() async {
+    _finishGen++;
+    _finishPlaying = false;
+    _finishPaused = false;
+    if (!_finishInitialized) return;
+    try {
+      await _finishPlayer?.stop().timeout(_callTimeout);
+    } catch (_) {}
+  }
+
   Future<void> dispose() async {
+    _finishGen++;
+    _finishPlaying = false;
+    try {
+      await _finishPlayer?.dispose();
+      await _climaxPlayer?.dispose();
+    } catch (_) {}
     try {
       await _player.dispose();
     } catch (_) {}

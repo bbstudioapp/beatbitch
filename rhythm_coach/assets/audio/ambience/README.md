@@ -33,11 +33,31 @@ code nécessaire.
 | studio  | rhythm  | `drone_low.mp3`          |
 | studio  | lick    | `drone_low.mp3`          |
 | studio  | biffle  | `drone_low.mp3`          |
+| voix_homme | rhythm, freestyle | peu profond `rythme_leger_1/2.mp3`, profond `rythme_profond_1/2.mp3` |
+| voix_homme | lick, suckle | `lick_1/2.mp3` |
+| voix_homme | hold | peu profond `tenue_legere_1/2.mp3`, profond `tenue_profonde_1/2.mp3` |
+| voix_homme | breath | `elle_souffle.mp3` |
+| voix_homme | climax (chime du final) | `homme_climax_1/2/3.mp3` |
+| voix_femme | rhythm, freestyle | peu profond `rythme_leger_1/2.mp3`, profond `rythme_profond_1/2.mp3` |
+| voix_femme | lick, suckle | `lick_1/2.mp3` |
+| voix_femme | hold | peu profond `tenue_legere_1/2.mp3`, profond `tenue_profonde_1/2.mp3` |
+| voix_femme | breath | `elle_souffle.mp3` |
+| voix_femme | climax (chime du final) | `femme_climax_1/2/3.mp3` |
 
 Le pack `intime` est généré synthétiquement par
 `tools/generate_ambience.sh` (sinusoïdes harmoniques + filtres ffmpeg,
 loop propre via fades symétriques). Ré-exécute le script pour
 régénérer ou pour ajuster les fréquences/durées.
+
+Les packs `voix_homme` et `voix_femme` sont des boucles de ~48 s montées
+à partir de sons générés par ElevenLabs.
+
+Les boucles ne contiennent que des bruitages ; les gémissements sont réservés au climax
+(`"climax"` : clips joués une fois avec le chime du final).
+
+Une piste peut lister plusieurs variantes, tirées au hasard, et les séparer
+par palier de profondeur : `{"shallow": [...], "deep": [...]}` (profond =
+throat, full, balls).
 
 Si un fichier manque, le pack reste sélectionnable dans l'UI mais le
 mode concerné jouera en silence. C'est volontaire (fail-safe).

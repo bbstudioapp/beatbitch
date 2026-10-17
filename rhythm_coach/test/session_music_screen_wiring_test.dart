@@ -240,7 +240,7 @@ class _SilentAmbienceEngine extends AmbienceEngine {
   @override
   Future<void> play(String? assetPath) async {}
   @override
-  Future<void> playForMode(SessionMode mode) async {}
+  Future<void> playForMode(SessionMode mode, {Position? depth}) async {}
   @override
   Future<void> pause() async {}
   @override

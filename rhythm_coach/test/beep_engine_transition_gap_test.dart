@@ -15,8 +15,12 @@ void main() {
       }
     });
 
-    test('changement de mode vers rhythm/hold : 600 ms', () {
-      for (final mode in [SessionMode.rhythm, SessionMode.hold]) {
+    test('changement de mode vers rhythm/hold/breath : 600 ms', () {
+      for (final mode in [
+        SessionMode.rhythm,
+        SessionMode.hold,
+        SessionMode.breath,
+      ]) {
         expect(
           BeepEngine.transitionGap(incoming: mode, previous: SessionMode.beg),
           const Duration(milliseconds: 600),
@@ -26,14 +30,13 @@ void main() {
     });
 
     test(
-      'changement de mode vers lick/hand/biffle/breath/freestyle/suckle : '
+      'changement de mode vers lick/hand/biffle/freestyle/suckle : '
       '1500 ms',
       () {
         for (final mode in [
           SessionMode.lick,
           SessionMode.hand,
           SessionMode.biffle,
-          SessionMode.breath,
           SessionMode.freestyle,
           SessionMode.suckle,
         ]) {

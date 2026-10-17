@@ -96,6 +96,9 @@ extension FailFlowOrchestrator on SessionController {
 
     _failActive = true;
     final myGen = ++_failGen;
+    _finishMusicStarted = false;
+    unawaited(_ambience.fadeOutFinishMusic(
+        duration: const Duration(milliseconds: 600)));
     _hadFailThisSession = true;
     _stamina.onFail();
     _saliva.onFail();
@@ -458,6 +461,9 @@ extension FailFlowOrchestrator on SessionController {
 
     _failActive = true;
     final myGen = ++_failGen;
+    _finishMusicStarted = false;
+    unawaited(_ambience.fadeOutFinishMusic(
+        duration: const Duration(milliseconds: 600)));
     _disarmHoldVerifier();
     _stopwatch.stop();
     _ticker?.cancel();

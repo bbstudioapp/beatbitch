@@ -29,7 +29,14 @@ class BeepEngine {
   static const String _freestyleStartAsset = 'freestyle_start';
   static const String _freestyleEndAsset = 'freestyle_end';
   static const String _finaleChimeAsset = 'finale_chime';
-  static const String _lickBallsAsset = 'lick_balls_beep';
+  static const List<String> _lickAssets = [
+    'lick_tip_beep',
+    'lick_head_beep',
+    'lick_mid_beep',
+    'lick_throat_beep',
+    'lick_full_beep',
+    'lick_balls_beep',
+  ];
 
   static const List<String> _allAssets = [
     _tipAsset,
@@ -47,11 +54,11 @@ class BeepEngine {
     _freestyleStartAsset,
     _freestyleEndAsset,
     _finaleChimeAsset,
-    _lickBallsAsset,
+    ..._lickAssets,
   ];
 
   static const double _rhythmVolume = 1.0;
-  static const double _lickVolume = 0.65;
+  static const double _lickVolume = 1.0;
   static const double _handVolume = 0.85;
   static const double _holdLayerVolume = 0.9;
   static const double _breathVolume = 0.9;
@@ -86,7 +93,7 @@ class BeepEngine {
     _handDownAsset,
     _handUpAsset,
     _suckleAsset,
-    _lickBallsAsset,
+    ..._lickAssets,
   };
 
   final Map<String, _PlayerPool> _pools = {};
@@ -112,9 +119,6 @@ class BeepEngine {
   BeatAnchor _anchor = BeatAnchor.none;
 
   int _ratio = 1;
-
-  @visibleForTesting
-  void Function(String asset, double volume)? debugOnTrigger;
 
   /// Temps écoulé hors pauses : une reprise replanifie les mouvements restants.
   List<HoldMove> _moves = const [];
@@ -231,7 +235,6 @@ class BeepEngine {
       case SessionMode.lick:
       case SessionMode.hand:
       case SessionMode.biffle:
-      case SessionMode.breath:
       case SessionMode.freestyle:
       case SessionMode.suckle:
         return true;
@@ -239,6 +242,7 @@ class BeepEngine {
         return incomingTo == null;
       case SessionMode.rhythm:
       case SessionMode.hold:
+      case SessionMode.breath:
         return false;
     }
   }
@@ -393,8 +397,88 @@ class BeepEngine {
     tick();
   }
 
-  void _trigger(String assetName, double baseVolume) {
-    final volume = baseVolume * _beepGain;
+  /// Un bip en retard de moins que ça sur son temps est joué quand même ;
+  /// au-delà il est sauté plutôt que de sonner à côté du temps.
+  static const Duration _gridLateTolerance = Duration(milliseconds: 40);
+
+  static const Duration _gridHopMin = Duration(milliseconds: 20);
+
+  /// Un timer qui sonne avant son temps (position de lecture ré-ancrée ou plus
+  /// lente que l'horloge murale) se reprogramme ; en dessous de cet écart le bip
+  /// part.
+  static const Duration _gridEarlyTolerance = Duration(milliseconds: 1);
+
+  /// Cale les loops rythmés sur les temps d'un morceau : chaque bip tombe sur un
+  /// temps de sa grille, lu sur [position] (position de lecture du morceau), et
+  /// non sur un intervalle déduit du BPM du step. [music] fixe aussi le gain des
+  /// bips.
+  void attachMusic(SessionMusic music, Duration Function() position) {
+    _music = music;
+    _musicPosition = position;
+    _beepGain = music.beepGain;
+  }
+
+  /// Observe chaque déclenchement de sample avec son volume final.
+  @visibleForTesting
+  void Function(String asset, double volume)? debugOnTrigger;
+
+  /// Avance des bips sur le morceau (séance musicale seulement) : chaque bip
+  /// part ce délai avant son temps de grille. Relue à chaque bip, réglable en
+  /// cours de séance.
+  Duration musicBeepAdvance = Duration.zero;
+
+  void detachMusic() {
+    _music = null;
+    _musicPosition = null;
+    _beepGain = 1.0;
+  }
+
+  /// **Anti-drift** : le temps visé de chaque bip est calculé depuis son index
+  /// sur la grille du morceau puis comparé à la position de lecture relue à
+  /// chaque bip — ni l'intervalle entier d'un BPM arrondi, ni le retard d'un
+  /// timer précédent ne s'accumulent. Un step à `bpm` moitié du tempo du
+  /// morceau joue un temps sur deux (cf. [SessionMusic.strideForStepBpm]).
+  void _startGridLoop({required double volume}) {
+    final music = _music!;
+    final position = _musicPosition!;
+    final stride = music.strideForStepBpm(_bpm);
+    final myGen = ++_loopGen;
+    var lastBeat = -1;
+    Duration lead() => position() + musicBeepAdvance;
+
+    void scheduleNext() {
+      if (myGen != _loopGen) return;
+      final now = lead();
+      var index =
+          music.beatIndexAtOrAfter(now - _gridLateTolerance, stride: stride);
+      final justPlayed = lastBeat >= 0 &&
+          index <= lastBeat &&
+          music.beatTime(lastBeat) - now < music.beatPeriod;
+      if (justPlayed) index = lastBeat + stride;
+      final wait = music.beatTime(index) - now;
+      // Le timer est en temps mural, la position en temps de lecture : on
+      // n'attend que l'essentiel de l'écart puis on relit la position, jusqu'à
+      // tomber sur le temps.
+      final hop = wait > _gridHopMin ? wait * 0.85 : wait;
+      _loopTimer = Timer(hop > Duration.zero ? hop : Duration.zero, () {
+        if (myGen != _loopGen) return;
+        if (music.beatTime(index) - lead() > _gridEarlyTolerance) {
+          scheduleNext();
+          return;
+        }
+        lastBeat = index;
+        // BPM effectif de la grille : l'intervalle annoncé au curseur est
+        // l'écart réel jusqu'au temps suivant joué.
+        _emitPositionBeat(volume, music.bpm / stride);
+        scheduleNext();
+      });
+    }
+
+    scheduleNext();
+  }
+
+  /// Clampé à `_bpmEnd` : un step peut durer plus que prévu (fail, pause),
+  /// on n'extrapole pas.
   double _currentInterpolatedBpm(int elapsedMs) {
     final bpmEnd = _bpmEnd;
     final dur = _loopDurationMs;
@@ -412,7 +496,11 @@ class BeepEngine {
       final (asset, vol) = _resolveHandBeat(pos, baseVolume);
       _trigger(asset, vol);
     } else {
-      _trigger(_assetForPosition(pos), baseVolume);
+      _trigger(
+          _mode == SessionMode.lick
+              ? _lickAssetForPosition(pos)
+              : _assetForPosition(pos),
+          baseVolume);
     }
     _notifyBeat(_mode, pos, Duration(milliseconds: intervalMs), currentBpm);
     return intervalMs;
@@ -625,8 +713,6 @@ class BeepEngine {
     _trigger(_breathAsset, _breathVolume);
   }
 
-  /// Déclenche un sample en utilisant le prochain player du pool round-robin.
-  /// Fire-and-forget : le ticker n'attend pas la fin de l'opération audio.
   void _trigger(String assetName, double baseVolume) {
     final volume = baseVolume * _beepGain;
     debugOnTrigger?.call(assetName, volume);
@@ -698,7 +784,7 @@ class BeepEngine {
         if (myGen != _loopGen) return;
         _trigger(
             frames[i].tongue
-                ? _lickBallsAsset
+                ? _lickAssetForPosition(frames[i].beep!)
                 : _assetForPosition(frames[i].beep!),
             _rhythmVolume * frames[i].volume);
         scheduleFrom(i + 1);
@@ -707,6 +793,15 @@ class BeepEngine {
 
     scheduleFrom(0);
   }
+
+  String _lickAssetForPosition(Position p) => switch (p) {
+        Position.tip => 'lick_tip_beep',
+        Position.head => 'lick_head_beep',
+        Position.mid => 'lick_mid_beep',
+        Position.throat => 'lick_throat_beep',
+        Position.full => 'lick_full_beep',
+        Position.balls => 'lick_balls_beep',
+      };
 
   void _stopLoop() {
     _loopTimer?.cancel();
@@ -740,7 +835,7 @@ class BeepEngine {
 
   void playLickPositionOnce(Position p) {
     if (!_initialized) return;
-    _trigger(_assetForPosition(p), _lickVolume);
+    _trigger(_lickAssetForPosition(p), _lickVolume);
   }
 
   void playHoldOnce(Position p) {

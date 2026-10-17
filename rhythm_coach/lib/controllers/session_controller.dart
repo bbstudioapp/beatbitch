@@ -280,6 +280,8 @@ class SessionController extends ChangeNotifier {
   /// halo blanc crémeux pile sur le chime.
   bool _finaleChimeStarted = false;
 
+  bool _finishMusicStarted = false;
+
   // ─── État du flow fail ─────────────────────────────────────────────────
 
   FailPhase? _failPhase;
@@ -1063,11 +1065,17 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Aligne l'ambiance lue sur le mode courant du BeepEngine d'après le
-  /// pack actif (porté par AmbienceEngine). Appelé après chaque step de config.
+  /// Aligne l'ambiance lue sur le mode et la profondeur courants du
+  /// BeepEngine d'après le pack actif (porté par AmbienceEngine). Appelé après
+  /// chaque step de config.
   Future<void> _syncAmbienceToCurrentMode() async {
     if (_music != null) return;
-    await _ambience.playForMode(_beep.currentMode);
+    final from = _beep.currentFrom;
+    final to = _beep.currentTo;
+    await _ambience.playForMode(
+      _beep.currentMode,
+      depth: to != null && to.index > from.index ? to : from,
+    );
   }
 
   // ─── Cycle principal ───────────────────────────────────────────────────
@@ -1096,6 +1104,7 @@ class SessionController extends ChangeNotifier {
         _finalChimePlayed = _music != null;
         _musicBreathUntil = null;
         _finaleChimeStarted = false;
+        _finishMusicStarted = false;
         _sessionBadgeUnlocks = const [];
         _sessionMilestoneUnlocks = const [];
         _currentHoldFullDuration = 0;
@@ -1337,6 +1346,7 @@ class SessionController extends ChangeNotifier {
     await _beep.stop();
     await _releaseMusic();
     await _ambience.stop();
+    await _ambience.stopFinishMusic();
     // Borné comme le canal de synthèse : `_state` ne bascule qu'après, et le
     // ticker est déjà annulé. Un canal pigeon muet laissait la séance morte
     // sans jamais revenir à `idle` — même signature que l'issue #317.
@@ -1745,6 +1755,7 @@ class SessionController extends ChangeNotifier {
         _finalChimePlayed = true;
         unawaited(_playFinalChimeAfterAction(step.text));
       }
+      _updateFinishMusic(step);
 
       _nextStepIndex++;
 
@@ -1763,6 +1774,25 @@ class SessionController extends ChangeNotifier {
     if (modeChanged) {
       _syncAmbienceToCurrentMode();
     }
+  }
+
+  /// Musique de finish : démarre pendant la montée de façon que son sommet
+  /// tombe sur le final, s'éteint au premier step du post-final.
+  void _updateFinishMusic(SessionStep step) {
+    final finalT = session.finalStepTime;
+    final finishStart = session.silentFinishStartTime;
+    if (_music != null || finalT == null || finishStart == null) return;
+    if (step.time > finalT) {
+      unawaited(_ambience.fadeOutFinishMusic());
+      return;
+    }
+    final peak = AmbienceEngine.finishMusicPeak.inSeconds;
+    if (_finishMusicStarted || step.time < max(finishStart, finalT - peak)) {
+      return;
+    }
+    _finishMusicStarted = true;
+    unawaited(
+        _ambience.startFinishMusic(Duration(seconds: finalT - step.time)));
   }
 
   /// Prononce la plus ancienne phrase en attente dès que la voix se libère.
@@ -1889,6 +1919,7 @@ class SessionController extends ChangeNotifier {
     // accroche pour démarrer le halo pile sur le son).
     _finaleChimeStarted = true;
     notifyListeners();
+    unawaited(_ambience.playClimax());
     await _beep.playFinaleChime(category: session.finalCategory);
   }
 
@@ -2097,6 +2128,7 @@ class SessionController extends ChangeNotifier {
         }
       }
       if (!_released) {
+        unawaited(_ambience.playClimax());
         await _beep.playFinaleChime(category: session.finalCategory);
         _finalChimePlayed = true;
       }
@@ -2505,6 +2537,7 @@ class SessionController extends ChangeNotifier {
           await _tts.stop();
           await _beep.stop();
           await _ambience.stop();
+          await _ambience.stopFinishMusic();
         } catch (_) {}
       }());
       WakelockPlus.disable();
