@@ -902,16 +902,17 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                       // Un défi ou un flow fail joue des segments absents de
                       // `session.steps` sur une horloge de séance figée : rien
                       // à annoncer tant qu'elle l'est.
-                      upcomingSteps: ctrl.isTimelineFrozen || ctrl.isFailing
-                          ? const []
-                          : resolveUpcomingMovementSteps(
-                              steps: ctrl.session.steps,
-                              defaultMode: ctrl.session.defaultMode,
-                              afterSecond: ctrl.elapsedSeconds,
-                              currentMode: ctrl.currentMode,
-                              currentFrom: ctrl.currentFrom,
-                              currentBpm: ctrl.currentBpm,
-                            ),
+                      upcomingSteps:
+                          ctrl.isTimelineFrozen || ctrl.isFailFlowActive
+                              ? const []
+                              : resolveUpcomingMovementSteps(
+                                  steps: ctrl.session.steps,
+                                  defaultMode: ctrl.session.defaultMode,
+                                  afterSecond: ctrl.elapsedSeconds,
+                                  currentMode: ctrl.currentMode,
+                                  currentFrom: ctrl.currentFrom,
+                                  currentBpm: ctrl.currentBpm,
+                                ),
                     )
                   else
                     SizedBox(height: animHeight),
@@ -942,6 +943,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                           children: [
                             _UseMeButton(
                               enabled: ctrl.isRunning &&
+                                  !ctrl.isFailFlowActive &&
                                   !_upgradeRequested &&
                                   !_upgradeInFlight,
                               used: _upgradeRequested,
@@ -955,6 +957,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                   if (widget.onRequestFinishNow != null && !_finishNowDone) ...[
                     _FinishNowButton(
                       enabled: ctrl.isRunning &&
+                          !ctrl.isFailFlowActive &&
                           !_finishNowInFlight &&
                           (ctrl.session.durationSeconds -
                                   ctrl.elapsedSeconds) >=
@@ -1151,7 +1154,7 @@ class _ControlsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isRunning = controller.isRunning;
-    final disabledByFail = controller.isFailing;
+    final disabledByFail = controller.isFailFlowActive;
     final mainIcon = isRunning ? Icons.pause : Icons.play_arrow;
     final mainAction = disabledByFail
         ? null

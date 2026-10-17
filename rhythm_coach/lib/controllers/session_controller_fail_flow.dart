@@ -543,8 +543,9 @@ extension FailFlowOrchestrator on SessionController {
     final last = _lastConfigStep;
     if (last == null) return;
     final applying = _beep.applyStep(last, session.defaultMode);
-    // Le moteur prend son mode avant son délai de transition : l'écran le
-    // suit tout de suite, pas à la fin du délai.
+    _failPhase = null;
+    _currentPunishment = null;
+    _state = SessionState.running;
     _notify();
     await applying;
     _capabilityTracker?.onStepApplied(

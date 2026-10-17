@@ -158,22 +158,33 @@ void main() {
   testWidgets(
       'mini-punition : l\'écran montre le rythme de la séance dès que le '
       'moteur le reprend', (tester) async {
-    final lag = await _screenLagAtResume(tester,
+    final (lag, failingFrames, announcedFrames) = await _screenLagAtResume(
+        tester,
         session: _session,
         punish: (ctrl) => ctrl.debugRunMiniPunishment(_holdPunishment));
     expect(lag, lessThan(_lagToleranceMs),
         reason: 'l\'écran a montré le rythme ${lag.inMilliseconds} ms après '
             'le moteur');
+    expect(failingFrames, 0,
+        reason: 'bandeau de punition encore affiché à côté du rythme restauré');
+    expect(announcedFrames, 0,
+        reason: 'la courbe annonce la suite sur une horloge de séance gelée');
   }, timeout: const Timeout(Duration(seconds: 120)));
 
   testWidgets(
       'FAIL sans section suivante : l\'écran montre le rythme de la séance '
       'dès que le moteur le reprend', (tester) async {
-    final lag = await _screenLagAtResume(tester,
-        session: _singleSection, punish: (ctrl) => ctrl.triggerFail());
+    final (lag, failingFrames, announcedFrames) = await _screenLagAtResume(
+        tester,
+        session: _singleSection,
+        punish: (ctrl) => ctrl.triggerFail());
     expect(lag, lessThan(_lagToleranceMs),
         reason: 'l\'écran a montré le rythme ${lag.inMilliseconds} ms après '
             'le moteur');
+    expect(failingFrames, 0,
+        reason: 'bandeau de punition encore affiché à côté du rythme restauré');
+    expect(announcedFrames, 0,
+        reason: 'la courbe annonce la suite sur une horloge de séance gelée');
   }, timeout: const Timeout(Duration(seconds: 120)));
 }
 
@@ -285,8 +296,11 @@ Future<(SessionController, Future<void> Function())> _mount(
 const _lagToleranceMs = Duration(milliseconds: 400);
 
 /// Écart entre le moteur qui reprend le rythme de la séance à la sortie d'une
-/// punition de tenue et l'écran qui le montre.
-Future<Duration> _screenLagAtResume(
+/// punition de tenue et l'écran qui le montre, et nombre d'images où l'écran
+/// montre ce rythme alors que le contrôleur est encore en `failing`, et nombre
+/// d'images où la courbe annonce la suite avant que l'horloge de séance ne
+/// reparte.
+Future<(Duration, int, int)> _screenLagAtResume(
   WidgetTester tester, {
   required Session session,
   required Future<void> Function(SessionController ctrl) punish,
@@ -304,8 +318,11 @@ Future<Duration> _screenLagAtResume(
   var punished = false;
   DateTime? engineAt;
   DateTime? screenAt;
+  var failingFrames = 0;
+  var announcedFrames = 0;
   final deadline = DateTime.now().add(const Duration(seconds: 40));
-  while (DateTime.now().isBefore(deadline) && screenAt == null) {
+  while (DateTime.now().isBefore(deadline) &&
+      !(screenAt != null && !ctrl.isFailFlowActive)) {
     await slice();
     if (ctrl.failPhase == FailPhase.punishment &&
         ctrl.currentMode == SessionMode.hold) {
@@ -316,7 +333,17 @@ Future<Duration> _screenLagAtResume(
     if (ctrl.currentMode == SessionMode.rhythm) engineAt ??= now;
     final shown =
         tester.widget<MovementAnimation>(find.byType(MovementAnimation)).mode;
-    if (shown == SessionMode.rhythm) screenAt ??= now;
+    if (shown == SessionMode.rhythm) {
+      screenAt ??= now;
+      if (ctrl.isFailing || ctrl.failPhase != null) failingFrames++;
+      if (ctrl.isFailFlowActive &&
+          tester
+              .widget<MovementAnimation>(find.byType(MovementAnimation))
+              .upcomingSteps
+              .isNotEmpty) {
+        announcedFrames++;
+      }
+    }
   }
   expect(punished, isTrue, reason: 'la punition de tenue ne démarre pas');
   expect(engineAt, isNotNull, reason: 'le moteur ne reprend pas le rythme');
@@ -327,7 +354,7 @@ Future<Duration> _screenLagAtResume(
   await tester.pumpWidget(const SizedBox());
   await tester
       .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
-  return screenAt!.difference(engineAt!);
+  return (screenAt!.difference(engineAt!), failingFrames, announcedFrames);
 }
 
 /// Lance [punish] à 2,5 s de séance s'il est fourni, laisse passer le gel

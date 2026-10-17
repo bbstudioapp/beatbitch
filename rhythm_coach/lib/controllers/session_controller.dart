@@ -1035,6 +1035,10 @@ class SessionController extends ChangeNotifier {
   bool get isIdle => _state == SessionState.idle;
   bool get isFailing => _state == SessionState.failing;
 
+  /// Vrai de l'arrêt de l'horloge à son redémarrage, délai de reprise du moteur
+  /// compris : [isRunning] l'est déjà alors que l'horloge est encore gelée.
+  bool get isFailFlowActive => _failActive;
+
   /// True quand le `finale_chime` retentit (après la phrase d'action du
   /// step final). Consommé par l'overlay de finale (halo blanc crémeux) :
   /// combiné à `isRunning`, ça ne s'allume que pour les sessions à step
@@ -1052,6 +1056,7 @@ class SessionController extends ChangeNotifier {
       return _state == SessionState.running && _musicBreathUntil == null;
     }
     return (_state == SessionState.running &&
+            !_failActive &&
             _punishmentBundle.isEmpty == false) ||
         (_state == SessionState.failing && _failPhase == FailPhase.punishment);
   }
@@ -1285,7 +1290,7 @@ class SessionController extends ChangeNotifier {
       _tts.speak(text).timeout(ttsSpeakTimeout, onTimeout: () {});
 
   Future<void> pause() async {
-    if (_state != SessionState.running) return;
+    if (_state != SessionState.running || _failActive) return;
     final musicPaused = _music?.pause();
     _stopwatch.stop();
     _ticker?.cancel();

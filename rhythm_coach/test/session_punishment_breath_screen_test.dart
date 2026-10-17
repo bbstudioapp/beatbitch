@@ -231,7 +231,7 @@ void main() {
             '${announced.take(3).join(' | ')}');
 
     unawaited(ctrl.triggerFail());
-    for (var i = 0; i < 50 && ctrl.failPhase != null; i++) {
+    for (var i = 0; i < 50 && ctrl.isFailFlowActive; i++) {
       await slice();
     }
     await tester.pump(const Duration(seconds: 2));
@@ -341,7 +341,7 @@ Future<List<_CurveSample>> _playCurve(WidgetTester tester,
   expect(startedAt, isNotNull, reason: 'la punition ne démarre pas');
 
   unawaited(ctrl.triggerFail());
-  for (var i = 0; i < 50 && ctrl.failPhase != null; i++) {
+  for (var i = 0; i < 50 && ctrl.isFailFlowActive; i++) {
     await slice();
   }
   // Le saut de section relance un step sans l'attendre : son délai de
@@ -562,7 +562,7 @@ Future<_Played> _play(
 
   // Sortie propre : un second FAIL abandonne la punition en cours.
   unawaited(ctrl.triggerFail());
-  for (var i = 0; i < 50 && ctrl.failPhase != null; i++) {
+  for (var i = 0; i < 50 && ctrl.isFailFlowActive; i++) {
     await slice();
   }
   await tester.pumpWidget(const SizedBox());
