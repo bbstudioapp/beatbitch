@@ -55,6 +55,7 @@
   "sessionStateFinished": "FERTIG",
   "sessionStateFailing": "FAIL",
   "sessionBreakBanner": "PAUSE",
+  "sessionBreakSkipButton": "PAUSE ÜBERSPRINGEN",
   "sessionFailPhasePhrase": "Fail-Satz",
   "sessionFailPhaseBreath": "Atmen",
   "sessionFailPhasePunishment": "Strafe",

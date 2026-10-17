@@ -55,6 +55,7 @@
   "sessionStateFinished": "HECHO",
   "sessionStateFailing": "FALLO",
   "sessionBreakBanner": "PAUSA",
+  "sessionBreakSkipButton": "SALTAR LA PAUSA",
   "sessionFailPhasePhrase": "Frase de fallo",
   "sessionFailPhaseBreath": "Respiración",
   "sessionFailPhasePunishment": "Castigo",

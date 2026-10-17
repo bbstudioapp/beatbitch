@@ -129,6 +129,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionBreakBanner => 'BREAK';
 
   @override
+  String get sessionBreakSkipButton => 'SKIP THE BREAK';
+
+  @override
   String get sessionFailPhasePhrase => 'Fail phrase';
 
   @override

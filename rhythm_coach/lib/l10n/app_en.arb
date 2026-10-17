@@ -55,6 +55,7 @@
   "sessionStateFinished": "DONE",
   "sessionStateFailing": "FAIL",
   "sessionBreakBanner": "BREAK",
+  "sessionBreakSkipButton": "SKIP THE BREAK",
   "sessionFailPhasePhrase": "Fail phrase",
   "sessionFailPhaseBreath": "Breath",
   "sessionFailPhasePunishment": "Punishment",

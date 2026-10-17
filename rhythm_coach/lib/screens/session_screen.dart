@@ -1634,6 +1634,24 @@ class _BreakBanner extends StatelessWidget {
             const SizedBox(height: 10),
             PostureIndicator(pose: newPose),
           ],
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: controller.skipBreak,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: _border,
+                side: const BorderSide(color: _border),
+              ),
+              child: Text(
+                t.sessionBreakSkipButton,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 2,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

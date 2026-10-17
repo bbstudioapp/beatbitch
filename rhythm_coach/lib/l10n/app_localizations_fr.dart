@@ -130,6 +130,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get sessionBreakBanner => 'PAUSE';
 
   @override
+  String get sessionBreakSkipButton => 'PASSER LA PAUSE';
+
+  @override
   String get sessionFailPhasePhrase => 'Phrase de fail';
 
   @override

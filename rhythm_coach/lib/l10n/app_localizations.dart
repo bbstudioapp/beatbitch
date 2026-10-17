@@ -330,6 +330,12 @@ abstract class AppLocalizations {
   /// **'PAUSE'**
   String get sessionBreakBanner;
 
+  /// No description provided for @sessionBreakSkipButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'PASSER LA PAUSE'**
+  String get sessionBreakSkipButton;
+
   /// No description provided for @sessionFailPhasePhrase.
   ///
   /// In fr, this message translates to:

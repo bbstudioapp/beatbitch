@@ -130,6 +130,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get sessionBreakBanner => 'PAUSE';
 
   @override
+  String get sessionBreakSkipButton => 'PAUSE ÜBERSPRINGEN';
+
+  @override
   String get sessionFailPhasePhrase => 'Fail-Satz';
 
   @override
