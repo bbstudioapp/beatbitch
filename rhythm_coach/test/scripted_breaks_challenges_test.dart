@@ -127,9 +127,15 @@ void main() {
             scriptedBreaks: true,
           )
           .session;
-      final expectedCount = minutes >= 45 ? 2 : 1;
-      expect(withoutChallenges.breaks.length, expectedCount,
-          reason: '$minutes min → $expectedCount pause(s)');
+      final breaks = withoutChallenges.breaks;
+      expect(breaks, isNotEmpty);
+      for (var k = 0; k < breaks.length; k++) {
+        // Sans spécialisation : une pause toutes les 10 min, posée à la
+        // première frontière de bloc qui suit.
+        expect(breaks[k].time,
+            inInclusiveRange((k + 1) * 600, (k + 1) * 600 + 150),
+            reason: '$minutes min → pause n°${k + 1}');
+      }
     }
   });
 }

@@ -152,6 +152,7 @@ extension CareerHooksOrchestrator on SessionController {
     _breakActive = false;
     _activeBreak = null;
     _nextBreakIndex = 0;
+    _nextPostureChangeIndex = 0;
     // Reset du flag chime : la régen apporte son propre step final +
     // apothéose. Si l'ancienne session avait déjà tiré son chime (cas
     // rare où Supplier est cliqué pile entre final et fin), on doit
@@ -206,6 +207,7 @@ extension CareerHooksOrchestrator on SessionController {
     _breakActive = false;
     _activeBreak = null;
     _nextBreakIndex = 0;
+    _nextPostureChangeIndex = 0;
     // Reset du flag chime : la régen apporte son propre step final + apothéose.
     _finalChimePlayed = false;
     _finaleChimeStarted = false;

@@ -86,3 +86,12 @@ class ScriptedBreak {
   /// Seconde de fin du break (exclusive de la fenêtre d'effort suivante).
   int get endTime => time + durationSeconds;
 }
+
+/// Changement de position hors pause : la coach annonce [pose] et la séance
+/// attend que la joueuse s'y mette. Transient comme [ScriptedBreak].
+class PostureChange {
+  final int time;
+  final Posture pose;
+
+  const PostureChange({required this.time, required this.pose});
+}

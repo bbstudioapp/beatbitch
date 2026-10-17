@@ -73,6 +73,8 @@ class _PendingMilestoneInsert {
 /// bookkeeping `bodyStartTime` / `bodyDurationSeconds` consommé par
 /// `_assembleResult` côté caller.
 class MilestoneScheduler {
+  LevelMilestone? lastInserted;
+
   final SessionRuntimeState _state;
   final PushMilestoneSequence _pushMilestoneSequence;
   final List<_PendingMilestoneInsert> _pending;
@@ -181,6 +183,7 @@ class MilestoneScheduler {
     final p = _pending[index];
     if (p.inserted) return;
     p.inserted = true;
+    lastInserted = p.milestone;
     final startedAt = ctx.time;
     _pushMilestoneSequence(ctx, milestone: p.milestone);
     if (index == 0) {

@@ -1041,6 +1041,10 @@ extension ChallengeOrchestrator on SessionController {
             orders: b.orders,
           ),
       ],
+      postureChanges: [
+        for (final c in _session.postureChanges)
+          PostureChange(time: shiftLate(c.time)!, pose: c.pose),
+      ],
       // On préserve la liste complète des défis, mais on shifte les trigger
       // times des défis suivants (ceux après `endOfChallenge`) pour qu'ils
       // restent synchronisés avec la nouvelle timeline — les deux listes

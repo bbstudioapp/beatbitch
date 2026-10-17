@@ -31,3 +31,12 @@ List<Posture> availablePostures(Set<UnlockKey> unlockedKeys) => [
       for (final p in Posture.values)
         if (p != Posture.free && unlockedKeys.contains(p.unlockKeyEnum)) p,
     ];
+
+/// Posture enseignée par une milestone `intro_posture_*`, `null` pour toute
+/// autre milestone. Suit la convention d'id de `assets/career/milestones.json`.
+Posture? postureTaughtByMilestone(String? milestoneId) {
+  const prefix = 'intro_posture_';
+  if (milestoneId == null || !milestoneId.startsWith(prefix)) return null;
+  final pose = Posture.fromString(milestoneId.substring(prefix.length));
+  return pose == Posture.free ? null : pose;
+}

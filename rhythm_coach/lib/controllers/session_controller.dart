@@ -8,6 +8,7 @@ import '../career/models/career_generation_inputs.dart';
 import '../career/models/challenge.dart';
 import '../career/models/level_milestone.dart';
 import '../career/models/phrase_bank.dart';
+import '../career/models/posture_unlock.dart';
 import '../career/services/challenges/challenge_segment_builder.dart';
 import '../career/services/generation/career_session_generator.dart';
 import '../career/services/specialization_service.dart';
@@ -481,6 +482,8 @@ class SessionController extends ChangeNotifier {
   Posture _currentPose = Posture.free;
   Posture get currentPose => _currentPose;
 
+  int _nextPostureChangeIndex = 0;
+
   /// Posture imposée au démarrage (issue #77), lisible **avant** `start()`
   /// (qui seul initialise `_currentPose`). Sert à l'écran d'intro pour
   /// afficher la pose à prendre avant validation. `free` si aucune.
@@ -513,7 +516,7 @@ class SessionController extends ChangeNotifier {
 
   /// Garde-fou anti-soft-lock : si la joueuse ne valide pas la posture, on
   /// reprend seul au bout de ce délai (téléphone resté posé).
-  static const Duration _readyTimeoutDuration = Duration(seconds: 90);
+  static const Duration _readyTimeoutDuration = Duration(minutes: 2);
 
   // ─── Commentaires aléatoires ───────────────────────────────────────────
 
@@ -1122,6 +1125,7 @@ class SessionController extends ChangeNotifier {
         _breakActive = false;
         _activeBreak = null;
         _nextBreakIndex = 0;
+        _nextPostureChangeIndex = 0;
         _breakOrderLastAtSec = 0;
         _currentPose = _session.initialPose;
         _postureGate = null;
@@ -1454,6 +1458,7 @@ class SessionController extends ChangeNotifier {
     // enseignée pendant sa fenêtre pour que l'indicateur en séance l'affiche,
     // comme un break. Après `_updateBreakPhase` — fenêtres disjointes.
     _updateMilestonePose();
+    _updatePostureChange();
     _checkSteps();
     _speakPendingWhenFree();
     // Gel de l'effort pendant un break : pas de crédit hold/saliva/stamina/

@@ -182,6 +182,9 @@ class Session {
   /// sessions courtes / hors carrière). Transient comme [challenges].
   final List<ScriptedBreak> breaks;
 
+  /// Changements de position hors pause, ordonnés par temps.
+  final List<PostureChange> postureChanges;
+
   /// Morceau en fond : quand il est posé, sa position de lecture est l'horloge
   /// de la séance (cf. `SessionController.elapsed`). `null` = séance ordinaire.
   final SessionMusic? music;
@@ -212,6 +215,7 @@ class Session {
     this.challengeTriggerTimes = const [],
     this.initialPose = Posture.free,
     this.breaks = const [],
+    this.postureChanges = const [],
     this.music,
   });
 

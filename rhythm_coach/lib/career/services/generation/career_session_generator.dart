@@ -219,17 +219,20 @@ class CareerSessionGenerator {
   static const int _breakMinDurationSeconds = 60;
   static const int _breakMaxDurationSeconds = 120;
 
-  /// Seuils de durée totale (s) d'apparition des breaks : 1 break dès
-  /// ~28 min, 2 breaks dès ~45 min (cf. spec `specs/scripted_breaks.md`).
-  static const int _oneBreakThresholdSeconds = 28 * 60;
-  static const int _twoBreakThresholdSeconds = 45 * 60;
+  /// Intervalle entre deux pauses : de 10 min à endurance nulle à 20 min dès
+  /// [_enduranceFullPoints] points d'endurance, interpolé entre les deux.
+  static const int _breakIntervalLowEnduranceSeconds = 10 * 60;
+  static const int _breakIntervalHighEnduranceSeconds = 20 * 60;
+  static const int _enduranceFullPoints = 5;
 
-  /// Nombre de breaks scénarisés à insérer selon la durée totale.
-  static int _computeBreakCount(int effectiveDuration) {
-    if (effectiveDuration >= _twoBreakThresholdSeconds) return 2;
-    if (effectiveDuration >= _oneBreakThresholdSeconds) return 1;
-    return 0;
-  }
+  static const int _scriptedEventsEarliestSeconds = 10 * 60;
+
+  static const int _postureChangeMinIntervalSeconds = 6 * 60;
+  static const int _postureChangeMaxIntervalSeconds = 10 * 60;
+
+  /// Un changement de position dû à moins de cette marge d'une pause se fait
+  /// pendant la pause.
+  static const int _postureMergeWindowSeconds = 2 * 60;
 
   /// Marge (s) laissée entre une pause scénarisée et le créneau d'un défi.
   /// Absorbe l'écart entre l'horaire *planifié* d'un bloc et son émission
@@ -237,35 +240,22 @@ class CareerSessionGenerator {
   /// suit son trigger, jamais pile dessus.
   static const int _breakChallengeGapSeconds = 60;
 
-  /// Plancher de décalage d'une pause, en fraction de `genUntil`. Les
-  /// fractions nominales (0.34 / 0.5) garantissaient seules « jamais dans les
-  /// 5 premières minutes » ; dès qu'on décale, il faut le dire.
-  static const double _breakEarliestFraction = 0.25;
-
-  /// `triggerTime` d'insertion des breaks dans la fenêtre de génération
-  /// `genUntil` (≈ durée hors phase finish). 1 break → vers la moitié ;
-  /// 2 breaks → vers le tiers et les deux tiers. Le placement aux frontières
-  /// de blocs (insertion dans la boucle main) et `genUntil < effectiveDuration`
-  /// garantissent structurellement « jamais dans les 5 premières min ni dans
-  /// la phase finish » pour les durées éligibles (≥ 28 min).
+  /// `triggerTime` des pauses : une tous les [intervalSeconds] dans la fenêtre
+  /// de génération `genUntil`.
   ///
-  /// [challengeWindows] : créneaux `(début, fin)` déjà réservés par les défis
-  /// planifiés. Sans eux, les deux plannings visent le même milieu de séance —
-  /// une pause et un défi médian tombent alors au même endroit, le trou
-  /// d'effort de la pause avale le trigger du défi et la boucle main le
-  /// réémet à `break.endTime` : la joueuse reçoit l'ordre de se mettre à
-  /// quatre pattes et l'annonce du défi au même instant. Les horaires de défi
-  /// ne bougent pas (ils portent la dramaturgie du défi et se coordonnent
-  /// avec la durée de séance) — c'est la pause qui cède le passage.
+  /// [challengeWindows] : créneaux `(début, fin)` déjà réservés par les défis.
+  /// Sans eux, le trou d'effort d'une pause peut avaler le trigger d'un défi,
+  /// que la boucle main réémet à `break.endTime`. Les horaires de défi ne
+  /// bougent pas : c'est la pause qui cède le passage.
   static List<int> _computeBreakTriggerTimes({
-    required int count,
+    required int intervalSeconds,
     required int genUntil,
     List<(int, int)> challengeWindows = const [],
   }) {
-    if (count == 0) return const [];
-    final ideals = count == 1
-        ? [(genUntil * 0.5).round()]
-        : [(genUntil * 0.34).round(), (genUntil * 0.67).round()];
+    if (intervalSeconds <= 0) return const [];
+    final ideals = [
+      for (var t = intervalSeconds; t < genUntil; t += intervalSeconds) t,
+    ];
     // Une pause déjà placée devient elle-même un créneau occupé : deux pauses
     // décalées vers le même trou libre se recouvriraient.
     final busy = [...challengeWindows];
@@ -292,7 +282,7 @@ class CareerSessionGenerator {
     bool collides(int t) => busy
         .any((w) => t < w.$2 + _breakChallengeGapSeconds && t + span > w.$1);
     if (!collides(ideal)) return ideal;
-    final lowest = (genUntil * _breakEarliestFraction).round();
+    const lowest = _scriptedEventsEarliestSeconds;
     final highest = genUntil - span;
     int? best;
     for (final w in busy) {
@@ -901,7 +891,7 @@ class CareerSessionGenerator {
     // que le 1ᵉʳ break impose une pose *différente* ; le 2ᵉ tend vers récup
     // pure (`newPose == null`, continuité de pose).
     final plannedBreakTimes = _computeBreakTriggerTimes(
-      count: _config.scriptedBreaks ? _computeBreakCount(effectiveDuration) : 0,
+      intervalSeconds: _config.scriptedBreaks ? _breakIntervalSeconds() : 0,
       genUntil: ctx.genUntil,
       challengeWindows: [
         for (var i = 0; i < plannedTriggerTimes.length; i++)
@@ -914,8 +904,13 @@ class CareerSessionGenerator {
       ],
     );
     final sessionBreaks = <ScriptedBreak>[];
+    final postureChanges = <PostureChange>[];
     var nextBreakIndex = 0;
-    var currentPose = _initialPose;
+    var currentPose =
+        postureTaughtByMilestone(milestoneScheduler.lastInserted?.id) ??
+            _initialPose;
+    int? nextPostureChangeAt =
+        _config.scriptedBreaks ? _scriptedEventsEarliestSeconds : null;
 
     while (ctx.time < ctx.genUntil) {
       // Phase 1 — Insertion milestone : on traite les pending dans
@@ -924,38 +919,64 @@ class CareerSessionGenerator {
       // ne pas la louper). Le cas time < target continue à empiler des
       // steps de chauffe normalement.
       if (milestoneScheduler.tryInsertAt(ctx)) {
+        final taught =
+            postureTaughtByMilestone(milestoneScheduler.lastInserted?.id);
+        if (taught != null && _config.scriptedBreaks) {
+          currentPose = taught;
+          nextPostureChangeAt = max(_scriptedEventsEarliestSeconds,
+              ctx.time + _pickPostureChangeInterval());
+        }
         if (ctx.time >= ctx.genUntil) break;
         continue;
       }
-      // Phase 1.5 — Break scénarisé (issue #77) : pause active de récup,
-      // frontière de bloc majeure (priorité juste après la milestone). Inséré
-      // dès que `time` atteint le trigger planifié : on pose le `ScriptedBreak`
-      // et on réserve l'enveloppe (`time += durationSeconds`) sans émettre de
-      // step d'effort — le trou laissé est honoré en runtime par le gel du
-      // moteur (PR4). Le profil stamina y reste à `cap` (récup = plein), ce
-      // qui est sémantiquement correct.
+      // Phase 1.5 — Pause scénarisée : trou d'effort de `durationSeconds`,
+      // aucun step émis, le runtime gèle le moteur sur la fenêtre.
       if (nextBreakIndex < plannedBreakTimes.length &&
           ctx.time >= plannedBreakTimes[nextBreakIndex]) {
         final dur = _pickBreakDuration();
         if (ctx.genUntil - ctx.time >= dur) {
-          final newPose = _pickBreakPose(
-            unlockedKeys,
-            currentPose,
-            pureRecovery: nextBreakIndex >= 1,
-          );
+          final end = ctx.time + dur;
+          final changeDue = nextPostureChangeAt != null &&
+              nextPostureChangeAt <= end + _postureMergeWindowSeconds;
+          final newPose =
+              changeDue ? _pickNextPose(unlockedKeys, currentPose) : null;
           sessionBreaks.add(ScriptedBreak(
             time: ctx.time,
             durationSeconds: dur,
             newPose: newPose,
           ));
-          if (newPose != null) currentPose = newPose;
-          ctx.time += dur;
+          if (changeDue) {
+            if (newPose != null) currentPose = newPose;
+            nextPostureChangeAt =
+                newPose == null ? null : end + _pickPostureChangeInterval();
+          }
+          ctx.time = end;
           nextBreakIndex++;
           continue;
         }
         // Pas la place avant la phase finish → on saute ce break (sinon le
         // test resterait vrai à chaque itération et bloquerait la boucle).
         nextBreakIndex++;
+      }
+      // Phase 1.6 — Changement de position seul, sans avancer le temps : le
+      // bloc émis ensuite démarre à `ctx.time` et relance le bip après la
+      // validation. Cède le pas à une pause proche et à un défi dû.
+      final postureDue = nextPostureChangeAt;
+      if (postureDue != null &&
+          ctx.time >= postureDue &&
+          !(nextBreakIndex < plannedBreakTimes.length &&
+              plannedBreakTimes[nextBreakIndex] - ctx.time <=
+                  _postureMergeWindowSeconds) &&
+          !(nextChallengeIndex < challengeQueue.length &&
+              ctx.time >= plannedTriggerTimes[nextChallengeIndex])) {
+        final pose = _pickNextPose(unlockedKeys, currentPose);
+        if (pose != null) {
+          postureChanges.add(PostureChange(time: ctx.time, pose: pose));
+          currentPose = pose;
+          nextPostureChangeAt = ctx.time + _pickPostureChangeInterval();
+        } else {
+          nextPostureChangeAt = null;
+        }
       }
       // Phase 2 — Mini-vague (+ breath long post-vague) : 2-3 steps à
       // BPM montant qui cassent la diagonale d'intensité, suivis d'un
@@ -1090,6 +1111,7 @@ class CareerSessionGenerator {
         challenges: insertedChallenges,
         challengeTriggerTimes: challengeTriggerTimes,
         breaks: sessionBreaks,
+        postureChanges: postureChanges,
       );
     }
 
@@ -1177,6 +1199,7 @@ class CareerSessionGenerator {
       challenges: insertedChallenges,
       challengeTriggerTimes: challengeTriggerTimes,
       breaks: sessionBreaks,
+      postureChanges: postureChanges,
     );
   }
 
@@ -1733,17 +1756,9 @@ class CareerSessionGenerator {
       _breakMinDurationSeconds +
       _rng.nextInt(_breakMaxDurationSeconds - _breakMinDurationSeconds + 1);
 
-  /// Posture appliquée à la reprise d'un break (issue #77), ou `null` pour une
-  /// récup pure (aucun changement de posture). `null` si [pureRecovery] (2ᵉ
-  /// break d'une session très longue, par continuité de pose) ou si aucune
-  /// posture débloquée n'est différente de [current] (tirage hors `free` et
-  /// hors posture courante). Déterministe sous seed via `_rng`.
-  Posture? _pickBreakPose(
-    Set<UnlockKey> unlockedKeys,
-    Posture current, {
-    required bool pureRecovery,
-  }) {
-    if (pureRecovery) return null;
+  /// Nouvelle posture parmi les débloquées, hors `free` et hors [current] ;
+  /// `null` si aucune ne convient.
+  Posture? _pickNextPose(Set<UnlockKey> unlockedKeys, Posture current) {
     final candidates = [
       for (final p in availablePostures(unlockedKeys))
         if (p != Posture.free && p != current) p,
@@ -1751,6 +1766,18 @@ class CareerSessionGenerator {
     if (candidates.isEmpty) return null;
     return candidates[_rng.nextInt(candidates.length)];
   }
+
+  int _pickPostureChangeInterval() =>
+      _postureChangeMinIntervalSeconds +
+      _rng.nextInt(_postureChangeMaxIntervalSeconds -
+          _postureChangeMinIntervalSeconds +
+          1);
+
+  int _breakIntervalSeconds() => StaminaModel.lerp(
+        _breakIntervalLowEnduranceSeconds.toDouble(),
+        _breakIntervalHighEnduranceSeconds.toDouble(),
+        _config.pts(SpecializationBranch.endurance) / _enduranceFullPoints,
+      ).round();
 
   /// Construit le [CareerGenerationResult] final à partir des accumulateurs
   /// `ctx.steps` / `ctx.profile` et du curseur `time`. Tronque le profil à la
@@ -1774,6 +1801,7 @@ class CareerSessionGenerator {
     List<Challenge> challenges = const [],
     List<int> challengeTriggerTimes = const [],
     List<ScriptedBreak> breaks = const [],
+    List<PostureChange> postureChanges = const [],
   }) {
     final finalDuration = ctx.time + 2;
     final trimmedProfile = List<double>.generate(
@@ -1816,6 +1844,7 @@ class CareerSessionGenerator {
         challengeTriggerTimes: challengeTriggerTimes,
         initialPose: _initialPose,
         breaks: breaks,
+        postureChanges: postureChanges,
       ),
       staminaProfile: trimmedProfile,
       overloadAxis: _config.overloadAxis,

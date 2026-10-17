@@ -85,6 +85,40 @@ extension BreakSequencer on SessionController {
     _speakScripted(order);
   }
 
+  /// Passe la pause en cours : saute la timeline à sa fin et enchaîne sur la
+  /// reprise. No-op hors pause.
+  void skipBreak() {
+    final b = _activeBreak;
+    if (!_breakActive || b == null) return;
+    final end = Duration(seconds: b.endTime);
+    if (elapsed < end) _timelineOffset += end - elapsed;
+    _exitBreak(b);
+  }
+
+  /// Déclenche le prochain changement de position seul : annonce, coupure du
+  /// bip et attente de mise en place. Le step posé à `change.time` relance
+  /// l'effort après la validation ; si un saut de timeline l'a déjà consommé,
+  /// le changement est abandonné plutôt que de laisser la séance muette.
+  void _updatePostureChange() {
+    final changes = _session.postureChanges;
+    if (_nextPostureChangeIndex >= changes.length) return;
+    if (_breakActive || isTimelineFrozen || _failActive) return;
+    final change = changes[_nextPostureChangeIndex];
+    if (elapsedSeconds < change.time) return;
+    _nextPostureChangeIndex++;
+    final steps = _session.steps;
+    if (_nextStepIndex >= steps.length ||
+        steps[_nextStepIndex].time > change.time) {
+      return;
+    }
+    _currentPose = change.pose;
+    _disarmHoldVerifier();
+    unawaited(_beep.pause());
+    final phrase = _phraseBank?.pickPostureChange(change.pose, _random);
+    if (phrase != null) _speakScripted(phrase);
+    _enterAwaitReady();
+  }
+
   /// Tire un intervalle d'ordre dans [min, max] (cadence irrégulière).
   int _pickBreakOrderInterval() =>
       SessionController._breakOrderMinIntervalSeconds +
@@ -129,20 +163,9 @@ extension BreakSequencer on SessionController {
   void _updateMilestonePose() {
     final id = currentMilestoneIdInWindow;
     if (id == null) return;
-    final pose = _postureForMilestoneId(id);
+    final pose = postureTaughtByMilestone(id);
     if (pose != null && pose != _currentPose) {
       _currentPose = pose;
     }
-  }
-
-  /// Déduit la posture enseignée d'un id de milestone posture
-  /// (`intro_posture_kneeling` → [Posture.kneeling]). `null` pour toute autre
-  /// milestone. Suit la convention d'id du catalogue
-  /// (`assets/career/milestones.json`), langue-indépendante.
-  Posture? _postureForMilestoneId(String id) {
-    const prefix = 'intro_posture_';
-    if (!id.startsWith(prefix)) return null;
-    final pose = Posture.fromString(id.substring(prefix.length));
-    return pose == Posture.free ? null : pose;
   }
 }

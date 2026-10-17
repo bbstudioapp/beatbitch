@@ -117,21 +117,6 @@ void main() {
       expect(s.breaks, isEmpty);
     });
 
-    test('session courte (< 28 min) → aucun break', () {
-      final s = gen(durationSeconds: 18 * 60, unlocked: allPostures);
-      expect(s.breaks, isEmpty);
-    });
-
-    test('≥ 28 min et < 45 min → 1 break', () {
-      final s = gen(durationSeconds: 35 * 60, unlocked: allPostures);
-      expect(s.breaks, hasLength(1));
-    });
-
-    test('≥ 45 min → 2 breaks', () {
-      final s = gen(durationSeconds: 45 * 60, unlocked: allPostures);
-      expect(s.breaks, hasLength(2));
-    });
-
     test('durées dans [60, 120] et ordonnés, hors phase finish', () {
       final s = gen(durationSeconds: 45 * 60, unlocked: allPostures);
       var prevEnd = 0;
@@ -163,15 +148,10 @@ void main() {
       expect(first.newPose, isNot(s.initialPose));
     });
 
-    test('2ᵉ break → récup pure (newPose null), continuité de pose', () {
-      final s = gen(durationSeconds: 45 * 60, unlocked: allPostures);
-      expect(s.breaks[1].newPose, isNull);
-    });
-
     test('aucune posture débloquée → break en récup pure (newPose null)', () {
       final s = gen(durationSeconds: 35 * 60, unlocked: const {});
-      expect(s.breaks, hasLength(1));
-      expect(s.breaks.first.newPose, isNull);
+      expect(s.breaks, isNotEmpty);
+      expect(s.breaks.every((b) => b.newPose == null), isTrue);
     });
 
     test('déterministe sous seed identique', () {
