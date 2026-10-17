@@ -908,6 +908,36 @@ void main() {
 
     t.ctrl.dispose();
   }, timeout: const Timeout(Duration(seconds: 20)));
+
+  test(
+      'JE PEUX PAS puis arrière-plan : la séance se met en pause, la fin du '
+      'souffle n\'arrive pas seule au retour', () async {
+    final t = build();
+    await t.ctrl.start();
+    await at(t.port, t.ctrl, 75);
+    await t.ctrl.triggerFail();
+    expect(t.ctrl.isMusicBreathing, isTrue);
+    final applied = t.beep.appliedSteps.length;
+    final plays = t.port.plays;
+
+    t.ctrl.onAppBackgrounded();
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(t.ctrl.state, SessionState.paused);
+    expect(t.port.pauses, greaterThan(0), reason: 'le morceau continue');
+
+    t.port.seek(const Duration(seconds: 90));
+    t.ctrl.onAppForegrounded();
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+
+    expect(t.ctrl.state, SessionState.paused,
+        reason: 'le retour dans l\'appli a relancé la séance seul');
+    expect(t.ctrl.isMusicBreathing, isTrue,
+        reason: 'le souffle s\'est terminé pendant la pause');
+    expect(t.beep.appliedSteps.length, applied);
+    expect(t.port.plays, plays);
+
+    await t.ctrl.stop();
+  }, timeout: const Timeout(Duration(seconds: 20)));
 }
 
 class _Port implements MusicPlayerPort {
