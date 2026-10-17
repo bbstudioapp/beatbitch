@@ -131,19 +131,7 @@ extension FailFlowOrchestrator on SessionController {
       }
       if (!_isFailFlowAlive(myGen)) return;
 
-      final jumped = _skipToNextSection();
-      if (!jumped) {
-        await _restorePreviousLoop();
-      }
-
-      _stopwatch.start();
-      _startTicker();
-      _startRandomComments();
-      _state = SessionState.running;
-      // Coup de pouce immédiat : si on a sauté pile sur le `time` du
-      // prochain step, on le déclenche tout de suite plutôt que d'attendre
-      // le prochain tick (200 ms d'écart audible sinon).
-      _checkSteps();
+      await _leaveFailFlow(mayJump: true);
     } finally {
       // Ne nettoie le state global que si on est toujours owner du flow —
       // sinon on écraserait celui d'un nouveau triggerFail qui aurait pris
@@ -156,6 +144,47 @@ extension FailFlowOrchestrator on SessionController {
         _notify();
       }
     }
+  }
+
+  /// Appli hors de l'avant-plan : la séance arrive en pause et la sortie
+  /// attend le bouton de reprise.
+  Future<void> _leaveFailFlow({required bool mayJump}) async {
+    if (_appInBackground) {
+      _deferredFailExit = () => _completeFailExit(mayJump: mayJump);
+      await _pauseAfterFail();
+      return;
+    }
+    await _completeFailExit(mayJump: mayJump);
+  }
+
+  Future<void> _completeFailExit({required bool mayJump}) async {
+    final jumped = mayJump && _skipToNextSection();
+    if (!jumped) {
+      await _restorePreviousLoop();
+      // `pause()` ignore l'arrière-plan tant que `_failActive` est vrai.
+      if (_appInBackground) {
+        await _pauseAfterFail();
+        return;
+      }
+    }
+
+    _stopwatch.start();
+    _startTicker();
+    _startRandomComments();
+    _state = SessionState.running;
+    // Coup de pouce immédiat : si on a sauté pile sur le `time` du
+    // prochain step, on le déclenche tout de suite plutôt que d'attendre
+    // le prochain tick (200 ms d'écart audible sinon).
+    _checkSteps();
+  }
+
+  /// Horloge, ticker et commentaires sont déjà arrêtés depuis l'entrée du flow.
+  Future<void> _pauseAfterFail() async {
+    await _stopTtsBounded();
+    await _beep.pause();
+    await _ambience.pause();
+    _state = SessionState.paused;
+    _notify();
   }
 
   /// « JE PEUX PAS » sur une séance à morceau : ni phrase ni punition, la musique
@@ -360,12 +389,7 @@ extension FailFlowOrchestrator on SessionController {
         _obedience.onPunishmentCompleted();
       }
       if (!_isFailFlowAlive(myGen)) return;
-      await _restorePreviousLoop();
-      _stopwatch.start();
-      _startTicker();
-      _startRandomComments();
-      _state = SessionState.running;
-      _checkSteps();
+      await _leaveFailFlow(mayJump: false);
     } finally {
       if (_failGen == myGen) {
         _failPhase = null;

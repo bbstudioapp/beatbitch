@@ -211,6 +211,10 @@ class SessionController extends ChangeNotifier {
   Completer<void>? _punishmentCompleter;
   bool _punishmentAbandoned = false;
 
+  /// Reste de la sortie d'un flow fail interrompue par l'arrière-plan : rejouée
+  /// par `resume()`, abandonnée par un nouveau départ.
+  Future<void> Function()? _deferredFailExit;
+
   // ─── État du défi intra-séance ────────────────────────────────────────
 
   ChallengePhase _challengePhase = ChallengePhase.none;
@@ -793,6 +797,7 @@ class SessionController extends ChangeNotifier {
         _lastSpokenResolvedText = null;
         _lastConfigStep = null;
         _configApplied = false;
+        _deferredFailExit = null;
         _hadFailThisSession = false;
         _finalChimePlayed = _music != null;
         _musicBreathUntil = null;
@@ -960,6 +965,13 @@ class SessionController extends ChangeNotifier {
 
   Future<void> resume() async {
     if (_state != SessionState.paused) return;
+    final failExit = _deferredFailExit;
+    if (failExit != null) {
+      _deferredFailExit = null;
+      await failExit();
+      notifyListeners();
+      return;
+    }
     final musicResumed = _music?.resume();
     _stopwatch.start();
     _state = SessionState.running;

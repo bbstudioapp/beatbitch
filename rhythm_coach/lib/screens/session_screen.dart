@@ -218,6 +218,7 @@ class _SessionScreenState extends State<SessionScreen>
       _controller.addListener(_onCareerStateChanged);
     }
     WidgetsBinding.instance.addObserver(this);
+    _relayLifecycle(WidgetsBinding.instance.lifecycleState);
     // `buildVerifierIfEnabled` rend null en silence (permission refusée,
     // calibration absente).
     if (widget.holdVerifier == null) {
@@ -285,7 +286,10 @@ class _SessionScreenState extends State<SessionScreen>
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
+  void didChangeAppLifecycleState(AppLifecycleState state) =>
+      _relayLifecycle(state);
+
+  void _relayLifecycle(AppLifecycleState? state) {
     // Reprise manuelle : le son ne repart jamais seul au retour dans l'app.
     switch (state) {
       case AppLifecycleState.paused:
@@ -295,6 +299,7 @@ class _SessionScreenState extends State<SessionScreen>
       case AppLifecycleState.resumed:
         _controller.onAppForegrounded();
       case AppLifecycleState.detached:
+      case null:
         break;
     }
   }
