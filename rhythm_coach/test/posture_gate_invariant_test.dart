@@ -212,6 +212,7 @@ void main() {
                 newPose: Posture.standing,
               ),
             ],
+            postureChanges: [PostureChange(time: 200, pose: Posture.allFours)],
             challenges: [
               Challenge(
                 axis: CapabilityAxis.holdThroatStreak,
@@ -306,6 +307,7 @@ void main() {
       // la pause d'après suit le même décalage que les steps.
       expect(ctrl.session.breaks[1].time, 100 - (13 + 5));
       expect(ctrl.session.breaks[1].newPose, Posture.standing);
+      expect(ctrl.session.postureChanges.single.time, 200 - (13 + 5));
 
       await ctrl.stop();
     }, timeout: const Timeout(Duration(seconds: 40)));

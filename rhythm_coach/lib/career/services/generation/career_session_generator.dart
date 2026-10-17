@@ -882,14 +882,8 @@ class CareerSessionGenerator {
     final insertedChallenges = <Challenge>[];
     var nextChallengeIndex = 0;
 
-    // Breaks scénarisés (issue #77) — pauses actives de récup sur sessions
-    // longues. Comme les défis : trigger times planifiés, insertion aux
-    // frontières de blocs dans la boucle main, réservation de l'enveloppe
-    // (trou d'effort = `durationSeconds`, le runtime gèle le moteur — cf.
-    // PR4). Gaté par `_config.scriptedBreaks` ; 0 break si off.
-    // `currentPose` suit la posture en cours (départ = posture initiale) pour
-    // que le 1ᵉʳ break impose une pose *différente* ; le 2ᵉ tend vers récup
-    // pure (`newPose == null`, continuité de pose).
+    // `currentPose` suit la posture que la joueuse tient réellement, milestone
+    // posture comprise : un changement n'impose jamais la pose en cours.
     final plannedBreakTimes = _computeBreakTriggerTimes(
       intervalSeconds: _config.scriptedBreaks ? _breakIntervalSeconds() : 0,
       genUntil: ctx.genUntil,

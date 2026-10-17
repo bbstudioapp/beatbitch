@@ -2,8 +2,7 @@ part of 'session_controller.dart';
 
 // ─── Break scénarisé (issue #77) ──────────────────────────────────────────
 //
-// Pause active de récup imposée sur les sessions longues (cf. spec locale
-// `specs/scripted_breaks.md`). Le générateur a déjà laissé un *trou d'effort*
+// Pause active de récup. Le générateur a déjà laissé un *trou d'effort*
 // dans l'enveloppe (aucun step entre `break.time` et `break.endTime`) ; le
 // runtime se contente de geler le moteur d'effort sur cette fenêtre et de
 // jouer une dramaturgie de récup :
@@ -102,7 +101,7 @@ extension BreakSequencer on SessionController {
   void _updatePostureChange() {
     final changes = _session.postureChanges;
     if (_nextPostureChangeIndex >= changes.length) return;
-    if (_breakActive || isTimelineFrozen || _failActive) return;
+    if (isTimelineFrozen || _failActive) return;
     final change = changes[_nextPostureChangeIndex];
     if (elapsedSeconds < change.time) return;
     _nextPostureChangeIndex++;

@@ -51,7 +51,7 @@ enum Posture {
       };
 }
 
-/// Pause active scénarisée insérée sur les sessions longues. Pendant un
+/// Pause active scénarisée. Pendant un
 /// break, le moteur d'effort est gelé et la coach donne des ordres espacés
 /// ([orders]) ; un break peut aussi changer de posture à la reprise
 /// ([newPose]).
@@ -68,8 +68,7 @@ class ScriptedBreak {
   final int durationSeconds;
 
   /// Posture appliquée à la reprise, ou `null` si le break ne change pas de
-  /// posture (récup pure : 2ᵉ break d'une session très longue, ou aucune
-  /// posture débloquée).
+  /// posture.
   final Posture? newPose;
 
   /// Ordres TTS (hors changement de posture) joués espacés pendant le break

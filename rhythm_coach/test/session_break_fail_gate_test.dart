@@ -20,7 +20,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 ///
 /// La sortie d'un break qui impose une nouvelle posture arme un gel de
 /// posture : la séance se fige jusqu'au « JE SUIS EN PLACE » ou au timeout de
-/// sécurité de 90 s. Ce gel est délibéré — tant qu'il tient, `_checkSteps()`
+/// sécurité. Ce gel est délibéré — tant qu'il tient, `_checkSteps()`
 /// retourne tôt et `_onTick` décrémente `_timelineOffset`, donc plus aucun
 /// step n'est consommé et l'horloge logique n'avance plus.
 ///

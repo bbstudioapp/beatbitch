@@ -224,9 +224,9 @@ void main() {
 
     test('jamais pendant un défi', () {
       var withBoth = 0;
-      for (final minutes in [30, 45, 60]) {
+      for (var minutes = 20; minutes <= 90; minutes += 5) {
         for (final count in [1, 2]) {
-          for (var seed = 0; seed < 10; seed++) {
+          for (var seed = 0; seed < 30; seed++) {
             final s = _gen(minutes: minutes, seed: seed, challengeCount: count);
             for (final t in s.challengeTriggerTimes) {
               final next = s.steps

@@ -177,9 +177,8 @@ class Session {
   /// `specs/scripted_breaks.md`.
   final Posture initialPose;
 
-  /// Breaks scénarisés (pauses actives) insérés sur les sessions longues.
-  /// Liste ordonnée par temps d'entrée ; vide = aucun break (cas par défaut,
-  /// sessions courtes / hors carrière). Transient comme [challenges].
+  /// Breaks scénarisés (pauses actives), ordonnés par temps d'entrée.
+  /// Transient comme [challenges].
   final List<ScriptedBreak> breaks;
 
   /// Changements de position hors pause, ordonnés par temps.

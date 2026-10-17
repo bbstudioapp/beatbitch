@@ -1376,7 +1376,7 @@ class SessionController extends ChangeNotifier {
     _lastHoldTickAtSecond = -1;
     // Remise à zéro du gel de posture, comme dans `start()` : il ne tient
     // déjà plus (la timeline vient d'être remise à zéro), mais son `Timer` de
-    // sécurité survivait à l'arrêt et réveillait ~90 s plus tard un
+    // sécurité survivait à l'arrêt et réveillait plus tard un
     // contrôleur devenu inactif.
     _postureGate = null;
     _readyTimeout?.cancel();
@@ -1864,7 +1864,7 @@ class SessionController extends ChangeNotifier {
   /// compris. [awaitingPostureReady] vaut déjà `false` à cet instant — la
   /// purge sert à ce qu'un gel enterré ne **ressuscite** pas si sa
   /// justification redevenait vraie (une scène concurrente qui se termine),
-  /// et à ne pas laisser un `Timer` de 90 s courir derrière une séance qui a
+  /// et à ne pas laisser le `Timer` de sécurité courir derrière une séance qui a
   /// repris.
   void _burySpentPostureGate() {
     if (_postureGate == null || awaitingPostureReady) return;
@@ -1953,7 +1953,7 @@ class SessionController extends ChangeNotifier {
     // vie d'une séance (`start`, `stop`, ici) : entre elles, c'est la garde du
     // battement qui s'en charge, et elle ne tourne plus sans ticker. Il n'y a
     // pas de gel à lever — il est tombé de lui-même — juste une ressource qui
-    // réveillerait l'écran de fin 90 s plus tard.
+    // réveillerait l'écran de fin plus tard.
     _postureGate = null;
     _readyTimeout?.cancel();
     _readyTimeout = null;
