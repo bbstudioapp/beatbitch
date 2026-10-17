@@ -1184,11 +1184,13 @@ class SessionController extends ChangeNotifier {
       } catch (e) {
         debugPrint('start(): _tts.init() a échoué (non bloquant) : $e');
       }
+      if (_released) return;
       try {
         await _beep.init();
       } catch (e) {
         debugPrint('start(): _beep.init() a échoué (non bloquant) : $e');
       }
+      if (_released) return;
       final music = _music;
       final track = _session.music;
       if (music != null && track != null) {
@@ -1198,6 +1200,7 @@ class SessionController extends ChangeNotifier {
                   .clamp(0, musicBeepAdvanceMaxMs);
         } catch (_) {}
         await music.start(track);
+        if (_released) return;
         _beep.attachMusic(track, () => music.position);
         _beep.musicBeepAdvance = Duration(milliseconds: _musicBeepAdvanceMs);
         _musicAttached = true;
@@ -1218,6 +1221,11 @@ class SessionController extends ChangeNotifier {
       } catch (e) {
         debugPrint(
             'start(): WakelockPlus.enable() a échoué (non bloquant) : $e');
+      }
+      if (_released) {
+        await WakelockPlus.disable()
+            .timeout(_wakelockTimeout, onTimeout: () {});
+        return;
       }
 
       // Reset du fond média : on repart sur le placeholder animé tant que
@@ -1941,6 +1949,7 @@ class SessionController extends ChangeNotifier {
   int? _postChallengeBreathRealEndSec;
 
   Future<void> _finish() async {
+    if (_released) return;
     _stopwatch.stop();
     _ticker?.cancel();
     _ticker = null;
