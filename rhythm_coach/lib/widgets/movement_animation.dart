@@ -1403,10 +1403,8 @@ class _TrajectoryPainter extends CustomPainter {
 
 const double _kCursorX = -0.1;
 
-/// Hauteur commune des boîtes centrées sur un niveau (lignes, libellés,
-/// curseur) : un `Align` ne place le centre d'un enfant sur la même ordonnée
-/// que si tous les enfants ont la même hauteur. Égale au plus grand curseur,
-/// et demi-hauteur reprise comme marge par la trajectoire.
+/// Un `Align` ne centre ses enfants sur la même ordonnée que s'ils ont la
+/// même hauteur. Égale au plus grand curseur.
 const double _kLevelBox = 28;
 
 /// Le niveau `balls` garde toujours sa place, affiché ou non : la piste en
@@ -1456,8 +1454,7 @@ class _CursorVisual extends StatelessWidget {
   }
 }
 
-/// L'image est un asset externalisé (R2) : absente d'un build local ou de
-/// test, la silhouette dessinée la remplace.
+/// Asset externalisé sur R2 : absent d'un build local ou de la CI.
 class _Shaft extends StatelessWidget {
   const _Shaft();
 
