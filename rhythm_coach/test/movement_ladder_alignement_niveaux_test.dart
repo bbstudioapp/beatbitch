@@ -61,6 +61,15 @@ void main() {
         expect(lineYs, hasLength(rows));
         expect(labelY, closeTo(cursorY, 0.5));
         expect(lineYs[p.index], closeTo(cursorY, 0.5));
+
+        const box = 28.0;
+        final top = tester.getTopLeft(find.byType(MovementAnimation)).dy;
+        final slotY = top +
+            box / 2 +
+            p.index / (Position.values.length - 1) * (160 - box);
+        expect(cursorY, closeTo(slotY, 0.5),
+            reason: 'la place de ${p.name} sur ${Position.values.length}, '
+                'quel que soit le nombre de niveaux affichés');
       });
     }
   }
