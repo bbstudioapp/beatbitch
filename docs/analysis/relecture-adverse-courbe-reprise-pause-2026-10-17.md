@@ -51,7 +51,7 @@ Les trois lignes du correctif sont tenues, chacune par le bon test.
    trajectoire n'est pas recalculée sur `elapsed` seul ; seule la langue du lick (`_tongue`, `:859`)
    peut bouger. Non mesuré.
 3. **Pause pendant le gap d'entrée d'un step.** Le moteur poursuit `applyStep` après le gap et sonne
-   pendant la pause (préexistant, sondé, sas `tss2-020`) ; la courbe, elle, est figée : son et image
+   pendant la pause (préexistant, sondé, sas `tss2-022`) ; la courbe, elle, est figée : son et image
    divergent le temps de la pause. Hors périmètre.
 4. Le test de reprise est en **temps réel** (Stopwatch + `runAsync`, tolérance 150 ms) : sensible à la
    charge machine. Il a tenu sur 5 lancements ici (base + 4 mutations), machine partagée avec une autre

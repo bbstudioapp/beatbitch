@@ -54,7 +54,7 @@ trous de filet.
 4. **Pause pendant le gap d'entrée en tenue.** Si `pause()` tombe pendant les 300/600 ms du gap,
    `applyStep` poursuit : bip de tenue et mouvements démarrent **pendant la pause**. Préexistant pour
    la boucle de rythme (develop) ; les mouvements de tenue en héritent. Sondé et déposé au sas
-   (`tss2-020`), hors périmètre.
+   (`tss2-022`), hors périmètre.
 5. **Reprise : à-coup de 250 ms au plus.** Au premier frame après `resume()`, l'extrapolation d'horloge
    du widget (`extrapolatedElapsed`, plafond 250 ms) avance jusqu'au tick suivant : la seconde courbe
    (langue) peut sauter de ≤ 250 ms pendant ≤ 200 ms. Non mesuré, probablement invisible.
