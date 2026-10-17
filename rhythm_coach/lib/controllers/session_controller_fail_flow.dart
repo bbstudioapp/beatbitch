@@ -1,41 +1,13 @@
 part of 'session_controller.dart';
 
-// ─── Flow fail / punition ─────────────────────────────────────────────
-//
-// Tout ce qui se passe entre l'appui sur le bouton FAIL (ou un tick
-// mini-punition coach) et la reprise de la timeline principale. Vit ici
-// pour la cohésion physique :
-//
-//   triggerFail
-//     ├─ phrase de fail (tier `tapout` si la limite est attribuée à
-//     │  un axe poussé, sinon pool standard / pool swallow)
-//     ├─ respiration (durée modulée par la stamina projetée)
-//     ├─ punition (carrière contextuelle si profil dispo, sinon
-//     │  tirage statique dans `punishments.json`)
-//     └─ saut de section / restauration du loop précédent
-//
-//   _runMiniPunishmentFlow (déclenché par `_accrueMiniPunishmentTick`,
-//   1× par minute, gaté par `Coach.miniPunishmentRate`) — variante
-//   allégée : pas de phrase fail, pas de breath de récup, pas de saut
-//   de section.
-//
-// Les champs d'état (`_failActive`, `_failGen`, `_failPhase`,
-// `_currentFailPhrase`, `_currentPunishment`, `_punishmentCompleter`,
-// `_punishmentTicker`, `_punishmentAbandoned`, compteurs mini-punition)
-// restent sur `SessionController` (les extensions Dart ne portent pas de
-// champs d'instance) ; les méthodes async qui les manipulent sont
-// rassemblées ici sous forme d'extension `part of`.
+// Les champs d'état du flow restent sur `SessionController` : les extensions
+// Dart ne portent pas de champs d'instance.
 
 extension FailFlowOrchestrator on SessionController {
-  /// Prédicat « le flow fail courant est toujours le mien » : combine le
-  /// flag `_failActive` (annulé par `stop()` global) et la génération
-  /// (`_failGen`) pour qu'un await long ne reprenne pas la main si un
-  /// nouveau `triggerFail` a démarré entre-temps.
+  /// Faux dès que `stop()` ou un nouveau `triggerFail` a repris la main pendant
+  /// un await long.
   bool _isFailFlowAlive(int gen) => _failActive && _failGen == gen;
 
-  /// Déclenche la séquence : pause → phrase fail → respiration → punition →
-  /// reprise du loop session là où il était.
-  ///
   /// Le bouton appelant doit vérifier [canTriggerFail] pour ne pas appeler
   /// cette méthode hors d'un état running.
   Future<void> triggerFail() async {
@@ -46,49 +18,25 @@ extension FailFlowOrchestrator on SessionController {
       return;
     }
 
-    // Phase 1 défis — pendant un défi, le bouton FAIL classique est masqué
-    // côté UI (cf. _ChallengeButtons remplace _FailButton). La sortie est
-    // pilotée par le release du doigt : tolérance épuisée pendant
-    // `countdown`/`live` = fail, release pendant `atSeuil` = succès, release
-    // pendant `countdown` = retour breath / skipped (selon compteur). Si on
-    // arrive ici malgré tout (debug, test, harness), on no-op : la machine
-    // d'états défi a déjà son moteur dans `_updateChallengePhase`.
+    // Défi : la sortie est pilotée par `_updateChallengePhase`, pas par ce flow.
     if (isChallengeActive) {
       return;
     }
 
-    // Break scénarisé (issue #77) : tout ce qui suit rebat la timeline (saut
-    // de section, ou régénération de retry) sans jamais passer par
-    // `_exitBreak`, qui resterait sinon coincé à `true` sur une timeline qui
-    // n'a plus de trou d'effort.
-    //
-    // La pose du break n'est pas appliquée : sa phrase de changement ne sera
-    // pas prononcée, imposer une position sans l'ordonner serait un ordre
-    // muet. Le break est annulé, sa mise en scène avec. Le gel de posture,
-    // lui, n'a rien à lever ici : il est dérivé de la scène qui l'a ordonné
-    // (`PostureGate`) et tombe de lui-même dès que ce flow prend la main.
+    // Ce qui suit rebat la timeline sans passer par `_exitBreak` : le break est
+    // annulé ici ; le gel de posture tombe de lui-même (`PostureGate`).
     _breakActive = false;
     _activeBreak = null;
 
-    // Retry milestone : si on rate dans la fenêtre pédagogique, on tente
-    // d'abord de proposer une nouvelle tentative via le callback (qui
-    // regénère + appelle requestUpgrade). Si le callback prend la main,
-    // on saute entièrement le flow fail standard — pas de pénalités, pas
-    // de phrase fail, pas de punition. La milestone est juste rejouée.
-    //
-    // Le profil de capacités, lui, voit ce fail : on fige les plafonds de
-    // session AVANT le callback pour que la régénération du retry lise des
-    // `capabilitySessionCeilings` à jour. `onFail` est idempotent (streaks
-    // remis à 0), donc le ré-appel du flow standard plus bas (cas retry non
-    // pris en charge) est sans effet.
+    // Retry milestone : les plafonds de session sont figés AVANT le callback pour
+    // que la régénération lise des `capabilitySessionCeilings` à jour (`onFail`
+    // est idempotent).
     if (_isInMilestoneWindow() && onMilestoneRetry != null) {
       _capabilityTracker?.onFail();
       final handled = await onMilestoneRetry!(this);
       if (handled) return;
     }
 
-    // Cas particulier : on est déjà dans le flow fail, en pleine punition
-    // → on abandonne la punition (malus obéissance, pas de re-punition).
     if (_state == SessionState.failing && _failPhase == FailPhase.punishment) {
       _abandonPunishment();
       return;
@@ -102,19 +50,8 @@ extension FailFlowOrchestrator on SessionController {
     _hadFailThisSession = true;
     _stamina.onFail();
     _saliva.onFail();
-    // Capacités : fige les plafonds de session sur la valeur live des
-    // streaks, puis les vide — un streak interrompu par un fail ne devient
-    // jamais un record propre (cf. §3/§6 de la spec).
     _capabilityTracker?.onFail();
-    // Le mode forbidden est levé par le fail : la salope a craqué, on
-    // repart sur des bases neutres. Si la session veut re-imposer le
-    // forbidden après reprise, c'est au scénario de poser un step le
-    // demandant explicitement.
     _swallowMode = SwallowMode.allowed;
-    // Pénalités amplifiées si on craque dans la dernière minute (la
-    // session est presque terminée — c'est ruiné). Cumulable avec ×2 si
-    // une milestone candidate au niveau courant était présente et n'a pas
-    // été acquittée : « tu pouvais avancer, tu as raté ». Au pire ×4.
     final lastMinuteMul = _isInLastMinute() ? 2.0 : 1.0;
     final missedMilestone = _milestoneOpportunityMissed();
     _obedience.onFail(
@@ -126,22 +63,15 @@ extension FailFlowOrchestrator on SessionController {
       milestoneOpportunityMissed: missedMilestone,
     );
     _punishmentAbandoned = false;
-    // Le hold full en cours est interrompu : pas de crédit Iron Lungs.
     _currentHoldFullDuration = 0;
-    // Le hold éventuellement en cours est interrompu — disarm la caméra
-    // pour ne pas spammer de rappels pendant la phrase de fail / breath.
     _disarmHoldVerifier();
 
-    // 1) Mise en pause du timing principal et du loop courant.
     _stopwatch.stop();
     _ticker?.cancel();
     _ticker = null;
     _stopRandomComments();
-    // Borné : le ticker et le chronomètre sont déjà arrêtés, et `_state` ne
-    // bascule qu'après. Sur un canal de synthèse muet, la séance resterait
-    // `running` sans horloge ni ticker — un gel sans recours, sur le seul
-    // contrôle de séance visible en production (play/pause/stop sont derrière
-    // le toggle debug `showSessionControls`, off par défaut).
+    // Borné : ticker et chronomètre sont déjà arrêtés, un canal de synthèse muet
+    // figerait la séance en `running` sans recours.
     await _stopTtsBounded();
     _dropPendingSpeech();
     await _beep.pause();
@@ -149,46 +79,26 @@ extension FailFlowOrchestrator on SessionController {
     _state = SessionState.failing;
 
     try {
-      // 2) Phrase de fail.
       _failPhase = FailPhase.phrase;
       // On résout immédiatement : le contenu stocké dans `_currentFailPhrase`
       // est la version affichable (sans `{name}`). Le speak qui suit est
       // alors un pass-through pour le placeholder déjà absent.
-      // Si la salope a avalé alors que c'était interdit, on tire dans le
-      // pool dédié `failPhrasesSwallow` (transgression de consigne) plutôt
-      // que dans le pool générique. Fallback transparent au pool standard
-      // si le pool dédié est vide (sécurité contre un JSON incomplet).
       final swallowPool = _punishmentBundle.failPhrasesSwallow;
       final usingSwallowPool =
           _swallowMode == SwallowMode.forbidden && swallowPool.isNotEmpty;
       final pool =
           usingSwallowPool ? swallowPool : _punishmentBundle.failPhrases;
-      // Phase 4 — coach audible : si le « je peux pas » est imputable à un axe
-      // poussé au-delà de sa zone de confort (§6, attribution non ambiguë grâce
-      // à la surcharge isolée) et que le dé ∝ niveau tombe juste, on remplace la
-      // phrase de fail standard par une variante DOUCE « limite reconnue » (tier
-      // `tapout`). Jamais sur le pool « avalement interdit transgressé »
-      // (indiscipline ≠ limite légitime).
       final tapoutPhrase = usingSwallowPool ? null : _tapoutPhraseOrNull();
       final raw = tapoutPhrase ?? _pickRandom(pool);
       _currentFailPhrase = raw == null ? null : _tts.resolveText(raw);
       _notify();
       if (_currentFailPhrase != null) {
-        // awaitSpeakCompletion(true) → ce await retourne quand la phrase
-        // est entièrement prononcée. Borné : `_stopTtsBounded()` plus haut a
-        // déjà arrêté ticker et chronomètre, et toute la suite du flow — la
-        // respiration, la punition, le retour en `running` — est en aval. Un
-        // moteur qui ne rappelle jamais figeait la séance en `failing`, sur le
-        // seul contrôle visible en production.
+        // Borné : un moteur qui ne rappelle jamais figerait la séance en `failing`.
         _lastScriptedSpeakAt = DateTime.now();
         await _speakBounded(_currentFailPhrase!);
       }
       if (!_isFailFlowAlive(myGen)) return;
 
-      // 3) Respiration : toujours présente comme phase de transition,
-      //    mais raccourcie quand l'endurance projetée à l'instant t est
-      //    confortable (pas besoin d'imposer une longue récup à
-      //    quelqu'une qui n'en a pas besoin).
       _failPhase = FailPhase.breath;
       _notify();
       final stamina = _staminaAtNow();
@@ -208,18 +118,12 @@ extension FailFlowOrchestrator on SessionController {
       await _waitInterruptible(Duration(seconds: breathSeconds), gen: myGen);
       if (!_isFailFlowAlive(myGen)) return;
 
-      // 4) Punition. En carrière, on génère une composition contextuelle
-      //    bornée par le profil de capacités (§7 — Phase 5). Hors carrière
-      //    (Custom, scénarios JSON), on retombe sur le tirage statique dans
-      //    `punishments.json` — comportement historique.
       _currentPunishment = _generateCareerPunishmentOrNull() ??
           _pickRandom(_punishmentBundle.punishments);
       _failPhase = FailPhase.punishment;
       _notify();
       if (_currentPunishment != null) {
         await _runPunishment(_currentPunishment!);
-        // Bonus seulement si la punition a été menée à terme (ni stop()
-        // global, ni abandon volontaire via le bouton FAIL).
         if (_isFailFlowAlive(myGen) && !_punishmentAbandoned) {
           _humiliation.onPunishmentCompleted();
           _obedience.onPunishmentCompleted();
@@ -227,11 +131,6 @@ extension FailFlowOrchestrator on SessionController {
       }
       if (!_isFailFlowAlive(myGen)) return;
 
-      // 5) Saut à la section suivante : on cherche le prochain step de
-      //    config et on avance la timeline jusqu'à son `time`. Tous les
-      //    steps text-only intermédiaires sont consommés silencieusement.
-      //    Si aucune section suivante n'existe, on restaure le loop d'avant
-      //    le fail pour ne pas laisser la séance sans audio.
       final jumped = _skipToNextSection();
       if (!jumped) {
         await _restorePreviousLoop();
@@ -259,11 +158,8 @@ extension FailFlowOrchestrator on SessionController {
     }
   }
 
-  /// « JE PEUX PAS » sur une séance à morceau : la musique ne s'arrête jamais et
-  /// il n'y a ni phrase, ni punition, ni saut de section. La joueuse souffle
-  /// pendant [SessionController._musicBreathBeats] temps du morceau ; les steps
-  /// qui tombent dans ce souffle sont perdus, et la séance reprend sur le step
-  /// que le morceau a atteint (cf. [_endMusicBreath]).
+  /// « JE PEUX PAS » sur une séance à morceau : ni phrase ni punition, la musique
+  /// ne s'arrête jamais.
   Future<void> _triggerMusicalFail() async {
     final track = session.music!;
     _hadFailThisSession = true;
@@ -285,9 +181,6 @@ extension FailFlowOrchestrator on SessionController {
     );
   }
 
-  /// Fin du souffle : le loop de bips repart sur le dernier step de config dont
-  /// l'heure est passée, là où le morceau est rendu. Sans phrase (les consignes
-  /// manquées sont perdues) ; une tenue ne reprend que pour sa durée restante.
   void _endMusicBreath(int seconds) {
     _musicBreathUntil = null;
     _failPhase = null;
@@ -329,14 +222,8 @@ extension FailFlowOrchestrator on SessionController {
     _beep.detachMusic();
   }
 
-  /// Joue toutes les étapes d'une punition selon leur `time` relatif,
-  /// jusqu'à atteindre [Punishment.durationSeconds]. Interruptible via
-  /// `_abandonPunishment()` (qui complète `_punishmentCompleter`).
   Future<void> _runPunishment(Punishment p) async {
-    // Refuse les appels concurrents : si un précédent est encore actif,
-    // c'est un état incohérent (les flows fail/mini-punition s'attendent
-    // tous via await). On ne ré-entre pas ; le caller verra un retour
-    // immédiat et la séquence en cours continuera son cycle.
+    // Pas de ré-entrée : un appel concurrent est un état incohérent.
     final previous = _punishmentCompleter;
     if (previous != null && !previous.isCompleted) {
       if (kDebugMode) {
@@ -345,7 +232,6 @@ extension FailFlowOrchestrator on SessionController {
       }
       return;
     }
-    // Annule un ticker éventuellement orphelin pour ne pas le superposer.
     _punishmentTicker?.cancel();
     _punishmentTicker = null;
 
@@ -407,9 +293,6 @@ extension FailFlowOrchestrator on SessionController {
     await _beep.stop(); // coupe les bips de la punition avant de continuer
   }
 
-  /// Interrompt la punition en cours (déclenché par un appui sur FAIL
-  /// pendant la phase punishment). Pénalité d'obéissance, pas de
-  /// re-punition pour éviter la spirale.
   void _abandonPunishment() {
     _punishmentAbandoned = true;
     final mul = _isInLastMinute() ? 2.0 : 1.0;
@@ -423,12 +306,8 @@ extension FailFlowOrchestrator on SessionController {
     }
   }
 
-  /// Tick mini-punition : 1 tirage par minute. Si le coach a un
-  /// `miniPunishmentRate` > 0 et que l'état autorise une mini-punition (pas
-  /// en milestone, pas dernière minute, pas en finish), tente de déclencher
-  /// `_runMiniPunishmentFlow`. Pas de garde sur `_state == running` ici
-  /// — `_accrueHoldSecond` ne s'appelle que sous le ticker, qui ne tourne
-  /// que pendant `running`.
+  /// Pas de garde sur `_state == running` : `_accrueHoldSecond` ne s'appelle que
+  /// sous le ticker.
   void _accrueMiniPunishmentTick() {
     if (_music != null) return;
     _miniPunishmentTickAccumulator++;
@@ -448,14 +327,9 @@ extension FailFlowOrchestrator on SessionController {
     if (shortPool.isEmpty) return;
     final p = shortPool[_miniPunishmentRng.nextInt(shortPool.length)];
     _miniPunishmentsTriggered++;
-    // Fire-and-forget : on ne bloque pas le ticker.
     unawaited(_runMiniPunishmentFlow(p));
   }
 
-  /// Joue une mini-punition inopinée déclenchée par le tick coach.
-  /// Variante allégée du flow fail : pas de phrase fail, pas de breath de
-  /// récup, pas de saut de section. On enchaîne directement la punition
-  /// puis on restaure le loop précédent.
   Future<void> _runMiniPunishmentFlow(Punishment p) async {
     if (_state != SessionState.running) return;
 
@@ -469,10 +343,7 @@ extension FailFlowOrchestrator on SessionController {
     _ticker?.cancel();
     _ticker = null;
     _stopRandomComments();
-    // Borné, même schéma que `triggerFail` — et plus insidieux ici : ce flow
-    // est tiré automatiquement (~1 fois par minute en carrière selon
-    // `Coach.miniPunishmentRate`), donc la séance pourrait progresser
-    // normalement puis se figer sans aucune action de l'utilisatrice.
+    // Borné, comme `triggerFail` : ce flow est tiré sans action de l'utilisatrice.
     await _stopTtsBounded();
     _dropPendingSpeech();
     await _beep.pause();
@@ -506,15 +377,7 @@ extension FailFlowOrchestrator on SessionController {
     }
   }
 
-  /// Génère une punition carrière contextuelle (Phase 5, §7) via
-  /// `CareerSessionGenerator.generatePunishment`. Renvoie `null` hors
-  /// carrière (pas de profil de capacités ou pas de banque coach) — le
-  /// caller retombe alors sur le tirage statique dans `punishments.json`.
-  ///
-  /// On reconstruit un générateur à la volée (pas d'état conservé entre
-  /// fails) : la classe est suffisamment légère, le `Random()` interne
-  /// suffit pour la variation et on évite de propager une référence partagée
-  /// avec la chaîne de génération de session principale.
+  /// Renvoie `null` hors carrière : le caller retombe sur le tirage statique.
   Punishment? _generateCareerPunishmentOrNull() {
     final profile = _capabilityProfile;
     final bank = _phraseBank;
@@ -537,8 +400,6 @@ extension FailFlowOrchestrator on SessionController {
     );
   }
 
-  /// Restaure le loop de bips qui tournait avant le fail (ou no-op
-  /// si aucune étape de config n'avait encore été appliquée).
   Future<void> _restorePreviousLoop() async {
     final last = _lastConfigStep;
     if (last == null) return;
@@ -558,25 +419,12 @@ extension FailFlowOrchestrator on SessionController {
     await _syncAmbienceToCurrentMode();
   }
 
-  /// Cherche la prochaine étape avec configuration de bip (i.e. le début
-  /// d'une nouvelle « section ») strictement après [elapsedSeconds]. Si
-  /// trouvée, avance [_timelineOffset] pour faire correspondre l'horloge
-  /// effective à son `time`, et place [_nextStepIndex] dessus. Les éventuels
-  /// steps text-only entre la position courante et la nouvelle section
-  /// sont sautés silencieusement.
-  ///
-  /// Retourne true si un saut a eu lieu, false si on est déjà dans la
-  /// dernière section (pas de saut effectué) **ou** si le saut aurait
-  /// enjambé la fenêtre d'armement d'un défi encore à jouer.
+  /// Retourne false si aucune section ne suit **ou** si le saut enjamberait la
+  /// fenêtre d'armement d'un défi encore à jouer.
   bool _skipToNextSection() {
     final currentSec = elapsedSeconds;
-    // Un défi ne s'arme que si l'horloge traverse `[trigger, trigger + 13)`
-    // pendant qu'un tick tourne (`_updateChallengePhase`). Un fail qui tombe
-    // dans cette fenêtre, ou pile dessus, laissait le saut passer par-dessus :
-    // le défi n'était jamais proposé et disparaissait sans un mot. On borne
-    // donc le saut à l'ouverture de la fenêtre — quitte à ne pas sauter du
-    // tout quand elle est déjà ouverte (le défi s'arme alors au tick suivant
-    // et gèle l'horloge lui-même).
+    // Un défi ne s'arme que si l'horloge traverse `[trigger, trigger + 13)` sous
+    // un tick : le saut est borné à l'ouverture de cette fenêtre.
     final pendingTrigger = _nextPendingChallengeTrigger(currentSec);
     for (var i = _nextStepIndex; i < session.steps.length; i++) {
       final step = session.steps[i];
