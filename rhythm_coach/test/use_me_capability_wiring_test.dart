@@ -277,10 +277,38 @@ void main() {
     final after = await CapabilityService().snapshotProfile();
     expect(after.bestOf(CapabilityAxis.rhythmBpmCeilThroat), 105,
         reason: 'le best normal ne prend pas le 280 BPM rejoué');
-    expect(after.comfortOf(CapabilityAxis.rhythmBpmCeilThroat),
-        inInclusiveRange(100, 100.1),
-        reason: 'à peine 3 s tenues avant le FAIL (+0,05 %) : les ~7 s '
-            'rejouées après le FAIL, comptées, donneraient plus de +0,15 %');
+    expect(after.comfortOf(CapabilityAxis.rhythmBpmCeilThroat), 100,
+        reason: 'le 280 BPM n\'a duré que ~0,6 s avant le FAIL : le seuil du '
+            'gain n\'est pas atteint, et celui rejoué après le FAIL ne compte '
+            'pas (avant tss2-037 D6, il l\'ouvrait : +0,05 %)');
+  }, timeout: const Timeout(Duration(seconds: 60)));
+
+  test(
+      'T6f FAIL sous le confort, puis un step d\'escalade à 290 BPM joué '
+      'après le FAIL : le seuil du gain reste fermé', () async {
+    const underComfortStep = SessionStep(
+        time: 0,
+        mode: SessionMode.rhythm,
+        from: Position.head,
+        to: Position.throat,
+        bpm: 100);
+    final beep = _RecordingBeepEngine();
+    final ctrl = buildController(beep, 10);
+    ctrl.onUseMeEnded = (c) async => null;
+    await ctrl.start();
+    await enterUseMe(ctrl, steps: const [underComfortStep, nextUseMeStep]);
+    await Future<void>.delayed(const Duration(milliseconds: 2600));
+    expect(beep.appliedSteps.where((s) => s.bpm == 290), isEmpty,
+        reason: 'le step 290 BPM n\'est pas encore arrivé au FAIL');
+    await ctrl.triggerFail();
+    await untilFinished(ctrl);
+    expect(beep.appliedSteps.where((s) => s.bpm == 290), isNotEmpty,
+        reason:
+            'sonde non vide : le step 290 BPM a été appliqué après le FAIL');
+    final after = await CapabilityService().snapshotProfile();
+    expect(after.comfortOf(CapabilityAxis.rhythmBpmCeilThroat), 100,
+        reason: 'les secondes tenues à 100 BPM restent sous comfort × 1,02 : '
+            'le 290 BPM joué après le FAIL ne doit pas ouvrir le gain');
   }, timeout: const Timeout(Duration(seconds: 60)));
 
   test('T6d pause pendant « Utilise-moi » : le temps en pause ne compte pas',

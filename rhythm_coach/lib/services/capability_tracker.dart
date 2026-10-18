@@ -72,6 +72,7 @@ class CapabilityTracker {
   final Map<CapabilityAxis, double> _ceilings = {};
   final Map<CapabilityAxis, double> _useMeReached = {};
   int _useMeSeconds = 0;
+  bool _useMeClosed = false;
 
   /// Plafonds figés sur les appuis FAIL de la session en cours (§6) — vue
   /// non modifiable, lue par `SessionController.capabilitySessionCeilings`
@@ -96,6 +97,7 @@ class CapabilityTracker {
     _ceilings.clear();
     _useMeReached.clear();
     _useMeSeconds = 0;
+    _useMeClosed = false;
   }
 
   /// Un step de config vient d'être appliqué (changement de mode/profondeur/
@@ -195,7 +197,10 @@ class CapabilityTracker {
     final c = _config;
     if (c == null) return;
     _configSeconds += 1;
-    if (useMeActive) _useMeSeconds += 1;
+    if (useMeActive) {
+      _useMeSeconds += 1;
+      _useMeClosed = false;
+    }
 
     if (c.airless) _apnea += 1;
     if (c.engagesThroat) _engagement += 1;
@@ -241,6 +246,7 @@ class CapabilityTracker {
   /// les plafonds de session (`sessionCeilings`), puis on vide tout — un
   /// streak interrompu par un fail ne devient jamais un record (cf. §3/§6).
   void onFail() {
+    _useMeClosed = true;
     _ceilFrom(CapabilityAxis.gorgeApneeStreak, _apnea);
     _ceilFrom(CapabilityAxis.gorgeEngagementStreak, _engagement);
     _ceilFrom(CapabilityAxis.rhythmMotionStreak, _motion);
@@ -413,7 +419,9 @@ class CapabilityTracker {
 
   void _recordReached(CapabilityAxis axis, double value,
       {bool minimize = false}) {
-    final target = (_config?.useMe ?? false) ? _useMeReached : _reached;
+    final useMe = _config?.useMe ?? false;
+    if (useMe && _useMeClosed) return;
+    final target = useMe ? _useMeReached : _reached;
     final current = target[axis];
     if (current == null) {
       target[axis] = value;

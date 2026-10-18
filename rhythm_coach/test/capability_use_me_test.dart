@@ -233,6 +233,43 @@ void main() {
       expect(r.useMeReached[CapabilityAxis.gorgeEngagementStreak], 30);
     });
 
+    test(
+        'après le FAIL, la boucle « Utilise-moi » rejouée n\'alimente plus '
+        'useMeReached ; un nouvel épisode le rouvre', () {
+      final tr = CapabilityTracker()..onSessionStart();
+      void actif(int n) {
+        for (var i = 0; i < n; i++) {
+          tr.onTickSecond(swallowMode: SwallowMode.allowed, useMeActive: true);
+        }
+      }
+
+      gorge(tr, useMe: true);
+      actif(5);
+      tr.onFail();
+      gorge(tr, useMe: true);
+      secondes(tr, 30);
+      expect(
+          tr
+              .finalizeReport()
+              .useMeReached[CapabilityAxis.gorgeEngagementStreak],
+          isNull,
+          reason: 'les 30 s rejouées après le FAIL ne comptent pas');
+
+      final tr2 = CapabilityTracker()..onSessionStart();
+      gorge(tr2, useMe: true);
+      tr2.onFail();
+      gorge(tr2, useMe: true);
+      for (var i = 0; i < 30; i++) {
+        tr2.onTickSecond(swallowMode: SwallowMode.allowed, useMeActive: true);
+      }
+      expect(
+          tr2
+              .finalizeReport()
+              .useMeReached[CapabilityAxis.gorgeEngagementStreak],
+          30,
+          reason: 'un nouvel épisode, tick actif, rouvre le seuil');
+    });
+
     test('« Utilise-moi » → normal : le streak subi ne gonfle pas le normal',
         () {
       final tr = CapabilityTracker()..onSessionStart();
