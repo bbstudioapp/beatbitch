@@ -276,6 +276,12 @@ abstract class AppLocalizations {
   /// **'Ambiance'**
   String get sessionAmbienceLabel;
 
+  /// No description provided for @sessionSettingsTooltip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réglages'**
+  String get sessionSettingsTooltip;
+
   /// No description provided for @sessionUseMeLabel.
   ///
   /// In fr, this message translates to:

@@ -218,6 +218,7 @@ class _SessionScreenState extends State<SessionScreen>
       _controller.addListener(_onCareerStateChanged);
     }
     WidgetsBinding.instance.addObserver(this);
+    _enterImmersive();
     _relayLifecycle(WidgetsBinding.instance.lifecycleState);
     // `buildVerifierIfEnabled` rend null en silence (permission refusée,
     // calibration absente).
@@ -271,8 +272,12 @@ class _SessionScreenState extends State<SessionScreen>
       _controller.removeListener(_onCareerStateChanged);
     }
     _controller.dispose();
+    unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
     super.dispose();
   }
+
+  void _enterImmersive() => unawaited(
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky));
 
   void _handleChallengeHaptic(ChallengeHapticKind kind) {
     switch (kind) {
@@ -297,6 +302,7 @@ class _SessionScreenState extends State<SessionScreen>
       case AppLifecycleState.hidden:
         _controller.onAppBackgrounded();
       case AppLifecycleState.resumed:
+        _enterImmersive();
         _controller.onAppForegrounded();
       case AppLifecycleState.detached:
       case null:
@@ -672,6 +678,35 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     return name.trim();
   }
 
+  void _openSettings() {
+    final ctrl = context.read<SessionController>();
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppTheme.surface,
+      builder: (_) => StatefulBuilder(
+        builder: (_, setSheet) => ListenableBuilder(
+          listenable: ctrl,
+          builder: (_, __) => SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+              child: _VolumesBlock(
+                ttsVolume: _volume,
+                ambienceVolume: ctrl.ambienceVolume,
+                onTtsVolume: (v) {
+                  setState(() => _volume = v);
+                  widget.tts.setVolume(v);
+                  setSheet(() {});
+                },
+                onAmbienceVolume: ctrl.setAmbienceVolume,
+                showAmbience: !ctrl.isMusical,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<bool> _confirmExit(BuildContext context) async {
     final ctrl = context.read<SessionController>();
     if (ctrl.isIdle || ctrl.isFinished) return true;
@@ -710,6 +745,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     final t = AppLocalizations.of(context);
 
     final inPrep = _prepCountdown != null;
+    final showRunning = !_introPending && !inPrep && !ctrl.isFinished;
     return PopScope(
       canPop: ctrl.isIdle || ctrl.isFinished,
       onPopInvokedWithResult: (didPop, _) async {
@@ -719,21 +755,9 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
         }
       },
       child: Scaffold(
-        appBar: inPrep
+        appBar: showRunning || inPrep
             ? null
-            : AppBar(
-                title: Text(ctrl.session.name),
-                actions: [
-                  if (_showRemainingTime &&
-                      (ctrl.isRunning || ctrl.isPaused || ctrl.isFailing) &&
-                      ctrl.session.durationSeconds > 0)
-                    _RemainingTimeChip(
-                      remainingSeconds:
-                          (ctrl.session.durationSeconds - ctrl.elapsedSeconds)
-                              .clamp(0, ctrl.session.durationSeconds),
-                    ),
-                ],
-              ),
+            : AppBar(title: Text(ctrl.session.name)),
         body: Focus(
           focusNode: _challengeFocus,
           autofocus: true,
@@ -746,8 +770,10 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
             child: Stack(
               children: [
                 Positioned.fill(
-                    child:
-                        SessionBackground(mediaEnabled: _showBackgroundMedia)),
+                    child: SessionBackground(
+                  mediaEnabled: _showBackgroundMedia,
+                  bottomVeilOnly: showRunning,
+                )),
                 SafeArea(
                   child: _introPending
                       ? _IntroPanel(
@@ -835,203 +861,270 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
   }
 
   Widget _buildRunningView(SessionController ctrl) {
+    final t = AppLocalizations.of(context);
     final showBar = _showStaminaBar && widget.staminaProfile != null;
     // Sous la barre de stamina, on compresse : overflow sur petit écran.
     final animHeight = showBar ? 130.0 : 160.0;
     // `IntrinsicHeight` garde les Spacer tout en permettant le scroll quand
     // toutes les barres debug sont affichées.
-    return LayoutBuilder(
-      builder: (ctx, constraints) => SingleChildScrollView(
-        physics: const ClampingScrollPhysics(),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: constraints.maxHeight),
-          child: IntrinsicHeight(
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: 24,
-                vertical: showBar ? 6 : 16,
-              ),
-              child: Column(
-                children: [
-                  if (ctrl.state != SessionState.running) ...[
-                    _StateBadge(state: ctrl.state),
-                    SizedBox(height: showBar ? 6 : 12),
-                  ],
-                  if (ctrl.isFailing || ctrl.isMusicBreathing)
-                    _FailPhaseIndicator(controller: ctrl)
-                  else if (ctrl.hasConfig)
-                    ModeBadgeRow(
-                      mode: ctrl.currentMode,
-                      from: ctrl.currentFrom,
-                      to: ctrl.currentTo,
-                      bpm: ctrl.currentBpm,
-                      showDetails: _showModeBadge,
-                    )
-                  else
-                    const SizedBox(height: 30),
-                  if (ctrl.currentPose != Posture.free) ...[
-                    SizedBox(height: showBar ? 4 : 8),
-                    PostureIndicator(pose: ctrl.currentPose),
-                  ],
-                  if (showBar) ...[
-                    const SizedBox(height: 4),
-                    StaminaBar(
-                      profile: widget.staminaProfile!,
-                      currentSecond: ctrl.elapsedSeconds,
-                      liveValue: ctrl.stamina.value,
-                    ),
-                  ],
-                  if (_showHumiliationBar) ...[
-                    const SizedBox(height: 4),
-                    HumiliationBar(
-                      careerScore: ctrl.humiliation.careerScore,
-                      sessionScore: ctrl.humiliation.sessionScore,
-                    ),
-                  ],
-                  if (_showObedienceBar) ...[
-                    const SizedBox(height: 4),
-                    ObedienceBar(value: ctrl.obedience.score),
-                  ],
-                  if (_showSalivaBar) ...[
-                    const SizedBox(height: 4),
-                    SalivaBar(
-                      value: ctrl.saliva.value,
-                      max: ctrl.saliva.maxValue,
-                    ),
-                  ],
-                  const Spacer(),
-                  if (_showTimer)
-                    TimerDisplay(
-                        elapsed: ctrl.elapsed, total: ctrl.session.duration)
-                  else if (ctrl.hasConfig && !ctrl.breakActive)
-                    MovementAnimation(
-                      mode: ctrl.currentMode,
-                      from: ctrl.currentFrom,
-                      to: ctrl.currentTo,
-                      bpm: ctrl.currentBpm,
-                      height: animHeight,
-                      beepEngine: widget.beep,
-                      positionRowCount: widget.positionRowCount,
-                      stepSerial: widget.beep.stepSerial,
-                      elapsed: ctrl.elapsed,
-                      paused: ctrl.isPaused,
-                      showTrajectoryDots: _showTrajectoryDots,
-                      moves: ctrl.currentMoves,
-                      // Un défi ou un flow fail joue des segments absents de
-                      // `session.steps` sur une horloge de séance figée : rien
-                      // à annoncer tant qu'elle l'est.
-                      upcomingSteps:
-                          ctrl.isTimelineFrozen || ctrl.isFailFlowActive
-                              ? const []
-                              : resolveUpcomingMovementSteps(
-                                  steps: ctrl.session.steps,
-                                  defaultMode: ctrl.session.defaultMode,
-                                  afterSecond: ctrl.elapsedSeconds,
-                                  currentMode: ctrl.currentMode,
-                                  currentFrom: ctrl.currentFrom,
-                                  currentBpm: ctrl.currentBpm,
+    return Stack(
+      children: [
+        LayoutBuilder(
+          builder: (ctx, constraints) => SingleChildScrollView(
+            physics: const ClampingScrollPhysics(),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: showBar ? 6 : 16,
+                  ),
+                  child: Column(
+                    children: [
+                      if (ctrl.state != SessionState.running) ...[
+                        _StateBadge(state: ctrl.state),
+                        SizedBox(height: showBar ? 6 : 12),
+                      ],
+                      if (ctrl.isFailing || ctrl.isMusicBreathing)
+                        _FailPhaseIndicator(controller: ctrl)
+                      else if (ctrl.hasConfig)
+                        ModeBadgeRow(
+                          mode: ctrl.currentMode,
+                          from: ctrl.currentFrom,
+                          to: ctrl.currentTo,
+                          bpm: ctrl.currentBpm,
+                          showDetails: _showModeBadge,
+                        )
+                      else
+                        const SizedBox(height: 30),
+                      if (ctrl.currentPose != Posture.free) ...[
+                        SizedBox(height: showBar ? 4 : 8),
+                        PostureIndicator(pose: ctrl.currentPose),
+                      ],
+                      if (showBar) ...[
+                        const SizedBox(height: 4),
+                        StaminaBar(
+                          profile: widget.staminaProfile!,
+                          currentSecond: ctrl.elapsedSeconds,
+                          liveValue: ctrl.stamina.value,
+                        ),
+                      ],
+                      if (_showHumiliationBar) ...[
+                        const SizedBox(height: 4),
+                        HumiliationBar(
+                          careerScore: ctrl.humiliation.careerScore,
+                          sessionScore: ctrl.humiliation.sessionScore,
+                        ),
+                      ],
+                      if (_showObedienceBar) ...[
+                        const SizedBox(height: 4),
+                        ObedienceBar(value: ctrl.obedience.score),
+                      ],
+                      if (_showSalivaBar) ...[
+                        const SizedBox(height: 4),
+                        SalivaBar(
+                          value: ctrl.saliva.value,
+                          max: ctrl.saliva.maxValue,
+                        ),
+                      ],
+                      const Spacer(flex: 5),
+                      if (_showTimer)
+                        TimerDisplay(
+                            elapsed: ctrl.elapsed, total: ctrl.session.duration)
+                      else if (ctrl.hasConfig && !ctrl.breakActive)
+                        MovementAnimation(
+                          mode: ctrl.currentMode,
+                          from: ctrl.currentFrom,
+                          to: ctrl.currentTo,
+                          bpm: ctrl.currentBpm,
+                          height: animHeight,
+                          beepEngine: widget.beep,
+                          positionRowCount: widget.positionRowCount,
+                          stepSerial: widget.beep.stepSerial,
+                          elapsed: ctrl.elapsed,
+                          paused: ctrl.isPaused,
+                          showTrajectoryDots: _showTrajectoryDots,
+                          moves: ctrl.currentMoves,
+                          // Un défi ou un flow fail joue des segments absents de
+                          // `session.steps` sur une horloge de séance figée : rien
+                          // à annoncer tant qu'elle l'est.
+                          upcomingSteps:
+                              ctrl.isTimelineFrozen || ctrl.isFailFlowActive
+                                  ? const []
+                                  : resolveUpcomingMovementSteps(
+                                      steps: ctrl.session.steps,
+                                      defaultMode: ctrl.session.defaultMode,
+                                      afterSecond: ctrl.elapsedSeconds,
+                                      currentMode: ctrl.currentMode,
+                                      currentFrom: ctrl.currentFrom,
+                                      currentBpm: ctrl.currentBpm,
+                                    ),
+                        )
+                      else
+                        SizedBox(height: animHeight),
+                      const Spacer(flex: 9),
+                      // Réserve fixe : la courbe ne bouge pas avec la hauteur
+                      // du texte de consigne.
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                            minHeight: constraints.maxHeight * 0.30),
+                        child: Align(
+                          alignment: Alignment.bottomCenter,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (!ctrl.isChallengeActive)
+                                _CurrentInstruction(
+                                  text: ctrl.currentDisplayText,
                                 ),
-                    )
-                  else
-                    SizedBox(height: animHeight),
-                  SizedBox(height: showBar ? 12 : 24),
-                  if (!ctrl.isChallengeActive)
-                    _CurrentInstruction(
-                      text: ctrl.currentDisplayText,
-                    ),
-                  const Spacer(),
-                  if (_showSessionControls) ...[
-                    _ControlsRow(controller: ctrl),
-                    SizedBox(height: showBar ? 10 : 16),
-                  ],
-                  if (widget.isCareer &&
-                      widget.onRequestUpgrade != null &&
-                      !ctrl.isChallengeActive)
-                    ListenableBuilder(
-                      listenable: milestoneService,
-                      builder: (context, _) {
-                        if (!milestoneService.hasUnlock(UnlockKey.begLibre)) {
-                          return const SizedBox.shrink();
-                        }
-                        return Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _UseMeButton(
-                              enabled: ctrl.isRunning &&
-                                  !ctrl.isFailFlowActive &&
-                                  !_upgradeRequested &&
-                                  !_upgradeInFlight,
-                              used: _upgradeRequested,
-                              onPressed: _onUpgrade,
-                            ),
-                            SizedBox(height: showBar ? 8 : 12),
-                          ],
-                        );
-                      },
-                    ),
-                  if (widget.onRequestFinishNow != null && !_finishNowDone) ...[
-                    _FinishNowButton(
-                      enabled: ctrl.isRunning &&
-                          !ctrl.isFailFlowActive &&
-                          !_finishNowInFlight &&
-                          (ctrl.session.durationSeconds -
-                                  ctrl.elapsedSeconds) >=
-                              _finishNowMinRemainingSeconds,
-                      onPressed: _onFinishNow,
-                    ),
-                    SizedBox(height: showBar ? 8 : 12),
-                  ],
-                  if (ctrl.breakActive) ...[
-                    _BreakBanner(controller: ctrl),
-                    SizedBox(height: showBar ? 8 : 12),
-                  ],
-                  if (ctrl.awaitingPostureReady) ...[
-                    _PostureReadyButton(controller: ctrl),
-                    SizedBox(height: showBar ? 8 : 12),
-                  ],
-                  if (ctrl.isChallengeActive) ...[
-                    _ChallengeBanner(controller: ctrl),
-                    SizedBox(height: showBar ? 6 : 10),
-                    _ChallengeButtons(controller: ctrl),
-                    SizedBox(height: showBar ? 8 : 12),
-                  ] else
-                    _FailButton(controller: ctrl),
-                  if (_showSkipSessionButton &&
-                      (ctrl.isRunning || ctrl.isPaused)) ...[
-                    SizedBox(height: showBar ? 8 : 12),
-                    Builder(
-                      builder: (ctx) => OutlinedButton.icon(
-                        onPressed: () => ctrl.debugFinishSuccess(),
-                        icon: const Icon(Icons.fast_forward, size: 18),
-                        label: Text(
-                            AppLocalizations.of(ctx).sessionDebugFinishButton),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.greenAccent,
-                          side: const BorderSide(color: Colors.greenAccent),
-                          minimumSize: const Size.fromHeight(36),
+                              SizedBox(height: showBar ? 8 : 12),
+                              if (_showSessionControls) ...[
+                                _ControlsRow(controller: ctrl),
+                                SizedBox(height: showBar ? 10 : 16),
+                              ],
+                              if (widget.onRequestFinishNow != null &&
+                                  !_finishNowDone) ...[
+                                _FinishNowButton(
+                                  enabled: ctrl.isRunning &&
+                                      !ctrl.isFailFlowActive &&
+                                      !_finishNowInFlight &&
+                                      (ctrl.session.durationSeconds -
+                                              ctrl.elapsedSeconds) >=
+                                          _finishNowMinRemainingSeconds,
+                                  onPressed: _onFinishNow,
+                                ),
+                                SizedBox(height: showBar ? 8 : 12),
+                              ],
+                              if (ctrl.breakActive) ...[
+                                _BreakBanner(controller: ctrl),
+                                SizedBox(height: showBar ? 8 : 12),
+                              ],
+                              if (ctrl.awaitingPostureReady) ...[
+                                _PostureReadyButton(controller: ctrl),
+                                SizedBox(height: showBar ? 8 : 12),
+                              ],
+                              if (ctrl.isChallengeActive) ...[
+                                _ChallengeBanner(controller: ctrl),
+                                SizedBox(height: showBar ? 6 : 10),
+                                _ChallengeButtons(controller: ctrl),
+                              ] else
+                                _buildActionRow(ctrl),
+                              if (_showSkipSessionButton &&
+                                  (ctrl.isRunning || ctrl.isPaused)) ...[
+                                SizedBox(height: showBar ? 8 : 12),
+                                Builder(
+                                  builder: (ctx) => OutlinedButton.icon(
+                                    onPressed: () => ctrl.debugFinishSuccess(),
+                                    icon: const Icon(Icons.fast_forward,
+                                        size: 18),
+                                    label: Text(AppLocalizations.of(ctx)
+                                        .sessionDebugFinishButton),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.greenAccent,
+                                      side: const BorderSide(
+                                          color: Colors.greenAccent),
+                                      minimumSize: const Size.fromHeight(36),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              if (kDebugMode && ctrl.isMusical)
+                                _MusicBeepAdvanceRow(controller: ctrl),
+                              SizedBox(height: showBar ? 10 : 24),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                  SizedBox(height: showBar ? 10 : 16),
-                  _VolumesBlock(
-                    ttsVolume: _volume,
-                    ambienceVolume: ctrl.ambienceVolume,
-                    onTtsVolume: (v) {
-                      setState(() => _volume = v);
-                      widget.tts.setVolume(v);
-                    },
-                    onAmbienceVolume: ctrl.setAmbienceVolume,
-                    showAmbience: !ctrl.isMusical,
+                    ],
                   ),
-                  if (kDebugMode && ctrl.isMusical)
-                    _MusicBeepAdvanceRow(controller: ctrl),
-                ],
+                ),
               ),
             ),
           ),
         ),
-      ),
+        if (!ctrl.isFinished) ...[
+          Positioned(
+            top: 6,
+            left: 8,
+            child: _OverlayIconButton(
+              key: const Key('session-back-button'),
+              icon: Icons.arrow_back,
+              tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+              onPressed: () => Navigator.of(context).maybePop(),
+            ),
+          ),
+          Positioned(
+            top: 6,
+            right: 8,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_showRemainingTime &&
+                    (ctrl.isRunning || ctrl.isPaused || ctrl.isFailing) &&
+                    ctrl.session.durationSeconds > 0)
+                  _RemainingTimeChip(
+                    remainingSeconds:
+                        (ctrl.session.durationSeconds - ctrl.elapsedSeconds)
+                            .clamp(0, ctrl.session.durationSeconds),
+                  ),
+                _OverlayIconButton(
+                  key: const Key('session-settings-button'),
+                  icon: Icons.tune,
+                  tooltip: t.sessionSettingsTooltip,
+                  onPressed: _openSettings,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// « JE PEUX PAS » reste en pleine opacité et plus large que « UTILISE-MOI »,
+  /// qui n'apparaît qu'une fois débloqué.
+  Widget _buildActionRow(SessionController ctrl) {
+    return ListenableBuilder(
+      listenable: milestoneService,
+      builder: (context, _) {
+        final showUseMe = widget.isCareer &&
+            widget.onRequestUpgrade != null &&
+            milestoneService.hasUnlock(UnlockKey.begLibre) &&
+            ctrl.useMeUnlocked;
+        return Row(
+          children: [
+            if (showUseMe) ...[
+              Flexible(
+                flex: 2,
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0.0, end: 0.6),
+                  duration: const Duration(milliseconds: 500),
+                  curve: Curves.easeOut,
+                  builder: (_, v, child) => Opacity(opacity: v, child: child),
+                  child: _UseMeButton(
+                    key: const Key('session-useme-button'),
+                    enabled: ctrl.isRunning &&
+                        !ctrl.isFailFlowActive &&
+                        !_upgradeRequested &&
+                        !_upgradeInFlight,
+                    used: _upgradeRequested,
+                    onPressed: _onUpgrade,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+            ],
+            Expanded(
+              flex: 3,
+              child: _FailButton(
+                key: const Key('session-fail-button'),
+                controller: ctrl,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -1130,6 +1223,11 @@ class _FailPhaseIndicator extends StatelessWidget {
 }
 
 class _CurrentInstruction extends StatelessWidget {
+  static const List<Shadow> _shadows = [
+    Shadow(blurRadius: 4, color: Color(0xDD000000), offset: Offset(0, 1)),
+    Shadow(blurRadius: 14, color: Color(0x99000000)),
+  ];
+
   final String? text;
   const _CurrentInstruction({required this.text});
 
@@ -1142,21 +1240,20 @@ class _CurrentInstruction extends StatelessWidget {
           child: Text(
             AppLocalizations.of(context).sessionStartPrompt,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: AppTheme.textMuted, fontSize: 14),
+            style: const TextStyle(
+                color: Colors.white70, fontSize: 14, shadows: _shadows),
           ),
         ),
       );
     }
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 60),
-      child: Text(
-        text!,
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          fontSize: 16,
-          color: AppTheme.textSecondary,
-          height: 1.4,
-        ),
+    return Text(
+      text!,
+      textAlign: TextAlign.center,
+      style: const TextStyle(
+        fontSize: 17,
+        color: Colors.white,
+        height: 1.4,
+        shadows: _shadows,
       ),
     );
   }
@@ -1269,7 +1366,7 @@ class _FailButton extends StatelessWidget {
   static const Color _failColorDark = Color(0xFF8A1A1A);
 
   final SessionController controller;
-  const _FailButton({required this.controller});
+  const _FailButton({super.key, required this.controller});
 
   @override
   Widget build(BuildContext context) {
@@ -1283,26 +1380,29 @@ class _FailButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           onTap: enabled ? controller.triggerFail : null,
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 18),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.flag,
-                  color: enabled ? Colors.white : Colors.white38,
-                  size: 22,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  AppLocalizations.of(context).sessionFailButton,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 3,
+            padding: const EdgeInsets.symmetric(vertical: 15),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.flag,
                     color: enabled ? Colors.white : Colors.white38,
+                    size: 22,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 12),
+                  Text(
+                    AppLocalizations.of(context).sessionFailButton,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 3,
+                      color: enabled ? Colors.white : Colors.white38,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -1662,6 +1762,7 @@ class _UseMeButton extends StatelessWidget {
   final VoidCallback onPressed;
 
   const _UseMeButton({
+    super.key,
     required this.enabled,
     required this.used,
     required this.onPressed,
@@ -1680,26 +1781,29 @@ class _UseMeButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           onTap: enabled ? onPressed : null,
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.front_hand,
-                  color: enabled ? Colors.black : Colors.white38,
-                  size: 20,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 3,
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.front_hand,
                     color: enabled ? Colors.black : Colors.white38,
+                    size: 18,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 2,
+                      color: enabled ? Colors.black : Colors.white38,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -1770,6 +1874,34 @@ class _FinishNowButton extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _OverlayIconButton extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  const _OverlayIconButton({
+    super.key,
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.black.withValues(alpha: 0.25),
+      shape: const CircleBorder(),
+      child: IconButton(
+        tooltip: tooltip,
+        iconSize: 22,
+        color: Colors.white.withValues(alpha: 0.75),
+        icon: Icon(icon),
+        onPressed: onPressed,
       ),
     );
   }

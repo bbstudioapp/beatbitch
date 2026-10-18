@@ -46,6 +46,7 @@
   "sessionStopConfirm": "Arrêter",
   "sessionVoiceLabel": "Voix",
   "sessionAmbienceLabel": "Ambiance",
+  "sessionSettingsTooltip": "Réglages",
   "sessionUseMeLabel": "UTILISE-MOI",
   "sessionUseMeUsedLabel": "UTILISÉE",
   "careerUseMeBegPhrase": "Supplie-moi de t'utiliser comme le jouet que tu es.",

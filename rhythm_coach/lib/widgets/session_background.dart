@@ -31,7 +31,15 @@ class SessionBackground extends StatelessWidget {
   /// (qui continue son cycle, juste pas affichée).
   final bool mediaEnabled;
 
-  const SessionBackground({super.key, this.mediaEnabled = true});
+  /// Séance en cours : le haut de l'image reste en pleine lumière, seul le bas
+  /// (consigne, boutons) est assombri. Faux ailleurs : voile uniforme.
+  final bool bottomVeilOnly;
+
+  const SessionBackground({
+    super.key,
+    this.mediaEnabled = true,
+    this.bottomVeilOnly = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -53,7 +61,10 @@ class SessionBackground extends StatelessWidget {
                   switchOutCurve: Curves.easeIn,
                   child: entry == null
                       ? const _AmbientGradient(key: ValueKey('__placeholder__'))
-                      : _MediaBackground(entry: entry, key: ValueKey(entry.id)),
+                      : _MediaBackground(
+                          entry: entry,
+                          bottomVeilOnly: bottomVeilOnly,
+                          key: ValueKey(entry.id)),
                 );
               },
             ),
@@ -72,8 +83,10 @@ class SessionBackground extends StatelessWidget {
 /// cas `video` plus tard.
 class _MediaBackground extends StatelessWidget {
   final BackgroundEntry entry;
+  final bool bottomVeilOnly;
 
-  const _MediaBackground({required this.entry, super.key});
+  const _MediaBackground(
+      {required this.entry, required this.bottomVeilOnly, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -96,11 +109,23 @@ class _MediaBackground extends StatelessWidget {
         // fourni. Préférable au paramètre `opacity` d'Image.* qui baisse
         // uniformément (les pixels clairs deviennent transparents tout
         // autant que les sombres).
-        const DecoratedBox(
-          decoration: BoxDecoration(
-            color: Color(0x73000000), // ~0.45 alpha
-          ),
-          child: SizedBox.expand(),
+        DecoratedBox(
+          decoration: bottomVeilOnly
+              ? const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: [0.0, 0.5, 0.78, 1.0],
+                    colors: [
+                      Color(0x00000000),
+                      Color(0x00000000),
+                      Color(0x99000000),
+                      Color(0xD9000000),
+                    ],
+                  ),
+                )
+              : const BoxDecoration(color: Color(0x73000000)), // ~0.45 alpha
+          child: const SizedBox.expand(),
         ),
       ],
     );

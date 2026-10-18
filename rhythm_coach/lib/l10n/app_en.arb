@@ -46,6 +46,7 @@
   "sessionStopConfirm": "Stop",
   "sessionVoiceLabel": "Voice",
   "sessionAmbienceLabel": "Ambience",
+  "sessionSettingsTooltip": "Settings",
   "sessionUseMeLabel": "USE ME",
   "sessionUseMeUsedLabel": "USED",
   "careerUseMeBegPhrase": "Beg me to use you like the toy you are.",

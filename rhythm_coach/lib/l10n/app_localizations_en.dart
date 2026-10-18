@@ -102,6 +102,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionAmbienceLabel => 'Ambience';
 
   @override
+  String get sessionSettingsTooltip => 'Settings';
+
+  @override
   String get sessionUseMeLabel => 'USE ME';
 
   @override

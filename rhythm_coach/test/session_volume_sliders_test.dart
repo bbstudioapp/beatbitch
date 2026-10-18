@@ -134,6 +134,8 @@ void main() {
           () => Future<void>.delayed(const Duration(milliseconds: 100)));
       await tester.pump(const Duration(milliseconds: 100));
     }
+    await tester.tap(find.byKey(const Key('session-settings-button')));
+    await tester.pump(const Duration(milliseconds: 500));
     final values =
         tester.widgetList<Slider>(find.byType(Slider)).map((s) => s.value);
     expect(values, containsAll(<double>[0.4, 0.2]));
