@@ -821,8 +821,10 @@ class _PositionLadderState extends State<_PositionLadder> {
   DateTime? _pausedAt;
 
   /// Aucune image n'est construite en arrière-plan : la première qui montre
-  /// la pause arrive au retour dans l'appli.
+  /// la pause arrive au retour dans l'appli. La pause date de l'instant où le
+  /// temps de séance s'est arrêté, pas de cette image.
   DateTime? _lastFrameAt;
+  Duration? _lastFrameElapsed;
 
   @override
   void initState() {
@@ -833,7 +835,9 @@ class _PositionLadderState extends State<_PositionLadder> {
   @override
   void didUpdateWidget(covariant _PositionLadder oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.paused && !oldWidget.paused) _pausedAt = _lastFrameAt;
+    if (widget.paused && !oldWidget.paused) {
+      _pausedAt = _lastFrameAt!.add(widget.elapsed - _lastFrameElapsed!);
+    }
     if (!widget.paused) _resumeClock();
     if (!_sameGeometry(oldWidget, widget)) {
       _recompute();
@@ -916,6 +920,7 @@ class _PositionLadderState extends State<_PositionLadder> {
   @override
   Widget build(BuildContext context) {
     _lastFrameAt = DateTime.now();
+    _lastFrameElapsed = widget.elapsed;
     final windowMs =
         _PositionLadder._trajectoryWindow.inMilliseconds.toDouble();
     final deltaT =
