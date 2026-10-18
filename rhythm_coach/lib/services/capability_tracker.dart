@@ -71,6 +71,7 @@ class CapabilityTracker {
   final Map<CapabilityAxis, double> _reached = {};
   final Map<CapabilityAxis, double> _ceilings = {};
   final List<Map<CapabilityAxis, double>> _failCeilings = [];
+  bool _salivaOverflowed = false;
 
   /// Plafonds figés sur les appuis FAIL de la session en cours (§6) — vue
   /// non modifiable, lue par `SessionController.capabilitySessionCeilings`
@@ -94,6 +95,7 @@ class CapabilityTracker {
     _reached.clear();
     _ceilings.clear();
     _failCeilings.clear();
+    _salivaOverflowed = false;
   }
 
   /// Un step de config vient d'être appliqué (changement de mode/profondeur/
@@ -208,6 +210,7 @@ class CapabilityTracker {
   void onSalivaOverflow() {
     if (_noswallow > 0) {
       _noswallowHadOverflow = true;
+      _salivaOverflowed = true;
       _ceilFrom(CapabilityAxis.noswallowStreak, _noswallow);
     }
   }
@@ -292,6 +295,7 @@ class CapabilityTracker {
       reached: Map.unmodifiable(_reached),
       sessionCeilings: Map.unmodifiable(_ceilings),
       failCeilings: List.unmodifiable(_failCeilings),
+      salivaOverflowed: _salivaOverflowed,
     );
     if (kDebugMode && !report.isEmpty) {
       debugPrint('[Capability] report reached=${report.reached} '

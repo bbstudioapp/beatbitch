@@ -263,7 +263,9 @@ void main() {
       await seed(svc, {CapabilityAxis.noswallowStreak: 120});
       final attributed = await svc.commit(
         const SessionCapabilityReport(
-            reached: {}, sessionCeilings: {CapabilityAxis.noswallowStreak: 60}),
+            reached: {},
+            sessionCeilings: {CapabilityAxis.noswallowStreak: 60},
+            salivaOverflowed: true),
         sessionIndex: 2,
       );
       expect(attributed, isNull);
