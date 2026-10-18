@@ -111,6 +111,18 @@ class CapabilityRegulator {
     return attributed;
   }
 
+  static Set<CapabilityAxis> failAccused(
+    Map<CapabilityAxis, double> frozen,
+    CapabilityProfile profile,
+  ) {
+    final others = Map.of(frozen)..remove(CapabilityAxis.noswallowStreak);
+    return {
+      if (frozen.containsKey(CapabilityAxis.noswallowStreak))
+        CapabilityAxis.noswallowStreak,
+      ...accusedAxes(attributeTapOut(others, profile), others),
+    };
+  }
+
   static Set<CapabilityAxis> accusedAxes(
     CapabilityAxis? attributed,
     Map<CapabilityAxis, double> ceilings,
@@ -330,8 +342,7 @@ class CapabilityService {
         CapabilityRegulator.attributeTapOut(report.sessionCeilings, profile);
     final accused = <CapabilityAxis>{
       for (final frozen in report.failCeilings)
-        ...CapabilityRegulator.accusedAxes(
-            CapabilityRegulator.attributeTapOut(frozen, profile), frozen),
+        ...CapabilityRegulator.failAccused(frozen, profile),
     };
 
     for (final axis in CapabilityAxis.values) {
