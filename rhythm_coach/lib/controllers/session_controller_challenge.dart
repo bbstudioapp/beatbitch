@@ -917,18 +917,10 @@ extension ChallengeOrchestrator on SessionController {
     _beep.applyStep(next, _session.defaultMode);
     _configApplied = true;
     _lastConfigStep = next;
-    _lastConfigStepUseMe = _useMeActive;
     if (!_session.noStats) {
       _stats.markModeUsed(next.mode ?? _session.defaultMode);
     }
-    _capabilityTracker?.onStepApplied(
-      mode: next.mode ?? _session.defaultMode,
-      from: next.from,
-      to: next.to,
-      bpm: next.bpm,
-      duration: next.duration,
-      useMe: _useMeActive,
-    );
+    _trackConfigStep(next);
     _armHoldVerifierIfHoldStep(next);
     _syncAmbienceToCurrentMode();
   }

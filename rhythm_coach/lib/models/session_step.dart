@@ -130,6 +130,11 @@ class SessionStep {
   /// Mouvements ponctuels pendant une tenue (cf. [HoldMove]). Vide hors hold.
   final List<HoldMove> moves;
 
+  /// Step issu de l'escalade « Utilise-moi » : hors enveloppe de capacités,
+  /// jamais compté comme un step normal quel que soit l'état du mode quand il
+  /// s'applique.
+  final bool useMe;
+
   const SessionStep({
     required this.time,
     this.text = '',
@@ -146,6 +151,7 @@ class SessionStep {
     this.anchor = BeatAnchor.none,
     this.ratio = 1,
     this.moves = const [],
+    this.useMe = false,
   });
 
   /// Le même step, replacé à [time]. Les rebases de timeline (supplication
@@ -153,7 +159,7 @@ class SessionStep {
   /// que de relister les champs : une liste recopiée à la main perd le champ
   /// qu'on vient d'ajouter, et `awaitReady` — la gate de posture — l'a été
   /// trois fois.
-  SessionStep rebased(int time) => SessionStep(
+  SessionStep rebased(int time, {bool? useMe}) => SessionStep(
         time: time,
         text: text,
         from: from,
@@ -169,6 +175,7 @@ class SessionStep {
         anchor: anchor,
         ratio: ratio,
         moves: moves,
+        useMe: useMe ?? this.useMe,
       );
 
   /// True quand l'étape ne fait QUE déclencher une phrase TTS et n'apporte
@@ -221,6 +228,7 @@ class SessionStep {
           for (final m in json['moves'] as List)
             if (HoldMove.tryParse(m) case final move?) move,
       ],
+      useMe: json['useMe'] == true,
     );
   }
 
@@ -264,6 +272,7 @@ class SessionStep {
         if (anchor != BeatAnchor.none) 'anchor': anchor.serialized,
         if (ratio != 1) 'ratio': ratio,
         if (moves.isNotEmpty) 'moves': [for (final m in moves) m.toJson()],
+        if (useMe) 'useMe': true,
       };
 
   /// Sérialisation `chainAction` : on omet `time` (recalculé par le

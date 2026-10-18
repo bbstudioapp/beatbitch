@@ -168,9 +168,6 @@ class SessionController extends ChangeNotifier {
 
   SessionStep? _lastConfigStep;
 
-  /// Régime de [_lastConfigStep] : `_useMeActive` est déjà levé quand un FAIL le rejoue.
-  bool _lastConfigStepUseMe = false;
-
   /// Non nul pour une séance à morceau : sa position de lecture est l'horloge
   /// de séance, le chronomètre ne sert plus qu'au temps joué.
   final MusicEngine? _music;
@@ -592,6 +589,17 @@ class SessionController extends ChangeNotifier {
     final held = playedElapsed - _useMeStartedPlayed;
     _capabilityTracker?.recordUseMeHeld(held.inSeconds);
     await _stats.recordUseMeHeld(held.inSeconds);
+  }
+
+  void _trackConfigStep(SessionStep step) {
+    _capabilityTracker?.onStepApplied(
+      mode: step.mode ?? session.defaultMode,
+      from: step.from,
+      to: step.to,
+      bpm: step.bpm,
+      duration: step.duration,
+      useMe: step.useMe,
+    );
   }
 
   @visibleForTesting
@@ -1380,16 +1388,8 @@ class SessionController extends ChangeNotifier {
         }
         _configApplied = true;
         _lastConfigStep = step;
-        _lastConfigStepUseMe = _useMeActive;
         modeChanged = true;
-        _capabilityTracker?.onStepApplied(
-          mode: resolvedMode,
-          from: step.from,
-          to: step.to,
-          bpm: step.bpm,
-          duration: step.duration,
-          useMe: _useMeActive,
-        );
+        _trackConfigStep(step);
         _armHoldVerifierIfHoldStep(step);
         _pickBackground(_buildBackgroundContext(step, resolvedMode));
         if (_music == null && step.text.isEmpty && previousConfig != null) {
@@ -1793,6 +1793,7 @@ class SessionController extends ChangeNotifier {
     required Session upcoming,
     SessionStep? insistentBeg,
     required int start,
+    bool useMe = false,
   }) {
     final begDuration =
         insistentBeg == null ? 0 : (insistentBeg.duration ?? 12);
@@ -1808,8 +1809,10 @@ class SessionController extends ChangeNotifier {
           to: insistentBeg.to,
           bpm: insistentBeg.bpm,
           duration: begDuration,
+          useMe: useMe,
         ),
-      for (final s in upcoming.steps) s.rebased(s.time + offset),
+      for (final s in upcoming.steps)
+        s.rebased(s.time + offset, useMe: s.useMe || useMe),
     ];
 
     final bodies = <({String id, int start, int? duration})>[];

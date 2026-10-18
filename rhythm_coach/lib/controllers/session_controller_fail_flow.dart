@@ -447,14 +447,7 @@ extension FailFlowOrchestrator on SessionController {
     _state = SessionState.running;
     _notify();
     await applying;
-    _capabilityTracker?.onStepApplied(
-      mode: last.mode ?? session.defaultMode,
-      from: last.from,
-      to: last.to,
-      bpm: last.bpm,
-      duration: last.duration,
-      useMe: _lastConfigStepUseMe,
-    );
+    _trackConfigStep(last);
     await _syncAmbienceToCurrentMode();
   }
 

@@ -181,7 +181,16 @@ void main() {
         trackCapabilities: true,
       );
 
-  Future<void> enterUseMe(SessionController c) => c.requestUpgrade(
+  const nextUseMeStep = SessionStep(
+      time: 3,
+      mode: SessionMode.rhythm,
+      from: Position.head,
+      to: Position.throat,
+      bpm: 290);
+
+  Future<void> enterUseMe(SessionController c,
+          {List<SessionStep> steps = const [useMeStep]}) =>
+      c.requestUpgrade(
         insistentBeg: const SessionStep(
             time: 0, text: 'supplie', mode: SessionMode.beg, duration: 2),
         upcomingSession: Session(
@@ -190,7 +199,7 @@ void main() {
           description: '',
           durationSeconds: c.session.durationSeconds - c.elapsedSeconds - 2,
           defaultMode: SessionMode.rhythm,
-          steps: const [useMeStep],
+          steps: steps,
         ),
         useMe: true,
       );
@@ -273,6 +282,26 @@ void main() {
     expect(after.comfortOf(CapabilityAxis.rhythmBpmCeilThroat),
         closeTo(100 * 1.05, 1e-6),
         reason: 'un cran « Utilise-moi », pas de ratchet normal sur 280 BPM');
+  }, timeout: const Timeout(Duration(seconds: 60)));
+  test(
+      'T10 FAIL sans suite normale (hook null) : les steps d\'escalade qui '
+      'restent ne s\'écrivent pas dans le profil normal', () async {
+    final beep = _RecordingBeepEngine();
+    final ctrl = buildController(beep, 10);
+    ctrl.onUseMeEnded = (c) async => null;
+    await ctrl.start();
+    await enterUseMe(ctrl, steps: const [useMeStep, nextUseMeStep]);
+    await Future<void>.delayed(const Duration(milliseconds: 2600));
+    expect(beep.appliedSteps.where((s) => s.bpm == 290), isEmpty,
+        reason: 'le step 290 BPM n\'est pas encore arrivé au FAIL');
+    await ctrl.triggerFail();
+    await untilFinished(ctrl);
+    expect(beep.appliedSteps.where((s) => s.bpm == 290), isNotEmpty,
+        reason:
+            'sonde non vide : le step 290 BPM a été appliqué après le FAIL');
+    final after = await CapabilityService().snapshotProfile();
+    expect(after.bestOf(CapabilityAxis.rhythmBpmCeilThroat), 105);
+    expect(after.bestOf(CapabilityAxis.gorgeCrossingsBpmThroat), 100);
   }, timeout: const Timeout(Duration(seconds: 60)));
 }
 

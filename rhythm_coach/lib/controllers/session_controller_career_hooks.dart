@@ -133,6 +133,7 @@ extension CareerHooksOrchestrator on SessionController {
       upcoming: upcomingSession,
       insistentBeg: insistentBeg,
       start: start,
+      useMe: useMe,
     );
 
     // Coupe le TTS en cours pour ne pas garder une phrase orpheline

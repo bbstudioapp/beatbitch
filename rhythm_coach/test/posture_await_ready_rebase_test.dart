@@ -50,6 +50,7 @@ void main() {
         swallowMode: SwallowMode.forbidden,
         background: 'bg_x',
         awaitReady: true,
+        useMe: true,
       );
 
       final avant = Map<String, dynamic>.from(complet.toJson())..remove('time');
