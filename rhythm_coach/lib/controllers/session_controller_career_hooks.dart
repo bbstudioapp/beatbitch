@@ -211,7 +211,7 @@ extension CareerHooksOrchestrator on SessionController {
   Future<void> requestPostChallengeRegen({
     required Session upcomingSession,
   }) async {
-    if (_state != SessionState.running) return;
+    if (_state != SessionState.running || _useMeActive) return;
     // Avec l'excision du défi par `_excisChallengeFromSession`, la
     // séance est déjà alignée sur `elapsedSeconds` (= position d'avant
     // le défi) — la nouvelle suite est rebasée sur cet instant et sera
