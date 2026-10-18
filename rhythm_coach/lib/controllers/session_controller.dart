@@ -560,6 +560,19 @@ class SessionController extends ChangeNotifier {
 
   bool get hadFailThisSession => _hadFailThisSession;
 
+  static const Duration useMeUnlockAfter = Duration(minutes: 2);
+
+  Duration _playedAtLastFail = Duration.zero;
+
+  /// Règle simplifiée de l'essai : « Utilise-moi » apparaît après
+  /// [useMeUnlockAfter] de temps joué sans FAIL. Le chronomètre est arrêté
+  /// pendant tout le flow fail, la punition ne compte donc pas.
+  bool get useMeUnlocked =>
+      playedElapsed - _playedAtLastFail >= useMeUnlockAfter;
+
+  @visibleForTesting
+  void debugAddPlayed(Duration d) => _playedOffset += d;
+
   /// Ordonnés par catalogue ; vide tant que [_finish] n'a pas terminé sa
   /// réconciliation.
   List<BadgeUnlock> _sessionBadgeUnlocks = const [];
@@ -789,6 +802,7 @@ class SessionController extends ChangeNotifier {
         _stopwatch.reset();
         _timelineOffset = Duration.zero;
         _playedOffset = Duration.zero;
+        _playedAtLastFail = Duration.zero;
         _dropPendingSpeech();
         _nextStepIndex = 0;
         _lastSpoken = null;
@@ -1002,6 +1016,7 @@ class SessionController extends ChangeNotifier {
     _stopwatch.reset();
     _timelineOffset = Duration.zero;
     _playedOffset = Duration.zero;
+    _playedAtLastFail = Duration.zero;
     _ticker?.cancel();
     _ticker = null;
     // Borné, comme dans `pause()` : un canal de synthèse muet ne doit pas

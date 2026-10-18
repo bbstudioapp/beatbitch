@@ -18,6 +18,8 @@ extension FailFlowOrchestrator on SessionController {
       return;
     }
 
+    _playedAtLastFail = playedElapsed;
+
     // Ce qui suit rebat la timeline sans passer par `_exitBreak`.
     _breakActive = false;
     _activeBreak = null;
@@ -201,6 +203,7 @@ extension FailFlowOrchestrator on SessionController {
   Future<void> _triggerMusicalFail() async {
     final track = session.music!;
     _hadFailThisSession = true;
+    _playedAtLastFail = playedElapsed;
     _stamina.onFail();
     _saliva.onFail();
     _currentHoldFullDuration = 0;
