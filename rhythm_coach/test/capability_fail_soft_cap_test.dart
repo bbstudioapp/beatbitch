@@ -8,9 +8,10 @@ import 'package:beat_bitch/services/capability_service.dart';
 import 'package:beat_bitch/services/capability_tracker.dart';
 import 'package:beat_bitch/services/saliva_engine.dart';
 
-void _tick(CapabilityTracker t, int n) {
+void _tick(CapabilityTracker t, int n,
+    {SwallowMode swallow = SwallowMode.allowed}) {
   for (var i = 0; i < n; i++) {
-    t.onTickSecond(swallowMode: SwallowMode.allowed);
+    t.onTickSecond(swallowMode: swallow);
   }
 }
 
@@ -26,6 +27,7 @@ Future<CapabilityProfile> _seedProfile(CapabilityService svc) async {
       CapabilityAxis.gorgeApneeStreak: 30,
       CapabilityAxis.holdThroatStreak: 22,
       CapabilityAxis.effortNoBreathStreak: 120,
+      CapabilityAxis.noswallowStreak: 120,
     }, sessionCeilings: const {}),
     sessionIndex: 1,
   );
@@ -218,6 +220,62 @@ void main() {
           CapabilityAxis.rhythmDepthMax: 2,
           CapabilityAxis.rhythmBpmCeilShallow: 119,
         }),
+        isEmpty);
+  });
+
+  test('FAIL pendant un « sans avaler », sans débordement : rien ne baisse',
+      () async {
+    final svc = CapabilityService();
+    final before = await _seedProfile(svc);
+    final t = CapabilityTracker()..onSessionStart();
+    t.onStepApplied(mode: SessionMode.hold, to: Position.throat, duration: 30);
+    _tick(t, 10, swallow: SwallowMode.forbidden);
+    t.onFail();
+    final report = t.finalizeReport();
+    expect(report.sessionCeilings[CapabilityAxis.noswallowStreak], 10.0);
+
+    await svc.commit(report, sessionIndex: 2);
+    final after = await svc.snapshotProfile();
+
+    expect(_offRule(before, after, report, const {}), isEmpty);
+  });
+
+  test('vrai débordement de salive : noswallow seul perd 15 %', () async {
+    final svc = CapabilityService();
+    final before = await _seedProfile(svc);
+    final t = CapabilityTracker()..onSessionStart();
+    t.onStepApplied(mode: SessionMode.hold, to: Position.throat, duration: 30);
+    _tick(t, 10, swallow: SwallowMode.forbidden);
+    t.onSalivaOverflow();
+    _tick(t, 5, swallow: SwallowMode.forbidden);
+    t.onStepApplied(mode: SessionMode.breath, duration: 10);
+    _tick(t, 5);
+    final report = t.finalizeReport();
+    expect(report.sessionCeilings[CapabilityAxis.noswallowStreak], 10.0);
+
+    await svc.commit(report, sessionIndex: 2);
+    final after = await svc.snapshotProfile();
+
+    expect(
+        _offRule(before, after, report, {CapabilityAxis.noswallowStreak: 102}),
+        isEmpty);
+  });
+
+  test('FAIL où « sans avaler » est le plus au-delà de son confort : accusé',
+      () async {
+    final svc = CapabilityService();
+    final before = await _seedProfile(svc);
+    final t = CapabilityTracker()..onSessionStart();
+    t.onStepApplied(mode: SessionMode.breath, duration: 140);
+    _tick(t, 130, swallow: SwallowMode.forbidden);
+    t.onFail();
+    final report = t.finalizeReport();
+
+    await svc.commit(report, sessionIndex: 2);
+    final after = await svc.snapshotProfile();
+
+    expect(
+        _offRule(before, after, report, {CapabilityAxis.noswallowStreak: 102}),
         isEmpty);
   });
 }
