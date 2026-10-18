@@ -917,6 +917,7 @@ extension ChallengeOrchestrator on SessionController {
     _beep.applyStep(next, _session.defaultMode);
     _configApplied = true;
     _lastConfigStep = next;
+    _lastConfigStepUseMe = _useMeActive;
     if (!_session.noStats) {
       _stats.markModeUsed(next.mode ?? _session.defaultMode);
     }

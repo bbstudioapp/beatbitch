@@ -168,6 +168,9 @@ class SessionController extends ChangeNotifier {
 
   SessionStep? _lastConfigStep;
 
+  /// Régime de [_lastConfigStep] : `_useMeActive` est déjà levé quand un FAIL le rejoue.
+  bool _lastConfigStepUseMe = false;
+
   /// Non nul pour une séance à morceau : sa position de lecture est l'horloge
   /// de séance, le chronomètre ne sert plus qu'au temps joué.
   final MusicEngine? _music;
@@ -1377,6 +1380,7 @@ class SessionController extends ChangeNotifier {
         }
         _configApplied = true;
         _lastConfigStep = step;
+        _lastConfigStepUseMe = _useMeActive;
         modeChanged = true;
         _capabilityTracker?.onStepApplied(
           mode: resolvedMode,
