@@ -10,9 +10,9 @@ porte_sur:
   - rhythm_coach/lib/services/capability_tracker.dart
   - rhythm_coach/test/capability_fail_soft_cap_test.dart
 provenance:
-  mesure: 16
-  deduit: 19
-  document: 9
+  mesure: 22
+  deduit: 22
+  document: 14
   sans_marqueur: 0
 sources_citees: []
 relu_contre:
@@ -209,3 +209,53 @@ plus dépassé parmi les autres valeurs figées.
 - [déduit] Un débordement peut aussi survenir quand avaler est permis (seuil 90, auto-déglutition à 75 avec délai) ; il n'a
   jamais touché les capacités.
 - [déduit] Commentaires de `capability_service.dart` et `session_controller.dart` non nettoyés (plafond de jetons).
+
+## 4ᵉ passe : décisions de Manu sur R3 et R4, gardes manquantes
+
+[document] Écrite à la main, à partir de la relecture adverse du 2ᵉ tour (`relecture/fail-soft-cap-2`, `d4e795e`).
+
+### Décisions de Manu
+
+- [document] R3 : « quand elle craque pendant un sans avaler, faut-il en plus baisser une autre capacité ? » → « Non,
+  seulement « sans avaler » ».
+- [document] R4 : « dans la séance même d'un JE PEUX PAS, une capacité qui n'est pas en cause peut-elle quand même
+  progresser si elle a fait mieux que d'habitude avant le craquage ? » → « Oui, elle progresse ».
+
+### Correctifs
+
+- [mesuré] R3 : `failAccused` renvoie `noswallow` seul dès qu'il est figé ; la règle commune ne s'applique plus qu'aux
+  FAIL hors « sans avaler ». Les deux tests « la tenue baisse aussi » attendent désormais `hold.throat.streak` intact
+  (rouges avant le correctif : `22.0 → 18.7`).
+- [mesuré] R4 : dans `regulate`, un axe figé non accusé passe par la branche des records de la séance ; un axe accusé ne
+  passe que par la baisse. Record de 30 s avant un FAIL non accusé : confort 22 → 27,17 (était 22). Le même record avant
+  un FAIL qui accuse la tenue : 22 → 18,7, sans hausse.
+- [déduit] Un axe figé sans record dans la séance garde son confort, sans décroissance d'inactivité, comme avant.
+- [mesuré] R2 : le test « débordement » passe par un vrai `SessionController` (`capability_saliva_overflow_test.dart`) :
+  séance « sans avaler » en tenue `full`, salive amorcée à 89, franchissement du seuil 90 constaté, puis confort
+  `noswallow` 4 → 4,94 en fin de séance. Rejoué sur `2eecd6b~1` (le contrôleur appelait le tracker au débordement) :
+  rouge, `Actual: <3.4>`. L'ancien test, qui ne débordait rien, est retiré.
+- [mesuré] R6 : la phrase « un `best` ne compte que si aucun débordement… » retirée de `capability_axis.dart`.
+- [document] R5 : fiche `tss2-045` au sas, pas de correctif.
+
+### Mutations (une à la fois, restaurées par copie, `git diff` vide)
+
+| Mutation [mesuré] | Tests rouges | Assertion |
+|---|---|---|
+| M1 groupe du rythme profond sans filtre sur les axes figés | 1 | `gorge.crossings_pm.throat` 100 → 85 |
+| M3 cause hors groupe entraîne le groupe | 2 | profondeur 3 → 2, vitesse gorge 100 → 85 |
+| M5 engagement non figé au FAIL | 1 | plafond engagement absent |
+| M6 apnée non figée | 1 | plafond apnée absent |
+| M7 effort sans souffle non figé | 1 | plafond effort absent |
+| R3 inversé (autre axe accusé avec `noswallow`) | 2 | `hold.throat.streak` 22 → 18,7 |
+| R4 inversé (axe figé non accusé ne monte pas) | 1 | confort 22 au lieu de 27,17 |
+
+[mesuré] `flutter analyze` : « No issues found! » ; `dart format --set-exit-if-changed .` à 0 ; suite complète : 1118 verts.
+
+### 4ᵉ passe : ce que je n'ai pas pu établir
+
+- [déduit] M8 (streak `noswallow` non remis à zéro au FAIL) et M9 (union avec le plafond de séance) non rejouées : la
+  relecture n'a pas démontré d'effet.
+- [déduit] Le test du débordement amorce la salive par `saliva.seed` : la production naturelle jusqu'au seuil (environ
+  80 s de tenue `full` avec le plafond « sloppy ») n'est pas parcourue.
+- [document] `session_controller.dart:1966-1969` (« l'attribution de `commit` ne sert qu'au ratchet ↓ ») reste faux, fichier
+  non touché par cette passe.
