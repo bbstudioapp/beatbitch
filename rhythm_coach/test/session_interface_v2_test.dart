@@ -250,6 +250,48 @@ void main() {
     }
   }
 
+  for (final size in const [
+    Size(568, 320),
+    Size(667, 375),
+    Size(844, 390),
+    Size(320, 568),
+    Size(390, 850),
+  ]) {
+    testWidgets(
+        '« JE PEUX PAS » entier et tapable, immobile quand « UTILISE-MOI » '
+        'apparaît (${size.width.toInt()}×${size.height.toInt()})',
+        (tester) async {
+      await pumpScreen(tester, screen(), size: size);
+      final screenRect = Offset.zero & size;
+      final failBefore = tester.getRect(failButton);
+      final instructionBefore = tester.getRect(instruction);
+      expect(screenRect.contains(failBefore.topLeft), isTrue,
+          reason: 'coin haut-gauche de « JE PEUX PAS » hors écran');
+      expect(failBefore.bottom, lessThanOrEqualTo(size.height),
+          reason: '« JE PEUX PAS » rogné par le bas');
+
+      ctrlOf(tester).debugAddPlayed(SessionController.useMeUnlockAfter);
+      await settle(tester, 10);
+
+      expect(useMeButton, findsOneWidget);
+      expect(tester.getRect(failButton), failBefore);
+      expect(tester.getRect(instruction), instructionBefore);
+      final useMe = tester.getRect(useMeButton);
+      expect(failBefore.overlaps(useMe), isFalse);
+      expect(screenRect.contains(useMe.topLeft), isTrue);
+      expect(useMe.bottom, lessThanOrEqualTo(size.height));
+      expect(useMe.right, lessThanOrEqualTo(size.width));
+      expect(useMe.top, greaterThanOrEqualTo(instructionBefore.bottom));
+
+      await tester.tap(failButton);
+      await settle(tester, 3);
+      expect(ctrlOf(tester).isFailing, isTrue);
+      await tester.runAsync(ctrlOf(tester).stop);
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
+
   testWidgets('règle des 2 minutes : sans FAIL, un FAIL remet à zéro',
       (tester) async {
     await pumpScreen(tester, screen());

@@ -406,6 +406,8 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
   bool _showSessionControls = false;
   bool _settingsOpen = false;
   static const double _useMeLineHeight = 56;
+  static const double _useMeCompactWidth = 168;
+  static const double _compactHeight = 440;
   bool _showModeBadge = false;
   bool _showTrajectoryDots = false;
   bool _showSkipSessionButton = false;
@@ -852,178 +854,183 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     return Stack(
       children: [
         LayoutBuilder(
-          builder: (ctx, constraints) => SingleChildScrollView(
-            physics: const ClampingScrollPhysics(),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight),
-              child: IntrinsicHeight(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: showBar ? 6 : 16,
-                  ),
-                  child: Column(
-                    children: [
-                      if (ctrl.state != SessionState.running) ...[
-                        _StateBadge(state: ctrl.state),
-                        SizedBox(height: showBar ? 6 : 12),
-                      ],
-                      if (ctrl.isFailing || ctrl.isMusicBreathing)
-                        _FailPhaseIndicator(controller: ctrl)
-                      else if (ctrl.hasConfig)
-                        ModeBadgeRow(
-                          mode: ctrl.currentMode,
-                          from: ctrl.currentFrom,
-                          to: ctrl.currentTo,
-                          bpm: ctrl.currentBpm,
-                          showDetails: _showModeBadge,
-                        )
-                      else
-                        const SizedBox(height: 30),
-                      if (ctrl.currentPose != Posture.free) ...[
-                        SizedBox(height: showBar ? 4 : 8),
-                        PostureIndicator(pose: ctrl.currentPose),
-                      ],
-                      if (showBar) ...[
-                        const SizedBox(height: 4),
-                        StaminaBar(
-                          profile: widget.staminaProfile!,
-                          currentSecond: ctrl.elapsedSeconds,
-                          liveValue: ctrl.stamina.value,
-                        ),
-                      ],
-                      if (_showHumiliationBar) ...[
-                        const SizedBox(height: 4),
-                        HumiliationBar(
-                          careerScore: ctrl.humiliation.careerScore,
-                          sessionScore: ctrl.humiliation.sessionScore,
-                        ),
-                      ],
-                      if (_showObedienceBar) ...[
-                        const SizedBox(height: 4),
-                        ObedienceBar(value: ctrl.obedience.score),
-                      ],
-                      if (_showSalivaBar) ...[
-                        const SizedBox(height: 4),
-                        SalivaBar(
-                          value: ctrl.saliva.value,
-                          max: ctrl.saliva.maxValue,
-                        ),
-                      ],
-                      const Spacer(flex: 5),
-                      if (_showTimer)
-                        TimerDisplay(
-                            elapsed: ctrl.elapsed, total: ctrl.session.duration)
-                      else if (ctrl.hasConfig && !ctrl.breakActive)
-                        MovementAnimation(
-                          mode: ctrl.currentMode,
-                          from: ctrl.currentFrom,
-                          to: ctrl.currentTo,
-                          bpm: ctrl.currentBpm,
-                          height: animHeight,
-                          beepEngine: widget.beep,
-                          positionRowCount: widget.positionRowCount,
-                          stepSerial: widget.beep.stepSerial,
-                          elapsed: ctrl.elapsed,
-                          paused: ctrl.isPaused,
-                          showTrajectoryDots: _showTrajectoryDots,
-                          moves: ctrl.currentMoves,
-                          // Un défi ou un flow fail joue des segments absents de
-                          // `session.steps` sur une horloge de séance figée : rien
-                          // à annoncer tant qu'elle l'est.
-                          upcomingSteps:
-                              ctrl.isTimelineFrozen || ctrl.isFailFlowActive
-                                  ? const []
-                                  : resolveUpcomingMovementSteps(
-                                      steps: ctrl.session.steps,
-                                      defaultMode: ctrl.session.defaultMode,
-                                      afterSecond: ctrl.elapsedSeconds,
-                                      currentMode: ctrl.currentMode,
-                                      currentFrom: ctrl.currentFrom,
-                                      currentBpm: ctrl.currentBpm,
-                                    ),
-                        )
-                      else
-                        SizedBox(height: animHeight),
-                      const Spacer(flex: 9),
-                      // Réserve fixe : la courbe ne bouge pas avec la hauteur
-                      // du texte de consigne.
-                      ConstrainedBox(
-                        constraints: BoxConstraints(
-                            minHeight: constraints.maxHeight * 0.30),
-                        child: Align(
-                          alignment: Alignment.bottomCenter,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (!ctrl.isChallengeActive)
-                                _CurrentInstruction(
-                                  text: ctrl.currentDisplayText,
-                                ),
-                              SizedBox(height: showBar ? 8 : 12),
-                              if (_showSessionControls) ...[
-                                _ControlsRow(controller: ctrl),
-                                SizedBox(height: showBar ? 10 : 16),
-                              ],
-                              if (widget.onRequestFinishNow != null &&
-                                  !_finishNowDone) ...[
-                                _FinishNowButton(
-                                  enabled: ctrl.isRunning &&
-                                      !ctrl.isFailFlowActive &&
-                                      !_finishNowInFlight &&
-                                      (ctrl.session.durationSeconds -
-                                              ctrl.elapsedSeconds) >=
-                                          _finishNowMinRemainingSeconds,
-                                  onPressed: _onFinishNow,
-                                ),
-                                SizedBox(height: showBar ? 8 : 12),
-                              ],
-                              if (ctrl.breakActive) ...[
-                                _BreakBanner(controller: ctrl),
-                                SizedBox(height: showBar ? 8 : 12),
-                              ],
-                              if (ctrl.awaitingPostureReady) ...[
-                                _PostureReadyButton(controller: ctrl),
-                                SizedBox(height: showBar ? 8 : 12),
-                              ],
-                              if (ctrl.isChallengeActive) ...[
-                                _ChallengeBanner(controller: ctrl),
-                                SizedBox(height: showBar ? 6 : 10),
-                                _ChallengeButtons(controller: ctrl),
-                              ] else
-                                _buildActionRow(ctrl),
-                              if (_showSkipSessionButton &&
-                                  (ctrl.isRunning || ctrl.isPaused)) ...[
-                                SizedBox(height: showBar ? 8 : 12),
-                                Builder(
-                                  builder: (ctx) => OutlinedButton.icon(
-                                    onPressed: () => ctrl.debugFinishSuccess(),
-                                    icon: const Icon(Icons.fast_forward,
-                                        size: 18),
-                                    label: Text(AppLocalizations.of(ctx)
-                                        .sessionDebugFinishButton),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: Colors.greenAccent,
-                                      side: const BorderSide(
-                                          color: Colors.greenAccent),
-                                      minimumSize: const Size.fromHeight(36),
+          builder: (ctx, constraints) {
+            final compact = constraints.maxHeight < _compactHeight;
+            return SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: showBar || compact ? 6 : 16,
+                    ),
+                    child: Column(
+                      children: [
+                        if (ctrl.state != SessionState.running) ...[
+                          _StateBadge(state: ctrl.state),
+                          SizedBox(height: showBar ? 6 : 12),
+                        ],
+                        if (ctrl.isFailing || ctrl.isMusicBreathing)
+                          _FailPhaseIndicator(controller: ctrl)
+                        else if (ctrl.hasConfig)
+                          ModeBadgeRow(
+                            mode: ctrl.currentMode,
+                            from: ctrl.currentFrom,
+                            to: ctrl.currentTo,
+                            bpm: ctrl.currentBpm,
+                            showDetails: _showModeBadge,
+                          )
+                        else
+                          const SizedBox(height: 30),
+                        if (ctrl.currentPose != Posture.free) ...[
+                          SizedBox(height: showBar ? 4 : 8),
+                          PostureIndicator(pose: ctrl.currentPose),
+                        ],
+                        if (showBar) ...[
+                          const SizedBox(height: 4),
+                          StaminaBar(
+                            profile: widget.staminaProfile!,
+                            currentSecond: ctrl.elapsedSeconds,
+                            liveValue: ctrl.stamina.value,
+                          ),
+                        ],
+                        if (_showHumiliationBar) ...[
+                          const SizedBox(height: 4),
+                          HumiliationBar(
+                            careerScore: ctrl.humiliation.careerScore,
+                            sessionScore: ctrl.humiliation.sessionScore,
+                          ),
+                        ],
+                        if (_showObedienceBar) ...[
+                          const SizedBox(height: 4),
+                          ObedienceBar(value: ctrl.obedience.score),
+                        ],
+                        if (_showSalivaBar) ...[
+                          const SizedBox(height: 4),
+                          SalivaBar(
+                            value: ctrl.saliva.value,
+                            max: ctrl.saliva.maxValue,
+                          ),
+                        ],
+                        const Spacer(flex: 5),
+                        if (_showTimer)
+                          TimerDisplay(
+                              elapsed: ctrl.elapsed,
+                              total: ctrl.session.duration)
+                        else if (ctrl.hasConfig && !ctrl.breakActive)
+                          MovementAnimation(
+                            mode: ctrl.currentMode,
+                            from: ctrl.currentFrom,
+                            to: ctrl.currentTo,
+                            bpm: ctrl.currentBpm,
+                            height: animHeight,
+                            beepEngine: widget.beep,
+                            positionRowCount: widget.positionRowCount,
+                            stepSerial: widget.beep.stepSerial,
+                            elapsed: ctrl.elapsed,
+                            paused: ctrl.isPaused,
+                            showTrajectoryDots: _showTrajectoryDots,
+                            moves: ctrl.currentMoves,
+                            // Un défi ou un flow fail joue des segments absents de
+                            // `session.steps` sur une horloge de séance figée : rien
+                            // à annoncer tant qu'elle l'est.
+                            upcomingSteps:
+                                ctrl.isTimelineFrozen || ctrl.isFailFlowActive
+                                    ? const []
+                                    : resolveUpcomingMovementSteps(
+                                        steps: ctrl.session.steps,
+                                        defaultMode: ctrl.session.defaultMode,
+                                        afterSecond: ctrl.elapsedSeconds,
+                                        currentMode: ctrl.currentMode,
+                                        currentFrom: ctrl.currentFrom,
+                                        currentBpm: ctrl.currentBpm,
+                                      ),
+                          )
+                        else
+                          SizedBox(height: animHeight),
+                        const Spacer(flex: 9),
+                        // Réserve fixe : la courbe ne bouge pas avec la hauteur
+                        // du texte de consigne.
+                        ConstrainedBox(
+                          constraints: BoxConstraints(
+                              minHeight: constraints.maxHeight * 0.30),
+                          child: Align(
+                            alignment: Alignment.bottomCenter,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (!ctrl.isChallengeActive)
+                                  _CurrentInstruction(
+                                    text: ctrl.currentDisplayText,
+                                  ),
+                                SizedBox(height: showBar || compact ? 6 : 12),
+                                if (_showSessionControls) ...[
+                                  _ControlsRow(controller: ctrl),
+                                  SizedBox(height: showBar ? 10 : 16),
+                                ],
+                                if (widget.onRequestFinishNow != null &&
+                                    !_finishNowDone) ...[
+                                  _FinishNowButton(
+                                    enabled: ctrl.isRunning &&
+                                        !ctrl.isFailFlowActive &&
+                                        !_finishNowInFlight &&
+                                        (ctrl.session.durationSeconds -
+                                                ctrl.elapsedSeconds) >=
+                                            _finishNowMinRemainingSeconds,
+                                    onPressed: _onFinishNow,
+                                  ),
+                                  SizedBox(height: showBar ? 8 : 12),
+                                ],
+                                if (ctrl.breakActive) ...[
+                                  _BreakBanner(controller: ctrl),
+                                  SizedBox(height: showBar ? 8 : 12),
+                                ],
+                                if (ctrl.awaitingPostureReady) ...[
+                                  _PostureReadyButton(controller: ctrl),
+                                  SizedBox(height: showBar ? 8 : 12),
+                                ],
+                                if (ctrl.isChallengeActive) ...[
+                                  _ChallengeBanner(controller: ctrl),
+                                  SizedBox(height: showBar ? 6 : 10),
+                                  _ChallengeButtons(controller: ctrl),
+                                ] else
+                                  _buildActionRow(ctrl, compact: compact),
+                                if (_showSkipSessionButton &&
+                                    (ctrl.isRunning || ctrl.isPaused)) ...[
+                                  SizedBox(height: showBar ? 8 : 12),
+                                  Builder(
+                                    builder: (ctx) => OutlinedButton.icon(
+                                      onPressed: () =>
+                                          ctrl.debugFinishSuccess(),
+                                      icon: const Icon(Icons.fast_forward,
+                                          size: 18),
+                                      label: Text(AppLocalizations.of(ctx)
+                                          .sessionDebugFinishButton),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: Colors.greenAccent,
+                                        side: const BorderSide(
+                                            color: Colors.greenAccent),
+                                        minimumSize: const Size.fromHeight(36),
+                                      ),
                                     ),
                                   ),
-                                ),
+                                ],
+                                if (kDebugMode && ctrl.isMusical)
+                                  _MusicBeepAdvanceRow(controller: ctrl),
+                                SizedBox(height: showBar || compact ? 6 : 24),
                               ],
-                              if (kDebugMode && ctrl.isMusical)
-                                _MusicBeepAdvanceRow(controller: ctrl),
-                              SizedBox(height: showBar ? 10 : 24),
-                            ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         ),
         if (!ctrl.isFinished) ...[
           Positioned(
@@ -1089,14 +1096,51 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
   }
 
   /// « JE PEUX PAS » garde la même place que « UTILISE-MOI » soit là ou non :
-  /// la ligne de ce dernier est réservée dès qu'il peut apparaître.
-  Widget _buildActionRow(SessionController ctrl) {
+  /// la place de ce dernier est réservée dès qu'il peut apparaître, sur sa
+  /// ligne au-dessus, ou à sa droite quand l'écran est trop bas pour la ligne.
+  Widget _buildActionRow(SessionController ctrl, {required bool compact}) {
     return ListenableBuilder(
       listenable: milestoneService,
       builder: (context, _) {
         final useMeAvailable = widget.isCareer &&
             widget.onRequestUpgrade != null &&
             milestoneService.hasUnlock(UnlockKey.begLibre);
+        final failButton = _FailButton(
+          key: const Key('session-fail-button'),
+          controller: ctrl,
+        );
+        final useMeButton = ctrl.useMeUnlocked
+            ? TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 0.6),
+                duration: const Duration(milliseconds: 500),
+                curve: Curves.easeOut,
+                builder: (_, v, child) => Opacity(opacity: v, child: child),
+                child: _UseMeButton(
+                  key: const Key('session-useme-button'),
+                  enabled: ctrl.isRunning &&
+                      !ctrl.isFailFlowActive &&
+                      !_upgradeRequested &&
+                      !_upgradeInFlight,
+                  used: _upgradeRequested,
+                  onPressed: _onUpgrade,
+                ),
+              )
+            : null;
+        if (useMeAvailable && compact) {
+          return Row(
+            children: [
+              Expanded(child: failButton),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: _useMeCompactWidth,
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: useMeButton,
+                ),
+              ),
+            ],
+          );
+        }
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1106,30 +1150,10 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                 height: _useMeLineHeight,
                 child: Align(
                   alignment: Alignment.topRight,
-                  child: ctrl.useMeUnlocked
-                      ? TweenAnimationBuilder<double>(
-                          tween: Tween(begin: 0.0, end: 0.6),
-                          duration: const Duration(milliseconds: 500),
-                          curve: Curves.easeOut,
-                          builder: (_, v, child) =>
-                              Opacity(opacity: v, child: child),
-                          child: _UseMeButton(
-                            key: const Key('session-useme-button'),
-                            enabled: ctrl.isRunning &&
-                                !ctrl.isFailFlowActive &&
-                                !_upgradeRequested &&
-                                !_upgradeInFlight,
-                            used: _upgradeRequested,
-                            onPressed: _onUpgrade,
-                          ),
-                        )
-                      : null,
+                  child: useMeButton,
                 ),
               ),
-            _FailButton(
-              key: const Key('session-fail-button'),
-              controller: ctrl,
-            ),
+            failButton,
           ],
         );
       },
