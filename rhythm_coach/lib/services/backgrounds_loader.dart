@@ -103,6 +103,9 @@ class BackgroundEntry {
   /// Palier (`nu1` / `nu2`) porté par l'entrée, `null` en lingerie.
   String? get tier => tagsByCategory[BackgroundTagCategory.tier]?.first;
 
+  // Le pack nomme ses fonds d'intro `<coach>-pack[-nuN]-intro-…` : pas de tag.
+  bool get isIntro => id.contains('-intro-');
+
   // Le pack nomme ses transitions sans tag propre : palier + coach seuls.
   bool get isTierTransition =>
       tier != null &&

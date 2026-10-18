@@ -28,6 +28,7 @@ import '../controllers/session_controller.dart';
 import '../models/session.dart';
 import '../services/ambience_engine.dart';
 import '../services/badge_service.dart';
+import '../services/backgrounds_service.dart';
 import '../services/beep_engine.dart';
 import '../services/capability_axis.dart';
 import '../services/capability_service.dart';
@@ -506,7 +507,10 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     if (widget.introText != null && widget.introText!.trim().isNotEmpty) {
       _introPending = true;
       _resolvedIntroText = widget.tts.resolveText(widget.introText!);
-      WidgetsBinding.instance.addPostFrameCallback((_) => _speakIntro());
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _playIntroBackground();
+        _speakIntro();
+      });
     } else if (widget.autoStart) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -602,6 +606,15 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     _startPrepCountdown();
   }
 
+  void _playIntroBackground() {
+    if (!mounted) return;
+    final ctrl = context.read<SessionController>();
+    BackgroundsService.instance.pickIntro(
+      ctrl.coachTag,
+      tier: SessionController.backgroundTierFor(0, ctrl.session),
+    );
+  }
+
   void _startPrepCountdown() {
     // L'UI bascule avant `stop()` : sur Linux, arrêter le TTS prend plusieurs
     // centaines de ms.
@@ -609,6 +622,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
       _introPending = false;
       _prepCountdown = _prepDurationSeconds;
     });
+    _playIntroBackground();
     unawaited(widget.tts.stop());
     widget.tts.speak(
       CoachPhrasesService.instance.current.prepCountdown(_prepDurationSeconds),

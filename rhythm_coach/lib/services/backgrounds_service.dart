@@ -189,6 +189,23 @@ class BackgroundsService {
     return true;
   }
 
+  /// Fond d'intro de la coach au palier [tier]. Faux, fond courant gardé, si
+  /// la coach n'en a aucun ; vrai sans changer de fond s'il en joue déjà un.
+  bool pickIntro(String? coach, {String? tier}) {
+    final candidates = _bundle.entries
+        .where((e) =>
+            e.isIntro &&
+            e.tier == tier &&
+            (e.tagsByCategory[BackgroundTagCategory.coach]?.contains(coach) ??
+                false))
+        .toList();
+    if (candidates.isEmpty) return false;
+    _transitions.clear();
+    _afterTransitions = null;
+    if (!candidates.contains(current.value)) _setExcluding(candidates);
+    return true;
+  }
+
   BackgroundEntry? _transitionTo(String? coach, int rank) {
     final candidates = _bundle.entries
         .where((e) =>

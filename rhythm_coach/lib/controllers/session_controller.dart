@@ -375,6 +375,7 @@ class SessionController extends ChangeNotifier {
   /// Slug du coach actif (extrait de l'`id` `coach_NN_<slug>` par le caller) ;
   /// `null` = aucun fond `_<coach>` ne matche.
   final String? _coachTag;
+  String? get coachTag => _coachTag;
 
   int _miniPunishmentTickAccumulator = 0;
 
