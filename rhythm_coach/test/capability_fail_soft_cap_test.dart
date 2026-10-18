@@ -69,6 +69,12 @@ Map<String, String> _offRule(
     if ((got - expected).abs() > 1e-9) {
       out[axis.storageKey] = '$prev → $got (attendu $expected)';
     }
+    final srBefore = before.stateOf(axis).successRate;
+    final srExpected = lowered.containsKey(axis) ? 0.35 : srBefore;
+    final srGot = after.stateOf(axis).successRate;
+    if ((srGot - srExpected).abs() > 1e-9) {
+      out['${axis.storageKey}.sr'] = '$srBefore → $srGot (attendu $srExpected)';
+    }
   }
   return out;
 }

@@ -91,7 +91,7 @@ void main() {
       final quick = _reg(CapabilityAxis.holdFullStreak, prev,
           sessionCeiling: 22, sessionIndex: 5, quickie: true);
       expect(normal.comfort, 30.0);
-      expect(normal.successRate, lessThan(prev.successRate));
+      expect(normal.successRate, prev.successRate);
       expect(quick.comfort, 30.0);
       expect(quick.successRate, prev.successRate);
     });

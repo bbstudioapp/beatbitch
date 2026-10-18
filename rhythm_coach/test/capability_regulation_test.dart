@@ -97,12 +97,14 @@ void main() {
       expect(next.successRate, lessThan(0.7));
     });
 
-    test('signal négatif subi mais non imputé → comfort inchangé', () {
+    test(
+        'signal négatif subi mais non imputé → comfort et successRate inchangés',
+        () {
       final next = _reg(CapabilityAxis.gorgeEngagementStreak,
           _st(best: 40, comfort: 30, sr: 0.6, seen: 4),
           sessionCeiling: 26, hardNegative: false, sessionIndex: 5);
       expect(next.comfort, 30.0);
-      expect(next.successRate, lessThan(0.6));
+      expect(next.successRate, 0.6);
       final higher = _reg(CapabilityAxis.gorgeEngagementStreak,
           _st(best: 40, comfort: 22, sr: 0.6, seen: 4),
           sessionCeiling: 30, hardNegative: false, sessionIndex: 5);
