@@ -1965,8 +1965,7 @@ class SessionController extends ChangeNotifier {
       // `sessionIndex` = nombre de sessions complétées (déjà incrémenté par
       // `recordSessionCompleted`) → horloge de decay du `CapabilityRegulator`.
       // Renvoie l'axe imputé du tap-out — ignoré ici (le `tapout` a déjà été
-      // attribué live pour la phrase coach ; l'attribution de `commit` ne sert
-      // qu'au ratchet ↓).
+      // attribué live pour la phrase coach).
       if (capReport != null && !capReport.isEmpty) {
         await _capabilities.commit(capReport,
             sessionIndex: snap.sessionsCompleted, quickie: _isQuickie);
