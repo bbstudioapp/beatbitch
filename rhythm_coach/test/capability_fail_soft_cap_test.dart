@@ -250,7 +250,7 @@ void main() {
         isEmpty);
   });
 
-  test('FAIL pendant un « sans avaler », sans débordement : rien ne baisse',
+  test('FAIL pendant un « sans avaler » : elle a avalé, noswallow perd 15 %',
       () async {
     final svc = CapabilityService();
     final before = await _seedProfile(svc);
@@ -264,7 +264,55 @@ void main() {
     await svc.commit(report, sessionIndex: 2);
     final after = await svc.snapshotProfile();
 
-    expect(_offRule(before, after, report, const {}), isEmpty);
+    expect(
+        _offRule(before, after, report, {CapabilityAxis.noswallowStreak: 102}),
+        isEmpty);
+  });
+
+  test('FAIL en « sans avaler » sur une tenue trop longue : les deux baissent',
+      () async {
+    final svc = CapabilityService();
+    final before = await _seedProfile(svc);
+    final t = CapabilityTracker()..onSessionStart();
+    t.onStepApplied(mode: SessionMode.hold, to: Position.throat, duration: 30);
+    _tick(t, 25, swallow: SwallowMode.forbidden);
+    t.onFail();
+    final report = t.finalizeReport();
+
+    await svc.commit(report, sessionIndex: 2);
+    final after = await svc.snapshotProfile();
+
+    expect(
+        _offRule(before, after, report, {
+          CapabilityAxis.holdThroatStreak: 18.7,
+          CapabilityAxis.noswallowStreak: 102,
+        }),
+        isEmpty);
+  });
+
+  test(
+      'FAIL où « sans avaler » dépasse le plus : la tenue au-delà de son '
+      'confort baisse aussi', () async {
+    final svc = CapabilityService();
+    final before = await _seedProfile(svc);
+    final t = CapabilityTracker()..onSessionStart();
+    t.onStepApplied(mode: SessionMode.breath, duration: 140);
+    _tick(t, 130, swallow: SwallowMode.forbidden);
+    t.onStepApplied(mode: SessionMode.hold, to: Position.throat, duration: 30);
+    _tick(t, 23, swallow: SwallowMode.forbidden);
+    t.onFail();
+    final report = t.finalizeReport();
+    expect(report.sessionCeilings[CapabilityAxis.noswallowStreak], 153.0);
+
+    await svc.commit(report, sessionIndex: 2);
+    final after = await svc.snapshotProfile();
+
+    expect(
+        _offRule(before, after, report, {
+          CapabilityAxis.holdThroatStreak: 18.7,
+          CapabilityAxis.noswallowStreak: 102,
+        }),
+        isEmpty);
   });
 
   test('débordement de salive : noswallow ne baisse pas', () async {
