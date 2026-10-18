@@ -216,4 +216,26 @@ void main() {
       expect(d['pause'], isEmpty, reason: d['pause']!.join('\n'));
     });
   }
+
+  testWidgets(
+      'la séance court 400 ms sans image avant la pause : la reprise garde le '
+      'step suivant au même instant de séance', (tester) async {
+    const start = Duration(milliseconds: 8000);
+    final k = _holdThenRhythm;
+    final engine = _Engine();
+    await tester.pumpWidget(_host(k, engine, elapsed: start, paused: false));
+    await tester.pump(const Duration(milliseconds: 16));
+    final stop = start + const Duration(milliseconds: 400);
+    await tester.pumpWidget(_host(k, engine, elapsed: stop, paused: true));
+    await tester.pumpWidget(_host(k, engine, elapsed: stop, paused: false));
+    await tester.pump(const Duration(milliseconds: 16));
+    final leave =
+        _curve(tester).skip(1).where((p) => k.leaves(p.$2)).firstOrNull;
+    await engine.beats.close();
+    expect(leave, isNotNull);
+    // La référence est la constante du scénario : une image mesurée extrapole
+    // sur l'horloge réelle, que flutter_test ne simule pas.
+    expect(stop.inMilliseconds + (leave!.$1 * 3000).round(),
+        closeTo(_start * 1000 + _gap.inMilliseconds, 100));
+  });
 }
