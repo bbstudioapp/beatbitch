@@ -202,8 +202,6 @@ void main() {
     }
   }
 
-  /// Arme le défi, le passe, et tient la régénération post-défi en vol
-  /// jusqu'à ce que [release] soit complété.
   Future<SessionController> passChallengeWithRegenHeld(
     _RecordingBeepEngine beep,
     Completer<void> release,
