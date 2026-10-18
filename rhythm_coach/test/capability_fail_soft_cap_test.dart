@@ -404,9 +404,12 @@ void main() {
     _tick(t, 2);
     t.onFail();
     final report = t.finalizeReport();
-    expect(report.failCeilings.last
-        .containsKey(CapabilityAxis.gorgeCrossingsBpmThroat), isFalse);
-    expect(report.sessionCeilings[CapabilityAxis.gorgeCrossingsBpmThroat], 50.0);
+    expect(
+        report.failCeilings.last
+            .containsKey(CapabilityAxis.gorgeCrossingsBpmThroat),
+        isFalse);
+    expect(
+        report.sessionCeilings[CapabilityAxis.gorgeCrossingsBpmThroat], 50.0);
 
     await svc.commit(report, sessionIndex: 2);
     final after = await svc.snapshotProfile();
@@ -443,8 +446,8 @@ void main() {
     final after = await svc.snapshotProfile();
 
     expect(
-        _offRule(before, after, report,
-            {CapabilityAxis.gorgeEngagementStreak: 51}),
+        _offRule(
+            before, after, report, {CapabilityAxis.gorgeEngagementStreak: 51}),
         isEmpty);
   });
 
@@ -469,7 +472,8 @@ void main() {
     final after = await svc.snapshotProfile();
 
     expect(
-        _offRule(before, after, report, {CapabilityAxis.gorgeApneeStreak: 25.5}),
+        _offRule(
+            before, after, report, {CapabilityAxis.gorgeApneeStreak: 25.5}),
         isEmpty);
   });
 
@@ -489,8 +493,8 @@ void main() {
     final after = await svc.snapshotProfile();
 
     expect(
-        _offRule(before, after, report,
-            {CapabilityAxis.effortNoBreathStreak: 102}),
+        _offRule(
+            before, after, report, {CapabilityAxis.effortNoBreathStreak: 102}),
         isEmpty);
   });
 }

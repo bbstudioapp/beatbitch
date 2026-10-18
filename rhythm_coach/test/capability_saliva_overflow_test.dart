@@ -81,8 +81,7 @@ void main() {
     await ctrl.start();
     ctrl.saliva.seed(SalivaEngine.overflowThreshold - 1);
 
-    await _waitUntil(
-        () => ctrl.saliva.value >= SalivaEngine.overflowThreshold);
+    await _waitUntil(() => ctrl.saliva.value >= SalivaEngine.overflowThreshold);
     expect(ctrl.isFinished, isFalse);
     await _waitUntil(() => ctrl.isFinished);
 
