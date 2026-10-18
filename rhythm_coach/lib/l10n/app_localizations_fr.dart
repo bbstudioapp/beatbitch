@@ -327,6 +327,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get profileStatHoldFullMax => 'Hold full max';
 
   @override
+  String get profileStatUseMeMax => 'Plus longue tenue en Utilise-moi';
+
+  @override
   String get profileStatHoldThroatTotal => 'Hold throat (cumul)';
 
   @override

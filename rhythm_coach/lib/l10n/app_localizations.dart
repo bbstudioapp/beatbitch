@@ -684,6 +684,12 @@ abstract class AppLocalizations {
   /// **'Hold full max'**
   String get profileStatHoldFullMax;
 
+  /// No description provided for @profileStatUseMeMax.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plus longue tenue en Utilise-moi'**
+  String get profileStatUseMeMax;
+
   /// No description provided for @profileStatHoldThroatTotal.
   ///
   /// In fr, this message translates to:

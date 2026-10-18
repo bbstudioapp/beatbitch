@@ -326,6 +326,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get profileStatHoldFullMax => 'Längster Tief-Hold';
 
   @override
+  String get profileStatUseMeMax => 'Längste Zeit in „Benutz mich“';
+
+  @override
   String get profileStatHoldThroatTotal => 'Kehlen-Hold (gesamt)';
 
   @override

@@ -326,6 +326,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileStatHoldFullMax => 'Longest deep hold';
 
   @override
+  String get profileStatUseMeMax => 'Longest stretch in Use Me';
+
+  @override
   String get profileStatHoldThroatTotal => 'Throat hold (total)';
 
   @override
