@@ -205,16 +205,10 @@ class CapabilityRegulator {
       if (hardNegative) {
         if (isDepthCran) {
           comfort = (comfort - 1).clamp(0.0, prev.comfort!);
-          if (sessionCeiling < comfort) comfort = sessionCeiling;
         } else if (isMinimize) {
-          // « plus facile » = comfort s'éloigne de best (monte pour un floor).
-          final double base =
-              sessionCeiling > comfort ? sessionCeiling : comfort;
-          comfort = base / kRatchetDownFactor;
+          comfort = comfort / kRatchetDownFactor;
         } else {
-          final double base =
-              sessionCeiling < comfort ? sessionCeiling : comfort;
-          comfort = base * kRatchetDownFactor;
+          comfort = comfort * kRatchetDownFactor;
         }
         sr = _ema(sr, 0.0);
       } else {
