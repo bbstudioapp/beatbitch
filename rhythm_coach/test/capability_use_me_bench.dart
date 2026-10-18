@@ -1,6 +1,3 @@
-// Banc commun des tests « Utilise-moi » × profil de capacités (tss2-037) :
-// vrai générateur, vrai tracker, vrai service (prefs simulées), rejeu seconde
-// par seconde comme le contrôleur.
 import 'package:beat_bitch/career/models/career_generation_inputs.dart';
 import 'package:beat_bitch/career/models/phrase_bank.dart';
 import 'package:beat_bitch/career/services/generation/career_session_generator.dart';

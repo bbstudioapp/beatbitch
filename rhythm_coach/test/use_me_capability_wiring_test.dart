@@ -18,8 +18,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'capability_use_me_bench.dart';
 
-/// tss2-037, câblage : le vrai `SessionController` (tracker + service) ne laisse
-/// « Utilise-moi » ni poser de plafond de session, ni écrire le profil normal.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 

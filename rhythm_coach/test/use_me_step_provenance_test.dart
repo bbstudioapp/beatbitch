@@ -3,8 +3,6 @@ import 'package:beat_bitch/models/session.dart';
 import 'package:beat_bitch/models/session_step.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// tss2-037 : le régime « Utilise-moi » est porté par le step, posé là où la
-/// timeline est remplacée par l'escalade.
 void main() {
   const rhythm = SessionStep(
       time: 0,

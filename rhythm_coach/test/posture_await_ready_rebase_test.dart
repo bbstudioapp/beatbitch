@@ -5,8 +5,8 @@ import 'package:beat_bitch/models/session.dart';
 import 'package:beat_bitch/models/session_step.dart';
 import 'package:beat_bitch/services/saliva_engine.dart';
 
-/// Une posture imposée fige la séance jusqu'à confirmation (`awaitReady`,
-/// issue #77). Les rebases de timeline reconstruisent les steps champ à
+/// Une posture imposée fige la séance jusqu'à confirmation (`awaitReady`).
+/// Les rebases de timeline reconstruisent les steps champ à
 /// champ : si l'un d'eux oublie ce champ, la posture s'enchaîne sans attendre.
 Session sessionAvecPosture() => const Session(
       id: 'up',

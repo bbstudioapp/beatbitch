@@ -114,7 +114,7 @@ class SessionStep {
   /// séance (`awaitingPostureReady`) jusqu'à ce que la joueuse confirme qu'elle
   /// est en position (bouton « JE SUIS EN PLACE »). Posé sur le 1er step des
   /// milestones posture (`intro_posture_*`), et déclenché aussi en runtime à la
-  /// sortie d'un break qui change de posture (issue #77).
+  /// sortie d'un break qui change de posture.
   final bool awaitReady;
 
   /// Ancrage du loop rythmé (rhythm/lick/hand) — cf. `BeepEngine._intervalAfter`.

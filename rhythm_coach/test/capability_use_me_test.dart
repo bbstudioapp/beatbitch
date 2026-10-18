@@ -1,5 +1,3 @@
-// tss2-037 : « Utilise-moi » ne doit plus fausser le profil de capacités.
-// Banc : vrai générateur + vrai tracker + vrai service (cf. capability_use_me_bench.dart).
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:beat_bitch/models/session.dart';
