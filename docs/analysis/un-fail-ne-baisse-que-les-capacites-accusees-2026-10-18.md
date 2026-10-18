@@ -10,9 +10,9 @@ porte_sur:
   - rhythm_coach/lib/services/capability_tracker.dart
   - rhythm_coach/test/capability_fail_soft_cap_test.dart
 provenance:
-  mesure: 12
-  deduit: 13
-  document: 8
+  mesure: 16
+  deduit: 19
+  document: 9
   sans_marqueur: 0
 sources_citees: []
 relu_contre:
@@ -173,3 +173,39 @@ code identique hors commentaires, vérifié par comparaison. `flutter analyze` :
   (fiche `tss2-044` au sas, non mesurée).
 - [déduit] Le débordement réel à −15 % et la lecture de « montent normalement » sont des interprétations, à confirmer par Manu.
 - [déduit] La calibration des défis et la fréquence réelle d'un 2ᵉ FAIL ou d'un FAIL en « sans avaler » ne sont pas mesurées.
+
+## 3ᵉ passe : déborder est le but, avaler est l'échec
+
+[document] Décision de Manu le 18/10, mot pour mot : « Cest justement le but de faire deborder. Cest si on avale qu'on fail ».
+Elle remplace la règle tss2-043 de la 2ᵉ passe (`ff178ff`).
+
+[mesuré] Débordement : test `9b60215`, rouge sur `9ce5a24` (plafond `noswallow` posé à 10 s, streak coupé à 20 au lieu de 25).
+Correctif `2eecd6b` : le tracker ne reçoit plus le débordement (`onSalivaOverflow`, `salivaOverflowed` et le drapeau de streak
+retirés) ; `noswallow` reste à 120, le streak compte en entier. Le bump d'humiliation n'est pas touché.
+
+[mesuré] FAIL pendant un « sans avaler » : test `2be3680`, rouge sur `2eecd6b` (`noswallow` resté à 120 au lieu de 102 ; quand
+`noswallow` dépasse le plus, la tenue gorge restait à 22 au lieu de 18,7). Correctif `ff63cb2` :
+`CapabilityRegulator.failAccused` accuse `noswallow` dès qu'il est figé au FAIL, et la règle commune désigne en plus l'axe le
+plus dépassé parmi les autres valeurs figées.
+
+| Mutation [mesuré] | Tests rouges |
+|---|---|
+| A. `noswallow` figé mais pas accusé | 4 |
+| B. règle commune appliquée avec `noswallow` dans le lot | 1 |
+| C. `noswallow` non figé au FAIL | 4 |
+| D. soft-cap rétabli | 14 |
+| E. groupe du rythme profond retiré | 5 |
+| F. streak sans avaler oublié en fin de séance | 1 (après `f0de139`, verte avant) |
+
+[mesuré] `flutter analyze` : « No issues found! » ; `dart format --set-exit-if-changed .` à 0 ; suite complète : 1112 verts.
+
+### 3ᵉ passe : ce que je n'ai pas pu établir
+
+- [déduit] Lire « les autres causes » comme l'axe le plus dépassé hors `noswallow` est une interprétation (mutation B).
+- [déduit] Le débordement compté comme succès (streak entier) suit le mot « succès » de la consigne ; non confirmé par Manu.
+- [déduit] Aucun test ne garde l'absence de lien débordement → tracker au niveau `SessionController` : le lien n'existe plus.
+- [déduit] Un FAIL dans la seconde qui suit un « avale » coaché accuserait encore `noswallow` (streak non remis à zéro avant le
+  tick suivant) ; non mesuré.
+- [déduit] Un débordement peut aussi survenir quand avaler est permis (seuil 90, auto-déglutition à 75 avec délai) ; il n'a
+  jamais touché les capacités.
+- [déduit] Commentaires de `capability_service.dart` et `session_controller.dart` non nettoyés (plafond de jetons).
