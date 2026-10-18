@@ -1259,9 +1259,9 @@ class SessionController extends ChangeNotifier {
   BackgroundContext? _lastBackgroundContext;
   bool _failBackgroundShown = false;
 
-  void _pickBackground(BackgroundContext ctx) {
+  void _pickBackground(BackgroundContext ctx, {bool playerScene = false}) {
     _lastBackgroundContext = ctx;
-    BackgroundsService.instance.pickForContext(ctx);
+    BackgroundsService.instance.pickForContext(ctx, playerScene: playerScene);
   }
 
   /// Le palier monte avec l'horloge, pas seulement aux changements de step.
@@ -1410,7 +1410,11 @@ class SessionController extends ChangeNotifier {
         modeChanged = true;
         _trackConfigStep(step);
         _armHoldVerifierIfHoldStep(step);
-        _pickBackground(_buildBackgroundContext(step, resolvedMode));
+        _pickBackground(
+          _buildBackgroundContext(step, resolvedMode),
+          playerScene:
+              resolvedMode != SessionMode.beg && !_isInMilestoneWindow(),
+        );
         if (_music == null && step.text.isEmpty && previousConfig != null) {
           _maybeFireTransitionPhrase(previousConfig, step);
         }

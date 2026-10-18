@@ -16,7 +16,7 @@ enum BackgroundMediaType {
 /// fermé : tout segment du basename qui n'appartient à aucune catégorie
 /// fait partie de l'`id`, pas des tags. Cela permet à l'`id` de contenir
 /// des `_` sans casser le parsing.
-enum BackgroundTagCategory { mode, position, coach, phase, tier }
+enum BackgroundTagCategory { mode, position, coach, phase, tier, viewpoint }
 
 /// Vocabulaire de tags reconnus dans les noms de fichiers de fond.
 ///
@@ -43,6 +43,7 @@ class BackgroundTagVocabulary {
     'beg': BackgroundTagCategory.mode,
     'freestyle': BackgroundTagCategory.mode,
     'hand': BackgroundTagCategory.mode,
+    'suckle': BackgroundTagCategory.mode,
     // Position.values.map((p) => p.name)
     'tip': BackgroundTagCategory.position,
     'head': BackgroundTagCategory.position,
@@ -66,6 +67,8 @@ class BackgroundTagVocabulary {
     // Paliers de nudité : `nu1` = seins nus, `nu2` = nue. Sans tag = lingerie.
     'nu1': BackgroundTagCategory.tier,
     'nu2': BackgroundTagCategory.tier,
+    // Scène vue par la joueuse, commune à toutes les coachs.
+    'pov': BackgroundTagCategory.viewpoint,
   };
 
   static BackgroundTagCategory? categorize(String tag) => _byTag[tag];
@@ -105,6 +108,8 @@ class BackgroundEntry {
 
   // Le pack nomme ses fonds d'intro `<coach>-pack[-nuN]-intro-…` : pas de tag.
   bool get isIntro => id.contains('-intro-');
+
+  bool get isPov => tags.contains('pov');
 
   // Le pack nomme ses transitions sans tag propre : palier + coach seuls.
   bool get isTierTransition =>

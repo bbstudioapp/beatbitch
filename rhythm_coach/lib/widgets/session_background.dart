@@ -94,7 +94,7 @@ class _MediaBackground extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         switch (entry.type) {
-          _ when entry.isTierTransition => PlayOnceImage(
+          _ when entry.isTierTransition || entry.isPov => PlayOnceImage(
               path: entry.path,
               onDone: () =>
                   BackgroundsService.instance.transitionFinished(entry),

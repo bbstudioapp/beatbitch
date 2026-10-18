@@ -38,6 +38,7 @@ class BackgroundContext {
         BackgroundTagCategory.coach => coach,
         BackgroundTagCategory.phase => phase,
         BackgroundTagCategory.tier => tier,
+        BackgroundTagCategory.viewpoint => null,
       };
 }
 
@@ -67,7 +68,22 @@ class BackgroundsService {
       ValueNotifier<BackgroundEntry?>(null);
 
   BackgroundsBundle _bundle = BackgroundsBundle.empty;
-  final Random _rng = Random();
+  Random _rng = Random();
+
+  @visibleForTesting
+  set debugRandom(Random rng) => _rng = rng;
+
+  /// Tenues où la coach lève la main : jamais tirées.
+  static const Set<String> handRaisedHolds = {
+    'helene-pack-hold-26002-ltx-pp-s26002',
+    'helene-pack-nu1-hold-26002-ltx-pp-s26002',
+    'helene-pack-nu2-hold-26002-anim',
+    'lina-pack-hold-25001-ltx-pp-s25001',
+    'lina-pack-nu1-hold-25001-anim',
+    'lina-pack-nu1-hold-25002-anim',
+    'lina-pack-nu2-hold-25001-anim',
+    'lina-pack-nu2-hold-25002-anim',
+  };
 
   static const List<String> _tierNames = ['nu1', 'nu2'];
   static int _rankOf(String? tier) => _tierNames.indexOf(tier ?? '') + 1;
@@ -77,11 +93,13 @@ class BackgroundsService {
   int _tierRank = 0;
   final List<BackgroundEntry> _transitions = [];
   BackgroundContext? _afterTransitions;
+  BackgroundContext? _lastGesture;
 
   void _resetTiers() {
     _tierRank = 0;
     _transitions.clear();
     _afterTransitions = null;
+    _lastGesture = null;
   }
 
   /// Charge ou recharge le catalogue. Appelé une fois au démarrage de
@@ -128,8 +146,12 @@ class BackgroundsService {
   /// `pickRandom` historique (entrées taguées comprises) — mieux vaut un
   /// fond inadapté que pas de fond du tout quand le catalogue est entiè-
   /// rement tagué.
-  void pickForContext(BackgroundContext ctx) {
+  void pickForContext(BackgroundContext ctx, {bool playerScene = false}) {
     if (_bundle.entries.isEmpty) return;
+    if (current.value?.isPov ?? false) {
+      _transitions.clear();
+      _afterTransitions = null;
+    }
     // Seul un coach qui a des fonds de palier en reçoit ; le palier atteint
     // ne redescend pas en cours de séance.
     final tiered = ctx.coach != null && _tieredCoaches.contains(ctx.coach);
@@ -152,8 +174,35 @@ class BackgroundsService {
       if (!wasPlaying) current.value = _transitions.first;
       return;
     }
+    if (playerScene && _insertPlayerScene(effective)) return;
     _pick(effective);
   }
+
+  /// Une fois sur trois, une scène de la joueuse qui suit le mode et la
+  /// position s'intercale entre deux gestes de la coach, jouée une fois.
+  bool _insertPlayerScene(BackgroundContext ctx) {
+    final shown = current.value;
+    if (ctx.phase != null ||
+        shown == null ||
+        shown.isIntro ||
+        shown.isPov ||
+        shown.isTierTransition ||
+        shown.tagsByCategory.containsKey(BackgroundTagCategory.phase)) {
+      return false;
+    }
+    final scenes =
+        _bundle.entries.where((e) => e.isPov && _sceneMatches(e, ctx)).toList();
+    if (scenes.isEmpty || _rng.nextInt(3) != 0) return false;
+    final scene = scenes[_rng.nextInt(scenes.length)];
+    _transitions.add(scene);
+    _afterTransitions = ctx;
+    current.value = scene;
+    return true;
+  }
+
+  static bool _sceneMatches(BackgroundEntry e, BackgroundContext ctx) =>
+      [BackgroundTagCategory.mode, BackgroundTagCategory.position].every(
+          (cat) => e.tagsByCategory[cat]?.contains(ctx.valueFor(cat)) ?? true);
 
   /// Fin de lecture d'une transition (signalée par le widget). Enchaîne la
   /// suivante, ou le fond du dernier contexte demandé. Ignorée si [entry]
@@ -226,7 +275,12 @@ class BackgroundsService {
     }
     final ranked = _rank(ctx);
     if (ranked.best.isNotEmpty) {
+      _lastGesture = ctx;
       _setExcluding(ranked.best);
+      return;
+    }
+    if (ranked.withheld) {
+      _keepGesture(ctx);
       return;
     }
     if (ranked.untagged.isNotEmpty) {
@@ -238,13 +292,33 @@ class BackgroundsService {
     pickRandom();
   }
 
-  ({List<BackgroundEntry> best, List<BackgroundEntry> untagged}) _rank(
+  /// Sans tenue montrable, la coach garde son geste précédent, au palier
+  /// courant.
+  void _keepGesture(BackgroundContext ctx) {
+    final last = _lastGesture;
+    if (last == null) return;
+    final gesture = _rank(BackgroundContext(
+      mode: last.mode,
+      position: last.position,
+      coach: ctx.coach,
+      phase: ctx.phase,
+      tier: ctx.tier,
+    )).best;
+    if (!gesture.contains(current.value)) _setExcluding(gesture);
+  }
+
+  ({
+    List<BackgroundEntry> best,
+    List<BackgroundEntry> untagged,
+    bool withheld,
+  }) _rank(
     BackgroundContext ctx, {
     bool Function(BackgroundEntry)? where,
   }) {
     var bestScore = -1;
     final byScore = <int, List<BackgroundEntry>>{};
     final untagged = <BackgroundEntry>[];
+    var withheld = false;
     for (final e in _bundle.entries) {
       if (e.isTierTransition || (where != null && !where(e))) continue;
       if (!e.hasTags) {
@@ -253,6 +327,10 @@ class BackgroundsService {
       }
       final score = _scoreEntry(e, ctx);
       if (score < 0) continue;
+      if (handRaisedHolds.contains(e.id)) {
+        withheld = true;
+        continue;
+      }
       byScore.putIfAbsent(score, () => <BackgroundEntry>[]).add(e);
       if (score > bestScore) bestScore = score;
     }
@@ -261,6 +339,7 @@ class BackgroundsService {
           ? (byScore[bestScore] ?? const <BackgroundEntry>[])
           : const <BackgroundEntry>[],
       untagged: untagged,
+      withheld: withheld,
     );
   }
 
@@ -307,7 +386,10 @@ class BackgroundsService {
   /// bundle a une seule entrée, on retombe forcément dessus ; si le
   /// bundle est vide, no-op (le widget reste sur son placeholder animé).
   void pickRandom() {
-    final pool = _bundle.entries.where((e) => !e.isTierTransition).toList();
+    final pool = _bundle.entries
+        .where((e) =>
+            !e.isTierTransition && !e.isPov && !handRaisedHolds.contains(e.id))
+        .toList();
     final n = pool.length;
     if (n == 0) return;
     if (n == 1) {
