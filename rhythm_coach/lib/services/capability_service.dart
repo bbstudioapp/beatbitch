@@ -115,12 +115,10 @@ class CapabilityRegulator {
     Map<CapabilityAxis, double> frozen,
     CapabilityProfile profile,
   ) {
-    final others = Map.of(frozen)..remove(CapabilityAxis.noswallowStreak);
-    return {
-      if (frozen.containsKey(CapabilityAxis.noswallowStreak))
-        CapabilityAxis.noswallowStreak,
-      ...accusedAxes(attributeTapOut(others, profile), others),
-    };
+    if (frozen.containsKey(CapabilityAxis.noswallowStreak)) {
+      return const {CapabilityAxis.noswallowStreak};
+    }
+    return accusedAxes(attributeTapOut(frozen, profile), frozen);
   }
 
   static Set<CapabilityAxis> accusedAxes(
