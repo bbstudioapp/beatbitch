@@ -188,6 +188,12 @@ void main() {
             find.ancestor(of: f, matching: find.byType(Opacity)))
         .fold(1.0, (acc, o) => acc * o.opacity);
     expect(opacityOf(failButton), 1.0);
+    final failFill = tester
+        .widget<Material>(find
+            .descendant(of: failButton, matching: find.byType(Material))
+            .first)
+        .color!;
+    expect(failFill.a, 1.0);
     expect(opacityOf(useMeButton), closeTo(0.6, 0.01));
 
     await tester.tap(failButton);
@@ -261,11 +267,11 @@ void main() {
       'rétablit le mode immersif', (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 850));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(MaterialApp(
-      locale: const Locale('fr'),
+    await tester.pumpWidget(const MaterialApp(
+      locale: Locale('fr'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: const Scaffold(body: Text('accueil')),
+      home: Scaffold(body: Text('accueil')),
     ));
     final nav = tester.state<NavigatorState>(find.byType(Navigator));
     nav.push(MaterialPageRoute<void>(builder: (_) => screen()));

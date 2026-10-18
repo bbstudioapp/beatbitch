@@ -97,6 +97,16 @@ void main() {
     return ctrl;
   }
 
+  Future<void> openSettings(WidgetTester tester) async {
+    await tester.tap(find.byKey(const Key('session-settings-button')));
+    await tester.pump(const Duration(milliseconds: 500));
+  }
+
+  Future<void> closeSettings(WidgetTester tester) async {
+    await tester.tapAt(const Offset(200, 20));
+    await tester.pump(const Duration(milliseconds: 500));
+  }
+
   testWidgets(
       'séance à morceau : pas de curseur d\'ambiance, et un JE PEUX PAS '
       'affiche la respiration sans quitter l\'état running', (tester) async {
@@ -104,9 +114,11 @@ void main() {
     final t = AppLocalizations.of(tester.element(find.byType(SessionScreen)));
 
     expect(ctrl.isMusical, isTrue);
+    await openSettings(tester);
     expect(find.text(t.sessionVoiceLabel), findsOneWidget,
         reason: 'le curseur de voix reste');
     expect(find.text(t.sessionAmbienceLabel), findsNothing);
+    await closeSettings(tester);
     expect(find.text(t.sessionDebugMusicBeepAdvanceLabel), findsOneWidget,
         reason: 'réglage debug de l\'avance des bips');
     expect(find.text('150 ms'), findsOneWidget);
@@ -143,7 +155,9 @@ void main() {
     final t = AppLocalizations.of(tester.element(find.byType(SessionScreen)));
 
     expect(ctrl.isMusical, isFalse);
+    await openSettings(tester);
     expect(find.text(t.sessionAmbienceLabel), findsOneWidget);
+    await closeSettings(tester);
     expect(find.text(t.sessionDebugMusicBeepAdvanceLabel), findsNothing);
     expect(find.text(t.sessionFailPhaseBreath.toUpperCase()), findsNothing);
 
