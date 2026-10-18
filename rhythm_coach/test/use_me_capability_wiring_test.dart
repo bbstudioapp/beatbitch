@@ -303,6 +303,24 @@ void main() {
   }, timeout: const Timeout(Duration(seconds: 60)));
 
   test(
+      'T6e ~2 min 30 en « Utilise-moi » sans FAIL : le confort BPM monte '
+      'd\'environ +2,5 %', () async {
+    final ctrl = buildController(_RecordingBeepEngine(), 152);
+    await ctrl.start();
+    await enterUseMe(ctrl);
+    for (var i = 0; i < 1700 && ctrl.state != SessionState.finished; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+    expect(ctrl.state, SessionState.finished,
+        reason: 'la séance va à son terme');
+    final after = await CapabilityService().snapshotProfile();
+    expect(after.comfortOf(CapabilityAxis.rhythmBpmCeilThroat),
+        inInclusiveRange(102.2, 102.6),
+        reason: '~150 s tenues sur 300 s = la moitié de +5 % ; un gain jamais '
+            'accordé laisserait 100');
+  }, timeout: const Timeout(Duration(seconds: 220)));
+
+  test(
       'T10 FAIL sans suite normale (hook null) : les steps d\'escalade qui '
       'restent ne s\'écrivent pas dans le profil normal', () async {
     final beep = _RecordingBeepEngine();
