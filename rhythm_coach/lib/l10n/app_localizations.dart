@@ -876,6 +876,12 @@ abstract class AppLocalizations {
   /// **'Main continue'**
   String get profileCapHandStreak;
 
+  /// No description provided for @profileCapUseMeHeld.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tenue en Utilise-moi'**
+  String get profileCapUseMeHeld;
+
   /// No description provided for @profileDiagnosticSection.
   ///
   /// In fr, this message translates to:

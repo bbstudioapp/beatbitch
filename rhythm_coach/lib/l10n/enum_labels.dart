@@ -237,6 +237,7 @@ extension CapabilityAxisL10n on CapabilityAxis {
       CapabilityAxis.lickDepthMax => t.profileCapLickDepth,
       CapabilityAxis.lickStreak => t.profileCapLickStreak,
       CapabilityAxis.handStreak => t.profileCapHandStreak,
+      CapabilityAxis.useMeHeldStreak => t.profileCapUseMeHeld,
     };
   }
 

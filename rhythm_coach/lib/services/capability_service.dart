@@ -60,19 +60,26 @@ class CapabilityProfile {
 /// (max streak / max BPM / cran max ; min pour les axes `minimize` ;
 /// somme de la session pour les axes `accumulate`).
 ///
+/// [useMeReached] : ce qu'ont atteint les steps « Utilise-moi » (hors enveloppe
+/// de la joueuse) — tampon séparé, jamais écrit dans `best` ; ne sert qu'au
+/// cran de `comfort` de `CapabilityRegulator.useMeComfortNudge`.
+///
 /// [sessionCeilings] : valeurs figées lors d'un appui FAIL (cf. §6 de la
 /// spec). En Phase 1 elles sont collectées mais pas encore consommées —
 /// le générateur ne les lira qu'en Phase 2.
 class SessionCapabilityReport {
   final Map<CapabilityAxis, double> reached;
   final Map<CapabilityAxis, double> sessionCeilings;
+  final Map<CapabilityAxis, double> useMeReached;
 
   const SessionCapabilityReport({
     required this.reached,
     required this.sessionCeilings,
+    this.useMeReached = const {},
   });
 
-  bool get isEmpty => reached.isEmpty && sessionCeilings.isEmpty;
+  bool get isEmpty =>
+      reached.isEmpty && sessionCeilings.isEmpty && useMeReached.isEmpty;
 }
 
 /// Boucle d'autorégulation du profil de capacités (Phase 3, cf. §5 / §11 de
@@ -132,6 +139,35 @@ class CapabilityRegulator {
   /// comfort × 1.30), le cap à 1.05 × reached limitait quand même la
   /// montée. `1.15` laisse l'ancrage respirer.
   static const double kRatchetAnchorHeadroom = 1.15;
+
+  /// Cran de `comfort` accordé au plus une fois par séance quand la joueuse a
+  /// tenu « Utilise-moi » au-dessus de sa zone de confort (fraction de `comfort`).
+  static const double kUseMeComfortGain = 0.05;
+
+  /// Axes sur lesquels « Utilise-moi » peut donner ce cran : les BPM pilotants.
+  static const Set<CapabilityAxis> useMeNudgeAxes = {
+    CapabilityAxis.rhythmBpmCeilThroat,
+    CapabilityAxis.rhythmBpmCeilFull,
+    CapabilityAxis.gorgeCrossingsBpmThroat,
+    CapabilityAxis.gorgeCrossingsBpmFull,
+  };
+
+  /// Nouveau `comfort` après le cran « Utilise-moi », ou `null` s'il n'y en a
+  /// pas : axe hors [useMeNudgeAxes], tenue sous le `comfort`, ou `comfort`
+  /// déjà au plafond `bestNormal × kSurchargeMax`.
+  static double? useMeComfortNudge({
+    required CapabilityAxis axis,
+    required double comfort,
+    required double bestNormal,
+    required double useMeReached,
+  }) {
+    if (!useMeNudgeAxes.contains(axis)) return null;
+    if (useMeReached < comfort * kOvershootMargin) return null;
+    final double cap = bestNormal * kSurchargeMax;
+    final double raised = comfort * (1 + kUseMeComfortGain);
+    final double next = raised < cap ? raised : cap;
+    return next > comfort ? next : null;
+  }
 
   /// Rabot du `comfort` sur tap-out/fail/débordement imputé.
   static const double kRatchetDownFactor = 0.85;
@@ -441,12 +477,18 @@ class CapabilityService {
   /// défensif) ou si le seed a été volontairement effacé.
   static const String _kLegacyMigrated = 'cap.legacy_migrated';
 
+  /// Source de l'amorçage de [CapabilityAxis.useMeHeldStreak] : même grandeur
+  /// que `StatsService` y écrit déjà (clé lue directement, comme ci-dessus).
+  static const String _kStatsMaxUseMeSec = 'stats.max_use_me_sec';
+  static const String _kUseMeHeldMigrated = 'cap.use_me_held_migrated';
+
   static const double defaultSuccessRate = 0.5;
 
   /// Lit l'état persisté de tous les axes (après migration legacy).
   Future<CapabilityProfile> snapshotProfile() async {
     final prefs = await SharedPreferences.getInstance();
     await _migrateLegacy(prefs);
+    await _migrateUseMeHeld(prefs);
     final states = <CapabilityAxis, CapabilityAxisState>{};
     for (final axis in CapabilityAxis.values) {
       states[axis] = _readState(prefs, axis);
@@ -475,6 +517,7 @@ class CapabilityService {
     if (report.isEmpty) return null;
     final prefs = await SharedPreferences.getInstance();
     await _migrateLegacy(prefs);
+    await _migrateUseMeHeld(prefs);
 
     final prevStates = <CapabilityAxis, CapabilityAxisState>{
       for (final axis in CapabilityAxis.values) axis: _readState(prefs, axis),
@@ -511,11 +554,22 @@ class CapabilityService {
         quickie: quickie,
       );
       if (next.comfort == null || next.best == null) continue;
+      var comfort = next.comfort!;
+      final useMeReached = report.useMeReached[axis];
+      if (useMeReached != null && ceiling == null && !quickie) {
+        comfort = CapabilityRegulator.useMeComfortNudge(
+              axis: axis,
+              comfort: comfort,
+              bestNormal: next.best!,
+              useMeReached: useMeReached,
+            ) ??
+            comfort;
+      }
       _writeState(
         prefs,
         axis,
         best: next.best!,
-        comfort: next.comfort!,
+        comfort: comfort,
         successRate: next.successRate,
         lastSeenSession: next.lastSeenSession,
       );
@@ -536,6 +590,7 @@ class CapabilityService {
       await prefs.remove('$_prefix${axis.storageKey}$_suffixLastSeen');
     }
     await prefs.remove(_kLegacyMigrated);
+    await prefs.remove(_kUseMeHeldMigrated);
   }
 
   // ── interne ───────────────────────────────────────────────────────────
@@ -577,6 +632,22 @@ class CapabilityService {
     final base = '$_prefix${CapabilityAxis.holdFullStreak.storageKey}';
     if (prefs.getDouble('$base$_suffixBest') != null) return;
     final v = legacy.toDouble();
+    prefs.setDouble('$base$_suffixBest', v);
+    prefs.setDouble('$base$_suffixComfort', v);
+    prefs.setDouble('$base$_suffixSuccessRate', defaultSuccessRate);
+    prefs.setInt('$base$_suffixLastSeen', -1);
+  }
+
+  /// Amorce [CapabilityAxis.useMeHeldStreak] depuis la plus longue tenue déjà
+  /// enregistrée dans les stats — une seule fois, si l'axe est vide.
+  Future<void> _migrateUseMeHeld(SharedPreferences prefs) async {
+    if (prefs.getBool(_kUseMeHeldMigrated) ?? false) return;
+    await prefs.setBool(_kUseMeHeldMigrated, true);
+    final held = prefs.getInt(_kStatsMaxUseMeSec) ?? 0;
+    if (held <= 0) return;
+    final base = '$_prefix${CapabilityAxis.useMeHeldStreak.storageKey}';
+    if (prefs.getDouble('$base$_suffixBest') != null) return;
+    final v = held.toDouble();
     prefs.setDouble('$base$_suffixBest', v);
     prefs.setDouble('$base$_suffixComfort', v);
     prefs.setDouble('$base$_suffixSuccessRate', defaultSuccessRate);

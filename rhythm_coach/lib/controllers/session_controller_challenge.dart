@@ -926,6 +926,7 @@ extension ChallengeOrchestrator on SessionController {
       to: next.to,
       bpm: next.bpm,
       duration: next.duration,
+      useMe: _useMeActive,
     );
     _armHoldVerifierIfHoldStep(next);
     _syncAmbienceToCurrentMode();

@@ -187,6 +187,7 @@
   "profileCapLickDepth": "Profondeur langue",
   "profileCapLickStreak": "Langue continue",
   "profileCapHandStreak": "Main continue",
+  "profileCapUseMeHeld": "Tenue en Utilise-moi",
   "profileDiagnosticSection": "DIAGNOSTIC",
   "profileDiagnosticDescription": "Exporte un fichier JSON avec ton état de progression — utile si tu veux signaler un bug. Rien n'est envoyé automatiquement, c'est toi qui choisis ce que tu en fais.",
   "profileDiagnosticExportButton": "Exporter mes données",

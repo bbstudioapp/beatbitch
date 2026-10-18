@@ -187,6 +187,7 @@
   "profileCapLickDepth": "Tongue depth",
   "profileCapLickStreak": "Unbroken tongue",
   "profileCapHandStreak": "Unbroken hand",
+  "profileCapUseMeHeld": "Hold in Use Me",
   "profileDiagnosticSection": "DIAGNOSTIC",
   "profileDiagnosticDescription": "Export a JSON file with your progress data — useful when reporting a bug. Nothing is sent automatically, you choose what to do with it.",
   "profileDiagnosticExportButton": "Export my data",

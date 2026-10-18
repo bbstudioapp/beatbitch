@@ -453,6 +453,7 @@ extension FailFlowOrchestrator on SessionController {
       to: last.to,
       bpm: last.bpm,
       duration: last.duration,
+      useMe: _useMeActive,
     );
     await _syncAmbienceToCurrentMode();
   }

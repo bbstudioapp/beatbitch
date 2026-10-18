@@ -425,6 +425,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get profileCapHandStreak => 'Ununterbrochene Hand';
 
   @override
+  String get profileCapUseMeHeld => 'Durchhalten in „Benutz mich“';
+
+  @override
   String get profileDiagnosticSection => 'DIAGNOSE';
 
   @override

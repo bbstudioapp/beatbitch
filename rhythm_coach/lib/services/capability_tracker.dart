@@ -70,6 +70,7 @@ class CapabilityTracker {
   // ── rapport en construction ───────────────────────────────────────────
   final Map<CapabilityAxis, double> _reached = {};
   final Map<CapabilityAxis, double> _ceilings = {};
+  final Map<CapabilityAxis, double> _useMeReached = {};
 
   /// Plafonds figés sur les appuis FAIL de la session en cours (§6) — vue
   /// non modifiable, lue par `SessionController.capabilitySessionCeilings`
@@ -92,6 +93,7 @@ class CapabilityTracker {
     _crossingsAccum = 0;
     _reached.clear();
     _ceilings.clear();
+    _useMeReached.clear();
   }
 
   /// Un step de config vient d'être appliqué (changement de mode/profondeur/
@@ -102,14 +104,20 @@ class CapabilityTracker {
     Position? to,
     int? bpm,
     int? duration,
+    bool useMe = false,
   }) {
     final next = _ConfigState(
       mode: mode,
       from: from,
       to: to,
       bpm: bpm,
+      useMe: useMe,
     );
     final prev = _config;
+
+    // Entrée ou sortie d'« Utilise-moi » : les streaks vivants sont clos dans
+    // le tampon du régime qu'on quitte, le nouveau régime repart de zéro.
+    if (prev != null && prev.useMe != useMe) _closeLiveStreaks();
 
     // Clôtures de streaks : un streak qui se casse « proprement » (= pas par
     // un fail) est enregistré comme record.
@@ -210,6 +218,16 @@ class CapabilityTracker {
     }
   }
 
+  /// La tenue « Utilise-moi » qui vient de se terminer (secondes) — axe
+  /// informatif [CapabilityAxis.useMeHeldStreak], écrit même si un FAIL l'a close.
+  void recordUseMeHeld(int seconds) {
+    if (seconds <= 0) return;
+    final current = _reached[CapabilityAxis.useMeHeldStreak];
+    if (current == null || seconds > current) {
+      _reached[CapabilityAxis.useMeHeldStreak] = seconds.toDouble();
+    }
+  }
+
   /// Appui sur FAIL : on fige la valeur live de tous les streaks actifs dans
   /// les plafonds de session (`sessionCeilings`), puis on vide tout — un
   /// streak interrompu par un fail ne devient jamais un record (cf. §3/§6).
@@ -282,6 +300,7 @@ class CapabilityTracker {
     final report = SessionCapabilityReport(
       reached: Map.unmodifiable(_reached),
       sessionCeilings: Map.unmodifiable(_ceilings),
+      useMeReached: Map.unmodifiable(_useMeReached),
     );
     if (kDebugMode && !report.isEmpty) {
       debugPrint('[Capability] report reached=${report.reached} '
@@ -341,6 +360,21 @@ class CapabilityTracker {
     );
   }
 
+  void _closeLiveStreaks() {
+    _flushStreak(CapabilityAxis.gorgeApneeStreak, _apnea);
+    _flushStreak(CapabilityAxis.gorgeEngagementStreak, _engagement);
+    _flushStreak(CapabilityAxis.rhythmMotionStreak, _motion);
+    _flushStreak(CapabilityAxis.holdThroatStreak, _holdThroat);
+    _flushStreak(CapabilityAxis.holdFullStreak, _holdFull);
+    _flushStreak(CapabilityAxis.biffleStreak, _biffleStreak);
+    _flushStreak(CapabilityAxis.lickStreak, _lickStreak);
+    _flushStreak(CapabilityAxis.handStreak, _handStreak);
+    _flushStreak(CapabilityAxis.effortNoBreathStreak, _effortNoBreath);
+    _apnea = _engagement = _motion = 0;
+    _holdThroat = _holdFull = 0;
+    _biffleStreak = _lickStreak = _handStreak = _effortNoBreath = 0;
+  }
+
   void _flushStreak(CapabilityAxis axis, double value) {
     if (value <= 0) return;
     _recordReached(axis, value);
@@ -369,18 +403,19 @@ class CapabilityTracker {
 
   void _recordReached(CapabilityAxis axis, double value,
       {bool minimize = false}) {
-    final current = _reached[axis];
+    final target = (_config?.useMe ?? false) ? _useMeReached : _reached;
+    final current = target[axis];
     if (current == null) {
-      _reached[axis] = value;
+      target[axis] = value;
     } else if (minimize) {
-      if (value < current) _reached[axis] = value;
+      if (value < current) target[axis] = value;
     } else {
-      if (value > current) _reached[axis] = value;
+      if (value > current) target[axis] = value;
     }
   }
 
   void _ceilFrom(CapabilityAxis axis, double value) {
-    if (value <= 0) return;
+    if (value <= 0 || (_config?.useMe ?? false)) return;
     final current = _ceilings[axis];
     if (current == null || value < current) _ceilings[axis] = value;
   }
@@ -396,11 +431,15 @@ class _ConfigState {
   final Position? to;
   final int? bpm;
 
+  /// Step posé par « Utilise-moi » : hors enveloppe, jamais compté comme normal.
+  final bool useMe;
+
   const _ConfigState({
     required this.mode,
     this.from,
     this.to,
     this.bpm,
+    this.useMe = false,
   });
 
   /// Composantes rythmées prises en compte par le modèle gorge (hand exclu).

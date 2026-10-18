@@ -173,6 +173,12 @@ enum CapabilityAxis {
   /// durcir (cf. « hand n'est jamais un levier de difficulté »).
   handStreak(
       'hand.streak', CapabilityUnit.seconds, CapabilityRecordKind.maximize,
+      pilotant: false),
+
+  /// Plus longue tenue continue en « Utilise-moi » (même grandeur que
+  /// `stats.max_use_me_sec`). Informative : jamais lue par le générateur.
+  useMeHeldStreak('useMe.held_streak', CapabilityUnit.seconds,
+      CapabilityRecordKind.maximize,
       pilotant: false);
 
   const CapabilityAxis(

@@ -426,6 +426,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get profileCapHandStreak => 'Main continue';
 
   @override
+  String get profileCapUseMeHeld => 'Tenue en Utilise-moi';
+
+  @override
   String get profileDiagnosticSection => 'DIAGNOSTIC';
 
   @override

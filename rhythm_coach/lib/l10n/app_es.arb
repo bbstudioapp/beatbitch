@@ -187,6 +187,7 @@
   "profileCapLickDepth": "Profundidad de lengua",
   "profileCapLickStreak": "Lengua sin pausa",
   "profileCapHandStreak": "Mano sin pausa",
+  "profileCapUseMeHeld": "Aguante en «Úsame»",
   "profileDiagnosticSection": "DIAGNÓSTICO",
   "profileDiagnosticDescription": "Exporta un archivo JSON con tus datos de progreso — útil para reportar un bug. Nada se envía automáticamente, tú decides qué hacer con él.",
   "profileDiagnosticExportButton": "Exportar mis datos",

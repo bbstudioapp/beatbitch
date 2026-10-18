@@ -587,6 +587,7 @@ class SessionController extends ChangeNotifier {
     if (!_useMeActive) return;
     _useMeActive = false;
     final held = playedElapsed - _useMeStartedPlayed;
+    _capabilityTracker?.recordUseMeHeld(held.inSeconds);
     await _stats.recordUseMeHeld(held.inSeconds);
   }
 
@@ -1383,6 +1384,7 @@ class SessionController extends ChangeNotifier {
           to: step.to,
           bpm: step.bpm,
           duration: step.duration,
+          useMe: _useMeActive,
         );
         _armHoldVerifierIfHoldStep(step);
         _pickBackground(_buildBackgroundContext(step, resolvedMode));
@@ -1587,6 +1589,9 @@ class SessionController extends ChangeNotifier {
     await WakelockPlus.disable().timeout(_wakelockTimeout, onTimeout: () {});
     _flushHoldFull();
     _disarmHoldVerifier();
+    // La tenue « Utilise-moi » entre dans le rapport : `_endUseMe` passe avant
+    // `finalizeReport`.
+    await _endUseMe();
     // Les streaks sont clos dès maintenant ; le rapport sert au commit plus bas
     // et à détecter un record battu sur l'axe poussé. `_capabilityTracker` est
     // null hors carrière. `finalizeReport` est idempotent.
@@ -1594,7 +1599,6 @@ class SessionController extends ChangeNotifier {
     final SessionCapabilityReport? capReport =
         (capTracker != null && !_released) ? capTracker.finalizeReport() : null;
     final CapabilityAxis? recordAxis = _detectCapabilityRecord(capReport);
-    await _endUseMe();
     if (!_session.noStats) {
       await _stats.addElapsedSeconds(playedSeconds);
       await _stats.recordSessionCompleted(hadFail: _hadFailThisSession);

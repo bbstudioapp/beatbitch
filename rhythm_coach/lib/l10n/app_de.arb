@@ -187,6 +187,7 @@
   "profileCapLickDepth": "Zungentiefe",
   "profileCapLickStreak": "Ununterbrochene Zunge",
   "profileCapHandStreak": "Ununterbrochene Hand",
+  "profileCapUseMeHeld": "Durchhalten in „Benutz mich“",
   "profileDiagnosticSection": "DIAGNOSE",
   "profileDiagnosticDescription": "Exportiere eine JSON-Datei mit deinen Fortschrittsdaten — nützlich, wenn du einen Bug melden willst. Es wird nichts automatisch verschickt, du entscheidest, was du damit machst.",
   "profileDiagnosticExportButton": "Meine Daten exportieren",
