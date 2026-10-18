@@ -181,6 +181,7 @@ void main() {
     expect(useMe.right, lessThanOrEqualTo(fail.left));
     expect(fail.width, greaterThan(useMe.width));
     expect(fail.height, inInclusiveRange(48, 64));
+    final ctrl = ctrlOf(tester);
 
     double opacityOf(Finder f) => tester
         .widgetList<Opacity>(
@@ -191,8 +192,9 @@ void main() {
 
     await tester.tap(failButton);
     await settle(tester, 3);
-    expect(ctrlOf(tester).isFailing, isTrue);
-    await tester.pump(const Duration(seconds: 60));
+    expect(ctrl.isFailing, isTrue);
+    await tester.runAsync(ctrl.stop);
+    await tester.pump(const Duration(milliseconds: 200));
     await tester.pumpWidget(const SizedBox());
   });
 
@@ -217,7 +219,8 @@ void main() {
     expect(ctrl.useMeUnlocked, isFalse);
     ctrl.debugAddPlayed(second * 2);
     expect(ctrl.useMeUnlocked, isTrue);
-    await tester.pump(const Duration(seconds: 60));
+    await tester.runAsync(ctrl.stop);
+    await tester.pump(const Duration(milliseconds: 200));
     await tester.pumpWidget(const SizedBox());
   });
 
