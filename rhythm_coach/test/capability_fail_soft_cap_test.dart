@@ -267,9 +267,9 @@ void main() {
     expect(_offRule(before, after, report, const {}), isEmpty);
   });
 
-  test('vrai débordement de salive : noswallow seul perd 15 %', () async {
+  test('débordement de salive : noswallow ne baisse pas', () async {
     final svc = CapabilityService();
-    final before = await _seedProfile(svc);
+    await _seedProfile(svc);
     final t = CapabilityTracker()..onSessionStart();
     t.onStepApplied(mode: SessionMode.hold, to: Position.throat, duration: 30);
     _tick(t, 10, swallow: SwallowMode.forbidden);
@@ -278,14 +278,15 @@ void main() {
     t.onStepApplied(mode: SessionMode.breath, duration: 10);
     _tick(t, 5);
     final report = t.finalizeReport();
-    expect(report.sessionCeilings[CapabilityAxis.noswallowStreak], 10.0);
+    expect(report.sessionCeilings.containsKey(CapabilityAxis.noswallowStreak),
+        isFalse);
+    expect(report.reached[CapabilityAxis.noswallowStreak], 15.0);
 
     await svc.commit(report, sessionIndex: 2);
     final after = await svc.snapshotProfile();
 
-    expect(
-        _offRule(before, after, report, {CapabilityAxis.noswallowStreak: 102}),
-        isEmpty);
+    expect(after.comfortOf(CapabilityAxis.noswallowStreak), 120.0);
+    expect(after.stateOf(CapabilityAxis.noswallowStreak).successRate, 0.5);
   });
 
   test('FAIL où « sans avaler » est le plus au-delà de son confort : accusé',
