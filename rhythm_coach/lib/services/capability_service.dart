@@ -39,10 +39,12 @@ class CapabilityProfile {
 class SessionCapabilityReport {
   final Map<CapabilityAxis, double> reached;
   final Map<CapabilityAxis, double> sessionCeilings;
+  final List<Map<CapabilityAxis, double>> failCeilings;
 
   const SessionCapabilityReport({
     required this.reached,
     required this.sessionCeilings,
+    this.failCeilings = const [],
   });
 
   bool get isEmpty => reached.isEmpty && sessionCeilings.isEmpty;
@@ -323,12 +325,14 @@ class CapabilityService {
       for (final axis in CapabilityAxis.values) axis: _readState(prefs, axis),
     };
 
-    final attributed = CapabilityRegulator.attributeTapOut(
-      report.sessionCeilings,
-      CapabilityProfile(prevStates),
-    );
-    final accused =
-        CapabilityRegulator.accusedAxes(attributed, report.sessionCeilings);
+    final profile = CapabilityProfile(prevStates);
+    final attributed =
+        CapabilityRegulator.attributeTapOut(report.sessionCeilings, profile);
+    final accused = <CapabilityAxis>{
+      for (final frozen in report.failCeilings)
+        ...CapabilityRegulator.accusedAxes(
+            CapabilityRegulator.attributeTapOut(frozen, profile), frozen),
+    };
 
     for (final axis in CapabilityAxis.values) {
       final prev = prevStates[axis]!;

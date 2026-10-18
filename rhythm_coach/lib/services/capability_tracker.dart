@@ -70,6 +70,7 @@ class CapabilityTracker {
   // ── rapport en construction ───────────────────────────────────────────
   final Map<CapabilityAxis, double> _reached = {};
   final Map<CapabilityAxis, double> _ceilings = {};
+  final List<Map<CapabilityAxis, double>> _failCeilings = [];
 
   /// Plafonds figés sur les appuis FAIL de la session en cours (§6) — vue
   /// non modifiable, lue par `SessionController.capabilitySessionCeilings`
@@ -92,6 +93,7 @@ class CapabilityTracker {
     _crossingsAccum = 0;
     _reached.clear();
     _ceilings.clear();
+    _failCeilings.clear();
   }
 
   /// Un step de config vient d'être appliqué (changement de mode/profondeur/
@@ -214,16 +216,21 @@ class CapabilityTracker {
   /// les plafonds de session (`sessionCeilings`), puis on vide tout — un
   /// streak interrompu par un fail ne devient jamais un record (cf. §3/§6).
   void onFail() {
-    _ceilFrom(CapabilityAxis.gorgeApneeStreak, _apnea);
-    _ceilFrom(CapabilityAxis.gorgeEngagementStreak, _engagement);
-    _ceilFrom(CapabilityAxis.rhythmMotionStreak, _motion);
-    _ceilFrom(CapabilityAxis.holdThroatStreak, _holdThroat);
-    _ceilFrom(CapabilityAxis.holdFullStreak, _holdFull);
-    _ceilFrom(CapabilityAxis.biffleStreak, _biffleStreak);
-    _ceilFrom(CapabilityAxis.lickStreak, _lickStreak);
-    _ceilFrom(CapabilityAxis.handStreak, _handStreak);
-    _ceilFrom(CapabilityAxis.effortNoBreathStreak, _effortNoBreath);
-    _ceilFrom(CapabilityAxis.noswallowStreak, _noswallow);
+    final frozen = <CapabilityAxis, double>{};
+    void freeze(CapabilityAxis axis, double value) {
+      if (value > 0) frozen[axis] = value;
+    }
+
+    freeze(CapabilityAxis.gorgeApneeStreak, _apnea);
+    freeze(CapabilityAxis.gorgeEngagementStreak, _engagement);
+    freeze(CapabilityAxis.rhythmMotionStreak, _motion);
+    freeze(CapabilityAxis.holdThroatStreak, _holdThroat);
+    freeze(CapabilityAxis.holdFullStreak, _holdFull);
+    freeze(CapabilityAxis.biffleStreak, _biffleStreak);
+    freeze(CapabilityAxis.lickStreak, _lickStreak);
+    freeze(CapabilityAxis.handStreak, _handStreak);
+    freeze(CapabilityAxis.effortNoBreathStreak, _effortNoBreath);
+    freeze(CapabilityAxis.noswallowStreak, _noswallow);
 
     // Params du step courant figés aussi (§6) — pour les axes « config » qui
     // ne sont pas des streaks (profondeur rhythm, BPM de bande, BPM d'un
@@ -233,11 +240,11 @@ class CapabilityTracker {
     final c = _config;
     if (c != null) {
       if (c.mode == SessionMode.rhythm && c.to != null) {
-        _ceilFrom(CapabilityAxis.rhythmDepthMax, c.to!.index.toDouble());
+        freeze(CapabilityAxis.rhythmDepthMax, c.to!.index.toDouble());
         final bpm = (c.bpm ?? 60).toDouble();
-        _ceilFrom(_rhythmBand(c.to!).$1, bpm);
+        freeze(_rhythmBand(c.to!).$1, bpm);
         if (c.isCrossingPattern) {
-          _ceilFrom(
+          freeze(
             c.to == Position.throat
                 ? CapabilityAxis.gorgeCrossingsBpmThroat
                 : CapabilityAxis.gorgeCrossingsBpmFull,
@@ -245,9 +252,11 @@ class CapabilityTracker {
           );
         }
       } else if (c.isBiffle) {
-        _ceilFrom(CapabilityAxis.biffleBpmMax, (c.bpm ?? 80).toDouble());
+        freeze(CapabilityAxis.biffleBpmMax, (c.bpm ?? 80).toDouble());
       }
     }
+    frozen.forEach(_ceilFrom);
+    _failCeilings.add(Map.unmodifiable(frozen));
 
     _apnea = _engagement = _motion = 0;
     _holdThroat = _holdFull = 0;
@@ -282,6 +291,7 @@ class CapabilityTracker {
     final report = SessionCapabilityReport(
       reached: Map.unmodifiable(_reached),
       sessionCeilings: Map.unmodifiable(_ceilings),
+      failCeilings: List.unmodifiable(_failCeilings),
     );
     if (kDebugMode && !report.isEmpty) {
       debugPrint('[Capability] report reached=${report.reached} '

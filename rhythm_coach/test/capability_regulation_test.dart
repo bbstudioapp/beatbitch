@@ -224,7 +224,12 @@ void main() {
         const SessionCapabilityReport(reached: {}, sessionCeilings: {
           CapabilityAxis.gorgeApneeStreak: 30,
           CapabilityAxis.holdFullStreak: 41,
-        }),
+        }, failCeilings: [
+          {
+            CapabilityAxis.gorgeApneeStreak: 30,
+            CapabilityAxis.holdFullStreak: 41,
+          },
+        ]),
         sessionIndex: 2,
       );
       expect(attributed, CapabilityAxis.gorgeApneeStreak);
@@ -239,9 +244,11 @@ void main() {
       final svc = CapabilityService();
       await seed(svc, {CapabilityAxis.gorgeApneeStreak: 24});
       final attributed = await svc.commit(
-        const SessionCapabilityReport(
-            reached: {},
-            sessionCeilings: {CapabilityAxis.gorgeApneeStreak: 18}),
+        const SessionCapabilityReport(reached: {}, sessionCeilings: {
+          CapabilityAxis.gorgeApneeStreak: 18
+        }, failCeilings: [
+          {CapabilityAxis.gorgeApneeStreak: 18},
+        ]),
         sessionIndex: 2,
       );
       expect(attributed, isNull);
