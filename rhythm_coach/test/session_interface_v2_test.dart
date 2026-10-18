@@ -23,10 +23,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Disposition de l'écran de séance en cours : « JE PEUX PAS » plein et
-/// immobile, « UTILISE-MOI » sur sa propre ligne au-dessus, qui
-/// n'apparaît qu'après 2 minutes sans FAIL, réglages de volume derrière une
-/// icône, flèche de retour au comportement inchangé, mode immersif rétabli.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
