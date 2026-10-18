@@ -375,7 +375,6 @@ class SessionController extends ChangeNotifier {
   /// Slug du coach actif (extrait de l'`id` `coach_NN_<slug>` par le caller) ;
   /// `null` = aucun fond `_<coach>` ne matche.
   final String? _coachTag;
-  String? get coachTag => _coachTag;
 
   int _miniPunishmentTickAccumulator = 0;
 
@@ -1321,6 +1320,11 @@ class SessionController extends ChangeNotifier {
       phase: phase,
       tier: backgroundTierFor(elapsedSeconds, _session),
     );
+  }
+
+  void pickIntroBackground() {
+    BackgroundsService.instance
+        .pickIntro(_coachTag, tier: backgroundTierFor(0, _session));
   }
 
   BackgroundContext _buildChallengeBackgroundContext(SessionStep segment) {

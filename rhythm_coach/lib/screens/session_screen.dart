@@ -28,7 +28,6 @@ import '../controllers/session_controller.dart';
 import '../models/session.dart';
 import '../services/ambience_engine.dart';
 import '../services/badge_service.dart';
-import '../services/backgrounds_service.dart';
 import '../services/beep_engine.dart';
 import '../services/capability_axis.dart';
 import '../services/capability_service.dart';
@@ -608,11 +607,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
 
   void _playIntroBackground() {
     if (!mounted) return;
-    final ctrl = context.read<SessionController>();
-    BackgroundsService.instance.pickIntro(
-      ctrl.coachTag,
-      tier: SessionController.backgroundTierFor(0, ctrl.session),
-    );
+    context.read<SessionController>().pickIntroBackground();
   }
 
   void _startPrepCountdown() {

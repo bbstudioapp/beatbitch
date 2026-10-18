@@ -7,7 +7,6 @@ import 'package:beat_bitch/services/beep_engine.dart';
 import 'package:beat_bitch/services/punishment_loader.dart';
 import 'package:beat_bitch/services/random_comments_loader.dart';
 import 'package:beat_bitch/services/tts_service.dart';
-import 'package:beat_bitch/widgets/movement_animation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
