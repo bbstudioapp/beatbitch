@@ -112,7 +112,12 @@ void main() {
     }
   }
 
-  SessionScreen screen({TtsService? tts, AmbienceEngine? ambience}) =>
+  SessionScreen screen({
+    TtsService? tts,
+    AmbienceEngine? ambience,
+    bool career = true,
+    Future<void> Function(SessionController)? onEncore,
+  }) =>
       SessionScreen(
         session: const Session(
           id: 'v2',
@@ -136,9 +141,11 @@ void main() {
           maxIntervalSeconds: 999,
           scriptedCooldownSeconds: 4,
         ),
-        isCareer: true,
+        isCareer: career,
         onRequestUpgrade: (_) async {},
         autoStart: true,
+        autoContinueOnFinish: onEncore != null,
+        onRequestEncore: onEncore,
       );
 
   Future<void> pumpScreen(WidgetTester tester, SessionScreen s,
@@ -295,6 +302,77 @@ void main() {
     }
     expect(find.text('accueil'), findsOneWidget);
     expect(uiModes.last, 'SystemUiMode.edgeToEdge');
+  });
+
+  testWidgets(
+      'réglages ouverts : « JE PEUX PAS » reste tapable et déclenche le FAIL',
+      (tester) async {
+    await pumpScreen(tester, screen());
+    await tester.tap(settingsButton);
+    await settle(tester, 3);
+    expect(find.byType(Slider), findsWidgets);
+
+    await tester.tap(failButton);
+    await settle(tester, 3);
+    expect(ctrlOf(tester).isFailing, isTrue);
+    await tester.runAsync(ctrlOf(tester).stop);
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  Future<NavigatorState> pumpHome(WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 850));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(const MaterialApp(
+      locale: Locale('fr'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Scaffold(body: Text('accueil')),
+    ));
+    return tester.state<NavigatorState>(find.byType(Navigator));
+  }
+
+  testWidgets(
+      'séance enchaînée : l\'ancien écran ne rétablit pas la barre système '
+      'sous la nouvelle séance', (tester) async {
+    final nav = await pumpHome(tester);
+    nav.push(MaterialPageRoute<void>(builder: (_) => screen(career: false)));
+    await settle(tester);
+    nav.pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => screen(career: false)));
+    await settle(tester, 8);
+
+    expect(find.byType(SessionScreen), findsOneWidget);
+    expect(uiModes.last, 'SystemUiMode.immersiveSticky');
+    nav.pop();
+    await settle(tester, 8);
+    expect(uiModes.last, 'SystemUiMode.edgeToEdge');
+  });
+
+  testWidgets(
+      'enchaînement automatique avec les réglages ouverts : plus d\'ancien '
+      'écran dans la pile', (tester) async {
+    final nav = await pumpHome(tester);
+    nav.push(MaterialPageRoute<void>(
+      builder: (_) => screen(
+        career: false,
+        onEncore: (ctrl) => nav.pushReplacement(
+            MaterialPageRoute<void>(builder: (_) => screen(career: false))),
+      ),
+    ));
+    await settle(tester);
+
+    await tester.tap(settingsButton);
+    await settle(tester, 3);
+    ctrlOf(tester).debugFinishSuccess();
+    await tester.pump(const Duration(seconds: 5));
+    await settle(tester, 8);
+
+    expect(find.byType(SessionScreen, skipOffstage: false), findsOneWidget);
+    nav.pop();
+    await settle(tester, 8);
+    expect(find.byType(SessionScreen), findsNothing);
+    expect(find.text('accueil'), findsOneWidget);
   });
 
   testWidgets('fond : dégradé bas seul en séance, voile uniforme ailleurs',

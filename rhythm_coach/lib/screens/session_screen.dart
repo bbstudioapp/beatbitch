@@ -177,6 +177,9 @@ class _SessionScreenState extends State<SessionScreen>
   /// suivante.
   late final int _positionRowCount;
 
+  // Enchaînement : le `dispose` de l'ancien écran suit l'`initState` du nouveau.
+  static _SessionScreenState? _immersiveOwner;
+
   @override
   void initState() {
     super.initState();
@@ -218,6 +221,7 @@ class _SessionScreenState extends State<SessionScreen>
       _controller.addListener(_onCareerStateChanged);
     }
     WidgetsBinding.instance.addObserver(this);
+    _immersiveOwner = this;
     _enterImmersive();
     _relayLifecycle(WidgetsBinding.instance.lifecycleState);
     // `buildVerifierIfEnabled` rend null en silence (permission refusée,
@@ -272,7 +276,10 @@ class _SessionScreenState extends State<SessionScreen>
       _controller.removeListener(_onCareerStateChanged);
     }
     _controller.dispose();
-    unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
+    if (identical(_immersiveOwner, this)) {
+      _immersiveOwner = null;
+      unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
+    }
     super.dispose();
   }
 
@@ -397,6 +404,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
   bool _showObedienceBar = false;
   bool _showSalivaBar = false;
   bool _showSessionControls = false;
+  bool _settingsOpen = false;
   bool _showModeBadge = false;
   bool _showTrajectoryDots = false;
   bool _showSkipSessionButton = false;
@@ -678,34 +686,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     return name.trim();
   }
 
-  void _openSettings() {
-    final ctrl = context.read<SessionController>();
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: AppTheme.surface,
-      builder: (_) => StatefulBuilder(
-        builder: (_, setSheet) => ListenableBuilder(
-          listenable: ctrl,
-          builder: (_, __) => SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-              child: _VolumesBlock(
-                ttsVolume: _volume,
-                ambienceVolume: ctrl.ambienceVolume,
-                onTtsVolume: (v) {
-                  setState(() => _volume = v);
-                  widget.tts.setVolume(v);
-                  setSheet(() {});
-                },
-                onAmbienceVolume: ctrl.setAmbienceVolume,
-                showAmbience: !ctrl.isMusical,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  void _toggleSettings() => setState(() => _settingsOpen = !_settingsOpen);
 
   Future<bool> _confirmExit(BuildContext context) async {
     final ctrl = context.read<SessionController>();
@@ -1072,11 +1053,35 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                   key: const Key('session-settings-button'),
                   icon: Icons.tune,
                   tooltip: t.sessionSettingsTooltip,
-                  onPressed: _openSettings,
+                  onPressed: _toggleSettings,
                 ),
               ],
             ),
           ),
+          if (_settingsOpen)
+            Positioned(
+              top: 60,
+              left: 16,
+              right: 16,
+              child: Material(
+                key: const Key('session-settings-panel'),
+                color: AppTheme.surface,
+                borderRadius: BorderRadius.circular(16),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+                  child: _VolumesBlock(
+                    ttsVolume: _volume,
+                    ambienceVolume: ctrl.ambienceVolume,
+                    onTtsVolume: (v) {
+                      setState(() => _volume = v);
+                      widget.tts.setVolume(v);
+                    },
+                    onAmbienceVolume: ctrl.setAmbienceVolume,
+                    showAmbience: !ctrl.isMusical,
+                  ),
+                ),
+              ),
+            ),
         ],
       ],
     );
