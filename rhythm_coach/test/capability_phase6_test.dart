@@ -97,14 +97,16 @@ void main() {
       expect(quick.successRate, 0.5);
     });
 
-    test('soft-cap subi neutralisé en quickie', () {
+    test('signal non imputé neutralisé en quickie', () {
       final prev = _st(best: 30, comfort: 30);
       final normal = _reg(CapabilityAxis.holdFullStreak, prev,
           sessionCeiling: 22, sessionIndex: 5);
       final quick = _reg(CapabilityAxis.holdFullStreak, prev,
           sessionCeiling: 22, sessionIndex: 5, quickie: true);
-      expect(normal.comfort, 22.0); // soft-cap appliqué
-      expect(quick.comfort, 30.0); // figé
+      expect(normal.comfort, 30.0);
+      expect(normal.successRate, lessThan(prev.successRate));
+      expect(quick.comfort, 30.0);
+      expect(quick.successRate, prev.successRate);
     });
 
     test('le decay des axes non sollicités est indépendant du quickie', () {
