@@ -506,7 +506,10 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     if (widget.introText != null && widget.introText!.trim().isNotEmpty) {
       _introPending = true;
       _resolvedIntroText = widget.tts.resolveText(widget.introText!);
-      WidgetsBinding.instance.addPostFrameCallback((_) => _speakIntro());
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _playIntroBackground();
+        _speakIntro();
+      });
     } else if (widget.autoStart) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -602,6 +605,11 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     _startPrepCountdown();
   }
 
+  void _playIntroBackground() {
+    if (!mounted) return;
+    context.read<SessionController>().pickIntroBackground();
+  }
+
   void _startPrepCountdown() {
     // L'UI bascule avant `stop()` : sur Linux, arrêter le TTS prend plusieurs
     // centaines de ms.
@@ -609,6 +617,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
       _introPending = false;
       _prepCountdown = _prepDurationSeconds;
     });
+    _playIntroBackground();
     unawaited(widget.tts.stop());
     widget.tts.speak(
       CoachPhrasesService.instance.current.prepCountdown(_prepDurationSeconds),
@@ -814,23 +823,18 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                                           : null,
                                       elapsedSeconds: ctrl.playedSeconds,
                                     ))
-                              : Stack(
-                                  children: [
-                                    Positioned.fill(
-                                        child: _buildRunningView(ctrl)),
-                                    if (ctrl.isPaused)
-                                      Positioned.fill(
-                                        child: _PausedOverlay(
-                                          onResume: ctrl.resume,
-                                        ),
-                                      ),
-                                  ],
-                                ))),
+                              : SizedBox.expand(
+                                  child: _buildRunningView(ctrl)))),
                 ),
+                if (showRunning && ctrl.isPaused)
+                  Positioned.fill(
+                    child: _PausedOverlay(onResume: ctrl.resume),
+                  ),
                 // Ses résidus blancs masqueraient le texte blanc de
                 // `_FinishedPanel`.
                 if (!ctrl.isFinished || ctrl.hasPendingBadges)
                   Positioned.fill(
+                    key: const ValueKey('session-finale'),
                     child: SessionFinaleOverlay(
                       active: ctrl.isRunning && ctrl.finaleChimeStarted,
                     ),

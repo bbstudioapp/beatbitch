@@ -859,6 +859,11 @@ extension ChallengeOrchestrator on SessionController {
         ),
         session.defaultMode,
       );
+      _pickBackground(BackgroundContext(
+        mode: SessionMode.breath.name,
+        coach: _coachTag,
+        tier: SessionController.backgroundTierFor(elapsedSeconds, _session),
+      ));
       _syncAmbienceToCurrentMode();
     }
   }
@@ -915,6 +920,7 @@ extension ChallengeOrchestrator on SessionController {
     _challengeStepStartedAtSec = nowRealSec;
     if (_released) return;
     _beep.applyStep(next, _session.defaultMode);
+    _pickBackground(_buildChallengeBackgroundContext(next));
     _configApplied = true;
     _lastConfigStep = next;
     if (!_session.noStats) {
