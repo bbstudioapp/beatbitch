@@ -112,10 +112,15 @@ extension CareerHooksOrchestrator on SessionController {
   Future<void> requestUpgrade({
     required SessionStep insistentBeg,
     required Session upcomingSession,
+    bool useMe = false,
   }) async {
     if (_state != SessionState.running) return;
 
     final start = elapsedSeconds;
+    if (useMe) {
+      _useMeActive = true;
+      _useMeStartedPlayed = playedElapsed;
+    }
 
     // Délégué à `buildUpgradedSession` (helper statique pur, testable) :
     // propage les body milestones de l'ancienne session dont la fenêtre
@@ -162,6 +167,29 @@ extension CareerHooksOrchestrator on SessionController {
     // Force le déclenchement immédiat du beg (time = start ≤ elapsedSeconds).
     _checkSteps();
     _notify();
+  }
+
+  /// Fin d'« Utilise-moi » par un FAIL : la suite normale demandée à
+  /// [onUseMeEnded] prend la place de l'escalade, dès `elapsedSeconds` (le
+  /// chrono est gelé depuis le FAIL, le total reste la durée choisie).
+  /// `false` sans hook ou sans suite : la timeline n'est pas touchée.
+  Future<bool> _resumeNormalSession() async {
+    final upcoming = await onUseMeEnded?.call(this);
+    if (upcoming == null) return false;
+    _session = SessionController.buildUpgradedSession(
+      previous: _session,
+      upcoming: upcoming,
+      start: elapsedSeconds,
+    );
+    _nextStepIndex = 0;
+    // `_restorePreviousLoop` rejouerait sinon la dernière boucle d'escalade.
+    _lastConfigStep = null;
+    _breakActive = false;
+    _activeBreak = null;
+    _nextBreakIndex = 0;
+    _finalChimePlayed = false;
+    _finaleChimeStarted = false;
+    return true;
   }
 
   /// Remplace la suite de la séance par les [upcomingSession.steps] rebased

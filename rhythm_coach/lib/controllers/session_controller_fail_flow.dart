@@ -19,6 +19,9 @@ extension FailFlowOrchestrator on SessionController {
     }
 
     _playedAtLastFail = playedElapsed;
+    final endsUseMe = _useMeActive;
+    if (endsUseMe) _useMeFailEndings++;
+    await _endUseMe();
 
     // Ce qui suit rebat la timeline sans passer par `_exitBreak`.
     _breakActive = false;
@@ -126,7 +129,10 @@ extension FailFlowOrchestrator on SessionController {
       }
       if (!_isFailFlowAlive(myGen)) return;
 
-      await _leaveFailFlow(mayJump: true, gen: myGen);
+      final resumed = endsUseMe && await _resumeNormalSession();
+      if (!_isFailFlowAlive(myGen)) return;
+
+      await _leaveFailFlow(mayJump: !resumed, gen: myGen);
     } finally {
       // Ne nettoie le state global que si on est toujours owner du flow —
       // sinon on écraserait celui d'un nouveau triggerFail qui aurait pris

@@ -353,6 +353,8 @@ class SessionController extends ChangeNotifier {
   /// `true` si pris en charge (le flow fail standard est alors sauté).
   Future<bool> Function(SessionController controller)? onMilestoneRetry;
 
+  Future<Session?> Function(SessionController controller)? onUseMeEnded;
+
   /// Appelé quand un défi élargit le set d'unlocks acquittés : le caller doit
   /// régénérer le reste de la séance puis appeler `requestPostChallengeRegen`.
   Future<void> Function(SessionController controller)? onPostChallengeRegen;
@@ -561,14 +563,32 @@ class SessionController extends ChangeNotifier {
   bool get hadFailThisSession => _hadFailThisSession;
 
   static const Duration useMeUnlockAfter = Duration(minutes: 2);
+  static const Duration useMeUnlockStep = Duration(minutes: 1);
 
   Duration _playedAtLastFail = Duration.zero;
+  bool _useMeActive = false;
+  Duration _useMeStartedPlayed = Duration.zero;
+  int _useMeFailEndings = 0;
 
-  /// Règle simplifiée de l'essai : « Utilise-moi » apparaît après
-  /// [useMeUnlockAfter] de temps joué sans FAIL. Le chronomètre est arrêté
-  /// pendant tout le flow fail, la punition ne compte donc pas.
+  bool get useMeActive => _useMeActive;
+
+  /// Délai sans FAIL avant que « Utilise-moi » (re)paraisse : [useMeUnlockAfter]
+  /// au départ, puis +[useMeUnlockStep] par « Utilise-moi » terminé par un FAIL.
+  Duration get useMeUnlockDelay =>
+      useMeUnlockAfter + useMeUnlockStep * _useMeFailEndings;
+
+  /// Règle de l'essai : « Utilise-moi » apparaît après [useMeUnlockDelay] de
+  /// temps joué sans FAIL. Le chronomètre est arrêté pendant tout le flow fail,
+  /// la punition ne compte donc pas ; une mini-punition n'est pas un FAIL.
   bool get useMeUnlocked =>
-      playedElapsed - _playedAtLastFail >= useMeUnlockAfter;
+      playedElapsed - _playedAtLastFail >= useMeUnlockDelay;
+
+  Future<void> _endUseMe() async {
+    if (!_useMeActive) return;
+    _useMeActive = false;
+    final held = playedElapsed - _useMeStartedPlayed;
+    await _stats.recordUseMeHeld(held.inSeconds);
+  }
 
   @visibleForTesting
   void debugAddPlayed(Duration d) => _playedOffset += d;
@@ -803,6 +823,8 @@ class SessionController extends ChangeNotifier {
         _timelineOffset = Duration.zero;
         _playedOffset = Duration.zero;
         _playedAtLastFail = Duration.zero;
+        _useMeActive = false;
+        _useMeFailEndings = 0;
         _dropPendingSpeech();
         _nextStepIndex = 0;
         _lastSpoken = null;
@@ -1017,6 +1039,8 @@ class SessionController extends ChangeNotifier {
     _timelineOffset = Duration.zero;
     _playedOffset = Duration.zero;
     _playedAtLastFail = Duration.zero;
+    _useMeActive = false;
+    _useMeFailEndings = 0;
     _ticker?.cancel();
     _ticker = null;
     // Borné, comme dans `pause()` : un canal de synthèse muet ne doit pas
@@ -1570,6 +1594,7 @@ class SessionController extends ChangeNotifier {
     final SessionCapabilityReport? capReport =
         (capTracker != null && !_released) ? capTracker.finalizeReport() : null;
     final CapabilityAxis? recordAxis = _detectCapabilityRecord(capReport);
+    await _endUseMe();
     if (!_session.noStats) {
       await _stats.addElapsedSeconds(playedSeconds);
       await _stats.recordSessionCompleted(hadFail: _hadFailThisSession);
@@ -1743,7 +1768,7 @@ class SessionController extends ChangeNotifier {
 
   /// Helper pur : assemble la [Session] qui remplace la suite après un Supplier
   /// ou un retry milestone. Préfixe un beg insistant à [start], rebase les
-  /// steps de [upcoming] sur `start + insistentBeg.duration` et fusionne les
+  /// steps de [upcoming] sur `start + insistentBeg.duration` (`start` sans beg) et fusionne les
   /// milestones :
   ///
   /// - **Body milestones de [previous]** : conservées uniquement si leur
@@ -1758,22 +1783,24 @@ class SessionController extends ChangeNotifier {
   static Session buildUpgradedSession({
     required Session previous,
     required Session upcoming,
-    required SessionStep insistentBeg,
+    SessionStep? insistentBeg,
     required int start,
   }) {
-    final begDuration = insistentBeg.duration ?? 12;
+    final begDuration =
+        insistentBeg == null ? 0 : (insistentBeg.duration ?? 12);
     final offset = start + begDuration;
 
     final newSteps = <SessionStep>[
-      SessionStep(
-        time: start,
-        text: insistentBeg.text,
-        mode: insistentBeg.mode,
-        from: insistentBeg.from,
-        to: insistentBeg.to,
-        bpm: insistentBeg.bpm,
-        duration: begDuration,
-      ),
+      if (insistentBeg != null)
+        SessionStep(
+          time: start,
+          text: insistentBeg.text,
+          mode: insistentBeg.mode,
+          from: insistentBeg.from,
+          to: insistentBeg.to,
+          bpm: insistentBeg.bpm,
+          duration: begDuration,
+        ),
       for (final s in upcoming.steps) s.rebased(s.time + offset),
     ];
 

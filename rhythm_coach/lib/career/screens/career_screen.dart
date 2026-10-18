@@ -7,6 +7,7 @@ import '../../controllers/session_controller.dart';
 import '../../l10n/app_localizations.dart';
 import '../../l10n/format_helpers.dart';
 import '../../models/posture.dart';
+import '../../models/session.dart';
 import '../../screens/session_screen.dart';
 import '../../services/ambience_engine.dart';
 import '../../services/beep_engine.dart';
@@ -564,6 +565,7 @@ class _CareerScreenState extends State<CareerScreen> {
             bundle,
             clamped,
           ),
+          onUseMeEnded: (ctrl) => _handleUseMeEnded(ctrl, bundle, clamped),
           onPostChallengeRegen: (ctrl) => _handlePostChallengeRegen(
             ctrl,
             bundle,
@@ -835,7 +837,47 @@ class _CareerScreenState extends State<CareerScreen> {
     await ctrl.requestUpgrade(
       insistentBeg: beg,
       upcomingSession: newGen.session,
+      useMe: true,
     );
+  }
+
+  /// Un FAIL met fin à « Utilise-moi » : régénère une séance normale pour le
+  /// temps qui reste (l'ancienne suite a été coupée par l'upgrade). `null` si
+  /// le reste est trop court pour une séance.
+  Future<Session?> _handleUseMeEnded(
+    SessionController ctrl,
+    _CareerBundle bundle,
+    int level,
+  ) async {
+    final t = AppLocalizations.of(context);
+    final remaining = ctrl.session.durationSeconds - ctrl.elapsedSeconds;
+    if (remaining < 30) return null;
+    final activeCoach = _resolveCoach(bundle);
+    final coachBank = activeCoach.toPhraseBank(
+        fallback: bundle.bank, specialization: bundle.specialization);
+    final humiliationCareer = await _stats.getHumiliationLevel();
+    return CareerSessionGenerator()
+        .generate(
+          durationSeconds: remaining,
+          level: level,
+          bank: coachBank,
+          includeHand: bundle.includeHand,
+          specialization:
+              activeCoach.effectiveAllocation(bundle.specialization),
+          humiliationCareer: humiliationCareer,
+          humiliationSession: ctrl.humiliation.sessionScore,
+          obedience: ctrl.obedience.score,
+          unlockedKeys: milestoneService.acquiredUnlockKeys(),
+          coachModeWeights: activeCoach.modeWeights,
+          sessionName: t.careerSessionName(level),
+          sessionNameQuickie: t.careerSessionNameQuickie(level),
+          anatomy: widget.userProfile.anatomy,
+          capability: CapabilityInputs(
+            profile: bundle.capabilityProfile,
+            sessionCeilings: ctrl.capabilitySessionCeilings,
+          ),
+        )
+        .session;
   }
 
   /// Retry milestone : appelé par `SessionController.triggerFail` quand
@@ -1140,6 +1182,7 @@ class _CareerScreenState extends State<CareerScreen> {
           // « repart d'où on était » côté humiliation intra-session.
           seedHumiliationSession: previousSessionHumiliation,
           onRequestUpgrade: (ctrl) => _handleUpgrade(ctrl, bundle, level),
+          onUseMeEnded: (ctrl) => _handleUseMeEnded(ctrl, bundle, level),
           onRequestEncore: !canChainEncore
               ? null
               : (ctrl) => _handleEncore(

@@ -81,6 +81,7 @@ class SessionScreen extends StatefulWidget {
   /// Doit rendre `true` quand le retry est géré : le flow fail standard est
   /// alors sauté.
   final Future<bool> Function(SessionController controller)? onMilestoneRetry;
+  final Future<Session?> Function(SessionController controller)? onUseMeEnded;
 
   final Future<void> Function(SessionController controller)?
       onPostChallengeRegen;
@@ -143,6 +144,7 @@ class SessionScreen extends StatefulWidget {
     this.endButtonLabel,
     this.onRequestEncore,
     this.onMilestoneRetry,
+    this.onUseMeEnded,
     this.onPostChallengeRegen,
     this.onChallengeOutcome,
     this.autoStart = false,
@@ -207,6 +209,7 @@ class _SessionScreenState extends State<SessionScreen>
       isQuickie: widget.isQuickie,
     );
     _controller.onMilestoneRetry = widget.onMilestoneRetry;
+    _controller.onUseMeEnded = widget.onUseMeEnded;
     _controller.onPostChallengeRegen = widget.onPostChallengeRegen;
     _controller.onChallengeOutcome = widget.onChallengeOutcome;
     _controller.onChallengeHaptic = _handleChallengeHaptic;
@@ -413,7 +416,6 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
   bool _showSkipSessionButton = false;
   bool _showBackgroundMedia = true;
   bool _showRemainingTime = false;
-  bool _upgradeRequested = false;
   bool _upgradeInFlight = false;
   bool _finishNowInFlight = false;
   bool _finishNowDone = false;
@@ -638,17 +640,14 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
 
   Future<void> _onUpgrade() async {
     final callback = widget.onRequestUpgrade;
-    if (callback == null || _upgradeRequested || _upgradeInFlight) return;
+    if (callback == null || _upgradeInFlight) return;
     final ctrl = context.read<SessionController>();
-    if (!ctrl.isRunning) return;
+    if (!ctrl.isRunning || ctrl.useMeActive) return;
     setState(() => _upgradeInFlight = true);
     try {
       await callback(ctrl);
       if (!mounted) return;
-      setState(() {
-        _upgradeRequested = true;
-        _upgradeInFlight = false;
-      });
+      setState(() => _upgradeInFlight = false);
     } catch (_) {
       if (!mounted) return;
       setState(() => _upgradeInFlight = false);
@@ -1116,9 +1115,9 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                   key: const Key('session-useme-button'),
                   enabled: ctrl.isRunning &&
                       !ctrl.isFailFlowActive &&
-                      !_upgradeRequested &&
+                      !ctrl.useMeActive &&
                       !_upgradeInFlight,
-                  used: _upgradeRequested,
+                  used: ctrl.useMeActive,
                   onPressed: _onUpgrade,
                 ),
               )

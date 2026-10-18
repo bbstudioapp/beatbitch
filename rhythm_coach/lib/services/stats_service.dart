@@ -15,6 +15,7 @@ class StatsService {
   static const String _kSessionsNoFail = 'stats.sessions_no_fail_streak';
   static const String _kModesUsedMask = 'stats.modes_used_mask';
   static const String _kMaxHoldFullSecAtomic = 'stats.max_hold_full_atomic';
+  static const String _kMaxUseMeSec = 'stats.max_use_me_sec';
   static const String _kLastSessionDay = 'stats.last_session_day';
   static const String _kDailyStreak = 'stats.daily_streak';
   static const String _kEncoresAsked = 'stats.encores_asked';
@@ -42,6 +43,7 @@ class StatsService {
       sessionsNoFailStreak: prefs.getInt(_kSessionsNoFail) ?? 0,
       modesUsedMask: prefs.getInt(_kModesUsedMask) ?? 0,
       maxHoldFullAtomic: prefs.getInt(_kMaxHoldFullSecAtomic) ?? 0,
+      maxUseMeSec: prefs.getInt(_kMaxUseMeSec) ?? 0,
       dailyStreak: prefs.getInt(_kDailyStreak) ?? 0,
       encoresAsked: prefs.getInt(_kEncoresAsked) ?? 0,
       quickiesCompleted: prefs.getInt(_kQuickiesCompleted) ?? 0,
@@ -218,6 +220,15 @@ class StatsService {
     }
   }
 
+  /// Plus longue tenue en « Utilise-moi » (jusqu'au FAIL ou à la fin de séance).
+  Future<void> recordUseMeHeld(int seconds) async {
+    if (seconds <= 0) return;
+    final prefs = await SharedPreferences.getInstance();
+    if (seconds > (prefs.getInt(_kMaxUseMeSec) ?? 0)) {
+      await prefs.setInt(_kMaxUseMeSec, seconds);
+    }
+  }
+
   /// Marque un mode comme utilisé (badge ToutTerrain).
   Future<void> markModeUsed(SessionMode mode) async {
     final prefs = await SharedPreferences.getInstance();
@@ -303,6 +314,7 @@ class StatsSnapshot {
   final int biffles;
   final int holdThroatSeconds;
   final int holdFullSeconds;
+  final int maxUseMeSec;
   final int sessionsCompleted;
   final int sessionsNoFailStreak;
   final int modesUsedMask;
@@ -324,6 +336,7 @@ class StatsSnapshot {
     required this.biffles,
     required this.holdThroatSeconds,
     required this.holdFullSeconds,
+    this.maxUseMeSec = 0,
     required this.sessionsCompleted,
     required this.sessionsNoFailStreak,
     required this.modesUsedMask,
