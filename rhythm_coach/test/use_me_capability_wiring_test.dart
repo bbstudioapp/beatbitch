@@ -262,8 +262,8 @@ void main() {
   }, timeout: const Timeout(Duration(seconds: 40)));
 
   test(
-      'T6c FAIL sans suite normale (hook null) : le step 280 BPM rejoué par '
-      '_restorePreviousLoop reste « Utilise-moi »', () async {
+      'T6c FAIL sans suite normale (hook null) : la boucle 280 BPM rejouée '
+      'après le FAIL n\'ajoute rien au gain', () async {
     final beep = _RecordingBeepEngine();
     final ctrl = buildController(beep, 10);
     ctrl.onUseMeEnded = (c) async => null;
@@ -280,9 +280,28 @@ void main() {
     expect(after.bestOf(CapabilityAxis.rhythmBpmCeilThroat), 105,
         reason: 'le best normal ne prend pas le 280 BPM rejoué');
     expect(after.comfortOf(CapabilityAxis.rhythmBpmCeilThroat),
-        closeTo(100 * 1.05, 1e-6),
-        reason: 'un cran « Utilise-moi », pas de ratchet normal sur 280 BPM');
+        inInclusiveRange(100, 100.1),
+        reason: 'à peine 3 s tenues avant le FAIL (+0,05 %) : les ~7 s '
+            'rejouées après le FAIL, comptées, donneraient plus de +0,15 %');
   }, timeout: const Timeout(Duration(seconds: 60)));
+
+  test('T6d pause pendant « Utilise-moi » : le temps en pause ne compte pas',
+      () async {
+    final ctrl = buildController(_RecordingBeepEngine(), 8);
+    await ctrl.start();
+    await enterUseMe(ctrl);
+    await Future<void>.delayed(const Duration(milliseconds: 2600));
+    await ctrl.pause();
+    await Future<void>.delayed(const Duration(seconds: 4));
+    await ctrl.resume();
+    await untilFinished(ctrl);
+    final after = await CapabilityService().snapshotProfile();
+    expect(after.comfortOf(CapabilityAxis.rhythmBpmCeilThroat),
+        inInclusiveRange(100, 100.17),
+        reason: '8 s de séance = au plus +0,13 % ; les 4 s de pause comptées '
+            'feraient +0,2 %');
+  }, timeout: const Timeout(Duration(seconds: 60)));
+
   test(
       'T10 FAIL sans suite normale (hook null) : les steps d\'escalade qui '
       'restent ne s\'écrivent pas dans le profil normal', () async {

@@ -55,17 +55,18 @@ void main() {
         closeTo(105 * 1.15, 1e-6));
   });
 
-  test('T3 deux épisodes dans une séance : un seul cran', () async {
+  test('T3 deux épisodes de 2 min dans une séance : durées cumulées, +4 %',
+      () async {
     final tr = CapabilityTracker()..onSessionStart();
     final before = await CapabilityService().snapshotProfile();
     final normal = benchGen(100, 20 * 60, profile: before);
     benchReplay(tr, normal.session.steps, 0, 120);
     var t = 120;
     for (var episode = 0; episode < 2; episode++) {
-      final um = benchGen(200 + episode, 150, useMe: true, profile: before);
-      benchReplay(tr, benchShift(um.session.steps, t), t, t + 150,
+      final um = benchGen(200 + episode, 120, useMe: true, profile: before);
+      benchReplay(tr, benchShift(um.session.steps, t), t, t + 120,
           useMeFrom: t);
-      t += 150;
+      t += 120;
       final gap = benchGen(300 + episode, 40, profile: before);
       benchReplay(tr, benchShift(gap.session.steps, t), t, t + 40);
       t += 40;
@@ -74,8 +75,44 @@ void main() {
     final after = await CapabilityService().snapshotProfile();
     expect(
         after.comfortOf(CapabilityAxis.rhythmBpmCeilThroat),
-        closeTo(before.comfortOf(CapabilityAxis.rhythmBpmCeilThroat)! * 1.05,
+        closeTo(before.comfortOf(CapabilityAxis.rhythmBpmCeilThroat)! * 1.04,
             1e-6));
+  });
+
+  double throatGain(BenchOutcome o) =>
+      o.after.comfortOf(CapabilityAxis.rhythmBpmCeilThroat)! /
+      o.before.comfortOf(CapabilityAxis.rhythmBpmCeilThroat)!;
+
+  test('T11 FAIL après 3 s de « Utilise-moi » : gain proportionnel, ≈ 0',
+      () async {
+    final tr = CapabilityTracker()..onSessionStart();
+    final before = await CapabilityService().snapshotProfile();
+    const escalade = SessionStep(
+        time: 0,
+        mode: SessionMode.rhythm,
+        from: Position.head,
+        to: Position.throat,
+        bpm: 160);
+    benchReplay(tr, [escalade], 0, 3, useMeFrom: 0);
+    tr.onFail();
+    await CapabilityService().commit(tr.finalizeReport(), sessionIndex: 21);
+    final after = await CapabilityService().snapshotProfile();
+    expect(
+        after.comfortOf(CapabilityAxis.rhythmBpmCeilThroat),
+        closeTo(
+            before.comfortOf(CapabilityAxis.rhythmBpmCeilThroat)! *
+                (1 + 0.05 * 3 / 300),
+            1e-6));
+  });
+
+  test('T12 2 min 30 tenues : +2,5 %', () async {
+    final o = await benchSession(useMe: true, useMeSec: 150);
+    expect(throatGain(o), closeTo(1.025, 1e-6));
+  });
+
+  test('T13 8 min tenues : plafonné à +5 % par séance', () async {
+    final o = await benchSession(useMe: true, useMeSec: 480);
+    expect(throatGain(o), closeTo(1.05, 1e-6));
   });
 
   test('T4 le FAIL qui termine « Utilise-moi » n\'impose rien aux axes normaux',

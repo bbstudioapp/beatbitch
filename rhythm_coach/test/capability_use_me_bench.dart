@@ -128,7 +128,12 @@ void benchReplay(CapabilityTracker tr, List<SessionStep> steps, int t0, int t1,
         useMe: useMe,
       );
     }
-    tr.onTickSecond(swallowMode: SwallowMode.allowed);
+    tr.onTickSecond(
+      swallowMode: SwallowMode.allowed,
+      useMeActive: useMeFrom != null &&
+          s >= useMeFrom &&
+          (useMeUntil == null || s < useMeUntil),
+    );
   }
 }
 

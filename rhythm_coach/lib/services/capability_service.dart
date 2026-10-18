@@ -64,6 +64,9 @@ class CapabilityProfile {
 /// de la joueuse) — tampon séparé, jamais écrit dans `best` ; ne sert qu'au
 /// cran de `comfort` de `CapabilityRegulator.useMeComfortNudge`.
 ///
+/// [useMeSeconds] : secondes jouées en « Utilise-moi » avant le FAIL qui le
+/// termine, tous épisodes de la séance cumulés (mesure du cran).
+///
 /// [sessionCeilings] : valeurs figées lors d'un appui FAIL (cf. §6 de la
 /// spec). En Phase 1 elles sont collectées mais pas encore consommées —
 /// le générateur ne les lira qu'en Phase 2.
@@ -71,11 +74,13 @@ class SessionCapabilityReport {
   final Map<CapabilityAxis, double> reached;
   final Map<CapabilityAxis, double> sessionCeilings;
   final Map<CapabilityAxis, double> useMeReached;
+  final int useMeSeconds;
 
   const SessionCapabilityReport({
     required this.reached,
     required this.sessionCeilings,
     this.useMeReached = const {},
+    this.useMeSeconds = 0,
   });
 
   bool get isEmpty =>
@@ -140,9 +145,10 @@ class CapabilityRegulator {
   /// montée. `1.15` laisse l'ancrage respirer.
   static const double kRatchetAnchorHeadroom = 1.15;
 
-  /// Cran de `comfort` accordé au plus une fois par séance quand la joueuse a
-  /// tenu « Utilise-moi » au-dessus de sa zone de confort (fraction de `comfort`).
-  static const double kUseMeComfortGain = 0.05;
+  /// Plafond par séance du cran de `comfort` « Utilise-moi » (fraction de
+  /// `comfort`), atteint après [kUseMeFullGainSeconds] de tenue cumulée.
+  static const double kUseMeComfortGainMax = 0.05;
+  static const int kUseMeFullGainSeconds = 300;
 
   /// Axes sur lesquels « Utilise-moi » peut donner ce cran : les BPM pilotants.
   static const Set<CapabilityAxis> useMeNudgeAxes = {
@@ -153,18 +159,22 @@ class CapabilityRegulator {
   };
 
   /// Nouveau `comfort` après le cran « Utilise-moi », ou `null` s'il n'y en a
-  /// pas : axe hors [useMeNudgeAxes], tenue sous le `comfort`, ou `comfort`
-  /// déjà au plafond `bestNormal × kSurchargeMax`.
+  /// pas : axe hors [useMeNudgeAxes], tenue sous le `comfort`, durée nulle, ou
+  /// `comfort` déjà au plafond `bestNormal × kSurchargeMax`. Le gain croît
+  /// linéairement avec [useMeSeconds] jusqu'à [kUseMeComfortGainMax].
   static double? useMeComfortNudge({
     required CapabilityAxis axis,
     required double comfort,
     required double bestNormal,
     required double useMeReached,
+    required int useMeSeconds,
   }) {
     if (!useMeNudgeAxes.contains(axis)) return null;
     if (useMeReached < comfort * kOvershootMargin) return null;
+    final double share =
+        (useMeSeconds / kUseMeFullGainSeconds).clamp(0.0, 1.0).toDouble();
     final double cap = bestNormal * kSurchargeMax;
-    final double raised = comfort * (1 + kUseMeComfortGain);
+    final double raised = comfort * (1 + kUseMeComfortGainMax * share);
     final double next = raised < cap ? raised : cap;
     return next > comfort ? next : null;
   }
@@ -562,6 +572,7 @@ class CapabilityService {
               comfort: comfort,
               bestNormal: next.best!,
               useMeReached: useMeReached,
+              useMeSeconds: report.useMeSeconds,
             ) ??
             comfort;
       }

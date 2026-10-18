@@ -1172,7 +1172,10 @@ class SessionController extends ChangeNotifier {
     final now = elapsedSeconds;
     if (now == _lastHoldTickAtSecond) return;
     _lastHoldTickAtSecond = now;
-    _capabilityTracker?.onTickSecond(swallowMode: _swallowMode);
+    _capabilityTracker?.onTickSecond(
+      swallowMode: _swallowMode,
+      useMeActive: _useMeActive,
+    );
     _obedience.onTickSecond();
     _humiliation.onTickSecond(obedienceLevel: _obedience.score);
     _stamina.setCurrentMode(
