@@ -179,7 +179,7 @@ void main() {
       expect(report.reached.containsKey(CapabilityAxis.biffleBpmMax), isFalse);
     });
 
-    test('noswallow : streak enregistré, mais voidé par un débordement', () {
+    test('noswallow : un débordement ne coupe ni ne plafonne le streak', () {
       final t = CapabilityTracker()..onSessionStart();
       t.onStepApplied(
           mode: SessionMode.rhythm,
@@ -188,16 +188,24 @@ void main() {
           bpm: 80,
           duration: 60);
       _tick(t, 20, swallow: SwallowMode.forbidden);
-      _tick(t, 1, swallow: SwallowMode.allowed); // fenêtre autorisée → flush
+      _tick(t, 1, swallow: SwallowMode.allowed);
       _tick(t, 10, swallow: SwallowMode.forbidden);
-      t.onSalivaOverflow();
-      _tick(t, 5, swallow: SwallowMode.forbidden);
-      _tick(t, 1, swallow: SwallowMode.allowed); // ce streak-ci est voidé
+      _tick(t, 15, swallow: SwallowMode.forbidden);
       final report = t.finalizeReport();
-      expect(report.reached[CapabilityAxis.noswallowStreak], 20.0);
-      // Le débordement fige aussi un plafond de session sur noswallow (= signal
-      // négatif imputé de plein droit, §5.3).
-      expect(report.sessionCeilings[CapabilityAxis.noswallowStreak], 10.0);
+      expect(report.reached[CapabilityAxis.noswallowStreak], 25.0);
+      expect(report.sessionCeilings.containsKey(CapabilityAxis.noswallowStreak),
+          isFalse);
+    });
+
+    test('noswallow : un FAIL remet le streak à zéro', () {
+      final t = CapabilityTracker()..onSessionStart();
+      t.onStepApplied(
+          mode: SessionMode.hold, to: Position.throat, duration: 30);
+      _tick(t, 10, swallow: SwallowMode.forbidden);
+      t.onFail();
+      _tick(t, 5, swallow: SwallowMode.forbidden);
+      final report = t.finalizeReport();
+      expect(report.reached[CapabilityAxis.noswallowStreak], 5.0);
     });
 
     test(

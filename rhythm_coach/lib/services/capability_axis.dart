@@ -130,8 +130,7 @@ enum CapabilityAxis {
 
   // ── Salive ────────────────────────────────────────────────────────────
   /// `swallowMode == forbidden` en continu. Cassé par fenêtre autorisée /
-  /// fail. Un `best` ne compte que si aucun débordement n'a eu lieu pendant
-  /// le streak.
+  /// fail.
   noswallowStreak(
       'noswallow.streak', CapabilityUnit.seconds, CapabilityRecordKind.maximize,
       pilotant: true),

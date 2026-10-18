@@ -1193,7 +1193,6 @@ class SessionController extends ChangeNotifier {
     );
     final overflows = _saliva.popOverflowEvents();
     if (overflows > 0) {
-      _capabilityTracker?.onSalivaOverflow();
       final remaining = _salivaOverflowsCap - _salivaOverflowsThisSession;
       final apply = overflows > remaining ? remaining : overflows;
       for (var i = 0; i < apply; i++) {
