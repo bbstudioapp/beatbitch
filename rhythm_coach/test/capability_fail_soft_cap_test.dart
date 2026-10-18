@@ -48,8 +48,6 @@ SessionCapabilityReport _failAfter(
   return t.finalizeReport();
 }
 
-/// Axes figés dont le confort ne suit pas la règle : ratchet dur s'il est
-/// dans [accused], inchangé sinon.
 Map<String, String> _offRule(
   CapabilityProfile before,
   CapabilityProfile after,
