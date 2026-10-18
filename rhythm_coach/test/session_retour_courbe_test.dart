@@ -131,6 +131,27 @@ void main() {
         reason: 'le curseur quitte la tenue pour le rythme à venir',
       );
     });
+
+    testWidgets(
+        '$how à la fin d’une tenue « Tout », puis rythme Gland ↔ Gorge et '
+        'tenue « Tout » : le rythme ne retombe pas à « Tout »', (tester) async {
+      final track =
+          await _replay(tester, pauseAtMs: 2500, leavesApp: leavesApp);
+      final rhythm = [
+        for (final s in track)
+          if (s.resumed && s.elapsedMs > 3800 && s.elapsedMs < 7800) s,
+      ];
+      expect(rhythm.map((s) => s.mode).toSet(), {SessionMode.rhythm});
+      expect(rhythm.length, greaterThan(30));
+      expect(
+        [
+          for (final s in rhythm)
+            if (s.idx > Position.throat.index + 0.5) '$s',
+        ],
+        isEmpty,
+        reason: 'le curseur rejoint la tenue « Tout » qui suit le rythme',
+      );
+    });
   }
 }
 
