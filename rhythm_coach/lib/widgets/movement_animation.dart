@@ -820,6 +820,12 @@ class _PositionLadderState extends State<_PositionLadder> {
 
   DateTime? _pausedAt;
 
+  /// En `hidden` et `paused`, Flutter ne construit plus d'image : la première
+  /// qui montre la pause peut n'arriver qu'au retour. La pause date donc de
+  /// l'arrêt du temps de séance, pas de cette image.
+  DateTime? _lastFrameAt;
+  Duration? _lastFrameElapsed;
+
   @override
   void initState() {
     super.initState();
@@ -829,7 +835,9 @@ class _PositionLadderState extends State<_PositionLadder> {
   @override
   void didUpdateWidget(covariant _PositionLadder oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.paused && !oldWidget.paused) _pausedAt = DateTime.now();
+    if (widget.paused && !oldWidget.paused) {
+      _pausedAt = _lastFrameAt!.add(widget.elapsed - _lastFrameElapsed!);
+    }
     if (!widget.paused) _resumeClock();
     if (!_sameGeometry(oldWidget, widget)) {
       _recompute();
@@ -857,6 +865,13 @@ class _PositionLadderState extends State<_PositionLadder> {
     _rawBeats = widget._computeFutureBeats(_boundaryPins);
     _computedAt = DateTime.now();
     _windowUnfillable = _rawBeats!.isEmpty || _rawBeats!.last.t < 1.0;
+  }
+
+  /// Une image en pause ne relance pas l'horloge : seul le moteur le fait.
+  void _refill() {
+    final frozen = _pausedAt != null;
+    _recompute();
+    if (frozen) _pausedAt = _computedAt;
   }
 
   static const Color _tongueColor = Color(0xFF4FC3F7);
@@ -911,6 +926,8 @@ class _PositionLadderState extends State<_PositionLadder> {
 
   @override
   Widget build(BuildContext context) {
+    _lastFrameAt = DateTime.now();
+    _lastFrameElapsed = widget.elapsed;
     final windowMs =
         _PositionLadder._trajectoryWindow.inMilliseconds.toDouble();
     final deltaT =
@@ -922,7 +939,7 @@ class _PositionLadderState extends State<_PositionLadder> {
     if (beats != null &&
         !_windowUnfillable &&
         (beats.isEmpty || beats.last.t < 1.0)) {
-      _recompute();
+      _refill();
       beats = _scrollBeats(_rawBeats!, 0.0);
     }
     if (beats == null) {
