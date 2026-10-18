@@ -48,6 +48,18 @@ SessionCapabilityReport _failAfter(
   return t.finalizeReport();
 }
 
+SessionCapabilityReport _failEachRhythm(
+    List<(Position from, Position to, int bpm)> rhythms) {
+  final t = CapabilityTracker()..onSessionStart();
+  for (final (from, to, bpm) in rhythms) {
+    t.onStepApplied(
+        mode: SessionMode.rhythm, from: from, to: to, bpm: bpm, duration: 30);
+    _tick(t, 2);
+    t.onFail();
+  }
+  return t.finalizeReport();
+}
+
 Map<String, String> _offRule(
   CapabilityProfile before,
   CapabilityProfile after,
@@ -164,5 +176,48 @@ void main() {
     final after = await svc.snapshotProfile();
 
     expect(_offRule(before, after, report, const {}), isEmpty);
+  });
+
+  test(
+      'deux FAIL : un 2ᵉ FAIL peu profond ne retire pas la profondeur accusée '
+      'par le 1ᵉʳ', () async {
+    final svc = CapabilityService();
+    final before = await _seedProfile(svc);
+    final report = _failEachRhythm([
+      (Position.mid, Position.throat, 112),
+      (Position.tip, Position.head, 40),
+    ]);
+    expect(report.sessionCeilings[CapabilityAxis.rhythmDepthMax],
+        Position.head.index.toDouble());
+
+    await svc.commit(report, sessionIndex: 2);
+    final after = await svc.snapshotProfile();
+
+    expect(
+        _offRule(before, after, report, {
+          CapabilityAxis.rhythmBpmCeilThroat: 85,
+          CapabilityAxis.rhythmDepthMax: 2,
+        }),
+        isEmpty);
+  });
+
+  test('deux FAIL de causes différentes : chacun garde ses accusés', () async {
+    final svc = CapabilityService();
+    final before = await _seedProfile(svc);
+    final report = _failEachRhythm([
+      (Position.mid, Position.throat, 112),
+      (Position.head, Position.mid, 154),
+    ]);
+
+    await svc.commit(report, sessionIndex: 2);
+    final after = await svc.snapshotProfile();
+
+    expect(
+        _offRule(before, after, report, {
+          CapabilityAxis.rhythmBpmCeilThroat: 85,
+          CapabilityAxis.rhythmDepthMax: 2,
+          CapabilityAxis.rhythmBpmCeilShallow: 119,
+        }),
+        isEmpty);
   });
 }
