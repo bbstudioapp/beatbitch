@@ -148,15 +148,15 @@ void main() {
   // appelle `onPostChallengeRegen`.
   SessionController build(_RecordingBeepEngine beep) => SessionController(
         staminaProfile: List<double>.filled(300, 100),
-        session: Session(
+        session: const Session(
           id: 'useme-regen',
           name: 'useme-regen',
           description: '',
           durationSeconds: 20,
           defaultMode: SessionMode.rhythm,
-          steps: const [normalStep],
-          challenges: const [challenge],
-          challengeTriggerTimes: const [1],
+          steps: [normalStep],
+          challenges: [challenge],
+          challengeTriggerTimes: [1],
         ),
         tts: TtsService(),
         beep: beep,
