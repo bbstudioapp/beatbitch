@@ -22,6 +22,8 @@ Future<CapabilityProfile> _seedProfile(CapabilityService svc) async {
       CapabilityAxis.rhythmBpmCeilShallow: 140,
       CapabilityAxis.rhythmBpmCeilThroat: 100,
       CapabilityAxis.rhythmBpmCeilFull: 80,
+      CapabilityAxis.gorgeCrossingsBpmThroat: 100,
+      CapabilityAxis.gorgeCrossingsBpmFull: 80,
       CapabilityAxis.rhythmDepthMax: Position.throat.index.toDouble(),
       CapabilityAxis.gorgeEngagementStreak: 60,
       CapabilityAxis.gorgeApneeStreak: 30,
@@ -119,6 +121,7 @@ void main() {
     expect(
         _offRule(before, after, report, {
           CapabilityAxis.rhythmBpmCeilThroat: 85,
+          CapabilityAxis.gorgeCrossingsBpmThroat: 85,
           CapabilityAxis.rhythmDepthMax: 2,
         }),
         isEmpty);
@@ -143,6 +146,28 @@ void main() {
         _offRule(before, after, report, {
           CapabilityAxis.rhythmDepthMax: 2,
           CapabilityAxis.rhythmBpmCeilFull: 68,
+        }),
+        isEmpty);
+  });
+
+  test(
+      'franchissement vers full, profondeur sondée : profondeur, BPM de bande '
+      'et BPM franchissant accusés', () async {
+    final svc = CapabilityService();
+    final before = await _seedProfile(svc);
+    final report =
+        _failAfter(2, from: Position.mid, to: Position.full, bpm: 70);
+    expect(report.sessionCeilings[CapabilityAxis.gorgeCrossingsBpmFull], 70.0);
+
+    final attributed = await svc.commit(report, sessionIndex: 2);
+    expect(attributed, CapabilityAxis.rhythmDepthMax);
+    final after = await svc.snapshotProfile();
+
+    expect(
+        _offRule(before, after, report, {
+          CapabilityAxis.rhythmDepthMax: 2,
+          CapabilityAxis.rhythmBpmCeilFull: 68,
+          CapabilityAxis.gorgeCrossingsBpmFull: 68,
         }),
         isEmpty);
   });
@@ -198,6 +223,7 @@ void main() {
     expect(
         _offRule(before, after, report, {
           CapabilityAxis.rhythmBpmCeilThroat: 85,
+          CapabilityAxis.gorgeCrossingsBpmThroat: 85,
           CapabilityAxis.rhythmDepthMax: 2,
         }),
         isEmpty);
@@ -217,6 +243,7 @@ void main() {
     expect(
         _offRule(before, after, report, {
           CapabilityAxis.rhythmBpmCeilThroat: 85,
+          CapabilityAxis.gorgeCrossingsBpmThroat: 85,
           CapabilityAxis.rhythmDepthMax: 2,
           CapabilityAxis.rhythmBpmCeilShallow: 119,
         }),
