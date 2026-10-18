@@ -3,23 +3,32 @@ type: analyse
 sujet: saut-de-courbe-au-retour-dans-l-appli
 ecrit_le: 2026-10-18T15:55:48+02:00
 auteur: session tss2-courbe-retour · claude-opus-5-5
-revision: 2ebaa87
+revision: 8b9e202
 branche: fix/courbe-retour-appli
 porte_sur:
+  - rhythm_coach/lib/screens/session_screen.dart
   - rhythm_coach/lib/widgets/movement_animation.dart
+  - rhythm_coach/test/movement_reprise_pause_test.dart
   - rhythm_coach/test/session_retour_courbe_test.dart
 provenance:
-  mesure: 7
-  deduit: 2
-  document: 2
+  mesure: 12
+  deduit: 3
+  document: 4
   sans_marqueur: 0
 sources_citees: []
 relu_contre:
+  - rhythm_coach/lib/screens/session_screen.dart:310
   - rhythm_coach/lib/widgets/movement_animation.dart:647
   - rhythm_coach/lib/widgets/movement_animation.dart:836
+  - rhythm_coach/lib/widgets/movement_animation.dart:839
   - rhythm_coach/lib/widgets/movement_animation.dart:848
   - rhythm_coach/lib/widgets/movement_animation.dart:850
+  - rhythm_coach/lib/widgets/movement_animation.dart:871
+  - rhythm_coach/lib/widgets/movement_animation.dart:874
   - rhythm_coach/lib/widgets/movement_animation.dart:918
+  - rhythm_coach/lib/widgets/movement_animation.dart:946
+  - rhythm_coach/test/movement_reprise_pause_test.dart:167
+  - rhythm_coach/test/movement_reprise_pause_test.dart:230
 ---
 
 ## Symptôme
@@ -49,3 +58,22 @@ relu_contre:
 - [mesuré] Aucun test déterministe ne garde le terme `widget.elapsed - _lastFrameElapsed`. Le retirer (version `aa842cb`) laisse le banc de retour vert : seule la charge le fait tomber, et pas à chaque fois.
 - [mesuré] J'ai essayé un cas « 500 ms de séance sans image avant la pause » dans `movement_reprise_pause_test`. Il est rouge sur les trois versions : −1 000 ms avec le code d'avant, +540 ms avec `aa842cb`, −306 ms avec la version finale. La cause n'est pas établie et le cas a été retiré (copie dans le scratchpad de la session).
 - [document] Les autres horloges murales du widget (`_frozenAt`, `_lastBeatAt`) ne sont pas décalées par une pause. Aucun banc ne les a mises en défaut ici, mais rien ne les garde non plus.
+
+## 2ᵉ passe — réserves de la relecture adverse
+
+Relecture : branche `relecture/courbe-retour-appli` (`8cee91d`), défauts D1 à D4.
+
+**Terme « temps de séance écoulé » (D3).** [mesuré] Banc B1-400 de la relecture ajouté à `rhythm_coach/test/movement_reprise_pause_test.dart:230` (`8e3f565`) : la séance court 400 ms sans image, pause, reprise immédiate ; la référence est la constante du scénario (10 600 ms ± 100). Vert 3 fois sur 3 sur le code corrigé. Rouge sur `aa842cb` (+270 ms), sur `82e3a7f` (+307 ms) et sous la mutation `add` → `subtract` de `rhythm_coach/lib/widgets/movement_animation.dart:839` (+583 ms).
+
+**Pause consommée par une image en pause (D1).** [mesuré] Cas « 500 ms sans image avant la pause » rétabli (`8d5f5fa`, `rhythm_coach/test/movement_reprise_pause_test.dart:167` et `:211`). Rouge sur `7b47b8b^` : après la reprise, la courbe quitte le step à 9 535 ms au lieu de 10 528 ms (−993 ms), assertion `d['après']`. Cause, celle de la relecture : la garde « fenêtre à remplir » de `build` recalcule pendant une image en pause, et `_recompute` relance l'horloge. Correctif `7b47b8b` : ce recalcul passe par `_refill` (`rhythm_coach/lib/widgets/movement_animation.dart:871`), qui refige l'horloge à l'instant du recalcul si elle l'était (`:874`). Le chemin d'un bip reçu avant la levée de la pause (`didUpdateWidget`) garde `_recompute` et relance toujours l'horloge. Les 11 tests des deux bancs de courbe sont verts.
+
+[mesuré] Mutations, sur `movement_reprise_pause_test` et `session_retour_courbe_test` : retirer `:874` rend rouge le seul cas « 500 ms sans image » (−979 ms) ; la mutation des auteurs (`DateTime.now()`) rend rouges B1-400 et les trois cas « retour » ; `add` → `subtract` rend rouges B1-400 et le cas « 500 ms ». Remettre `_recompute` au second appel de `build` (fenêtre entièrement défilée, `:946`) laisse les 11 tests verts : cet appel n'est gardé par rien, il n'a donc pas été changé.
+
+**Commentaire (D4).** [mesuré] `rhythm_coach/lib/screens/session_screen.dart:310-313` envoie `inactive`, `hidden` et `paused` au même `onAppBackgrounded` ; le commentaire de `_lastFrameAt` borne désormais l'absence d'image à `hidden` et `paused` (`8b9e202`, commentaires seulement).
+
+**Datation 250 ms après l'arrêt du chrono (D2).** [document] Pas de correctif : défaut antérieur, fiche `tss2-048` au sas.
+
+[mesuré] `flutter analyze` : No issues found. `dart format --set-exit-if-changed .` : 0 fichier modifié sur 384. Suite complète une fois : 1 563 verts en 3 min 52. `movement_reprise_pause_test` seul : vert 4 fois sur 4.
+
+- [déduit] Le second chemin de D1 décrit par la relecture (pause posée puis recalcul dans le même `didUpdateWidget`, `:838-844`) n'est ni exécuté ni corrigé : sans bip, rien ne distingue ce recalcul de celui d'un moteur qui reprend.
+- [document] Toujours rien sur le S21.
