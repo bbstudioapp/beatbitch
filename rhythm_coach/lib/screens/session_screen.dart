@@ -1095,9 +1095,6 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     );
   }
 
-  /// « JE PEUX PAS » garde la même place que « UTILISE-MOI » soit là ou non :
-  /// la place de ce dernier est réservée dès qu'il peut apparaître, sur sa
-  /// ligne au-dessus, ou à sa droite quand l'écran est trop bas pour la ligne.
   Widget _buildActionRow(SessionController ctrl, {required bool compact}) {
     return ListenableBuilder(
       listenable: milestoneService,
