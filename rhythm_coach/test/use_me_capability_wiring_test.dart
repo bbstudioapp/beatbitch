@@ -238,6 +238,9 @@ void main() {
 
   test('T5 tenue « Utilise-moi » sans FAIL : useMe.held_streak dans le profil',
       () async {
+    // Amorçage déjà fait : sinon `stats.max_use_me_sec` remplirait l'axe seul.
+    SharedPreferences.setMockInitialValues(
+        {...benchPrefsSeed(), 'cap.use_me_held_migrated': true});
     final ctrl = buildController(_RecordingBeepEngine(), 9);
     await ctrl.start();
     await enterUseMe(ctrl);
