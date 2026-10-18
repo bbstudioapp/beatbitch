@@ -63,6 +63,7 @@ flutter:
     - assets/audio/music/
     - assets/audio/finale/
     - assets/audio/finale_chimes.json
+    - assets/badges/
     - assets/career/
     - assets/career/coaches/
     - assets/career/coaches/portraits/
