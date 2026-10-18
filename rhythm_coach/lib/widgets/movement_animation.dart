@@ -867,6 +867,13 @@ class _PositionLadderState extends State<_PositionLadder> {
     _windowUnfillable = _rawBeats!.isEmpty || _rawBeats!.last.t < 1.0;
   }
 
+  /// Une image en pause ne relance pas l'horloge : seul le moteur le fait.
+  void _refill() {
+    final frozen = _pausedAt != null;
+    _recompute();
+    if (frozen) _pausedAt = _computedAt;
+  }
+
   static const Color _tongueColor = Color(0xFF4FC3F7);
 
   (List<_BeatPoint>, double?) _tongue() {
@@ -932,7 +939,7 @@ class _PositionLadderState extends State<_PositionLadder> {
     if (beats != null &&
         !_windowUnfillable &&
         (beats.isEmpty || beats.last.t < 1.0)) {
-      _recompute();
+      _refill();
       beats = _scrollBeats(_rawBeats!, 0.0);
     }
     if (beats == null) {
