@@ -289,6 +289,7 @@ class StatsService {
       _kSessionsNoFail,
       _kModesUsedMask,
       _kMaxHoldFullSecAtomic,
+      _kMaxUseMeSec,
       _kLastSessionDay,
       _kDailyStreak,
       _kEncoresAsked,

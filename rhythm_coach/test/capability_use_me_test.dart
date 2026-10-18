@@ -2,9 +2,13 @@
 // Banc : vrai générateur + vrai tracker + vrai service (cf. capability_use_me_bench.dart).
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:beat_bitch/models/session.dart';
+import 'package:beat_bitch/models/session_step.dart';
 import 'package:beat_bitch/services/capability_axis.dart';
 import 'package:beat_bitch/services/capability_service.dart';
 import 'package:beat_bitch/services/capability_tracker.dart';
+import 'package:beat_bitch/services/saliva_engine.dart';
+import 'package:beat_bitch/services/stats_service.dart';
 
 import 'capability_use_me_bench.dart';
 
@@ -148,5 +152,23 @@ void main() {
     final p = await CapabilityService().snapshotProfile();
     expect(p.stateOf(CapabilityAxis.useMeHeldStreak).hasData, isFalse);
     expect(p.axesWithData, isNot(contains(CapabilityAxis.useMeHeldStreak)));
+  });
+
+  test('T9 « Tout remettre à zéro » : l\'axe useMe.held_streak ne revient pas',
+      () async {
+    final seed = benchPrefsSeed();
+    seed['stats.max_use_me_sec'] = 400;
+    SharedPreferences.setMockInitialValues(seed);
+    final amorce = await CapabilityService().snapshotProfile();
+    expect(amorce.bestOf(CapabilityAxis.useMeHeldStreak), 400,
+        reason:
+            'sonde non vide : l\'axe est bien amorcé avant la remise à zéro');
+
+    await Future.wait(
+        [StatsService().resetAll(), CapabilityService().resetAll()]);
+
+    final after = await CapabilityService().snapshotProfile();
+    expect(after.stateOf(CapabilityAxis.useMeHeldStreak).hasData, isFalse);
+    expect(after.axesWithData, isEmpty);
   });
 }
