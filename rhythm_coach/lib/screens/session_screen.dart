@@ -834,6 +834,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                 // `_FinishedPanel`.
                 if (!ctrl.isFinished || ctrl.hasPendingBadges)
                   Positioned.fill(
+                    key: const ValueKey('session-finale'),
                     child: SessionFinaleOverlay(
                       active: ctrl.isRunning && ctrl.finaleChimeStarted,
                     ),
