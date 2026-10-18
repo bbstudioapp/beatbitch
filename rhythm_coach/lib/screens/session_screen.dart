@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show kDebugMode, visibleForTesting;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -23,6 +23,7 @@ import '../models/anatomy_profile.dart';
 import '../models/badge.dart';
 import '../career/services/debug_settings_service.dart';
 import '../career/widgets/stamina_bar.dart';
+import '../widgets/badge_emblem.dart';
 import '../widgets/debug_score_bar.dart';
 import '../controllers/session_controller.dart';
 import '../models/session.dart';
@@ -2750,7 +2751,7 @@ class _BadgeUnlocksBlock extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         for (final u in unlocks) ...[
-          _BadgeUnlockTile(unlock: u),
+          BadgeUnlockTile(unlock: u),
           const SizedBox(height: 10),
         ],
       ],
@@ -2758,9 +2759,10 @@ class _BadgeUnlocksBlock extends StatelessWidget {
   }
 }
 
-class _BadgeUnlockTile extends StatelessWidget {
+@visibleForTesting
+class BadgeUnlockTile extends StatelessWidget {
   final BadgeUnlock unlock;
-  const _BadgeUnlockTile({required this.unlock});
+  const BadgeUnlockTile({super.key, required this.unlock});
 
   Color _tierColor() {
     return switch (unlock.tier) {
@@ -2786,7 +2788,11 @@ class _BadgeUnlockTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.emoji_events, color: color, size: 28),
+          BadgeEmblem(
+            family: unlock.definition.family,
+            tier: unlock.tier,
+            size: 44,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
