@@ -814,19 +814,13 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                                           : null,
                                       elapsedSeconds: ctrl.playedSeconds,
                                     ))
-                              : Stack(
-                                  children: [
-                                    Positioned.fill(
-                                        child: _buildRunningView(ctrl)),
-                                    if (ctrl.isPaused)
-                                      Positioned.fill(
-                                        child: _PausedOverlay(
-                                          onResume: ctrl.resume,
-                                        ),
-                                      ),
-                                  ],
-                                ))),
+                              : SizedBox.expand(
+                                  child: _buildRunningView(ctrl)))),
                 ),
+                if (showRunning && ctrl.isPaused)
+                  Positioned.fill(
+                    child: _PausedOverlay(onResume: ctrl.resume),
+                  ),
                 // Ses résidus blancs masqueraient le texte blanc de
                 // `_FinishedPanel`.
                 if (!ctrl.isFinished || ctrl.hasPendingBadges)
