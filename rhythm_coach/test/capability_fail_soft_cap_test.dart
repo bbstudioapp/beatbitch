@@ -18,7 +18,9 @@ Future<CapabilityProfile> _seedProfile(CapabilityService svc) async {
   await svc.commit(
     SessionCapabilityReport(reached: {
       CapabilityAxis.rhythmMotionStreak: 90,
+      CapabilityAxis.rhythmBpmCeilShallow: 140,
       CapabilityAxis.rhythmBpmCeilThroat: 100,
+      CapabilityAxis.rhythmBpmCeilFull: 80,
       CapabilityAxis.rhythmDepthMax: Position.throat.index.toDouble(),
       CapabilityAxis.gorgeEngagementStreak: 60,
       CapabilityAxis.gorgeApneeStreak: 30,
@@ -30,33 +32,47 @@ Future<CapabilityProfile> _seedProfile(CapabilityService svc) async {
   return svc.snapshotProfile();
 }
 
-/// Axes figés, non imputés, dont le confort a baissé plus que ne l'aurait
-/// fait un FAIL imputé à cet axe à sa limite (`figé = comfort`, ratchet dur).
-Map<String, String> _worseThanImputed(
+SessionCapabilityReport _failAfter(
+  int seconds, {
+  required Position from,
+  required Position to,
+  required int bpm,
+}) {
+  final t = CapabilityTracker()..onSessionStart();
+  t.onStepApplied(mode: SessionMode.hold, to: Position.throat, duration: 10);
+  _tick(t, 10);
+  t.onStepApplied(
+      mode: SessionMode.rhythm, from: from, to: to, bpm: bpm, duration: 30);
+  _tick(t, seconds);
+  t.onFail();
+  return t.finalizeReport();
+}
+
+/// Axes figés dont le confort ne suit pas la règle : ratchet dur s'il est
+/// dans [accused], inchangé sinon.
+Map<String, String> _offRule(
   CapabilityProfile before,
   CapabilityProfile after,
   SessionCapabilityReport report,
-  CapabilityAxis? attributed,
+  Set<CapabilityAxis> accused,
 ) {
   final out = <String, String>{};
   for (final axis in report.sessionCeilings.keys) {
-    if (axis == attributed) continue;
     final prev = before.stateOf(axis);
     if (prev.comfort == null) continue;
-    final imputed = CapabilityRegulator.regulate(
-      axis: axis,
-      prev: prev,
-      sessionCeiling: prev.comfort,
-      hardNegative: true,
-      sessionIndex: 2,
-    ).comfort!;
+    final expected = accused.contains(axis)
+        ? CapabilityRegulator.regulate(
+            axis: axis,
+            prev: prev,
+            reached: report.reached[axis],
+            sessionCeiling: report.sessionCeilings[axis],
+            hardNegative: true,
+            sessionIndex: 2,
+          ).comfort!
+        : prev.comfort!;
     final got = after.comfortOf(axis)!;
-    final worse = axis.recordKind == CapabilityRecordKind.minimize
-        ? got > imputed + 1e-9
-        : got < imputed - 1e-9;
-    if (worse) {
-      out[axis.storageKey] = '${prev.comfort} → $got '
-          '(imputé : ${imputed.toStringAsFixed(1)})';
+    if ((got - expected).abs() > 1e-9) {
+      out[axis.storageKey] = '${prev.comfort} → $got (attendu $expected)';
     }
   }
   return out;
@@ -68,24 +84,12 @@ void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   test(
-      'tap-out imputé au BPM : les streaks vivants non imputés ne baissent pas '
-      'plus que l\'axe imputé', () async {
+      'rythme profond, vitesse sondée : BPM et profondeur accusés, streaks '
+      'vivants intacts', () async {
     final svc = CapabilityService();
     final before = await _seedProfile(svc);
-
-    final t = CapabilityTracker()..onSessionStart();
-    t.onStepApplied(mode: SessionMode.hold, to: Position.throat, duration: 10);
-    _tick(t, 10);
-    t.onStepApplied(
-      mode: SessionMode.rhythm,
-      from: Position.mid,
-      to: Position.throat,
-      bpm: 112,
-      duration: 30,
-    );
-    _tick(t, 2);
-    t.onFail();
-    final report = t.finalizeReport();
+    final report =
+        _failAfter(2, from: Position.mid, to: Position.throat, bpm: 112);
     expect(report.sessionCeilings[CapabilityAxis.rhythmMotionStreak], 2.0);
     expect(report.sessionCeilings[CapabilityAxis.rhythmBpmCeilThroat], 112.0);
 
@@ -94,27 +98,61 @@ void main() {
     final after = await svc.snapshotProfile();
     expect(after.comfortOf(CapabilityAxis.rhythmBpmCeilThroat),
         closeTo(100 * CapabilityRegulator.kRatchetDownFactor, 1e-9));
+    expect(after.comfortOf(CapabilityAxis.rhythmDepthMax),
+        Position.mid.index.toDouble());
 
-    expect(_worseThanImputed(before, after, report, attributed), isEmpty);
+    expect(
+        _offRule(before, after, report, {
+          CapabilityAxis.rhythmBpmCeilThroat,
+          CapabilityAxis.rhythmDepthMax,
+        }),
+        isEmpty);
   });
 
-  test(
-      'FAIL sur un step lent (non imputé) : ni le BPM ni les streaks ne '
-      'baissent plus qu\'un FAIL imputé', () async {
+  test('rythme profond, profondeur sondée : profondeur et BPM de bande accusés',
+      () async {
     final svc = CapabilityService();
     final before = await _seedProfile(svc);
+    final report =
+        _failAfter(2, from: Position.throat, to: Position.full, bpm: 70);
+    expect(report.sessionCeilings[CapabilityAxis.rhythmDepthMax],
+        Position.full.index.toDouble());
 
-    final t = CapabilityTracker()..onSessionStart();
-    t.onStepApplied(
-      mode: SessionMode.rhythm,
-      from: Position.mid,
-      to: Position.throat,
-      bpm: 50,
-      duration: 30,
-    );
-    _tick(t, 6);
-    t.onFail();
-    final report = t.finalizeReport();
+    final attributed = await svc.commit(report, sessionIndex: 2);
+    expect(attributed, CapabilityAxis.rhythmDepthMax);
+    final after = await svc.snapshotProfile();
+    expect(after.comfortOf(CapabilityAxis.rhythmBpmCeilFull), lessThan(80));
+
+    expect(
+        _offRule(before, after, report, {
+          CapabilityAxis.rhythmDepthMax,
+          CapabilityAxis.rhythmBpmCeilFull,
+        }),
+        isEmpty);
+  });
+
+  test('rythme peu profond, vitesse sondée : seul le BPM est accusé', () async {
+    final svc = CapabilityService();
+    final before = await _seedProfile(svc);
+    final report =
+        _failAfter(2, from: Position.head, to: Position.mid, bpm: 154);
+    expect(report.sessionCeilings[CapabilityAxis.rhythmDepthMax],
+        Position.mid.index.toDouble());
+
+    final attributed = await svc.commit(report, sessionIndex: 2);
+    expect(attributed, CapabilityAxis.rhythmBpmCeilShallow);
+    final after = await svc.snapshotProfile();
+
+    expect(
+        _offRule(before, after, report, {CapabilityAxis.rhythmBpmCeilShallow}),
+        isEmpty);
+  });
+
+  test('FAIL sur un step lent, aucun axe surchargé : rien ne baisse', () async {
+    final svc = CapabilityService();
+    final before = await _seedProfile(svc);
+    final report =
+        _failAfter(6, from: Position.mid, to: Position.throat, bpm: 50);
     expect(report.sessionCeilings[CapabilityAxis.rhythmMotionStreak], 6.0);
     expect(report.sessionCeilings[CapabilityAxis.rhythmBpmCeilThroat], 50.0);
 
@@ -122,6 +160,6 @@ void main() {
     expect(attributed, isNull);
     final after = await svc.snapshotProfile();
 
-    expect(_worseThanImputed(before, after, report, attributed), isEmpty);
+    expect(_offRule(before, after, report, const {}), isEmpty);
   });
 }

@@ -105,14 +105,12 @@ void main() {
       expect(next.successRate, lessThan(0.7));
     });
 
-    test('signal négatif subi mais non imputé → simple soft-cap (pas ×0.85)',
-        () {
+    test('signal négatif subi mais non imputé → comfort inchangé', () {
       final next = _reg(CapabilityAxis.gorgeEngagementStreak,
           _st(best: 40, comfort: 30, sr: 0.6, seen: 4),
           sessionCeiling: 26, hardNegative: false, sessionIndex: 5);
-      expect(next.comfort, 26.0);
+      expect(next.comfort, 30.0);
       expect(next.successRate, lessThan(0.6));
-      // soft-cap n\'augmente jamais le comfort (plafond figé plus haut → no-op).
       final higher = _reg(CapabilityAxis.gorgeEngagementStreak,
           _st(best: 40, comfort: 22, sr: 0.6, seen: 4),
           sessionCeiling: 30, hardNegative: false, sessionIndex: 5);
@@ -264,7 +262,7 @@ void main() {
       );
       expect(attributed, isNull);
       final p = await svc.snapshotProfile();
-      expect(p.comfortOf(CapabilityAxis.gorgeApneeStreak), 18.0); // soft-cap
+      expect(p.comfortOf(CapabilityAxis.gorgeApneeStreak), 24.0);
     });
 
     test('débordement de salive → ratchet dur sur noswallow même si ratio < 1',

@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/session_step.dart';
 import 'capability_axis.dart';
 
 /// État persistant d'un axe du profil de capacités.
@@ -214,6 +215,35 @@ class CapabilityRegulator {
     return attributed;
   }
 
+  static Set<CapabilityAxis> accusedAxes(
+    CapabilityAxis? attributed,
+    Map<CapabilityAxis, double> ceilings,
+  ) {
+    if (attributed == null) return const {};
+    final depth = ceilings[CapabilityAxis.rhythmDepthMax];
+    final group = depth == null ? const <CapabilityAxis>{} : _deepRhythm(depth);
+    if (!group.contains(attributed)) return {attributed};
+    return group.where(ceilings.containsKey).toSet();
+  }
+
+  static Set<CapabilityAxis> _deepRhythm(double depth) {
+    if (depth >= Position.full.index) {
+      return const {
+        CapabilityAxis.rhythmDepthMax,
+        CapabilityAxis.rhythmBpmCeilFull,
+        CapabilityAxis.gorgeCrossingsBpmFull,
+      };
+    }
+    if (depth >= Position.throat.index) {
+      return const {
+        CapabilityAxis.rhythmDepthMax,
+        CapabilityAxis.rhythmBpmCeilThroat,
+        CapabilityAxis.gorgeCrossingsBpmThroat,
+      };
+    }
+    return const {};
+  }
+
   /// Recalcule l'état d'un axe en fin de session carrière.
   ///
   /// [reached] : valeur propre atteinte cette session (`null` si l'axe n'a pas
@@ -221,7 +251,7 @@ class CapabilityRegulator {
   /// [sessionCeiling] : valeur figée sur un FAIL de la séance (§6), ou `null`.
   /// [hardNegative] : vrai si le signal négatif est *imputé* à cet axe (tap-out
   /// attribué, ou débordement de salive pour `noswallow`) → ratchet ↓ dur ;
-  /// sinon un `sessionCeiling` non nul ne fait qu'un soft-cap.
+  /// sinon un `sessionCeiling` non nul laisse `comfort` en place.
   /// [sessionIndex] : index de la session courante (horloge de decay).
   /// [quickie] : la session est une **séance bâclée** (§2). Dans ce cas le
   /// `best` est mis à jour normalement (l'exploit a eu lieu, il compte pour
@@ -327,12 +357,6 @@ class CapabilityRegulator {
         }
         sr = _ema(sr, 0.0);
       } else {
-        // Soft-cap : on tempère sans le ×0,85 (cf. §6 « tempère l'agressivité »).
-        if (isMinimize) {
-          if (sessionCeiling > comfort) comfort = sessionCeiling;
-        } else {
-          if (sessionCeiling < comfort) comfort = sessionCeiling;
-        }
         sr = _ema(sr, 0.0, weight: 0.5);
       }
     } else if (reached != null) {
@@ -488,6 +512,8 @@ class CapabilityService {
       report.sessionCeilings,
       CapabilityProfile(prevStates),
     );
+    final accused =
+        CapabilityRegulator.accusedAxes(attributed, report.sessionCeilings);
 
     for (final axis in CapabilityAxis.values) {
       final prev = prevStates[axis]!;
@@ -499,7 +525,7 @@ class CapabilityService {
       // Un débordement de salive sur `noswallow` est un signal négatif imputé
       // de plein droit (§5.3), indépendamment du ratio — le `sessionCeiling`
       // posé par `CapabilityTracker.onSalivaOverflow` le matérialise.
-      final bool hard = axis == attributed ||
+      final bool hard = accused.contains(axis) ||
           (axis == CapabilityAxis.noswallowStreak && ceiling != null);
       final next = CapabilityRegulator.regulate(
         axis: axis,
