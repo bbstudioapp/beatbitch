@@ -1322,6 +1322,17 @@ class SessionController extends ChangeNotifier {
     );
   }
 
+  BackgroundContext _buildChallengeBackgroundContext(SessionStep segment) {
+    final pos = segment.to ?? segment.from;
+    return BackgroundContext(
+      mode: (segment.mode ?? _session.defaultMode).name,
+      position: pos?.name,
+      coach: _coachTag,
+      phase: 'challenge',
+      tier: backgroundTierFor(elapsedSeconds, _session),
+    );
+  }
+
   void _disarmHoldVerifier() {
     final verifier = _holdVerifier;
     if (verifier == null || !verifier.isArmed) return;
