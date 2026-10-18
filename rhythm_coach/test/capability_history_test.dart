@@ -8,6 +8,7 @@ import 'package:beat_bitch/services/diagnostic_import_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
 CapabilityHistoryEntry _entry(int i, {double best = 10}) =>
     CapabilityHistoryEntry(
@@ -74,6 +75,32 @@ void main() {
       expect(h.single.axes['hold.full.streak']!.best, 20);
     });
 
+    test('confort et record distincts : chacun sa valeur, le taux aussi',
+        () async {
+      SharedPreferences.setMockInitialValues({
+        'cap.legacy_migrated': true,
+        'cap.use_me_held_migrated': true,
+        'cap.hold.full.streak.best': 40.0,
+        'cap.hold.full.streak.comfort': 25.0,
+        'cap.hold.full.streak.sr': 0.8,
+        'cap.hold.full.streak.seen': 3,
+      });
+      final svc = CapabilityService();
+      await svc.commit(
+        const SessionCapabilityReport(
+            reached: {CapabilityAxis.holdFullStreak: 10}, sessionCeilings: {}),
+        sessionIndex: 4,
+      );
+      final profile = await svc.snapshotProfile();
+      final e = (await stored()).single.axes['hold.full.streak']!;
+      expect(e.best, 40.0);
+      expect(e.comfort, profile.comfortOf(CapabilityAxis.holdFullStreak));
+      expect(e.comfort, isNot(e.best));
+      expect(e.successRate, isNot(CapabilityService.defaultSuccessRate));
+      expect(e.successRate,
+          profile.stateOf(CapabilityAxis.holdFullStreak).successRate);
+    });
+
     test('deux séances → deux entrées, la 2ᵉ reflète le profil mis à jour',
         () async {
       final svc = CapabilityService();
@@ -120,10 +147,43 @@ void main() {
       expect(h, hasLength(CapabilityHistory.maxEntries));
       expect(h.first.sessionIndex, 5);
       expect(h.last.sessionIndex, CapabilityHistory.maxEntries + 4);
+      final raw = json.decode(prefs.getString('cap.history')!) as Map;
+      expect(raw['entries'], hasLength(CapabilityHistory.maxEntries),
+          reason: 'le stockage lui-même est borné, pas seulement la lecture');
     }, timeout: const Timeout(Duration(seconds: 60)));
+
+    test('un import plus long que la borne est tronqué au stockage', () async {
+      final prefs = await SharedPreferences.getInstance();
+      final longHistory = CapabilityHistory.toJson([
+        for (var i = 0; i < CapabilityHistory.maxEntries + 5; i++) _entry(i),
+      ]);
+      await DiagnosticImportService(prefs)
+          .apply(<String, dynamic>{'capabilityHistory': longHistory});
+      final raw = json.decode(prefs.getString('cap.history')!) as Map;
+      expect(raw['entries'], hasLength(CapabilityHistory.maxEntries));
+      expect(CapabilityHistory.read(prefs).first.sessionIndex, 5);
+    });
   });
 
   group('CapabilityHistory — tolérance', () {
+    test('écriture de l\'historique en échec : le profil est quand même écrit',
+        () async {
+      final store = _FailingHistoryStore();
+      SharedPreferencesStorePlatform.instance = store;
+      SharedPreferences.resetStatic();
+      final svc = CapabilityService();
+      await svc.commit(
+        const SessionCapabilityReport(
+            reached: {CapabilityAxis.holdFullStreak: 20}, sessionCeilings: {}),
+        sessionIndex: 1,
+      );
+      expect(store.historyWrites, 1,
+          reason: 'sonde non vide : on a bien tenté');
+      expect(
+          (await svc.snapshotProfile()).bestOf(CapabilityAxis.holdFullStreak),
+          20);
+    });
+
     for (final raw in <Object>[
       '{pas du json',
       '[1,2,3]',
@@ -253,4 +313,19 @@ void main() {
           isFalse);
     });
   });
+}
+
+class _FailingHistoryStore extends InMemorySharedPreferencesStore {
+  int historyWrites = 0;
+
+  _FailingHistoryStore() : super.empty();
+
+  @override
+  Future<bool> setValue(String valueType, String key, Object value) {
+    if (key.endsWith('cap.history')) {
+      historyWrites++;
+      throw StateError('disque plein');
+    }
+    return super.setValue(valueType, key, value);
+  }
 }
