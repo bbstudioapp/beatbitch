@@ -213,17 +213,15 @@ class CapabilityRegulator {
       );
     }
 
-    if (sessionCeiling != null) {
-      if (hardNegative) {
-        if (isDepthCran) {
-          comfort = (comfort - 1).clamp(0.0, prev.comfort!);
-        } else if (isMinimize) {
-          comfort = comfort / kRatchetDownFactor;
-        } else {
-          comfort = comfort * kRatchetDownFactor;
-        }
-        sr = _ema(sr, 0.0);
+    if (sessionCeiling != null && hardNegative) {
+      if (isDepthCran) {
+        comfort = (comfort - 1).clamp(0.0, prev.comfort!);
+      } else if (isMinimize) {
+        comfort = comfort / kRatchetDownFactor;
+      } else {
+        comfort = comfort * kRatchetDownFactor;
       }
+      sr = _ema(sr, 0.0);
     } else if (reached != null) {
       final bool overshoot = isMinimize
           ? reached <= comfort * (2 - kOvershootMargin)
@@ -252,7 +250,7 @@ class CapabilityRegulator {
           sr = _ema(sr, 1.0);
         }
       }
-    } else {
+    } else if (sessionCeiling == null) {
       if (prev.lastSeenSession >= 0 &&
           sessionIndex - prev.lastSeenSession >= kDecayAfterSessions &&
           newBest != null) {
