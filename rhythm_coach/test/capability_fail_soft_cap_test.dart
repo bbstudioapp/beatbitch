@@ -52,25 +52,22 @@ Map<String, String> _offRule(
   CapabilityProfile before,
   CapabilityProfile after,
   SessionCapabilityReport report,
-  Set<CapabilityAxis> accused,
+  Map<CapabilityAxis, double> lowered,
 ) {
   final out = <String, String>{};
+  for (final axis in lowered.keys) {
+    if (!report.sessionCeilings.containsKey(axis) ||
+        before.comfortOf(axis) == null) {
+      out[axis.storageKey] = 'accusé attendu sans plafond ni confort';
+    }
+  }
   for (final axis in report.sessionCeilings.keys) {
-    final prev = before.stateOf(axis);
-    if (prev.comfort == null) continue;
-    final expected = accused.contains(axis)
-        ? CapabilityRegulator.regulate(
-            axis: axis,
-            prev: prev,
-            reached: report.reached[axis],
-            sessionCeiling: report.sessionCeilings[axis],
-            hardNegative: true,
-            sessionIndex: 2,
-          ).comfort!
-        : prev.comfort!;
+    final prev = before.comfortOf(axis);
+    if (prev == null) continue;
+    final expected = lowered[axis] ?? prev;
     final got = after.comfortOf(axis)!;
     if ((got - expected).abs() > 1e-9) {
-      out[axis.storageKey] = '${prev.comfort} → $got (attendu $expected)';
+      out[axis.storageKey] = '$prev → $got (attendu $expected)';
     }
   }
   return out;
@@ -101,30 +98,31 @@ void main() {
 
     expect(
         _offRule(before, after, report, {
-          CapabilityAxis.rhythmBpmCeilThroat,
-          CapabilityAxis.rhythmDepthMax,
+          CapabilityAxis.rhythmBpmCeilThroat: 85,
+          CapabilityAxis.rhythmDepthMax: 2,
         }),
         isEmpty);
   });
 
-  test('rythme profond, profondeur sondée : profondeur et BPM de bande accusés',
-      () async {
+  test(
+      'rythme profond, profondeur sondée lentement : la vitesse accusée avec '
+      'elle perd 15 %, pas jusqu\'au BPM de la sonde', () async {
     final svc = CapabilityService();
     final before = await _seedProfile(svc);
     final report =
-        _failAfter(2, from: Position.throat, to: Position.full, bpm: 70);
+        _failAfter(2, from: Position.throat, to: Position.full, bpm: 40);
     expect(report.sessionCeilings[CapabilityAxis.rhythmDepthMax],
         Position.full.index.toDouble());
+    expect(report.sessionCeilings[CapabilityAxis.rhythmBpmCeilFull], 40.0);
 
     final attributed = await svc.commit(report, sessionIndex: 2);
     expect(attributed, CapabilityAxis.rhythmDepthMax);
     final after = await svc.snapshotProfile();
-    expect(after.comfortOf(CapabilityAxis.rhythmBpmCeilFull), lessThan(80));
 
     expect(
         _offRule(before, after, report, {
-          CapabilityAxis.rhythmDepthMax,
-          CapabilityAxis.rhythmBpmCeilFull,
+          CapabilityAxis.rhythmDepthMax: 2,
+          CapabilityAxis.rhythmBpmCeilFull: 68,
         }),
         isEmpty);
   });
@@ -142,7 +140,8 @@ void main() {
     final after = await svc.snapshotProfile();
 
     expect(
-        _offRule(before, after, report, {CapabilityAxis.rhythmBpmCeilShallow}),
+        _offRule(
+            before, after, report, {CapabilityAxis.rhythmBpmCeilShallow: 119}),
         isEmpty);
   });
 

@@ -86,12 +86,13 @@ void main() {
       expect(next.lastSeenSession, 5);
     });
 
-    test('signal négatif imputé → ratchet ↓ ×0.85, best inchangé', () {
+    test(
+        'signal négatif imputé → ratchet ↓ ×0.85 depuis le confort, même sous '
+        'le plafond figé, best inchangé', () {
       final next = _reg(CapabilityAxis.gorgeApneeStreak,
           _st(best: 40, comfort: 24, sr: 0.7, seen: 4),
           sessionCeiling: 22, hardNegative: true, sessionIndex: 5);
-      expect(next.comfort,
-          closeTo(22.0 * CapabilityRegulator.kRatchetDownFactor, 1e-9));
+      expect(next.comfort, closeTo(20.4, 1e-9));
       expect(next.best, 40.0);
       expect(next.successRate, lessThan(0.7));
     });
@@ -246,8 +247,9 @@ void main() {
       expect(p.comfortOf(CapabilityAxis.gorgeApneeStreak), 24.0);
     });
 
-    test('débordement de salive → ratchet dur sur noswallow même si ratio < 1',
-        () async {
+    test(
+        'débordement de salive → noswallow perd 15 % même si ratio < 1, pas '
+        'jusqu\'à la durée du débordement', () async {
       final svc = CapabilityService();
       await seed(svc, {CapabilityAxis.noswallowStreak: 120});
       final attributed = await svc.commit(
@@ -257,8 +259,7 @@ void main() {
       );
       expect(attributed, isNull);
       final p = await svc.snapshotProfile();
-      expect(p.comfortOf(CapabilityAxis.noswallowStreak),
-          closeTo(60.0 * CapabilityRegulator.kRatchetDownFactor, 1e-6));
+      expect(p.comfortOf(CapabilityAxis.noswallowStreak), closeTo(102, 1e-6));
     });
 
     test('ratchet ↑ consolide la progression sur plusieurs sessions', () async {
