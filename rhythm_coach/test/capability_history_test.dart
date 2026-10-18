@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:beat_bitch/services/capability_axis.dart';
 import 'package:beat_bitch/services/capability_history.dart';
@@ -144,6 +145,7 @@ void main() {
         await CapabilityHistory.append(prefs, _entry(i));
       }
       final h = CapabilityHistory.read(prefs);
+      expect(CapabilityHistory.maxEntries, 300);
       expect(h, hasLength(CapabilityHistory.maxEntries));
       expect(h.first.sessionIndex, 5);
       expect(h.last.sessionIndex, CapabilityHistory.maxEntries + 4);
@@ -151,6 +153,52 @@ void main() {
       expect(raw['entries'], hasLength(CapabilityHistory.maxEntries),
           reason: 'le stockage lui-même est borné, pas seulement la lecture');
     }, timeout: const Timeout(Duration(seconds: 60)));
+
+    test('valeurs arrondies à 2 décimales à l\'écriture', () async {
+      final prefs = await SharedPreferences.getInstance();
+      await CapabilityHistory.append(
+        prefs,
+        CapabilityHistoryEntry(
+          at: DateTime.utc(2026, 10, 18),
+          sessionIndex: 1,
+          axes: {
+            'hold.full.streak': const CapabilityHistoryAxis(
+                best: 12.3456789,
+                comfort: 0.30000000000000004,
+                successRate: 0.5714285),
+          },
+        ),
+      );
+      final raw = json.decode(prefs.getString('cap.history')!) as Map;
+      final axes = (raw['entries'] as List).single['a'] as Map;
+      expect(axes['hold.full.streak'], [12.35, 0.3, 0.57]);
+    });
+
+    test('historique plein sur tous les axes : poids borné', () async {
+      final rng = Random(7);
+      final prefs = await SharedPreferences.getInstance();
+      for (var i = 0; i < CapabilityHistory.maxEntries + 10; i++) {
+        await CapabilityHistory.append(
+          prefs,
+          CapabilityHistoryEntry(
+            at: DateTime.utc(2026, 10, 18).add(Duration(minutes: i)),
+            sessionIndex: i,
+            axes: {
+              for (final axis in CapabilityAxis.values)
+                axis.storageKey: CapabilityHistoryAxis(
+                  best: rng.nextDouble() * 150,
+                  comfort: rng.nextDouble() * 150,
+                  successRate: rng.nextDouble(),
+                ),
+            },
+          ),
+        );
+      }
+      final size = prefs.getString('cap.history')!.length;
+      // ignore: avoid_print
+      print('poids plein (${CapabilityAxis.values.length} axes) : $size');
+      expect(size, lessThan(350000));
+    }, timeout: const Timeout(Duration(seconds: 120)));
 
     test('un import plus long que la borne est tronqué au stockage', () async {
       final prefs = await SharedPreferences.getInstance();
@@ -188,7 +236,6 @@ void main() {
       '{pas du json',
       '[1,2,3]',
       '{"v":1,"entries":"non"}',
-      '{"v":99,"entries":[{"t":1,"i":1,"a":{}}]}',
       42,
     ]) {
       test(
@@ -209,6 +256,29 @@ void main() {
         final h = await stored();
         expect(h, hasLength(1));
         expect(h.single.sessionIndex, 4);
+      });
+    }
+
+    for (final raw in <String>[
+      '{"v":99,"entries":[{"t":1,"i":1,"a":{}}]}',
+      '{"v":2,"entries":"autre forme"}',
+    ]) {
+      test('version inconnue ($raw) : gardée telle quelle, rien n\'est ajouté',
+          () async {
+        SharedPreferences.setMockInitialValues({'cap.history': raw});
+        final svc = CapabilityService();
+        await svc.commit(
+          const SessionCapabilityReport(
+              reached: {CapabilityAxis.holdFullStreak: 20},
+              sessionCeilings: {}),
+          sessionIndex: 4,
+        );
+        expect(
+            (await svc.snapshotProfile()).bestOf(CapabilityAxis.holdFullStreak),
+            20,
+            reason: 'le profil est écrit malgré tout');
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getString('cap.history'), raw);
       });
     }
 

@@ -45,7 +45,7 @@ class CapabilityHistory {
 
   static const String prefsKey = 'cap.history';
   static const int schemaVersion = 1;
-  static const int maxEntries = 1000;
+  static const int maxEntries = 300;
 
   /// Historique persisté, de la plus ancienne à la plus récente entrée.
   /// Vide si la clé est absente, d'un autre type ou illisible.
@@ -60,12 +60,19 @@ class CapabilityHistory {
   }
 
   /// Ajoute [entry] en fin d'historique et ne garde que les [maxEntries]
-  /// dernières. Un historique illisible repart de zéro.
+  /// dernières. Un historique d'une version inconnue est laissé tel quel (rien
+  /// n'est ajouté) ; un historique illisible repart de zéro.
   static Future<void> append(
     SharedPreferences prefs,
     CapabilityHistoryEntry entry,
   ) async {
-    final all = [...read(prefs), entry];
+    Object? decoded;
+    try {
+      final raw = prefs.getString(prefsKey);
+      if (raw != null) decoded = json.decode(raw);
+    } catch (_) {}
+    if (decoded is Map && decoded['v'] != schemaVersion) return;
+    final all = [...fromJson(decoded), entry];
     final kept =
         all.length > maxEntries ? all.sublist(all.length - maxEntries) : all;
     await prefs.setString(prefsKey, json.encode(toJson(kept)));
@@ -98,11 +105,17 @@ class CapabilityHistory {
               'i': e.sessionIndex,
               'a': {
                 for (final a in e.axes.entries)
-                  a.key: [a.value.best, a.value.comfort, a.value.successRate],
+                  a.key: [
+                    _round2(a.value.best),
+                    _round2(a.value.comfort),
+                    _round2(a.value.successRate),
+                  ],
               },
             },
         ],
       };
+
+  static double _round2(double v) => (v * 100).roundToDouble() / 100;
 
   static CapabilityHistoryEntry? _entryFromJson(Object? e) {
     if (e is! Map) return null;
