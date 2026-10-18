@@ -20,8 +20,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Disposition de l'écran de séance en cours : une seule ligne de boutons dont
-/// « JE PEUX PAS » reste le plus large et le plus plein, « UTILISE-MOI » qui
+/// Disposition de l'écran de séance en cours : « JE PEUX PAS » plein et
+/// immobile, « UTILISE-MOI » sur sa propre ligne au-dessus, qui
 /// n'apparaît qu'après 2 minutes sans FAIL, réglages de volume derrière une
 /// icône, flèche de retour au comportement inchangé, mode immersif rétabli.
 void main() {
@@ -149,11 +149,12 @@ void main() {
       );
 
   Future<void> pumpScreen(WidgetTester tester, SessionScreen s,
-      {Size size = const Size(390, 850)}) async {
+      {Size size = const Size(390, 850),
+      Locale locale = const Locale('fr')}) async {
     await tester.binding.setSurfaceSize(size);
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(MaterialApp(
-      locale: const Locale('fr'),
+      locale: locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: s,
@@ -175,8 +176,8 @@ void main() {
   });
 
   testWidgets(
-      'boutons : une ligne, « JE PEUX PAS » plus large, plein et '
-      'tapable, « UTILISE-MOI » à côté et semi-transparent', (tester) async {
+      'boutons : « UTILISE-MOI » sur sa ligne au-dessus, semi-transparent, '
+      '« JE PEUX PAS » plein et tapable', (tester) async {
     await pumpScreen(tester, screen());
     ctrlOf(tester).debugAddPlayed(SessionController.useMeUnlockAfter);
     await settle(tester, 10);
@@ -184,8 +185,8 @@ void main() {
     expect(useMeButton, findsOneWidget);
     final fail = tester.getRect(failButton);
     final useMe = tester.getRect(useMeButton);
-    expect(fail.center.dy, closeTo(useMe.center.dy, 1));
-    expect(useMe.right, lessThanOrEqualTo(fail.left));
+    expect(useMe.bottom, lessThanOrEqualTo(fail.top));
+    expect(useMe.right, closeTo(fail.right, 0.5));
     expect(fail.width, greaterThan(useMe.width));
     expect(fail.height, inInclusiveRange(48, 64));
     final ctrl = ctrlOf(tester);
@@ -210,6 +211,38 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
     await tester.pumpWidget(const SizedBox());
   });
+
+  final instruction = find.byWidgetPredicate(
+      (w) => w.runtimeType.toString() == '_CurrentInstruction');
+  for (final lang in ['fr', 'en', 'de', 'es']) {
+    for (final width in [320.0, 390.0, 700.0]) {
+      testWidgets(
+          '« UTILISE-MOI » apparaît : « JE PEUX PAS » et la consigne ne '
+          'bougent pas ($lang, $width)', (tester) async {
+        await pumpScreen(tester, screen(),
+            size: Size(width, 850), locale: Locale(lang));
+        final failBefore = tester.getRect(failButton);
+        final instructionBefore = tester.getRect(instruction);
+        expect(useMeButton, findsNothing);
+
+        ctrlOf(tester).debugAddPlayed(SessionController.useMeUnlockAfter);
+        await settle(tester, 10);
+
+        expect(useMeButton, findsOneWidget);
+        expect(tester.getRect(failButton), failBefore);
+        expect(tester.getRect(instruction), instructionBefore);
+        final useMe = tester.getRect(useMeButton);
+        expect(useMe.bottom, lessThanOrEqualTo(failBefore.top));
+        expect(useMe.right, closeTo(failBefore.right, 0.5));
+        expect(useMe.top, greaterThanOrEqualTo(instructionBefore.bottom));
+        expect(useMe.height, greaterThanOrEqualTo(48));
+        expect(useMe.width, greaterThanOrEqualTo(48));
+        expect(useMe.height, lessThan(failBefore.height + 1));
+        expect(failBefore.height, greaterThanOrEqualTo(48));
+        await tester.pumpWidget(const SizedBox());
+      });
+    }
+  }
 
   testWidgets('règle des 2 minutes : sans FAIL, un FAIL remet à zéro',
       (tester) async {

@@ -405,6 +405,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
   bool _showSalivaBar = false;
   bool _showSessionControls = false;
   bool _settingsOpen = false;
+  static const double _useMeLineHeight = 56;
   bool _showModeBadge = false;
   bool _showTrajectoryDots = false;
   bool _showSkipSessionButton = false;
@@ -1087,45 +1088,47 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     );
   }
 
-  /// « JE PEUX PAS » reste en pleine opacité et plus large que « UTILISE-MOI »,
-  /// qui n'apparaît qu'une fois débloqué.
+  /// « JE PEUX PAS » garde la même place que « UTILISE-MOI » soit là ou non :
+  /// la ligne de ce dernier est réservée dès qu'il peut apparaître.
   Widget _buildActionRow(SessionController ctrl) {
     return ListenableBuilder(
       listenable: milestoneService,
       builder: (context, _) {
-        final showUseMe = widget.isCareer &&
+        final useMeAvailable = widget.isCareer &&
             widget.onRequestUpgrade != null &&
-            milestoneService.hasUnlock(UnlockKey.begLibre) &&
-            ctrl.useMeUnlocked;
-        return Row(
+            milestoneService.hasUnlock(UnlockKey.begLibre);
+        return Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            if (showUseMe) ...[
-              Flexible(
-                flex: 2,
-                child: TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0.0, end: 0.6),
-                  duration: const Duration(milliseconds: 500),
-                  curve: Curves.easeOut,
-                  builder: (_, v, child) => Opacity(opacity: v, child: child),
-                  child: _UseMeButton(
-                    key: const Key('session-useme-button'),
-                    enabled: ctrl.isRunning &&
-                        !ctrl.isFailFlowActive &&
-                        !_upgradeRequested &&
-                        !_upgradeInFlight,
-                    used: _upgradeRequested,
-                    onPressed: _onUpgrade,
-                  ),
+            if (useMeAvailable)
+              SizedBox(
+                width: double.infinity,
+                height: _useMeLineHeight,
+                child: Align(
+                  alignment: Alignment.topRight,
+                  child: ctrl.useMeUnlocked
+                      ? TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0.0, end: 0.6),
+                          duration: const Duration(milliseconds: 500),
+                          curve: Curves.easeOut,
+                          builder: (_, v, child) =>
+                              Opacity(opacity: v, child: child),
+                          child: _UseMeButton(
+                            key: const Key('session-useme-button'),
+                            enabled: ctrl.isRunning &&
+                                !ctrl.isFailFlowActive &&
+                                !_upgradeRequested &&
+                                !_upgradeInFlight,
+                            used: _upgradeRequested,
+                            onPressed: _onUpgrade,
+                          ),
+                        )
+                      : null,
                 ),
               ),
-              const SizedBox(width: 12),
-            ],
-            Expanded(
-              flex: 3,
-              child: _FailButton(
-                key: const Key('session-fail-button'),
-                controller: ctrl,
-              ),
+            _FailButton(
+              key: const Key('session-fail-button'),
+              controller: ctrl,
             ),
           ],
         );
@@ -1777,8 +1780,8 @@ class _UseMeButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final label = used ? t.sessionUseMeUsedLabel : t.sessionUseMeLabel;
-    return SizedBox(
-      width: double.infinity,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
       child: Material(
         color: enabled ? _color : _colorMuted.withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(16),
@@ -1786,7 +1789,7 @@ class _UseMeButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           onTap: enabled ? onPressed : null,
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: Row(
