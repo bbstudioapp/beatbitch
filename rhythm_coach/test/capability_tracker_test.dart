@@ -190,7 +190,6 @@ void main() {
       _tick(t, 20, swallow: SwallowMode.forbidden);
       _tick(t, 1, swallow: SwallowMode.allowed);
       _tick(t, 10, swallow: SwallowMode.forbidden);
-      t.onSalivaOverflow();
       _tick(t, 15, swallow: SwallowMode.forbidden);
       _tick(t, 1, swallow: SwallowMode.allowed);
       final report = t.finalizeReport();

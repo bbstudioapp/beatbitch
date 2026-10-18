@@ -256,23 +256,6 @@ void main() {
       expect(p.comfortOf(CapabilityAxis.gorgeApneeStreak), 24.0);
     });
 
-    test(
-        'débordement de salive → noswallow perd 15 % même si ratio < 1, pas '
-        'jusqu\'à la durée du débordement', () async {
-      final svc = CapabilityService();
-      await seed(svc, {CapabilityAxis.noswallowStreak: 120});
-      final attributed = await svc.commit(
-        const SessionCapabilityReport(
-            reached: {},
-            sessionCeilings: {CapabilityAxis.noswallowStreak: 60},
-            salivaOverflowed: true),
-        sessionIndex: 2,
-      );
-      expect(attributed, isNull);
-      final p = await svc.snapshotProfile();
-      expect(p.comfortOf(CapabilityAxis.noswallowStreak), closeTo(102, 1e-6));
-    });
-
     test('ratchet ↑ consolide la progression sur plusieurs sessions', () async {
       final svc = CapabilityService();
       await seed(svc, {CapabilityAxis.holdFullStreak: 30});

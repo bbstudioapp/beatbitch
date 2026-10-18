@@ -40,13 +40,11 @@ class SessionCapabilityReport {
   final Map<CapabilityAxis, double> reached;
   final Map<CapabilityAxis, double> sessionCeilings;
   final List<Map<CapabilityAxis, double>> failCeilings;
-  final bool salivaOverflowed;
 
   const SessionCapabilityReport({
     required this.reached,
     required this.sessionCeilings,
     this.failCeilings = const [],
-    this.salivaOverflowed = false,
   });
 
   bool get isEmpty => reached.isEmpty && sessionCeilings.isEmpty;
@@ -334,7 +332,6 @@ class CapabilityService {
       for (final frozen in report.failCeilings)
         ...CapabilityRegulator.accusedAxes(
             CapabilityRegulator.attributeTapOut(frozen, profile), frozen),
-      if (report.salivaOverflowed) CapabilityAxis.noswallowStreak,
     };
 
     for (final axis in CapabilityAxis.values) {

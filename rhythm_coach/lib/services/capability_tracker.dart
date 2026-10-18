@@ -19,7 +19,6 @@ class CapabilityTracker {
   double _holdThroat = 0;
   double _holdFull = 0;
   double _noswallow = 0;
-  bool _noswallowHadOverflow = false;
   double _biffleStreak = 0;
   double _lickStreak = 0;
   double _handStreak = 0;
@@ -30,7 +29,6 @@ class CapabilityTracker {
   final Map<CapabilityAxis, double> _reached = {};
   final Map<CapabilityAxis, double> _ceilings = {};
   final List<Map<CapabilityAxis, double>> _failCeilings = [];
-  bool _salivaOverflowed = false;
 
   Map<CapabilityAxis, double> get sessionCeilings =>
       Map.unmodifiable(_ceilings);
@@ -42,13 +40,11 @@ class CapabilityTracker {
     _apnea = _engagement = _motion = 0;
     _holdThroat = _holdFull = 0;
     _noswallow = 0;
-    _noswallowHadOverflow = false;
     _biffleStreak = _lickStreak = _handStreak = _effortNoBreath = 0;
     _crossingsAccum = 0;
     _reached.clear();
     _ceilings.clear();
     _failCeilings.clear();
-    _salivaOverflowed = false;
   }
 
   void onStepApplied({
@@ -115,11 +111,8 @@ class CapabilityTracker {
     if (swallowMode == SwallowMode.forbidden) {
       _noswallow += 1;
     } else if (_noswallow > 0) {
-      if (!_noswallowHadOverflow) {
-        _flushStreak(CapabilityAxis.noswallowStreak, _noswallow);
-      }
+      _flushStreak(CapabilityAxis.noswallowStreak, _noswallow);
       _noswallow = 0;
-      _noswallowHadOverflow = false;
     }
 
     final c = _config;
@@ -140,14 +133,6 @@ class CapabilityTracker {
     if (!_configRecordsLogged && _configSeconds >= sustainedRecordSeconds) {
       _configRecordsLogged = true;
       _logSustainedConfigRecords(c);
-    }
-  }
-
-  void onSalivaOverflow() {
-    if (_noswallow > 0) {
-      _noswallowHadOverflow = true;
-      _salivaOverflowed = true;
-      _ceilFrom(CapabilityAxis.noswallowStreak, _noswallow);
     }
   }
 
@@ -192,7 +177,6 @@ class CapabilityTracker {
     _apnea = _engagement = _motion = 0;
     _holdThroat = _holdFull = 0;
     _noswallow = 0;
-    _noswallowHadOverflow = false;
     _biffleStreak = _lickStreak = _handStreak = _effortNoBreath = 0;
     _config = null;
     _configSeconds = 0;
@@ -209,9 +193,7 @@ class CapabilityTracker {
     _flushStreak(CapabilityAxis.lickStreak, _lickStreak);
     _flushStreak(CapabilityAxis.handStreak, _handStreak);
     _flushStreak(CapabilityAxis.effortNoBreathStreak, _effortNoBreath);
-    if (_noswallow > 0 && !_noswallowHadOverflow) {
-      _flushStreak(CapabilityAxis.noswallowStreak, _noswallow);
-    }
+    _flushStreak(CapabilityAxis.noswallowStreak, _noswallow);
     final crossings = _crossingsAccum.floor();
     if (crossings > 0) {
       _reached[CapabilityAxis.gorgeCrossingsLifetime] = crossings.toDouble();
@@ -220,7 +202,6 @@ class CapabilityTracker {
       reached: Map.unmodifiable(_reached),
       sessionCeilings: Map.unmodifiable(_ceilings),
       failCeilings: List.unmodifiable(_failCeilings),
-      salivaOverflowed: _salivaOverflowed,
     );
     if (kDebugMode && !report.isEmpty) {
       debugPrint('[Capability] report reached=${report.reached} '

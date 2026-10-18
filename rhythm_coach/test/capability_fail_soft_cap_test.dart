@@ -273,7 +273,6 @@ void main() {
     final t = CapabilityTracker()..onSessionStart();
     t.onStepApplied(mode: SessionMode.hold, to: Position.throat, duration: 30);
     _tick(t, 10, swallow: SwallowMode.forbidden);
-    t.onSalivaOverflow();
     _tick(t, 5, swallow: SwallowMode.forbidden);
     t.onStepApplied(mode: SessionMode.breath, duration: 10);
     _tick(t, 5);
