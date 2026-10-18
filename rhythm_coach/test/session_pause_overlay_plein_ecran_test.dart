@@ -7,6 +7,7 @@ import 'package:beat_bitch/services/beep_engine.dart';
 import 'package:beat_bitch/services/punishment_loader.dart';
 import 'package:beat_bitch/services/random_comments_loader.dart';
 import 'package:beat_bitch/services/tts_service.dart';
+import 'package:beat_bitch/widgets/session_finale_overlay.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -82,14 +83,7 @@ void main() {
     }
   });
 
-  testWidgets("le voile de pause couvre tout l'écran, barre d'état comprise",
-      (tester) async {
-    tester.view.physicalSize = const Size(1080, 2400);
-    tester.view.devicePixelRatio = 1.0;
-    const statusBar = FakeViewPadding(top: 80, bottom: 48);
-    tester.view.padding = statusBar;
-    tester.view.viewPadding = statusBar;
-    addTearDown(tester.view.reset);
+  Future<void> pumpSession(WidgetTester tester) async {
     await tester.pumpWidget(MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
@@ -123,17 +117,28 @@ void main() {
         autoStart: true,
       ),
     ));
-    Future<void> settle() async {
-      for (var i = 0; i < 5; i++) {
-        await tester.runAsync(
-            () => Future<void>.delayed(const Duration(milliseconds: 100)));
-        await tester.pump(const Duration(milliseconds: 100));
-      }
-    }
+  }
 
-    await settle();
+  Future<void> settle(WidgetTester tester) async {
+    for (var i = 0; i < 5; i++) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 100)));
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+  }
+
+  testWidgets("le voile de pause couvre tout l'écran, barre d'état comprise",
+      (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    const statusBar = FakeViewPadding(top: 80, bottom: 48);
+    tester.view.padding = statusBar;
+    tester.view.viewPadding = statusBar;
+    addTearDown(tester.view.reset);
+    await pumpSession(tester);
+    await settle(tester);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
-    await settle();
+    await settle(tester);
 
     final veil = find.ancestor(
       of: find.byWidgetPredicate(
@@ -143,6 +148,27 @@ void main() {
     expect(veil, findsOneWidget);
     final rect = tester.getRect(veil);
     expect(rect, const Rect.fromLTWH(0, 0, 1080, 2400));
+  });
+
+  testWidgets('la finale garde son état à travers une pause puis une reprise',
+      (tester) async {
+    await pumpSession(tester);
+    await settle(tester);
+    final avant = tester.state(find.byType(SessionFinaleOverlay));
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await settle(tester);
+    final veil = find.byWidgetPredicate(
+        (w) => w is Icon && w.icon == Icons.play_arrow && w.size == 72);
+    expect(veil, findsOneWidget);
+    expect(tester.state(find.byType(SessionFinaleOverlay)), same(avant));
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await settle(tester);
+    await tester.tap(veil);
+    await settle(tester);
+    expect(veil, findsNothing);
+    expect(tester.state(find.byType(SessionFinaleOverlay)), same(avant));
   });
 }
 
