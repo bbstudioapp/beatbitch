@@ -413,6 +413,11 @@ int complementaryBeatIntervalMs({
 /// Le curseur est le point `t=0` de la trajectoire : une seule source pour
 /// les deux. `lastBeatAt`/`flipped` ne changent qu'à la réception d'un vrai
 /// `BeatEvent`, jamais sur une horloge murale libre.
+const _kLevelLabelShadows = [
+  Shadow(color: Color(0xB3000000), blurRadius: 3),
+  Shadow(color: Color(0x80000000), blurRadius: 1, offset: Offset(0, 1)),
+];
+
 class _PositionLadder extends StatefulWidget {
   final SessionMode mode;
   final Position from;
@@ -1007,12 +1012,13 @@ class _PositionLadderState extends State<_PositionLadder> {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: activeIndices.contains(i)
-                        ? FontWeight.w700
-                        : FontWeight.w400,
+                        ? FontWeight.w800
+                        : FontWeight.w600,
                     letterSpacing: 1,
                     color: activeIndices.contains(i)
-                        ? widget.color.withValues(alpha: 0.85)
-                        : AppTheme.textMuted.withValues(alpha: 0.45),
+                        ? widget.color
+                        : Colors.white.withValues(alpha: 0.9),
+                    shadows: _kLevelLabelShadows,
                   ),
                 ),
               ),
