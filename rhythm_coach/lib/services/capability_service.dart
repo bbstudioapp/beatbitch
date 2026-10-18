@@ -211,8 +211,6 @@ class CapabilityRegulator {
           comfort = comfort * kRatchetDownFactor;
         }
         sr = _ema(sr, 0.0);
-      } else {
-        sr = _ema(sr, 0.0, weight: 0.5);
       }
     } else if (reached != null) {
       final bool overshoot = isMinimize
