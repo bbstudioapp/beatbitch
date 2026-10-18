@@ -820,9 +820,9 @@ class _PositionLadderState extends State<_PositionLadder> {
 
   DateTime? _pausedAt;
 
-  /// Aucune image n'est construite en arrière-plan : la première qui montre
-  /// la pause arrive au retour dans l'appli. La pause date de l'instant où le
-  /// temps de séance s'est arrêté, pas de cette image.
+  /// En `hidden` et `paused`, Flutter ne construit plus d'image : la première
+  /// qui montre la pause peut n'arriver qu'au retour. La pause date donc de
+  /// l'arrêt du temps de séance, pas de cette image.
   DateTime? _lastFrameAt;
   Duration? _lastFrameElapsed;
 
