@@ -93,15 +93,20 @@ void main() {
       expect(h[1].axes['hold.full.streak']!.best, 30);
     });
 
-    test('rapport vide (séance qui n\'écrit pas le profil) → aucune entrée',
+    test(
+        'rapport vide (séance qui n\'écrit pas le profil) : pas de nouvelle entrée',
         () async {
-      await CapabilityService().commit(
-        const SessionCapabilityReport(reached: {}, sessionCeilings: {}),
-        sessionIndex: 3,
+      final svc = CapabilityService();
+      await svc.commit(
+        const SessionCapabilityReport(
+            reached: {CapabilityAxis.holdFullStreak: 20}, sessionCeilings: {}),
+        sessionIndex: 1,
       );
-      expect(await stored(), isEmpty);
-      expect((await SharedPreferences.getInstance()).containsKey('cap.history'),
-          isFalse);
+      await svc.commit(
+        const SessionCapabilityReport(reached: {}, sessionCeilings: {}),
+        sessionIndex: 2,
+      );
+      expect((await stored()).map((e) => e.sessionIndex), [1]);
     });
   });
 
