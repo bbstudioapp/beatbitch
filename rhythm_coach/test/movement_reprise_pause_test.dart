@@ -102,13 +102,15 @@ Widget _host(_Case k, _Engine engine,
     );
 
 /// Séance à 8 s, mise en pause 1 s plus tard pendant [pauseMs] de temps
-/// mural, puis 800 ms de reprise. Comme le moteur, un rythme émet son premier
-/// bip de reprise avant que l'écran ne lève la pause. Rend l'instant de séance
+/// mural, puis 800 ms de reprise. Pendant les [blindMs] qui précèdent la
+/// pause, la séance court sans aucune image. Comme le moteur, un rythme émet
+/// son premier bip de reprise avant que l'écran ne lève la pause. Rend l'instant de séance
 /// où la courbe quitte le step courant juste avant la pause et, pendant et
 /// après la pause, les images où elle le quitte à plus de 150 ms de cet
 /// instant.
 Future<(int?, Map<String, List<String>>)> _replay(
-    WidgetTester tester, _Case k, int pauseMs) async {
+    WidgetTester tester, _Case k, int pauseMs,
+    {int blindMs = 0}) async {
   const startElapsed = Duration(milliseconds: 8000);
   const pauseAtMs = 1000;
   final resumeAtMs = pauseAtMs + pauseMs;
@@ -162,6 +164,7 @@ Future<(int?, Map<String, List<String>>)> _replay(
     await tester
         .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 16)));
     final ms = wall.elapsedMilliseconds;
+    if (ms >= pauseAtMs - blindMs && ms < pauseAtMs) continue;
     final paused = ms >= pauseAtMs && ms < resumeAtMs;
     if (tickPaused && !paused) {
       beatOrigin = sessionNow();
@@ -200,15 +203,22 @@ Future<(int?, Map<String, List<String>>)> _replay(
 }
 
 void main() {
-  for (final (name, k, pauseMs) in [
-    ('tenue → rythme, pause longue', _holdThenRhythm, 3000),
-    ('rythme → tenue, pause longue', _rhythmThenHold, 3000),
-    ('tenue → rythme, pause courte', _holdThenRhythm, 400),
+  for (final (name, k, pauseMs, blindMs) in [
+    ('tenue → rythme, pause longue', _holdThenRhythm, 3000, 0),
+    ('rythme → tenue, pause longue', _rhythmThenHold, 3000, 0),
+    ('tenue → rythme, pause courte', _holdThenRhythm, 400, 0),
+    (
+      'tenue → rythme, 500 ms sans image avant la pause',
+      _holdThenRhythm,
+      3000,
+      500
+    ),
   ]) {
     testWidgets(
         '$name puis reprise : la courbe situe le step suivant au même instant '
         'de séance qu\'avant la pause', (tester) async {
-      final (referenceMs, d) = await _replay(tester, k, pauseMs);
+      final (referenceMs, d) =
+          await _replay(tester, k, pauseMs, blindMs: blindMs);
       // Le scénario est valide : avant la pause, la courbe quitte le step
       // courant vers l'instant où le moteur jouera le suivant.
       expect(referenceMs, closeTo(_start * 1000 + _gap.inMilliseconds, 400));
