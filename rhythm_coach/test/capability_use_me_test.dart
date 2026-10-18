@@ -105,4 +105,48 @@ void main() {
       expect(o.after.bestOf(a), o.before.bestOf(a), reason: a.storageKey);
     }
   });
+
+  test('T5b l\'axe useMe.held_streak n\'est jamais lu par le générateur',
+      () async {
+    List<Map<String, dynamic>> steps(CapabilityProfile p) =>
+        benchGen(100, 20 * 60, profile: p)
+            .session
+            .steps
+            .map((st) => st.toJson())
+            .toList();
+    final plain = await CapabilityService().snapshotProfile();
+    final seed = benchPrefsSeed();
+    seed['cap.useMe.held_streak.best'] = 999.0;
+    seed['cap.useMe.held_streak.comfort'] = 999.0;
+    SharedPreferences.setMockInitialValues(seed);
+    final withAxis = await CapabilityService().snapshotProfile();
+    expect(withAxis.bestOf(CapabilityAxis.useMeHeldStreak), 999,
+        reason: 'sonde non vide');
+    expect(steps(withAxis), steps(plain));
+  });
+
+  test('T8 profil existant, best gonflé compris : lu sans erreur, axe amorcé',
+      () async {
+    final seed = benchPrefsSeed();
+    seed['cap.rhythm.bpm_ceil.throat.best'] = 298.0;
+    seed['stats.max_use_me_sec'] = 240;
+    SharedPreferences.setMockInitialValues(seed);
+    final p = await CapabilityService().snapshotProfile();
+    expect(p.bestOf(CapabilityAxis.rhythmBpmCeilThroat), 298,
+        reason: 'le best gonflé est lu tel quel, sans réparation');
+    expect(p.bestOf(CapabilityAxis.useMeHeldStreak), 240);
+    expect(p.comfortOf(CapabilityAxis.useMeHeldStreak), 240);
+    expect(p.axesWithData, contains(CapabilityAxis.useMeHeldStreak));
+
+    (await SharedPreferences.getInstance()).setInt('stats.max_use_me_sec', 400);
+    final again = await CapabilityService().snapshotProfile();
+    expect(again.bestOf(CapabilityAxis.useMeHeldStreak), 240,
+        reason: 'amorçage unique');
+  });
+
+  test('T8b sans tenue passée : l\'axe reste vide', () async {
+    final p = await CapabilityService().snapshotProfile();
+    expect(p.stateOf(CapabilityAxis.useMeHeldStreak).hasData, isFalse);
+    expect(p.axesWithData, isNot(contains(CapabilityAxis.useMeHeldStreak)));
+  });
 }

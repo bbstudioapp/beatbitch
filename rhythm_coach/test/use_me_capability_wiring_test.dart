@@ -236,6 +236,19 @@ void main() {
     await ctrl.stop();
   }, timeout: const Timeout(Duration(seconds: 40)));
 
+  test('T5 tenue « Utilise-moi » sans FAIL : useMe.held_streak dans le profil',
+      () async {
+    final ctrl = buildController(_RecordingBeepEngine(), 9);
+    await ctrl.start();
+    await enterUseMe(ctrl);
+    await untilFinished(ctrl);
+    final after = await CapabilityService().snapshotProfile();
+    expect(
+        after.bestOf(CapabilityAxis.useMeHeldStreak), greaterThanOrEqualTo(6),
+        reason: 'la tenue sans FAIL entre dans le rapport avant le commit');
+    expect(after.bestOf(CapabilityAxis.rhythmBpmCeilThroat), 105);
+  }, timeout: const Timeout(Duration(seconds: 40)));
+
   test(
       'T6c FAIL sans suite normale (hook null) : le step 280 BPM rejoué par '
       '_restorePreviousLoop reste « Utilise-moi »', () async {
