@@ -6,6 +6,7 @@ import '../career/models/coach_catalog.dart';
 import '../career/models/specialization.dart';
 import '../models/badge.dart';
 import 'capability_axis.dart';
+import 'capability_history.dart';
 import 'locale_service.dart';
 import 'profile_reconciliation.dart';
 import 'tts_service.dart';
@@ -46,6 +47,7 @@ class DiagnosticImportService {
         'stats.humiliation_level', _map(payload['humiliation'])['careerScore']);
     _double('stats.obedience_level', _map(payload['obedience'])['level']);
     _capabilities(_map(payload['capabilities']));
+    _capabilityHistory(payload['capabilityHistory']);
     _milestones(_map(payload['milestones']));
     _badges(_map(payload['badges']));
     _coach(_map(payload['coach']));
@@ -117,6 +119,13 @@ class DiagnosticImportService {
     }
     _bool('cap.legacy_migrated', j['legacyMigrated']);
     _bool('cap.use_me_held_migrated', j['useMeHeldMigrated']);
+  }
+
+  void _capabilityHistory(Object? j) {
+    final entries = CapabilityHistory.fromJson(j);
+    if (entries.isEmpty) return;
+    _string(CapabilityHistory.prefsKey,
+        jsonEncode(CapabilityHistory.toJson(entries)));
   }
 
   void _milestones(Map<String, dynamic> j) {
@@ -252,6 +261,7 @@ class DiagnosticImportService {
       'stats.obedience_level',
       'cap.legacy_migrated',
       'cap.use_me_held_migrated',
+      CapabilityHistory.prefsKey,
       for (final axis in CapabilityAxis.values) ...[
         'cap.${axis.storageKey}.best',
         'cap.${axis.storageKey}.comfort',

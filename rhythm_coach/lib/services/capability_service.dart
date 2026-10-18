@@ -1,6 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'capability_axis.dart';
+import 'capability_history.dart';
 
 /// État persistant d'un axe du profil de capacités.
 ///
@@ -470,6 +471,11 @@ class CapabilityRegulator {
 /// Mode **carrière uniquement** : Custom et scénarios JSON n'écrivent rien
 /// (le `CapabilityTracker` n'y est tout simplement pas câblé).
 class CapabilityService {
+  final DateTime Function() _clock;
+
+  CapabilityService({DateTime Function()? clock})
+      : _clock = clock ?? DateTime.now;
+
   static const String _prefix = 'cap.';
   static const String _suffixBest = '.best';
   static const String _suffixComfort = '.comfort';
@@ -585,7 +591,35 @@ class CapabilityService {
         lastSeenSession: next.lastSeenSession,
       );
     }
+    await _appendHistory(prefs, sessionIndex);
     return attributed;
+  }
+
+  /// Une entrée d'historique par `commit` : l'état de chaque axe porteur de
+  /// données une fois le profil mis à jour. Sans axe, rien à noter. Un échec
+  /// d'écriture ne doit jamais faire échouer la clôture de séance.
+  Future<void> _appendHistory(SharedPreferences prefs, int sessionIndex) async {
+    final axes = <String, CapabilityHistoryAxis>{};
+    for (final axis in CapabilityAxis.values) {
+      final s = _readState(prefs, axis);
+      if (s.best == null || s.comfort == null) continue;
+      axes[axis.storageKey] = CapabilityHistoryAxis(
+        best: s.best!,
+        comfort: s.comfort!,
+        successRate: s.successRate,
+      );
+    }
+    if (axes.isEmpty) return;
+    try {
+      await CapabilityHistory.append(
+        prefs,
+        CapabilityHistoryEntry(
+          at: _clock().toUtc(),
+          sessionIndex: sessionIndex,
+          axes: axes,
+        ),
+      );
+    } catch (_) {}
   }
 
   /// Efface tout le profil de capacités (bouton « tout remettre à zéro » du
@@ -602,6 +636,7 @@ class CapabilityService {
     }
     await prefs.remove(_kLegacyMigrated);
     await prefs.remove(_kUseMeHeldMigrated);
+    await prefs.remove(CapabilityHistory.prefsKey);
   }
 
   // ── interne ───────────────────────────────────────────────────────────

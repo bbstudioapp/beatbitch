@@ -8,6 +8,7 @@ import '../career/models/coach_catalog.dart';
 import '../career/models/specialization.dart';
 import '../models/badge.dart';
 import 'capability_axis.dart';
+import 'capability_history.dart';
 import 'diagnostic_export_integrity.dart';
 import 'locale_service.dart';
 import 'profile_reconciliation.dart';
@@ -121,6 +122,8 @@ class DiagnosticExportService {
       'humiliation': _humiliation(),
       'obedience': _obedience(),
       'capabilities': _capabilities(),
+      'capabilityHistory':
+          CapabilityHistory.toJson(CapabilityHistory.read(_prefs)),
       'milestones': _milestones(),
       'badges': _badges(),
       'coach': _coach(),
