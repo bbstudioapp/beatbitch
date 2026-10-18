@@ -497,4 +497,26 @@ void main() {
             before, after, report, {CapabilityAxis.effortNoBreathStreak: 102}),
         isEmpty);
   });
+
+  test(
+      'FAIL non accusé, axe non joué depuis longtemps : son confort ne bouge '
+      'pas', () async {
+    final svc = CapabilityService();
+    final before = await _seedProfile(svc);
+    final t = CapabilityTracker()..onSessionStart();
+    t.onStepApplied(mode: SessionMode.hold, to: Position.throat, duration: 30);
+    _tick(t, 10, swallow: SwallowMode.forbidden);
+    t.onFail();
+    final report = t.finalizeReport();
+    expect(report.sessionCeilings[CapabilityAxis.holdThroatStreak], 10.0);
+    expect(
+        report.reached.containsKey(CapabilityAxis.holdThroatStreak), isFalse);
+
+    await svc.commit(report, sessionIndex: 10);
+    final after = await svc.snapshotProfile();
+
+    expect(
+        _offRule(before, after, report, {CapabilityAxis.noswallowStreak: 102}),
+        isEmpty);
+  });
 }

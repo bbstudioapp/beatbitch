@@ -196,6 +196,17 @@ void main() {
       expect(report.sessionCeilings.containsKey(CapabilityAxis.noswallowStreak),
           isFalse);
     });
+
+    test('noswallow : un FAIL remet le streak à zéro', () {
+      final t = CapabilityTracker()..onSessionStart();
+      t.onStepApplied(
+          mode: SessionMode.hold, to: Position.throat, duration: 30);
+      _tick(t, 10, swallow: SwallowMode.forbidden);
+      t.onFail();
+      _tick(t, 5, swallow: SwallowMode.forbidden);
+      final report = t.finalizeReport();
+      expect(report.reached[CapabilityAxis.noswallowStreak], 5.0);
+    });
   });
 
   group('CapabilityService', () {
