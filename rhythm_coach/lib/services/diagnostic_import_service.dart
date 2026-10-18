@@ -93,6 +93,7 @@ class DiagnosticImportService {
     _int('stats.sessions_no_fail_streak', j['sessionsNoFailStreak']);
     _int('stats.modes_used_mask', j['modesUsedMask']);
     _int('stats.max_hold_full_atomic', j['maxHoldFullAtomic']);
+    _int('stats.max_use_me_sec', j['maxUseMeSec']);
     _int('stats.last_session_day', j['lastSessionDay']);
     _int('stats.daily_streak', j['dailyStreak']);
     _int('stats.encores_asked', j['encoresAsked']);
@@ -115,6 +116,7 @@ class DiagnosticImportService {
       _int('$base.seen', a['lastSeenSession']);
     }
     _bool('cap.legacy_migrated', j['legacyMigrated']);
+    _bool('cap.use_me_held_migrated', j['useMeHeldMigrated']);
   }
 
   void _milestones(Map<String, dynamic> j) {
@@ -236,6 +238,7 @@ class DiagnosticImportService {
       'stats.sessions_no_fail_streak',
       'stats.modes_used_mask',
       'stats.max_hold_full_atomic',
+      'stats.max_use_me_sec',
       'stats.last_session_day',
       'stats.daily_streak',
       'stats.encores_asked',
@@ -248,6 +251,7 @@ class DiagnosticImportService {
       'stats.humiliation_level',
       'stats.obedience_level',
       'cap.legacy_migrated',
+      'cap.use_me_held_migrated',
       for (final axis in CapabilityAxis.values) ...[
         'cap.${axis.storageKey}.best',
         'cap.${axis.storageKey}.comfort',

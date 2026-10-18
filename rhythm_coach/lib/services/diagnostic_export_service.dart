@@ -250,6 +250,7 @@ class DiagnosticExportService {
             _prefs.getInt('stats.sessions_no_fail_streak') ?? 0,
         'modesUsedMask': _prefs.getInt('stats.modes_used_mask') ?? 0,
         'maxHoldFullAtomic': _prefs.getInt('stats.max_hold_full_atomic') ?? 0,
+        'maxUseMeSec': _prefs.getInt('stats.max_use_me_sec') ?? 0,
         'lastSessionDay': _prefs.getInt('stats.last_session_day'),
         'dailyStreak': _prefs.getInt('stats.daily_streak') ?? 0,
         'encoresAsked': _prefs.getInt('stats.encores_asked') ?? 0,
@@ -292,6 +293,7 @@ class DiagnosticExportService {
     return <String, dynamic>{
       'axes': axes,
       'legacyMigrated': _prefs.getBool('cap.legacy_migrated') ?? false,
+      'useMeHeldMigrated': _prefs.getBool('cap.use_me_held_migrated') ?? false,
     };
   }
 

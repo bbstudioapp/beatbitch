@@ -1,8 +1,12 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:beat_bitch/services/capability_axis.dart';
+import 'package:beat_bitch/services/capability_service.dart';
+import 'package:beat_bitch/services/diagnostic_export_service.dart';
 import 'package:beat_bitch/services/diagnostic_import_service.dart';
 
 void main() {
@@ -69,5 +73,82 @@ void main() {
     expect(prefs.getInt('badge.tier.throatQueen'), 2);
 
     expect(prefs.getBool('pref.scripted_breaks'), true);
+  });
+
+  test('restaure le drapeau d\'amorçage et la tenue max « Utilise-moi »',
+      () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final prefs = await SharedPreferences.getInstance();
+    await DiagnosticImportService(prefs).apply(<String, dynamic>{
+      'capabilities': {
+        'axes': {
+          'useMe.held_streak': {
+            'best': 300.0,
+            'comfort': 300.0,
+            'successRate': 0.5,
+            'lastSeenSession': -1,
+          },
+        },
+        'useMeHeldMigrated': true,
+      },
+      'stats': {'maxUseMeSec': 300},
+    });
+
+    expect(prefs.getBool('cap.use_me_held_migrated'), true);
+    expect(prefs.getInt('stats.max_use_me_sec'), 300);
+  });
+
+  test(
+      'un export sans amorçage : l\'axe ne dépend pas des stats de l\'appareil',
+      () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'cap.use_me_held_migrated': true,
+      'stats.max_use_me_sec': 500,
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await DiagnosticImportService(prefs).apply(<String, dynamic>{
+      'capabilities': {'axes': {}},
+    });
+
+    expect(prefs.getBool('cap.use_me_held_migrated'), isNull);
+    expect(prefs.getInt('stats.max_use_me_sec'), isNull);
+    final profile = await CapabilityService().snapshotProfile();
+    expect(profile.stateOf(CapabilityAxis.useMeHeldStreak).hasData, isFalse);
+  });
+
+  test('aller-retour export → import : l\'axe « Utilise-moi » suit la joueuse',
+      () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'cap.use_me_held_migrated': true,
+      'stats.max_use_me_sec': 240,
+      'cap.useMe.held_streak.best': 240.0,
+      'cap.useMe.held_streak.comfort': 240.0,
+    });
+    final source = DiagnosticExportService(
+      prefs: await SharedPreferences.getInstance(),
+      packageInfo: PackageInfo(
+          appName: 'BeatBitch',
+          packageName: 'app.bbstudio.beatbitch',
+          version: '0.7.0',
+          buildNumber: '1'),
+      platform: 'android',
+      locale: 'fr',
+      exportedAt: DateTime.utc(2026, 10, 18),
+    );
+    final exported = json.decode(
+            json.encode(source.buildPayload(const DiagnosticExportOptions())))
+        as Map<String, dynamic>;
+
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'stats.max_use_me_sec': 999,
+    });
+    await DiagnosticImportService(await SharedPreferences.getInstance())
+        .apply(exported);
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getBool('cap.use_me_held_migrated'), true);
+    expect(prefs.getInt('stats.max_use_me_sec'), 240);
+    final profile = await CapabilityService().snapshotProfile();
+    expect(profile.bestOf(CapabilityAxis.useMeHeldStreak), 240);
   });
 }
