@@ -9,10 +9,13 @@ import 'package:beat_bitch/models/session.dart';
 import 'package:beat_bitch/models/session_step.dart';
 import 'package:beat_bitch/screens/session_screen.dart';
 import 'package:beat_bitch/services/ambience_engine.dart';
+import 'package:beat_bitch/services/backgrounds_loader.dart';
+import 'package:beat_bitch/services/backgrounds_service.dart';
 import 'package:beat_bitch/services/beep_engine.dart';
 import 'package:beat_bitch/services/punishment_loader.dart';
 import 'package:beat_bitch/services/random_comments_loader.dart';
 import 'package:beat_bitch/services/tts_service.dart';
+import 'package:beat_bitch/widgets/mode_badge_row.dart';
 import 'package:beat_bitch/widgets/session_background.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -116,6 +119,7 @@ void main() {
     TtsService? tts,
     AmbienceEngine? ambience,
     bool career = true,
+    String? intro,
     Future<void> Function(SessionController)? onEncore,
   }) =>
       SessionScreen(
@@ -143,14 +147,16 @@ void main() {
         ),
         isCareer: career,
         onRequestUpgrade: (_) async {},
-        autoStart: true,
+        introText: intro,
+        autoStart: intro == null,
         autoContinueOnFinish: onEncore != null,
         onRequestEncore: onEncore,
       );
 
   Future<void> pumpScreen(WidgetTester tester, SessionScreen s,
       {Size size = const Size(390, 850),
-      Locale locale = const Locale('fr')}) async {
+      Locale locale = const Locale('fr'),
+      bool waitRunning = true}) async {
     await tester.binding.setSurfaceSize(size);
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(MaterialApp(
@@ -160,7 +166,7 @@ void main() {
       home: s,
     ));
     await settle(tester);
-    for (var i = 0; i < 60 && !ctrlOf(tester).isRunning; i++) {
+    for (var i = 0; waitRunning && i < 60 && !ctrlOf(tester).isRunning; i++) {
       await settle(tester, 1);
     }
   }
@@ -408,14 +414,85 @@ void main() {
     expect(find.text('accueil'), findsOneWidget);
   });
 
-  testWidgets('fond : dégradé bas seul en séance, voile uniforme ailleurs',
+  bool veilOnly(WidgetTester tester) => tester
+      .widget<SessionBackground>(find.byType(SessionBackground))
+      .bottomVeilOnly;
+
+  testWidgets('fond : voile uniforme à l\'intro', (tester) async {
+    await pumpScreen(tester, screen(intro: 'Bonjour'), waitRunning: false);
+    expect(find.byType(AppBar), findsOneWidget);
+    expect(veilOnly(tester), isFalse);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('fond : dégradé bas seul en séance, voile uniforme à la fin',
+      (tester) async {
+    await pumpScreen(tester, screen(career: false));
+    expect(veilOnly(tester), isTrue);
+
+    await tester.runAsync(ctrlOf(tester).debugFinishSuccess);
+    await settle(tester, 3);
+    expect(ctrlOf(tester).isFinished, isTrue);
+    expect(veilOnly(tester), isFalse);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('fond : le dégradé noircit le bas, le voile uniforme couvre tout',
+      (tester) async {
+    BackgroundsService.instance.current.value = const BackgroundEntry(
+        id: 'v2-test',
+        type: BackgroundMediaType.image,
+        path: 'assets/inexistant.png');
+    addTearDown(() => BackgroundsService.instance.current.value = null);
+
+    Future<BoxDecoration> veil({required bool bottomOnly}) async {
+      await tester.pumpWidget(MaterialApp(
+        home: SizedBox.expand(
+            child: SessionBackground(bottomVeilOnly: bottomOnly)),
+      ));
+      await tester.pump(const Duration(seconds: 1));
+      final boxes = find.descendant(
+          of: find.byType(SessionBackground),
+          matching: find.byType(DecoratedBox));
+      return (boxes.evaluate().last.widget as DecoratedBox).decoration
+          as BoxDecoration;
+    }
+
+    final gradient = await veil(bottomOnly: true);
+    expect(gradient.color, isNull);
+    final colors = (gradient.gradient as LinearGradient);
+    expect(colors.begin, Alignment.topCenter);
+    expect(colors.end, Alignment.bottomCenter);
+    expect(colors.colors.first.a, 0);
+    expect(colors.colors.last.a, greaterThan(0.8));
+
+    final uniform = await veil(bottomOnly: false);
+    expect(uniform.gradient, isNull);
+    expect(uniform.color!.a, closeTo(0.45, 0.01));
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('retour d\'arrière-plan : le mode immersif est repris',
       (tester) async {
     await pumpScreen(tester, screen());
-    expect(
-        tester
-            .widget<SessionBackground>(find.byType(SessionBackground))
-            .bottomVeilOnly,
-        isTrue);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await settle(tester, 2);
+    uiModes.clear();
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await settle(tester, 2);
+    expect(uiModes, contains('SystemUiMode.immersiveSticky'));
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('pastille du mode : semi-transparente', (tester) async {
+    await pumpScreen(tester, screen());
+    final opacity = tester.widget<Opacity>(find
+        .descendant(
+            of: find.byType(ModeBadgeRow), matching: find.byType(Opacity))
+        .first);
+    expect(opacity.opacity, inExclusiveRange(0.5, 1.0));
+    await tester.pumpWidget(const SizedBox());
   });
 }
 

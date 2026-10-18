@@ -422,6 +422,20 @@ void main() {
   }, timeout: const Timeout(Duration(seconds: 20)));
 
   test(
+      'JE PEUX PAS : remet à zéro le compteur des 2 minutes d\'« UTILISE-MOI »',
+      () async {
+    final t = build();
+    await t.ctrl.start();
+    await at(t.port, t.ctrl, 75);
+    t.ctrl.debugAddPlayed(SessionController.useMeUnlockAfter);
+    expect(t.ctrl.useMeUnlocked, isTrue);
+
+    await t.ctrl.triggerFail();
+    expect(t.ctrl.useMeUnlocked, isFalse);
+    await t.ctrl.stop();
+  }, timeout: const Timeout(Duration(seconds: 20)));
+
+  test(
       'JE PEUX PAS : la musique ne s\'arrête pas, ni punition ni phrase, les '
       'consignes du souffle sont perdues et la séance reprend sur le step '
       'atteint', () async {
