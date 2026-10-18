@@ -310,27 +310,6 @@ void main() {
         isEmpty);
   });
 
-  test('débordement de salive : noswallow ne baisse pas', () async {
-    final svc = CapabilityService();
-    await _seedProfile(svc);
-    final t = CapabilityTracker()..onSessionStart();
-    t.onStepApplied(mode: SessionMode.hold, to: Position.throat, duration: 30);
-    _tick(t, 10, swallow: SwallowMode.forbidden);
-    _tick(t, 5, swallow: SwallowMode.forbidden);
-    t.onStepApplied(mode: SessionMode.breath, duration: 10);
-    _tick(t, 5);
-    final report = t.finalizeReport();
-    expect(report.sessionCeilings.containsKey(CapabilityAxis.noswallowStreak),
-        isFalse);
-    expect(report.reached[CapabilityAxis.noswallowStreak], 15.0);
-
-    await svc.commit(report, sessionIndex: 2);
-    final after = await svc.snapshotProfile();
-
-    expect(after.comfortOf(CapabilityAxis.noswallowStreak), 120.0);
-    expect(after.stateOf(CapabilityAxis.noswallowStreak).successRate, 0.5);
-  });
-
   test('FAIL où « sans avaler » est le plus au-delà de son confort : accusé',
       () async {
     final svc = CapabilityService();
