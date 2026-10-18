@@ -171,4 +171,43 @@ void main() {
     expect(after.stateOf(CapabilityAxis.useMeHeldStreak).hasData, isFalse);
     expect(after.axesWithData, isEmpty);
   });
+
+  group('T11 le changement de régime clôt les streaks vivants', () {
+    void secondes(CapabilityTracker tr, int n) {
+      for (var i = 0; i < n; i++) {
+        tr.onTickSecond(swallowMode: SwallowMode.allowed);
+      }
+    }
+
+    void gorge(CapabilityTracker tr, {required bool useMe}) => tr.onStepApplied(
+          mode: SessionMode.rhythm,
+          from: Position.head,
+          to: Position.throat,
+          bpm: useMe ? 280 : 100,
+          useMe: useMe,
+        );
+
+    test('normal → « Utilise-moi » : le streak normal reste au normal', () {
+      final tr = CapabilityTracker()..onSessionStart();
+      gorge(tr, useMe: false);
+      secondes(tr, 20);
+      gorge(tr, useMe: true);
+      secondes(tr, 30);
+      final r = tr.finalizeReport();
+      expect(r.reached[CapabilityAxis.gorgeEngagementStreak], 20);
+      expect(r.useMeReached[CapabilityAxis.gorgeEngagementStreak], 30);
+    });
+
+    test('« Utilise-moi » → normal : le streak subi ne gonfle pas le normal',
+        () {
+      final tr = CapabilityTracker()..onSessionStart();
+      gorge(tr, useMe: true);
+      secondes(tr, 30);
+      gorge(tr, useMe: false);
+      secondes(tr, 10);
+      final r = tr.finalizeReport();
+      expect(r.useMeReached[CapabilityAxis.gorgeEngagementStreak], 30);
+      expect(r.reached[CapabilityAxis.gorgeEngagementStreak], 10);
+    });
+  });
 }
