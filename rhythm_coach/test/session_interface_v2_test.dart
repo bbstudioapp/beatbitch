@@ -119,6 +119,7 @@ void main() {
     TtsService? tts,
     AmbienceEngine? ambience,
     bool career = true,
+    bool upgrade = true,
     String? intro,
     Future<void> Function(SessionController)? onEncore,
   }) =>
@@ -146,7 +147,7 @@ void main() {
           scriptedCooldownSeconds: 4,
         ),
         isCareer: career,
-        onRequestUpgrade: (_) async {},
+        onRequestUpgrade: upgrade ? (_) async {} : null,
         introText: intro,
         autoStart: intro == null,
         autoContinueOnFinish: onEncore != null,
@@ -289,6 +290,51 @@ void main() {
       await tester.runAsync(ctrlOf(tester).stop);
       await tester.pump(const Duration(milliseconds: 200));
       await tester.pumpWidget(const SizedBox());
+    });
+  }
+
+  for (final size in const [Size(390, 850), Size(568, 320)]) {
+    testWidgets(
+        'aucune place réservée à « UTILISE-MOI » hors carrière avec '
+        'begLibre (${size.width.toInt()}×${size.height.toInt()})',
+        (tester) async {
+      Future<(double gap, double width)> measure({
+        bool career = true,
+        bool upgrade = true,
+        bool begLibre = true,
+      }) async {
+        milestoneService
+            .setSessionUnlocks(begLibre ? {UnlockKey.begLibre} : <UnlockKey>{});
+        await pumpScreen(tester, screen(career: career, upgrade: upgrade),
+            size: size);
+        final fail = tester.getRect(failButton);
+        final gap = fail.top - tester.getRect(instruction).bottom;
+        final width = fail.width;
+        await tester.runAsync(ctrlOf(tester).stop);
+        await tester.pump(const Duration(milliseconds: 200));
+        await tester.pumpWidget(const SizedBox());
+        return (gap, width);
+      }
+
+      final reserved = await measure();
+      final custom = await measure(career: false);
+      final surprise = await measure(upgrade: false);
+      final noBegLibre = await measure(begLibre: false);
+
+      final tall = size.height > 440;
+      for (final (name, other) in [
+        ('Custom', custom),
+        ('routeur de surprise', surprise),
+        ('sans begLibre', noBegLibre),
+      ]) {
+        expect(other.$1, closeTo(custom.$1, 0.01), reason: name);
+        expect(other.$2, closeTo(custom.$2, 0.01), reason: name);
+        if (tall) {
+          expect(reserved.$1 - other.$1, closeTo(56, 0.01), reason: name);
+        } else {
+          expect(other.$2, greaterThan(reserved.$2 + 100), reason: name);
+        }
+      }
     });
   }
 
