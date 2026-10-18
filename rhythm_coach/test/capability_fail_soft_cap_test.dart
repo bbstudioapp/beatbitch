@@ -269,8 +269,9 @@ void main() {
         isEmpty);
   });
 
-  test('FAIL en « sans avaler » sur une tenue trop longue : les deux baissent',
-      () async {
+  test(
+      'FAIL en « sans avaler » sur une tenue trop longue : seul noswallow '
+      'baisse', () async {
     final svc = CapabilityService();
     final before = await _seedProfile(svc);
     final t = CapabilityTracker()..onSessionStart();
@@ -283,16 +284,13 @@ void main() {
     final after = await svc.snapshotProfile();
 
     expect(
-        _offRule(before, after, report, {
-          CapabilityAxis.holdThroatStreak: 18.7,
-          CapabilityAxis.noswallowStreak: 102,
-        }),
+        _offRule(before, after, report, {CapabilityAxis.noswallowStreak: 102}),
         isEmpty);
   });
 
   test(
       'FAIL où « sans avaler » dépasse le plus : la tenue au-delà de son '
-      'confort baisse aussi', () async {
+      'confort ne baisse pas', () async {
     final svc = CapabilityService();
     final before = await _seedProfile(svc);
     final t = CapabilityTracker()..onSessionStart();
@@ -308,10 +306,7 @@ void main() {
     final after = await svc.snapshotProfile();
 
     expect(
-        _offRule(before, after, report, {
-          CapabilityAxis.holdThroatStreak: 18.7,
-          CapabilityAxis.noswallowStreak: 102,
-        }),
+        _offRule(before, after, report, {CapabilityAxis.noswallowStreak: 102}),
         isEmpty);
   });
 
@@ -351,6 +346,172 @@ void main() {
 
     expect(
         _offRule(before, after, report, {CapabilityAxis.noswallowStreak: 102}),
+        isEmpty);
+  });
+
+  test(
+      'FAIL non accusé : un record de la séance fait monter l\'axe figé comme '
+      'sans FAIL', () async {
+    final svc = CapabilityService();
+    await _seedProfile(svc);
+    final t = CapabilityTracker()..onSessionStart();
+    t.onStepApplied(mode: SessionMode.hold, to: Position.throat, duration: 30);
+    _tick(t, 30);
+    t.onStepApplied(mode: SessionMode.breath, duration: 10);
+    _tick(t, 10);
+    t.onStepApplied(mode: SessionMode.hold, to: Position.throat, duration: 30);
+    _tick(t, 5);
+    t.onFail();
+    final report = t.finalizeReport();
+    expect(report.sessionCeilings[CapabilityAxis.holdThroatStreak], 5.0);
+    expect(report.reached[CapabilityAxis.holdThroatStreak], 30.0);
+
+    expect(await svc.commit(report, sessionIndex: 2), isNull);
+    final after = await svc.snapshotProfile();
+
+    const gain = CapabilityRegulator.kRatchetUpGainMin +
+        (CapabilityRegulator.kRatchetUpGainMax -
+                CapabilityRegulator.kRatchetUpGainMin) *
+            0.5;
+    expect(after.comfortOf(CapabilityAxis.holdThroatStreak),
+        closeTo(22 * (1 + gain), 1e-9));
+    expect(after.stateOf(CapabilityAxis.holdThroatStreak).successRate,
+        closeTo(0.65, 1e-9));
+  });
+
+  test('FAIL accusé : un record de la séance ne fait pas monter l\'axe accusé',
+      () async {
+    final svc = CapabilityService();
+    await _seedProfile(svc);
+    final t = CapabilityTracker()..onSessionStart();
+    t.onStepApplied(mode: SessionMode.hold, to: Position.throat, duration: 30);
+    _tick(t, 30);
+    t.onStepApplied(mode: SessionMode.breath, duration: 10);
+    _tick(t, 10);
+    t.onStepApplied(mode: SessionMode.hold, to: Position.throat, duration: 30);
+    _tick(t, 25);
+    t.onFail();
+    final report = t.finalizeReport();
+    expect(report.reached[CapabilityAxis.holdThroatStreak], 30.0);
+
+    expect(await svc.commit(report, sessionIndex: 2),
+        CapabilityAxis.holdThroatStreak);
+    final after = await svc.snapshotProfile();
+
+    expect(after.comfortOf(CapabilityAxis.holdThroatStreak),
+        closeTo(22 * CapabilityRegulator.kRatchetDownFactor, 1e-9));
+  });
+
+  test(
+      'deux FAIL de rythme profond : la vitesse franchissante figée par le 1ᵉʳ '
+      'sans être accusée n\'est pas entraînée par le groupe du 2ᵉ', () async {
+    final svc = CapabilityService();
+    final before = await _seedProfile(svc);
+    final t = CapabilityTracker()..onSessionStart();
+    t.onStepApplied(
+        mode: SessionMode.rhythm,
+        from: Position.mid,
+        to: Position.throat,
+        bpm: 50,
+        duration: 30);
+    _tick(t, 6);
+    t.onFail();
+    t.onStepApplied(
+        mode: SessionMode.rhythm,
+        from: Position.throat,
+        to: Position.throat,
+        bpm: 112,
+        duration: 30);
+    _tick(t, 2);
+    t.onFail();
+    final report = t.finalizeReport();
+    expect(report.failCeilings.last
+        .containsKey(CapabilityAxis.gorgeCrossingsBpmThroat), isFalse);
+    expect(report.sessionCeilings[CapabilityAxis.gorgeCrossingsBpmThroat], 50.0);
+
+    await svc.commit(report, sessionIndex: 2);
+    final after = await svc.snapshotProfile();
+
+    expect(
+        _offRule(before, after, report, {
+          CapabilityAxis.rhythmBpmCeilThroat: 85,
+          CapabilityAxis.rhythmDepthMax: 2,
+        }),
+        isEmpty);
+  });
+
+  test(
+      'FAIL dû à la durée en gorge sur un rythme profond lent : seul '
+      'l\'engagement est accusé', () async {
+    final svc = CapabilityService();
+    final before = await _seedProfile(svc);
+    final t = CapabilityTracker()..onSessionStart();
+    t.onStepApplied(mode: SessionMode.hold, to: Position.throat, duration: 50);
+    _tick(t, 50);
+    t.onStepApplied(
+        mode: SessionMode.rhythm,
+        from: Position.mid,
+        to: Position.throat,
+        bpm: 50,
+        duration: 90);
+    _tick(t, 80);
+    t.onFail();
+    final report = t.finalizeReport();
+    expect(report.sessionCeilings[CapabilityAxis.gorgeEngagementStreak], 130.0);
+
+    expect(await svc.commit(report, sessionIndex: 2),
+        CapabilityAxis.gorgeEngagementStreak);
+    final after = await svc.snapshotProfile();
+
+    expect(
+        _offRule(before, after, report,
+            {CapabilityAxis.gorgeEngagementStreak: 51}),
+        isEmpty);
+  });
+
+  test('FAIL en apnée sur un rythme en gorge lent : seule l\'apnée est accusée',
+      () async {
+    final svc = CapabilityService();
+    final before = await _seedProfile(svc);
+    final t = CapabilityTracker()..onSessionStart();
+    t.onStepApplied(
+        mode: SessionMode.rhythm,
+        from: Position.throat,
+        to: Position.throat,
+        bpm: 50,
+        duration: 60);
+    _tick(t, 40);
+    t.onFail();
+    final report = t.finalizeReport();
+    expect(report.sessionCeilings[CapabilityAxis.gorgeApneeStreak], 40.0);
+
+    expect(await svc.commit(report, sessionIndex: 2),
+        CapabilityAxis.gorgeApneeStreak);
+    final after = await svc.snapshotProfile();
+
+    expect(
+        _offRule(before, after, report, {CapabilityAxis.gorgeApneeStreak: 25.5}),
+        isEmpty);
+  });
+
+  test('FAIL après un long effort sans souffle : seul cet effort est accusé',
+      () async {
+    final svc = CapabilityService();
+    final before = await _seedProfile(svc);
+    final t = CapabilityTracker()..onSessionStart();
+    t.onStepApplied(mode: SessionMode.hand, duration: 140);
+    _tick(t, 130);
+    t.onFail();
+    final report = t.finalizeReport();
+    expect(report.sessionCeilings[CapabilityAxis.effortNoBreathStreak], 130.0);
+
+    expect(await svc.commit(report, sessionIndex: 2),
+        CapabilityAxis.effortNoBreathStreak);
+    final after = await svc.snapshotProfile();
+
+    expect(
+        _offRule(before, after, report,
+            {CapabilityAxis.effortNoBreathStreak: 102}),
         isEmpty);
   });
 }
