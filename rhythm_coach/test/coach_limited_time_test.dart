@@ -108,6 +108,37 @@ void main() {
       expect(s.selectedCoach, isNull);
     });
 
+    test(
+        'bandeau : proposée tant qu\'elle n\'a pas été choisie dans sa fenêtre',
+        () async {
+      var now = _firstDay;
+      final s = CoachService(clock: () => now);
+      await s.load();
+      final lina = s.coaches.first;
+      expect(
+          s.limitedTimeToTry(lina).map((c) => c.id), [CoachCatalog.lilithId]);
+      expect(s.limitedTimeToTry(_lilith), isEmpty);
+
+      await s.selectCoach(_lilith);
+      await s.selectCoach(lina);
+      expect(s.limitedTimeToTry(lina), isEmpty);
+
+      final reloaded = CoachService(clock: () => now);
+      await reloaded.load();
+      expect(reloaded.limitedTimeToTry(lina), isEmpty);
+
+      now = _after;
+      expect(s.limitedTimeToTry(lina), isEmpty);
+      now = _nextYearFirstDay;
+      expect(
+          s.limitedTimeToTry(lina).map((c) => c.id), [CoachCatalog.lilithId]);
+
+      now = _firstDay;
+      await s.resetAll();
+      expect(
+          s.limitedTimeToTry(lina).map((c) => c.id), [CoachCatalog.lilithId]);
+    });
+
     test('ne débloque ni ne fait avancer aucun palier', () async {
       final s = CoachService(clock: () => _firstDay);
       await s.load();

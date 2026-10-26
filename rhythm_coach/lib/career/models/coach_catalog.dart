@@ -159,10 +159,10 @@ class CoachCatalog {
     Coach(
       id: lilithId,
       name: 'Lilith',
-      title: 'Coach éphémère',
+      title: 'Coach d’Halloween',
       archetype: CoachArchetype.taquinSadique,
       publicBio: 'Sorcière de passage, le temps où le voile est mince. '
-          'Elle envoûte plus qu\'elle ne punit.',
+          'Elle envoûte plus qu’elle ne punit : chaque séance est un rituel.',
       specialties: [
         SpecializationBranch.sloppy,
         SpecializationBranch.obeissance,

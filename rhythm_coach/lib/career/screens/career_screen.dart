@@ -1338,13 +1338,7 @@ class _CareerScreenState extends State<CareerScreen> {
           final activeOfferedUntil = coachService.offeredUntil(activeCoach);
           final isFreeTraining = activeOfferedUntil == null &&
               !coachService.advancesTier(activeCoach);
-          final limitedTimeToTry = [
-            for (final c in coachService.coaches)
-              if (c.availability != null &&
-                  c.id != activeCoach.id &&
-                  !coachService.pickedThisWindow(c))
-                c
-          ];
+          final limitedTimeToTry = coachService.limitedTimeToTry(activeCoach);
           final freeSpecPoints = SpecializationService.totalPointsForSeconds(
                 bundle.totalSeconds,
               ) -

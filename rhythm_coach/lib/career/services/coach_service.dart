@@ -93,8 +93,15 @@ class CoachService extends ChangeNotifier {
   /// coach permanent.
   DateTime? offeredUntil(Coach c) => c.availability?.lastDayOf(_now());
 
-  /// Vrai si ce coach éphémère a déjà été choisi pendant sa fenêtre en cours.
-  bool pickedThisWindow(Coach c) => _pickedYears[c.id] == _now().year;
+  /// Coachs éphémères proposés aujourd'hui, autres que [active], que la
+  /// joueuse n'a pas encore choisis pendant leur fenêtre en cours.
+  List<Coach> limitedTimeToTry(Coach active) => [
+        for (final c in coaches)
+          if (c.availability != null &&
+              c.id != active.id &&
+              _pickedYears[c.id] != _now().year)
+            c
+      ];
 
   int get currentTier => _currentTier;
 
