@@ -20,13 +20,6 @@ class BackgroundContext {
     this.tier,
   });
 
-  bool get isEmpty =>
-      mode == null &&
-      position == null &&
-      coach == null &&
-      phase == null &&
-      tier == null;
-
   String? valueFor(BackgroundTagCategory cat) => switch (cat) {
         BackgroundTagCategory.mode => mode,
         BackgroundTagCategory.position => position,
@@ -252,11 +245,9 @@ class BackgroundsService {
             .take(1)
             .toList();
     if (candidates.isEmpty) {
-      if (coach != null) {
-        _transitions.clear();
-        _afterTransitions = null;
-        current.value = null;
-      }
+      _transitions.clear();
+      _afterTransitions = null;
+      current.value = null;
       return false;
     }
     _transitions.clear();
@@ -280,10 +271,6 @@ class BackgroundsService {
   }
 
   void _pick(BackgroundContext ctx) {
-    if (ctx.isEmpty) {
-      pickRandom();
-      return;
-    }
     final ranked = _rank(ctx);
     if (ranked.withheld) {
       _keepGesture(ctx);
@@ -302,7 +289,7 @@ class BackgroundsService {
       _keepCoach(ctx);
       return;
     }
-    pickRandom();
+    current.value = null;
   }
 
   void _keepCoach(BackgroundContext ctx) {
@@ -436,28 +423,6 @@ class BackgroundsService {
     final draw = _rng.nextInt(candidates.length - 1);
     final pick = draw >= idx ? draw + 1 : draw;
     current.value = candidates[pick];
-  }
-
-  void pickRandom() {
-    final pool = _bundle.entries
-        .where((e) =>
-            !e.isTierTransition && !e.isPov && !handRaisedHolds.contains(e.id))
-        .toList();
-    final n = pool.length;
-    if (n == 0) return;
-    if (n == 1) {
-      current.value = pool.first;
-      return;
-    }
-    final cur = current.value;
-    final curIdx = cur == null ? -1 : pool.indexOf(cur);
-    if (curIdx < 0) {
-      current.value = pool[_rng.nextInt(n)];
-      return;
-    }
-    final draw = _rng.nextInt(n - 1);
-    final pick = draw >= curIdx ? draw + 1 : draw;
-    current.value = pool[pick];
   }
 
   void clear() {

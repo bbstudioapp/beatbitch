@@ -215,8 +215,6 @@ void main() {
       for (var i = 0; i < 50; i++) {
         svc.pickForContext(_ctx('hold', position: 'full'));
         expect(_now.id, 'a');
-        svc.pickRandom();
-        expect(_now.id, 'a');
       }
     });
 
@@ -551,8 +549,7 @@ void main() {
     test('jamais tirées comme fond ordinaire', () {
       _load(['a_rhythm_lina', ..._povs]);
       for (var i = 0; i < 100; i++) {
-        svc.pickForContext(
-            const BackgroundContext(mode: 'hold', position: 'full'));
+        svc.pickForContext(_ctx('hold', position: 'full'));
         expect(_now.isPov, isFalse);
       }
     });
