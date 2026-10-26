@@ -152,10 +152,8 @@ extension CareerHooksOrchestrator on SessionController {
     required Session upcomingSession,
   }) async {
     if (_state != SessionState.running || _useMeActive) return;
-    // Défi excisé et chrono gelé pendant le souffle : `elapsedSeconds` en est
-    // déjà la fin.
-    final breathEnd = elapsedSeconds;
     final playedUntil = _activeChallengeTriggerSec;
+    final breathEnd = playedUntil ?? elapsedSeconds;
     _session = SessionController.buildPostChallengeRegenSession(
       previous: _session,
       upcoming: upcomingSession,

@@ -189,14 +189,11 @@ extension ChallengeOrchestrator on SessionController {
     return until != null && _realSec.toInt() < until;
   }
 
-  /// Instant `elapsedSeconds` auquel la séance reprend après le défi —
-  /// utilisé par `requestPostChallengeRegen` pour rebaser une suite
-  /// régénérée. Vu que la session a déjà été rebasée en interne par
-  /// `_excisChallengeFromSession` (le défi est excisé de la timeline),
-  /// c'est simplement `elapsedSeconds` (= la position où on était avant
-  /// le défi). `null` hors fenêtre post-défi.
-  int? get postChallengeBreathUntilSec =>
-      _inPostChallengeBreath ? elapsedSeconds : null;
+  /// Instant de séance où elle reprend après le défi, `null` hors du souffle
+  /// post-défi.
+  int? get postChallengeBreathUntilSec => _inPostChallengeBreath
+      ? (_activeChallengeTriggerSec ?? elapsedSeconds)
+      : null;
 
   /// Chiffre courant du countdown (3, 2, 1) ou `null` si on n'est pas en
   /// phase countdown. Exposé pour le banner UI qui affiche le chiffre
@@ -953,11 +950,10 @@ extension ChallengeOrchestrator on SessionController {
   /// Excise la fenêtre défi (step trigger + enveloppe estimée pour le défi)
   /// de la timeline session, en décalant tous les steps suivants ainsi que
   /// les timestamps de fin (`durationSeconds`, `finalStepTime`,
-  /// `silentFinishStartTime`, milestones) de `-shift`. À l'issue,
-  /// l'`elapsedSeconds` courant (= `challengeTriggerTime`, gelé pendant le
-  /// défi) coïncide exactement avec la position du step qui suivait le défi
-  /// dans l'ancienne timeline : la séance reprend **immédiatement** là où
-  /// elle en était avant le défi, sans saut visible du timer.
+  /// `silentFinishStartTime`, milestones) de `-shift`. À l'issue, le
+  /// déclencheur coïncide avec la position du step qui suivait le défi dans
+  /// l'ancienne timeline : la séance reprend là où elle en était avant le
+  /// défi, sans saut visible du timer.
   ///
   /// Phase B (streaming) : le step défi n'est plus pré-positionné dans la
   /// timeline — le générateur ne pose que le step trigger et réserve une
