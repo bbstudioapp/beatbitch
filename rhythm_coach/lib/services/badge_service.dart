@@ -15,8 +15,6 @@ class BadgeService {
 
   BadgeService({DateTime Function()? clock}) : _now = clock ?? DateTime.now;
 
-  /// Un badge Sabbat non obtenu n'est montré que pendant la fenêtre de
-  /// Lilith : hors fenêtre, il serait verrouillé et inaccessible.
   Future<List<BadgeState>> currentStates(StatsSnapshot snap) async {
     return [
       for (final def in BadgeDefinition.catalog)

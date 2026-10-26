@@ -47,20 +47,9 @@ class CoachAvailability {
 
 /// Contraintes optionnelles pour autoriser la sélection d'un coach.
 /// Évaluées par `CoachService.evaluate` à chaque demande.
-///
-/// Refonte 0.5.0 : l'ancien flag `requiresHands` a été retiré du coach.
-/// L'obligation de la stimulation main est désormais portée uniquement
-/// par la milestone planifiée (`LevelMilestone.requiresHands` — cf.
-/// `assets/career/milestones.json` et `career_screen._start`). Si une
-/// milestone insérée dans la prochaine session implique biffle/hand, le
-/// toggle `includeHand` est forcé à true côté `CareerScreen`, peu
-/// importe le coach choisi.
 class CoachRequirement {
   /// Temps total cumulé (en secondes) que la joueuse doit avoir investi
-  /// pour débloquer ce coach (Phase 19.10 — remplace l'ancien
-  /// `minPlayerLevel`). Le déblocage par investissement remplace le
-  /// déblocage par niveau de carrière qui disparaît avec Phase 19.
-  /// Defaut 0 : coach disponible dès le démarrage.
+  /// pour débloquer ce coach. Défaut 0 : coach disponible dès le démarrage.
   final int minPlayerSeconds;
 
   const CoachRequirement({
@@ -76,10 +65,9 @@ class CoachRequirement {
   /// }
   /// ```
   /// Toute clé absente garde sa valeur par défaut. Les clés legacy
-  /// `minPlayerLevel` (Phase 19) et `requiresHands` (0.5.0) sont
-  /// silencieusement ignorées — les `Coach`s sont matérialisés via
-  /// `CoachCatalog.defaults` qui pose les nouveaux seuils ; les
-  /// overrides JSON ne touchent pas les requirements.
+  /// `minPlayerLevel` et `requiresHands` sont ignorées : les seuils viennent
+  /// de `CoachCatalog.defaults`, les overrides JSON ne touchent pas les
+  /// requirements.
   factory CoachRequirement.fromJson(Map<String, dynamic> json) {
     return CoachRequirement(
       minPlayerSeconds: (json['minPlayerSeconds'] as num?)?.toInt() ?? 0,
@@ -396,8 +384,7 @@ class CoachPhrasePack {
   /// Vide / absent = pas de coloration, comportement historique.
   final Map<SpecializationBranch, Map<String, List<PhraseEntry>>> branchPhrases;
 
-  /// Phrases de progression du **profil de capacités** (Phase 4 — coach
-  /// audible parcimonieux). Pour chaque axe — clé = `CapabilityAxis.storageKey`
+  /// Phrases de progression du **profil de capacités**. Pour chaque axe — clé = `CapabilityAxis.storageKey`
   /// (ex. `"gorge.apnee_streak"`, `"rhythm.depth_max"`) — trois tiers :
   ///
   /// - `attempt` : annonce avant une surcharge (« aujourd'hui on bat ton
@@ -413,7 +400,7 @@ class CoachPhrasePack {
   /// silence — comportement de tous les coachs sauf Lina + Victoria.
   final Map<String, Map<String, List<PhraseEntry>>> progressPhrases;
 
-  /// Phrases du système de défis intra-séance (Phase 1). Pour chaque axe —
+  /// Phrases du système de défis intra-séance. Pour chaque axe —
   /// clé = `CapabilityAxis.storageKey` (ex. `"hold.throat.streak"`) — sept
   /// tiers :
   ///
@@ -1160,7 +1147,7 @@ class _CoachComposedPhraseBank extends PhraseBank {
 
   @override
   String? pickBreakEntry(Random rng) {
-    // Délégation au pool global : phrases de break (issue #77) non encore
+    // Délégation au pool global : phrases de break non encore
     // déclinées par coach.
     return fallback.pickBreakEntry(rng);
   }

@@ -50,7 +50,6 @@ class CoachCatalog {
       ],
       tier: 2,
       isPrincipal: true,
-      // Phase 19.10 : 1h cumulée — ~2-3 séances.
       requirements: CoachRequirement(minPlayerSeconds: 3600),
       portraitAsset: '$_portraitDir/coach_02_helene.png',
     ),
@@ -73,16 +72,14 @@ class CoachCatalog {
       ],
       tier: 3,
       isPrincipal: true,
-      // 1h30 cumulées — pile entre Hélène (1h) et Jade (3h).
       requirements: CoachRequirement(minPlayerSeconds: 5400),
       portraitAsset: '$_portraitDir/coach_07_marc.png',
       // Seul coach masculin : la table de voix préférées de la langue est
       // calibrée féminine, il n'y a rien à y prendre pour lui — d'où le saut
       // vers la première voix de la locale. Aucun blocage n'y est attaché :
       // `CoachService.evaluate` ne teste que le déblocage et le temps de jeu,
-      // et un gating sur la disponibilité d'une voix a été livré puis retiré
-      // (décision de Manu, ne pas y revenir). Une voix masculine se choisit à
-      // la main, dans la section VOIX DES COACHS du Profil : aucun des canaux
+      // et la disponibilité d'une voix ne conditionne rien. Une voix
+      // masculine se choisit à la main, dans la section VOIX DES COACHS du Profil : aucun des canaux
       // que la sélection automatique atteint (Android, web) ne déclare le
       // genre d'une voix (cf. `TtsService._fallbackPick`).
       voicePreset: CoachVoicePreset(skipPreferredVoices: true),
@@ -101,9 +98,6 @@ class CoachCatalog {
       ],
       tier: 4,
       isPrincipal: true,
-      // Phase 19.10 : 3h cumulées. (Refonte 0.5.0 : `requiresHands` retiré
-      // du coach — le hand obligatoire est désormais piloté par la milestone
-      // planifiée, pas par le coach choisi.)
       requirements: CoachRequirement(minPlayerSeconds: 10800),
       portraitAsset: '$_portraitDir/coach_03_jade.png',
     ),
@@ -120,7 +114,6 @@ class CoachCatalog {
       ],
       tier: 5,
       isPrincipal: true,
-      // Phase 19.10 : 7h cumulées.
       requirements: CoachRequirement(minPlayerSeconds: 25200),
       portraitAsset: '$_portraitDir/coach_04_morgan.png',
     ),
@@ -137,7 +130,6 @@ class CoachCatalog {
       ],
       tier: 6,
       isPrincipal: true,
-      // Phase 19.10 : 15h cumulées.
       requirements: CoachRequirement(minPlayerSeconds: 54000),
       portraitAsset: '$_portraitDir/coach_05_victoria.png',
     ),
@@ -151,7 +143,6 @@ class CoachCatalog {
       specialties: SpecializationBranch.values,
       tier: 7,
       isPrincipal: true,
-      // Phase 19.10 : 25h cumulées — palier terminal.
       requirements: CoachRequirement(minPlayerSeconds: 90000),
       portraitAsset: '$_portraitDir/coach_06_nyx.png',
     ),

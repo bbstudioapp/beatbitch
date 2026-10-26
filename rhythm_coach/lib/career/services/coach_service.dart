@@ -19,7 +19,7 @@ enum CoachSelectionStatus {
   lockedTier,
 
   /// Le temps cumulé du joueur est en-dessous du `minPlayerSeconds` requis
-  /// par le coach (Phase 19.10).
+  /// par le coach.
   blockedMinPlayerSeconds,
 
   /// Coach éphémère sélectionné pendant sa fenêtre : ni palier ni temps joué
@@ -203,7 +203,7 @@ class CoachService extends ChangeNotifier {
   /// Réconciliation complète, pas incrémentale : on parcourt **tout** le
   /// catalogue plutôt que les seuls paliers franchis depuis le dernier
   /// appel. Sinon un Principal inséré à un palier intermédiaire par une
-  /// mise à jour (Marc, palier 3, 0.6.0) reste inaccessible à vie pour
+  /// mise à jour reste inaccessible à vie pour
   /// qui avait déjà dépassé ce palier — ce palier n'étant plus jamais
   /// revisité, et ce d'autant plus sûrement qu'on a joué longtemps.
   /// Idempotent : sans coach à rattraper, rien n'est écrit ni notifié.
@@ -230,10 +230,7 @@ class CoachService extends ChangeNotifier {
   /// ce soit le Principal — c'est l'appelant qui décide d'avertir
   /// l'utilisateur avant de confirmer la sélection d'un coach
   /// non-Principal.
-  /// Refonte 0.5.0 : `handsEnabled` n'est plus consulté ici — le hand
-  /// n'est plus une contrainte du coach, juste de la milestone planifiée
-  /// (`LevelMilestone.requiresHands`). Le paramètre est conservé pour
-  /// rétrocompat des call sites mais ignoré.
+  /// `handsEnabled` est ignoré : le paramètre subsiste pour les call sites.
   CoachSelectionStatus evaluate(
     Coach c, {
     required int playerTotalSeconds,

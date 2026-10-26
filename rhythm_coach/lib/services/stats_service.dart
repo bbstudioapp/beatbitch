@@ -67,7 +67,7 @@ class StatsService {
   }
 
   /// Lecture rapide du temps total cumulé persisté, en secondes. Sert au
-  /// déblocage des coachs par investissement (Phase 19.10) — plus simple
+  /// déblocage des coachs par investissement — plus simple
   /// que de charger un `snapshot()` complet quand seul ce compteur
   /// importe.
   Future<int> getTotalSeconds() async {
@@ -105,10 +105,7 @@ class StatsService {
   }
 
   /// Comptabilise un appui sur le bouton « J'en veux encore ». Cumul
-  /// global, alimente le badge JamaisRassasiee. Le bump d'humiliation
-  /// transit désormais via la conservation du `sessionScore` au start
-  /// de la session-encore enchaînée et le delta career intégré au
-  /// `_finish` (cf. `HumiliationEngine.applyEndOfSessionDelta`).
+  /// global, alimente le badge JamaisRassasiee.
   Future<void> recordEncoreAsked() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(

@@ -325,11 +325,11 @@ class DiagnosticImportService {
   /// (cf. [apply]) — à la différence des autres sections, effacées sans
   /// condition.
   ///
-  /// Pourquoi cette exception : tout export produit depuis la Phase 3 porte
+  /// Pourquoi cette exception : tout export porte
   /// une section `voice`, donc charger l'export d'une utilisatrice repose
   /// bien son état vocal exact — sans quoi on diagnostiquerait un problème
   /// de voix en entendant ses propres réglages. Un payload qui n'en parle
-  /// pas (preset debug d'`assets/debug/profiles/`, export d'avant la Phase 3)
+  /// pas (preset debug d'`assets/debug/profiles/`, export ancien)
   /// ne gère pas les voix : les effacer changerait silencieusement la voix
   /// de la machine, et le repli est justement muet en séance.
   ///
