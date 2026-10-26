@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:beat_bitch/career/models/phrase_bank.dart';
 import 'package:beat_bitch/controllers/session_controller.dart';
+import 'package:beat_bitch/controllers/session_regen_args.dart';
 import 'package:beat_bitch/models/posture.dart';
 import 'package:beat_bitch/models/punishment.dart';
 import 'package:beat_bitch/models/session.dart';
@@ -230,6 +231,41 @@ void main() {
     expect(script.changes.length, 1);
     expect(ctrl.pauseSecondsAhead, 152);
     ctrl.dispose();
+  });
+
+  group('arguments des régénérations', () {
+    // Séance de 200 s, 152 s de pauses à venir, effort restant 48 s.
+    test('« Utilise-moi » : l\'effort restant moins le beg', () async {
+      final ctrl = buildController(_TrackingBeepEngine());
+      await ctrl.start();
+      expect(ctrl.upgradeRegenDuration(5), 43);
+      ctrl.dispose();
+    });
+
+    test(
+        'retry de milestone : effort restant plus la milestone, pauses '
+        'rebasées sur la fin du beg', () async {
+      final ctrl = buildController(_TrackingBeepEngine());
+      await ctrl.start();
+      final args =
+          ctrl.milestoneRetryRegenArgs(begDuration: 6, milestoneSeconds: 30);
+      expect(args.durationSeconds, 78);
+      expect(args.carry.breaks.map((b) => b.time), [0, 24, 114]);
+      expect(args.carry.changes.map((c) => c.time), [54]);
+      ctrl.dispose();
+    });
+
+    test(
+        'post-défi hors souffle : effort restant, pauses rebasées sur '
+        'l\'instant courant', () async {
+      final ctrl = buildController(_TrackingBeepEngine());
+      await ctrl.start();
+      final args = ctrl.postChallengeRegenArgs();
+      expect(args.durationSeconds, 48);
+      expect(args.carry.breaks.map((b) => b.time), [1, 30, 120]);
+      expect(args.carry.changes.map((c) => c.time), [60]);
+      ctrl.dispose();
+    });
   });
 
   test('pause en cours : ni comptée parmi les restantes, ni oubliée', () async {
