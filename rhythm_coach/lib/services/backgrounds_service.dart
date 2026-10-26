@@ -205,7 +205,14 @@ class BackgroundsService {
                 false)
             .take(1)
             .toList();
-    if (candidates.isEmpty) return false;
+    if (candidates.isEmpty) {
+      if (coach != null) {
+        _transitions.clear();
+        _afterTransitions = null;
+        current.value = null;
+      }
+      return false;
+    }
     _transitions.clear();
     _afterTransitions = null;
     if (!candidates.contains(current.value)) _setExcluding(candidates);
