@@ -240,18 +240,18 @@ class CareerSessionGenerator {
   /// suit son trigger, jamais pile dessus.
   static const int _breakChallengeGapSeconds = 60;
 
-  /// `triggerTime` de la pause n°[index] (0 pour la première) : à
-  /// `(index + 1) × intervalSeconds` de séance hors pauses. [pauseSeconds], le
-  /// temps des pauses déjà posées, décale l'horaire sur la timeline. `null`
-  /// quand cet horaire dépasse [effortEnd], la fin de la boucle main hors
-  /// fenêtres réservées.
+  /// `triggerTime` de la pause qui suit celle dont l'horaire visé + la durée
+  /// valent [previousEnd] (0 avant la première) : [intervalSeconds] d'effort
+  /// après. [pauseSeconds], le temps des pauses déjà posées, ramène cet horaire
+  /// à une position d'effort. `null` quand elle dépasse [effortEnd], la fin de
+  /// la boucle main hors fenêtres réservées.
   ///
   /// [challengeWindows] : créneaux `(début, fin)` déjà réservés par les défis.
   /// Sans eux, le trou d'effort d'une pause peut avaler le trigger d'un défi,
   /// que la boucle main réémet à `break.endTime`. Les horaires de défi ne
   /// bougent pas : c'est la pause qui cède le passage.
   static int? _breakTriggerTime({
-    required int index,
+    required int previousEnd,
     required int intervalSeconds,
     required int effortEnd,
     required int pauseSeconds,
@@ -259,10 +259,9 @@ class CareerSessionGenerator {
     List<(int, int)> challengeWindows = const [],
   }) {
     if (intervalSeconds <= 0) return null;
-    final effort = (index + 1) * intervalSeconds;
-    if (effort >= effortEnd) return null;
-    return _breakSlotClearOf(effort + pauseSeconds,
-        genUntil: genUntil, busy: challengeWindows);
+    final ideal = previousEnd + intervalSeconds;
+    if (ideal - pauseSeconds >= effortEnd) return null;
+    return _breakSlotClearOf(ideal, genUntil: genUntil, busy: challengeWindows);
   }
 
   /// Renvoie l'horaire de pause le plus proche de [ideal] dont la fenêtre
@@ -905,12 +904,13 @@ class CareerSessionGenerator {
         ),
     ];
     var pauseSecondsPlaced = 0;
+    var previousBreakEnd = 0;
     int? breakTriggerTime(int index) {
       if (carrying) {
         return index < carry.breaks.length ? carry.breaks[index].time : null;
       }
       return _breakTriggerTime(
-        index: index,
+        previousEnd: previousBreakEnd,
         intervalSeconds: breakInterval,
         effortEnd: genUntilBase,
         pauseSeconds: pauseSecondsPlaced,
@@ -989,6 +989,7 @@ class CareerSessionGenerator {
           }
           ctx.time = end;
           pauseSecondsPlaced += dur;
+          previousBreakEnd = nextBreakAt + dur;
           breakBusyWindows
               .add((end - dur, end - dur + _breakMaxDurationSeconds));
           nextBreakAt = breakTriggerTime(++nextBreakIndex);
@@ -996,6 +997,7 @@ class CareerSessionGenerator {
         }
         // Pas la place avant la phase finish → on saute ce break (sinon le
         // test resterait vrai à chaque itération et bloquerait la boucle).
+        previousBreakEnd = nextBreakAt;
         nextBreakAt = breakTriggerTime(++nextBreakIndex);
       }
       // Phase 1.6 — Changement de position seul, sans avancer le temps : le

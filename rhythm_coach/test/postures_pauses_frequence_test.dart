@@ -49,11 +49,27 @@ const _challengePool = [
     targetThreshold: 12,
     mode: SessionMode.biffle,
   ),
+  Challenge(
+    axis: CapabilityAxis.gorgeApneeStreak,
+    kind: ChallengeAxisKind.duration,
+    targetThreshold: 8,
+    mode: SessionMode.hold,
+  ),
+  Challenge(
+    axis: CapabilityAxis.rhythmMotionStreak,
+    kind: ChallengeAxisKind.duration,
+    targetThreshold: 15,
+    mode: SessionMode.rhythm,
+  ),
 ];
 
 /// Retard maximal entre l'horaire visé d'un événement et la frontière de bloc
 /// où la boucle principale le pose.
 const _blockSlack = 150;
+
+/// Raccourcissement toléré de l'effort entre deux pauses : le retard de bloc de
+/// la précédente et le repli avant un défi s'additionnent.
+const _gapTolerance = _blockSlack + 20;
 
 Session _gen({
   required int minutes,
@@ -156,6 +172,27 @@ void main() {
         expect(mean, closeTo(interval, 30), reason: 'écarts : $gaps');
       });
     }
+
+    test(
+        '0 pt, 45 min, 2 à 4 défis : 7 min d\'effort entre deux pauses, même '
+        'quand un défi a reporté la précédente', () {
+      var gaps = 0;
+      for (final count in [2, 3, 4]) {
+        for (var seed = 0; seed < 200; seed++) {
+          final s = _gen(minutes: 45, seed: seed, challengeCount: count);
+          for (var k = 1; k < s.breaks.length; k++) {
+            final gap = s.breaks[k].time - s.breaks[k - 1].endTime;
+            gaps++;
+            expect(gap, greaterThanOrEqualTo(420 - _gapTolerance),
+                reason: '$count défis seed=$seed : pause n°${k + 1} à '
+                    '${s.breaks[k].time}, la précédente finit à '
+                    '${s.breaks[k - 1].endTime}');
+          }
+        }
+      }
+      expect(gaps, greaterThan(1000),
+          reason: 'trop peu d\'écarts pour mesurer : $gaps');
+    });
 
     test('jamais avant 7 min ni pendant la phase finish', () {
       for (final minutes in [8, 12, 15, 20]) {
