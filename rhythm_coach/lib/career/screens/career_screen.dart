@@ -980,21 +980,8 @@ class _CareerScreenState extends State<CareerScreen> {
     return true;
   }
 
-  /// Régénération post-défi : un défi vient d'acquitter au moins une
-  /// milestone, le set d'unlocks s'est élargi (la mise à jour runtime de
-  /// `_unlockedKeys` est déjà faite par le contrôleur dans
-  /// `_finalizeChallengeAcquittals`). On régénère le reste de la séance
-  /// pour que le générateur consomme la compétence fraîchement débloquée
-  /// — sans regen, la timeline restante reste celle composée au start
-  /// avec l'ancien set, et le succès du défi ne « débloque » rien de
-  /// visible avant la séance suivante.
-  ///
-  /// Transition silencieuse : pas de beg insistant ni de phrase, le breath
-  /// de 10s post-défi sert lui-même de pont. Skip si :
-  /// - aucun profil de capacités (sessions hors carrière — ne devrait pas
-  ///   arriver, mais robustesse) ;
-  /// - moins de 30 s restantes après la fin du breath (pas assez de matière
-  ///   pour reposer une suite cohérente).
+  /// Sous 30 s d'effort restant avant la phase de fin, la suite n'aurait pas
+  /// assez de matière pour être cohérente : la timeline en cours est gardée.
   Future<void> _handlePostChallengeRegen(
     SessionController ctrl,
     _CareerBundle bundle,
