@@ -51,6 +51,155 @@ const _povs = [
   'pov-E-gag_pov_hold_full',
 ];
 
+const _pack = [
+  'helene-pack-beg-26002-ltx-pp-s26002_beg_helene',
+  'helene-pack-biffle-26002-ltx-pp-s26002_biffle_helene',
+  'helene-pack-breath-26002-ltx-pp-s26002_breath_helene',
+  'helene-pack-fail-26002-ltx-pp-s26002_fail_helene',
+  'helene-pack-freestyle-26002-ltx-pp-s26002_freestyle_helene',
+  'helene-pack-hand-26002-ltx-pp-s26002_hand_helene',
+  'helene-pack-hold-26002-ltx-pp-s26002_hold_helene',
+  'helene-pack-intro-26002-ltx-pp-s26002_helene',
+  'helene-pack-lick-26002-ltx-pp-s26002_lick_helene',
+  'helene-pack-nu1-beg-26002-ltx-pp-s26002_beg_helene_nu1',
+  'helene-pack-nu1-biffle-26002-ltx-pp-s26002_biffle_helene_nu1',
+  'helene-pack-nu1-breath-26002-ltx-pp-s26002_breath_helene_nu1',
+  'helene-pack-nu1-fail-26002-ltx-pp-s26002_fail_helene_nu1',
+  'helene-pack-nu1-final-26002-ltx-pp-s26002_final_helene_nu1',
+  'helene-pack-nu1-freestyle-26002-ltx-pp-s26002_freestyle_helene_nu1',
+  'helene-pack-nu1-hand-26002-ltx-pp-s26002_hand_helene_nu1',
+  'helene-pack-nu1-hold-26002-ltx-pp-s26002_hold_helene_nu1',
+  'helene-pack-nu1-intro-26002-ltx-pp-s26002_helene_nu1',
+  'helene-pack-nu1-lick-26002-ltx-pp-s26002_lick_helene_nu1',
+  'helene-pack-nu1-postfinal-26002-ltx-pp-s26002_post-final_helene_nu1',
+  'helene-pack-nu1-rhythm-full-26002-ltx-pp-s26002_rhythm_full_helene_nu1',
+  'helene-pack-nu1-rhythm-head-26002-ltx-pp-s26002_rhythm_head_helene_nu1',
+  'helene-pack-nu1-rhythm-mid-26002-ltx-pp-s26002_rhythm_mid_helene_nu1',
+  'helene-pack-nu1-rhythm-throat-26002-ltx-pp-s26002_rhythm_throat_helene_nu1',
+  'helene-pack-nu1-rhythm-tip-26002-ltx-pp-s26002_rhythm_tip_helene_nu1',
+  'helene-pack-nu2-beg-26002-anim_beg_helene_nu2',
+  'helene-pack-nu2-biffle-26002-anim_biffle_helene_nu2',
+  'helene-pack-nu2-breath-26002-anim_breath_helene_nu2',
+  'helene-pack-nu2-fail-26002-anim_fail_helene_nu2',
+  'helene-pack-nu2-final-26002-anim_final_helene_nu2',
+  'helene-pack-nu2-freestyle-26002-anim_freestyle_helene_nu2',
+  'helene-pack-nu2-hand-26002-anim_hand_helene_nu2',
+  'helene-pack-nu2-hold-26002-anim_hold_helene_nu2',
+  'helene-pack-nu2-intro-26002-anim_helene_nu2',
+  'helene-pack-nu2-lick-26002-anim_lick_helene_nu2',
+  'helene-pack-nu2-postfinal-26002-anim_post-final_helene_nu2',
+  'helene-pack-nu2-rhythm-full-26002-anim_rhythm_full_helene_nu2',
+  'helene-pack-nu2-rhythm-head-26002-anim_rhythm_head_helene_nu2',
+  'helene-pack-nu2-rhythm-mid-26002-anim_rhythm_mid_helene_nu2',
+  'helene-pack-nu2-rhythm-throat-26002-anim_rhythm_throat_helene_nu2',
+  'helene-pack-nu2-rhythm-tip-26002-anim_rhythm_tip_helene_nu2',
+  'helene-pack-rhythm-full-26002-ltx-pp-s26002_rhythm_full_helene',
+  'helene-pack-rhythm-head-26002-ltx-pp-s26002_rhythm_head_helene',
+  'helene-pack-rhythm-mid-26002-ltx-pp-s26002_rhythm_mid_helene',
+  'helene-pack-rhythm-throat-26002-ltx-pp-s26002_rhythm_throat_helene',
+  'helene-pack-rhythm-tip-26002-ltx-pp-s26002_rhythm_tip_helene',
+  'helene-pack-strip1-26002-anim_helene_nu1',
+  'helene-pack-strip2-26002-anim_helene_nu2',
+  'lina-pack-beg-25001-ltx-pp-s25001_beg_lina',
+  'lina-pack-beg-25002-ltx-pp-s25002_beg_lina',
+  'lina-pack-biffle-25001-ltx-pp-s25001_biffle_lina',
+  'lina-pack-biffle-25002-ltx-pp-s25002_biffle_lina',
+  'lina-pack-breath-25001-ltx-pp-s25001_breath_lina',
+  'lina-pack-breath-25002-ltx-pp-s25002_breath_lina',
+  'lina-pack-fail-25001-ltx-pp-s25001_fail_lina',
+  'lina-pack-fail-25002-ltx-pp-s25002_fail_lina',
+  'lina-pack-freestyle-25001-ltx-pp-s25001_freestyle_lina',
+  'lina-pack-freestyle-25002-ltx-pp-s25002_freestyle_lina',
+  'lina-pack-hand-25001-ltx-pp-s25001_hand_lina',
+  'lina-pack-hand-25002-ltx-pp-s25002_hand_lina',
+  'lina-pack-hold-25001-ltx-pp-s25001_hold_lina',
+  'lina-pack-hold-25002-ltx-pp-s25002_hold_lina',
+  'lina-pack-intro-25001-ltx-pp-s25001_lina',
+  'lina-pack-intro-25002-ltx-pp-s25002_lina',
+  'lina-pack-lick-25001-ltx-pp-s25001_lick_lina',
+  'lina-pack-lick-25002-ltx-pp-s25002_lick_lina',
+  'lina-pack-nu1-beg-25001-anim_beg_lina_nu1',
+  'lina-pack-nu1-beg-25002-anim_beg_lina_nu1',
+  'lina-pack-nu1-biffle-25001-anim_biffle_lina_nu1',
+  'lina-pack-nu1-biffle-25002-anim_biffle_lina_nu1',
+  'lina-pack-nu1-breath-25001-anim_breath_lina_nu1',
+  'lina-pack-nu1-breath-25002-anim_breath_lina_nu1',
+  'lina-pack-nu1-fail-25001-anim_fail_lina_nu1',
+  'lina-pack-nu1-fail-25002-anim_fail_lina_nu1',
+  'lina-pack-nu1-final-25001-anim_final_lina_nu1',
+  'lina-pack-nu1-final-25002-anim_final_lina_nu1',
+  'lina-pack-nu1-freestyle-25001-anim_freestyle_lina_nu1',
+  'lina-pack-nu1-freestyle-25002-anim_freestyle_lina_nu1',
+  'lina-pack-nu1-hand-25001-anim_hand_lina_nu1',
+  'lina-pack-nu1-hand-25002-anim_hand_lina_nu1',
+  'lina-pack-nu1-hold-25001-anim_hold_lina_nu1',
+  'lina-pack-nu1-hold-25002-anim_hold_lina_nu1',
+  'lina-pack-nu1-lick-25001-anim_lick_lina_nu1',
+  'lina-pack-nu1-lick-25002-anim_lick_lina_nu1',
+  'lina-pack-nu1-postfinal-25001-anim_post-final_lina_nu1',
+  'lina-pack-nu1-postfinal-25002-anim_post-final_lina_nu1',
+  'lina-pack-nu1-rhythm-full-25001-anim_rhythm_full_lina_nu1',
+  'lina-pack-nu1-rhythm-full-25002-anim_rhythm_full_lina_nu1',
+  'lina-pack-nu1-rhythm-head-25001-anim_rhythm_head_lina_nu1',
+  'lina-pack-nu1-rhythm-head-25002-anim_rhythm_head_lina_nu1',
+  'lina-pack-nu1-rhythm-mid-25001-anim_rhythm_mid_lina_nu1',
+  'lina-pack-nu1-rhythm-mid-25002-anim_rhythm_mid_lina_nu1',
+  'lina-pack-nu1-rhythm-throat-25001-anim_rhythm_throat_lina_nu1',
+  'lina-pack-nu1-rhythm-throat-25002-anim_rhythm_throat_lina_nu1',
+  'lina-pack-nu1-rhythm-tip-25001-anim_rhythm_tip_lina_nu1',
+  'lina-pack-nu1-rhythm-tip-25002-anim_rhythm_tip_lina_nu1',
+  'lina-pack-nu2-beg-25001-anim_beg_lina_nu2',
+  'lina-pack-nu2-beg-25002-anim_beg_lina_nu2',
+  'lina-pack-nu2-biffle-25001-anim_biffle_lina_nu2',
+  'lina-pack-nu2-biffle-25002-anim_biffle_lina_nu2',
+  'lina-pack-nu2-breath-25001-anim_breath_lina_nu2',
+  'lina-pack-nu2-breath-25002-anim_breath_lina_nu2',
+  'lina-pack-nu2-fail-25001-anim_fail_lina_nu2',
+  'lina-pack-nu2-fail-25002-anim_fail_lina_nu2',
+  'lina-pack-nu2-final-25001-anim_final_lina_nu2',
+  'lina-pack-nu2-final-25002-anim_final_lina_nu2',
+  'lina-pack-nu2-freestyle-25001-anim_freestyle_lina_nu2',
+  'lina-pack-nu2-freestyle-25002-anim_freestyle_lina_nu2',
+  'lina-pack-nu2-hand-25001-anim_hand_lina_nu2',
+  'lina-pack-nu2-hand-25002-anim_hand_lina_nu2',
+  'lina-pack-nu2-hold-25001-anim_hold_lina_nu2',
+  'lina-pack-nu2-hold-25002-anim_hold_lina_nu2',
+  'lina-pack-nu2-lick-25001-anim_lick_lina_nu2',
+  'lina-pack-nu2-lick-25002-anim_lick_lina_nu2',
+  'lina-pack-nu2-postfinal-25001-anim_post-final_lina_nu2',
+  'lina-pack-nu2-postfinal-25002-anim_post-final_lina_nu2',
+  'lina-pack-nu2-rhythm-full-25001-anim_rhythm_full_lina_nu2',
+  'lina-pack-nu2-rhythm-full-25002-anim_rhythm_full_lina_nu2',
+  'lina-pack-nu2-rhythm-head-25001-anim_rhythm_head_lina_nu2',
+  'lina-pack-nu2-rhythm-head-25002-anim_rhythm_head_lina_nu2',
+  'lina-pack-nu2-rhythm-mid-25001-anim_rhythm_mid_lina_nu2',
+  'lina-pack-nu2-rhythm-mid-25002-anim_rhythm_mid_lina_nu2',
+  'lina-pack-nu2-rhythm-throat-25001-anim_rhythm_throat_lina_nu2',
+  'lina-pack-nu2-rhythm-throat-25002-anim_rhythm_throat_lina_nu2',
+  'lina-pack-nu2-rhythm-tip-25001-anim_rhythm_tip_lina_nu2',
+  'lina-pack-nu2-rhythm-tip-25002-anim_rhythm_tip_lina_nu2',
+  'lina-pack-rhythm-full-25001-ltx-pp-s25001_rhythm_full_lina',
+  'lina-pack-rhythm-full-25002-ltx-pp-s25002_rhythm_full_lina',
+  'lina-pack-rhythm-head-25001-ltx-pp-s25001_rhythm_head_lina',
+  'lina-pack-rhythm-head-25002-ltx-pp-s25002_rhythm_head_lina',
+  'lina-pack-rhythm-mid-25001-ltx-pp-s25001_rhythm_mid_lina',
+  'lina-pack-rhythm-mid-25002-ltx-pp-s25002_rhythm_mid_lina',
+  'lina-pack-rhythm-throat-25001-ltx-pp-s25001_rhythm_throat_lina',
+  'lina-pack-rhythm-throat-25002-ltx-pp-s25002_rhythm_throat_lina',
+  'lina-pack-rhythm-tip-25001-ltx-pp-s25001_rhythm_tip_lina',
+  'lina-pack-rhythm-tip-25002-ltx-pp-s25002_rhythm_tip_lina',
+  'lina-pack-strip1-25001-anim_lina_nu1',
+  'lina-pack-strip1-25002-anim_lina_nu1',
+  'lina-pack-strip2-25001-anim_lina_nu2',
+  'lina-pack-strip2-25002-anim_lina_nu2',
+  'pov-A-gag_pov_hold_full',
+  'pov-A-rhythm-full_pov_rhythm_full',
+  'pov-A-suckle_pov_suckle',
+  'pov-E-gag_pov_hold_full',
+  'pov-E-rhythm-full_pov_rhythm_full',
+  'pov-E-suckle_pov_suckle',
+];
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final svc = BackgroundsService.instance;
@@ -172,6 +321,30 @@ void main() {
       svc.transitionFinished(_now);
       expect(_now.id, finalFull, reason: 'tenue de la phase finale');
     });
+
+    for (final coach in ['lina', 'helene']) {
+      for (final tier in ['nu1', 'nu2']) {
+        for (final position in ['balls', null]) {
+          test(
+              '$coach $tier, 1re tenue $position sans fond de rythme à '
+              'sa profondeur : la coach suce', () {
+            _load(_pack);
+            for (var seed = 0; seed < 60; seed++) {
+              svc.clear();
+              svc.debugRandom = Random(seed);
+              svc.pickForContext(
+                  _ctx('hold', position: position, coach: coach, tier: tier));
+              while (_now.isTierTransition) {
+                svc.transitionFinished(_now);
+              }
+              expect(_now.tagsByCategory[BackgroundTagCategory.mode],
+                  contains('rhythm'),
+                  reason: 'graine $seed : ${_now.id}');
+            }
+          });
+        }
+      }
+    }
   });
 
   group('scènes de joueuse', () {

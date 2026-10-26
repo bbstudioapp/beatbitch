@@ -250,18 +250,19 @@ class BackgroundsService {
           )).best;
     if (gesture.isEmpty) {
       if (current.value?.isTierTransition ?? false) {
-        _setExcluding(_coachGesturesAt(ctx));
+        _setExcluding(_coachRhythmsAt(ctx));
       }
       return;
     }
     if (!gesture.contains(current.value)) _setExcluding(gesture);
   }
 
-  List<BackgroundEntry> _coachGesturesAt(BackgroundContext ctx) {
-    final gestures = _bundle.entries
+  List<BackgroundEntry> _coachRhythmsAt(BackgroundContext ctx) {
+    final rhythms = _bundle.entries
         .where((e) =>
             e.tier == ctx.tier &&
-            e.tagsByCategory.containsKey(BackgroundTagCategory.mode) &&
+            (e.tagsByCategory[BackgroundTagCategory.mode]?.contains('rhythm') ??
+                false) &&
             (e.tagsByCategory[BackgroundTagCategory.phase]
                     ?.contains(ctx.phase) ??
                 true) &&
@@ -270,13 +271,13 @@ class BackgroundsService {
                     ?.contains(ctx.coach) ??
                 false))
         .toList();
-    final samePosition = gestures
+    final samePosition = rhythms
         .where((e) =>
             e.tagsByCategory[BackgroundTagCategory.position]
                 ?.contains(ctx.position) ??
             false)
         .toList();
-    return samePosition.isEmpty ? gestures : samePosition;
+    return samePosition.isEmpty ? rhythms : samePosition;
   }
 
   ({
