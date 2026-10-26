@@ -21,7 +21,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 BackgroundEntry _e(String basename) =>
     BackgroundsLoader.parseEntry('assets/backgrounds/$basename')!;
 
-// Noms calqués sur le pack Lina (`<id>_<tags>.webp`).
 final _lingerie = [
   'lina-pack-intro-1-x_lina.webp',
   'lina-pack-hold-1-x_hold_lina.webp',
@@ -198,7 +197,6 @@ void main() {
       final strip = _now;
       expect(strip.id, 'lina-pack-strip1-1-x');
 
-      // Pendant la lecture, un changement de mode ne coupe pas la transition.
       svc.pickForContext(_ctx(mode: 'rhythm', position: 'tip', tier: 'nu1'));
       expect(_now, strip);
 
