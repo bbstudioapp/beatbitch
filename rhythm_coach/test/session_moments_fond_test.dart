@@ -187,6 +187,55 @@ void main() {
     expect(_fond(), before);
     await _unmount(tester);
   });
+
+  testWidgets(
+      'sans coach, l\'écran garde le fond neutre : jeu, punition, étape '
+      'validée', (tester) async {
+    milestoneService.seedForTest(catalog: const [
+      LevelMilestone(
+        id: _milestoneId,
+        humilRequired: 0,
+        displayLabel: _milestoneId,
+        sequence: [],
+        durationSeconds: 1,
+        unlocks: [UnlockKey.holdHead],
+      ),
+    ]);
+    final shown = <String?>[];
+    void record() => shown.add(_fond());
+    BackgroundsService.instance.current.addListener(record);
+    addTearDown(
+        () => BackgroundsService.instance.current.removeListener(record));
+    final neutral = find.byKey(const ValueKey('__placeholder__'));
+    final media = find.byWidgetPredicate((w) =>
+        w is Image &&
+        w.image is AssetImage &&
+        (w.image as AssetImage).assetName.startsWith('assets/backgrounds/'));
+
+    await tester.pumpWidget(_app(_screen(
+      coach: null,
+      durationSeconds: 3,
+      milestoneId: _milestoneId,
+    )));
+    final ctrl = _controller(tester);
+    await _until(tester, () => ctrl.state == SessionState.running);
+    expect(neutral, findsOneWidget);
+    expect(media, findsNothing);
+
+    unawaited(ctrl.debugRunMiniPunishment(_punishment));
+    await tester.pump();
+    expect(ctrl.state, SessionState.failing);
+    expect(neutral, findsOneWidget);
+
+    await _until(tester, () => ctrl.state == SessionState.finished);
+    expect(ctrl.sessionMilestoneUnlocks.map((m) => m.id), [_milestoneId]);
+    await tester.pump(const Duration(seconds: 1));
+    expect(neutral, findsOneWidget);
+    expect(media, findsNothing);
+    expect(find.byType(PlayOnceImage), findsNothing);
+    expect(shown.whereType<String>(), isEmpty);
+    await _unmount(tester);
+  });
 }
 
 const _punishment = Punishment(
@@ -239,7 +288,7 @@ Widget _app(Widget home) => DefaultAssetBundle(
     );
 
 SessionScreen _screen({
-  required String coach,
+  required String? coach,
   required int durationSeconds,
   String? milestoneId,
 }) =>
