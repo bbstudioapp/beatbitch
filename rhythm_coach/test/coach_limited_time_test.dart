@@ -106,6 +106,8 @@ void main() {
       await s.load();
       expect(s.selectedCoachId, isNull);
       expect(s.selectedCoach, isNull);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('coach.selected_id'), isNull);
     });
 
     test(
@@ -147,6 +149,86 @@ void main() {
       expect(s.advancesTier(_lilith), isFalse);
       expect(s.currentTier, 7);
     });
+  });
+
+  group('Lilith choisie une année, désélectionnée l\'année suivante', () {
+    final picked = DateTime(2026, 10, 30);
+    final between = <String, Future<void> Function()>{
+      'appli jamais rouverte': () async {},
+      'appli rouverte hors fenêtre': () async {
+        await CoachService(clock: () => _after).load();
+      },
+      'écriture incidente hors fenêtre': () async {
+        final s = CoachService(clock: () => DateTime(2027, 3, 1));
+        await s.load();
+        await s.syncFromTotalSeconds(4000);
+      },
+    };
+
+    between.forEach((label, meanwhile) {
+      test(
+          '$label : le 27/10/2027 elle n\'est pas sélectionnée, ESSAYER la '
+          'propose', () async {
+        final first = CoachService(clock: () => picked);
+        await first.load();
+        await first.selectCoach(_lilith);
+        expect(first.selectedCoach?.id, CoachCatalog.lilithId);
+
+        await meanwhile();
+
+        final s = CoachService(clock: () => _nextYearFirstDay);
+        await s.load();
+        expect(s.selectedCoachId, isNull);
+        expect(s.selectedCoach, isNull);
+        final active = s.selectedCoach ?? s.currentTierPrincipal!;
+        expect(active.availability, isNull);
+        expect(s.limitedTimeToTry(active).map((c) => c.id),
+            [CoachCatalog.lilithId]);
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getString('coach.selected_id'), isNull);
+      });
+    });
+
+    test(
+        'rouverte après sa fenêtre la même année, la sélection persistée est '
+        'effacée', () async {
+      final first = CoachService(clock: () => picked);
+      await first.load();
+      await first.selectCoach(_lilith);
+
+      final s = CoachService(clock: () => _after);
+      await s.load();
+      expect(s.selectedCoach, isNull);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('coach.selected_id'), isNull);
+    });
+
+    test('choisie dans la fenêtre en cours, elle le reste au rechargement',
+        () async {
+      final first = CoachService(clock: () => _firstDay);
+      await first.load();
+      await first.selectCoach(_lilith);
+
+      final s = CoachService(clock: () => _lastDay);
+      await s.load();
+      expect(s.selectedCoach?.id, CoachCatalog.lilithId);
+    });
+
+    for (final now in [_after, _nextYearFirstDay]) {
+      test('un coach permanent choisi reste sélectionné le $now', () async {
+        final first = CoachService(clock: () => picked);
+        await first.load();
+        await first.syncFromTotalSeconds(100000);
+        final jade = first.coaches.firstWhere((c) => c.id == 'coach_03_jade');
+        await first.selectCoach(jade);
+
+        final s = CoachService(clock: () => now);
+        await s.load();
+        expect(s.selectedCoach?.id, 'coach_03_jade');
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getString('coach.selected_id'), 'coach_03_jade');
+      });
+    }
   });
 
   group('Les coachs permanents sont inchangés', () {

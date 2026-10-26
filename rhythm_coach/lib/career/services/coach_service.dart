@@ -153,6 +153,13 @@ class CoachService extends ChangeNotifier {
     // toujours débloqué (cas d'un upgrade d'app qui aurait ajouté un
     // coach manquant au set persisté).
     _ensureCurrentTierPrincipalUnlocked();
+    for (final c in _coaches) {
+      if (c.id != _selectedCoachId || c.availability == null) continue;
+      if (!_isOffered(c) || _pickedYears[c.id] != _now().year) {
+        _selectedCoachId = null;
+        await prefs.remove(_kSelectedId);
+      }
+    }
     // Si la sélection persistée pointe sur un coach qui n'existe plus
     // (renommé, retiré), on la nettoie pour ne pas afficher du vide.
     if (_selectedCoachId != null && selectedCoach == null) {
