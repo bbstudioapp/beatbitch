@@ -7,11 +7,12 @@ part of 'session_controller.dart';
 // runtime se contente de geler le moteur d'effort sur cette fenêtre et de
 // jouer une dramaturgie de récup :
 //
-//   entrée  → pause du beep + phrase « on souffle »
+//   entrée  → pause du beep + phrase « on souffle », ou, si la pause change de
+//             position, application de la pose + phrase de pose + attente de
+//             mise en place
 //   pendant → ordres espacés (« bois une gorgée », « respire »…)
-//   reprise → application de la nouvelle posture + phrase de changement de
-//             pose (ou phrase de reprise neutre), puis le step d'effort posé
-//             par le générateur juste après le trou reconfigure le beep.
+//   reprise → phrase de reprise, puis le step d'effort posé par le générateur
+//             juste après le trou reconfigure le beep.
 //
 // Contrairement au flow fail, l'horloge `elapsed` continue de tourner : la
 // machine est donc pilotée par tick (`_updateBreakPhase`, appelée dans
@@ -28,9 +29,8 @@ extension BreakSequencer on SessionController {
     final now = elapsedSeconds;
 
     if (_breakActive) {
-      final b = _activeBreak!;
-      if (now >= b.endTime) {
-        _exitBreak(b);
+      if (now >= _activeBreak!.endTime) {
+        _exitBreak();
       } else {
         _maybeFireBreakOrder();
       }
@@ -51,8 +51,11 @@ extension BreakSequencer on SessionController {
   }
 
   /// Entrée dans un break : gèle le loop d'effort (pause beep + disarm caméra)
-  /// et énonce la phrase d'entrée. `_breakActive` coupe l'accrual d'effort et
-  /// les commentaires aléatoires (cf. `_onTick` / `_fireRandomComment`).
+  /// et énonce la phrase d'entrée, ou celle du changement de pose si le break
+  /// en porte un — une seule phrase, la seconde couperait la première. La
+  /// nouvelle pose est posée ici et, hors `free`, la pause attend la mise en
+  /// place. `_breakActive` coupe l'accrual d'effort et les commentaires
+  /// aléatoires (cf. `_onTick` / `_fireRandomComment`).
   void _enterBreak(ScriptedBreak b) {
     _breakActive = true;
     _activeBreak = b;
@@ -61,8 +64,15 @@ extension BreakSequencer on SessionController {
     _breakOrderInterval = _pickBreakOrderInterval();
     _disarmHoldVerifier();
     unawaited(_beep.pause());
-    final entry = _phraseBank?.pickBreakEntry(_random);
-    if (entry != null) _speakScripted(entry);
+    final newPose = b.newPose;
+    if (newPose != null) _currentPose = newPose;
+    final bank = _phraseBank;
+    final phrase = newPose != null
+        ? (bank?.pickPostureChange(newPose, _random) ??
+            bank?.pickBreakEntry(_random))
+        : bank?.pickBreakEntry(_random);
+    if (phrase != null) _speakScripted(phrase);
+    if (newPose != null && newPose != Posture.free) _enterAwaitReady();
     _notify();
   }
 
@@ -83,13 +93,17 @@ extension BreakSequencer on SessionController {
   }
 
   /// Passe la pause en cours : saute la timeline à sa fin et enchaîne sur la
-  /// reprise. No-op hors pause.
+  /// reprise. Le saut fait tomber le gel de posture (`timelineOffset` a
+  /// augmenté) : si la joueuse n'avait pas encore validé sa mise en place, on
+  /// la réclame à nouveau. No-op hors pause.
   void skipBreak() {
     final b = _activeBreak;
     if (!_breakActive || b == null) return;
+    final stillPlacing = awaitingPostureReady;
     final end = Duration(seconds: b.endTime);
     if (elapsed < end) _timelineOffset += end - elapsed;
-    _exitBreak(b);
+    _exitBreak();
+    if (stillPlacing) _enterAwaitReady();
   }
 
   /// Déclenche le prochain changement de position seul : annonce, coupure du
@@ -123,30 +137,16 @@ extension BreakSequencer on SessionController {
           SessionController._breakOrderMinIntervalSeconds +
           1);
 
-  /// Sortie d'un break : applique la nouvelle posture, énonce la phrase de
-  /// changement de pose (ou de reprise neutre en récup pure), et relâche
+  /// Sortie d'un break : énonce la phrase de reprise et relâche
   /// `_breakActive`. Le beep n'est PAS restauré ici : `_checkSteps` (appelé
   /// juste après dans `_onTick`) applique le step d'effort que le générateur
   /// a posé à `break.endTime`, ce qui reconfigure et relance le loop à
   /// l'heure ; sa propre phrase attend la fin de la phrase de reprise.
-  void _exitBreak(ScriptedBreak b) {
+  void _exitBreak() {
     _breakActive = false;
     _activeBreak = null;
-    final newPose = b.newPose;
-    if (newPose != null) _currentPose = newPose;
-    final bank = _phraseBank;
-    final resume = newPose != null
-        ? (bank?.pickPostureChange(newPose, _random) ??
-            bank?.pickBreakResume(_random))
-        : bank?.pickBreakResume(_random);
+    final resume = _phraseBank?.pickBreakResume(_random);
     if (resume != null) _speakScripted(resume);
-    // Gate posture : si le break impose une nouvelle posture
-    // physique, on gèle la reprise jusqu'à ce que la joueuse s'y mette (comme
-    // le 1er step des milestones posture). `free` = pas de repositionnement,
-    // pas de gate.
-    if (newPose != null && newPose != Posture.free) {
-      _enterAwaitReady();
-    }
     _notify();
   }
 

@@ -128,7 +128,7 @@ void main() {
     ],
   );
 
-  // Break [1,3) imposant `kneeling` à la reprise, et le step d'effort que le
+  // Break [1,3) imposant `kneeling` dès son entrée, et le step d'effort que le
   // générateur pose toujours juste après le trou. Profil de stamina plein :
   // la respiration du flow fail est alors tirée dans sa fourchette courte.
   SessionController buildController({BeepEngine? beep}) => SessionController(
@@ -171,13 +171,13 @@ void main() {
         ),
       );
 
-  /// Amène la séance jusqu'au gate armé à la sortie du break.
+  /// Amène la séance jusqu'au gate armé à l'entrée du break.
   Future<void> reachPostureGate(SessionController ctrl) async {
     await ctrl.start();
-    await Future<void>.delayed(const Duration(milliseconds: 3600));
-    expect(ctrl.breakActive, isFalse, reason: 'break fini à t≈3,6 s');
+    await Future<void>.delayed(const Duration(milliseconds: 1600));
+    expect(ctrl.breakActive, isTrue, reason: 'break entré à t≈1 s');
     expect(ctrl.awaitingPostureReady, isTrue,
-        reason: 'newPose=kneeling → le gate s\'arme à la sortie du break');
+        reason: 'newPose=kneeling → le gate s\'arme à l\'entrée du break');
   }
 
   test(
@@ -217,8 +217,8 @@ void main() {
     // t≈1,6 s : dans la fenêtre du break, avant sa fin naturelle à t=3.
     await Future<void>.delayed(const Duration(milliseconds: 1600));
     expect(ctrl.breakActive, isTrue);
-    expect(ctrl.awaitingPostureReady, isFalse,
-        reason: 'le gate ne s\'arme qu\'à la SORTIE du break');
+    ctrl.confirmPostureReady();
+    expect(ctrl.awaitingPostureReady, isFalse);
     expect(ctrl.canTriggerFail, isTrue);
 
     await ctrl.triggerFail();
@@ -310,11 +310,12 @@ void main() {
             'le reprendre ferait repartir l\'effort en pleine pause');
 
     // Et il doit bien repartir ensuite : c'est le step d'effort posé après le
-    // trou qui le reconfigure, une fois la mise en place validée.
-    await Future<void>.delayed(const Duration(milliseconds: 1600));
+    // trou qui le reconfigure, une fois la mise en place validée et la pause
+    // écoulée.
     expect(ctrl.awaitingPostureReady, isTrue);
     ctrl.confirmPostureReady();
-    await Future<void>.delayed(const Duration(milliseconds: 600));
+    await Future<void>.delayed(const Duration(milliseconds: 2600));
+    expect(ctrl.awaitingPostureReady, isFalse);
     expect(beep.appliedSteps.map((s) => s.text), contains('apres-break'),
         reason: 'la séance n\'est pas restée muette pour autant');
 

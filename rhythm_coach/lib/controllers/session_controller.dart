@@ -477,7 +477,7 @@ class SessionController extends ChangeNotifier {
   int _breakOrderInterval = _breakOrderMinIntervalSeconds;
 
   /// Posture courante imposée. Initialisée à
-  /// `session.initialPose` au `start()`, mise à jour à la reprise de chaque
+  /// `session.initialPose` au `start()`, mise à jour à l'entrée de chaque
   /// break qui change de pose. Exposée pour l'indicateur de posture (PR5).
   Posture _currentPose = Posture.free;
   Posture get currentPose => _currentPose;
@@ -491,7 +491,7 @@ class SessionController extends ChangeNotifier {
 
   /// Gate de validation posture : ce qui justifie le gel courant,
   /// `null` s'il n'y en a pas. Armé par un step `awaitReady` (milestone
-  /// posture) ou une sortie de break qui change de pose. Gel identique au défi
+  /// posture) ou l'entrée d'un break qui change de pose. Gel identique au défi
   /// (`elapsedSeconds` figé via `_timelineOffset` dans `_onTick`,
   /// stopwatch/ticker intacts).
   ///
