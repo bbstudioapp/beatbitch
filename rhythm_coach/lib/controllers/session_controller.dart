@@ -303,10 +303,12 @@ class SessionController extends ChangeNotifier {
     return unplayedPostureScript.pauseSeconds + rest;
   }
 
-  /// Effort restant à partir de [fromSec] : ce qui reste de la séance, pauses à
-  /// venir retranchées. Durée demandée au générateur pour une suite régénérée.
+  /// Effort restant de [fromSec] au début de la phase de fin, pauses à venir
+  /// retranchées : une suite régénérée y ajoute sa propre phase de fin.
   int effortSecondsLeftFrom(int fromSec) =>
-      _session.durationSeconds - fromSec - pauseSecondsAhead;
+      (_session.silentFinishStartTime ?? _session.durationSeconds) -
+      fromSec -
+      pauseSecondsAhead;
 
   /// Pauses et changements de position restants, rebasés sur [fromSec] : ce que
   /// le générateur rejoue dans une suite régénérée à partir de cet instant.

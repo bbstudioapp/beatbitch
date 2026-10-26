@@ -261,6 +261,44 @@ void main() {
     }
   });
 
+  test(
+      'durationExcludesFinish : le corps va jusqu\'à la durée demandée, la '
+      'phase de fin s\'y ajoute', () {
+    const finalM = LevelMilestone(
+      id: 'final_test',
+      humilRequired: 0.0,
+      displayLabel: 'final',
+      placement: MilestonePlacement.finalApotheose,
+      sequence: [
+        SessionStep(
+          time: 0,
+          text: 'final-step',
+          mode: SessionMode.hold,
+          to: Position.tip,
+          duration: 60,
+        ),
+      ],
+      durationSeconds: 60,
+      unlocks: [],
+    );
+    for (var seed = 0; seed < 10; seed++) {
+      final s = CareerSessionGenerator(seed: seed)
+          .generate(
+            level: 10,
+            bank: _bank(),
+            durationSeconds: 300,
+            durationExcludesFinish: true,
+            milestones: const MilestonePlan(finalMilestone: finalM),
+            unlockedKeys: _allUnlocks,
+          )
+          .session;
+      expect(s.silentFinishStartTime, greaterThanOrEqualTo(300),
+          reason: 'graine $seed');
+      expect(s.durationSeconds, greaterThanOrEqualTo(360),
+          reason: 'graine $seed');
+    }
+  });
+
   test('sans finalMilestone, _pickFinal classique est appelé', () {
     // Contre-épreuve : sans finalMilestone, le finisher est calculé par
     // `_pickFinal` (= comportement historique). À humil 0 + niveau 2,

@@ -802,6 +802,7 @@ class _CareerScreenState extends State<CareerScreen> {
     final humiliationSession = ctrl.humiliation.sessionScore;
     final newGen = CareerSessionGenerator().generate(
       durationSeconds: genDuration,
+      durationExcludesFinish: true,
       level: newLevel,
       bank: coachBank,
       includeHand: bundle.includeHand,
@@ -924,6 +925,7 @@ class _CareerScreenState extends State<CareerScreen> {
 
     final newGen = CareerSessionGenerator().generate(
       durationSeconds: regen.durationSeconds,
+      durationExcludesFinish: true,
       carry: regen.carry,
       level: level,
       bank: coachBank,
@@ -1019,6 +1021,7 @@ class _CareerScreenState extends State<CareerScreen> {
 
     final newGen = CareerSessionGenerator().generate(
       durationSeconds: regen.durationSeconds,
+      durationExcludesFinish: true,
       carry: regen.carry,
       level: level,
       bank: coachBank,

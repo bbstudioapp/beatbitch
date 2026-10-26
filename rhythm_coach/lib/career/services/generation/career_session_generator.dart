@@ -599,6 +599,9 @@ class CareerSessionGenerator {
     /// surprise / Supplier / encore).
     MilestonePlan milestones = MilestonePlan.none,
 
+    /// `durationSeconds` s'arrête au début de la phase de fin, qui s'y ajoute.
+    bool durationExcludesFinish = false,
+
     /// 2ᵉ enveloppe de difficulté (profil de capacités + plafonds figés
     /// par fail). `CapabilityInputs.none` = aucun gating capacité.
     /// `overloadAxis` est ignoré ici (`generate()` pioche son axe via
@@ -740,9 +743,11 @@ class CareerSessionGenerator {
         : _finisherBudgetSeconds;
     // Base de la fenêtre de génération : `ctx.genUntil` y ajoute ensuite les
     // fenêtres de défi réservées, qui ne sont pas du contenu de séance.
-    final genUntilBase = effectiveDuration -
-        finalBudget -
-        (isLowLevel && !useFinalMilestone ? _preFinisherBudgetSeconds : 0);
+    final genUntilBase = durationExcludesFinish
+        ? effectiveDuration
+        : effectiveDuration -
+            finalBudget -
+            (isLowLevel && !useFinalMilestone ? _preFinisherBudgetSeconds : 0);
 
     // `_state.salivaSim` et `_state.salivaSimSecond` sont posés par
     // `SessionRuntimeState.fresh()` plus haut.
