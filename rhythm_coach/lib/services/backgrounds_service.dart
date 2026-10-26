@@ -234,7 +234,29 @@ class BackgroundsService {
       _setExcluding(ranked.untagged);
       return;
     }
+    if (ctx.coach != null) {
+      _keepCoach(ctx);
+      return;
+    }
     pickRandom();
+  }
+
+  void _keepCoach(BackgroundContext ctx) {
+    final own = _bundle.entries
+        .where((e) =>
+            !e.isTierTransition &&
+            !e.isPov &&
+            !handRaisedHolds.contains(e.id) &&
+            (e.tagsByCategory[BackgroundTagCategory.phase]
+                    ?.contains(ctx.phase) ??
+                true) &&
+            (e.tagsByCategory[BackgroundTagCategory.coach]
+                    ?.contains(ctx.coach) ??
+                false))
+        .toList();
+    final atTier = own.where((e) => e.tier == ctx.tier).toList();
+    final pool = atTier.isEmpty ? own : atTier;
+    if (!pool.contains(current.value)) _setExcluding(pool);
   }
 
   void _keepGesture(BackgroundContext ctx) {
