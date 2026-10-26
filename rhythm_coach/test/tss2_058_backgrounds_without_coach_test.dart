@@ -85,6 +85,14 @@ void main() {
     expect(svc.current.value, isNull);
   });
 
+  test('un fond de coach encore affiché cède au neutre au geste sans coach',
+      () {
+    showLina();
+    svc.pickForContext(
+        const BackgroundContext(mode: 'rhythm', position: 'mid'));
+    expect(svc.current.value, isNull);
+  });
+
   test('avec coach, chaque geste montre un fond de cette coach', () {
     final gestures = play('lina').gestures;
     expect(gestures, everyElement(isNotNull));
