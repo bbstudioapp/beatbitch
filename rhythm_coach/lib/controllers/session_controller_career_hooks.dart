@@ -121,9 +121,8 @@ extension CareerHooksOrchestrator on SessionController {
     // Défi excisé et chrono gelé pendant le souffle : `elapsedSeconds` en est
     // déjà la fin.
     final breathEnd = elapsedSeconds;
-    // L'horloge gelée oscille sous le déclencheur (offset −tick à chaque tick) :
-    // `elapsedSeconds` tombe une seconde en dessous, et un jalon qui finit au
-    // déclencheur paraîtrait inachevé.
+    // Horloge gelée : `elapsedSeconds` vaut le déclencheur ou une seconde de
+    // moins selon l'instant de la régénération ; `playedUntil` ne varie pas.
     final triggers = _session.challengeTriggerTimes;
     final playedUntil =
         _activeChallengeIndex >= 0 && _activeChallengeIndex < triggers.length
