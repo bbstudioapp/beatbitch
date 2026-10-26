@@ -71,6 +71,20 @@ void main() {
     expect(svc.current.value, isNull);
   });
 
+  void showLina() {
+    svc.pickForContext(const BackgroundContext(
+        mode: 'rhythm', position: 'mid', coach: 'lina'));
+    expect(svc.current.value?.tagsByCategory[BackgroundTagCategory.coach],
+        contains('lina'));
+  }
+
+  test('après une séance avec coach, l\'intro sans coach repasse au neutre',
+      () {
+    showLina();
+    svc.pickIntro(null);
+    expect(svc.current.value, isNull);
+  });
+
   test('avec coach, chaque geste montre un fond de cette coach', () {
     final gestures = play('lina').gestures;
     expect(gestures, everyElement(isNotNull));
