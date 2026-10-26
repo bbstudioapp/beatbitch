@@ -2,7 +2,9 @@
 
 Branche `feat/postures-pauses-frequence`, partie de `fix/corrections-octobre` (`cb080c6`).
 Décision appliquée : Manu, 17/10 (changement de position toutes les 6-10 min, pauses
-selon l'endurance, pause passable, fusion pause + changement).
+selon l'endurance, pause passable, fusion pause + changement). Valeurs révisées le 26/10 (§2,
+§4) : pauses toutes les 7 à 12 min, 1er changement entre 4 et 7 min, annonce au début de la
+pause, temps de pause hors du temps d'effort, pauses gardées dans les suites refaites.
 
 ## 1. L'existant, relevé avant de coder
 
@@ -26,6 +28,12 @@ ils sont réutilisés tels quels, seul le délai de reprise automatique passe à
 | `ac19034` | Bouton « PASSER LA PAUSE » dans la bannière de pause, 4 langues (`sessionBreakSkipButton`). |
 | `f5dd575` | Garde runtime impossible retirée, balayage des défis élargi (la garde du générateur n'y était pas atteinte), report à l'excision testé, commentaires rendus faux corrigés (90 s, « sessions longues », « 2ᵉ pause en récup pure »). |
 | `b4941ee` | Commentaires seulement : références de ticket, de spec et de phase de refacto des fichiers touchés. |
+| `5178b02` | Valeurs du 26/10 : pauses toutes les `lerp(7 min, 12 min, pts_endurance / 5)`, 1er changement de position tiré entre 4 et 7 min, puis 6-10 min. Remplace les 10-20 min et le 1er changement à 10 min du `676316f`. |
+| `af320f9` | La pause qui change de position l'annonce dès son entrée : pose posée, une seule phrase (pose, sinon entrée), attente de mise en place pendant la pause ; `_exitBreak` ne dit plus que la reprise ; `skipBreak` ré-arme l'attente si elle n'était pas validée. |
+| `557f030` | Le temps de pause sort du temps d'effort : fenêtre réservée comme un défi (`reservedWindowSeconds`), la séance dure la durée choisie + les pauses. `inLastMinute` et la progression de stamina des jalons se lisent sur le temps d'effort. |
+| `87792bc` | Les suites refaites (après un défi, étape retentée) rejouent les pauses et changements non joués (`PostureScript`, `generate(carry:)`) ; l'effort restant exclut `pauseSecondsAhead`. « Utilise-moi » (non-stop) ne les garde pas. |
+| `8edab32` | Libellé de durée : « + le temps des défis et des pauses » / « + le temps des pauses » (4 langues) ; la séance bâclée n'a jamais de pause. |
+| `762a227` | Test des getters `unplayedPostureScript` / `pauseSecondsAhead` du contrôleur. |
 
 Vérifications : `flutter analyze` → No issues found! ; `dart format` appliqué ; suite complète verte à
 `f5dd575` (1390 tests) ; `flutter build web` OK. À `b4941ee` (commentaires seulement), une suite
@@ -63,38 +71,43 @@ Mutations, restaurées par copie :
 
 ## 4. Choix faits faute de précision dans la décision — à trancher par Manu
 
-1. **Mesure d'endurance** : points de spécialisation « Endurance » (0 pt → 10 min, ≥ 5 pts → 20 min,
-   linéaire entre). C'est l'« endurance » que le générateur lit déjà partout. Alternative :
-   l'axe mesuré « Effort sans pause » (`effortNoBreathStreak.comfort`) — plus fidèle à ce que la joueuse
-   tient, mais vide pour un profil neuf, jamais lu par le générateur et sans bornes « faible/forte »
-   existantes (il faudrait les inventer). Le choix est isolé dans `_breakIntervalSeconds()`.
+1. **Mesure d'endurance** : points de spécialisation « Endurance » (0 pt → pause toutes les 7 min,
+   ≥ 5 pts → 12 min, linéaire entre). C'est l'« endurance » que le générateur lit déjà partout.
+   Alternative : l'axe mesuré « Effort sans pause » (`effortNoBreathStreak.comfort`) — plus fidèle à ce
+   que la joueuse tient, mais vide pour un profil neuf, jamais lu par le générateur et sans bornes
+   existantes. Le choix est isolé dans `_breakIntervalSeconds()`.
 2. **Postures « débloquées »** = hors `free`. Sans posture débloquée : aucun changement, pauses sans
    pose ; avec une seule : au plus un changement par séance.
-3. **Premier changement à 10 min pile** (frontière de bloc suivante), puis +6-10 min tirés. Alternative :
-   premier changement tiré entre 10 et 16 min.
+3. **Premier changement** tiré entre 4 et 7 min (frontière de bloc suivante), puis +6-10 min tirés.
 4. **« Près d'une pause » = 2 min** avant le début ou après la fin de la pause.
-5. **Changement porté par une pause** : la nouvelle pose s'affiche dans la bannière pendant la pause,
-   l'annonce et l'attente de mise en place viennent à sa fin (mécanisme existant, une seule
-   interruption continue). Alternative : annoncer à l'entrée de la pause, sans attente à la sortie.
-6. **Délai de reprise auto à 2 min pour tous les gels de posture** (milestones posture et sortie de
-   pause compris, 90 s avant) : une seule constante.
-7. **Passer la pause raccourcit la séance** du temps restant de la pause (la pause est un trou dans
-   l'enveloppe, le saut de timeline le supprime). Alternative : sortir les pauses de l'enveloppe comme
-   les défis (la séance dure alors la durée choisie + les pauses non passées).
-8. **Contenu d'effort** : à endurance faible, une séance de 60 min porte ~5 pauses de 60-120 s, soit
-   5 à 10 min sans effort dans la durée choisie (2 pauses max avant). Durée 60-120 s gardée faute de
-   mesure contraire.
+5. **Changement porté par une pause** : annoncé à l'entrée de la pause, qui attend « JE SUIS EN PLACE »
+   avant de courir ; le temps de mise en place n'est pas déduit de la pause (l'horloge est gelée).
+6. **Délai de reprise auto à 2 min pour tous les gels de posture** (milestones posture et pauses
+   compris, 90 s avant) : une seule constante.
+7. **Pauses hors effort** : la séance dure la durée choisie + les pauses, comme avec les défis ;
+   passer une pause raccourcit la séance du temps de pause restant, jamais l'effort.
+8. **Suites refaites** : post-défi et étape retentée gardent pauses et changements non joués, recalés
+   sur le temps déjà joué ; une pause qui ne tient plus avant la phase finish est abandonnée. Une
+   pause en cours au moment de la régénération est coupée. « Utilise-moi » ne garde rien (décision
+   de Manu, 26/10).
+9. **Libellé de durée** : trois variantes selon les défis et les pauses actifs, car « défis et pauses »
+   serait faux dès qu'une des deux fonctions est éteinte.
 
 ## 5. Ce qui reste ouvert
 
-- Les régénérations en cours de séance (« Utilise-moi », retry milestone, après défi) ne portent ni
-  pauses ni changements : la suite de la séance n'en a plus (préexistant pour les pauses, s'étend aux
-  changements).
-- Non couverts par un test : le suivi de la pose enseignée par une milestone `intro_posture_*` dans
-  le générateur (`postureTaughtByMilestone`), la remise à zéro de `_nextPostureChangeIndex` aux
-  régénérations.
-- Nettoyage des commentaires partiel dans les trois gros fichiers touchés : restent 48 lignes-récit
-  (phases, spec, refacto) dans `career_session_generator.dart`, 28 dans `session_controller.dart`,
-  19 dans `session_controller_challenge.dart`.
-- Rien n'a été joué sur téléphone : ressenti de la cadence, du bouton et de l'attente à juger.
+- Retry d'une étape qui enseigne une posture : la pose du jalon rejoué peut rendre un changement
+  porté sans effet (même pose). Rare, bénin.
+- Non protégés par un test : `inLastMinute` sur le temps d'effort (observable seulement par une
+  récupération absente, tirage trop fin pour une assertion stable) ; le câblage des trois sites de
+  `career_screen.dart` (`pauseSecondsAhead`, `carry`) et du libellé, que seul un banc d'écran
+  prouverait.
+- Les cibles de jalon (`tryInsertAt`) restent sur `ctx.time` : avec des pauses avant, un jalon tombe
+  plus tôt dans l'effort de la somme des pauses déjà passées, comme déjà avec les défis. Aucun
+  jalon perdu (`insertAllRemaining`).
+- Fusion avec `fix/regen-garde-jalons` (`1a274c8`) : mêmes deux builders et même constructeur
+  `Session(...)` que `87792bc`, conflit textuel additif à la fusion.
+- Rien n'a été joué sur téléphone : ressenti de la cadence, du bouton, de l'annonce et de l'attente à juger.
+- Nettoyage des commentaires partiel dans les trois gros fichiers touchés : restent des lignes-récit
+  (phases, spec, refacto) dans `career_session_generator.dart`, `session_controller.dart`,
+  `session_controller_challenge.dart`.
 - La spec locale `~/vault/perso/bb/specs/scripted_breaks.md` décrit encore les seuils 28/45 min.
