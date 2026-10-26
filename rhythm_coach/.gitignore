@@ -67,3 +67,6 @@ screenshots/
 
 # Originaux des fonds animés avant recompression (tools/compress_backgrounds.py).
 /assets-originaux/
+
+# Reste d'une recompression interrompue (tools/compress_backgrounds.py).
+assets/backgrounds/.*.tmp
