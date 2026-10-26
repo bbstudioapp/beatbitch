@@ -17,12 +17,17 @@ List<String> _v3(String c) => [
       '$c-v3-postfinal_post-final_${c}_nu2.webp',
     ];
 
+const _povs = [
+  'pov-A-gag_pov_hold_full.webp',
+  'pov-A-rhythm-full_pov_rhythm_full.webp',
+  'pov-A-suckle_pov_suckle.webp',
+];
+
 void main() {
   final svc = BackgroundsService.instance;
   final bundle = BackgroundsBundle(entries: [
-    for (final c in _coaches)
-      for (final n in _v3(c))
-        BackgroundsLoader.parseEntry('assets/backgrounds/$n')!,
+    for (final n in [for (final c in _coaches) ..._v3(c), ..._povs])
+      BackgroundsLoader.parseEntry('assets/backgrounds/$n')!,
   ]);
 
   setUp(() {
@@ -32,39 +37,47 @@ void main() {
   });
   tearDown(() => svc.debugRandom = Random());
 
-  List<BackgroundEntry> playWithoutCoach() {
-    final shown = <BackgroundEntry>[];
+  ({List<BackgroundEntry?> gestures, List<BackgroundEntry?> all}) play(
+      String? coach) {
+    final all = <BackgroundEntry?>[];
+    void record() => all.add(svc.current.value);
+    svc.current.addListener(record);
+    svc.pickIntro(coach);
+    final gestures = <BackgroundEntry?>[];
     for (var i = 0; i < 60; i++) {
-      svc.pickForContext(BackgroundContext(
-        mode: i.isEven ? 'rhythm' : 'hold',
-        position: i.isEven ? 'mid' : 'throat',
-      ));
-      final cur = svc.current.value;
-      if (cur != null) shown.add(cur);
+      svc.pickForContext(
+        BackgroundContext(
+          mode: i.isEven ? 'rhythm' : 'hold',
+          position: i.isEven ? 'mid' : 'throat',
+          coach: coach,
+          phase: switch (i) { 58 => 'final', 59 => 'post-final', _ => null },
+          tier: i < 20 ? null : (i < 40 ? 'nu1' : 'nu2'),
+        ),
+        playerScene: true,
+      );
+      gestures.add(svc.current.value);
     }
-    return shown;
+    svc
+      ..pickFail(coach)
+      ..pickPunish(coach)
+      ..pickMilestone(coach);
+    svc.current.removeListener(record);
+    return (gestures: gestures, all: all);
   }
 
-  test('sans coach, un geste ordinaire ne montre ni final ni fail ni punition',
-      () {
-    final shown = playWithoutCoach();
-    expect(shown, isNotEmpty);
-    final offPhase = shown
-        .where((e) =>
-            e.tags.contains('final') ||
-            e.tags.contains('post-final') ||
-            e.tags.contains('fail') ||
-            e.tags.contains('punish'))
-        .map((e) => e.id)
-        .toSet();
-    expect(offPhase, isEmpty,
-        reason: 'un fond de phase ou de moment hors de son moment');
+  test('sans coach, aucun fond de coach : le fond neutre de bout en bout', () {
+    final shown = play(null).all.whereType<BackgroundEntry>().map((e) => e.id);
+    expect(shown, isEmpty);
+    expect(svc.current.value, isNull);
   });
 
-  test('sans coach, la séance garde une seule coach', () {
-    final coaches = playWithoutCoach()
-        .expand((e) => e.tagsByCategory[BackgroundTagCategory.coach] ?? {})
+  test('avec coach, chaque geste montre un fond de cette coach', () {
+    final gestures = play('lina').gestures;
+    expect(gestures, everyElement(isNotNull));
+    final coaches = gestures
+        .where((e) => !e!.isPov)
+        .expand((e) => e!.tagsByCategory[BackgroundTagCategory.coach] ?? {})
         .toSet();
-    expect(coaches, hasLength(1), reason: 'coachs montrées : $coaches');
+    expect(coaches, {'lina'});
   });
 }
