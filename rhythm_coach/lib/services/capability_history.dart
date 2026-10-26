@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Valeurs d'un axe à la fin d'une séance, telles que persistées par
@@ -99,7 +100,7 @@ class CapabilityHistory {
   static Map<String, dynamic> toJson(
     List<CapabilityHistoryEntry> entries, {
     bool dayOnly = false,
-    DateTime Function(DateTime) toLocal = _systemLocal,
+    DateTime Function(DateTime)? toLocal,
   }) =>
       <String, dynamic>{
         'v': schemaVersion,
@@ -107,7 +108,7 @@ class CapabilityHistory {
           for (final e in entries)
             <String, dynamic>{
               't': dayOnly
-                  ? _dayStart(toLocal(e.at))
+                  ? _dayStart((toLocal ?? localOf)(e.at))
                   : e.at.millisecondsSinceEpoch,
               'i': e.sessionIndex,
               'a': {
@@ -122,7 +123,30 @@ class CapabilityHistory {
         ],
       };
 
-  static DateTime _systemLocal(DateTime d) => d.toLocal();
+  /// Conversion utilisée par [toJson] quand aucun `toLocal` n'est passé.
+  @visibleForTesting
+  static DateTime Function(DateTime) localOf = systemLocal;
+
+  static DateTime systemLocal(DateTime d) => d.toLocal();
+
+  /// Minuit local du jour porté par [d] (composantes lues telles quelles).
+  static DateTime localMidnight(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  /// Relit la section d'un export « jour seul » : chaque `t` est un jour
+  /// (minuit UTC de la date locale), rendu par [fromLocal] en instant dont
+  /// `toLocal` rend ce même jour.
+  static List<CapabilityHistoryEntry> fromExportJson(
+    Object? decoded, {
+    DateTime Function(DateTime) fromLocal = localMidnight,
+  }) =>
+      [
+        for (final e in fromJson(decoded))
+          CapabilityHistoryEntry(
+            at: fromLocal(e.at),
+            sessionIndex: e.sessionIndex,
+            axes: e.axes,
+          ),
+      ];
 
   static int _dayStart(DateTime local) =>
       DateTime.utc(local.year, local.month, local.day).millisecondsSinceEpoch;
