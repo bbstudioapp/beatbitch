@@ -65,10 +65,8 @@ class SessionController extends ChangeNotifier {
   final StatsService _stats;
   final BadgeService _badges;
 
-  /// N'écrit que si [_capabilityTracker] a produit un rapport.
   final CapabilityService _capabilities;
 
-  /// Non null uniquement sur les sessions carrière (`trackCapabilities`).
   final CapabilityTracker? _capabilityTracker;
 
   /// Plafonds figés aux appuis FAIL de la séance ; vide hors carrière ou sans
@@ -76,7 +74,6 @@ class SessionController extends ChangeNotifier {
   Map<CapabilityAxis, double> get capabilitySessionCeilings =>
       _capabilityTracker?.sessionCeilings ?? const {};
 
-  /// 0 hors carrière.
   final int _careerLevel;
 
   /// Axe surchargé de la séance (`null` hors carrière ou profil neuf) ; sert
@@ -93,12 +90,8 @@ class SessionController extends ChangeNotifier {
   /// `onPostChallengeRegen`.
   Set<UnlockKey> _unlockedKeys;
 
-  /// Repassé au générateur de punition carrière pour exclure les compositions à
-  /// la main.
   final bool _includeHand;
 
-  /// Séance bâclée : `CapabilityService.commit` enregistre le `best` sans
-  /// recalibrer la cible `comfort`.
   final bool _isQuickie;
 
   final HumiliationEngine _humiliation = HumiliationEngine();
@@ -238,10 +231,8 @@ class SessionController extends ChangeNotifier {
   int _challengeCrossingsCount = 0;
   int get challengeCrossingsCount => _challengeCrossingsCount;
 
-  /// Dernier défi armé ; l'historique complet est dans [_completedChallenges].
   ChallengeOutcome? _challengeOutcome;
 
-  /// -1 = aucun défi en cours.
   int _activeChallengeIndex = -1;
 
   /// Évite de ré-armer un défi traité quand la session reboucle sur le même
@@ -263,7 +254,6 @@ class SessionController extends ChangeNotifier {
   /// suivant si le TTS était occupé, sans doublon.
   String? _challengeSpokenText;
 
-  /// Clone de `session.challenge`.
   Challenge? _activeChallenge;
 
   ChallengeSegmentBuilder? _segmentBuilder;
@@ -337,8 +327,6 @@ class SessionController extends ChangeNotifier {
   /// libéré.
   bool _released = false;
 
-  /// Sert l'annonce TTS d'unlock par défaut de `_finish()`. `null` hors widget
-  /// tree (tests).
   AppLocalizations? _appLocalizations;
   void setAppLocalizations(AppLocalizations? l10n) {
     _appLocalizations = l10n;
@@ -369,7 +357,6 @@ class SessionController extends ChangeNotifier {
 
   final SpecializationService? _specializationService;
 
-  /// Probabilité par minute ; 0 = jamais.
   final double _miniPunishmentRate;
 
   /// Slug du coach actif (extrait de l'`id` `coach_NN_<slug>` par le caller) ;
@@ -572,14 +559,9 @@ class SessionController extends ChangeNotifier {
 
   bool get useMeActive => _useMeActive;
 
-  /// Délai sans FAIL avant que « Utilise-moi » (re)paraisse : [useMeUnlockAfter]
-  /// au départ, puis +[useMeUnlockStep] par « Utilise-moi » terminé par un FAIL.
   Duration get useMeUnlockDelay =>
       useMeUnlockAfter + useMeUnlockStep * _useMeFailEndings;
 
-  /// Règle de l'essai : « Utilise-moi » apparaît après [useMeUnlockDelay] de
-  /// temps joué sans FAIL. Le chronomètre est arrêté pendant tout le flow fail,
-  /// la punition ne compte donc pas ; une mini-punition n'est pas un FAIL.
   bool get useMeUnlocked =>
       playedElapsed - _playedAtLastFail >= useMeUnlockDelay;
 
@@ -605,22 +587,16 @@ class SessionController extends ChangeNotifier {
   @visibleForTesting
   void debugAddPlayed(Duration d) => _playedOffset += d;
 
-  /// Ordonnés par catalogue ; vide tant que [_finish] n'a pas terminé sa
-  /// réconciliation.
   List<BadgeUnlock> _sessionBadgeUnlocks = const [];
   List<BadgeUnlock> get sessionBadgeUnlocks => _sessionBadgeUnlocks;
 
-  /// Calculée par `_finish`, gardée en attente jusqu'à `revealBadgeUnlocks()`.
   List<BadgeUnlock> _pendingBadgeUnlocks = const [];
 
-  /// Milestones acquittées dans cette séance (pas déjà acquittées avant) ; vide
-  /// tant que [_finish] n'a pas terminé.
   List<LevelMilestone> _sessionMilestoneUnlocks = const [];
   List<LevelMilestone> get sessionMilestoneUnlocks => _sessionMilestoneUnlocks;
 
   bool get milestoneAcquittedThisSession => _sessionMilestoneUnlocks.isNotEmpty;
 
-  /// Au moins une milestone planifiée n'est pas encore complétée.
   bool _milestoneOpportunityMissed() {
     final ids = <String?>[
       _session.milestoneId,
@@ -697,7 +673,6 @@ class SessionController extends ChangeNotifier {
   static const int musicBeepAdvanceStepMs = 10;
   int _musicBeepAdvanceMs = DebugSettingsService.defaultMusicBeepAdvanceMs;
 
-  /// Avance des bips sur le morceau, en ms ; 0 hors séance musicale.
   int get musicBeepAdvanceMs => _music == null ? 0 : _musicBeepAdvanceMs;
 
   Future<void> setMusicBeepAdvanceMs(int ms) async {
@@ -1106,8 +1081,6 @@ class SessionController extends ChangeNotifier {
     _ticker = Timer.periodic(_tickInterval, (_) => _onTick());
   }
 
-  /// Debug : termine la séance comme un succès complet, sans la jouer. Réservé
-  /// au flag `DebugSettingsService.getSkipSessionButton`.
   Future<void> debugFinishSuccess() async {
     if (_state != SessionState.running && _state != SessionState.paused) {
       return;
@@ -1213,7 +1186,6 @@ class SessionController extends ChangeNotifier {
     }
   }
 
-  /// À appeler quand le mode change ou que la session se termine.
   void _flushHoldFull() {
     if (_currentHoldFullDuration > 0) {
       if (!_session.noStats) {
@@ -1233,18 +1205,12 @@ class SessionController extends ChangeNotifier {
     verifier.arm(expected);
   }
 
-  /// Faux pour un final `hold` ancré (`step.anchor == BeatAnchor.to`) : ses
-  /// allers-retours sont un mouvement demandé par l'app, pas une dérive à
-  /// sanctionner. L'architecture arme par step entier : la portion statique qui
-  /// suit les swings n'est pas non plus vérifiée.
   @visibleForTesting
   static bool shouldArmHoldVerifier(SessionStep step, SessionMode defaultMode) {
     final mode = step.mode ?? defaultMode;
     return mode == SessionMode.hold && step.anchor != BeatAnchor.to;
   }
 
-  /// Palier de nudité du fond (`nu1`, `nu2`, `null` = lingerie) à [seconds] :
-  /// un tiers de la durée chacun, la montée et ce qui suit toujours en `nu2`.
   @visibleForTesting
   static String? backgroundTierFor(int seconds, Session session) {
     final finish = session.silentFinishStartTime ?? session.finalStepTime;
@@ -1263,7 +1229,6 @@ class SessionController extends ChangeNotifier {
     BackgroundsService.instance.pickForContext(ctx);
   }
 
-  /// Le palier monte avec l'horloge, pas seulement aux changements de step.
   void _refreshBackgroundTier() {
     final last = _lastBackgroundContext;
     if (last == null) return;
@@ -1764,8 +1729,6 @@ class SessionController extends ChangeNotifier {
     }
   }
 
-  /// Identifié via `Session.finalStepTime` ; à défaut (hors carrière), dernier
-  /// step de config.
   SessionStep? _findFinalStep() {
     final finalT = session.finalStepTime;
     if (finalT != null) {
@@ -1780,8 +1743,6 @@ class SessionController extends ChangeNotifier {
     return null;
   }
 
-  /// Premier step de config après `finalStepTime` ; `null` sans step final ou
-  /// sans step de config derrière.
   SessionStep? _findPostFinalStep() {
     final finalT = session.finalStepTime;
     if (finalT == null) return null;
@@ -1889,10 +1850,6 @@ class SessionController extends ChangeNotifier {
     );
   }
 
-  /// Helper pur : assemble la [Session] qui remplace la suite après un défi qui
-  /// a élargi les unlocks. Rebase les steps de [upcoming] sur [breathEnd] et
-  /// décale aussi les métadonnées de fin.
-  ///
   /// Conserve [previous.challenges] (et leurs timestamps) :
   /// `_updateChallengePhase` est en `phase == ended` à ce stade, le défi ne
   /// sera pas re-déclenché.
@@ -1901,10 +1858,29 @@ class SessionController extends ChangeNotifier {
     required Session previous,
     required Session upcoming,
     required int breathEnd,
+    int? playedUntil,
   }) {
     final newSteps = <SessionStep>[
       for (final s in upcoming.steps) s.rebased(s.time + breathEnd),
     ];
+
+    final windowLimit = playedUntil ?? breathEnd;
+    final bodies = <({String id, int start, int duration})>[];
+    void addPrevIfWindowEnded(int? mStart, int? mDur, String? id) {
+      if (id == null || mStart == null || mDur == null) return;
+      if ((mStart + mDur) <= windowLimit) {
+        bodies.add((id: id, start: mStart, duration: mDur));
+      }
+    }
+
+    addPrevIfWindowEnded(previous.milestoneStartTime,
+        previous.milestoneDurationSeconds, previous.milestoneId);
+    addPrevIfWindowEnded(previous.secondMilestoneStartTime,
+        previous.secondMilestoneDurationSeconds, previous.secondMilestoneId);
+    bodies.sort((a, b) => a.start.compareTo(b.start));
+    final mid1 = bodies.isNotEmpty ? bodies[0] : null;
+    final mid2 = bodies.length >= 2 ? bodies[1] : null;
+
     final upFinalStepTime = upcoming.finalStepTime;
     final upSilentFinish = upcoming.silentFinishStartTime;
     return Session(
@@ -1914,6 +1890,12 @@ class SessionController extends ChangeNotifier {
       durationSeconds: breathEnd + upcoming.durationSeconds,
       defaultMode: previous.defaultMode,
       steps: newSteps,
+      milestoneId: mid1?.id,
+      milestoneStartTime: mid1?.start,
+      milestoneDurationSeconds: mid1?.duration,
+      secondMilestoneId: mid2?.id,
+      secondMilestoneStartTime: mid2?.start,
+      secondMilestoneDurationSeconds: mid2?.duration,
       finalStepTime:
           upFinalStepTime != null ? upFinalStepTime + breathEnd : null,
       silentFinishStartTime:

@@ -121,10 +121,18 @@ extension CareerHooksOrchestrator on SessionController {
     // Défi excisé et chrono gelé pendant le souffle : `elapsedSeconds` en est
     // déjà la fin.
     final breathEnd = elapsedSeconds;
+    // Horloge gelée : `elapsedSeconds` vaut le déclencheur ou une seconde de
+    // moins selon l'instant de la régénération ; `playedUntil` ne varie pas.
+    final triggers = _session.challengeTriggerTimes;
+    final playedUntil =
+        _activeChallengeIndex >= 0 && _activeChallengeIndex < triggers.length
+            ? triggers[_activeChallengeIndex]
+            : null;
     _session = SessionController.buildPostChallengeRegenSession(
       previous: _session,
       upcoming: upcomingSession,
       breathEnd: breathEnd,
+      playedUntil: playedUntil,
     );
 
     _nextStepIndex = 0;
