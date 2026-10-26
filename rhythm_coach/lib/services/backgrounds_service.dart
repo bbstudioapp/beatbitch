@@ -239,18 +239,19 @@ class BackgroundsService {
 
   void _keepGesture(BackgroundContext ctx) {
     final last = _lastGesture;
-    final gesture = last == null
-        ? const <BackgroundEntry>[]
-        : _rank(BackgroundContext(
-            mode: last.mode,
+    final gesture = last?.mode == 'rhythm'
+        ? _rank(BackgroundContext(
+            mode: last!.mode,
             position: last.position,
             coach: ctx.coach,
             phase: ctx.phase,
             tier: ctx.tier,
-          )).best;
+          )).best
+        : const <BackgroundEntry>[];
     if (gesture.isEmpty) {
-      if (current.value?.isTierTransition ?? false) {
-        _setExcluding(_coachRhythmsAt(ctx));
+      if (last != null || (current.value?.isTierTransition ?? false)) {
+        final rhythms = _coachRhythmsAt(ctx);
+        if (!rhythms.contains(current.value)) _setExcluding(rhythms);
       }
       return;
     }

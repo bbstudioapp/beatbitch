@@ -345,6 +345,65 @@ void main() {
         }
       }
     }
+
+    for (final coach in ['lina', 'helene']) {
+      for (final tier in ['nu1', 'nu2']) {
+        for (final mode in [
+          'lick',
+          'beg',
+          'biffle',
+          'hand',
+          'breath',
+          'freestyle',
+        ]) {
+          test('$coach $tier, tenue après $mode : la coach suce', () {
+            _load(_pack);
+            for (var seed = 0; seed < 40; seed++) {
+              svc.clear();
+              svc.debugRandom = Random(seed);
+              svc.pickForContext(_ctx(mode, coach: coach, tier: tier));
+              while (_now.isTierTransition) {
+                svc.transitionFinished(_now);
+              }
+              expect(_now.tagsByCategory[BackgroundTagCategory.mode],
+                  contains(mode),
+                  reason: 'graine $seed : le geste est bien affiché');
+              svc.pickForContext(
+                  _ctx('hold', position: 'throat', coach: coach, tier: tier));
+              expect(_now.tagsByCategory[BackgroundTagCategory.mode],
+                  contains('rhythm'),
+                  reason: 'graine $seed : ${_now.id}');
+              expect(_now.tagsByCategory[BackgroundTagCategory.position],
+                  contains('throat'),
+                  reason: 'graine $seed : même profondeur que la tenue');
+              final held = _now;
+              svc.pickForContext(
+                  _ctx('hold', position: 'throat', coach: coach, tier: tier));
+              expect(_now, held, reason: 'graine $seed : tenue suivante');
+            }
+          });
+        }
+
+        test('$coach $tier, tenue après un rythme : la coach le garde', () {
+          _load(_pack);
+          for (var seed = 0; seed < 40; seed++) {
+            svc.clear();
+            svc.debugRandom = Random(seed);
+            svc.pickForContext(
+                _ctx('rhythm', position: 'mid', coach: coach, tier: tier));
+            while (_now.isTierTransition) {
+              svc.transitionFinished(_now);
+            }
+            final rhythm = _now;
+            expect(rhythm.tagsByCategory[BackgroundTagCategory.position],
+                contains('mid'));
+            svc.pickForContext(
+                _ctx('hold', position: 'throat', coach: coach, tier: tier));
+            expect(_now, rhythm, reason: 'graine $seed : ${_now.id}');
+          }
+        });
+      }
+    }
   });
 
   group('scènes de joueuse', () {
