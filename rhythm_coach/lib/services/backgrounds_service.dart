@@ -219,13 +219,13 @@ class BackgroundsService {
       return;
     }
     final ranked = _rank(ctx);
+    if (ranked.withheld) {
+      _keepGesture(ctx);
+      return;
+    }
     if (ranked.best.isNotEmpty) {
       _lastGesture = ctx;
       _setExcluding(ranked.best);
-      return;
-    }
-    if (ranked.withheld) {
-      _keepGesture(ctx);
       return;
     }
     if (ranked.untagged.isNotEmpty) {
@@ -237,15 +237,41 @@ class BackgroundsService {
 
   void _keepGesture(BackgroundContext ctx) {
     final last = _lastGesture;
-    if (last == null) return;
-    final gesture = _rank(BackgroundContext(
-      mode: last.mode,
-      position: last.position,
-      coach: ctx.coach,
-      phase: ctx.phase,
-      tier: ctx.tier,
-    )).best;
+    final gesture = last == null
+        ? const <BackgroundEntry>[]
+        : _rank(BackgroundContext(
+            mode: last.mode,
+            position: last.position,
+            coach: ctx.coach,
+            phase: ctx.phase,
+            tier: ctx.tier,
+          )).best;
+    if (gesture.isEmpty) {
+      if (current.value?.isTierTransition ?? false) {
+        _setExcluding(_coachGesturesAt(ctx));
+      }
+      return;
+    }
     if (!gesture.contains(current.value)) _setExcluding(gesture);
+  }
+
+  List<BackgroundEntry> _coachGesturesAt(BackgroundContext ctx) {
+    final gestures = _bundle.entries
+        .where((e) =>
+            e.tier == ctx.tier &&
+            e.tagsByCategory.containsKey(BackgroundTagCategory.mode) &&
+            !handRaisedHolds.contains(e.id) &&
+            (e.tagsByCategory[BackgroundTagCategory.coach]
+                    ?.contains(ctx.coach) ??
+                false))
+        .toList();
+    final samePosition = gestures
+        .where((e) =>
+            e.tagsByCategory[BackgroundTagCategory.position]
+                ?.contains(ctx.position) ??
+            false)
+        .toList();
+    return samePosition.isEmpty ? gestures : samePosition;
   }
 
   ({
@@ -259,7 +285,7 @@ class BackgroundsService {
     var bestScore = -1;
     final byScore = <int, List<BackgroundEntry>>{};
     final untagged = <BackgroundEntry>[];
-    var withheld = false;
+    var withheldScore = -1;
     for (final e in _bundle.entries) {
       if (e.isTierTransition || (where != null && !where(e))) continue;
       if (!e.hasTags) {
@@ -269,7 +295,7 @@ class BackgroundsService {
       final score = _scoreEntry(e, ctx);
       if (score < 0) continue;
       if (handRaisedHolds.contains(e.id)) {
-        withheld = true;
+        withheldScore = max(withheldScore, score);
         continue;
       }
       byScore.putIfAbsent(score, () => <BackgroundEntry>[]).add(e);
@@ -280,7 +306,7 @@ class BackgroundsService {
           ? (byScore[bestScore] ?? const <BackgroundEntry>[])
           : const <BackgroundEntry>[],
       untagged: untagged,
-      withheld: withheld,
+      withheld: withheldScore > bestScore,
     );
   }
 

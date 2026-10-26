@@ -54,7 +54,10 @@ const _povs = [
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final svc = BackgroundsService.instance;
-  tearDown(svc.debugResetForTest);
+  tearDown(() {
+    svc.debugResetForTest();
+    svc.debugRandom = Random();
+  });
 
   group('tenues où la coach lève la main', () {
     test('ne sont jamais tirées', () {
@@ -76,7 +79,9 @@ void main() {
           '$coach-pack-nu1-rhythm-full-$pack-ltx-pp-s${pack}_rhythm_full_${coach}_nu1',
           '$coach-pack-strip1-$pack-anim_${coach}_nu1',
           'jade-pack-rhythm-full-1_rhythm_full_jade',
+          '$coach-pack-intro-$pack-ltx-pp-s${pack}_$coach',
         ]);
+        svc.pickIntro(coach);
         svc.pickForContext(_ctx('rhythm', position: 'full', coach: coach));
         svc.pickForContext(_ctx('hold', position: 'full', coach: coach));
         expect(_now.id, '$coach-pack-rhythm-full-$pack-ltx-pp-s$pack');
@@ -86,13 +91,66 @@ void main() {
         expect(_now.isTierTransition, isTrue);
         svc.transitionFinished(_now);
         expect(_now.id, '$coach-pack-nu1-rhythm-full-$pack-ltx-pp-s$pack',
-            reason: 'après la transition, le geste précédent au nouveau palier');
+            reason:
+                'après la transition, le geste précédent au nouveau palier');
       });
     }
+    test('une tenue montrable passe devant une tenue retirée', () {
+      _load([..._handRaised, 'z_hold_lina', 'lina-pack-intro-25001_lina']);
+      svc.pickForContext(_ctx('hold', position: 'full'));
+      expect(_now.id, 'z');
+    });
+
+    test("une séance neuve n'hérite pas du geste de la précédente", () {
+      _load(
+          [..._handRaised, 'a_rhythm_full_lina', 'lina-pack-intro-25001_lina']);
+      svc.pickForContext(_ctx('rhythm', position: 'full'));
+      svc.clear();
+      svc.pickIntro('lina');
+      svc.pickForContext(_ctx('hold', position: 'full'));
+      expect(_now.isIntro, isTrue);
+    });
+
+    test('pendant une tenue, la bande de palier laisse place à la coach', () {
+      svc.debugRandom = _Zero();
+      const nu1Tip = 'lina-pack-nu1-rhythm-tip-25001-anim';
+      const nu1Full = 'lina-pack-nu1-rhythm-full-25001-anim';
+      _load([
+        ..._handRaised,
+        'lina-pack-rhythm-full-25001-ltx-pp-s25001_rhythm_full_lina',
+        'helene-pack-nu1-rhythm-full-26002-ltx-pp-s26002_rhythm_full_helene_nu1',
+        'lina-pack-intro-25001-ltx-pp-s25001_lina',
+        'lina-pack-lick-25001-ltx-pp-s25001_lick_lina',
+        'lina-pack-strip1-25001-anim_lina_nu1',
+        'lina-pack-nu1-fail-25001-anim_fail_lina_nu1',
+        '${nu1Tip}_rhythm_tip_lina_nu1',
+        '${nu1Full}_rhythm_full_lina_nu1',
+      ]);
+      svc.pickIntro('lina');
+      svc.pickForContext(_ctx('hold', position: 'full'));
+      expect(_now.isIntro, isTrue, reason: 'aucun geste avant la tenue');
+      svc.pickForContext(_ctx('hold', position: 'full', tier: 'nu1'));
+      expect(_now.isTierTransition, isTrue);
+      svc.transitionFinished(_now);
+      expect(_now.id, nu1Full, reason: 'à la même profondeur');
+
+      svc.clear();
+      svc.pickForContext(_ctx('lick'));
+      svc.pickForContext(_ctx('hold', position: 'full', tier: 'nu1'));
+      svc.transitionFinished(_now);
+      expect(_now.id, nu1Full, reason: 'le geste précédent manque au palier');
+
+      svc.clear();
+      svc.pickForContext(_ctx('lick'));
+      svc.pickForContext(_ctx('hold', position: 'balls', tier: 'nu1'));
+      svc.transitionFinished(_now);
+      expect(_now.id, nu1Tip, reason: 'aucun geste à cette profondeur');
+    });
   });
 
   group('scènes de joueuse', () {
     test("s'intercalent environ une fois sur trois, jamais deux d'affilée", () {
+      svc.debugRandom = Random(7);
       _load([
         'a_rhythm_full_lina',
         'b_rhythm_full_lina',
@@ -109,7 +167,7 @@ void main() {
         expect(_now.id, 'pov-E-rhythm-full');
         svc.transitionFinished(_now);
       }
-      expect(scenes, inInclusiveRange(120, 280));
+      expect(scenes, inInclusiveRange(180, 240));
     });
 
     test('jouée une fois, puis la coach ; un nouveau step la coupe', () {
@@ -196,6 +254,24 @@ void main() {
       svc.pickForContext(ctx);
       svc.pickForContext(ctx);
       expect(_now.isPov, isFalse, reason: 'sans demande du contrôleur');
+    });
+
+    test('aucune sur une bande de palier ni sur un fond de phase', () {
+      svc.debugRandom = _Zero();
+      _load([
+        'a_rhythm_full_lina',
+        'lina-pack-strip1-25001-anim_lina_nu1',
+        'f_fail_lina',
+        ..._povs,
+      ]);
+      final ctx = _ctx('rhythm', position: 'full');
+      svc.pickForContext(ctx);
+      svc.setById('lina-pack-strip1-25001-anim');
+      svc.pickForContext(ctx, playerScene: true);
+      expect(_now.id, 'a', reason: 'bande de palier');
+      svc.pickFail('lina');
+      svc.pickForContext(ctx, playerScene: true);
+      expect(_now.id, 'a', reason: "fond d'échec");
     });
 
     test('jamais tirées comme fond ordinaire', () {
