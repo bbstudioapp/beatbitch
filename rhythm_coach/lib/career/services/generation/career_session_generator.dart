@@ -624,6 +624,11 @@ class CareerSessionGenerator {
     /// scénarisés (préférence utilisateur `pref.scripted_breaks`). `false` =
     /// posture `free`, aucun changement ni break.
     bool scriptedBreaks = false,
+
+    /// Pauses et changements de position d'une séance en cours que cette suite
+    /// régénérée rejoue, en temps relatif à son début. Non vide, il remplace
+    /// le planificateur de [scriptedBreaks] : mêmes durées, mêmes poses.
+    PostureScript carry = PostureScript.none,
   }) {
     _bank = bank;
     _holdMovesAnnounced = false;
@@ -758,10 +763,13 @@ class CareerSessionGenerator {
           kChallengeBreathDurationSeconds +
           _estimatedChallengeDuration(ch),
     );
-    final maxPauseReserve = _config.scriptedBreaks
-        ? (genUntilBase ~/ _breakIntervalLowEnduranceSeconds + 1) *
-            _breakMaxDurationSeconds
-        : 0;
+    final carrying = !carry.isEmpty;
+    final maxPauseReserve = carrying
+        ? carry.pauseSeconds
+        : _config.scriptedBreaks
+            ? (genUntilBase ~/ _breakIntervalLowEnduranceSeconds + 1) *
+                _breakMaxDurationSeconds
+            : 0;
     final profile = List<double>.filled(
         effectiveDuration + maxChallengeReserve + maxPauseReserve + 60,
         StaminaModel.cap);
@@ -889,26 +897,30 @@ class CareerSessionGenerator {
 
     // `currentPose` suit la posture que la joueuse tient réellement, milestone
     // posture comprise : un changement n'impose jamais la pose en cours.
-    final plannedBreakTimes = _computeBreakTriggerTimes(
-      intervalSeconds: _config.scriptedBreaks ? _breakIntervalSeconds() : 0,
-      genUntil: ctx.genUntil,
-      challengeWindows: [
-        for (var i = 0; i < plannedTriggerTimes.length; i++)
-          (
-            plannedTriggerTimes[i],
-            plannedTriggerTimes[i] +
-                kChallengeBreathDurationSeconds +
-                _estimatedChallengeDuration(challengeQueue[i]),
-          ),
-      ],
-    );
+    final plannedBreakTimes = carrying
+        ? [for (final b in carry.breaks) b.time]
+        : _computeBreakTriggerTimes(
+            intervalSeconds:
+                _config.scriptedBreaks ? _breakIntervalSeconds() : 0,
+            genUntil: ctx.genUntil,
+            challengeWindows: [
+              for (var i = 0; i < plannedTriggerTimes.length; i++)
+                (
+                  plannedTriggerTimes[i],
+                  plannedTriggerTimes[i] +
+                      kChallengeBreathDurationSeconds +
+                      _estimatedChallengeDuration(challengeQueue[i]),
+                ),
+            ],
+          );
     final sessionBreaks = <ScriptedBreak>[];
     final postureChanges = <PostureChange>[];
     var nextBreakIndex = 0;
     var currentPose =
         postureTaughtByMilestone(milestoneScheduler.lastInserted?.id) ??
             _initialPose;
-    int? nextPostureChangeAt = _config.scriptedBreaks
+    var nextCarriedChange = 0;
+    int? nextPostureChangeAt = _config.scriptedBreaks && !carrying
         ? _postureFirstChangeMinSeconds +
             _rng.nextInt(_postureFirstChangeMaxSeconds -
                 _postureFirstChangeMinSeconds +
@@ -935,18 +947,23 @@ class CareerSessionGenerator {
       // aucun step émis, le runtime gèle le moteur sur la fenêtre.
       if (nextBreakIndex < plannedBreakTimes.length &&
           ctx.time >= plannedBreakTimes[nextBreakIndex]) {
-        final dur = _pickBreakDuration();
+        final carried = carrying ? carry.breaks[nextBreakIndex] : null;
+        final dur = carried?.durationSeconds ?? _pickBreakDuration();
         if (ctx.genUntil - ctx.time >= dur) {
           ctx.reservedWindowSeconds += dur;
           final end = ctx.time + dur;
-          final changeDue = nextPostureChangeAt != null &&
+          final changeDue = carried == null &&
+              nextPostureChangeAt != null &&
               nextPostureChangeAt <= end + _postureMergeWindowSeconds;
-          final newPose =
-              changeDue ? _pickNextPose(unlockedKeys, currentPose) : null;
+          final newPose = carried != null
+              ? carried.newPose
+              : (changeDue ? _pickNextPose(unlockedKeys, currentPose) : null);
+          if (carried != null && newPose != null) currentPose = newPose;
           sessionBreaks.add(ScriptedBreak(
             time: ctx.time,
             durationSeconds: dur,
             newPose: newPose,
+            orders: carried?.orders ?? const [],
           ));
           if (changeDue) {
             if (newPose != null) currentPose = newPose;
@@ -964,7 +981,11 @@ class CareerSessionGenerator {
       // Phase 1.6 — Changement de position seul, sans avancer le temps : le
       // bloc émis ensuite démarre à `ctx.time` et relance le bip après la
       // validation. Cède le pas à une pause proche et à un défi dû.
-      final postureDue = nextPostureChangeAt;
+      final postureDue = carrying
+          ? (nextCarriedChange < carry.changes.length
+              ? carry.changes[nextCarriedChange].time
+              : null)
+          : nextPostureChangeAt;
       if (postureDue != null &&
           ctx.time >= postureDue &&
           !(nextBreakIndex < plannedBreakTimes.length &&
@@ -972,11 +993,15 @@ class CareerSessionGenerator {
                   _postureMergeWindowSeconds) &&
           !(nextChallengeIndex < challengeQueue.length &&
               ctx.time >= plannedTriggerTimes[nextChallengeIndex])) {
-        final pose = _pickNextPose(unlockedKeys, currentPose);
+        final pose = carrying
+            ? carry.changes[nextCarriedChange++].pose
+            : _pickNextPose(unlockedKeys, currentPose);
         if (pose != null) {
           postureChanges.add(PostureChange(time: ctx.time, pose: pose));
           currentPose = pose;
-          nextPostureChangeAt = ctx.time + _pickPostureChangeInterval();
+          if (!carrying) {
+            nextPostureChangeAt = ctx.time + _pickPostureChangeInterval();
+          }
         } else {
           nextPostureChangeAt = null;
         }

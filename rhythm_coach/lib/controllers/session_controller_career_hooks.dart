@@ -143,12 +143,11 @@ extension CareerHooksOrchestrator on SessionController {
 
     _nextStepIndex = 0;
     _lastConfigStep = null;
-    // Reset de l'état break : la session régénérée n'a pas de
-    // break (`scriptedBreaks` non propagé aux régens mi-séance). Si un break
-    // était actif au moment du Supplier, on le clôt ici — sinon `_breakActive`
-    // resterait coincé à true (la nouvelle `breaks` vide fait sortir
-    // `_updateBreakPhase` tôt) et l'effort serait gelé. `_currentPose` est
-    // préservée (continuité de pose à travers l'upgrade).
+    // Reset de l'état break : les index repartent sur la liste de la session
+    // régénérée, qui porte les pauses restantes. Un break actif au moment du
+    // Supplier est clos ici, sa fenêtre n'existe plus dans la nouvelle
+    // timeline. `_currentPose` est préservée (continuité de pose à travers
+    // l'upgrade).
     _breakActive = false;
     _activeBreak = null;
     _nextBreakIndex = 0;
@@ -202,8 +201,7 @@ extension CareerHooksOrchestrator on SessionController {
     _nextStepIndex = 0;
     _lastConfigStep = null;
     _dropPendingSpeech();
-    // Reset de l'état break, même raison que `requestUpgrade` :
-    // la suite régénérée n'a pas de break, on évite un `_breakActive` coincé.
+    // Reset de l'état break, même raison que `requestUpgrade`.
     _breakActive = false;
     _activeBreak = null;
     _nextBreakIndex = 0;

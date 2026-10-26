@@ -1,3 +1,5 @@
+import 'dart:math';
+
 /// Posture physique imposée par la coach pendant une session.
 ///
 /// À ne pas confondre avec [Position] (`session_step.dart`), qui est la
@@ -93,4 +95,39 @@ class PostureChange {
   final Posture pose;
 
   const PostureChange({required this.time, required this.pose});
+}
+
+/// Pauses et changements de position d'une séance, regroupés pour passer d'une
+/// séance en cours à la suite régénérée qui les rejoue. Les temps sont ceux de
+/// la timeline qui le porte : absolus en sortie du contrôleur, relatifs au
+/// début de la suite en entrée du générateur ([shifted] fait le passage).
+class PostureScript {
+  final List<ScriptedBreak> breaks;
+  final List<PostureChange> changes;
+
+  const PostureScript({this.breaks = const [], this.changes = const []});
+
+  static const none = PostureScript();
+
+  bool get isEmpty => breaks.isEmpty && changes.isEmpty;
+
+  /// Somme des durées de pause, hors effort.
+  int get pauseSeconds => breaks.fold(0, (sum, b) => sum + b.durationSeconds);
+
+  /// Mêmes pauses et changements décalés de [delta] secondes, jamais avant 0.
+  PostureScript shifted(int delta) => PostureScript(
+        breaks: [
+          for (final b in breaks)
+            ScriptedBreak(
+              time: max(0, b.time + delta),
+              durationSeconds: b.durationSeconds,
+              newPose: b.newPose,
+              orders: b.orders,
+            ),
+        ],
+        changes: [
+          for (final c in changes)
+            PostureChange(time: max(0, c.time + delta), pose: c.pose),
+        ],
+      );
 }

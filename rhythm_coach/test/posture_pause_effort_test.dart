@@ -1,6 +1,5 @@
 import 'package:beat_bitch/career/models/phrase_bank.dart';
 import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
-import 'package:beat_bitch/models/posture.dart';
 import 'package:beat_bitch/models/session.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -25,7 +24,6 @@ Session _gen({
   required int durationSeconds,
   required bool scriptedBreaks,
   required int seed,
-  double endurance = 0,
 }) =>
     CareerSessionGenerator(seed: seed)
         .generate(

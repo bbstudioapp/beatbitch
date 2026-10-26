@@ -467,6 +467,24 @@ class SessionController extends ChangeNotifier {
   /// par `time`). Avancé à chaque entrée de break.
   int _nextBreakIndex = 0;
 
+  /// Pauses et changements de position pas encore déclenchés, en temps absolu
+  /// de la timeline courante : ce qu'une suite régénérée doit rejouer.
+  PostureScript get unplayedPostureScript => PostureScript(
+        breaks: _session.breaks.skip(_nextBreakIndex).toList(),
+        changes: _session.postureChanges.skip(_nextPostureChangeIndex).toList(),
+      );
+
+  /// Secondes de pause encore à venir : celles de [unplayedPostureScript] plus
+  /// le reste de la pause en cours. Hors effort, à retrancher de la durée
+  /// restante pour obtenir l'effort restant.
+  int get pauseSecondsAhead {
+    final active = _activeBreak;
+    final rest = _breakActive && active != null
+        ? max(0, active.endTime - elapsedSeconds)
+        : 0;
+    return unplayedPostureScript.pauseSeconds + rest;
+  }
+
   /// `elapsedSeconds` du dernier ordre de break énoncé. Sert à espacer les
   /// ordres.
   int _breakOrderLastAtSec = 0;
@@ -2275,6 +2293,10 @@ class SessionController extends ChangeNotifier {
     final upFinalStepTime = upcoming.finalStepTime;
     final upSilentFinish = upcoming.silentFinishStartTime;
     final upFinalMsStart = upcoming.finalMilestoneStartTime;
+    final script = PostureScript(
+      breaks: upcoming.breaks,
+      changes: upcoming.postureChanges,
+    ).shifted(offset);
 
     return Session(
       id: '${previous.id}:upgraded',
@@ -2298,6 +2320,8 @@ class SessionController extends ChangeNotifier {
           upSilentFinish != null ? upSilentFinish + offset : null,
       finalCategory: upcoming.finalCategory,
       noStats: previous.noStats,
+      breaks: script.breaks,
+      postureChanges: script.changes,
     );
   }
 
@@ -2320,6 +2344,10 @@ class SessionController extends ChangeNotifier {
     ];
     final upFinalStepTime = upcoming.finalStepTime;
     final upSilentFinish = upcoming.silentFinishStartTime;
+    final script = PostureScript(
+      breaks: upcoming.breaks,
+      changes: upcoming.postureChanges,
+    ).shifted(breathEnd);
     return Session(
       id: '${previous.id}:postchallenge',
       name: previous.name,
@@ -2333,6 +2361,8 @@ class SessionController extends ChangeNotifier {
           upSilentFinish != null ? upSilentFinish + breathEnd : null,
       finalCategory: upcoming.finalCategory,
       noStats: previous.noStats,
+      breaks: script.breaks,
+      postureChanges: script.changes,
       challenges: previous.challenges,
       challengeTriggerTimes: previous.challengeTriggerTimes,
     );
