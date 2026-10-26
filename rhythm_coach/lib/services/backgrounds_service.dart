@@ -201,6 +201,7 @@ class BackgroundsService {
   }
 
   static bool _sceneMatches(BackgroundEntry e, BackgroundContext ctx) =>
+      (!e.tags.contains('suckle') || ctx.position == 'head') &&
       [BackgroundTagCategory.mode, BackgroundTagCategory.position].every(
           (cat) => e.tagsByCategory[cat]?.contains(ctx.valueFor(cat)) ?? true);
 

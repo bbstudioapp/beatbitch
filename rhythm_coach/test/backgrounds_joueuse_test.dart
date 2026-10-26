@@ -156,6 +156,21 @@ void main() {
           'pov-E-gag');
     });
 
+    test('la scène « suckle » est réservée au gland', () {
+      svc.debugRandom = _Zero();
+      _load(['a_suckle_lina', ..._povs]);
+      for (final position in ['tip', 'mid', 'throat', 'full', 'balls']) {
+        final ctx = _ctx('suckle', position: position);
+        svc.pickForContext(ctx);
+        svc.pickForContext(ctx, playerScene: true);
+        expect(_now.isPov, isFalse, reason: position);
+      }
+      final head = _ctx('suckle', position: 'head');
+      svc.pickForContext(head);
+      svc.pickForContext(head, playerScene: true);
+      expect(_now.id, 'pov-E-suckle');
+    });
+
     test('aucune hors du créneau : intro, finale, sans geste à l\'écran', () {
       svc.debugRandom = _Zero();
       _load([
