@@ -146,6 +146,23 @@ void main() {
         reason: 'le fondu de la mini-punition éteint la musique ; le step de '
             '8 s qui suit doit la relancer, calée sur le final');
   }, timeout: const Timeout(Duration(seconds: 60)));
+
+  test(
+      'sans le fichier de la musique de finish, la montée et le final se '
+      "jouent jusqu'au bout", () async {
+    final ambience = _MissingFinishAssetAmbience();
+    final beep = _RecordingBeepEngine();
+    final ctrl = _buildController(ambience, beep: beep);
+    await ctrl.start();
+    await _waitUntil(() => ctrl.isFinished);
+
+    expect(ambience.attempts, 1,
+        reason: 'la musique est bien demandée, et son absence est absorbée');
+    expect(ambience.isFinishMusicPlaying, isFalse);
+    expect(beep.appliedTimes, containsAllInOrder([4, 8, 11]),
+        reason: 'montée (4), final (8) et post-final (11) appliqués');
+    ctrl.dispose();
+  }, timeout: const Timeout(Duration(seconds: 60)));
 }
 
 /// Démarrages de la musique de finish autour de [punish], lancé dès le
@@ -217,7 +234,8 @@ Future<void> _waitUntil(
   }
 }
 
-SessionController _buildController(AmbienceEngine ambience) {
+SessionController _buildController(AmbienceEngine ambience,
+    {BeepEngine? beep}) {
   return SessionController(
     session: const Session(
       id: 'finish',
@@ -236,7 +254,7 @@ SessionController _buildController(AmbienceEngine ambience) {
       ],
     ),
     tts: TtsService(),
-    beep: _SilentBeepEngine(),
+    beep: beep ?? _SilentBeepEngine(),
     ambience: ambience,
     punishmentBundle: const PunishmentBundle(failPhrases: [], punishments: []),
     randomComments: const RandomCommentsBundle(
@@ -268,6 +286,36 @@ class _SlowStartEngine extends AmbienceEngine {
     await Future<void>.delayed(const Duration(milliseconds: 300));
     inFlight = false;
   }
+}
+
+/// Le lecteur lève comme sur un asset absent du bundle.
+class _MissingFinishAssetAmbience extends AmbienceEngine {
+  int attempts = 0;
+
+  @override
+  Future<void> startFinishPlayback(Duration offset) async {
+    attempts++;
+    throw PlatformException(code: 'AudioPlayers Exception', message: 'asset');
+  }
+
+  @override
+  Future<void> play(String? assetPath) async {}
+  @override
+  Future<void> playForMode(SessionMode mode, {Position? depth}) async {}
+  @override
+  Future<void> pause() async {}
+  @override
+  Future<void> resume() async {}
+  @override
+  Future<void> stop() async {}
+}
+
+class _RecordingBeepEngine extends _SilentBeepEngine {
+  final List<int> appliedTimes = [];
+
+  @override
+  Future<void> applyStep(SessionStep step, SessionMode sessionMode) async =>
+      appliedTimes.add(step.time);
 }
 
 class _SilentBeepEngine extends BeepEngine {

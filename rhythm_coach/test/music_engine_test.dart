@@ -7,7 +7,7 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const _track = SessionMusic(
-  asset: 'audio/music/montee_en_puissance.mp3',
+  asset: 'audio/music/test_track.mp3',
   bpm: 121.96,
   firstBeatSeconds: 16.934,
 );

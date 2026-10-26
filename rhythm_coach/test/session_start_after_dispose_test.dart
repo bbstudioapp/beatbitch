@@ -266,7 +266,7 @@ void main() {
 }
 
 const _track = SessionMusic(
-  asset: 'audio/music/montee_en_puissance.mp3',
+  asset: 'audio/music/test_track.mp3',
   bpm: 121.96,
   firstBeatSeconds: 16.934,
 );
