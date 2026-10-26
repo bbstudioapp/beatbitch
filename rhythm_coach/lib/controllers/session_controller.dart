@@ -6,6 +6,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../career/models/career_generation_inputs.dart';
 import '../career/models/challenge.dart';
+import '../career/models/coach_catalog.dart';
 import '../career/models/level_milestone.dart';
 import '../career/models/phrase_bank.dart';
 import '../career/models/posture_unlock.dart';
@@ -1626,6 +1627,9 @@ class SessionController extends ChangeNotifier {
     if (!_session.noStats) {
       await _stats.addElapsedSeconds(playedSeconds);
       await _stats.recordSessionCompleted(hadFail: _hadFailThisSession);
+      if (_coachTag == CoachCatalog.lilith.slug) {
+        await _stats.recordSabbatSession();
+      }
       // `encoresAsked` = 0 : l'encore est déclenché depuis l'écran finished
       // APRÈS ce `_finish`.
       _humiliation.applyEndOfSessionDelta(

@@ -17,6 +17,8 @@ class CoachCatalog {
 
   static const String lilithId = 'coach_08_lilith';
 
+  static Coach get lilith => defaults.firstWhere((c) => c.id == lilithId);
+
   static const List<Coach> defaults = [
     Coach(
       id: 'coach_01_lina',

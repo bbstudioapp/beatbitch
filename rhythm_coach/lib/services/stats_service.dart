@@ -20,6 +20,7 @@ class StatsService {
   static const String _kDailyStreak = 'stats.daily_streak';
   static const String _kEncoresAsked = 'stats.encores_asked';
   static const String _kQuickiesCompleted = 'stats.quickies_completed';
+  static const String _kSabbatSessions = 'stats.sabbat_sessions';
   static const String _kHumiliationLevel = 'stats.humiliation_level';
   static const String _kObedienceLevel = 'stats.obedience_level';
 
@@ -47,6 +48,7 @@ class StatsService {
       dailyStreak: prefs.getInt(_kDailyStreak) ?? 0,
       encoresAsked: prefs.getInt(_kEncoresAsked) ?? 0,
       quickiesCompleted: prefs.getInt(_kQuickiesCompleted) ?? 0,
+      sabbatSessions: prefs.getInt(_kSabbatSessions) ?? 0,
       humiliationLevel: prefs.getDouble(_kHumiliationLevel) ?? 0.0,
       obedienceLevel: prefs.getDouble(_kObedienceLevel) ?? 0.0,
       finalsBouchePleine: prefs.getInt(_kFinalsBouchePleine) ?? 0,
@@ -154,6 +156,15 @@ class StatsService {
     await prefs.setInt(
       _kQuickiesCompleted,
       (prefs.getInt(_kQuickiesCompleted) ?? 0) + 1,
+    );
+  }
+
+  /// Séance complétée avec Lilith : alimente le badge Sabbat.
+  Future<void> recordSabbatSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(
+      _kSabbatSessions,
+      (prefs.getInt(_kSabbatSessions) ?? 0) + 1,
     );
   }
 
@@ -294,6 +305,7 @@ class StatsService {
       _kDailyStreak,
       _kEncoresAsked,
       _kQuickiesCompleted,
+      _kSabbatSessions,
       _kHumiliationLevel,
       _kObedienceLevel,
       _kFinalsBouchePleine,
@@ -323,6 +335,7 @@ class StatsSnapshot {
   final int dailyStreak;
   final int encoresAsked;
   final int quickiesCompleted;
+  final int sabbatSessions;
   final double humiliationLevel;
   final double obedienceLevel;
   final int finalsBouchePleine;
@@ -345,6 +358,7 @@ class StatsSnapshot {
     required this.dailyStreak,
     required this.encoresAsked,
     required this.quickiesCompleted,
+    this.sabbatSessions = 0,
     required this.humiliationLevel,
     required this.obedienceLevel,
     this.finalsBouchePleine = 0,

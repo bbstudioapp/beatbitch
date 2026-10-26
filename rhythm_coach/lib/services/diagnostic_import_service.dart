@@ -100,6 +100,7 @@ class DiagnosticImportService {
     _int('stats.daily_streak', j['dailyStreak']);
     _int('stats.encores_asked', j['encoresAsked']);
     _int('stats.quickies_completed', j['quickiesCompleted']);
+    _int('stats.sabbat_sessions', j['sabbatSessions']);
     _int('stats.finals_bouche_pleine', j['finalsBouchePleine']);
     _int('stats.finals_repeinte', j['finalsRepeinte']);
     _int('stats.finals_gobeuse', j['finalsGobeuse']);
@@ -257,6 +258,7 @@ class DiagnosticImportService {
       'stats.finals_gobeuse',
       'stats.post_finals_nettoyeuse',
       'stats.post_finals_suppliante',
+      'stats.sabbat_sessions',
       'stats.humiliation_level',
       'stats.obedience_level',
       'cap.legacy_migrated',
