@@ -332,7 +332,7 @@ void main() {
       final b = CapabilityHistory.read(dst);
       expect(b, hasLength(2));
       for (var i = 0; i < 2; i++) {
-        expect(b[i].at, a[i].at);
+        expect(b[i].at, DateTime.utc(a[i].at.year, a[i].at.month, a[i].at.day));
         expect(b[i].sessionIndex, a[i].sessionIndex);
         expect(b[i].axes['hold.full.streak']!.best,
             a[i].axes['hold.full.streak']!.best);
@@ -341,6 +341,48 @@ void main() {
         expect(b[i].axes['hold.full.streak']!.successRate,
             a[i].axes['hold.full.streak']!.successRate);
       }
+    });
+
+    test(
+        'l\'export ne garde que le jour : aucune heure, même pour un historique '
+        'déjà enregistré avec l\'heure', () async {
+      final src = await SharedPreferences.getInstance();
+      await CapabilityHistory.append(
+        src,
+        CapabilityHistoryEntry(
+          at: DateTime.utc(2026, 10, 18, 9, 30, 12, 345),
+          sessionIndex: 1,
+          axes: _entry(1).axes,
+        ),
+      );
+      await CapabilityHistory.append(
+        src,
+        CapabilityHistoryEntry(
+          at: DateTime.utc(2026, 10, 18, 23, 59, 59),
+          sessionIndex: 2,
+          axes: _entry(2).axes,
+        ),
+      );
+
+      final payload =
+          (await _exporter(src)).buildPayload(const DiagnosticExportOptions());
+      final decoded = json.decode(json.encode(payload)) as Map<String, dynamic>;
+      final entries = (decoded['capabilityHistory'] as Map)['entries'] as List;
+
+      expect(entries, hasLength(2));
+      for (final e in entries) {
+        expect(
+            (e as Map)['t'], DateTime.utc(2026, 10, 18).millisecondsSinceEpoch);
+      }
+
+      // L'import relit un export « jour seul » sans erreur.
+      SharedPreferences.setMockInitialValues({});
+      final dst = await SharedPreferences.getInstance();
+      await DiagnosticImportService(dst).apply(decoded);
+      final b = CapabilityHistory.read(dst);
+      expect(b, hasLength(2));
+      expect(b.map((e) => e.at), everyElement(DateTime.utc(2026, 10, 18)));
+      expect(b.map((e) => e.sessionIndex), [1, 2]);
     });
 
     test('export sans historique : section présente et vide', () async {
