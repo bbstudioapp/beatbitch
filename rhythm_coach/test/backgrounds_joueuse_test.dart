@@ -146,6 +146,32 @@ void main() {
       svc.transitionFinished(_now);
       expect(_now.id, nu1Tip, reason: 'aucun geste à cette profondeur');
     });
+
+    test("pendant une tenue, la coach n'emprunte pas le fond d'une autre phase",
+        () {
+      svc.debugRandom = _Zero();
+      const tip = 'lina-pack-nu1-rhythm-tip-25001-anim';
+      const finalFull = 'lina-pack-nu1-final-rhythm-full-25001-anim';
+      _load([
+        ..._handRaised,
+        'lina-pack-lick-25001-ltx-pp-s25001_lick_lina',
+        'lina-pack-strip1-25001-anim_lina_nu1',
+        '${tip}_rhythm_tip_lina_nu1',
+        'lina-pack-nu1-challenge-hold-full-25001-anim_challenge_hold_full_lina_nu1',
+        '${finalFull}_final_rhythm_full_lina_nu1',
+      ]);
+      svc.pickForContext(_ctx('lick'));
+      svc.pickForContext(_ctx('hold', position: 'full', tier: 'nu1'));
+      svc.transitionFinished(_now);
+      expect(_now.id, tip, reason: 'tenue hors phase');
+
+      svc.clear();
+      svc.pickForContext(_ctx('lick'));
+      svc.pickForContext(
+          _ctx('hold', position: 'full', phase: 'final', tier: 'nu1'));
+      svc.transitionFinished(_now);
+      expect(_now.id, finalFull, reason: 'tenue de la phase finale');
+    });
   });
 
   group('scènes de joueuse', () {

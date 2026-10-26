@@ -262,6 +262,9 @@ class BackgroundsService {
         .where((e) =>
             e.tier == ctx.tier &&
             e.tagsByCategory.containsKey(BackgroundTagCategory.mode) &&
+            (e.tagsByCategory[BackgroundTagCategory.phase]
+                    ?.contains(ctx.phase) ??
+                true) &&
             !handRaisedHolds.contains(e.id) &&
             (e.tagsByCategory[BackgroundTagCategory.coach]
                     ?.contains(ctx.coach) ??
