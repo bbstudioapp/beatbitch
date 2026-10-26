@@ -776,9 +776,7 @@ class _CareerScreenState extends State<CareerScreen> {
     final begWordCount =
         begPhrase.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
     final begDuration = (begWordCount * 0.6).ceil() + 1;
-    final remaining = ctrl.session.durationSeconds -
-        ctrl.elapsedSeconds -
-        ctrl.pauseSecondsAhead;
+    final remaining = ctrl.effortSecondsLeftFrom(ctrl.elapsedSeconds);
     if (remaining < begDuration + 30) return;
 
     // Plus de saut de niveau : la difficulté supplémentaire passe par
@@ -865,9 +863,7 @@ class _CareerScreenState extends State<CareerScreen> {
     await milestoneService.incrementRetryCount(milestoneId);
 
     const begDuration = 6;
-    final remaining = ctrl.session.durationSeconds -
-        ctrl.elapsedSeconds -
-        ctrl.pauseSecondsAhead;
+    final remaining = ctrl.effortSecondsLeftFrom(ctrl.elapsedSeconds);
     final retryDuration = remaining + milestone.durationSeconds;
 
     final activeCoach = _resolveCoach(bundle);
@@ -884,8 +880,7 @@ class _CareerScreenState extends State<CareerScreen> {
 
     final newGen = CareerSessionGenerator().generate(
       durationSeconds: retryDuration,
-      carry: ctrl.unplayedPostureScript
-          .shifted(-(ctrl.elapsedSeconds + begDuration)),
+      carry: ctrl.postureCarryFrom(ctrl.elapsedSeconds + begDuration),
       level: level,
       bank: coachBank,
       includeHand: bundle.includeHand,
@@ -962,8 +957,7 @@ class _CareerScreenState extends State<CareerScreen> {
   ) async {
     final t = AppLocalizations.of(context);
     final breathEnd = ctrl.postChallengeBreathUntilSec ?? ctrl.elapsedSeconds;
-    final remaining =
-        ctrl.session.durationSeconds - breathEnd - ctrl.pauseSecondsAhead;
+    final remaining = ctrl.effortSecondsLeftFrom(breathEnd);
     if (remaining < 30) return;
 
     final activeCoach = _resolveCoach(bundle);
@@ -982,7 +976,7 @@ class _CareerScreenState extends State<CareerScreen> {
 
     final newGen = CareerSessionGenerator().generate(
       durationSeconds: remaining,
-      carry: ctrl.unplayedPostureScript.shifted(-breathEnd),
+      carry: ctrl.postureCarryFrom(breathEnd),
       level: level,
       bank: coachBank,
       includeHand: includeHand,
@@ -1285,8 +1279,8 @@ class _CareerScreenState extends State<CareerScreen> {
           // (`targetChallengesFor`), donc la mention vaut pour tous.
           // Les pauses aussi : la première tombe à 7 min au plus tôt, la
           // séance bâclée (6 min) n'en a jamais.
-          final hasPauses = bundle.scriptedBreaks &&
-              lengthChoice != SessionLengthChoice.bachee;
+          final hasPauses =
+              lengthChoice.hasPauses(scriptedBreaks: bundle.scriptedBreaks);
           final durationLabel = _challengesEnabled
               ? (hasPauses
                   ? t.careerDurationPlusChallengesAndPauses(baseDurationLabel)

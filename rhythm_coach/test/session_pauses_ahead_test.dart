@@ -242,6 +242,12 @@ void main() {
     expect(script.changes.single.time, 60);
     // 150 s de pauses à venir + le reste de la pause active (1 ou 2 s).
     expect(ctrl.pauseSecondsAhead, inInclusiveRange(151, 152));
+    // Les pauses à venir sortent de l'effort restant, et la suite régénérée
+    // reçoit celles qui restent, rebasées sur l'instant de régénération.
+    expect(ctrl.effortSecondsLeftFrom(20), inInclusiveRange(28, 29));
+    final carry = ctrl.postureCarryFrom(20);
+    expect(carry.breaks.map((b) => b.time), [10, 100]);
+    expect(carry.changes.map((c) => c.time), [40]);
     ctrl.dispose();
   });
 }
