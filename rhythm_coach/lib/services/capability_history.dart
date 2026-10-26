@@ -95,17 +95,20 @@ class CapabilityHistory {
     return out.length > maxEntries ? out.sublist(out.length - maxEntries) : out;
   }
 
-  /// [dayOnly] : `t` ramené à minuit UTC du jour (export de diagnostic).
+  /// [dayOnly] : `t` = minuit UTC de la date locale, sans heure ni fuseau.
   static Map<String, dynamic> toJson(
     List<CapabilityHistoryEntry> entries, {
     bool dayOnly = false,
+    DateTime Function(DateTime) toLocal = _systemLocal,
   }) =>
       <String, dynamic>{
         'v': schemaVersion,
         'entries': [
           for (final e in entries)
             <String, dynamic>{
-              't': dayOnly ? _dayStart(e.at) : e.at.millisecondsSinceEpoch,
+              't': dayOnly
+                  ? _dayStart(toLocal(e.at))
+                  : e.at.millisecondsSinceEpoch,
               'i': e.sessionIndex,
               'a': {
                 for (final a in e.axes.entries)
@@ -119,10 +122,10 @@ class CapabilityHistory {
         ],
       };
 
-  static int _dayStart(DateTime at) {
-    final u = at.toUtc();
-    return DateTime.utc(u.year, u.month, u.day).millisecondsSinceEpoch;
-  }
+  static DateTime _systemLocal(DateTime d) => d.toLocal();
+
+  static int _dayStart(DateTime local) =>
+      DateTime.utc(local.year, local.month, local.day).millisecondsSinceEpoch;
 
   static double _round2(double v) => (v * 100).roundToDouble() / 100;
 

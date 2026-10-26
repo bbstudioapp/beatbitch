@@ -313,7 +313,7 @@ void main() {
   });
 
   group('Export / import', () {
-    test('aller-retour : l\'historique exporté est restitué à l\'identique',
+    test('aller-retour : l\'historique exporté garde le jour et le reste',
         () async {
       final src = await SharedPreferences.getInstance();
       await CapabilityHistory.append(src, _entry(1, best: 10));
@@ -332,7 +332,8 @@ void main() {
       final b = CapabilityHistory.read(dst);
       expect(b, hasLength(2));
       for (var i = 0; i < 2; i++) {
-        expect(b[i].at, DateTime.utc(a[i].at.year, a[i].at.month, a[i].at.day));
+        final local = a[i].at.toLocal();
+        expect(b[i].at, DateTime.utc(local.year, local.month, local.day));
         expect(b[i].sessionIndex, a[i].sessionIndex);
         expect(b[i].axes['hold.full.streak']!.best,
             a[i].axes['hold.full.streak']!.best);
@@ -344,25 +345,23 @@ void main() {
     });
 
     test(
-        'l\'export ne garde que le jour : aucune heure, même pour un historique '
-        'déjà enregistré avec l\'heure', () async {
+        'l\'export ne garde que le jour local : aucune heure, même pour un '
+        'historique déjà enregistré avec l\'heure', () async {
       final src = await SharedPreferences.getInstance();
-      await CapabilityHistory.append(
-        src,
-        CapabilityHistoryEntry(
-          at: DateTime.utc(2026, 10, 18, 9, 30, 12, 345),
-          sessionIndex: 1,
-          axes: _entry(1).axes,
-        ),
-      );
-      await CapabilityHistory.append(
-        src,
-        CapabilityHistoryEntry(
-          at: DateTime.utc(2026, 10, 18, 23, 59, 59),
-          sessionIndex: 2,
-          axes: _entry(2).axes,
-        ),
-      );
+      final instants = [
+        DateTime.utc(2026, 10, 18, 9, 30, 12, 345),
+        DateTime.utc(2026, 10, 18, 23, 59, 59),
+      ];
+      for (var i = 0; i < instants.length; i++) {
+        await CapabilityHistory.append(
+          src,
+          CapabilityHistoryEntry(
+            at: instants[i],
+            sessionIndex: i + 1,
+            axes: _entry(1).axes,
+          ),
+        );
+      }
 
       final payload =
           (await _exporter(src)).buildPayload(const DiagnosticExportOptions());
@@ -370,9 +369,13 @@ void main() {
       final entries = (decoded['capabilityHistory'] as Map)['entries'] as List;
 
       expect(entries, hasLength(2));
-      for (final e in entries) {
+      for (var i = 0; i < 2; i++) {
+        final local = instants[i].toLocal();
         expect(
-            (e as Map)['t'], DateTime.utc(2026, 10, 18).millisecondsSinceEpoch);
+            (entries[i] as Map)['t'],
+            DateTime.utc(local.year, local.month, local.day)
+                .millisecondsSinceEpoch);
+        expect((entries[i] as Map)['t'] % Duration.millisecondsPerDay, 0);
       }
 
       // L'import relit un export « jour seul » sans erreur.
@@ -381,8 +384,36 @@ void main() {
       await DiagnosticImportService(dst).apply(decoded);
       final b = CapabilityHistory.read(dst);
       expect(b, hasLength(2));
-      expect(b.map((e) => e.at), everyElement(DateTime.utc(2026, 10, 18)));
       expect(b.map((e) => e.sessionIndex), [1, 2]);
+    });
+
+    group('jour local de la joueuse, quel que soit le fuseau de la machine',
+        () {
+      // Fuseau injecté : le résultat ne dépend pas de TZ.
+      DateTime Function(DateTime) offset(int hours) =>
+          (d) => d.add(Duration(hours: hours));
+
+      int tOf(DateTime at, DateTime Function(DateTime) toLocal) {
+        final json = CapabilityHistory.toJson(
+          [
+            CapabilityHistoryEntry(
+                at: at, sessionIndex: 1, axes: _entry(1).axes),
+          ],
+          dayOnly: true,
+          toLocal: toLocal,
+        );
+        return ((json['entries'] as List).single as Map)['t'] as int;
+      }
+
+      test('Paris : 18/10 23:30 UTC est le 19/10 local', () {
+        expect(tOf(DateTime.utc(2026, 10, 18, 23, 30), offset(2)),
+            DateTime.utc(2026, 10, 19).millisecondsSinceEpoch);
+      });
+
+      test('New York : 19/10 01:30 UTC est le 18/10 local', () {
+        expect(tOf(DateTime.utc(2026, 10, 19, 1, 30), offset(-4)),
+            DateTime.utc(2026, 10, 18).millisecondsSinceEpoch);
+      });
     });
 
     test('export sans historique : section présente et vide', () async {
