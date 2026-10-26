@@ -115,10 +115,13 @@ void main() {
               expect(b.durationSeconds, inInclusiveRange(60, 120));
               expect(b.endTime, lessThanOrEqualTo(finish));
             }
-            // Le nombre découle de la durée : aucun créneau dû n'est sauté.
+            // Le nombre découle de la durée d'effort : aucun créneau dû n'est
+            // sauté.
+            final effortFinish = finish -
+                s.breaks.fold<int>(0, (sum, b) => sum + b.durationSeconds);
             final expected = [
               for (var t = interval;
-                  t + 120 + _blockSlack <= finish;
+                  t + 120 + _blockSlack <= effortFinish;
                   t += interval)
                 t
             ].length;
