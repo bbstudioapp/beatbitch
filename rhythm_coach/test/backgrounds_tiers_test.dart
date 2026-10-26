@@ -233,6 +233,21 @@ void main() {
       expect(_now.tags, {'hold', 'lina', 'nu2'});
     });
 
+    test("un fond imposé coupe la montée : la bande n'est pas rejouée", () {
+      svc.pickForContext(_ctx());
+      svc.pickForContext(_ctx(tier: 'nu1'));
+      final strip = _now;
+      expect(strip.isTierTransition, isTrue);
+
+      svc.setById('lina-pack-intro-1-x');
+      svc.transitionFinished(strip);
+      expect(_now.id, 'lina-pack-intro-1-x');
+
+      svc.pickForContext(_ctx(tier: 'nu1'));
+      expect(_now.tags, {'hold', 'lina', 'nu1'},
+          reason: 'le palier est acquis sans transition');
+    });
+
     test('une fin de transition d\'un autre fond est ignorée', () {
       svc.pickForContext(_ctx(tier: 'nu1'));
       final strip = _now;
