@@ -1244,8 +1244,6 @@ class SessionController extends ChangeNotifier {
     return mode == SessionMode.hold && step.anchor != BeatAnchor.to;
   }
 
-  /// Palier de nudité du fond (`nu1`, `nu2`, `null` = lingerie) à [seconds] :
-  /// un tiers de la durée chacun, la montée et ce qui suit toujours en `nu2`.
   @visibleForTesting
   static String? backgroundTierFor(int seconds, Session session) {
     final finish = session.silentFinishStartTime ?? session.finalStepTime;
@@ -1264,7 +1262,6 @@ class SessionController extends ChangeNotifier {
     BackgroundsService.instance.pickForContext(ctx, playerScene: playerScene);
   }
 
-  /// Le palier monte avec l'horloge, pas seulement aux changements de step.
   void _refreshBackgroundTier() {
     final last = _lastBackgroundContext;
     if (last == null) return;
