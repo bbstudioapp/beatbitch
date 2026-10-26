@@ -378,7 +378,6 @@ void main() {
         expect((entries[i] as Map)['t'] % Duration.millisecondsPerDay, 0);
       }
 
-      // L'import relit un export « jour seul » sans erreur.
       SharedPreferences.setMockInitialValues({});
       final dst = await SharedPreferences.getInstance();
       await DiagnosticImportService(dst).apply(decoded);

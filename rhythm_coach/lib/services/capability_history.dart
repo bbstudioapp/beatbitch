@@ -3,8 +3,6 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Valeurs d'un axe à la fin d'une séance, telles que persistées par
-/// `CapabilityService.commit`.
 class CapabilityHistoryAxis {
   final double best;
   final double comfort;
@@ -17,8 +15,6 @@ class CapabilityHistoryAxis {
   });
 }
 
-/// Une entrée par séance qui met à jour le profil : l'état de **tous** les
-/// axes porteurs de données, après la mise à jour.
 class CapabilityHistoryEntry {
   final DateTime at;
   final int sessionIndex;
@@ -34,13 +30,6 @@ class CapabilityHistoryEntry {
   });
 }
 
-/// Historique borné du profil de capacités (`shared_preferences`, clé
-/// [prefsKey]), pour un futur écran de progression. Aucun écran ne le lit
-/// aujourd'hui.
-///
-/// Format versionné :
-/// `{"v":1,"entries":[{"t":<ms UTC>,"i":<index séance>,"a":{"<axe>":[best,comfort,successRate]}}]}`
-/// Tolérant : tout ce qui est illisible est ignoré, jamais propagé.
 class CapabilityHistory {
   CapabilityHistory._();
 
@@ -48,8 +37,6 @@ class CapabilityHistory {
   static const int schemaVersion = 1;
   static const int maxEntries = 300;
 
-  /// Historique persisté, de la plus ancienne à la plus récente entrée.
-  /// Vide si la clé est absente, d'un autre type ou illisible.
   static List<CapabilityHistoryEntry> read(SharedPreferences prefs) {
     try {
       final raw = prefs.getString(prefsKey);
@@ -60,9 +47,6 @@ class CapabilityHistory {
     }
   }
 
-  /// Ajoute [entry] en fin d'historique et ne garde que les [maxEntries]
-  /// dernières. Un historique d'une version inconnue est laissé tel quel (rien
-  /// n'est ajouté) ; un historique illisible repart de zéro.
   static Future<void> append(
     SharedPreferences prefs,
     CapabilityHistoryEntry entry,
@@ -79,9 +63,6 @@ class CapabilityHistory {
     await prefs.setString(prefsKey, json.encode(toJson(kept)));
   }
 
-  /// Relit un historique déjà décodé (stockage ou section d'export). Les
-  /// entrées et axes abîmés sont ignorés ; une version inconnue donne une liste
-  /// vide.
   static List<CapabilityHistoryEntry> fromJson(Object? decoded) {
     if (decoded is! Map || decoded['v'] != schemaVersion) {
       return const <CapabilityHistoryEntry>[];
@@ -96,7 +77,6 @@ class CapabilityHistory {
     return out.length > maxEntries ? out.sublist(out.length - maxEntries) : out;
   }
 
-  /// [dayOnly] : `t` = minuit UTC de la date locale, sans heure ni fuseau.
   static Map<String, dynamic> toJson(
     List<CapabilityHistoryEntry> entries, {
     bool dayOnly = false,
@@ -123,13 +103,11 @@ class CapabilityHistory {
         ],
       };
 
-  /// Conversion utilisée par [toJson] quand aucun `toLocal` n'est passé.
   @visibleForTesting
   static DateTime Function(DateTime) localOf = systemLocal;
 
   static DateTime systemLocal(DateTime d) => d.toLocal();
 
-  /// Minuit local du jour porté par [d] (composantes lues telles quelles).
   static DateTime localMidnight(DateTime d) => DateTime(d.year, d.month, d.day);
 
   static List<CapabilityHistoryEntry> fromExportJson(
