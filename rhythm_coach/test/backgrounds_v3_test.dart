@@ -195,14 +195,29 @@ void main() {
           }
         }
         load();
-        svc.pickIntro(coach, tier: tier);
-        expect(svc.current.value, isNull,
-            reason: 'aucune intro dans les packs v3');
+        expect(svc.pickIntro(coach, tier: tier), hasPack);
+        expect(svc.current.value?.id, hasPack ? '$coach-v3-a1-play-01' : null,
+            reason: '$tier : intro');
       }
       expect(picks, 3 * 4 * _modes.length * (Position.values.length + 1));
     });
 
     if (!hasPack) continue;
+
+    test('$coach : aucune scène joueuse ne coupe son intro', () {
+      load();
+      svc.debugRandom = _Zero();
+      svc.pickIntro(coach);
+      final ctx =
+          BackgroundContext(mode: 'rhythm', position: 'full', coach: coach);
+      svc.pickForContext(ctx, playerScene: true);
+      expect(svc.current.value!.isPov, isFalse, reason: svc.current.value!.id);
+      svc.pickForContext(ctx);
+      expect(svc.current.value!.id, '$coach-v3-a1-play-01');
+      svc.pickForContext(ctx, playerScene: true);
+      expect(svc.current.value!.isPov, isTrue,
+          reason: 'revenue à son premier plan après le premier geste');
+    });
 
     test('$coach : le bon moment gagne quand le pack l\'a', () {
       String? shown(BackgroundContext ctx) {
@@ -253,4 +268,13 @@ void main() {
       }
     });
   }
+}
+
+class _Zero implements Random {
+  @override
+  int nextInt(int max) => 0;
+  @override
+  double nextDouble() => 0;
+  @override
+  bool nextBool() => false;
 }

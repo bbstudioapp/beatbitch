@@ -73,6 +73,7 @@ class BackgroundsService {
   final List<BackgroundEntry> _transitions = [];
   BackgroundContext? _afterTransitions;
   BackgroundContext? _lastGesture;
+  BackgroundEntry? _intro;
 
   void _resetTiers() {
     _tierRank = 0;
@@ -106,6 +107,7 @@ class BackgroundsService {
 
   void pickForContext(BackgroundContext ctx, {bool playerScene = false}) {
     if (_bundle.entries.isEmpty) return;
+    if (current.value != _intro) _intro = null;
     if (current.value?.isPov ?? false) {
       _transitions.clear();
       _afterTransitions = null;
@@ -139,6 +141,7 @@ class BackgroundsService {
     if (ctx.phase != null ||
         shown == null ||
         shown.isIntro ||
+        shown == _intro ||
         shown.isPov ||
         shown.isTierTransition ||
         shown.tagsByCategory.containsKey(BackgroundTagCategory.phase)) {
@@ -189,17 +192,24 @@ class BackgroundsService {
   }
 
   bool pickIntro(String? coach, {String? tier}) {
-    final candidates = _bundle.entries
-        .where((e) =>
-            e.isIntro &&
-            e.tier == tier &&
-            (e.tagsByCategory[BackgroundTagCategory.coach]?.contains(coach) ??
-                false))
-        .toList();
+    final own = _bundle.entries.where((e) =>
+        e.tagsByCategory[BackgroundTagCategory.coach]?.contains(coach) ??
+        false);
+    final intros = own.where((e) => e.isIntro && e.tier == tier).toList();
+    final candidates = intros.isNotEmpty
+        ? intros
+        : own
+            .where((e) =>
+                e.tagsByCategory[BackgroundTagCategory.moment]
+                    ?.contains('play') ??
+                false)
+            .take(1)
+            .toList();
     if (candidates.isEmpty) return false;
     _transitions.clear();
     _afterTransitions = null;
     if (!candidates.contains(current.value)) _setExcluding(candidates);
+    _intro = current.value;
     return true;
   }
 
