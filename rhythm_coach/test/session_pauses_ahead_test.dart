@@ -135,6 +135,93 @@ void main() {
         ),
       );
 
+  // Un changement joué avant la régénération : l'index des changements repart
+  // de zéro sur la suite régénérée, qui porte les changements restants.
+  SessionController buildPlayedChangeController() => SessionController(
+        staminaProfile: List<double>.filled(300, 100),
+        session: const Session(
+          id: 'changement-joue',
+          name: 'changement-joue',
+          description: '',
+          durationSeconds: 200,
+          defaultMode: SessionMode.rhythm,
+          postureChanges: [
+            PostureChange(time: 1, pose: Posture.kneeling),
+          ],
+          steps: [
+            SessionStep(time: 0, text: 'a', mode: SessionMode.rhythm, bpm: 80),
+            SessionStep(time: 1, text: 'b', mode: SessionMode.rhythm, bpm: 80),
+          ],
+        ),
+        tts: TtsService(),
+        beep: _TrackingBeepEngine(),
+        ambience: _SilentAmbienceEngine(),
+        punishmentBundle: punishments,
+        phraseBank: const PhraseBank(byMode: {}, congrats: [], intros: []),
+        randomComments: const RandomCommentsBundle(
+          comments: [],
+          minIntervalSeconds: 999,
+          maxIntervalSeconds: 999,
+          scriptedCooldownSeconds: 4,
+        ),
+      );
+
+  const carriedSuite = Session(
+    id: 'suite',
+    name: 'suite',
+    description: '',
+    durationSeconds: 60,
+    defaultMode: SessionMode.rhythm,
+    postureChanges: [
+      PostureChange(time: 1, pose: Posture.sitting),
+    ],
+    steps: [
+      SessionStep(time: 0, text: 'c', mode: SessionMode.rhythm, bpm: 80),
+      SessionStep(time: 1, text: 'd', mode: SessionMode.rhythm, bpm: 80),
+    ],
+  );
+
+  Future<SessionController> playedChangeController() async {
+    final ctrl = buildPlayedChangeController();
+    await ctrl.start();
+    await Future<void>.delayed(const Duration(milliseconds: 1600));
+    expect(ctrl.currentPose, Posture.kneeling);
+    expect(ctrl.unplayedPostureScript.changes, isEmpty);
+    ctrl.confirmPostureReady();
+    return ctrl;
+  }
+
+  test(
+      'requestUpgrade : le changement reporté se joue malgré un changement '
+      'déjà joué', () async {
+    final ctrl = await playedChangeController();
+    await ctrl.requestUpgrade(
+      insistentBeg: const SessionStep(
+        time: 0,
+        text: 'beg',
+        mode: SessionMode.rhythm,
+        bpm: 80,
+        duration: 1,
+      ),
+      upcomingSession: carriedSuite,
+    );
+    expect(ctrl.unplayedPostureScript.changes.map((c) => c.pose),
+        [Posture.sitting]);
+    await Future<void>.delayed(const Duration(milliseconds: 2800));
+    expect(ctrl.currentPose, Posture.sitting);
+    ctrl.dispose();
+  });
+
+  test(
+      'requestPostChallengeRegen : le changement reporté reste à venir '
+      'malgré un changement déjà joué', () async {
+    final ctrl = await playedChangeController();
+    await ctrl.requestPostChallengeRegen(upcomingSession: carriedSuite);
+    expect(ctrl.unplayedPostureScript.changes.map((c) => c.pose),
+        [Posture.sitting]);
+    ctrl.dispose();
+  });
+
   test('avant toute pause : tout est à venir', () async {
     final ctrl = buildController(_TrackingBeepEngine());
     await ctrl.start();
