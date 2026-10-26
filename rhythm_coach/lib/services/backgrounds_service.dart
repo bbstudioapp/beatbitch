@@ -348,7 +348,7 @@ class BackgroundsService {
       final wanted = ctx.valueFor(cat);
       if (wanted == null) return -1;
       if (!entryTags.contains(wanted)) return -1;
-      score += cat == BackgroundTagCategory.phase ? 2 : 1;
+      score += cat == BackgroundTagCategory.phase ? 3 : 1;
     }
     return score;
   }

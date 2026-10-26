@@ -83,4 +83,21 @@ void main() {
     expect(svc.pickIntro('lina', tier: 'nu1'), isTrue);
     expect(_now.id, _e(linaIntroNu1).id);
   });
+
+  test('step final en rhythm+position à nu1 : le fond final gagne', () {
+    var finals = 0;
+    const runs = 200;
+    for (var i = 0; i < runs; i++) {
+      svc.debugResetForTest();
+      _load([..._lingerie, ..._tier('nu1')]);
+      svc.pickForContext(
+          _ctx(mode: 'rhythm', position: 'tip', phase: 'final', tier: 'nu1'));
+      expect(_now.isTierTransition, isFalse,
+          reason: 'témoin : le banc est sorti de la transition');
+      if (_now.tagsByCategory.containsKey(BackgroundTagCategory.phase)) {
+        finals++;
+      }
+    }
+    expect(finals, runs, reason: 'fond final tiré $finals fois sur $runs');
+  });
 }
