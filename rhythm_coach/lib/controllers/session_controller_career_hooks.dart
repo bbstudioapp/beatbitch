@@ -112,6 +112,40 @@ extension CareerHooksOrchestrator on SessionController {
     return true;
   }
 
+  /// Horloge gelée sous le déclencheur : `elapsedSeconds` y vaut le
+  /// déclencheur ou une seconde de moins selon l'instant de la lecture.
+  int? get _activeChallengeTriggerSec {
+    final triggers = _session.challengeTriggerTimes;
+    return _activeChallengeIndex >= 0 && _activeChallengeIndex < triggers.length
+        ? triggers[_activeChallengeIndex]
+        : null;
+  }
+
+  /// Jalons de la séance que la suite post-défi doit rejouer : ceux dont la
+  /// fenêtre n'est pas terminée au déclencheur, hors jalons déjà acquis.
+  MilestonePlan get postChallengeMilestonePlan {
+    final playedUntil = _activeChallengeTriggerSec ?? elapsedSeconds;
+    LevelMilestone? unplayed(String? id, int? start, int? duration) {
+      if (id == null || start == null || duration == null) return null;
+      if (start + duration <= playedUntil) return null;
+      if (milestoneService.isCompleted(id)) return null;
+      return milestoneService.findById(id);
+    }
+
+    final s = _session;
+    final bodies = [
+      unplayed(s.milestoneId, s.milestoneStartTime, s.milestoneDurationSeconds),
+      unplayed(s.secondMilestoneId, s.secondMilestoneStartTime,
+          s.secondMilestoneDurationSeconds),
+    ].whereType<LevelMilestone>().toList();
+    return MilestonePlan(
+      bodies: bodies,
+      finalMilestone: unplayed(s.finalMilestoneId, s.finalMilestoneStartTime,
+          s.finalMilestoneDurationSeconds),
+      textResolver: milestoneService.getStepText,
+    );
+  }
+
   /// `upcomingSession.steps[*].time` partent de 0 : la méthode les rebase.
   /// Ni `_checkSteps()` ni arrêt du TTS : le souffle post-défi est en cours.
   Future<void> requestPostChallengeRegen({
@@ -121,13 +155,7 @@ extension CareerHooksOrchestrator on SessionController {
     // Défi excisé et chrono gelé pendant le souffle : `elapsedSeconds` en est
     // déjà la fin.
     final breathEnd = elapsedSeconds;
-    // Horloge gelée : `elapsedSeconds` vaut le déclencheur ou une seconde de
-    // moins selon l'instant de la régénération ; `playedUntil` ne varie pas.
-    final triggers = _session.challengeTriggerTimes;
-    final playedUntil =
-        _activeChallengeIndex >= 0 && _activeChallengeIndex < triggers.length
-            ? triggers[_activeChallengeIndex]
-            : null;
+    final playedUntil = _activeChallengeTriggerSec;
     _session = SessionController.buildPostChallengeRegenSession(
       previous: _session,
       upcoming: upcomingSession,

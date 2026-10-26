@@ -1,4 +1,5 @@
 import 'package:beat_bitch/career/models/capability_requirement.dart';
+import 'package:beat_bitch/career/models/career_generation_inputs.dart';
 import 'package:beat_bitch/career/models/challenge.dart';
 import 'package:beat_bitch/career/models/level_milestone.dart';
 import 'package:beat_bitch/career/models/unlock_key.dart';
@@ -111,14 +112,18 @@ void main() {
       'est acquitté à la fin de séance', () async {
     final ctrl = _buildController();
     var regens = 0;
+    MilestonePlan? plan;
     ctrl.onPostChallengeRegen = (c) async {
       regens++;
+      plan = c.postChallengeMilestonePlan;
       await c.requestPostChallengeRegen(upcomingSession: _upcoming);
     };
     await _playToEnd(ctrl);
 
     expect(regens, 1, reason: 'la régénération post-défi doit avoir tourné');
     expect(ctrl.session.id, endsWith(':postchallenge'));
+    expect(plan?.bodies, isEmpty,
+        reason: 'un jalon déjà joué ne doit pas être redemandé à la suite');
     expect(milestoneService.isCompleted(_defiId), isTrue,
         reason: 'le défi réussi doit acquitter le jalon de capacité');
     expect(milestoneService.isCompleted(_bodyId), isTrue,
@@ -127,22 +132,27 @@ void main() {
   }, timeout: const Timeout(Duration(seconds: 90)));
 
   test(
-      'après une régénération post-défi, le jalon pas encore joué au moment '
-      'du défi n\'est pas acquitté', () async {
+      'après une régénération post-défi, le jalon pas encore joué est '
+      'redemandé à la suite, et pas acquitté si elle ne le rejoue pas',
+      () async {
     final ctrl = _buildController(bodyStart: 21);
     var regens = 0;
+    MilestonePlan? plan;
     ctrl.onPostChallengeRegen = (c) async {
       regens++;
+      plan = c.postChallengeMilestonePlan;
       await c.requestPostChallengeRegen(upcomingSession: _upcoming);
     };
     await _playToEnd(ctrl);
 
     expect(regens, 1, reason: 'la régénération post-défi doit avoir tourné');
     expect(ctrl.session.id, endsWith(':postchallenge'));
+    expect(plan?.bodies.map((m) => m.id), [_bodyId],
+        reason: 'jalon en [21, 24 s) pas encore joué au défi : la suite '
+            'doit le rejouer');
     expect(milestoneService.isCompleted(_defiId), isTrue);
     expect(milestoneService.isCompleted(_bodyId), isFalse,
-        reason: 'jalon en [21, 24 s) remplacé par la suite régénérée : '
-            'jamais joué, il ne doit pas être offert');
+        reason: 'la suite ne l\'a pas rejoué : il ne doit pas être offert');
   }, timeout: const Timeout(Duration(seconds: 90)));
 }
 

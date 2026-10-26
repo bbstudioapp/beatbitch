@@ -45,6 +45,12 @@ void main() {
               'carry:regen.carry,'));
     });
 
+    test('régénération post-défi : les jalons pas encore joués sont redemandés',
+        () {
+      final body = _method(src, 'Future<void> _handlePostChallengeRegen(');
+      expect(body, contains('milestones:ctrl.postChallengeMilestonePlan,'));
+    });
+
     test('le libellé de durée annonce les pauses d\'après le palier', () {
       final flat = _flat(src);
       expect(

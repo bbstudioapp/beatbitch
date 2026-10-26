@@ -1036,11 +1036,7 @@ class _CareerScreenState extends State<CareerScreen> {
         profile: bundle.capabilityProfile,
         sessionCeilings: ctrl.capabilitySessionCeilings,
       ),
-      // Pas de `milestones` ni de `challenge` : les milestones de la séance
-      // ont déjà été insérées et le défi vient de tourner — on régénère le
-      // reste comme une suite « normale » qui consomme librement les
-      // nouveaux unlocks (le défi peut acquitter en cascade plusieurs
-      // milestones d'un coup, cf. § 5.4 spec).
+      milestones: ctrl.postChallengeMilestonePlan,
     );
 
     await ctrl.requestPostChallengeRegen(upcomingSession: newGen.session);

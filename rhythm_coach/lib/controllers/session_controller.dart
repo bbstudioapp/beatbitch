@@ -1908,7 +1908,7 @@ class SessionController extends ChangeNotifier {
     ];
 
     final windowLimit = playedUntil ?? breathEnd;
-    final bodies = <({String id, int start, int duration})>[];
+    final bodies = <({String id, int start, int? duration})>[];
     void addPrevIfWindowEnded(int? mStart, int? mDur, String? id) {
       if (id == null || mStart == null || mDur == null) return;
       if ((mStart + mDur) <= windowLimit) {
@@ -1920,12 +1920,23 @@ class SessionController extends ChangeNotifier {
         previous.milestoneDurationSeconds, previous.milestoneId);
     addPrevIfWindowEnded(previous.secondMilestoneStartTime,
         previous.secondMilestoneDurationSeconds, previous.secondMilestoneId);
+
+    void addUpcoming(int? mStart, int? mDur, String? id) {
+      if (id == null || mStart == null) return;
+      bodies.add((id: id, start: mStart + breathEnd, duration: mDur));
+    }
+
+    addUpcoming(upcoming.milestoneStartTime, upcoming.milestoneDurationSeconds,
+        upcoming.milestoneId);
+    addUpcoming(upcoming.secondMilestoneStartTime,
+        upcoming.secondMilestoneDurationSeconds, upcoming.secondMilestoneId);
     bodies.sort((a, b) => a.start.compareTo(b.start));
     final mid1 = bodies.isNotEmpty ? bodies[0] : null;
     final mid2 = bodies.length >= 2 ? bodies[1] : null;
 
     final upFinalStepTime = upcoming.finalStepTime;
     final upSilentFinish = upcoming.silentFinishStartTime;
+    final upFinalMsStart = upcoming.finalMilestoneStartTime;
     final script = PostureScript(
       breaks: upcoming.breaks,
       changes: upcoming.postureChanges,
@@ -1943,6 +1954,10 @@ class SessionController extends ChangeNotifier {
       secondMilestoneId: mid2?.id,
       secondMilestoneStartTime: mid2?.start,
       secondMilestoneDurationSeconds: mid2?.duration,
+      finalMilestoneId: upcoming.finalMilestoneId,
+      finalMilestoneStartTime:
+          upFinalMsStart != null ? upFinalMsStart + breathEnd : null,
+      finalMilestoneDurationSeconds: upcoming.finalMilestoneDurationSeconds,
       finalStepTime:
           upFinalStepTime != null ? upFinalStepTime + breathEnd : null,
       silentFinishStartTime:

@@ -359,6 +359,14 @@ void main() {
         finalMilestoneStartTime: 500,
         finalMilestoneDurationSeconds: 30,
       );
+      const bare = Session(
+        id: 'gen',
+        name: 'gen',
+        description: 'd',
+        durationSeconds: 240,
+        defaultMode: SessionMode.rhythm,
+        steps: [],
+      );
       const upcoming = Session(
         id: 'gen',
         name: 'gen',
@@ -374,7 +382,7 @@ void main() {
         finalMilestoneDurationSeconds: 30,
       );
 
-      Session regen(int breathEnd) =>
+      Session regen(int breathEnd, {Session upcoming = bare}) =>
           SessionController.buildPostChallengeRegenSession(
             previous: previous,
             upcoming: upcoming,
@@ -403,11 +411,20 @@ void main() {
         expect(r.secondMilestoneId, isNull);
       });
 
-      test('les jalons final et d\'upcoming sont abandonnés', () {
-        final r = regen(600);
-        expect(r.finalMilestoneId, isNull);
+      test('les jalons d\'upcoming sont reportés, rebasés sur breathEnd', () {
+        final r = regen(25, upcoming: upcoming);
         expect(r.milestoneId, 'm1');
-        expect(r.secondMilestoneId, 'm2');
+        expect(r.milestoneStartTime, 0);
+        expect(r.secondMilestoneId, 'mu');
+        expect(r.secondMilestoneStartTime, 30);
+        expect(r.secondMilestoneDurationSeconds, 10);
+        expect(r.finalMilestoneId, 'mfu');
+        expect(r.finalMilestoneStartTime, 225);
+        expect(r.finalMilestoneDurationSeconds, 30);
+      });
+
+      test('le jalon final de previous n\'est pas reporté', () {
+        expect(regen(25).finalMilestoneId, isNull);
       });
     });
   });

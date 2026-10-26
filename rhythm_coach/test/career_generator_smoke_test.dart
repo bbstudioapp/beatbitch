@@ -209,6 +209,58 @@ void main() {
             'body-step (t=$bodyTime) doit précéder final-step (t=$finalTime)');
   });
 
+  test('suite courte : les jalons de corps et final y sont posés', () {
+    const body = LevelMilestone(
+      id: 'body_test',
+      humilRequired: 0.0,
+      displayLabel: 'body',
+      sequence: [
+        SessionStep(
+          time: 0,
+          text: 'body-step',
+          mode: SessionMode.rhythm,
+          from: Position.tip,
+          to: Position.head,
+          bpm: 80,
+          duration: 10,
+        ),
+      ],
+      durationSeconds: 10,
+      unlocks: [],
+    );
+    const finalM = LevelMilestone(
+      id: 'final_test',
+      humilRequired: 0.0,
+      displayLabel: 'final',
+      placement: MilestonePlacement.finalApotheose,
+      sequence: [
+        SessionStep(
+          time: 0,
+          text: 'final-step',
+          mode: SessionMode.hold,
+          to: Position.tip,
+          duration: 8,
+        ),
+      ],
+      durationSeconds: 8,
+      unlocks: [],
+    );
+    for (final d in [30, 60, 120]) {
+      final s = CareerSessionGenerator(seed: d)
+          .generate(
+            level: 10,
+            bank: _bank(),
+            durationSeconds: d,
+            milestones:
+                const MilestonePlan(bodies: [body], finalMilestone: finalM),
+            unlockedKeys: _allUnlocks,
+          )
+          .session;
+      expect(s.milestoneId, 'body_test', reason: '$d s');
+      expect(s.finalMilestoneId, 'final_test', reason: '$d s');
+    }
+  });
+
   test('sans finalMilestone, _pickFinal classique est appelé', () {
     // Contre-épreuve : sans finalMilestone, le finisher est calculé par
     // `_pickFinal` (= comportement historique). À humil 0 + niveau 2,

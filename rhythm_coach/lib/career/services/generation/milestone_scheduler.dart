@@ -106,7 +106,7 @@ class MilestoneScheduler {
       final defaultTargetFraction = i == 0 ? 0.30 : 0.65;
       final maxInsert = m.insertAtMaxSeconds ??
           (effectiveDuration * defaultMaxFraction).round();
-      final minInsert = m.insertAtMinSeconds ?? 60;
+      final minInsert = min(m.insertAtMinSeconds ?? 60, maxInsert);
       final target = (effectiveDuration * defaultTargetFraction).round();
       pending.add(_PendingMilestoneInsert(
         milestone: m,
