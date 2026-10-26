@@ -112,8 +112,8 @@ jobs:
 
           mkdir -p assets/backgrounds assets/audio/ambience assets/audio/music assets/career/coaches/portraits assets/courbe
 
-          echo "Fetching backgrounds from s3://$R2_BUCKET/backgrounds/v1/ ..."
-          aws s3 sync "s3://$R2_BUCKET/backgrounds/v1/" assets/backgrounds/ \
+          echo "Fetching backgrounds from s3://$R2_BUCKET/backgrounds/v3/ ..."
+          aws s3 sync "s3://$R2_BUCKET/backgrounds/v3/" assets/backgrounds/ \
             --endpoint-url "$R2_ENDPOINT" \
             --no-progress
 
@@ -127,8 +127,8 @@ jobs:
             --endpoint-url "$R2_ENDPOINT" \
             --no-progress || echo "(music prefix empty or missing, continuing)"
 
-          echo "Fetching coach portraits from s3://$R2_BUCKET/coach-portraits/v1/ ..."
-          aws s3 sync "s3://$R2_BUCKET/coach-portraits/v1/" assets/career/coaches/portraits/ \
+          echo "Fetching coach portraits from s3://$R2_BUCKET/coach-portraits/v3/ ..."
+          aws s3 sync "s3://$R2_BUCKET/coach-portraits/v3/" assets/career/coaches/portraits/ \
             --endpoint-url "$R2_ENDPOINT" \
             --no-progress || echo "(coach-portraits prefix empty or missing, continuing)"
 
@@ -276,8 +276,8 @@ jobs:
 
           mkdir -p assets/backgrounds assets/audio/ambience assets/audio/music assets/career/coaches/portraits assets/courbe
 
-          echo "Fetching backgrounds from s3://$R2_BUCKET/backgrounds/v1/ ..."
-          aws s3 sync "s3://$R2_BUCKET/backgrounds/v1/" assets/backgrounds/ \
+          echo "Fetching backgrounds from s3://$R2_BUCKET/backgrounds/v3/ ..."
+          aws s3 sync "s3://$R2_BUCKET/backgrounds/v3/" assets/backgrounds/ \
             --endpoint-url "$R2_ENDPOINT" \
             --no-progress
 
@@ -291,8 +291,8 @@ jobs:
             --endpoint-url "$R2_ENDPOINT" \
             --no-progress || echo "(music prefix empty or missing, continuing)"
 
-          echo "Fetching coach portraits from s3://$R2_BUCKET/coach-portraits/v1/ ..."
-          aws s3 sync "s3://$R2_BUCKET/coach-portraits/v1/" assets/career/coaches/portraits/ \
+          echo "Fetching coach portraits from s3://$R2_BUCKET/coach-portraits/v3/ ..."
+          aws s3 sync "s3://$R2_BUCKET/coach-portraits/v3/" assets/career/coaches/portraits/ \
             --endpoint-url "$R2_ENDPOINT" \
             --no-progress || echo "(coach-portraits prefix empty or missing, continuing)"
 
@@ -390,8 +390,8 @@ jobs:
 
           mkdir -p assets/backgrounds assets/audio/ambience assets/audio/music assets/career/coaches/portraits assets/courbe
 
-          echo "Fetching backgrounds from s3://$R2_BUCKET/backgrounds/v1/ ..."
-          aws s3 sync "s3://$R2_BUCKET/backgrounds/v1/" assets/backgrounds/ \
+          echo "Fetching backgrounds from s3://$R2_BUCKET/backgrounds/v3/ ..."
+          aws s3 sync "s3://$R2_BUCKET/backgrounds/v3/" assets/backgrounds/ \
             --endpoint-url "$R2_ENDPOINT" \
             --no-progress
 
@@ -405,8 +405,8 @@ jobs:
             --endpoint-url "$R2_ENDPOINT" \
             --no-progress || echo "(music prefix empty or missing, continuing)"
 
-          echo "Fetching coach portraits from s3://$R2_BUCKET/coach-portraits/v1/ ..."
-          aws s3 sync "s3://$R2_BUCKET/coach-portraits/v1/" assets/career/coaches/portraits/ \
+          echo "Fetching coach portraits from s3://$R2_BUCKET/coach-portraits/v3/ ..."
+          aws s3 sync "s3://$R2_BUCKET/coach-portraits/v3/" assets/career/coaches/portraits/ \
             --endpoint-url "$R2_ENDPOINT" \
             --no-progress || echo "(coach-portraits prefix empty or missing, continuing)"
 
