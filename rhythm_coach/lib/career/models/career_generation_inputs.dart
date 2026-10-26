@@ -123,9 +123,6 @@ class CustomOverrides {
 }
 
 /// Plan d'insertion des milestones pédagogiques pour la séance courante.
-/// `career_screen._start` pousse les 3 champs ; `_handleMilestoneRetry`
-/// pousse `bodies` + `textResolver` (sans `finalMilestone`) ; les autres
-/// callers omettent tout.
 ///
 /// L'insertion effective est orchestrée par `_MilestoneScheduler` côté
 /// générateur (cf. `career_session_generator_milestone_scheduler.dart`).

@@ -23,7 +23,10 @@ void main() {
       final body = _method(src, 'Future<void> _handleUpgrade(');
       expect(body,
           contains('genDuration=ctrl.upgradeRegenDuration(begDuration);'));
-      expect(body, contains('generate(durationSeconds:genDuration,'));
+      expect(
+          body,
+          contains('generate(durationSeconds:genDuration,'
+              'durationExcludesFinish:true,'));
     });
 
     test('retry de milestone : durée et pauses reportées du contrôleur', () {
@@ -32,7 +35,7 @@ void main() {
       expect(
           body,
           contains('generate(durationSeconds:regen.durationSeconds,'
-              'carry:regen.carry,'));
+              'durationExcludesFinish:true,carry:regen.carry,'));
     });
 
     test('régénération post-défi : durée et pauses reportées du contrôleur',
@@ -42,7 +45,13 @@ void main() {
       expect(
           body,
           contains('generate(durationSeconds:regen.durationSeconds,'
-              'carry:regen.carry,'));
+              'durationExcludesFinish:true,carry:regen.carry,'));
+    });
+
+    test('régénération post-défi : les jalons pas encore joués sont redemandés',
+        () {
+      final body = _method(src, 'Future<void> _handlePostChallengeRegen(');
+      expect(body, contains('milestones:ctrl.postChallengeMilestonePlan,'));
     });
 
     test('le libellé de durée annonce les pauses d\'après le palier', () {
