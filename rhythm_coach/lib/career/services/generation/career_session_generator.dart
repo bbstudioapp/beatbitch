@@ -214,8 +214,8 @@ class CareerSessionGenerator {
   }
 
   /// Bornes de durée d'un break scénarisé. Tirées uniformément
-  /// par `_pickBreakDuration`. Le break consomme cette durée comme *trou
-  /// d'effort* dans l'enveloppe (cf. réservation dans `generate`).
+  /// par `_pickBreakDuration`. Le break est un *trou d'effort* qui s'ajoute à
+  /// la durée choisie (cf. réservation dans `generate`).
   static const int _breakMinDurationSeconds = 60;
   static const int _breakMaxDurationSeconds = 120;
 
@@ -747,10 +747,10 @@ class CareerSessionGenerator {
     // `SessionRuntimeState.fresh()` plus haut.
     final steps = <SessionStep>[];
     // Le profil est indexé sur la timeline générée, qui inclut les fenêtres
-    // de défi réservées (cf. `GenerationContext.challengeReserveSeconds`) :
+    // réservées, défis et pauses (cf. `GenerationContext.reservedWindowSeconds`) :
     // dimensionner sur `effectiveDuration` seul le laisserait tronqué sur
-    // toute la fin d'une séance à défis, et le contrôleur y lirait une
-    // endurance figée.
+    // toute la fin d'une séance à défis ou à pauses, et le contrôleur y
+    // lirait une endurance figée.
     final maxChallengeReserve = challenge.challenges.fold<int>(
       0,
       (sum, ch) =>
@@ -758,8 +758,13 @@ class CareerSessionGenerator {
           kChallengeBreathDurationSeconds +
           _estimatedChallengeDuration(ch),
     );
+    final maxPauseReserve = _config.scriptedBreaks
+        ? (genUntilBase ~/ _breakIntervalLowEnduranceSeconds + 1) *
+            _breakMaxDurationSeconds
+        : 0;
     final profile = List<double>.filled(
-        effectiveDuration + maxChallengeReserve + 60, StaminaModel.cap);
+        effectiveDuration + maxChallengeReserve + maxPauseReserve + 60,
+        StaminaModel.cap);
 
     // Ctx partagé par tous les helpers de phase : DTO des paramètres
     // figés + curseur courant (`time`, `stamina`, `progress` getter)
@@ -932,6 +937,7 @@ class CareerSessionGenerator {
           ctx.time >= plannedBreakTimes[nextBreakIndex]) {
         final dur = _pickBreakDuration();
         if (ctx.genUntil - ctx.time >= dur) {
+          ctx.reservedWindowSeconds += dur;
           final end = ctx.time + dur;
           final changeDue = nextPostureChangeAt != null &&
               nextPostureChangeAt <= end + _postureMergeWindowSeconds;
@@ -998,7 +1004,7 @@ class CareerSessionGenerator {
       // À l'exécution, `_excisChallengeFromSession` retire la fenêtre
       // effective (`breathDur + estimate`) et shift les steps suivants.
       //
-      // Cette enveloppe est reportée sur `ctx.challengeReserveSeconds` :
+      // Cette enveloppe est reportée sur `ctx.reservedWindowSeconds` :
       // elle décale d'autant la fin de la boucle main, donc elle n'est pas
       // prise sur le contenu de la séance. Sans ce report, la joueuse payait
       // deux fois — l'enveloppe rognait le contenu généré, puis l'excision
@@ -1029,7 +1035,7 @@ class CareerSessionGenerator {
         // Pas de step défi matérialisé ici — on réserve juste l'enveloppe
         // pour la planification aval.
         ctx.time += reservedStepDur;
-        ctx.challengeReserveSeconds += breathDur + reservedStepDur;
+        ctx.reservedWindowSeconds += breathDur + reservedStepDur;
         nextChallengeIndex++;
         continue;
       }
@@ -1421,7 +1427,7 @@ class CareerSessionGenerator {
     // l'endurance par contrat.
     // « Utilise-moi » désactive toute récup (comme la dernière minute) :
     // « respirer est inutile », la seule pause possible est un fail.
-    final inLastMinute = (ctx.effectiveDuration - ctx.time) <= 60;
+    final inLastMinute = (ctx.effectiveDuration - ctx.effortTime) <= 60;
     final noRecovery = inLastMinute || _config.useMe;
     // Bonus obédiance sur le seuil de recovery : capé +25 pour pas
     // qu'une obédiance lifetime extrême (200+) pousse le seuil à 80
@@ -1707,8 +1713,7 @@ class CareerSessionGenerator {
       final staminaBefore = s;
       if (mStep.mode != null) {
         final mDraft = _stepToDraft(mStep);
-        s = StaminaModel.apply(s, mDraft, t / ctx.effectiveDuration, ctx.cfg,
-            rules: _rules);
+        s = StaminaModel.apply(s, mDraft, ctx.progress, ctx.cfg, rules: _rules);
         _advanceSalivaSim(mDraft);
       }
       StaminaModel.fillProfile(
