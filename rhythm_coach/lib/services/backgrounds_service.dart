@@ -4,11 +4,6 @@ import 'package:flutter/foundation.dart';
 
 import 'backgrounds_loader.dart';
 
-/// Contexte de session passé à `BackgroundsService.pickForContext`. Chaque
-/// champ correspond à une catégorie du `BackgroundTagVocabulary`. Un champ
-/// `null` signifie « pas d'info » — toute entrée qui porte un tag de cette
-/// catégorie sera disqualifiée (un fond marqué `final` ne s'affiche pas
-/// hors de la phase finale).
 @immutable
 class BackgroundContext {
   final String? mode;
@@ -38,26 +33,10 @@ class BackgroundContext {
         BackgroundTagCategory.coach => coach,
         BackgroundTagCategory.phase => phase,
         BackgroundTagCategory.tier => tier,
+        BackgroundTagCategory.viewpoint => null,
       };
 }
 
-/// Singleton qui pilote le fond média de l'écran de jeu.
-///
-/// **Modes de mise à jour** :
-/// - `setById(id)` : override explicite (consommé par `step.background`).
-/// - `pickForContext(ctx)` : sélection priorisée — score = nombre de
-///   catégories de tags qui matchent le contexte. Une entrée taguée dans
-///   une catégorie *inconnue* du contexte (ex : `lick` pendant un rhythm)
-///   est disqualifiée. Si aucune entrée taguée ne match, on tombe sur les
-///   entrées sans tags (pool historique).
-/// - `pickRandom()` : fallback historique — pioche au hasard hors entrée
-///   courante, sans considérer les tags.
-/// - `clear()` : retire le fond courant (le widget retombe sur le
-///   placeholder animé).
-///
-/// **État** : `current` est un `ValueNotifier<BackgroundEntry?>` que le
-/// widget `SessionBackground` écoute. Pas de stream — un seul observateur
-/// (l'écran de jeu actif), pas besoin de broadcast.
 class BackgroundsService {
   BackgroundsService._();
 
@@ -67,7 +46,22 @@ class BackgroundsService {
       ValueNotifier<BackgroundEntry?>(null);
 
   BackgroundsBundle _bundle = BackgroundsBundle.empty;
-  final Random _rng = Random();
+  Random _rng = Random();
+
+  @visibleForTesting
+  set debugRandom(Random rng) => _rng = rng;
+
+  static const Set<String> handRaisedHolds = {
+    'helene-pack-hold-26002-ltx-pp-s26002',
+    'helene-pack-nu1-hold-26002-ltx-pp-s26002',
+    'helene-pack-nu2-hold-26002-anim',
+    'lina-pack-hold-25001-ltx-pp-s25001',
+    'lina-pack-hold-25002-ltx-pp-s25002',
+    'lina-pack-nu1-hold-25001-anim',
+    'lina-pack-nu1-hold-25002-anim',
+    'lina-pack-nu2-hold-25001-anim',
+    'lina-pack-nu2-hold-25002-anim',
+  };
 
   static const List<String> _tierNames = ['nu1', 'nu2'];
   static int _rankOf(String? tier) => _tierNames.indexOf(tier ?? '') + 1;
@@ -77,15 +71,15 @@ class BackgroundsService {
   int _tierRank = 0;
   final List<BackgroundEntry> _transitions = [];
   BackgroundContext? _afterTransitions;
+  BackgroundContext? _lastGesture;
 
   void _resetTiers() {
     _tierRank = 0;
     _transitions.clear();
     _afterTransitions = null;
+    _lastGesture = null;
   }
 
-  /// Charge ou recharge le catalogue. Appelé une fois au démarrage de
-  /// l'app, idempotent.
   void setBundle(BackgroundsBundle bundle) {
     _bundle = bundle;
     _tieredCoaches = {
@@ -93,8 +87,6 @@ class BackgroundsService {
         if (e.tier != null) ...?e.tagsByCategory[BackgroundTagCategory.coach],
     };
     _resetTiers();
-    // Si l'entrée courante n'existe plus dans le nouveau bundle, on la
-    // clear pour ne pas pointer vers un id orphelin.
     final cur = current.value;
     if (cur != null && _bundle.byId(cur.id) == null) {
       current.value = null;
@@ -103,35 +95,20 @@ class BackgroundsService {
 
   bool get hasEntries => _bundle.entries.isNotEmpty;
 
-  /// Override explicite par id (typiquement appelé par `SessionController`
-  /// quand un step a `background: "..."`). No-op si l'id est inconnu —
-  /// on ne casse pas la session pour un asset manquant, on garde le fond
-  /// courant.
   void setById(String id) {
     final entry = _bundle.byId(id);
     if (entry == null) return;
+    _transitions.clear();
+    _afterTransitions = null;
     current.value = entry;
   }
 
-  /// Sélection priorisée par tags du nom de fichier. Pour chaque entrée :
-  /// 1. Si elle porte au moins un tag dans une catégorie pour laquelle le
-  ///    contexte n'a *aucune* valeur attendue (ex : tag `final` hors phase
-  ///    finale, tag `lick` hors mode lick) → disqualifiée.
-  /// 2. Sinon, son score est le nombre de catégories pour lesquelles le
-  ///    contexte a une valeur ET cette valeur figure dans les tags de
-  ///    l'entrée.
-  ///
-  /// Le bucket de plus haut score gagne. À score égal, tirage aléatoire
-  /// (anti-doublon immédiat avec l'entrée courante). Si aucune entrée
-  /// taguée ne match, on retombe sur le pool des entrées sans tags
-  /// (`pickRandom` filtré). Si même ce pool est vide, on retombe sur le
-  /// `pickRandom` historique (entrées taguées comprises) — mieux vaut un
-  /// fond inadapté que pas de fond du tout quand le catalogue est entiè-
-  /// rement tagué.
-  void pickForContext(BackgroundContext ctx) {
+  void pickForContext(BackgroundContext ctx, {bool playerScene = false}) {
     if (_bundle.entries.isEmpty) return;
-    // Seul un coach qui a des fonds de palier en reçoit ; le palier atteint
-    // ne redescend pas en cours de séance.
+    if (current.value?.isPov ?? false) {
+      _transitions.clear();
+      _afterTransitions = null;
+    }
     final tiered = ctx.coach != null && _tieredCoaches.contains(ctx.coach);
     final before = _tierRank;
     if (tiered) _tierRank = max(_tierRank, _rankOf(ctx.tier));
@@ -152,12 +129,35 @@ class BackgroundsService {
       if (!wasPlaying) current.value = _transitions.first;
       return;
     }
+    if (playerScene && _insertPlayerScene(effective)) return;
     _pick(effective);
   }
 
-  /// Fin de lecture d'une transition (signalée par le widget). Enchaîne la
-  /// suivante, ou le fond du dernier contexte demandé. Ignorée si [entry]
-  /// n'est pas la transition à l'écran.
+  bool _insertPlayerScene(BackgroundContext ctx) {
+    final shown = current.value;
+    if (ctx.phase != null ||
+        shown == null ||
+        shown.isIntro ||
+        shown.isPov ||
+        shown.isTierTransition ||
+        shown.tagsByCategory.containsKey(BackgroundTagCategory.phase)) {
+      return false;
+    }
+    final scenes =
+        _bundle.entries.where((e) => e.isPov && _sceneMatches(e, ctx)).toList();
+    if (scenes.isEmpty || _rng.nextInt(3) != 0) return false;
+    final scene = scenes[_rng.nextInt(scenes.length)];
+    _transitions.add(scene);
+    _afterTransitions = ctx;
+    current.value = scene;
+    return true;
+  }
+
+  static bool _sceneMatches(BackgroundEntry e, BackgroundContext ctx) =>
+      (!e.tags.contains('suckle') || ctx.position == 'head') &&
+      [BackgroundTagCategory.mode, BackgroundTagCategory.position].every(
+          (cat) => e.tagsByCategory[cat]?.contains(ctx.valueFor(cat)) ?? true);
+
   void transitionFinished(BackgroundEntry entry) {
     if (_transitions.isEmpty || _transitions.first.id != entry.id) return;
     _transitions.removeAt(0);
@@ -170,8 +170,6 @@ class BackgroundsService {
     if (ctx != null) _pick(ctx);
   }
 
-  /// Fond de la phase d'échec, au palier atteint. Faux, fond courant gardé,
-  /// si le coach n'a aucun fond `fail`.
   bool pickFail(String? coach) {
     final tiered = coach != null && _tieredCoaches.contains(coach);
     final best = _rank(
@@ -189,8 +187,6 @@ class BackgroundsService {
     return true;
   }
 
-  /// Fond d'intro de la coach au palier [tier]. Faux, fond courant gardé, si
-  /// la coach n'en a aucun ; vrai sans changer de fond s'il en joue déjà un.
   bool pickIntro(String? coach, {String? tier}) {
     final candidates = _bundle.entries
         .where((e) =>
@@ -225,7 +221,12 @@ class BackgroundsService {
       return;
     }
     final ranked = _rank(ctx);
+    if (ranked.withheld) {
+      _keepGesture(ctx);
+      return;
+    }
     if (ranked.best.isNotEmpty) {
+      _lastGesture = ctx;
       _setExcluding(ranked.best);
       return;
     }
@@ -233,18 +234,65 @@ class BackgroundsService {
       _setExcluding(ranked.untagged);
       return;
     }
-    // Tout le catalogue est tagué mais aucun ne match : on retombe sur
-    // un random global plutôt que de figer le fond.
     pickRandom();
   }
 
-  ({List<BackgroundEntry> best, List<BackgroundEntry> untagged}) _rank(
+  void _keepGesture(BackgroundContext ctx) {
+    final last = _lastGesture;
+    final gesture = last?.mode == 'rhythm'
+        ? _rank(BackgroundContext(
+            mode: last!.mode,
+            position: last.position,
+            coach: ctx.coach,
+            phase: ctx.phase,
+            tier: ctx.tier,
+          )).best
+        : const <BackgroundEntry>[];
+    if (gesture.isEmpty) {
+      if (last != null || (current.value?.isTierTransition ?? false)) {
+        final rhythms = _coachRhythmsAt(ctx);
+        if (!rhythms.contains(current.value)) _setExcluding(rhythms);
+      }
+      return;
+    }
+    if (!gesture.contains(current.value)) _setExcluding(gesture);
+  }
+
+  List<BackgroundEntry> _coachRhythmsAt(BackgroundContext ctx) {
+    final rhythms = _bundle.entries
+        .where((e) =>
+            e.tier == ctx.tier &&
+            (e.tagsByCategory[BackgroundTagCategory.mode]?.contains('rhythm') ??
+                false) &&
+            (e.tagsByCategory[BackgroundTagCategory.phase]
+                    ?.contains(ctx.phase) ??
+                true) &&
+            !handRaisedHolds.contains(e.id) &&
+            (e.tagsByCategory[BackgroundTagCategory.coach]
+                    ?.contains(ctx.coach) ??
+                false))
+        .toList();
+    final samePosition = rhythms
+        .where((e) =>
+            e.tagsByCategory[BackgroundTagCategory.position]
+                ?.contains(ctx.position) ??
+            false)
+        .toList();
+    return samePosition.isEmpty ? rhythms : samePosition;
+  }
+
+  ({
+    List<BackgroundEntry> best,
+    List<BackgroundEntry> untagged,
+    bool withheld,
+  }) _rank(
     BackgroundContext ctx, {
     bool Function(BackgroundEntry)? where,
   }) {
     var bestScore = -1;
     final byScore = <int, List<BackgroundEntry>>{};
     final untagged = <BackgroundEntry>[];
+    var withheldScore = -1;
     for (final e in _bundle.entries) {
       if (e.isTierTransition || (where != null && !where(e))) continue;
       if (!e.hasTags) {
@@ -253,6 +301,10 @@ class BackgroundsService {
       }
       final score = _scoreEntry(e, ctx);
       if (score < 0) continue;
+      if (handRaisedHolds.contains(e.id)) {
+        withheldScore = max(withheldScore, score);
+        continue;
+      }
       byScore.putIfAbsent(score, () => <BackgroundEntry>[]).add(e);
       if (score > bestScore) bestScore = score;
     }
@@ -261,24 +313,19 @@ class BackgroundsService {
           ? (byScore[bestScore] ?? const <BackgroundEntry>[])
           : const <BackgroundEntry>[],
       untagged: untagged,
+      withheld: withheldScore > bestScore,
     );
   }
 
   static int _scoreEntry(BackgroundEntry e, BackgroundContext ctx) {
-    // Un contexte à palier exclut la lingerie (entrées sans tag de palier).
     if (ctx.tier != null && e.tier == null) return -1;
     var score = 0;
     for (final cat in BackgroundTagCategory.values) {
       final entryTags = e.tagsByCategory[cat];
       if (entryTags == null || entryTags.isEmpty) continue;
       final wanted = ctx.valueFor(cat);
-      // Catégorie présente sur l'entrée mais absente du contexte → fond
-      // hors-sujet (ex: tag `final` en pleine session). Mismatch sur la
-      // valeur attendue → idem (`lick` pendant un rhythm). Disqualifié.
       if (wanted == null) return -1;
       if (!entryTags.contains(wanted)) return -1;
-      // Une phase l'emporte sur un mode : le final est une tenue, les deux
-      // fonds seraient à égalité.
       score += cat == BackgroundTagCategory.phase ? 2 : 1;
     }
     return score;
@@ -301,13 +348,11 @@ class BackgroundsService {
     current.value = candidates[pick];
   }
 
-  /// Pioche aléatoire **différente** de l'entrée courante (anti-doublon
-  /// immédiat). Conservée pour les call sites qui n'ont pas de contexte
-  /// (ex : reset, debug) et comme fallback de `pickForContext`. Si le
-  /// bundle a une seule entrée, on retombe forcément dessus ; si le
-  /// bundle est vide, no-op (le widget reste sur son placeholder animé).
   void pickRandom() {
-    final pool = _bundle.entries.where((e) => !e.isTierTransition).toList();
+    final pool = _bundle.entries
+        .where((e) =>
+            !e.isTierTransition && !e.isPov && !handRaisedHolds.contains(e.id))
+        .toList();
     final n = pool.length;
     if (n == 0) return;
     if (n == 1) {
@@ -320,14 +365,11 @@ class BackgroundsService {
       current.value = pool[_rng.nextInt(n)];
       return;
     }
-    // Tire dans [0, n-1] en excluant curIdx. Astuce : tirer dans
-    // [0, n-2] et décaler de 1 si on tombe sur curIdx ou plus haut.
     final draw = _rng.nextInt(n - 1);
     final pick = draw >= curIdx ? draw + 1 : draw;
     current.value = pool[pick];
   }
 
-  /// Reset complet (sortie de session, retour au placeholder).
   void clear() {
     current.value = null;
     _resetTiers();
