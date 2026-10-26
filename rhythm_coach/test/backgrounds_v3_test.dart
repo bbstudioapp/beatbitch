@@ -190,6 +190,21 @@ void main() {
                 expect(svc.current.value!.tags, contains('fail'));
                 expect(svc.current.value!.tier, tier);
               }
+              for (final (moment, pick) in [
+                ('punish', svc.pickPunish),
+                ('milestone', svc.pickMilestone),
+              ]) {
+                final before = svc.current.value;
+                expect(pick(coach), hasPack, reason: '$where : $moment');
+                final e = svc.current.value;
+                if (!hasPack) {
+                  expect(e, before, reason: '$where : $moment sans pack');
+                  continue;
+                }
+                expect(owned(e!), isTrue, reason: '$where : $moment ${e.id}');
+                expect(e.tags, contains(moment), reason: '$where : ${e.id}');
+                expect(e.tier, tier, reason: '$where : $moment ${e.id}');
+              }
               picks++;
             }
           }
@@ -217,6 +232,23 @@ void main() {
       svc.pickForContext(ctx, playerScene: true);
       expect(svc.current.value!.isPov, isTrue,
           reason: 'revenue à son premier plan après le premier geste');
+    });
+
+    test('$coach : l\'étape franchie joue une fois puis rend le fond d\'avant',
+        () {
+      for (final tier in [null, 'nu1', 'nu2']) {
+        load();
+        svc.pickForContext(BackgroundContext(
+            mode: 'rhythm', position: 'tip', coach: coach, tier: tier));
+        drain('$tier');
+        final before = svc.current.value;
+        expect(svc.pickMilestone(coach), isTrue);
+        final milestone = svc.current.value!;
+        expect(milestone.id, startsWith('$coach-v3-'));
+        expect(milestone.isMilestone, isTrue, reason: milestone.id);
+        svc.transitionFinished(milestone);
+        expect(svc.current.value, before, reason: '$tier : ${before?.id}');
+      }
     });
 
     test('$coach : le bon moment gagne quand le pack l\'a', () {

@@ -95,6 +95,8 @@ class BackgroundEntry {
 
   bool get isPov => tags.contains('pov');
 
+  bool get isMilestone => tags.contains('milestone');
+
   // Le pack nomme ses transitions sans tag propre : palier + coach seuls.
   bool get isTierTransition =>
       tier != null &&

@@ -947,6 +947,7 @@ class SessionController extends ChangeNotifier {
 
       BackgroundsService.instance.clear();
       _lastBackgroundContext = null;
+      _failMoment = null;
       _failBackgroundShown = false;
 
       if (_backgroundedDuringStart) {
@@ -1255,6 +1256,7 @@ class SessionController extends ChangeNotifier {
   }
 
   BackgroundContext? _lastBackgroundContext;
+  String? _failMoment;
   bool _failBackgroundShown = false;
 
   void _pickBackground(BackgroundContext ctx, {bool playerScene = false}) {
@@ -1283,14 +1285,22 @@ class SessionController extends ChangeNotifier {
   // séance musicale) passent par `failing`.
   @override
   void notifyListeners() {
-    final failing = _state == SessionState.failing;
-    if (failing != _failBackgroundShown) {
-      if (failing) {
-        _failBackgroundShown = BackgroundsService.instance.pickFail(_coachTag);
-      } else {
+    final moment = _state != SessionState.failing
+        ? null
+        : (_failPhase == FailPhase.punishment ? 'punish' : 'fail');
+    if (moment != _failMoment) {
+      _failMoment = moment;
+      final backgrounds = BackgroundsService.instance;
+      if (moment == 'punish') {
+        _failBackgroundShown =
+            backgrounds.pickPunish(_coachTag) || _failBackgroundShown;
+      } else if (moment == 'fail') {
+        _failBackgroundShown =
+            backgrounds.pickFail(_coachTag) || _failBackgroundShown;
+      } else if (_failBackgroundShown) {
         _failBackgroundShown = false;
         final last = _lastBackgroundContext;
-        if (last != null) BackgroundsService.instance.pickForContext(last);
+        if (last != null) backgrounds.pickForContext(last);
       }
     }
     super.notifyListeners();
@@ -1746,6 +1756,9 @@ class SessionController extends ChangeNotifier {
     }
 
     _state = SessionState.finished;
+    if (_sessionMilestoneUnlocks.isNotEmpty) {
+      BackgroundsService.instance.pickMilestone(_coachTag);
+    }
     notifyListeners();
 
     // Post-basculement pour ne pas bloquer le rendu du panel de fin sur
