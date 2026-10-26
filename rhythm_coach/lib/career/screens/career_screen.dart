@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../../controllers/session_controller.dart';
+import '../../controllers/session_regen_args.dart';
 import '../../l10n/app_localizations.dart';
 import '../../l10n/format_helpers.dart';
 import '../../models/posture.dart';
@@ -778,8 +779,8 @@ class _CareerScreenState extends State<CareerScreen> {
     final begWordCount =
         begPhrase.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
     final begDuration = (begWordCount * 0.6).ceil() + 1;
-    final remaining = ctrl.session.durationSeconds - ctrl.elapsedSeconds;
-    if (remaining < begDuration + 30) return;
+    final genDuration = ctrl.upgradeRegenDuration(begDuration);
+    if (genDuration < 30) return;
 
     // Plus de saut de niveau : la difficulté supplémentaire passe par
     // `intense: true` (boost comforts + intensityFloor + BPM cap finish +
@@ -790,7 +791,6 @@ class _CareerScreenState extends State<CareerScreen> {
     final coachBank = activeCoach.toPhraseBank(
         fallback: bundle.bank, specialization: bundle.specialization);
 
-    final genDuration = remaining - begDuration;
     final humiliationCareer = await _stats.getHumiliationLevel();
     // Pour Supplier on utilise l'obédiance courante du contrôleur (live),
     // pas la valeur persistée — la séance est en cours, le score a déjà
@@ -905,8 +905,10 @@ class _CareerScreenState extends State<CareerScreen> {
     await milestoneService.incrementRetryCount(milestoneId);
 
     const begDuration = 6;
-    final remaining = ctrl.session.durationSeconds - ctrl.elapsedSeconds;
-    final retryDuration = remaining + milestone.durationSeconds;
+    final regen = ctrl.milestoneRetryRegenArgs(
+      begDuration: begDuration,
+      milestoneSeconds: milestone.durationSeconds,
+    );
 
     final activeCoach = _resolveCoach(bundle);
     final coachBank = activeCoach.toPhraseBank(
@@ -921,7 +923,8 @@ class _CareerScreenState extends State<CareerScreen> {
     final humiliationSession = ctrl.humiliation.sessionScore;
 
     final newGen = CareerSessionGenerator().generate(
-      durationSeconds: retryDuration,
+      durationSeconds: regen.durationSeconds,
+      carry: regen.carry,
       level: level,
       bank: coachBank,
       includeHand: bundle.includeHand,
@@ -997,9 +1000,8 @@ class _CareerScreenState extends State<CareerScreen> {
     bool includeHand,
   ) async {
     final t = AppLocalizations.of(context);
-    final breathEnd = ctrl.postChallengeBreathUntilSec ?? ctrl.elapsedSeconds;
-    final remaining = ctrl.session.durationSeconds - breathEnd;
-    if (remaining < 30) return;
+    final regen = ctrl.postChallengeRegenArgs();
+    if (regen.durationSeconds < 30) return;
 
     final activeCoach = _resolveCoach(bundle);
     final coachBank = activeCoach.toPhraseBank(
@@ -1016,7 +1018,8 @@ class _CareerScreenState extends State<CareerScreen> {
     final newUnlocks = milestoneService.acquiredUnlockKeys();
 
     final newGen = CareerSessionGenerator().generate(
-      durationSeconds: remaining,
+      durationSeconds: regen.durationSeconds,
+      carry: regen.carry,
       level: level,
       bank: coachBank,
       includeHand: includeHand,
@@ -1318,9 +1321,17 @@ class _CareerScreenState extends State<CareerScreen> {
           // palier est celle du contenu, pas celle de la montre. Tous les
           // paliers reçoivent au moins un défi quand le toggle est actif
           // (`targetChallengesFor`), donc la mention vaut pour tous.
+          // Les pauses aussi : la première tombe à 7 min au plus tôt, la
+          // séance bâclée (6 min) n'en a jamais.
+          final hasPauses =
+              lengthChoice.hasPauses(scriptedBreaks: bundle.scriptedBreaks);
           final durationLabel = _challengesEnabled
-              ? t.careerDurationPlusChallenges(baseDurationLabel)
-              : baseDurationLabel;
+              ? (hasPauses
+                  ? t.careerDurationPlusChallengesAndPauses(baseDurationLabel)
+                  : t.careerDurationPlusChallenges(baseDurationLabel))
+              : (hasPauses
+                  ? t.careerDurationPlusPauses(baseDurationLabel)
+                  : baseDurationLabel);
           final activeCoach = _resolveCoach(bundle);
           final principal = coachService.currentTierPrincipal;
           final isFreeTraining = !coachService.advancesTier(activeCoach);

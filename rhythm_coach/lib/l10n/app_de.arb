@@ -56,6 +56,7 @@
   "sessionStateFinished": "FERTIG",
   "sessionStateFailing": "FAIL",
   "sessionBreakBanner": "PAUSE",
+  "sessionBreakSkipButton": "PAUSE ÜBERSPRINGEN",
   "sessionFailPhasePhrase": "Fail-Satz",
   "sessionFailPhaseBreath": "Atmen",
   "sessionFailPhasePunishment": "Strafe",
@@ -233,6 +234,14 @@
   },
   "careerDurationPlusChallenges": "{duration} + Challenge-Zeit",
   "@careerDurationPlusChallenges": {
+    "placeholders": { "duration": { "type": "String" } }
+  },
+  "careerDurationPlusChallengesAndPauses": "{duration} + Challenge- und Pausenzeit",
+  "@careerDurationPlusChallengesAndPauses": {
+    "placeholders": { "duration": { "type": "String" } }
+  },
+  "careerDurationPlusPauses": "{duration} + Pausenzeit",
+  "@careerDurationPlusPauses": {
     "placeholders": { "duration": { "type": "String" } }
   },
   "careerDurationSection": "Dauer",

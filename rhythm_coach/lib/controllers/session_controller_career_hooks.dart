@@ -80,11 +80,11 @@ extension CareerHooksOrchestrator on SessionController {
 
     _nextStepIndex = 0;
     _lastConfigStep = null;
-    // `breaks` vide fait sortir `_updateBreakPhase` tôt : sans cette clôture,
-    // `_breakActive` resterait à true et l'effort serait gelé.
+    // Un break actif est clos : sa fenêtre n'existe plus dans la timeline régénérée.
     _breakActive = false;
     _activeBreak = null;
     _nextBreakIndex = 0;
+    _nextPostureChangeIndex = 0;
     // La nouvelle suite porte son propre final : son chime doit pouvoir jouer.
     _finalChimePlayed = false;
     _finaleChimeStarted = false;
@@ -142,6 +142,7 @@ extension CareerHooksOrchestrator on SessionController {
     _breakActive = false;
     _activeBreak = null;
     _nextBreakIndex = 0;
+    _nextPostureChangeIndex = 0;
     // La nouvelle suite porte son propre final : son chime doit pouvoir jouer.
     _finalChimePlayed = false;
     _finaleChimeStarted = false;

@@ -133,6 +133,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get sessionBreakBanner => 'PAUSE';
 
   @override
+  String get sessionBreakSkipButton => 'PASSER LA PAUSE';
+
+  @override
   String get sessionFailPhasePhrase => 'Phrase de fail';
 
   @override
@@ -538,6 +541,16 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String careerDurationPlusChallenges(String duration) {
     return '$duration + le temps des défis';
+  }
+
+  @override
+  String careerDurationPlusChallengesAndPauses(String duration) {
+    return '$duration + le temps des défis et des pauses';
+  }
+
+  @override
+  String careerDurationPlusPauses(String duration) {
+    return '$duration + le temps des pauses';
   }
 
   @override

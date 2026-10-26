@@ -195,14 +195,47 @@ void main() {
             ' posture, sur ${annoncesSousGel.length} des $gelPosture frames'
             ' gelées observées : ${annoncesSousGel.take(3).join(' | ')}');
   }, timeout: const Timeout(Duration(seconds: 180)));
+
+  testWidgets('le bouton de la bannière de pause passe la pause',
+      (tester) async {
+    tester.view.physicalSize = const Size(400, 1400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(_host(session: _longBreakSession));
+    await tester.pump();
+    final t = AppLocalizations.of(tester.element(find.byType(SessionScreen)));
+
+    SessionController? ctrl;
+    var skipped = false;
+    final fin = DateTime.now().add(const Duration(seconds: 10));
+    while (DateTime.now().isBefore(fin) && !skipped) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 100)));
+      await tester.pump(const Duration(milliseconds: 100));
+      final skip = find.text(t.sessionBreakSkipButton);
+      if (skip.evaluate().isEmpty) continue;
+      ctrl = Provider.of<SessionController>(tester.element(skip.first),
+          listen: false);
+      expect(ctrl.breakActive, isTrue);
+      await tester.tap(skip.first);
+      await tester.pump();
+      skipped = true;
+    }
+
+    expect(skipped, isTrue, reason: 'bouton jamais affiché pendant la pause');
+    expect(ctrl!.breakActive, isFalse);
+    expect(ctrl.elapsedSeconds, greaterThanOrEqualTo(40));
+    await ctrl.stop();
+  }, timeout: const Timeout(Duration(seconds: 60)));
 }
 
-Widget _host() => MaterialApp(
+Widget _host({Session session = _session}) => MaterialApp(
       locale: const Locale('fr'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: SessionScreen(
-        session: _session,
+        session: session,
         tts: TtsService(),
         beep: _SilentBeepEngine(),
         ambience: _SilentAmbienceEngine(),
@@ -233,6 +266,19 @@ const _session = Session(
     SessionStep(time: 3, mode: SessionMode.rhythm, bpm: 50, duration: 12),
     SessionStep(time: 15, mode: SessionMode.rhythm, bpm: 60, duration: 20),
     SessionStep(time: 35, mode: SessionMode.rhythm, bpm: 70, duration: 25),
+  ],
+);
+
+const _longBreakSession = Session(
+  id: 'pause-longue',
+  name: 'pause-longue',
+  description: '',
+  durationSeconds: 60,
+  defaultMode: SessionMode.rhythm,
+  breaks: [ScriptedBreak(time: 1, durationSeconds: 39)],
+  steps: [
+    SessionStep(time: 0, mode: SessionMode.rhythm, bpm: 40, duration: 1),
+    SessionStep(time: 40, mode: SessionMode.rhythm, bpm: 50, duration: 20),
   ],
 );
 

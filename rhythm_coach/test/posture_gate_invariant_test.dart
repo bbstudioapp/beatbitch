@@ -183,7 +183,7 @@ void main() {
       }
     });
 
-    // Pause [1,3) imposant `kneeling` à la reprise, et un défi dont le trigger
+    // Pause [1,3) imposant `kneeling` dès son entrée, et un défi dont le trigger
     // tombe exactement à `break.endTime` — ce que le générateur produisait
     // avant l'espacement des deux plannings, et ce qu'un décalage d'horloge
     // peut encore produire. Rien dans la clôture d'un défi
@@ -212,6 +212,7 @@ void main() {
                 newPose: Posture.standing,
               ),
             ],
+            postureChanges: [PostureChange(time: 200, pose: Posture.allFours)],
             challenges: [
               Challenge(
                 axis: CapabilityAxis.holdThroatStreak,
@@ -243,20 +244,30 @@ void main() {
           ),
         );
 
+    /// Amène la séance au tick où le défi s'arme, à `break.endTime` : la mise
+    /// en place est réclamée à l'entrée de la pause, donc validée avant que
+    /// celle-ci ne coure.
+    Future<void> reachChallengeBreath(SessionController ctrl) async {
+      await ctrl.start();
+      await Future<void>.delayed(const Duration(milliseconds: 1600));
+      expect(ctrl.awaitingPostureReady, isTrue);
+      ctrl.confirmPostureReady();
+      await Future<void>.delayed(const Duration(milliseconds: 2600));
+    }
+
     test(
         'une consigne concurrente n\'empile pas son bandeau sur l\'ordre de '
         'posture', () async {
       final ctrl = buildController();
-      await ctrl.start();
-      await Future<void>.delayed(const Duration(milliseconds: 3600));
+      await reachChallengeBreath(ctrl);
 
       expect(ctrl.breakActive, isFalse, reason: 'pause finie à t≈3,6 s');
       expect(ctrl.challengePhase, ChallengePhase.breath,
           reason: 'le trigger défi est planifié à `break.endTime` : il s\'arme '
               'au même tick que la sortie de pause');
       expect(ctrl.awaitingPostureReady, isFalse,
-          reason: 'le défi tient l\'écran : l\'ordre de posture n\'est plus la '
-              'scène courante, deux consignes ne s\'empilent pas');
+          reason: 'la mise en place a été validée à l\'entrée de la pause : à '
+              'sa fin, le défi tient seul l\'écran');
 
       await ctrl.stop();
     }, timeout: const Timeout(Duration(seconds: 40)));
@@ -265,8 +276,7 @@ void main() {
         'la clôture d\'un défi ne laisse pas de gel derrière elle — et rien '
         'dans cette clôture ne parle du gel', () async {
       final ctrl = buildController();
-      await ctrl.start();
-      await Future<void>.delayed(const Duration(milliseconds: 3600));
+      await reachChallengeBreath(ctrl);
       expect(ctrl.challengePhase, ChallengePhase.breath);
 
       // PASSE : `_completeChallenge` → `_startPostChallengeBreath` →
@@ -290,8 +300,7 @@ void main() {
 
     test('les pauses encore à venir survivent au défi', () async {
       final ctrl = buildController();
-      await ctrl.start();
-      await Future<void>.delayed(const Duration(milliseconds: 3600));
+      await reachChallengeBreath(ctrl);
       expect(ctrl.challengePhase, ChallengePhase.breath);
 
       ctrl.triggerChallengePass();
@@ -306,6 +315,7 @@ void main() {
       // la pause d'après suit le même décalage que les steps.
       expect(ctrl.session.breaks[1].time, 100 - (13 + 5));
       expect(ctrl.session.breaks[1].newPose, Posture.standing);
+      expect(ctrl.session.postureChanges.single.time, 200 - (13 + 5));
 
       await ctrl.stop();
     }, timeout: const Timeout(Duration(seconds: 40)));

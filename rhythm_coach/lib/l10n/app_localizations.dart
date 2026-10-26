@@ -336,6 +336,12 @@ abstract class AppLocalizations {
   /// **'PAUSE'**
   String get sessionBreakBanner;
 
+  /// No description provided for @sessionBreakSkipButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'PASSER LA PAUSE'**
+  String get sessionBreakSkipButton;
+
   /// No description provided for @sessionFailPhasePhrase.
   ///
   /// In fr, this message translates to:
@@ -1073,6 +1079,18 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'{duration} + le temps des défis'**
   String careerDurationPlusChallenges(String duration);
+
+  /// No description provided for @careerDurationPlusChallengesAndPauses.
+  ///
+  /// In fr, this message translates to:
+  /// **'{duration} + le temps des défis et des pauses'**
+  String careerDurationPlusChallengesAndPauses(String duration);
+
+  /// No description provided for @careerDurationPlusPauses.
+  ///
+  /// In fr, this message translates to:
+  /// **'{duration} + le temps des pauses'**
+  String careerDurationPlusPauses(String duration);
 
   /// No description provided for @careerDurationSection.
   ///

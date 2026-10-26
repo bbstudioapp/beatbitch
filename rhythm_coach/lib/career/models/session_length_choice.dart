@@ -68,6 +68,11 @@ enum SessionLengthChoice {
   /// moyenne/longue.
   final int maxBodyMilestones;
 
+  /// La séance bâclée n'a jamais de pause ; les autres en ont quand la
+  /// préférence [scriptedBreaks] est active.
+  bool hasPauses({required bool scriptedBreaks}) =>
+      scriptedBreaks && this != bachee;
+
   /// Nombre total cible d'« events » par séance (1/2/3/4 selon palier).
   /// Le nombre de défis effectivement insérés = `totalEvents - body
   /// insérés` (compensation : un défi remplace une milestone absente).

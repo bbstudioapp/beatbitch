@@ -8,6 +8,7 @@ import '../career/models/career_generation_inputs.dart';
 import '../career/models/challenge.dart';
 import '../career/models/level_milestone.dart';
 import '../career/models/phrase_bank.dart';
+import '../career/models/posture_unlock.dart';
 import '../career/services/challenges/challenge_segment_builder.dart';
 import '../career/services/generation/career_session_generator.dart';
 import '../career/services/specialization_service.dart';
@@ -284,12 +285,42 @@ class SessionController extends ChangeNotifier {
 
   int _nextBreakIndex = 0;
 
+  /// Pauses et changements de position pas encore déclenchés, en temps absolu
+  /// de la timeline courante : ce qu'une suite régénérée doit rejouer.
+  PostureScript get unplayedPostureScript => PostureScript(
+        breaks: _session.breaks.skip(_nextBreakIndex).toList(),
+        changes: _session.postureChanges.skip(_nextPostureChangeIndex).toList(),
+      );
+
+  /// Secondes de pause encore à venir : celles de [unplayedPostureScript] plus
+  /// le reste de la pause en cours. Hors effort, à retrancher de la durée
+  /// restante pour obtenir l'effort restant.
+  int get pauseSecondsAhead {
+    final active = _activeBreak;
+    final rest = _breakActive && active != null
+        ? max(0, active.endTime - elapsedSeconds)
+        : 0;
+    return unplayedPostureScript.pauseSeconds + rest;
+  }
+
+  /// Effort restant à partir de [fromSec] : ce qui reste de la séance, pauses à
+  /// venir retranchées. Durée demandée au générateur pour une suite régénérée.
+  int effortSecondsLeftFrom(int fromSec) =>
+      _session.durationSeconds - fromSec - pauseSecondsAhead;
+
+  /// Pauses et changements de position restants, rebasés sur [fromSec] : ce que
+  /// le générateur rejoue dans une suite régénérée à partir de cet instant.
+  PostureScript postureCarryFrom(int fromSec) =>
+      unplayedPostureScript.shifted(-fromSec);
+
   int _breakOrderLastAtSec = 0;
 
   int _breakOrderInterval = _breakOrderMinIntervalSeconds;
 
   Posture _currentPose = Posture.free;
   Posture get currentPose => _currentPose;
+
+  int _nextPostureChangeIndex = 0;
 
   /// Lisible avant `start()`, qui seul initialise `_currentPose`.
   Posture get initialPose => _session.initialPose;
@@ -311,7 +342,7 @@ class SessionController extends ChangeNotifier {
   Timer? _readyTimeout;
 
   /// Garde-fou anti-soft-lock : reprise seule sans validation de la posture.
-  static const Duration _readyTimeoutDuration = Duration(seconds: 90);
+  static const Duration _readyTimeoutDuration = Duration(minutes: 2);
 
   // ─── Commentaires aléatoires ───────────────────────────────────────────
 
@@ -834,6 +865,7 @@ class SessionController extends ChangeNotifier {
         _breakActive = false;
         _activeBreak = null;
         _nextBreakIndex = 0;
+        _nextPostureChangeIndex = 0;
         _breakOrderLastAtSec = 0;
         _currentPose = _session.initialPose;
         _postureGate = null;
@@ -1118,6 +1150,7 @@ class SessionController extends ChangeNotifier {
     _updateBreakPhase();
     // Après `_updateBreakPhase` : fenêtres disjointes.
     _updateMilestonePose();
+    _updatePostureChange();
     _checkSteps();
     _refreshBackgroundTier();
     _speakPendingWhenFree();
@@ -1828,6 +1861,10 @@ class SessionController extends ChangeNotifier {
     final upFinalStepTime = upcoming.finalStepTime;
     final upSilentFinish = upcoming.silentFinishStartTime;
     final upFinalMsStart = upcoming.finalMilestoneStartTime;
+    final script = PostureScript(
+      breaks: upcoming.breaks,
+      changes: upcoming.postureChanges,
+    ).shifted(offset);
 
     return Session(
       id: '${previous.id}:upgraded',
@@ -1851,6 +1888,8 @@ class SessionController extends ChangeNotifier {
           upSilentFinish != null ? upSilentFinish + offset : null,
       finalCategory: upcoming.finalCategory,
       noStats: previous.noStats,
+      breaks: script.breaks,
+      postureChanges: script.changes,
     );
   }
 
@@ -1887,6 +1926,10 @@ class SessionController extends ChangeNotifier {
 
     final upFinalStepTime = upcoming.finalStepTime;
     final upSilentFinish = upcoming.silentFinishStartTime;
+    final script = PostureScript(
+      breaks: upcoming.breaks,
+      changes: upcoming.postureChanges,
+    ).shifted(breathEnd);
     return Session(
       id: '${previous.id}:postchallenge',
       name: previous.name,
@@ -1906,6 +1949,8 @@ class SessionController extends ChangeNotifier {
           upSilentFinish != null ? upSilentFinish + breathEnd : null,
       finalCategory: upcoming.finalCategory,
       noStats: previous.noStats,
+      breaks: script.breaks,
+      postureChanges: script.changes,
       challenges: previous.challenges,
       challengeTriggerTimes: previous.challengeTriggerTimes,
     );
