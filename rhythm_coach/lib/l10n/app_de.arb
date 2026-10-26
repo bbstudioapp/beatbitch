@@ -768,6 +768,7 @@
   "badgeNameGobeuse": "Schluckerin",
   "badgeNameNettoyeuse": "Saubermacherin",
   "badgeNameSuppliante": "Bettlerin",
+  "badgeNameSabbat": "Hexensabbat",
 
   "badgeUnitMarathonien": "Minuten gesamt",
   "badgeUnitThroatQueen": "Throatfucks gesamt",
@@ -782,6 +783,7 @@
   "badgeUnitGobeuse": "Abspritzer auf die Zunge",
   "badgeUnitNettoyeuse": "sauber geleckte Reste danach",
   "badgeUnitSuppliante": "Betteleien nach dem Orgasmus",
+  "badgeUnitSabbat": "Sessions mit Lilith",
 
   "careerLevelTitleDebutante": "Anfängerin",
   "careerLevelTitleApprentieSuceuse": "Lutsch-Lehrling",
@@ -828,6 +830,12 @@
   "@coachSummaryFree": {
     "placeholders": { "title": { "type": "String" } }
   },
+
+  "coachBadgeLimitedTime": "BEFRISTET",
+  "coachLimitedTimeUntil": "Bis {date}",
+  "coachSummaryLimitedTime": "{title} · bis {date}",
+  "coachLimitedTimeBanner": "{name} ist bis {date} da.",
+  "coachLimitedTimeBannerAction": "AUSPROBIEREN",
 
   "coachFreeTrainingDialogTitle": "Freies Training",
   "coachFreeTrainingDialogBody": "Du trainierst mit {coachName}. Du machst Fortschritte bei deinen Fähigkeiten, aber deine Stufenanzeige bewegt sich nicht.",

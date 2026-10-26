@@ -338,6 +338,18 @@ Pour livrer le coach Jade en anglais :
 
 Aucun autre code à modifier — le `CoachService` détecte automatiquement les nouvelles entrées.
 
+### Coach éphémère
+
+Un coach proposé seulement une partie de l'année (Lilith, du 27/10 au 08/11) porte une `availability: CoachAvailability(...)`
+dans `CoachCatalog.defaults` : jours de début et de fin inclus, chaque année, heure locale de l'appareil. Pas de surcharge JSON.
+
+- **Jamais Principal** (`isPrincipal: false`, refusé par le validateur) : son palier disparaîtrait à la fin de la fenêtre.
+- Hors fenêtre, `CoachService.coaches` ne le contient pas : sélecteurs, Profil et sélection l'ignorent, la sélection
+  retombe sur la Principale. Ses réglages de voix restent stockés.
+- Pendant la fenêtre : en tête du sélecteur, choisissable sans palier ni temps joué, sans dialogue d'entraînement libre ;
+  bandeau ESSAYER sur l'écran Carrière tant qu'il n'a pas été choisi dans la fenêtre en cours.
+- Le placer **en fin** de `defaults` : les replis sur `coaches.first` doivent rester sur Lina.
+
 ### Pourquoi conserver le code Dart ?
 
 `CoachCatalog.defaults` agit comme **fallback de sécurité** : si tous les fichiers JSON disparaissent, l'app reste fonctionnelle avec les valeurs codées. Et l'`id` doit y être déclaré pour que le loader sache quels fichiers chercher (le dossier `coaches/` n'est pas scanné automatiquement, par sécurité).

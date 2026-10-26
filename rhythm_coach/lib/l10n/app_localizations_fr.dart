@@ -1647,6 +1647,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get badgeNameSuppliante => 'Suppliante';
 
   @override
+  String get badgeNameSabbat => 'Sabbat';
+
+  @override
   String get badgeUnitMarathonien => 'minutes cumulées';
 
   @override
@@ -1685,6 +1688,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get badgeUnitSuppliante => 'suppliques post-orgasme';
+
+  @override
+  String get badgeUnitSabbat => 'séances avec Lilith';
 
   @override
   String get careerLevelTitleDebutante => 'Débutante';
@@ -1788,6 +1794,36 @@ class AppLocalizationsFr extends AppLocalizations {
   String coachSummaryFree(String title) {
     return '$title · entraînement libre';
   }
+
+  @override
+  String get coachBadgeLimitedTime => 'ÉPHÉMÈRE';
+
+  @override
+  String coachLimitedTimeUntil(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.MMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return 'Jusqu\'au $dateString';
+  }
+
+  @override
+  String coachSummaryLimitedTime(String title, DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.MMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$title · jusqu\'au $dateString';
+  }
+
+  @override
+  String coachLimitedTimeBanner(String name, DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.MMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$name est là jusqu\'au $dateString.';
+  }
+
+  @override
+  String get coachLimitedTimeBannerAction => 'ESSAYER';
 
   @override
   String get coachFreeTrainingDialogTitle => 'Entraînement libre';

@@ -259,6 +259,7 @@ class DiagnosticExportService {
         'dailyStreak': _prefs.getInt('stats.daily_streak') ?? 0,
         'encoresAsked': _prefs.getInt('stats.encores_asked') ?? 0,
         'quickiesCompleted': _prefs.getInt('stats.quickies_completed') ?? 0,
+        'sabbatSessions': _prefs.getInt('stats.sabbat_sessions') ?? 0,
         'finalsBouchePleine': _prefs.getInt('stats.finals_bouche_pleine') ?? 0,
         'finalsRepeinte': _prefs.getInt('stats.finals_repeinte') ?? 0,
         'finalsGobeuse': _prefs.getInt('stats.finals_gobeuse') ?? 0,

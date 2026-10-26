@@ -768,6 +768,7 @@
   "badgeNameGobeuse": "Tragadora",
   "badgeNameNettoyeuse": "Limpiadora",
   "badgeNameSuppliante": "Suplicante",
+  "badgeNameSabbat": "Aquelarre",
 
   "badgeUnitMarathonien": "minutos totales",
   "badgeUnitThroatQueen": "gargantas profundas totales",
@@ -782,6 +783,7 @@
   "badgeUnitGobeuse": "finales en la lengua",
   "badgeUnitNettoyeuse": "post-finales limpiados con la lengua",
   "badgeUnitSuppliante": "súplicas post-orgasmo",
+  "badgeUnitSabbat": "sesiones con Lilith",
 
   "careerLevelTitleDebutante": "Principiante",
   "careerLevelTitleApprentieSuceuse": "Aprendiz de mamadora",
@@ -828,6 +830,12 @@
   "@coachSummaryFree": {
     "placeholders": { "title": { "type": "String" } }
   },
+
+  "coachBadgeLimitedTime": "EFÍMERA",
+  "coachLimitedTimeUntil": "Hasta el {date}",
+  "coachSummaryLimitedTime": "{title} · hasta el {date}",
+  "coachLimitedTimeBanner": "{name} está aquí hasta el {date}.",
+  "coachLimitedTimeBannerAction": "PROBAR",
 
   "coachFreeTrainingDialogTitle": "Entrenamiento libre",
   "coachFreeTrainingDialogBody": "Vas a entrenar con {coachName}. Progresarás en tus habilidades, pero tu medidor de nivel no se moverá.",

@@ -768,6 +768,7 @@
   "badgeNameGobeuse": "Swallower",
   "badgeNameNettoyeuse": "Cleaner",
   "badgeNameSuppliante": "Beggar",
+  "badgeNameSabbat": "Sabbat",
 
   "badgeUnitMarathonien": "minutes total",
   "badgeUnitThroatQueen": "throatfucks total",
@@ -782,6 +783,7 @@
   "badgeUnitGobeuse": "finishes on the tongue",
   "badgeUnitNettoyeuse": "post-finishes licked clean",
   "badgeUnitSuppliante": "post-orgasm begs",
+  "badgeUnitSabbat": "sessions with Lilith",
 
   "careerLevelTitleDebutante": "Beginner",
   "careerLevelTitleApprentieSuceuse": "Apprentice Cocksucker",
@@ -828,6 +830,12 @@
   "@coachSummaryFree": {
     "placeholders": { "title": { "type": "String" } }
   },
+
+  "coachBadgeLimitedTime": "LIMITED TIME",
+  "coachLimitedTimeUntil": "Until {date}",
+  "coachSummaryLimitedTime": "{title} · until {date}",
+  "coachLimitedTimeBanner": "{name} is here until {date}.",
+  "coachLimitedTimeBannerAction": "TRY HER",
 
   "coachFreeTrainingDialogTitle": "Free training",
   "coachFreeTrainingDialogBody": "You'll be training with {coachName}. You'll progress on your skills, but your tier gauge won't move.",

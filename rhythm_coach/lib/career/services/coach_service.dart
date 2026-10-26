@@ -19,8 +19,12 @@ enum CoachSelectionStatus {
   lockedTier,
 
   /// Le temps cumulé du joueur est en-dessous du `minPlayerSeconds` requis
-  /// par le coach (Phase 19.10).
+  /// par le coach.
   blockedMinPlayerSeconds,
+
+  /// Coach éphémère sélectionné pendant sa fenêtre : ni palier ni temps joué
+  /// requis, et pas d'avertissement « entraînement libre ».
+  selectedLimitedTime,
 }
 
 /// Source de vérité pour : palier courant, coach sélectionné, set des
@@ -35,26 +39,24 @@ class CoachService extends ChangeNotifier {
   static const String _kCurrentTier = 'coach.current_tier';
   static const String _kSelectedId = 'coach.selected_id';
   static const String _kUnlockedIds = 'coach.unlocked_ids';
+  static const String _kPickedYearPrefix = 'coach.picked_year.';
 
   List<Coach> _coaches;
+  final DateTime Function() _now;
 
   int _currentTier = 1;
   String? _selectedCoachId;
   Set<String> _unlockedIds = <String>{};
+  final Map<String, int> _pickedYears = <String, int>{};
   bool _loaded = false;
 
-  CoachService({List<Coach>? coaches})
-      : _coaches = List.unmodifiable(coaches ?? CoachCatalog.defaults);
+  CoachService({List<Coach>? coaches, DateTime Function()? clock})
+      : _coaches = List.unmodifiable(coaches ?? CoachCatalog.defaults),
+        _now = clock ?? DateTime.now;
 
-  /// Remplace la liste interne par [coaches]. Sert au bootstrap pour
-  /// injecter les coachs avec leurs phrases chargées (`CoachLoader.load()`).
   /// La liste fournie doit avoir les **mêmes ids** que le catalogue de base ;
   /// sinon les ids persistés dans `selectedCoachId` / `_unlockedIds`
   /// pourraient être désynchronisés.
-  ///
-  /// Valide la cohérence du catalogue final (tiers complets, minPlayerSeconds
-  /// strictement croissants). En debug : `assert` qui pète pour attraper les
-  /// erreurs côté dev. En release : log warning et continue.
   void attachPhrases(List<Coach> coaches) {
     final issues = CoachCatalogValidator.validate(coaches);
     if (issues.isNotEmpty) {
@@ -72,8 +74,28 @@ class CoachService extends ChangeNotifier {
 
   // ---- Lecture publique --------------------------------------------------
 
-  /// Catalogue immuable des coachs disponibles dans cette installation.
-  List<Coach> get coaches => _coaches;
+  /// Coachs proposés aujourd'hui : un coach éphémère n'y figure que pendant
+  /// sa fenêtre.
+  List<Coach> get coaches => [
+        for (final c in _coaches)
+          if (_isOffered(c)) c
+      ];
+
+  bool _isOffered(Coach c) => c.availability?.includes(_now()) ?? true;
+
+  /// Dernier jour de la fenêtre en cours d'un coach éphémère ; `null` pour un
+  /// coach permanent.
+  DateTime? offeredUntil(Coach c) => c.availability?.lastDayOf(_now());
+
+  /// Coachs éphémères proposés aujourd'hui, autres que [active], que la
+  /// joueuse n'a pas encore choisis pendant leur fenêtre en cours.
+  List<Coach> limitedTimeToTry(Coach active) => [
+        for (final c in coaches)
+          if (c.availability != null &&
+              c.id != active.id &&
+              _pickedYears[c.id] != _now().year)
+            c
+      ];
 
   int get currentTier => _currentTier;
 
@@ -81,13 +103,14 @@ class CoachService extends ChangeNotifier {
 
   Coach? get selectedCoach {
     if (_selectedCoachId == null) return null;
-    for (final c in _coaches) {
+    for (final c in coaches) {
       if (c.id == _selectedCoachId) return c;
     }
     return null;
   }
 
-  bool isUnlocked(Coach c) => _unlockedIds.contains(c.id);
+  bool isUnlocked(Coach c) =>
+      c.availability == null ? _unlockedIds.contains(c.id) : _isOffered(c);
 
   /// Coach Principal d'un palier donné (un seul attendu par palier).
   /// Renvoie null si aucun n'est marqué Principal pour ce palier (cas
@@ -114,12 +137,23 @@ class CoachService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _currentTier = prefs.getInt(_kCurrentTier) ?? 1;
     _selectedCoachId = prefs.getString(_kSelectedId);
+    for (final c in _coaches) {
+      final year = prefs.getInt('$_kPickedYearPrefix${c.id}');
+      if (year != null) _pickedYears[c.id] = year;
+    }
     final list = prefs.getStringList(_kUnlockedIds);
     _unlockedIds = list != null ? list.toSet() : _initialUnlocked();
     // Garde-fou : on garantit que le Principal du palier courant est
     // toujours débloqué (cas d'un upgrade d'app qui aurait ajouté un
     // coach manquant au set persisté).
     _ensureCurrentTierPrincipalUnlocked();
+    for (final c in _coaches) {
+      if (c.id != _selectedCoachId || c.availability == null) continue;
+      if (!_isOffered(c) || _pickedYears[c.id] != _now().year) {
+        _selectedCoachId = null;
+        await prefs.remove(_kSelectedId);
+      }
+    }
     // Si la sélection persistée pointe sur un coach qui n'existe plus
     // (renommé, retiré), on la nettoie pour ne pas afficher du vide.
     if (_selectedCoachId != null && selectedCoach == null) {
@@ -141,10 +175,6 @@ class CoachService extends ChangeNotifier {
     if (p != null) _unlockedIds.add(p.id);
   }
 
-  /// Calcule le tier maximal atteint pour un `totalSeconds` donné en se
-  /// basant sur les `requirements.minPlayerSeconds` des Principals
-  /// chargés. Source de vérité unique : pas de mapping
-  /// temps→tier hardcodé ailleurs.
   int _maxReachableTier(int totalSeconds) {
     var best = 0;
     for (final c in _coaches) {
@@ -153,24 +183,13 @@ class CoachService extends ChangeNotifier {
         best = c.tier;
       }
     }
-    // Au pire (catalogue vide ou minPlayerSeconds > totalSeconds partout),
-    // on reste au tier 1 — le Principal du tier 1 doit toujours être
-    // atteignable au démarrage (validé par CoachCatalogValidator).
     return best == 0 ? 1 : best;
   }
 
-  /// À appeler après le start de chaque session (ou au bootstrap après
-  /// chargement du temps cumulé) avec le `totalSeconds` global du joueur.
-  /// Met à jour le palier courant si le seuil du palier suivant est
-  /// atteint, et débloque automatiquement le Principal du nouveau palier.
-  ///
-  /// Renvoie la liste des coachs nouvellement débloqués lors de cet appel
-  /// (utile pour afficher un toast / lire une annonce TTS).
-  ///
   /// Réconciliation complète, pas incrémentale : on parcourt **tout** le
   /// catalogue plutôt que les seuls paliers franchis depuis le dernier
   /// appel. Sinon un Principal inséré à un palier intermédiaire par une
-  /// mise à jour (Marc, palier 3, 0.6.0) reste inaccessible à vie pour
+  /// mise à jour reste inaccessible à vie pour
   /// qui avait déjà dépassé ce palier — ce palier n'étant plus jamais
   /// revisité, et ce d'autant plus sûrement qu'on a joué longtemps.
   /// Idempotent : sans coach à rattraper, rien n'est écrit ni notifié.
@@ -197,15 +216,17 @@ class CoachService extends ChangeNotifier {
   /// ce soit le Principal — c'est l'appelant qui décide d'avertir
   /// l'utilisateur avant de confirmer la sélection d'un coach
   /// non-Principal.
-  /// Refonte 0.5.0 : `handsEnabled` n'est plus consulté ici — le hand
-  /// n'est plus une contrainte du coach, juste de la milestone planifiée
-  /// (`LevelMilestone.requiresHands`). Le paramètre est conservé pour
-  /// rétrocompat des call sites mais ignoré.
+  /// `handsEnabled` est ignoré : le paramètre subsiste pour les call sites.
   CoachSelectionStatus evaluate(
     Coach c, {
     required int playerTotalSeconds,
     bool handsEnabled = true,
   }) {
+    if (c.availability != null) {
+      return _isOffered(c)
+          ? CoachSelectionStatus.selectedLimitedTime
+          : CoachSelectionStatus.lockedTier;
+    }
     if (!isUnlocked(c)) return CoachSelectionStatus.lockedTier;
     if (playerTotalSeconds < c.requirements.minPlayerSeconds) {
       return CoachSelectionStatus.blockedMinPlayerSeconds;
@@ -221,17 +242,25 @@ class CoachService extends ChangeNotifier {
   Future<void> selectCoach(Coach c) async {
     if (_selectedCoachId == c.id) return;
     _selectedCoachId = c.id;
+    if (c.availability != null) {
+      final year = _now().year;
+      _pickedYears[c.id] = year;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('$_kPickedYearPrefix${c.id}', year);
+    }
     await _persist();
     notifyListeners();
   }
 
-  /// Efface palier courant, coach sélectionné et set débloqué. Appelé par
-  /// le bouton « tout remettre à zéro » du ProfileScreen.
   Future<void> resetAll() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_kCurrentTier);
     await prefs.remove(_kSelectedId);
     await prefs.remove(_kUnlockedIds);
+    for (final id in _pickedYears.keys) {
+      await prefs.remove('$_kPickedYearPrefix$id');
+    }
+    _pickedYears.clear();
     _currentTier = 1;
     _selectedCoachId = null;
     _unlockedIds = _initialUnlocked();

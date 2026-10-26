@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../career/models/coach_catalog.dart';
 import '../l10n/app_localizations.dart';
 import '../models/badge.dart';
 import 'stats_service.dart';
@@ -10,6 +11,10 @@ import 'stats_service.dart';
 class BadgeService {
   static const String _kPrefix = 'badge.tier.';
 
+  final DateTime Function() _now;
+
+  BadgeService({DateTime Function()? clock}) : _now = clock ?? DateTime.now;
+
   Future<List<BadgeState>> currentStates(StatsSnapshot snap) async {
     return [
       for (final def in BadgeDefinition.catalog)
@@ -18,8 +23,13 @@ class BadgeService {
           tier: def.tierFor(_valueFor(def.family, snap)),
           value: _valueFor(def.family, snap),
         ),
-    ];
+    ].where(_isShown).toList();
   }
+
+  bool _isShown(BadgeState s) =>
+      s.definition.family != BadgeFamily.sabbat ||
+      s.tier != BadgeTier.none ||
+      CoachCatalog.lilith.availability!.includes(_now());
 
   /// Compare l'état actuel à l'état persisté la dernière fois. Met à jour
   /// la persistance et retourne la liste des nouveaux déblocages (un par
@@ -58,6 +68,7 @@ class BadgeService {
         BadgeFamily.gobeuse => snap.finalsGobeuse,
         BadgeFamily.nettoyeuse => snap.postFinalsNettoyeuse,
         BadgeFamily.suppliante => snap.postFinalsSuppliante,
+        BadgeFamily.sabbat => snap.sabbatSessions,
       };
 
   /// Efface l'état persisté des paliers — utilisé par le reset profil.
@@ -101,6 +112,7 @@ class BadgeUnlock {
         BadgeFamily.gobeuse => l10n.badgeNameGobeuse,
         BadgeFamily.nettoyeuse => l10n.badgeNameNettoyeuse,
         BadgeFamily.suppliante => l10n.badgeNameSuppliante,
+        BadgeFamily.sabbat => l10n.badgeNameSabbat,
       };
 
   String _localizedTierLabel(AppLocalizations l10n) => switch (tier) {

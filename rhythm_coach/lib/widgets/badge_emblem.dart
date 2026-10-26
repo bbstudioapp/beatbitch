@@ -17,6 +17,7 @@ String badgeAssetPath(BadgeFamily family) => switch (family) {
       BadgeFamily.gobeuse => 'assets/badges/gobeuse.png',
       BadgeFamily.nettoyeuse => 'assets/badges/nettoyeuse.png',
       BadgeFamily.suppliante => 'assets/badges/suppliante.png',
+      BadgeFamily.sabbat => 'assets/badges/sabbat.png',
     };
 
 Color badgeTierColor(BadgeTier tier) => switch (tier) {

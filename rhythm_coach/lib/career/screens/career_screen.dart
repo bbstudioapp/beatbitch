@@ -39,6 +39,7 @@ import '../services/specialization_service.dart';
 import '../widgets/coach_portrait.dart';
 import '../widgets/free_spec_points_banner.dart';
 import '../widgets/free_training_banner.dart';
+import '../widgets/limited_time_coach_banner.dart';
 import 'coach_picker_screen.dart';
 import 'specialization_screen.dart';
 
@@ -80,7 +81,7 @@ class _CareerScreenState extends State<CareerScreen> {
   void initState() {
     super.initState();
     _bundleFuture = _loadBundle();
-    // Phase 1 défis — hydrate le toggle et le flag tutoriel depuis
+    // Hydrate le toggle et le flag tutoriel depuis
     // SharedPreferences. setState gardé par `mounted` pour ne pas casser si
     // l'utilisatrice quitte l'écran avant la fin de la lecture.
     _challengeService.isEnabled().then((v) {
@@ -183,7 +184,7 @@ class _CareerScreenState extends State<CareerScreen> {
 
   Future<void> _start(_CareerBundle bundle) async {
     final t = AppLocalizations.of(context);
-    // Phase 19.12 : `level` passé au générateur = synthLevel dérivé des
+    // `level` passé au générateur = synthLevel dérivé des
     // sessions (sert au titre de session + fallback Custom — le
     // générateur recalcule la config via `resolveForCareer` à partir
     // de `sessionsCompleted` + `lengthChoice`).
@@ -220,7 +221,7 @@ class _CareerScreenState extends State<CareerScreen> {
     final effectiveLengthChoice =
         lengthChoice.resolveAleatoireIfNeeded(Random());
 
-    // Phase 19.12 : la règle `requiresHands` des milestones reste, mais
+    // La règle `requiresHands` des milestones reste, mais
     // plus de gate par niveau — le toggle hand respecte simplement le
     // choix utilisatrice (préférence persistée) sauf override forcé en
     // aval par une milestone scriptée qui en a besoin.
@@ -247,7 +248,7 @@ class _CareerScreenState extends State<CareerScreen> {
     _installCoachNameResolver(activeCoach);
     await _applyCoachVoicePreset(activeCoach);
 
-    // Phase 19.12 : la bâclée est toujours accessible — plus de gate
+    // La bâclée est toujours accessible — plus de gate
     // par niveau. Le palier « bachee » du picker active automatiquement
     // `quickie:true` côté générateur (intensityFloor 0.65 + 6 min).
     //
@@ -268,7 +269,7 @@ class _CareerScreenState extends State<CareerScreen> {
     // séance — l'utilisatrice apprend une compétence en milieu de séance,
     // puis une autre en apothéose.
     //
-    // Phase 19.5 : le nombre cible de body milestones vient du palier de
+    // Le nombre cible de body milestones vient du palier de
     // durée (cf. `SessionLengthChoice.maxBodyMilestones`). Bâclée = 0 body
     // (pas de pédagogie sur 6 min), courte = 1, moyenne/longue = 2. La
     // disponibilité réelle dépend du catalogue pending.
@@ -369,7 +370,7 @@ class _CareerScreenState extends State<CareerScreen> {
       humiliationScore: humiliationScore,
       obedienceScore: obedienceScore,
     );
-    // Phase 19.5.b — construit N défis pour compléter le total
+    // Construit N défis pour compléter le total
     // d'events visé par le palier. Quand le catalogue de milestones est
     // épuisé (insertedBodies < maxBody), les défis comblent : longue avec
     // 0 milestone = 4 défis ; moyenne avec 1 milestone = 2 défis. Les
@@ -383,7 +384,7 @@ class _CareerScreenState extends State<CareerScreen> {
       // Anti-répétition inter-sessions : exclure d'abord les axes pickés à
       // la session précédente. Sur un profil jeune (3 axes prouvés) sans
       // cette exclusion, `pickOverloadAxis` retombe sur les mêmes 3 axes
-      // dans le même ordre 2 séances de suite (cf. retour stefsub v0.5.0).
+      // dans le même ordre 2 séances de suite.
       // Non bloquant : si la pool restante est trop petite pour atteindre
       // `targetCount`, on retire ce filtre dans le 2ᵉ essai du pick.
       final lastSessionAxes = await _challengeService.lastSessionAxes();
@@ -439,8 +440,7 @@ class _CareerScreenState extends State<CareerScreen> {
         // visuellement identique (même mode/from/to/kind) — sans ça une
         // joueuse avec plusieurs axes hold throat (holdThroatStreak,
         // gorgeApneeStreak, gorgeEngagementStreak) verrait deux défis
-        // « hold throat » dont seule la durée diffère. Cf. retour stefsub
-        // v0.5.0.
+        // « hold throat » dont seule la durée diffère.
         excludedAxes
             .addAll(ChallengeService.axesSharingVisualSignature(next.axis));
         isFirst = false;
@@ -456,7 +456,7 @@ class _CareerScreenState extends State<CareerScreen> {
       level: clamped,
       bank: coachBank,
       lengthChoice: effectiveLengthChoice,
-      // Phase 19.6 : déclenche resolveForCareer côté générateur (cap /
+      // Déclenche resolveForCareer côté générateur (cap /
       // regen / boosts dérivés des sessions au lieu du level).
       sessionsCompleted: bundle.completedSessions,
       includeHand: includeHand,
@@ -485,7 +485,7 @@ class _CareerScreenState extends State<CareerScreen> {
     );
 
     var introText = coachBank.pickIntro(Random());
-    // Break scénarisé (issue #77) : si le générateur a imposé une posture de
+    // Break scénarisé : si le générateur a imposé une posture de
     // départ, l'annoncer dans le briefing d'intro. Sinon la joueuse (yeux
     // fermés, téléphone posé sur le côté) ne saurait jamais s'y mettre — seuls
     // les *changements* de posture aux breaks étaient vocalisés jusqu'ici. Si
@@ -534,7 +534,7 @@ class _CareerScreenState extends State<CareerScreen> {
           // record/tapout) côté SessionController.
           capabilityOverloadAxis: result.overloadAxis,
           capabilityProfile: bundle.capabilityProfile,
-          // Phase 5 : punitions carrière générées par le `SessionController`
+          // Punitions carrière générées par le `SessionController`
           // ont besoin du même set d'unlocks et du même toggle hand que le
           // générateur initial pour filtrer leur palette.
           unlockedKeys: unlockedKeys,
@@ -594,7 +594,7 @@ class _CareerScreenState extends State<CareerScreen> {
     // `_completed` via `markCompleted` ; sinon, on retire l'illusion.
     milestoneService.setSessionUnlocks(const {});
 
-    // Phase 1 défis — pose le flag tutorial_seen après le 1ᵉʳ défi joué
+    // Pose le flag tutorial_seen après le 1ᵉʳ défi joué
     // (peu importe l'outcome : succès, fail, ou skip — la joueuse a vu
     // les boutons et le flow, c'est l'objet de la pédagogie tutoriel).
     // En multi-défi, seul le 1ᵉʳ peut être tutoriel (cf. boucle ci-dessus).
@@ -1166,7 +1166,7 @@ class _CareerScreenState extends State<CareerScreen> {
           staminaProfile: result.staminaProfile,
           capabilityOverloadAxis: result.overloadAxis,
           capabilityProfile: bundle.capabilityProfile,
-          // Phase 5 — punitions carrière côté SessionController utilisent
+          // Punitions carrière côté SessionController utilisent
           // les mêmes unlocks et le même toggle hand que le générateur
           // principal.
           unlockedKeys: encoreUnlockedKeys,
@@ -1271,7 +1271,7 @@ class _CareerScreenState extends State<CareerScreen> {
             );
           }
           final bundle = snapshot.data!;
-          // Phase 19.12 : difficulté + titre dérivent exclusivement de
+          // Difficulté + titre dérivent exclusivement de
           // `sessionsCompleted` + `lengthChoice` via le resolver.
           // Gating retabli post-playtest (cf. premier retour test 0.6 —
           // une débutante se retrouvait sur 25-45 min ou bâclée intense
@@ -1334,7 +1334,10 @@ class _CareerScreenState extends State<CareerScreen> {
                   : baseDurationLabel);
           final activeCoach = _resolveCoach(bundle);
           final principal = coachService.currentTierPrincipal;
-          final isFreeTraining = !coachService.advancesTier(activeCoach);
+          final activeOfferedUntil = coachService.offeredUntil(activeCoach);
+          final isFreeTraining = activeOfferedUntil == null &&
+              !coachService.advancesTier(activeCoach);
+          final limitedTimeToTry = coachService.limitedTimeToTry(activeCoach);
           final freeSpecPoints = SpecializationService.totalPointsForSeconds(
                 bundle.totalSeconds,
               ) -
@@ -1352,8 +1355,24 @@ class _CareerScreenState extends State<CareerScreen> {
               _CoachSummaryCard(
                 coach: activeCoach,
                 isPrincipal: !isFreeTraining,
+                offeredUntil: activeOfferedUntil,
                 onTap: () => _openCoachPicker(bundle),
               ),
+              for (final c in limitedTimeToTry) ...[
+                const SizedBox(height: 10),
+                LimitedTimeCoachBanner(
+                  coachName: c.name,
+                  until: coachService.offeredUntil(c)!,
+                  onTry: () async {
+                    if (coachService.evaluate(c, playerTotalSeconds: 0) !=
+                        CoachSelectionStatus.selectedLimitedTime) {
+                      return;
+                    }
+                    await coachService.selectCoach(c);
+                    if (mounted) setState(() {});
+                  },
+                ),
+              ],
               if (isFreeTraining) ...[
                 const SizedBox(height: 10),
                 FreeTrainingBanner(
@@ -1363,9 +1382,7 @@ class _CareerScreenState extends State<CareerScreen> {
                       ? null
                       : () async {
                           // Passe par `evaluate` pour respecter
-                          // `lockedTier` et `minPlayerSeconds` (refonte
-                          // 0.5.0 : `requiresHands` n'est plus sur le
-                          // coach, donc plus jamais bloqué côté hand).
+                          // `lockedTier` et `minPlayerSeconds`.
                           final status = coachService.evaluate(
                             principal,
                             playerTotalSeconds: await _stats.getTotalSeconds(),
@@ -1394,7 +1411,7 @@ class _CareerScreenState extends State<CareerScreen> {
                       );
                       if (!mounted) return;
                       // Bloc explicite : `() => x = future()` retourne le
-                      // Future, ce que setState refuse (cf. issue #63).
+                      // Future, ce que setState refuse.
                       setState(() {
                         _bundleFuture = _loadBundle();
                       });
@@ -1419,7 +1436,7 @@ class _CareerScreenState extends State<CareerScreen> {
                 durationLabel: durationLabel,
               ),
               const SizedBox(height: 12),
-              // Phase 19.11 — barre de temps cumulé segmentée par tier
+              // Barre de temps cumulé segmentée par tier
               // coach. Remplace progressivement la valorisation par level
               // au profit de l'investissement (= temps + sessions).
               _InvestmentBar(
@@ -1428,7 +1445,7 @@ class _CareerScreenState extends State<CareerScreen> {
                 coaches: coachService.coaches,
               ),
               const SizedBox(height: 24),
-              // Switch « Défis intra-séance » (Phase 1). Visible dès la
+              // Switch « Défis intra-séance ». Visible dès la
               // première séance — l'utilisatrice doit pouvoir l'activer si
               // elle veut accélérer sa progression. Le tutoriel scripté
               // garantit la pédagogie au 1ᵉʳ défi.
@@ -1575,8 +1592,7 @@ class _SectionLabel extends StatelessWidget {
 /// Picker de durée de séance — 5 paliers (bâclée/courte/moyenne/longue/
 /// aléatoire).
 ///
-/// Remplace `_LevelPicker` (Phase 19.4). Depuis le retour playtest 0.6,
-/// les paliers sont gatés par investissement (totalSeconds + sessions),
+/// Les paliers sont gatés par investissement (totalSeconds + sessions),
 /// et les paliers non débloqués sont **cachés** plutôt que grisés
 /// (révélation progressive par surprise, pas de carrot dangling). Les
 /// 4 flags `is*Unlocked` sont donc load-bearing — ne pas les supposer
@@ -1642,7 +1658,7 @@ bool isSessionLengthAleatoireUnlocked(int totalSeconds) {
 /// palier persisté n'est plus déverrouillé. Helper partagé entre `build`
 /// (pour le rendu du picker) et `_start` (pour la génération + persistance),
 /// sinon `_start` lit `bundle.lastLengthChoice` brut et peut lancer une
-/// séance à une durée que le picker cache (bug détecté en review PR #249).
+/// séance à une durée que le picker cache (bug détecté en review).
 ///
 /// Switch **exhaustif** sur tous les cas de `SessionLengthChoice` — pas
 /// de `_` catch-all : ajouter une 5ᵉ valeur d'enum déclenche une erreur
@@ -1844,7 +1860,7 @@ class _LevelTitleCard extends StatelessWidget {
   }
 }
 
-/// Barre de temps cumulé segmentée par tiers coach (Phase 19.11). Affiche :
+/// Barre de temps cumulé segmentée par tiers coach. Affiche :
 /// - le temps total joué (« 10 h 23 min »)
 /// - les sessions complétées (« 23 séances »)
 /// - une barre horizontale avec marqueurs pour chaque seuil tier coach
@@ -2037,11 +2053,13 @@ class _TierMarker extends StatelessWidget {
 class _CoachSummaryCard extends StatelessWidget {
   final Coach coach;
   final bool isPrincipal;
+  final DateTime? offeredUntil;
   final VoidCallback onTap;
 
   const _CoachSummaryCard({
     required this.coach,
     required this.isPrincipal,
+    required this.offeredUntil,
     required this.onTap,
   });
 
@@ -2084,9 +2102,12 @@ class _CoachSummaryCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      isPrincipal
-                          ? t.coachSummaryPrincipal(coach.title, coach.tier)
-                          : t.coachSummaryFree(coach.title),
+                      offeredUntil != null
+                          ? t.coachSummaryLimitedTime(
+                              coach.title, offeredUntil!)
+                          : isPrincipal
+                              ? t.coachSummaryPrincipal(coach.title, coach.tier)
+                              : t.coachSummaryFree(coach.title),
                       style: const TextStyle(
                         fontSize: 12,
                         color: AppTheme.textMuted,
@@ -2112,7 +2133,7 @@ class _CareerBundle {
   final bool includeHand;
   final SpecializationAllocation specialization;
 
-  /// Niveau synthétique (Phase 19.12) dérivé de `completedSessions` via
+  /// Niveau synthétique dérivé de `completedSessions` via
   /// `CareerDifficultyResolver.resolveForCareer`. Remplace le `maxLevel`
   /// retiré : sert au titre level affiché et aux call sites internes
   /// qui consomment encore un `level` int (filtre milestone `minLevel`,
@@ -2142,15 +2163,15 @@ class _CareerBundle {
   /// est forcé en tutoriel scripté (hold throat 5 s, axe robuste).
   final bool challengeTutorialSeen;
 
-  /// Dernier palier de durée choisi (Phase 19.4). Défaut `courte` quand
+  /// Dernier palier de durée choisi. Défaut `courte` quand
   /// rien n'est encore persisté.
   final SessionLengthChoice lastLengthChoice;
 
   /// Temps total cumulé (en secondes) persisté dans le `StatsService`.
-  /// Sert au déblocage des coachs par investissement (Phase 19.10).
+  /// Sert au déblocage des coachs par investissement.
   final int totalSeconds;
 
-  /// Préférence utilisateur `pref.scripted_breaks` (issue #77), on par défaut.
+  /// Préférence utilisateur `pref.scripted_breaks`, on par défaut.
   /// Quand `true`, les postures imposées + breaks scénarisés sont activés.
   /// Passé à `generate(scriptedBreaks:)` sur les deux entrées qui construisent
   /// un contrôleur frais (`_start`, `_handleEncore`) — pas aux régens

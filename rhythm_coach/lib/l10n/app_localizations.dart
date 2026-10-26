@@ -2946,6 +2946,12 @@ abstract class AppLocalizations {
   /// **'Suppliante'**
   String get badgeNameSuppliante;
 
+  /// No description provided for @badgeNameSabbat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sabbat'**
+  String get badgeNameSabbat;
+
   /// No description provided for @badgeUnitMarathonien.
   ///
   /// In fr, this message translates to:
@@ -3023,6 +3029,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'suppliques post-orgasme'**
   String get badgeUnitSuppliante;
+
+  /// No description provided for @badgeUnitSabbat.
+  ///
+  /// In fr, this message translates to:
+  /// **'séances avec Lilith'**
+  String get badgeUnitSabbat;
 
   /// No description provided for @careerLevelTitleDebutante.
   ///
@@ -3209,6 +3221,36 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'{title} · entraînement libre'**
   String coachSummaryFree(String title);
+
+  /// No description provided for @coachBadgeLimitedTime.
+  ///
+  /// In fr, this message translates to:
+  /// **'ÉPHÉMÈRE'**
+  String get coachBadgeLimitedTime;
+
+  /// No description provided for @coachLimitedTimeUntil.
+  ///
+  /// In fr, this message translates to:
+  /// **'Jusqu\'au {date}'**
+  String coachLimitedTimeUntil(DateTime date);
+
+  /// No description provided for @coachSummaryLimitedTime.
+  ///
+  /// In fr, this message translates to:
+  /// **'{title} · jusqu\'au {date}'**
+  String coachSummaryLimitedTime(String title, DateTime date);
+
+  /// No description provided for @coachLimitedTimeBanner.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} est là jusqu\'au {date}.'**
+  String coachLimitedTimeBanner(String name, DateTime date);
+
+  /// No description provided for @coachLimitedTimeBannerAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'ESSAYER'**
+  String get coachLimitedTimeBannerAction;
 
   /// No description provided for @coachFreeTrainingDialogTitle.
   ///

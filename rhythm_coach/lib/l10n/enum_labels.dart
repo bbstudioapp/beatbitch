@@ -89,6 +89,7 @@ extension BadgeFamilyL10n on BadgeFamily {
       BadgeFamily.gobeuse => t.badgeNameGobeuse,
       BadgeFamily.nettoyeuse => t.badgeNameNettoyeuse,
       BadgeFamily.suppliante => t.badgeNameSuppliante,
+      BadgeFamily.sabbat => t.badgeNameSabbat,
     };
   }
 
@@ -108,6 +109,7 @@ extension BadgeFamilyL10n on BadgeFamily {
       BadgeFamily.gobeuse => t.badgeUnitGobeuse,
       BadgeFamily.nettoyeuse => t.badgeUnitNettoyeuse,
       BadgeFamily.suppliante => t.badgeUnitSuppliante,
+      BadgeFamily.sabbat => t.badgeUnitSabbat,
     };
   }
 }
