@@ -54,15 +54,9 @@ class CoachService extends ChangeNotifier {
       : _coaches = List.unmodifiable(coaches ?? CoachCatalog.defaults),
         _now = clock ?? DateTime.now;
 
-  /// Remplace la liste interne par [coaches]. Sert au bootstrap pour
-  /// injecter les coachs avec leurs phrases chargées (`CoachLoader.load()`).
   /// La liste fournie doit avoir les **mêmes ids** que le catalogue de base ;
   /// sinon les ids persistés dans `selectedCoachId` / `_unlockedIds`
   /// pourraient être désynchronisés.
-  ///
-  /// Valide la cohérence du catalogue final (tiers complets, minPlayerSeconds
-  /// strictement croissants). En debug : `assert` qui pète pour attraper les
-  /// erreurs côté dev. En release : log warning et continue.
   void attachPhrases(List<Coach> coaches) {
     final issues = CoachCatalogValidator.validate(coaches);
     if (issues.isNotEmpty) {
@@ -181,10 +175,6 @@ class CoachService extends ChangeNotifier {
     if (p != null) _unlockedIds.add(p.id);
   }
 
-  /// Calcule le tier maximal atteint pour un `totalSeconds` donné en se
-  /// basant sur les `requirements.minPlayerSeconds` des Principals
-  /// chargés. Source de vérité unique : pas de mapping
-  /// temps→tier hardcodé ailleurs.
   int _maxReachableTier(int totalSeconds) {
     var best = 0;
     for (final c in _coaches) {
@@ -193,20 +183,9 @@ class CoachService extends ChangeNotifier {
         best = c.tier;
       }
     }
-    // Au pire (catalogue vide ou minPlayerSeconds > totalSeconds partout),
-    // on reste au tier 1 — le Principal du tier 1 doit toujours être
-    // atteignable au démarrage (validé par CoachCatalogValidator).
     return best == 0 ? 1 : best;
   }
 
-  /// À appeler après le start de chaque session (ou au bootstrap après
-  /// chargement du temps cumulé) avec le `totalSeconds` global du joueur.
-  /// Met à jour le palier courant si le seuil du palier suivant est
-  /// atteint, et débloque automatiquement le Principal du nouveau palier.
-  ///
-  /// Renvoie la liste des coachs nouvellement débloqués lors de cet appel
-  /// (utile pour afficher un toast / lire une annonce TTS).
-  ///
   /// Réconciliation complète, pas incrémentale : on parcourt **tout** le
   /// catalogue plutôt que les seuls paliers franchis depuis le dernier
   /// appel. Sinon un Principal inséré à un palier intermédiaire par une
@@ -273,8 +252,6 @@ class CoachService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Efface palier courant, coach sélectionné et set débloqué. Appelé par
-  /// le bouton « tout remettre à zéro » du ProfileScreen.
   Future<void> resetAll() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_kCurrentTier);
