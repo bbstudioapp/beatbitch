@@ -85,6 +85,7 @@ class BackgroundEntry {
   // Le pack nomme ses transitions sans tag propre : palier + coach seuls.
   bool get isTierTransition =>
       tier != null &&
+      !isIntro &&
       !tagsByCategory.containsKey(BackgroundTagCategory.mode) &&
       !tagsByCategory.containsKey(BackgroundTagCategory.position) &&
       !tagsByCategory.containsKey(BackgroundTagCategory.phase);
