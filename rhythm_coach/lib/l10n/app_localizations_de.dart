@@ -534,6 +534,16 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String careerDurationPlusChallengesAndPauses(String duration) {
+    return '$duration + Challenge- und Pausenzeit';
+  }
+
+  @override
+  String careerDurationPlusPauses(String duration) {
+    return '$duration + Pausenzeit';
+  }
+
+  @override
   String get careerDurationSection => 'Dauer';
 
   @override

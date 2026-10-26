@@ -233,6 +233,14 @@
   "@careerDurationPlusChallenges": {
     "placeholders": { "duration": { "type": "String" } }
   },
+  "careerDurationPlusChallengesAndPauses": "{duration} + le temps des défis et des pauses",
+  "@careerDurationPlusChallengesAndPauses": {
+    "placeholders": { "duration": { "type": "String" } }
+  },
+  "careerDurationPlusPauses": "{duration} + le temps des pauses",
+  "@careerDurationPlusPauses": {
+    "placeholders": { "duration": { "type": "String" } }
+  },
   "careerDurationSection": "Durée",
   "careerQuickieToggle": "Session bâclée",
   "careerQuickieSubtitle": "6 min — intense",

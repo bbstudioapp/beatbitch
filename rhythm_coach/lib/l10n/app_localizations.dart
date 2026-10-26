@@ -1062,6 +1062,18 @@ abstract class AppLocalizations {
   /// **'{duration} + le temps des défis'**
   String careerDurationPlusChallenges(String duration);
 
+  /// No description provided for @careerDurationPlusChallengesAndPauses.
+  ///
+  /// In fr, this message translates to:
+  /// **'{duration} + le temps des défis et des pauses'**
+  String careerDurationPlusChallengesAndPauses(String duration);
+
+  /// No description provided for @careerDurationPlusPauses.
+  ///
+  /// In fr, this message translates to:
+  /// **'{duration} + le temps des pauses'**
+  String careerDurationPlusPauses(String duration);
+
   /// No description provided for @careerDurationSection.
   ///
   /// In fr, this message translates to:

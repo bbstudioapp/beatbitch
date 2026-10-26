@@ -1275,9 +1275,17 @@ class _CareerScreenState extends State<CareerScreen> {
           // palier est celle du contenu, pas celle de la montre. Tous les
           // paliers reçoivent au moins un défi quand le toggle est actif
           // (`targetChallengesFor`), donc la mention vaut pour tous.
+          // Les pauses aussi : la première tombe à 7 min au plus tôt, la
+          // séance bâclée (6 min) n'en a jamais.
+          final hasPauses = bundle.scriptedBreaks &&
+              lengthChoice != SessionLengthChoice.bachee;
           final durationLabel = _challengesEnabled
-              ? t.careerDurationPlusChallenges(baseDurationLabel)
-              : baseDurationLabel;
+              ? (hasPauses
+                  ? t.careerDurationPlusChallengesAndPauses(baseDurationLabel)
+                  : t.careerDurationPlusChallenges(baseDurationLabel))
+              : (hasPauses
+                  ? t.careerDurationPlusPauses(baseDurationLabel)
+                  : baseDurationLabel);
           final activeCoach = _resolveCoach(bundle);
           final principal = coachService.currentTierPrincipal;
           final isFreeTraining = !coachService.advancesTier(activeCoach);

@@ -233,6 +233,14 @@
   "@careerDurationPlusChallenges": {
     "placeholders": { "duration": { "type": "String" } }
   },
+  "careerDurationPlusChallengesAndPauses": "{duration} + challenge and break time",
+  "@careerDurationPlusChallengesAndPauses": {
+    "placeholders": { "duration": { "type": "String" } }
+  },
+  "careerDurationPlusPauses": "{duration} + break time",
+  "@careerDurationPlusPauses": {
+    "placeholders": { "duration": { "type": "String" } }
+  },
   "careerDurationSection": "Duration",
   "careerQuickieToggle": "Quickie",
   "careerQuickieSubtitle": "6 min — intense",
