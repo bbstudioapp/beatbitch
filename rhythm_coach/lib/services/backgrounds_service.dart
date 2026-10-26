@@ -56,6 +56,7 @@ class BackgroundsService {
     'helene-pack-nu1-hold-26002-ltx-pp-s26002',
     'helene-pack-nu2-hold-26002-anim',
     'lina-pack-hold-25001-ltx-pp-s25001',
+    'lina-pack-hold-25002-ltx-pp-s25002',
     'lina-pack-nu1-hold-25001-anim',
     'lina-pack-nu1-hold-25002-anim',
     'lina-pack-nu2-hold-25001-anim',

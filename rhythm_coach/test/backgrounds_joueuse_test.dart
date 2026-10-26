@@ -38,6 +38,7 @@ const _handRaised = [
   'helene-pack-nu1-hold-26002-ltx-pp-s26002_hold_helene_nu1',
   'helene-pack-nu2-hold-26002-anim_hold_helene_nu2',
   'lina-pack-hold-25001-ltx-pp-s25001_hold_lina',
+  'lina-pack-hold-25002-ltx-pp-s25002_hold_lina',
   'lina-pack-nu1-hold-25001-anim_hold_lina_nu1',
   'lina-pack-nu1-hold-25002-anim_hold_lina_nu1',
   'lina-pack-nu2-hold-25001-anim_hold_lina_nu2',
@@ -57,34 +58,37 @@ void main() {
 
   group('tenues où la coach lève la main', () {
     test('ne sont jamais tirées', () {
-      _load([..._handRaised, 'lina-pack-hold-25002-ltx-pp-s25002_hold_lina']);
+      _load([..._handRaised, 'a_rhythm_full_lina']);
+      svc.pickForContext(_ctx('rhythm', position: 'full'));
       for (var i = 0; i < 50; i++) {
-        svc.pickForContext(_ctx('hold'));
-        expect(_now.id, 'lina-pack-hold-25002-ltx-pp-s25002');
+        svc.pickForContext(_ctx('hold', position: 'full'));
+        expect(_now.id, 'a');
         svc.pickRandom();
-        expect(_now.id, 'lina-pack-hold-25002-ltx-pp-s25002');
+        expect(_now.id, 'a');
       }
     });
 
-    test('sans tenue permise, la coach garde son geste au palier atteint', () {
-      _load([
-        ..._handRaised,
-        'helene-pack-rhythm-full-26002-ltx-pp-s26002_rhythm_full_helene',
-        'helene-pack-nu1-rhythm-full-26002-ltx-pp-s26002_rhythm_full_helene_nu1',
-        'helene-pack-strip1-26002-anim_helene_nu1',
-        'lina-pack-rhythm-full-25001-ltx-pp-s25001_rhythm_full_lina',
-      ]);
-      svc.pickForContext(_ctx('rhythm', position: 'full', coach: 'helene'));
-      svc.pickForContext(_ctx('hold', position: 'full', coach: 'helene'));
-      expect(_now.id, 'helene-pack-rhythm-full-26002-ltx-pp-s26002');
+    for (final (coach, pack) in [('helene', '26002'), ('lina', '25001')]) {
+      test('$coach sans tenue, garde son geste au palier atteint', () {
+        _load([
+          ..._handRaised,
+          '$coach-pack-rhythm-full-$pack-ltx-pp-s${pack}_rhythm_full_$coach',
+          '$coach-pack-nu1-rhythm-full-$pack-ltx-pp-s${pack}_rhythm_full_${coach}_nu1',
+          '$coach-pack-strip1-$pack-anim_${coach}_nu1',
+          'jade-pack-rhythm-full-1_rhythm_full_jade',
+        ]);
+        svc.pickForContext(_ctx('rhythm', position: 'full', coach: coach));
+        svc.pickForContext(_ctx('hold', position: 'full', coach: coach));
+        expect(_now.id, '$coach-pack-rhythm-full-$pack-ltx-pp-s$pack');
 
-      svc.pickForContext(
-          _ctx('hold', position: 'full', coach: 'helene', tier: 'nu1'));
-      expect(_now.isTierTransition, isTrue);
-      svc.transitionFinished(_now);
-      expect(_now.id, 'helene-pack-nu1-rhythm-full-26002-ltx-pp-s26002',
-          reason: 'après la transition, le geste précédent au nouveau palier');
-    });
+        svc.pickForContext(
+            _ctx('hold', position: 'full', coach: coach, tier: 'nu1'));
+        expect(_now.isTierTransition, isTrue);
+        svc.transitionFinished(_now);
+        expect(_now.id, '$coach-pack-nu1-rhythm-full-$pack-ltx-pp-s$pack',
+            reason: 'après la transition, le geste précédent au nouveau palier');
+      });
+    }
   });
 
   group('scènes de joueuse', () {
