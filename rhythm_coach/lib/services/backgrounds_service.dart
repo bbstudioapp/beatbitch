@@ -34,6 +34,7 @@ class BackgroundContext {
         BackgroundTagCategory.phase => phase,
         BackgroundTagCategory.tier => tier,
         BackgroundTagCategory.viewpoint => null,
+        BackgroundTagCategory.moment => 'play',
       };
 }
 
@@ -348,7 +349,11 @@ class BackgroundsService {
       final wanted = ctx.valueFor(cat);
       if (wanted == null) return -1;
       if (!entryTags.contains(wanted)) return -1;
-      score += cat == BackgroundTagCategory.phase ? 3 : 1;
+      score += switch (cat) {
+        BackgroundTagCategory.phase => 3,
+        BackgroundTagCategory.moment => 0,
+        _ => 1,
+      };
     }
     return score;
   }
