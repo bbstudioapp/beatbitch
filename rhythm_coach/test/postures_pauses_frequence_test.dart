@@ -105,15 +105,17 @@ void main() {
           for (var seed = 0; seed < 6; seed++) {
             final s = _gen(minutes: minutes, endurance: endurance, seed: seed);
             final finish = s.silentFinishStartTime!;
+            var pausesBefore = 0;
             for (var k = 0; k < s.breaks.length; k++) {
               final b = s.breaks[k];
               expect(
-                  b.time,
+                  b.time - pausesBefore,
                   inInclusiveRange(
                       (k + 1) * interval, (k + 1) * interval + _blockSlack),
                   reason: '$minutes min seed=$seed : pause n°${k + 1}');
               expect(b.durationSeconds, inInclusiveRange(60, 120));
               expect(b.endTime, lessThanOrEqualTo(finish));
+              pausesBefore += b.durationSeconds;
             }
             // Le nombre découle de la durée d'effort : aucun créneau dû n'est
             // sauté.
@@ -131,6 +133,27 @@ void main() {
           }
         }
         expect(sessionsWithBreaks, greaterThan(0));
+      });
+    }
+
+    for (final (endurance, interval) in [(0, 420), (5, 720)]) {
+      test(
+          '$endurance pt(s) : ${interval ~/ 60} min d\'effort entre deux pauses, '
+          'pause non comprise', () {
+        final gaps = <int>[];
+        for (var seed = 0; seed < 40; seed++) {
+          final s = _gen(minutes: 60, endurance: endurance, seed: seed);
+          for (var k = 1; k < s.breaks.length; k++) {
+            gaps.add(s.breaks[k].time - s.breaks[k - 1].endTime);
+          }
+        }
+        expect(gaps.length, greaterThan(80),
+            reason: 'trop peu d\'écarts pour mesurer : ${gaps.length}');
+        gaps.sort();
+        final median = gaps[gaps.length ~/ 2];
+        final mean = gaps.fold<int>(0, (a, b) => a + b) / gaps.length;
+        expect(median, closeTo(interval, 30), reason: 'écarts : $gaps');
+        expect(mean, closeTo(interval, 30), reason: 'écarts : $gaps');
       });
     }
 

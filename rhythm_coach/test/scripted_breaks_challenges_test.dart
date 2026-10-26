@@ -129,12 +129,14 @@ void main() {
           .session;
       final breaks = withoutChallenges.breaks;
       expect(breaks, isNotEmpty);
+      var pausesBefore = 0;
       for (var k = 0; k < breaks.length; k++) {
-        // Sans spécialisation : une pause toutes les 7 min, posée à la
-        // première frontière de bloc qui suit.
-        expect(breaks[k].time,
+        // Sans spécialisation : une pause toutes les 7 min d'effort, posée à
+        // la première frontière de bloc qui suit.
+        expect(breaks[k].time - pausesBefore,
             inInclusiveRange((k + 1) * 420, (k + 1) * 420 + 150),
             reason: '$minutes min → pause n°${k + 1}');
+        pausesBefore += breaks[k].durationSeconds;
       }
     }
   });
