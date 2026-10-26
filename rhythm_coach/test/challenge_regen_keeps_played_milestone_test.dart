@@ -125,6 +125,25 @@ void main() {
         reason: 'jalon joué en [0, 3 s) avant le défi, perdu par la '
             'séance régénérée : il ne sera jamais acquitté');
   }, timeout: const Timeout(Duration(seconds: 90)));
+
+  test(
+      'après une régénération post-défi, le jalon pas encore joué au moment '
+      'du défi n\'est pas acquitté', () async {
+    final ctrl = _buildController(bodyStart: 21);
+    var regens = 0;
+    ctrl.onPostChallengeRegen = (c) async {
+      regens++;
+      await c.requestPostChallengeRegen(upcomingSession: _upcoming);
+    };
+    await _playToEnd(ctrl);
+
+    expect(regens, 1, reason: 'la régénération post-défi doit avoir tourné');
+    expect(ctrl.session.id, endsWith(':postchallenge'));
+    expect(milestoneService.isCompleted(_defiId), isTrue);
+    expect(milestoneService.isCompleted(_bodyId), isFalse,
+        reason: 'jalon en [21, 24 s) remplacé par la suite régénérée : '
+            'jamais joué, il ne doit pas être offert');
+  }, timeout: const Timeout(Duration(seconds: 90)));
 }
 
 Future<void> _playToEnd(SessionController ctrl) async {
@@ -172,22 +191,22 @@ Future<void> _waitUntil(
   }
 }
 
-SessionController _buildController() {
+SessionController _buildController({int bodyStart = 0}) {
   return SessionController(
-    session: const Session(
+    session: Session(
       id: 'regen-jalon',
       name: 'regen-jalon',
       description: '',
       durationSeconds: 24,
       defaultMode: SessionMode.rhythm,
       noStats: true,
-      steps: [
+      steps: const [
         SessionStep(time: 0, mode: SessionMode.rhythm, bpm: 40, duration: 3),
         SessionStep(time: 3, mode: SessionMode.breath, duration: kTriggerDur),
         SessionStep(time: 21, mode: SessionMode.rhythm, bpm: 40, duration: 3),
       ],
       milestoneId: _bodyId,
-      milestoneStartTime: 0,
+      milestoneStartTime: bodyStart,
       milestoneDurationSeconds: 3,
       challenges: [_challenge],
       challengeTriggerTimes: [3],

@@ -1886,10 +1886,29 @@ class SessionController extends ChangeNotifier {
     required Session previous,
     required Session upcoming,
     required int breathEnd,
+    int? playedUntil,
   }) {
     final newSteps = <SessionStep>[
       for (final s in upcoming.steps) s.rebased(s.time + breathEnd),
     ];
+
+    final windowLimit = playedUntil ?? breathEnd;
+    final bodies = <({String id, int start, int duration})>[];
+    void addPrevIfWindowEnded(int? mStart, int? mDur, String? id) {
+      if (id == null || mStart == null || mDur == null) return;
+      if ((mStart + mDur) <= windowLimit) {
+        bodies.add((id: id, start: mStart, duration: mDur));
+      }
+    }
+
+    addPrevIfWindowEnded(previous.milestoneStartTime,
+        previous.milestoneDurationSeconds, previous.milestoneId);
+    addPrevIfWindowEnded(previous.secondMilestoneStartTime,
+        previous.secondMilestoneDurationSeconds, previous.secondMilestoneId);
+    bodies.sort((a, b) => a.start.compareTo(b.start));
+    final mid1 = bodies.isNotEmpty ? bodies[0] : null;
+    final mid2 = bodies.length >= 2 ? bodies[1] : null;
+
     final upFinalStepTime = upcoming.finalStepTime;
     final upSilentFinish = upcoming.silentFinishStartTime;
     return Session(
@@ -1899,6 +1918,12 @@ class SessionController extends ChangeNotifier {
       durationSeconds: breathEnd + upcoming.durationSeconds,
       defaultMode: previous.defaultMode,
       steps: newSteps,
+      milestoneId: mid1?.id,
+      milestoneStartTime: mid1?.start,
+      milestoneDurationSeconds: mid1?.duration,
+      secondMilestoneId: mid2?.id,
+      secondMilestoneStartTime: mid2?.start,
+      secondMilestoneDurationSeconds: mid2?.duration,
       finalStepTime:
           upFinalStepTime != null ? upFinalStepTime + breathEnd : null,
       silentFinishStartTime:
