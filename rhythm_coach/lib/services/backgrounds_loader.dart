@@ -11,7 +11,15 @@ enum BackgroundMediaType {
   }
 }
 
-enum BackgroundTagCategory { mode, position, coach, phase, tier, viewpoint }
+enum BackgroundTagCategory {
+  mode,
+  position,
+  coach,
+  phase,
+  tier,
+  viewpoint,
+  moment,
+}
 
 class BackgroundTagVocabulary {
   static const Map<String, BackgroundTagCategory> _byTag = {
@@ -40,6 +48,7 @@ class BackgroundTagVocabulary {
     'morgan': BackgroundTagCategory.coach,
     'victoria': BackgroundTagCategory.coach,
     'nyx': BackgroundTagCategory.coach,
+    'lilith': BackgroundTagCategory.coach,
     // Phases dramaturgiques. `final` = le step `finale_chime` ;
     // `post-final` = ce qui vient après (giclées résiduelles, MERCI).
     'final': BackgroundTagCategory.phase,
@@ -51,6 +60,10 @@ class BackgroundTagVocabulary {
     'nu2': BackgroundTagCategory.tier,
     // Scène vue par la joueuse, commune à toutes les coachs.
     'pov': BackgroundTagCategory.viewpoint,
+    // Moments de jeu : `play` = le fil de l'acte, quel que soit le geste.
+    'play': BackgroundTagCategory.moment,
+    'punish': BackgroundTagCategory.moment,
+    'milestone': BackgroundTagCategory.moment,
   };
 
   static BackgroundTagCategory? categorize(String tag) => _byTag[tag];
@@ -85,9 +98,9 @@ class BackgroundEntry {
   // Le pack nomme ses transitions sans tag propre : palier + coach seuls.
   bool get isTierTransition =>
       tier != null &&
-      !tagsByCategory.containsKey(BackgroundTagCategory.mode) &&
-      !tagsByCategory.containsKey(BackgroundTagCategory.position) &&
-      !tagsByCategory.containsKey(BackgroundTagCategory.phase);
+      !isIntro &&
+      tagsByCategory.keys.every((c) =>
+          c == BackgroundTagCategory.coach || c == BackgroundTagCategory.tier);
 }
 
 class BackgroundsBundle {

@@ -294,7 +294,7 @@ void main() {
     test('le repli aléatoire ne tire jamais une transition', () {
       _load([_strips[0], _strips[1], 'lina-pack-a_lick_lina.webp']);
       for (var i = 0; i < 30; i++) {
-        svc.pickForContext(_ctx(mode: 'beg', coach: 'helene'));
+        svc.pickForContext(const BackgroundContext(mode: 'beg'));
         expect(_now.isTierTransition, isFalse);
       }
     });

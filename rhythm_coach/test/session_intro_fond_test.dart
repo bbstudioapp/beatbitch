@@ -102,8 +102,8 @@ void main() {
     expect(svc.pickIntro('lina', tier: 'nu1'), isTrue);
     expect(svc.current.value?.id, 'lina-pack-nu1-intro-1');
     expect(svc.pickIntro('jade'), isFalse);
-    expect(svc.current.value?.id, 'lina-pack-nu1-intro-1',
-        reason: 'sans fond intro, le fond courant reste');
+    expect(svc.current.value, isNull,
+        reason: 'sans fond intro, jamais le fond d\'une autre coach');
   });
 
   testWidgets("l'écran joue le fond intro de la coach pendant l'intro",
