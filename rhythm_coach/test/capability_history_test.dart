@@ -474,6 +474,23 @@ void main() {
         }
         expect(days(prefs), first);
       });
+
+      test('export ancien avec heures : chaque instant est gardé tel quel', () {
+        final paris0030 = DateTime.utc(2026, 10, 18, 22, 30);
+        final newYork2000 = DateTime.utc(2026, 10, 19, 0, 0, 7);
+        final day = DateTime.utc(2026, 10, 18);
+        final entries = CapabilityHistory.fromExportJson({
+          'v': CapabilityHistory.schemaVersion,
+          'entries': [
+            for (final (i, t) in [paris0030, newYork2000, day].indexed)
+              {'t': t.millisecondsSinceEpoch, 'i': i, 'a': {}},
+          ],
+        });
+        expect(entries.map((e) => e.at.millisecondsSinceEpoch).take(2),
+            [paris0030, newYork2000].map((t) => t.millisecondsSinceEpoch));
+        expect(entries[2].at.toLocal(), DateTime(2026, 10, 18),
+            reason: 'un jour exporté reste un jour');
+      });
     });
 
     group('câblage par défaut : le fuseau du système, jamais l\'UTC', () {

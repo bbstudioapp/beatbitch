@@ -132,9 +132,6 @@ class CapabilityHistory {
   /// Minuit local du jour porté par [d] (composantes lues telles quelles).
   static DateTime localMidnight(DateTime d) => DateTime(d.year, d.month, d.day);
 
-  /// Relit la section d'un export « jour seul » : chaque `t` est un jour
-  /// (minuit UTC de la date locale), rendu par [fromLocal] en instant dont
-  /// `toLocal` rend ce même jour.
   static List<CapabilityHistoryEntry> fromExportJson(
     Object? decoded, {
     DateTime Function(DateTime) fromLocal = localMidnight,
@@ -142,7 +139,9 @@ class CapabilityHistory {
       [
         for (final e in fromJson(decoded))
           CapabilityHistoryEntry(
-            at: fromLocal(e.at),
+            at: e.at.millisecondsSinceEpoch % Duration.millisecondsPerDay == 0
+                ? fromLocal(e.at)
+                : e.at,
             sessionIndex: e.sessionIndex,
             axes: e.axes,
           ),
