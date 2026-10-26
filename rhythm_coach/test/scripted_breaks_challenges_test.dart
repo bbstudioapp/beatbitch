@@ -1,6 +1,7 @@
 import 'package:beat_bitch/career/models/challenge.dart';
 import 'package:beat_bitch/career/models/phrase_bank.dart';
 import 'package:beat_bitch/career/services/generation/career_session_generator.dart';
+import 'package:beat_bitch/models/posture.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Pauses scénarisées et défis intra-séance partagent la même séance
@@ -112,6 +113,84 @@ void main() {
         reason: 'sans séance portant les deux, le balayage ne teste rien');
     expect(collisions, isEmpty,
         reason: 'les deux plannings se connaissent : la pause cède le passage');
+  });
+
+  test(
+      'après une régénération post-défi, aucun défi gardé ne tombe dans une '
+      'pause reportée', () {
+    // Même calcul que `_handlePostChallengeRegen` : durée restante sans les
+    // pauses à venir, pauses et changements rebasés sur la fin du souffle.
+    // Les horaires des défis restants gardent ceux de la séance d'origine.
+    const postChallengeBreath = 10;
+    var regens = 0;
+    var closeCalls = 0;
+    final collisions = <String>[];
+    for (final minutes in [30, 45, 60, 75, 90]) {
+      for (final count in [2, 3, 4]) {
+        for (var seed = 0; seed < 100; seed++) {
+          final pool = challengePool.take(count).toList();
+          final s = CareerSessionGenerator(seed: seed)
+              .generate(
+                level: 14,
+                bank: bank(),
+                durationSeconds: minutes * 60,
+                unlockedKeys: UnlockKey.values.toSet(),
+                scriptedBreaks: true,
+                challenge: ChallengeInputs(challenges: pool),
+              )
+              .session;
+          final triggers = s.challengeTriggerTimes;
+          if (triggers.length < 2) continue;
+          final window = kChallengeBreathDurationSeconds +
+              pool.first.nominalDurationSeconds;
+          final breathEnd = triggers.first + postChallengeBreath;
+          final unplayed =
+              s.breaks.where((b) => b.time >= triggers.first + window);
+          final carry = [
+            for (final b in unplayed)
+              ScriptedBreak(
+                time: b.time - window - breathEnd,
+                durationSeconds: b.durationSeconds,
+                newPose: b.newPose,
+                orders: b.orders,
+              ),
+          ];
+          if (carry.isEmpty || carry.any((b) => b.time < 0)) continue;
+          final pauseSeconds =
+              unplayed.fold<int>(0, (a, b) => a + b.durationSeconds);
+          final remaining =
+              s.durationSeconds - window - breathEnd - pauseSeconds;
+          final regen = CareerSessionGenerator(seed: seed + 1000)
+              .generate(
+                level: 14,
+                bank: bank(),
+                durationSeconds: remaining,
+                carry: PostureScript(breaks: carry, changes: const []),
+                unlockedKeys: UnlockKey.values.toSet(),
+                scriptedBreaks: true,
+              )
+              .session;
+          regens++;
+          for (final b in regen.breaks) {
+            final start = breathEnd + b.time;
+            for (final t in triggers.skip(1)) {
+              final trigger = t - window;
+              if (trigger < start) continue;
+              if (trigger - (start + b.durationSeconds) < 60) closeCalls++;
+              if (trigger < start + b.durationSeconds) {
+                collisions.add('${minutes}min ×$count défis seed=$seed : '
+                    'pause [$start,${start + b.durationSeconds}) vs défi à $trigger');
+              }
+            }
+          }
+        }
+      }
+    }
+    expect(regens, greaterThan(500),
+        reason: 'le balayage doit régénérer des suites avec pauses reportées');
+    expect(closeCalls, greaterThan(0),
+        reason: 'aucune pause proche d\'un défi : le balayage ne mesure rien');
+    expect(collisions, isEmpty);
   });
 
   test('sans défi, les pauses gardent leurs horaires nominaux', () {
