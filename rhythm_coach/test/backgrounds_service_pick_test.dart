@@ -125,9 +125,7 @@ void main() {
       expect(BackgroundsService.instance.current.value, finalTag);
     });
 
-    test('all-tagged catalog with no match → falls back to random', () {
-      // Aucun fond non-tagué et aucun ne match → fallback `pickRandom`
-      // global (non-null garanti tant que le bundle n'est pas vide).
+    test('no coach and no match → neutral background', () {
       final wrong = _e('a_lick_full.png');
       final wrong2 = _e('b_biffle_head.png');
       BackgroundsService.instance.setBundle(
@@ -136,10 +134,10 @@ void main() {
       BackgroundsService.instance.pickForContext(
         const BackgroundContext(mode: 'rhythm', position: 'throat'),
       );
-      expect(BackgroundsService.instance.current.value, isNotNull);
+      expect(BackgroundsService.instance.current.value, isNull);
     });
 
-    test('empty context behaves like pickRandom', () {
+    test('empty context falls back to an untagged entry', () {
       final a = _e('a.png');
       final b = _e('b.png');
       BackgroundsService.instance.setBundle(

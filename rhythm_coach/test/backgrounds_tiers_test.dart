@@ -291,10 +291,10 @@ void main() {
       expect(_now, before);
     });
 
-    test('le repli aléatoire ne tire jamais une transition', () {
+    test('le repli sur la coach ne tire jamais une transition', () {
       _load([_strips[0], _strips[1], 'lina-pack-a_lick_lina.webp']);
       for (var i = 0; i < 30; i++) {
-        svc.pickForContext(const BackgroundContext(mode: 'beg'));
+        svc.pickForContext(const BackgroundContext(mode: 'beg', coach: 'lina'));
         expect(_now.isTierTransition, isFalse);
       }
     });
