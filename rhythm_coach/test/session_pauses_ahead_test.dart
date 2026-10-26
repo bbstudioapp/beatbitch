@@ -103,21 +103,21 @@ void main() {
   SessionController buildController(_TrackingBeepEngine beep) =>
       SessionController(
         staminaProfile: List<double>.filled(300, 100),
-        session: Session(
+        session: const Session(
           id: 'pauses-a-venir',
           name: 'pauses-a-venir',
           description: '',
           durationSeconds: 200,
           defaultMode: SessionMode.rhythm,
-          breaks: const [
+          breaks: [
             ScriptedBreak(time: 1, durationSeconds: 2),
             ScriptedBreak(time: 30, durationSeconds: 60),
             ScriptedBreak(time: 120, durationSeconds: 90),
           ],
-          postureChanges: const [
+          postureChanges: [
             PostureChange(time: 60, pose: Posture.kneeling),
           ],
-          steps: const [
+          steps: [
             SessionStep(time: 0, text: 'a', mode: SessionMode.rhythm, bpm: 80),
             SessionStep(time: 3, text: 'b', mode: SessionMode.rhythm, bpm: 80),
           ],
