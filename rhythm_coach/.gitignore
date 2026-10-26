@@ -64,3 +64,6 @@ assets/courbe/**/*.png
 
 # Captures marketing — pèsent et changent souvent, hors historique code.
 screenshots/
+
+# Originaux des fonds animés avant recompression (tools/compress_backgrounds.py).
+/assets-originaux/
