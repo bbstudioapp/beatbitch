@@ -1,9 +1,8 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Valeurs d'un axe à la fin d'une séance, telles que persistées par
-/// `CapabilityService.commit`.
 class CapabilityHistoryAxis {
   final double best;
   final double comfort;
@@ -16,8 +15,6 @@ class CapabilityHistoryAxis {
   });
 }
 
-/// Une entrée par séance qui met à jour le profil : l'état de **tous** les
-/// axes porteurs de données, après la mise à jour.
 class CapabilityHistoryEntry {
   final DateTime at;
   final int sessionIndex;
@@ -33,13 +30,6 @@ class CapabilityHistoryEntry {
   });
 }
 
-/// Historique borné du profil de capacités (`shared_preferences`, clé
-/// [prefsKey]), pour un futur écran de progression. Aucun écran ne le lit
-/// aujourd'hui.
-///
-/// Format versionné :
-/// `{"v":1,"entries":[{"t":<ms UTC>,"i":<index séance>,"a":{"<axe>":[best,comfort,successRate]}}]}`
-/// Tolérant : tout ce qui est illisible est ignoré, jamais propagé.
 class CapabilityHistory {
   CapabilityHistory._();
 
@@ -47,8 +37,6 @@ class CapabilityHistory {
   static const int schemaVersion = 1;
   static const int maxEntries = 300;
 
-  /// Historique persisté, de la plus ancienne à la plus récente entrée.
-  /// Vide si la clé est absente, d'un autre type ou illisible.
   static List<CapabilityHistoryEntry> read(SharedPreferences prefs) {
     try {
       final raw = prefs.getString(prefsKey);
@@ -59,9 +47,6 @@ class CapabilityHistory {
     }
   }
 
-  /// Ajoute [entry] en fin d'historique et ne garde que les [maxEntries]
-  /// dernières. Un historique d'une version inconnue est laissé tel quel (rien
-  /// n'est ajouté) ; un historique illisible repart de zéro.
   static Future<void> append(
     SharedPreferences prefs,
     CapabilityHistoryEntry entry,
@@ -78,9 +63,6 @@ class CapabilityHistory {
     await prefs.setString(prefsKey, json.encode(toJson(kept)));
   }
 
-  /// Relit un historique déjà décodé (stockage ou section d'export). Les
-  /// entrées et axes abîmés sont ignorés ; une version inconnue donne une liste
-  /// vide.
   static List<CapabilityHistoryEntry> fromJson(Object? decoded) {
     if (decoded is! Map || decoded['v'] != schemaVersion) {
       return const <CapabilityHistoryEntry>[];
@@ -95,13 +77,19 @@ class CapabilityHistory {
     return out.length > maxEntries ? out.sublist(out.length - maxEntries) : out;
   }
 
-  static Map<String, dynamic> toJson(List<CapabilityHistoryEntry> entries) =>
+  static Map<String, dynamic> toJson(
+    List<CapabilityHistoryEntry> entries, {
+    bool dayOnly = false,
+    DateTime Function(DateTime)? toLocal,
+  }) =>
       <String, dynamic>{
         'v': schemaVersion,
         'entries': [
           for (final e in entries)
             <String, dynamic>{
-              't': e.at.millisecondsSinceEpoch,
+              't': dayOnly
+                  ? _dayStart((toLocal ?? localOf)(e.at))
+                  : e.at.millisecondsSinceEpoch,
               'i': e.sessionIndex,
               'a': {
                 for (final a in e.axes.entries)
@@ -114,6 +102,31 @@ class CapabilityHistory {
             },
         ],
       };
+
+  @visibleForTesting
+  static DateTime Function(DateTime) localOf = systemLocal;
+
+  static DateTime systemLocal(DateTime d) => d.toLocal();
+
+  static DateTime localMidnight(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  static List<CapabilityHistoryEntry> fromExportJson(
+    Object? decoded, {
+    DateTime Function(DateTime) fromLocal = localMidnight,
+  }) =>
+      [
+        for (final e in fromJson(decoded))
+          CapabilityHistoryEntry(
+            at: e.at.millisecondsSinceEpoch % Duration.millisecondsPerDay == 0
+                ? fromLocal(e.at)
+                : e.at,
+            sessionIndex: e.sessionIndex,
+            axes: e.axes,
+          ),
+      ];
+
+  static int _dayStart(DateTime local) =>
+      DateTime.utc(local.year, local.month, local.day).millisecondsSinceEpoch;
 
   static double _round2(double v) => (v * 100).roundToDouble() / 100;
 

@@ -122,8 +122,9 @@ class DiagnosticExportService {
       'humiliation': _humiliation(),
       'obedience': _obedience(),
       'capabilities': _capabilities(),
-      'capabilityHistory':
-          CapabilityHistory.toJson(CapabilityHistory.read(_prefs)),
+      'capabilityHistory': CapabilityHistory.toJson(
+          CapabilityHistory.read(_prefs),
+          dayOnly: true),
       'milestones': _milestones(),
       'badges': _badges(),
       'coach': _coach(),

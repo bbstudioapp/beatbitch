@@ -122,7 +122,7 @@ class DiagnosticImportService {
   }
 
   void _capabilityHistory(Object? j) {
-    final entries = CapabilityHistory.fromJson(j);
+    final entries = CapabilityHistory.fromExportJson(j);
     if (entries.isEmpty) return;
     _string(CapabilityHistory.prefsKey,
         jsonEncode(CapabilityHistory.toJson(entries)));
