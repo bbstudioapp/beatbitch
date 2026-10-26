@@ -1,0 +1,220 @@
+{
+  "lang": "es",
+  "id": "coach_08_lilith",
+  "title": "Coach de Halloween",
+  "publicBio": "Una bruja de paso, mientras el velo es fino. Hechiza más de lo que castiga: cada sesión es un ritual.",
+  "phrases": {
+    "rhythm": {
+      "soft": [
+        "Sigue mi cadencia {name}. Despacio, como un conjuro.",
+        "Suave {name}. Un hechizo no se apresura.",
+        "Déjate mecer por el ritmo {name}.",
+        "Cada movimiento es una sílaba del hechizo {name}. Pronúncialas bien.",
+        "Las velas tiemblan a tu ritmo {name}. Que sea regular.",
+        "Eso es {name}. Estás entrando en el círculo."
+      ],
+      "medium": [
+        {"text": "Un poco más abajo {name}. El hechizo quiere más de ti.", "min_depth": "mid"},
+        "No rompas la cadencia {name}, o habrá que empezar el hechizo de nuevo.",
+        {"text": "Baja más {name}. La luna está mirando.", "min_depth": "mid"},
+        "Más rápido {name}. El caldero hierve.",
+        "Qué bonito {name}. Sigue con ese tempo.",
+        {"text": "Más profundo {name}. Así el encantamiento prende mejor.", "min_depth": "mid"}
+      ],
+      "hard": [
+        {"text": "Más profundo {name}. El hechizo solo funciona hasta el fondo.", "min_depth": "throat"},
+        "Más rápido {name}, la noche es corta.",
+        {"text": "Hasta abajo {name}. Dámelo todo.", "min_depth": "throat"},
+        "Tómalo todo {name}. Es el corazón del ritual.",
+        {"text": "Garganta abierta {name}, como una puerta en noche de aquelarre.", "min_depth": "throat"},
+        "No aflojes {name}. El hechizo está casi completo."
+      ]
+    },
+    "lick": {
+      "soft": [
+        "Lámela como la cera caliente de una vela {name}. Sin prisa.",
+        "Con la punta de la lengua {name}. Dibújame un pentáculo.",
+        "Suave {name}. Saborea la magia."
+      ],
+      "medium": [
+        "Todo el largo {name}. Despacio, como quien lee un grimorio.",
+        "Más poción {name}. Hazla brillar.",
+        "Lámela entera {name}. Ninguna página debe quedar olvidada."
+      ],
+      "hard": [
+        "Más mojada {name}. Una poción se prepara con generosidad.",
+        "Cúbrela de saliva {name}. Quiero que brille bajo la luna."
+      ]
+    },
+    "biffle": {
+      "soft": [
+        "Hazla chocar contra tu mejilla {name}. Tres veces, para conjurar.",
+        "Golpéate la cara con ella {name}. Cada golpe despierta un espíritu.",
+        "Haz que el hechizo resuene en tu mejilla {name}."
+      ],
+      "medium": [
+        "Más fuerte {name}. Los espíritus son duros de oído.",
+        "Ahora la otra mejilla {name}. El encantamiento debe ser simétrico."
+      ]
+    },
+    "hold": {
+      "soft": [
+        "Mantenla ahí {name}. La luna te mira.",
+        {"text": "Mantenla en la boca, inmóvil {name}.", "max_depth": "mid"},
+        "Quieta {name}. Respira por la nariz, como en una meditación.",
+        {"text": "Mantén la posición {name}. El hechizo se fija.", "max_depth": "throat"}
+      ],
+      "medium": [
+        {"text": "Quédate al fondo {name}. El encantamiento necesita tiempo.", "min_depth": "mid"},
+        {"text": "Más abajo, y mantén {name}.", "min_depth": "mid"},
+        {"text": "No subas antes de mi señal {name}.", "min_depth": "mid", "max_depth": "throat"},
+        "Mantén {name}. Cuenta las velas en tu cabeza."
+      ],
+      "hard": [
+        {"text": "Al fondo, inmóvil {name}. Estoy sellando el hechizo.", "min_depth": "throat"},
+        {"text": "Mantén {name}. Aquí es donde actúa la magia.", "min_depth": "throat"},
+        "Mantén hasta mi señal {name}. No antes."
+      ],
+      "finale": [
+        {"text": "Último conjuro. Mantenla al fondo {name}.", "min_depth": "mid"},
+        {"text": "Sellamos el ritual al fondo {name}. No la sueltes.", "min_depth": "throat"},
+        "Mantén hasta la señal {name}. El hechizo se cierra.",
+        "Es la última palabra del hechizo {name}. Mantenla bien."
+      ]
+    },
+    "breath": {
+      "soft": [
+        "Respira {name}. Deja que el humo del caldero te llene.",
+        "Inspira hondo {name}. Las velas esperan.",
+        "Recupera el aliento {name}. La noche aún es larga.",
+        "Relájate {name}. El círculo te protege."
+      ]
+    },
+    "beg": {
+      "soft": [
+        "Suplícame {name}. Una bruja solo concede los deseos bien dichos.",
+        "Dilo: «hechízame otra vez, {coach}».",
+        "Formula tu deseo {name}, en voz alta.",
+        "Pídeme que siga {name}. Con dulzura."
+      ],
+      "medium": [
+        "Repite: «esta noche soy tuya, {coach}».",
+        "Suplica «más, por favor, {coach}», y quizá te lo conceda.",
+        "Más alto {name}. La luna no te ha oído.",
+        "Llámame {coach}. A las brujas nos gusta que nos nombren."
+      ]
+    },
+    "freestyle": {
+      "soft": [
+        "Esta noche es tuya {name}. Lanza tu propio hechizo.",
+        "Enséñame tu propia magia {name}.",
+        "Libre {name}. Sorpréndeme."
+      ]
+    },
+    "hand": {
+      "soft": [
+        "Ahora tu mano {name}. Hazla brillar a la luz de las velas.",
+        "Acaríciala con la mano {name}, como una varita preciosa.",
+        "Sube y baja suave con la mano {name}. Descansa la boca."
+      ],
+      "medium": [
+        "Un poco más firme con la mano {name}. Qué bonito gesto.",
+        "Sigue la cadencia con tu mano {name}. Lo haces de maravilla."
+      ]
+    }
+  },
+  "randomComments": [
+    "Las velas se derriten por ti {name}.",
+    "Esta noche hay luna llena {name}. Buena señal.",
+    "El caldero humea más fuerte cuando te esmeras {name}.",
+    "Solo me quedo unas noches {name}. Aprovéchalo.",
+    "Eres una ofrenda preciosa {name}.",
+    "El velo es fino esta noche {name}. Te veo con toda claridad.",
+    "Ninguno de mis grimorios preveía algo tan bonito {name}.",
+    "Chis {name}. Escucha crepitar las velas."
+  ],
+  "intros": [
+    "Soy Lilith. El velo es fino estas noches {name}… así que he venido a buscarte.",
+    "Solo me quedo unas noches. Disfruta de cada una {name}.",
+    "Entra en mi círculo {name}. Esta noche, el hechizo lo lanzo yo.",
+    "Las velas están encendidas {name}. El ritual puede comenzar."
+  ],
+  "congrats": [
+    "El ritual se ha cumplido {name}. Vuelve antes de que mengüe la luna.",
+    "Bonito aquelarre {name}. El hechizo ha prendido.",
+    "Esta noche has sido una ofrenda perfecta {name}.",
+    "El caldero está en calma {name}. Lo has alimentado bien."
+  ],
+  "encore": [
+    "¿Otra noche en el círculo {name}? Yo nunca digo que no.",
+    "¿Ya vuelves {name}? El hechizo te ha gustado."
+  ],
+  "progress": {
+    "25": [
+      "El primer cuarto del hechizo está pronunciado {name}.",
+      "Las primeras velas se han derretido {name}. Sigue."
+    ],
+    "50": [
+      "La mitad del ritual {name}. La luna está en su cénit.",
+      "A medio camino {name}. El encantamiento empieza a prender."
+    ],
+    "75": [
+      "Tres cuartos del hechizo {name}. No rompas el círculo ahora.",
+      "El caldero hierve {name}. Ya queda poco."
+    ],
+    "90": [
+      "Las últimas palabras del hechizo {name}. Dalo todo.",
+      "Casi medianoche {name}. El ritual termina."
+    ]
+  },
+  "branchPhrases": {
+    "endurance": {
+      "soft": ["Un ritual se gana con resistencia {name}.", "Tienes aguante {name}. Las noches largas son para ti."],
+      "medium": ["Sigues aquí {name}. Al círculo le gustas.", "Resistes {name}. Es lo que esperaba de ti."],
+      "hard": ["La noche es larga y no flaqueas {name}.", "Hasta el caldero se cansa antes que tú {name}."]
+    },
+    "profondeur": {
+      "soft": ["Tu garganta es una puerta preciosa {name}.", "Siento que puedes bajar más {name}."],
+      "medium": ["Bajas muy bien {name}. Al hechizo le encanta la profundidad.", "Tu garganta se abre como un grimorio {name}."],
+      "hard": ["Lo más hondo posible {name}. Ahí viven los hechizos.", "Te tragas la noche entera {name}."]
+    },
+    "rythmeBiffle": {
+      "soft": ["Tu ritmo es un conjuro {name}.", "Cada golpe despierta el círculo {name}."],
+      "medium": ["Tienes la cadencia de una bruja {name}.", "El aquelarre baila a tu ritmo {name}."],
+      "hard": ["Más rápido que los tambores del aquelarre {name}.", "Tu ritmo hace temblar las velas {name}."]
+    },
+    "obeissance": {
+      "soft": ["Haces lo que te digo {name}. Hechizada.", "Me escuchas bien {name}. El encantamiento funciona."],
+      "medium": ["Obedeces sin pensar {name}. Mi hechizo es poderoso.", "Estás bajo mi hechizo {name}. Te sienta bien."],
+      "hard": ["Me perteneces hasta el amanecer {name}.", "Ya no tienes voluntad {name}. Solo la mía."]
+    },
+    "sloppy": {
+      "soft": ["Tu saliva es mi poción favorita {name}.", "Déjala correr {name}. Una poción debe fluir libre."],
+      "medium": ["Más poción {name}. El caldero la reclama.", "Chorreas como una vela que se derrite {name}."],
+      "hard": ["Ahógala en tu poción {name}.", "Todo chorrea {name}. Un ritual logrado."]
+    }
+  },
+  "progressPhrases": {
+    "gorge.engagement_streak": {
+      "attempt": ["Esta noche tu garganta se queda en el círculo un poco más {name}.", "El hechizo de hoy necesita tu garganta un poco más {name}."],
+      "record": ["Tu garganta nunca había estado tanto tiempo en el círculo {name}. El hechizo es poderoso.", "Un nuevo umbral para tu garganta {name}. La luna está orgullosa de ti."],
+      "tapout": ["Tu garganta ha dicho basta {name}. Lo respetamos, el hechizo puede esperar.", "Es tu verdadero límite esta noche {name}. Lo empujaremos otra noche."]
+    },
+    "noswallow.streak": {
+      "attempt": ["Esta noche guardas tu poción más tiempo sin tragar {name}.", "Ni una gota tragada {name}, un poco más que de costumbre."],
+      "record": ["Nunca habías guardado tu poción tanto tiempo {name}. Magnífico.", "Récord de poción guardada {name}. El caldero se desborda."],
+      "tapout": ["Has tenido que tragar {name}, es normal. Lo intentaremos otra noche.", "Tu límite está aquí esta noche {name}. Lo respetamos."]
+    },
+    "rhythm.motion_streak": {
+      "attempt": ["Esta noche el conjuro dura más sin pausa {name}.", "El hechizo de hoy no se detiene {name}. Un poco más largo que de costumbre."],
+      "record": ["Nunca te habías movido tanto tiempo sin parar {name}. Bonito hechizo.", "Tu ritual más largo sin pausa {name}. El círculo está impresionado."],
+      "tapout": ["Necesitabas una pausa {name}, es tu verdadero límite. Lo empujaremos.", "Te ha faltado el aliento {name}. No pasa nada, el hechizo esperará."]
+    }
+  },
+  "nicknames": {
+    "pool": ["pequeña bruja", "mi ofrenda", "mi criatura", "almita", "mi muñeca de cera"],
+    "use_user_prenom": true,
+    "use_user_nicknames": false
+  },
+  "coachNicknames": ["Lilith", "señora", "mi bruja"]
+}
