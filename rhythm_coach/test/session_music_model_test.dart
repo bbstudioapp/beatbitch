@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' show Locale;
 
 import 'package:beat_bitch/models/session.dart';
 import 'package:beat_bitch/models/session_music.dart';
 import 'package:beat_bitch/services/session_loader.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_test/flutter_test.dart';
 
 const _track = SessionMusic(
@@ -73,6 +75,43 @@ void main() {
         expect(sessions.every((s) => s.music == null), isTrue, reason: lang);
       }
       expect(asked, isEmpty);
+    });
+
+    test(
+        'sans le fichier de son morceau une séance est masquée, avec il est '
+        'proposé', () async {
+      final binding = TestWidgetsFlutterBinding.ensureInitialized();
+      const musical = 'assets/sessions/session_initiation.json';
+      final original =
+          json.decode(File(musical).readAsStringSync()) as Map<String, dynamic>;
+      final withTrack =
+          utf8.encode(json.encode({...original, 'music': _track.toJson()}));
+      binding.defaultBinaryMessenger.setMockMessageHandler('flutter/assets',
+          (message) async {
+        final key = utf8.decode(message!.buffer.asUint8List());
+        final bytes = key == musical ? withTrack : File(key).readAsBytesSync();
+        return ByteData.sublistView(bytes);
+      });
+      addTearDown(() {
+        binding.defaultBinaryMessenger
+            .setMockMessageHandler('flutter/assets', null);
+        rootBundle.evict(musical);
+      });
+      rootBundle.evict(musical);
+
+      Future<Iterable<Session>> initiation({required bool bundled}) async {
+        final asked = <String>[];
+        final sessions = await SessionLoader(isAssetBundled: (key) async {
+          asked.add(key);
+          return bundled;
+        }).loadAll(locale: const Locale('fr'));
+        expect(asked, ['assets/${_track.asset}']);
+        return sessions.where((s) => s.id == original['id']);
+      }
+
+      expect(await initiation(bundled: false), isEmpty);
+      final shown = await initiation(bundled: true);
+      expect(shown.single.music, _track);
     });
 
     test('un bloc music incomplet est ignoré, la séance s\'ouvre quand même',
