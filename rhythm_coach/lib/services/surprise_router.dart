@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../career/models/coach.dart';
@@ -21,6 +23,7 @@ import '../services/surprise_alert_service.dart';
 import '../services/tts_service.dart';
 
 class _SurpriseBundle {
+  final Coach coach;
   final PhraseBank bank;
   final PunishmentBundle punishments;
   final RandomCommentsBundle comments;
@@ -29,6 +32,7 @@ class _SurpriseBundle {
   final bool includeHand;
 
   _SurpriseBundle({
+    required this.coach,
     required this.bank,
     required this.punishments,
     required this.comments,
@@ -49,6 +53,11 @@ class _SurpriseBundle {
 /// faire progresser le coach via cette voie ponctuelle.
 class SurpriseRouter {
   SurpriseRouter._();
+
+  static Random _rng = Random();
+
+  @visibleForTesting
+  static set debugRandom(Random rng) => _rng = rng;
 
   static Future<void> launchSession({
     required BuildContext context,
@@ -96,6 +105,7 @@ class SurpriseRouter {
     final synthLevel = CareerDifficultyResolver.synthLevelFor(sessions);
 
     final bundle = _SurpriseBundle(
+      coach: _drawCoach(),
       bank: bank,
       punishments: punishments,
       comments: comments,
@@ -131,7 +141,8 @@ class SurpriseRouter {
     required double obedienceScore,
     required bool replace,
   }) async {
-    final activeCoach = _resolveCoach();
+    final activeCoach = bundle.coach;
+    await _applyCoachVoicePreset(tts, activeCoach);
     final coachBank = activeCoach.toPhraseBank(
       fallback: bundle.bank,
       specialization: bundle.specialization,
@@ -174,6 +185,7 @@ class SurpriseRouter {
         ambience: ambience,
         punishmentBundle: bundle.punishments,
         randomComments: activeCoach.composeRandomComments(bundle.comments),
+        coachTag: activeCoach.slug,
         isCareer: true,
         isQuickie: true,
         careerLevel: bundle.synthLevel,
@@ -248,10 +260,27 @@ class SurpriseRouter {
     );
   }
 
-  static Coach _resolveCoach() {
-    final selected = coachService.selectedCoach;
-    if (selected != null) return selected;
-    return coachService.coaches.first;
+  static Coach _drawCoach() {
+    final unlocked =
+        coachService.coaches.where(coachService.isUnlocked).toList();
+    return unlocked[_rng.nextInt(unlocked.length)];
+  }
+
+  static Future<void> _applyCoachVoicePreset(TtsService tts, Coach coach) {
+    final preset = coach.voicePreset;
+    if (preset.isEmpty) {
+      return tts.takeVoiceLead(tts.restoreDefaultVoicePreset);
+    }
+    return tts.takeVoiceLead(
+      () => tts.applyCoachVoicePreset(
+        coachId: coach.id,
+        voiceName: preset.voiceName,
+        voiceLocale: preset.voiceLocale,
+        rate: preset.rate,
+        pitch: preset.pitch,
+        skipPreferredVoices: preset.skipPreferredVoices,
+      ),
+    );
   }
 
   /// Liste des bodies localisés à passer à `SurpriseAlertService.arm()`.
