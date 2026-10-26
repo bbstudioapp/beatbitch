@@ -39,6 +39,7 @@ import '../services/specialization_service.dart';
 import '../widgets/coach_portrait.dart';
 import '../widgets/free_spec_points_banner.dart';
 import '../widgets/free_training_banner.dart';
+import '../widgets/limited_time_coach_banner.dart';
 import 'coach_picker_screen.dart';
 import 'specialization_screen.dart';
 
@@ -1334,7 +1335,16 @@ class _CareerScreenState extends State<CareerScreen> {
                   : baseDurationLabel);
           final activeCoach = _resolveCoach(bundle);
           final principal = coachService.currentTierPrincipal;
-          final isFreeTraining = !coachService.advancesTier(activeCoach);
+          final activeOfferedUntil = coachService.offeredUntil(activeCoach);
+          final isFreeTraining = activeOfferedUntil == null &&
+              !coachService.advancesTier(activeCoach);
+          final limitedTimeToTry = [
+            for (final c in coachService.coaches)
+              if (c.availability != null &&
+                  c.id != activeCoach.id &&
+                  !coachService.pickedThisWindow(c))
+                c
+          ];
           final freeSpecPoints = SpecializationService.totalPointsForSeconds(
                 bundle.totalSeconds,
               ) -
@@ -1352,8 +1362,24 @@ class _CareerScreenState extends State<CareerScreen> {
               _CoachSummaryCard(
                 coach: activeCoach,
                 isPrincipal: !isFreeTraining,
+                offeredUntil: activeOfferedUntil,
                 onTap: () => _openCoachPicker(bundle),
               ),
+              for (final c in limitedTimeToTry) ...[
+                const SizedBox(height: 10),
+                LimitedTimeCoachBanner(
+                  coachName: c.name,
+                  until: coachService.offeredUntil(c)!,
+                  onTry: () async {
+                    if (coachService.evaluate(c, playerTotalSeconds: 0) !=
+                        CoachSelectionStatus.selectedLimitedTime) {
+                      return;
+                    }
+                    await coachService.selectCoach(c);
+                    if (mounted) setState(() {});
+                  },
+                ),
+              ],
               if (isFreeTraining) ...[
                 const SizedBox(height: 10),
                 FreeTrainingBanner(
@@ -2037,11 +2063,13 @@ class _TierMarker extends StatelessWidget {
 class _CoachSummaryCard extends StatelessWidget {
   final Coach coach;
   final bool isPrincipal;
+  final DateTime? offeredUntil;
   final VoidCallback onTap;
 
   const _CoachSummaryCard({
     required this.coach,
     required this.isPrincipal,
+    required this.offeredUntil,
     required this.onTap,
   });
 
@@ -2084,9 +2112,12 @@ class _CoachSummaryCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      isPrincipal
-                          ? t.coachSummaryPrincipal(coach.title, coach.tier)
-                          : t.coachSummaryFree(coach.title),
+                      offeredUntil != null
+                          ? t.coachSummaryLimitedTime(
+                              coach.title, offeredUntil!)
+                          : isPrincipal
+                              ? t.coachSummaryPrincipal(coach.title, coach.tier)
+                              : t.coachSummaryFree(coach.title),
                       style: const TextStyle(
                         fontSize: 12,
                         color: AppTheme.textMuted,

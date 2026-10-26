@@ -15,6 +15,8 @@ class CoachCatalog {
   /// `portrait` de son `coach_<id>.json`.
   static const String _portraitDir = 'assets/career/coaches/portraits';
 
+  static const String lilithId = 'coach_08_lilith';
+
   static const List<Coach> defaults = [
     Coach(
       id: 'coach_01_lina',
@@ -151,19 +153,43 @@ class CoachCatalog {
       requirements: CoachRequirement(minPlayerSeconds: 90000),
       portraitAsset: '$_portraitDir/coach_06_nyx.png',
     ),
+    // En dernier : les replis sur `coaches.first` doivent rester sur Lina.
+    Coach(
+      id: lilithId,
+      name: 'Lilith',
+      title: 'Coach éphémère',
+      archetype: CoachArchetype.taquinSadique,
+      publicBio: 'Sorcière de passage, le temps où le voile est mince. '
+          'Elle envoûte plus qu\'elle ne punit.',
+      specialties: [
+        SpecializationBranch.sloppy,
+        SpecializationBranch.obeissance,
+      ],
+      tier: 1,
+      isPrincipal: false,
+      portraitAsset: '$_portraitDir/coach_08_lilith.png',
+      availability: CoachAvailability(
+        fromMonth: 10,
+        fromDay: 27,
+        untilMonth: 11,
+        untilDay: 8,
+      ),
+    ),
   ];
 }
 
 /// Validation de cohérence du catalogue de coachs. Appelée au boot par
 /// `CoachService.attachPhrases` (ou à la main pour les tests).
 ///
-/// Vérifie deux règles structurelles :
+/// Vérifie trois règles structurelles :
 /// 1. Pour chaque palier observé (de 1 à max), il existe **exactement un
 ///    Principal**. Pas de trou (palier 2 absent), pas de doublon (deux
 ///    Principals pour le palier 3).
 /// 2. Les `requirements.minPlayerSeconds` des Principals sont **strictement
 ///    croissants** dans l'ordre des paliers (le Principal du palier N+1
 ///    se débloque plus tard que celui du palier N).
+/// 3. Aucun coach éphémère n'est Principal : son palier disparaîtrait à la
+///    fin de sa fenêtre.
 ///
 /// Renvoie une liste de messages d'erreur lisibles. Vide = catalogue OK.
 class CoachCatalogValidator {
@@ -183,6 +209,12 @@ class CoachCatalogValidator {
     }
 
     final maxTier = principalsByTier.keys.reduce((a, b) => a > b ? a : b);
+
+    for (final c in coaches) {
+      if (c.isPrincipal && c.availability != null) {
+        issues.add('${c.id} : un coach éphémère ne peut pas être Principal.');
+      }
+    }
 
     for (var t = 1; t <= maxTier; t++) {
       final list = principalsByTier[t];

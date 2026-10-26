@@ -21,6 +21,10 @@ enum CoachSelectionStatus {
   /// Le temps cumulé du joueur est en-dessous du `minPlayerSeconds` requis
   /// par le coach (Phase 19.10).
   blockedMinPlayerSeconds,
+
+  /// Coach éphémère sélectionné pendant sa fenêtre : ni palier ni temps joué
+  /// requis, et pas d'avertissement « entraînement libre ».
+  selectedLimitedTime,
 }
 
 /// Source de vérité pour : palier courant, coach sélectionné, set des
@@ -35,16 +39,20 @@ class CoachService extends ChangeNotifier {
   static const String _kCurrentTier = 'coach.current_tier';
   static const String _kSelectedId = 'coach.selected_id';
   static const String _kUnlockedIds = 'coach.unlocked_ids';
+  static const String _kPickedYearPrefix = 'coach.picked_year.';
 
   List<Coach> _coaches;
+  final DateTime Function() _now;
 
   int _currentTier = 1;
   String? _selectedCoachId;
   Set<String> _unlockedIds = <String>{};
+  final Map<String, int> _pickedYears = <String, int>{};
   bool _loaded = false;
 
-  CoachService({List<Coach>? coaches})
-      : _coaches = List.unmodifiable(coaches ?? CoachCatalog.defaults);
+  CoachService({List<Coach>? coaches, DateTime Function()? clock})
+      : _coaches = List.unmodifiable(coaches ?? CoachCatalog.defaults),
+        _now = clock ?? DateTime.now;
 
   /// Remplace la liste interne par [coaches]. Sert au bootstrap pour
   /// injecter les coachs avec leurs phrases chargées (`CoachLoader.load()`).
@@ -72,8 +80,21 @@ class CoachService extends ChangeNotifier {
 
   // ---- Lecture publique --------------------------------------------------
 
-  /// Catalogue immuable des coachs disponibles dans cette installation.
-  List<Coach> get coaches => _coaches;
+  /// Coachs proposés aujourd'hui : un coach éphémère n'y figure que pendant
+  /// sa fenêtre.
+  List<Coach> get coaches => [
+        for (final c in _coaches)
+          if (_isOffered(c)) c
+      ];
+
+  bool _isOffered(Coach c) => c.availability?.includes(_now()) ?? true;
+
+  /// Dernier jour de la fenêtre en cours d'un coach éphémère ; `null` pour un
+  /// coach permanent.
+  DateTime? offeredUntil(Coach c) => c.availability?.lastDayOf(_now());
+
+  /// Vrai si ce coach éphémère a déjà été choisi pendant sa fenêtre en cours.
+  bool pickedThisWindow(Coach c) => _pickedYears[c.id] == _now().year;
 
   int get currentTier => _currentTier;
 
@@ -81,13 +102,14 @@ class CoachService extends ChangeNotifier {
 
   Coach? get selectedCoach {
     if (_selectedCoachId == null) return null;
-    for (final c in _coaches) {
+    for (final c in coaches) {
       if (c.id == _selectedCoachId) return c;
     }
     return null;
   }
 
-  bool isUnlocked(Coach c) => _unlockedIds.contains(c.id);
+  bool isUnlocked(Coach c) =>
+      c.availability == null ? _unlockedIds.contains(c.id) : _isOffered(c);
 
   /// Coach Principal d'un palier donné (un seul attendu par palier).
   /// Renvoie null si aucun n'est marqué Principal pour ce palier (cas
@@ -114,6 +136,10 @@ class CoachService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _currentTier = prefs.getInt(_kCurrentTier) ?? 1;
     _selectedCoachId = prefs.getString(_kSelectedId);
+    for (final c in _coaches) {
+      final year = prefs.getInt('$_kPickedYearPrefix${c.id}');
+      if (year != null) _pickedYears[c.id] = year;
+    }
     final list = prefs.getStringList(_kUnlockedIds);
     _unlockedIds = list != null ? list.toSet() : _initialUnlocked();
     // Garde-fou : on garantit que le Principal du palier courant est
@@ -206,6 +232,11 @@ class CoachService extends ChangeNotifier {
     required int playerTotalSeconds,
     bool handsEnabled = true,
   }) {
+    if (c.availability != null) {
+      return _isOffered(c)
+          ? CoachSelectionStatus.selectedLimitedTime
+          : CoachSelectionStatus.lockedTier;
+    }
     if (!isUnlocked(c)) return CoachSelectionStatus.lockedTier;
     if (playerTotalSeconds < c.requirements.minPlayerSeconds) {
       return CoachSelectionStatus.blockedMinPlayerSeconds;
@@ -221,6 +252,12 @@ class CoachService extends ChangeNotifier {
   Future<void> selectCoach(Coach c) async {
     if (_selectedCoachId == c.id) return;
     _selectedCoachId = c.id;
+    if (c.availability != null) {
+      final year = _now().year;
+      _pickedYears[c.id] = year;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('$_kPickedYearPrefix${c.id}', year);
+    }
     await _persist();
     notifyListeners();
   }
@@ -232,6 +269,10 @@ class CoachService extends ChangeNotifier {
     await prefs.remove(_kCurrentTier);
     await prefs.remove(_kSelectedId);
     await prefs.remove(_kUnlockedIds);
+    for (final id in _pickedYears.keys) {
+      await prefs.remove('$_kPickedYearPrefix$id');
+    }
+    _pickedYears.clear();
     _currentTier = 1;
     _selectedCoachId = null;
     _unlockedIds = _initialUnlocked();

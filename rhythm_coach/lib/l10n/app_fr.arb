@@ -771,6 +771,7 @@
   "badgeNameGobeuse": "Gobeuse",
   "badgeNameNettoyeuse": "Nettoyeuse",
   "badgeNameSuppliante": "Suppliante",
+  "badgeNameSabbat": "Sabbat",
 
   "badgeUnitMarathonien": "minutes cumulées",
   "badgeUnitThroatQueen": "throatfucks cumulés",
@@ -785,6 +786,7 @@
   "badgeUnitGobeuse": "finals sur la langue",
   "badgeUnitNettoyeuse": "post-finals à lécher",
   "badgeUnitSuppliante": "suppliques post-orgasme",
+  "badgeUnitSabbat": "séances avec Lilith",
 
   "careerLevelTitleDebutante": "Débutante",
   "careerLevelTitleApprentieSuceuse": "Apprentie Suceuse",
@@ -831,6 +833,21 @@
   "@coachSummaryFree": {
     "placeholders": { "title": { "type": "String" } }
   },
+
+  "coachBadgeLimitedTime": "ÉPHÉMÈRE",
+  "coachLimitedTimeUntil": "Jusqu'au {date}",
+  "@coachLimitedTimeUntil": {
+    "placeholders": { "date": { "type": "DateTime", "format": "MMMMd" } }
+  },
+  "coachSummaryLimitedTime": "{title} · jusqu'au {date}",
+  "@coachSummaryLimitedTime": {
+    "placeholders": { "title": { "type": "String" }, "date": { "type": "DateTime", "format": "MMMMd" } }
+  },
+  "coachLimitedTimeBanner": "{name} est là jusqu'au {date}.",
+  "@coachLimitedTimeBanner": {
+    "placeholders": { "name": { "type": "String" }, "date": { "type": "DateTime", "format": "MMMMd" } }
+  },
+  "coachLimitedTimeBannerAction": "ESSAYER",
 
   "coachFreeTrainingDialogTitle": "Entraînement libre",
   "coachFreeTrainingDialogBody": "Tu vas t'entraîner avec {coachName}. Tu progresseras sur tes compétences, mais ta jauge de palier n'avancera pas.",

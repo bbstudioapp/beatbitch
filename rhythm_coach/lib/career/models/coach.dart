@@ -21,6 +21,30 @@ enum CoachArchetype {
   sansPitie,
 }
 
+/// Fenêtre annuelle pendant laquelle un coach éphémère est proposé : du
+/// jour `from` au jour `until` inclus, chaque année, en heure locale.
+class CoachAvailability {
+  final int fromMonth;
+  final int fromDay;
+  final int untilMonth;
+  final int untilDay;
+
+  const CoachAvailability({
+    required this.fromMonth,
+    required this.fromDay,
+    required this.untilMonth,
+    required this.untilDay,
+  }) : assert(fromMonth * 100 + fromDay <= untilMonth * 100 + untilDay);
+
+  bool includes(DateTime now) {
+    final day = now.month * 100 + now.day;
+    return day >= fromMonth * 100 + fromDay &&
+        day <= untilMonth * 100 + untilDay;
+  }
+
+  DateTime lastDayOf(DateTime now) => DateTime(now.year, untilMonth, untilDay);
+}
+
 /// Contraintes optionnelles pour autoriser la sélection d'un coach.
 /// Évaluées par `CoachService.evaluate` à chaque demande.
 ///
@@ -676,6 +700,9 @@ class Coach {
   /// `TtsService.applyCoachVoicePreset`.
   final CoachVoicePreset voicePreset;
 
+  /// `null` = coach permanent.
+  final CoachAvailability? availability;
+
   const Coach({
     required this.id,
     required this.name,
@@ -690,6 +717,7 @@ class Coach {
     this.phrases = CoachPhrasePack.empty,
     this.modeWeights = const {},
     this.voicePreset = CoachVoicePreset.empty,
+    this.availability,
   });
 
   /// Renvoie une copie avec un autre pack de phrases. Si le pack porte
@@ -711,6 +739,7 @@ class Coach {
       phrases: pack,
       modeWeights: modeWeights,
       voicePreset: voicePreset,
+      availability: availability,
     );
   }
 
@@ -733,6 +762,7 @@ class Coach {
       phrases: phrases,
       modeWeights: meta.modeWeights ?? modeWeights,
       voicePreset: meta.voicePreset ?? voicePreset,
+      availability: availability,
     );
   }
 

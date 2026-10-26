@@ -102,6 +102,7 @@ class _CoachPickerScreenState extends State<CoachPickerScreen> {
         );
         return;
       case CoachSelectionStatus.selectedAdvancing:
+      case CoachSelectionStatus.selectedLimitedTime:
         await widget.service.selectCoach(coach);
         if (context.mounted) Navigator.of(context).pop(coach);
         return;
@@ -195,7 +196,13 @@ class _CoachPickerScreenState extends State<CoachPickerScreen> {
           // se révèlent à mesure que la joueuse progresse, pas en flash dès
           // la 1ʳᵉ ouverture du picker.
           final coaches = [...widget.service.coaches]
-            ..sort((a, b) => a.tier.compareTo(b.tier))
+            ..sort((a, b) {
+              final permanentA = a.availability == null ? 1 : 0;
+              final permanentB = b.availability == null ? 1 : 0;
+              return permanentA != permanentB
+                  ? permanentA.compareTo(permanentB)
+                  : a.tier.compareTo(b.tier);
+            })
             ..removeWhere((c) => c.tier > widget.service.currentTier + 1);
 
           return ListView.separated(
@@ -214,6 +221,7 @@ class _CoachPickerScreenState extends State<CoachPickerScreen> {
                 unlocked: unlocked,
                 isCurrentPrincipal: isCurrentPrincipal,
                 isSelected: isSelected,
+                offeredUntil: widget.service.offeredUntil(c),
                 onTap: () => _handleTap(context, c),
                 // Réservé aux coachs débloqués : régler la voix d'un coach
                 // qu'on ne joue pas encore n'a pas d'objet ici, et le picker
@@ -236,6 +244,7 @@ class _CoachCard extends StatelessWidget {
   final bool unlocked;
   final bool isCurrentPrincipal;
   final bool isSelected;
+  final DateTime? offeredUntil;
   final VoidCallback onTap;
 
   /// Voix effective du coach. `null` = pas de ligne (coach verrouillé,
@@ -248,6 +257,7 @@ class _CoachCard extends StatelessWidget {
     required this.unlocked,
     required this.isCurrentPrincipal,
     required this.isSelected,
+    required this.offeredUntil,
     required this.onTap,
     required this.voiceLabel,
     required this.onTapVoice,
@@ -301,7 +311,9 @@ class _CoachCard extends StatelessWidget {
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              t.coachPickerTierLabel(coach.tier),
+                              offeredUntil == null
+                                  ? t.coachPickerTierLabel(coach.tier)
+                                  : t.coachBadgeLimitedTime,
                               style: const TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,
@@ -311,7 +323,9 @@ class _CoachCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          if (isCurrentPrincipal)
+                          if (offeredUntil != null)
+                            const SizedBox.shrink()
+                          else if (isCurrentPrincipal)
                             _Badge(
                               icon: Icons.star,
                               label: t.coachBadgePrincipal,
@@ -358,6 +372,15 @@ class _CoachCard extends StatelessWidget {
                           letterSpacing: 0.5,
                         ),
                       ),
+                      if (offeredUntil != null)
+                        Text(
+                          t.coachLimitedTimeUntil(offeredUntil!),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.accent,
+                          ),
+                        ),
                       const SizedBox(height: 8),
                       Text(
                         coach.publicBio,

@@ -23,7 +23,7 @@ void main() {
   //   tier 7 (Nyx)      : 90 000  = 25 h
   group('CoachService — règle d\'avancement (Phase 19.10)', () {
     test('au démarrage, seul le Principal du palier 1 est débloqué', () async {
-      final s = CoachService();
+      final s = CoachService(clock: () => DateTime(2026, 1, 15));
       await s.load();
 
       final tier1Principal = s.principalOfTier(1)!;
