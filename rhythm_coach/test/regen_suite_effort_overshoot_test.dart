@@ -15,8 +15,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  const audioChannels = [
+    MethodChannel('xyz.luan/audioplayers.global'),
+    MethodChannel('xyz.luan/audioplayers'),
+  ];
+
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+    for (final c in audioChannels) {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(c, (call) async => null);
+    }
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(const MethodChannel('flutter_tts'),
             (call) async {
@@ -26,6 +35,10 @@ void main() {
   });
 
   tearDown(() {
+    for (final c in audioChannels) {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(c, null);
+    }
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(const MethodChannel('flutter_tts'), null);
   });
