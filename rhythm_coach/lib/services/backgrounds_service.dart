@@ -74,12 +74,14 @@ class BackgroundsService {
   BackgroundContext? _afterTransitions;
   BackgroundContext? _lastGesture;
   BackgroundEntry? _intro;
+  ({BackgroundEntry? entry})? _beforeMilestone;
 
   void _resetTiers() {
     _tierRank = 0;
     _transitions.clear();
     _afterTransitions = null;
     _lastGesture = null;
+    _beforeMilestone = null;
   }
 
   void setBundle(BackgroundsBundle bundle) {
@@ -108,9 +110,11 @@ class BackgroundsService {
   void pickForContext(BackgroundContext ctx, {bool playerScene = false}) {
     if (_bundle.entries.isEmpty) return;
     if (current.value != _intro) _intro = null;
-    if (current.value?.isPov ?? false) {
+    final shown = current.value;
+    if (shown != null && (shown.isPov || shown.isMilestone)) {
       _transitions.clear();
       _afterTransitions = null;
+      _beforeMilestone = null;
     }
     final tiered = ctx.coach != null && _tieredCoaches.contains(ctx.coach);
     final before = _tierRank;
@@ -170,8 +174,14 @@ class BackgroundsService {
       return;
     }
     final ctx = _afterTransitions;
+    final before = _beforeMilestone;
     _afterTransitions = null;
-    if (ctx != null) _pick(ctx);
+    _beforeMilestone = null;
+    if (ctx != null) {
+      _pick(ctx);
+    } else if (before != null) {
+      current.value = before.entry;
+    }
   }
 
   bool pickFail(String? coach) {
@@ -189,6 +199,42 @@ class BackgroundsService {
     _afterTransitions = null;
     _setExcluding(best);
     return true;
+  }
+
+  bool pickPunish(String? coach) {
+    final own = _momentOf(coach, 'punish');
+    if (own.isEmpty) return false;
+    _transitions.clear();
+    _afterTransitions = null;
+    _beforeMilestone = null;
+    _setExcluding(own);
+    return true;
+  }
+
+  bool pickMilestone(String? coach) {
+    final own = _momentOf(coach, 'milestone');
+    if (own.isEmpty) return false;
+    _beforeMilestone = _transitions.isEmpty ? (entry: current.value) : null;
+    final milestone = own[_rng.nextInt(own.length)];
+    _transitions
+      ..clear()
+      ..add(milestone);
+    current.value = milestone;
+    return true;
+  }
+
+  List<BackgroundEntry> _momentOf(String? coach, String moment) {
+    final tier = coach != null && _tieredCoaches.contains(coach)
+        ? _nameOf(_tierRank)
+        : null;
+    return _bundle.entries
+        .where((e) =>
+            e.tier == tier &&
+            (e.tagsByCategory[BackgroundTagCategory.moment]?.contains(moment) ??
+                false) &&
+            (e.tagsByCategory[BackgroundTagCategory.coach]?.contains(coach) ??
+                false))
+        .toList();
   }
 
   bool pickIntro(String? coach, {String? tier}) {
