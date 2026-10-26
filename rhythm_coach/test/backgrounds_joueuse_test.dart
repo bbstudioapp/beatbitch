@@ -274,6 +274,22 @@ void main() {
       expect(_now.id, 'a', reason: "fond d'échec");
     });
 
+    test('un fond imposé par le step la remplace sans geler la suite', () {
+      svc.debugRandom = _Zero();
+      _load([
+        'a_rhythm_full_lina',
+        'b_lick_lina',
+        'x_rhythm_full_lina',
+        ..._povs,
+      ]);
+      svc.pickForContext(_ctx('rhythm', position: 'full'));
+      svc.pickForContext(_ctx('rhythm', position: 'full'), playerScene: true);
+      expect(_now.isPov, isTrue);
+      svc.setById('x');
+      svc.pickForContext(_ctx('lick'));
+      expect(_now.id, 'b');
+    });
+
     test('jamais tirées comme fond ordinaire', () {
       _load(['a_rhythm_lina', ..._povs]);
       for (var i = 0; i < 100; i++) {

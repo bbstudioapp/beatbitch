@@ -98,6 +98,8 @@ class BackgroundsService {
   void setById(String id) {
     final entry = _bundle.byId(id);
     if (entry == null) return;
+    _transitions.clear();
+    _afterTransitions = null;
     current.value = entry;
   }
 
