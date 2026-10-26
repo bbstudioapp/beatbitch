@@ -130,10 +130,10 @@ void main() {
       final breaks = withoutChallenges.breaks;
       expect(breaks, isNotEmpty);
       for (var k = 0; k < breaks.length; k++) {
-        // Sans spécialisation : une pause toutes les 10 min, posée à la
+        // Sans spécialisation : une pause toutes les 7 min, posée à la
         // première frontière de bloc qui suit.
         expect(breaks[k].time,
-            inInclusiveRange((k + 1) * 600, (k + 1) * 600 + 150),
+            inInclusiveRange((k + 1) * 420, (k + 1) * 420 + 150),
             reason: '$minutes min → pause n°${k + 1}');
       }
     }

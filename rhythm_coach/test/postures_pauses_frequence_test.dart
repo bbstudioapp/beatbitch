@@ -92,10 +92,10 @@ List<({int time, int end, Posture pose})> _poseEvents(Session s) => [
 void main() {
   group('Pauses scénarisées — fréquence selon l\'endurance', () {
     for (final (endurance, interval) in [
-      (0, 600),
-      (2, 840),
-      (5, 1200),
-      (9, 1200)
+      (0, 420),
+      (2, 540),
+      (5, 720),
+      (9, 720)
     ]) {
       test(
           '$endurance pt(s) d\'endurance → une pause toutes les ${interval ~/ 60} min',
@@ -131,12 +131,12 @@ void main() {
       });
     }
 
-    test('jamais avant 10 min ni pendant la phase finish', () {
+    test('jamais avant 7 min ni pendant la phase finish', () {
       for (final minutes in [8, 12, 15, 20]) {
         for (var seed = 0; seed < 10; seed++) {
           final s = _gen(minutes: minutes, seed: seed);
           for (final b in s.breaks) {
-            expect(b.time, greaterThanOrEqualTo(600));
+            expect(b.time, greaterThanOrEqualTo(420));
             expect(b.endTime, lessThanOrEqualTo(s.silentFinishStartTime!));
           }
         }
@@ -152,8 +152,8 @@ void main() {
 
   group('Changements de position — événement à part', () {
     test(
-        'toutes les 6 à 10 min dès 10 min, parmi les débloquées, jamais deux '
-        'fois la même d\'affilée', () {
+        'le 1er entre 4 et 7 min, puis toutes les 6 à 10 min, parmi les '
+        'débloquées, jamais deux fois la même d\'affilée', () {
       var changes = 0;
       for (final minutes in [15, 30, 45, 75]) {
         for (final endurance in [0, 5]) {
@@ -165,7 +165,11 @@ void main() {
             for (final e in events) {
               final where =
                   '$minutes min end=$endurance seed=$seed t=${e.time}';
-              expect(e.time, greaterThanOrEqualTo(600), reason: where);
+              expect(e.time, greaterThanOrEqualTo(240), reason: where);
+              if (previousEnd == 0) {
+                expect(e.time, lessThanOrEqualTo(420 + _blockSlack),
+                    reason: where);
+              }
               expect(e.time, lessThan(s.silentFinishStartTime!), reason: where);
               expect(e.pose, isNot(Posture.free), reason: where);
               expect(e.pose, isNot(previous), reason: where);
@@ -187,6 +191,23 @@ void main() {
       }
       expect(changes, greaterThan(0),
           reason: 'aucun changement seul : le balayage ne teste rien');
+    });
+
+    test('le 1er changement est tiré entre 4 et 7 min, pas figé', () {
+      final firstTimes = <int>{};
+      for (var seed = 0; seed < 40; seed++) {
+        final s = _gen(minutes: 30, seed: seed, endurance: 0);
+        final first = _poseEvents(s).first;
+        expect(first.time, inInclusiveRange(240, 420 + _blockSlack),
+            reason: 'seed=$seed');
+        firstTimes.add(first.time);
+      }
+      // Un tirage figé à 4 min ne dépasse pas 240 + _blockSlack ; figé à 7 min,
+      // il ne descend pas sous 420.
+      expect(firstTimes.any((t) => t > 240 + _blockSlack), isTrue,
+          reason: 'jamais au-delà de 4 min : $firstTimes');
+      expect(firstTimes.any((t) => t < 420), isTrue,
+          reason: 'jamais avant 7 min : $firstTimes');
     });
 
     test('un changement tombe pile sur un step de config (reprise du bip)', () {

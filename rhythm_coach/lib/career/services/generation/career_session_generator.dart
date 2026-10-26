@@ -219,14 +219,14 @@ class CareerSessionGenerator {
   static const int _breakMinDurationSeconds = 60;
   static const int _breakMaxDurationSeconds = 120;
 
-  /// Intervalle entre deux pauses : de 10 min à endurance nulle à 20 min dès
+  /// Intervalle entre deux pauses : de 7 min à endurance nulle à 12 min dès
   /// [_enduranceFullPoints] points d'endurance, interpolé entre les deux.
-  static const int _breakIntervalLowEnduranceSeconds = 10 * 60;
-  static const int _breakIntervalHighEnduranceSeconds = 20 * 60;
+  static const int _breakIntervalLowEnduranceSeconds = 7 * 60;
+  static const int _breakIntervalHighEnduranceSeconds = 12 * 60;
   static const int _enduranceFullPoints = 5;
 
-  static const int _scriptedEventsEarliestSeconds = 10 * 60;
-
+  static const int _postureFirstChangeMinSeconds = 4 * 60;
+  static const int _postureFirstChangeMaxSeconds = 7 * 60;
   static const int _postureChangeMinIntervalSeconds = 6 * 60;
   static const int _postureChangeMaxIntervalSeconds = 10 * 60;
 
@@ -282,7 +282,7 @@ class CareerSessionGenerator {
     bool collides(int t) => busy
         .any((w) => t < w.$2 + _breakChallengeGapSeconds && t + span > w.$1);
     if (!collides(ideal)) return ideal;
-    const lowest = _scriptedEventsEarliestSeconds;
+    const lowest = _breakIntervalLowEnduranceSeconds;
     final highest = genUntil - span;
     int? best;
     for (final w in busy) {
@@ -903,8 +903,12 @@ class CareerSessionGenerator {
     var currentPose =
         postureTaughtByMilestone(milestoneScheduler.lastInserted?.id) ??
             _initialPose;
-    int? nextPostureChangeAt =
-        _config.scriptedBreaks ? _scriptedEventsEarliestSeconds : null;
+    int? nextPostureChangeAt = _config.scriptedBreaks
+        ? _postureFirstChangeMinSeconds +
+            _rng.nextInt(_postureFirstChangeMaxSeconds -
+                _postureFirstChangeMinSeconds +
+                1)
+        : null;
 
     while (ctx.time < ctx.genUntil) {
       // Phase 1 — Insertion milestone : on traite les pending dans
@@ -917,8 +921,7 @@ class CareerSessionGenerator {
             postureTaughtByMilestone(milestoneScheduler.lastInserted?.id);
         if (taught != null && _config.scriptedBreaks) {
           currentPose = taught;
-          nextPostureChangeAt = max(_scriptedEventsEarliestSeconds,
-              ctx.time + _pickPostureChangeInterval());
+          nextPostureChangeAt = ctx.time + _pickPostureChangeInterval();
         }
         if (ctx.time >= ctx.genUntil) break;
         continue;
