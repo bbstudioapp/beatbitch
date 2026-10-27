@@ -54,7 +54,8 @@ class SessionController extends ChangeNotifier {
 
   /// Borne l'attente de la voix en cours (`_tts.isSpeaking`) : un moteur TTS
   /// qui ne signale jamais sa fin (service Android déconnecté, `onend` avalé
-  /// par Safari/PWA) bloquerait toute phrase en attente.
+  /// par Safari/PWA) bloquerait toute phrase en attente et la reprise d'une
+  /// pause.
   static const int _maxTtsDeferTicks = 25;
 
   /// Remplacée à chaud par [requestUpgrade].
@@ -277,6 +278,17 @@ class SessionController extends ChangeNotifier {
 
   int _nextBreakIndex = 0;
 
+  /// Phrase de reprise d'une pause tant que son `speak` n'a pas rendu la main.
+  Future<void>? _resumeSpeech;
+
+  /// Battements passés à attendre la phrase de reprise, `null` hors reprise.
+  int? _resumeTicks;
+
+  bool get _awaitingResumePhrase =>
+      _resumeTicks != null &&
+      _resumeTicks! < _maxTtsDeferTicks &&
+      (_resumeSpeech != null || _tts.isSpeaking);
+
   /// Pauses et changements de position pas encore déclenchés, en temps absolu
   /// de la timeline courante : ce qu'une suite régénérée doit rejouer.
   PostureScript get unplayedPostureScript => PostureScript(
@@ -324,8 +336,16 @@ class SessionController extends ChangeNotifier {
   /// à chaque lecture, un chemin qui rebat la timeline n'a rien à lever.
   PostureGate? _postureGate;
 
-  bool get awaitingPostureReady =>
-      _postureGate?.stillHolds(
+  /// Gel ordonné par un step de posture dont la consigne attend la voix : il
+  /// ne devient [_postureGate] qu'une fois la consigne dite.
+  PostureGate? _postureGateUntilSaid;
+
+  bool get awaitingPostureReady => _gateHolds(_postureGate);
+
+  bool get _postureConsigneAwaited => _gateHolds(_postureGateUntilSaid);
+
+  bool _gateHolds(PostureGate? gate) =>
+      gate?.stillHolds(
         session: _session,
         nextStepIndex: _nextStepIndex,
         timelineOffset: _timelineOffset,
@@ -716,11 +736,15 @@ class SessionController extends ChangeNotifier {
   bool get isMusicBreathing => _musicBreathUntil != null;
 
   /// Vrai tant que `_onTick` gèle l'horloge de séance (défi, respiration de
-  /// récupération, attente de posture) : les instants des steps à venir ne
-  /// situent alors plus rien. `_onTick` passe par ce getter pour ne pas
+  /// récupération, posture et sa consigne, phrase de reprise d'une pause) : les
+  /// instants des steps à venir ne situent alors plus rien. `_onTick` passe par ce getter pour ne pas
   /// diverger.
   bool get isTimelineFrozen =>
-      isChallengeActive || _inPostChallengeBreath || awaitingPostureReady;
+      isChallengeActive ||
+      _inPostChallengeBreath ||
+      awaitingPostureReady ||
+      _postureConsigneAwaited ||
+      _awaitingResumePhrase;
   int get elapsedSeconds => elapsed.inSeconds;
 
   /// Temps réellement joué, pauses exclues, défis compris. Contrairement à
@@ -1366,7 +1390,8 @@ class SessionController extends ChangeNotifier {
     // Pareil pendant le breath de récup post-défi.
     if (_inPostChallengeBreath) return;
     // Gate posture : le step d'effort suivant attend la confirmation.
-    if (awaitingPostureReady) return;
+    if (awaitingPostureReady || _postureConsigneAwaited) return;
+    if (_awaitingResumePhrase) return;
     final s = elapsedSeconds;
     var modeChanged = false;
     final breathUntil = _musicBreathUntil;
@@ -1433,15 +1458,16 @@ class SessionController extends ChangeNotifier {
 
       final finalT = session.finalStepTime;
       final isFinal = finalT != null && step.time == finalT;
-      if (step.text.isNotEmpty) {
-        if (_music == null &&
-            !isFinal &&
-            (_tts.isSpeaking || _pendingSpeech.isNotEmpty)) {
-          _pendingSpeech.add(step);
-        } else {
-          _lastSpoken = step;
-          _speakScripted(step.text);
-        }
+      if (isFinal) _dropPendingSpeech();
+      final speechWaits = step.text.isNotEmpty &&
+          _music == null &&
+          !isFinal &&
+          (_tts.isSpeaking || _pendingSpeech.isNotEmpty);
+      if (speechWaits) {
+        _pendingSpeech.add(step);
+      } else if (step.text.isNotEmpty) {
+        _lastSpoken = step;
+        _speakScripted(step.text);
       }
 
       // Le `finale_chime` part PENDANT le step final, une fois sa phrase
@@ -1455,7 +1481,11 @@ class SessionController extends ChangeNotifier {
       _nextStepIndex++;
 
       if (step.awaitReady) {
-        _enterAwaitReady();
+        if (speechWaits) {
+          _postureGateUntilSaid = _newPostureGate();
+        } else {
+          _enterAwaitReady();
+        }
         break;
       }
     }
@@ -1511,11 +1541,19 @@ class SessionController extends ChangeNotifier {
     final step = _pendingSpeech.removeAt(0);
     _lastSpoken = step;
     _speakScripted(step.text);
+    if (step.awaitReady) {
+      final stillOrdered = _postureConsigneAwaited;
+      _postureGateUntilSaid = null;
+      if (stillOrdered) _enterAwaitReady();
+    }
   }
 
   void _dropPendingSpeech() {
     _pendingSpeech.clear();
     _ttsDeferredTicks = 0;
+    _postureGateUntilSaid = null;
+    _resumeSpeech = null;
+    _resumeTicks = null;
   }
 
   /// Arme le timeout de sécurité ; l'annonce de la posture a déjà été prononcée
@@ -1526,16 +1564,18 @@ class SessionController extends ChangeNotifier {
     // l'ancienne pose : `_onTick` l'a déjà fait, mais pas quand le gate s'arme
     // depuis `start()`.
     _updateMilestonePose();
-    _postureGate = PostureGate(
-      session: _session,
-      nextStepIndex: _nextStepIndex,
-      timelineOffset: _timelineOffset,
-      failGeneration: _failGen,
-    );
+    _postureGate = _newPostureGate();
     _readyTimeout?.cancel();
     _readyTimeout = Timer(_readyTimeoutDuration, confirmPostureReady);
     notifyListeners();
   }
+
+  PostureGate _newPostureGate() => PostureGate(
+        session: _session,
+        nextStepIndex: _nextStepIndex,
+        timelineOffset: _timelineOffset,
+        failGeneration: _failGen,
+      );
 
   /// Lève la gate (aussi appelée par le timeout de sécurité). Sans effet hors
   /// gate.
@@ -1573,17 +1613,16 @@ class SessionController extends ChangeNotifier {
   ///
   /// [trackForDisplay] : `false` pour les énoncés courts (chiffres du countdown
   /// défi) qui ne doivent pas rester affichés dans le panneau d'instruction.
-  void _speakScripted(String text, {bool trackForDisplay = true}) {
+  Future<void> _speakScripted(String text, {bool trackForDisplay = true}) {
     _lastScriptedSpeakAt = DateTime.now();
     final resolved = _tts.resolveText(text);
     if (trackForDisplay) {
       _lastSpokenResolvedText = resolved;
     }
     if (_tts.isSpeaking) {
-      _tts.stop().then((_) => _tts.speak(resolved));
-    } else {
-      _tts.speak(resolved);
+      return _tts.stop().then((_) => _tts.speak(resolved));
     }
+    return _tts.speak(resolved);
   }
 
   /// Attend la fin du speak de la phrase d'action du step final puis joue le

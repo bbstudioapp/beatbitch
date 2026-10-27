@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:beat_bitch/career/models/phrase_bank.dart';
 import 'package:beat_bitch/controllers/session_controller.dart';
 import 'package:beat_bitch/models/ambience_pack.dart';
+import 'package:beat_bitch/models/posture.dart';
 import 'package:beat_bitch/models/punishment.dart';
 import 'package:beat_bitch/models/session.dart';
 import 'package:beat_bitch/models/session_step.dart';
@@ -65,22 +66,38 @@ void main() {
 
   /// Installe un faux moteur TTS. [completesUtterances] à `false` reproduit un
   /// moteur qui démarre l'énoncé (`speak.onStart`) et ne signale jamais sa fin.
+  /// [repliesAtCompletion] reproduit Android sous `awaitSpeakCompletion(true)` :
+  /// `onStart` arrive après [startLatency], `speak` ne répond qu'en fin
+  /// d'énoncé et jamais pour un énoncé interrompu.
   void installFakeTtsEngine({
     required bool completesUtterances,
     Duration utterance = const Duration(milliseconds: 120),
+    bool repliesAtCompletion = false,
+    Duration startLatency = const Duration(milliseconds: 300),
     void Function(MethodCall call)? onCall,
   }) {
+    Timer? utteranceEnd;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
       onCall?.call(call);
       switch (call.method) {
         case 'speak':
+          if (repliesAtCompletion) {
+            final done = Completer<Object?>();
+            Timer(startLatency, () => pushFromEngine('speak.onStart', true));
+            utteranceEnd = Timer(utterance, () async {
+              await pushFromEngine('speak.onComplete', true);
+              done.complete(1);
+            });
+            return done.future;
+          }
           unawaited(pushFromEngine('speak.onStart', true));
           if (completesUtterances) {
             Timer(utterance, () => pushFromEngine('speak.onComplete', true));
           }
           return 1;
         case 'stop':
+          utteranceEnd?.cancel();
           unawaited(pushFromEngine('speak.onCancel', true));
           return 1;
         case 'getVoices':
@@ -258,6 +275,205 @@ void main() {
         calls.where((c) => c.$2 == 'speak' && '${c.$3}'.contains('avale'));
     expect(avale, hasLength(1), reason: 'pas mise en attente');
     expect(avale.single.$1, lessThan(1600));
+
+    await ctrl.stop();
+  }, timeout: const Timeout(Duration(seconds: 30)));
+
+  Future<void> expectEffortAfterResumePhrase(
+      {required bool repliesAtCompletion}) async {
+    final clock = Stopwatch();
+    final calls = <(int, String, Object?)>[];
+    installFakeTtsEngine(
+      completesUtterances: true,
+      utterance: const Duration(seconds: 3),
+      repliesAtCompletion: repliesAtCompletion,
+      onCall: (c) =>
+          calls.add((clock.elapsedMilliseconds, c.method, c.arguments)),
+    );
+    final beep = _RecordingBeepEngine(clock);
+    final ctrl = _buildController(
+      beep: beep,
+      phraseBank: _resumePhraseBank,
+      breaks: const [ScriptedBreak(time: 1, durationSeconds: 2)],
+      steps: const [
+        SessionStep(time: 0, mode: SessionMode.hold, to: Position.throat),
+        SessionStep(time: 3, mode: SessionMode.rhythm),
+      ],
+    );
+
+    clock.start();
+    await ctrl.start();
+    await Future<void>.delayed(const Duration(milliseconds: 7000));
+
+    final reprise = calls
+        .firstWhere((c) => c.$2 == 'speak' && '${c.$3}'.contains('on reprend'));
+    final rhythm =
+        beep.applied.firstWhere((a) => a.$2 == SessionMode.rhythm).$1;
+    expect(rhythm, greaterThanOrEqualTo(reprise.$1 + 2900),
+        reason: 'le step d\'effort attend la fin de la phrase de reprise');
+    expect(ctrl.elapsedSeconds, lessThan(5),
+        reason: 'l\'horloge de séance attend avec lui : le step garde sa '
+            'durée');
+
+    await ctrl.stop();
+  }
+
+  test(
+      'après une pause, les bips attendent la fin de la phrase de reprise '
+      '(moteur qui répond tout de suite)',
+      () => expectEffortAfterResumePhrase(repliesAtCompletion: false),
+      timeout: const Timeout(Duration(seconds: 30)));
+
+  test(
+      'après une pause, les bips attendent la fin de la phrase de reprise '
+      '(moteur qui répond en fin d\'énoncé)',
+      () => expectEffortAfterResumePhrase(repliesAtCompletion: true),
+      timeout: const Timeout(Duration(seconds: 30)));
+
+  test(
+      'une phrase de reprise qui ne signale jamais sa fin ne bloque pas la '
+      'reprise', () async {
+    final clock = Stopwatch();
+    installFakeTtsEngine(completesUtterances: false);
+    final beep = _RecordingBeepEngine(clock);
+    final ctrl = _buildController(
+      beep: beep,
+      phraseBank: _resumePhraseBank,
+      breaks: const [ScriptedBreak(time: 1, durationSeconds: 2)],
+      steps: const [
+        SessionStep(time: 0, mode: SessionMode.hold, to: Position.throat),
+        SessionStep(time: 3, mode: SessionMode.rhythm),
+      ],
+    );
+
+    clock.start();
+    await ctrl.start();
+    await Future<void>.delayed(const Duration(milliseconds: 9500));
+
+    final rhythm = beep.applied.where((a) => a.$2 == SessionMode.rhythm);
+    expect(rhythm, isNotEmpty, reason: 'l\'effort repart à la borne');
+    expect(rhythm.first.$1, lessThan(8800));
+
+    await ctrl.stop();
+  }, timeout: const Timeout(Duration(seconds: 30)));
+
+  test(
+      'une phrase de reprise coupée par une mise en pause ne retient pas '
+      "l'effort au retour", () async {
+    final clock = Stopwatch();
+    installFakeTtsEngine(
+      completesUtterances: true,
+      utterance: const Duration(seconds: 3),
+      repliesAtCompletion: true,
+    );
+    final beep = _RecordingBeepEngine(clock);
+    final ctrl = _buildController(
+      beep: beep,
+      phraseBank: _resumePhraseBank,
+      breaks: const [ScriptedBreak(time: 1, durationSeconds: 2)],
+      steps: const [
+        SessionStep(time: 0, mode: SessionMode.hold, to: Position.throat),
+        SessionStep(time: 3, mode: SessionMode.rhythm),
+      ],
+    );
+
+    clock.start();
+    await ctrl.start();
+    await Future<void>.delayed(const Duration(milliseconds: 4000));
+    await ctrl.pause();
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    final resumedAt = clock.elapsedMilliseconds;
+    await ctrl.resume();
+    await Future<void>.delayed(const Duration(milliseconds: 1500));
+
+    final rhythm = beep.applied.where((a) => a.$2 == SessionMode.rhythm);
+    expect(rhythm, isNotEmpty);
+    expect(rhythm.first.$1, lessThan(resumedAt + 1000),
+        reason: 'la phrase coupée ne retient plus l\'effort');
+
+    await ctrl.stop();
+  }, timeout: const Timeout(Duration(seconds: 30)));
+
+  test('une phrase restée en attente est jetée quand le step final part',
+      () async {
+    final clock = Stopwatch();
+    final calls = <(int, String, Object?)>[];
+    installFakeTtsEngine(
+      completesUtterances: true,
+      utterance: const Duration(seconds: 3),
+      onCall: (c) =>
+          calls.add((clock.elapsedMilliseconds, c.method, c.arguments)),
+    );
+    final ctrl = _buildController(
+      finalStepTime: 2,
+      steps: const [
+        SessionStep(time: 0, text: 'un', mode: SessionMode.rhythm),
+        SessionStep(time: 1, text: 'deux', mode: SessionMode.rhythm),
+        SessionStep(
+            time: 2, text: 'avale', mode: SessionMode.hold, to: Position.full),
+      ],
+    );
+
+    clock.start();
+    await ctrl.start();
+    await Future<void>.delayed(const Duration(milliseconds: 6500));
+
+    bool spoken(String word) =>
+        calls.any((c) => c.$2 == 'speak' && '${c.$3}'.contains(word));
+    expect(spoken('avale'), isTrue);
+    expect(spoken('deux'), isFalse,
+        reason: 'rien ne parle après la phrase finale');
+
+    await ctrl.stop();
+  }, timeout: const Timeout(Duration(seconds: 30)));
+
+  test(
+      'une posture imposée n\'attend la mise en place qu\'une fois sa '
+      'consigne dite', () async {
+    final clock = Stopwatch();
+    final calls = <(int, String, Object?)>[];
+    installFakeTtsEngine(
+      completesUtterances: true,
+      utterance: const Duration(seconds: 3),
+      onCall: (c) =>
+          calls.add((clock.elapsedMilliseconds, c.method, c.arguments)),
+    );
+    final beep = _RecordingBeepEngine(clock);
+    final ctrl = _buildController(
+      beep: beep,
+      steps: const [
+        SessionStep(time: 0, text: 'un', mode: SessionMode.rhythm),
+        SessionStep(
+            time: 1,
+            text: 'à genoux',
+            mode: SessionMode.hold,
+            to: Position.throat,
+            awaitReady: true),
+        SessionStep(time: 1, text: 'trois', mode: SessionMode.rhythm),
+      ],
+    );
+    int? askedAt;
+    ctrl.addListener(() {
+      if (ctrl.awaitingPostureReady) askedAt ??= clock.elapsedMilliseconds;
+    });
+
+    clock.start();
+    await ctrl.start();
+    await Future<void>.delayed(const Duration(milliseconds: 4500));
+
+    final consigne = calls
+        .firstWhere((c) => c.$2 == 'speak' && '${c.$3}'.contains('à genoux'));
+    expect(askedAt, isNotNull);
+    expect(askedAt!, greaterThanOrEqualTo(consigne.$1),
+        reason: 'la mise en place n\'est demandée qu\'une fois la consigne '
+            'dite');
+    final hold = beep.applied.firstWhere((a) => a.$2 == SessionMode.hold).$1;
+    expect(hold, lessThan(1400), reason: 'la tenue part à son heure');
+    expect(ctrl.elapsedSeconds, lessThanOrEqualTo(1),
+        reason: 'la séance reste gelée');
+    expect(beep.applied.where((a) => a.$2 == SessionMode.rhythm), hasLength(1),
+        reason: 'le step suivant, même à la même seconde, attend la mise en '
+            'place');
 
     await ctrl.stop();
   }, timeout: const Timeout(Duration(seconds: 30)));
@@ -548,6 +764,13 @@ final _stuckAmbiencePack = AmbiencePack(
 /// Banque minimale portant un pool `finale` pour `rhythm` — le mode du dernier
 /// step de config de la session de test, celui que `_findFinalStep` retient.
 /// Sans elle, `_finish` ne prononce pas de phrase finale.
+const _resumePhraseBank = PhraseBank(
+  byMode: {},
+  congrats: [],
+  intros: [],
+  breakResume: [PhraseEntry(text: 'on reprend')],
+);
+
 const _finalePhraseBank = PhraseBank(
   byMode: {
     SessionMode.rhythm: {
@@ -638,6 +861,7 @@ SessionController _buildController({
   PhraseBank? phraseBank,
   BeepEngine? beep,
   int? finalStepTime,
+  List<ScriptedBreak> breaks = const [],
   List<SessionStep> steps = const [
     SessionStep(time: 0, text: 'un', mode: SessionMode.rhythm),
     SessionStep(time: 1, text: 'deux', mode: SessionMode.rhythm),
@@ -654,6 +878,7 @@ SessionController _buildController({
       durationSeconds: 600,
       defaultMode: SessionMode.rhythm,
       steps: steps,
+      breaks: breaks,
       finalStepTime: finalStepTime,
     ),
     tts: TtsService(),
