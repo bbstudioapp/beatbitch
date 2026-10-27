@@ -20,9 +20,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Changement de position seul (hors pause) : la séance attend « JE SUIS EN
-/// PLACE », le moteur de bips est coupé. `Stopwatch` et `DateTime.now()` ne
-/// sont pas simulés par `flutter_test` : la séance se joue à l'horloge du mur.
+/// `Stopwatch` et `DateTime.now()` ne sont pas simulés par `flutter_test` :
+/// la séance se joue à l'horloge du mur.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -226,8 +225,6 @@ void main() {
   }, timeout: const Timeout(Duration(seconds: 90)));
 }
 
-/// Valeurs du curseur sous gel et intervalle médian entre deux valeurs
-/// différentes : la courbe n'est redessinée qu'au rythme où elle change.
 String _describeCursor(List<(int, double)> samples) {
   if (samples.isEmpty) return 'aucune';
   final idx = [for (final s in samples) s.$2];
@@ -263,9 +260,8 @@ List<(double, double)> _curve(WidgetTester tester) {
 class _Run {
   final SessionController ctrl;
 
-  /// Appelle [onFrame] à chaque tranche de 50 ms jusqu'à ce qu'il rende
-  /// `true` ; `sinceGel` est nul tant que la séance n'a pas attendu une
-  /// mise en place.
+  /// `sinceGel` est nul tant que la séance n'a pas attendu une mise en place ;
+  /// `true` arrête la boucle.
   final Future<void> Function(
       bool Function(SessionController ctrl, Duration? sinceGel) onFrame) play;
   const _Run(this.ctrl, this.play);

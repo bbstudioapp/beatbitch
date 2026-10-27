@@ -19,18 +19,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Troisième branche de `isTimelineFrozen` : l'attente de posture.
+/// Aucun défi dans la séance : son gel recouvrirait celui de la posture.
 ///
-/// `session_frozen_upcoming_steps_wiring_test.dart` couvre les deux autres
-/// (défi, respiration de récup). Retirer `|| awaitingPostureReady` de
-/// `isTimelineFrozen` laisse ce fichier-là vert : la branche posture arrive
-/// ici par la sortie d'un break qui impose une nouvelle posture, sans aucun
-/// défi dans la séance — sinon les deux gels se recouvrent et rien de neuf
-/// n'est prouvé.
-///
-/// Même prix que son voisin : `Stopwatch` n'est pas simulé par
-/// `flutter_test`, la séance se joue à l'horloge du mur, d'où le break de 2 s
-/// et la boucle `runAsync`/`pump`.
+/// `Stopwatch` n'est pas simulé par `flutter_test` : la séance se joue à
+/// l'horloge du mur, d'où le break de 2 s et la boucle `runAsync`/`pump`.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -62,10 +54,6 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
-    // Moteur qui complète, par cohérence avec le harnais voisin — sans effet
-    // mesuré ici : aucun step de cette séance n'a de texte et `_host()` ne
-    // fournit pas de `PhraseBank`, donc `_tts.speak()` n'est jamais appelé
-    // dans ce scénario (vérifié en retirant `onComplete` : même résultat).
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(ttsChannel, (call) async {
       switch (call.method) {
