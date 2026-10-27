@@ -1058,13 +1058,16 @@ class SessionController extends ChangeNotifier {
     _state = SessionState.running;
     _startTicker();
     _startRandomComments();
-    // Pendant une pause scénarisée ou l'attente de mise en place, le loop
-    // d'effort est coupé et le step posé après le trou le reconfigure : le
-    // reprendre ici ferait repartir l'effort en pleine pause. Même paire de
-    // gardes que le gel d'accrual dans `_onTick`. L'ambiance n'est pas coupée
-    // par le break : elle reprend inconditionnellement. Avant le premier step de
-    // config, la config par défaut du moteur ferait battre un rythme fantôme.
-    if (_configApplied && !_breakActive && !awaitingPostureReady) {
+    // Pendant une pause scénarisée, sa phrase de reprise ou l'attente de mise
+    // en place, le loop d'effort est coupé et le step posé après le trou le
+    // reconfigure : le reprendre ici relancerait la config d'avant le trou.
+    // L'ambiance n'est pas coupée par le break : elle reprend
+    // inconditionnellement. Avant le premier step de config, la config par
+    // défaut du moteur ferait battre un rythme fantôme.
+    if (_configApplied &&
+        !_breakActive &&
+        _resumeTicks == null &&
+        !awaitingPostureReady) {
       await _beep.resume();
     }
     await musicResumed;
