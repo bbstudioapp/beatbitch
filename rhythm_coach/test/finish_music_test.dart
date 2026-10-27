@@ -280,6 +280,44 @@ void main() {
     final fades = ambience.events.where((e) => e.$1 == 'fade');
     expect(fades, isNotEmpty);
     expect(fades.first.$2, 11, reason: 'premier step du post-final');
+    expect(fades, hasLength(1));
+  }, timeout: const Timeout(Duration(seconds: 60)));
+
+  test(
+      "étape franchie : sans post-final, la musique s'éteint à la fin de la "
+      'tenue finale', () async {
+    final ambience = _FinishRecordingAmbience();
+    late SessionController ctrl;
+    ambience.onEvent = (e) => ambience.events.add((e, ctrl.elapsedSeconds));
+    ctrl = _buildController(ambience,
+        session: const Session(
+          id: 'milestone-final',
+          name: 'milestone-final',
+          description: '',
+          durationSeconds: 14,
+          defaultMode: SessionMode.rhythm,
+          silentFinishStartTime: 4,
+          finalStepTime: 8,
+          steps: [
+            SessionStep(
+                time: 0, mode: SessionMode.rhythm, bpm: 40, duration: 4),
+            SessionStep(
+                time: 4, mode: SessionMode.rhythm, bpm: 90, duration: 4),
+            SessionStep(
+                time: 8,
+                mode: SessionMode.hold,
+                to: Position.full,
+                duration: 3),
+            SessionStep(time: 12, text: 'étape franchie'),
+          ],
+        ));
+    await ctrl.start();
+    await _waitUntil(() => ctrl.isFinished);
+    ctrl.dispose();
+
+    expect(ambience.events.where((e) => e.$1.startsWith('start')),
+        [('start 4s', 4)]);
+    expect(ambience.events.where((e) => e.$1 == 'fade'), [('fade', 11)]);
   }, timeout: const Timeout(Duration(seconds: 60)));
 
   test(

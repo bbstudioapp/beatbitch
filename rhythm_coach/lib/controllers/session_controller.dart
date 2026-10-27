@@ -1468,7 +1468,7 @@ class SessionController extends ChangeNotifier {
         break;
       }
     }
-    _fadeFinishMusicAtUseMeFinalEnd(s);
+    _fadeFinishMusicAtFinalEnd(s);
     if (modeChanged) {
       _syncAmbienceToCurrentMode();
     }
@@ -1493,15 +1493,12 @@ class SessionController extends ChangeNotifier {
         Duration(seconds: finalT - step.time), _finishTrack));
   }
 
-  /// « Utilise-moi » n'a pas de post-final : la fin de la tenue finale coupe
-  /// la musique à sa place.
-  void _fadeFinishMusicAtUseMeFinalEnd(int elapsedSeconds) {
+  void _fadeFinishMusicAtFinalEnd(int elapsedSeconds) {
     final step = _lastConfigStep;
     final duration = step?.duration;
     if (!_finishMusicStarted ||
         step == null ||
         duration == null ||
-        !step.useMe ||
         step.time != session.finalStepTime ||
         elapsedSeconds < step.time + duration) {
       return;
