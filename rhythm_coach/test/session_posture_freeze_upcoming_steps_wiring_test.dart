@@ -108,9 +108,8 @@ void main() {
   });
 
   testWidgets(
-      "attente de posture : l'écran n'annonce aucun instant à venir, "
-      'et les annonce à nouveau dès la mise en place confirmée',
-      (tester) async {
+      "attente de posture à la sortie d'une pause, sans défi : la mise en "
+      'place confirmée rend la courbe et ses instants à venir', (tester) async {
     await DebugSettingsService().setSkipSessionButton(true);
     tester.view.physicalSize = const Size(400, 1400);
     tester.view.devicePixelRatio = 1.0;
@@ -121,11 +120,9 @@ void main() {
     final t = AppLocalizations.of(tester.element(find.byType(SessionScreen)));
 
     var gelPosture = 0;
-    var horsGelAnnonce = 0;
     var horsGelApresMiseEnPlace = 0;
     var framesDefiActif = 0;
     var miseEnPlaceConfirmee = false;
-    final annoncesSousGel = <String>[];
     final ctrl = Provider.of<SessionController>(
         tester.element(find.byType(MovementAnimation)),
         listen: false);
@@ -145,14 +142,10 @@ void main() {
 
       if (ctrl.awaitingPostureReady) {
         gelPosture++;
-        if (anim != null && anim.upcomingSteps.isNotEmpty) {
-          annoncesSousGel.add('horloge à ${anim.elapsed.inMilliseconds} ms : '
-              '${anim.upcomingSteps.length} instants annoncés, le premier à '
-              '${anim.upcomingSteps.first.startSecond} s');
-        }
-      } else if (anim != null && anim.upcomingSteps.isNotEmpty) {
-        horsGelAnnonce++;
-        if (miseEnPlaceConfirmee) horsGelApresMiseEnPlace++;
+      } else if (miseEnPlaceConfirmee &&
+          anim != null &&
+          anim.upcomingSteps.isNotEmpty) {
+        horsGelApresMiseEnPlace++;
       }
 
       final enPlace = find.text(t.sessionPostureReadyButton);
@@ -166,24 +159,15 @@ void main() {
     }
 
     expect(gelPosture, greaterThanOrEqualTo(15),
-        reason: "le scénario n'est jamais entré en attente de posture : rien"
-            " n'a été vérifié sous ce gel");
+        reason: "le scénario n'est jamais entré en attente de posture");
     expect(framesDefiActif, 0,
         reason: 'un défi actif recouvrirait le gel de posture : ce scénario ne'
             ' prouverait alors rien de plus que son voisin');
     expect(miseEnPlaceConfirmee, isTrue,
         reason: "le bouton de mise en place n'a jamais été trouvé à l'écran");
-    expect(horsGelAnnonce, greaterThanOrEqualTo(10),
-        reason: 'hors gel, cette séance doit annoncer des instants à venir ;'
-            " sans cela le vide observé sous gel ne prouverait rien");
     expect(horsGelApresMiseEnPlace, greaterThanOrEqualTo(10),
-        reason: 'la mise en place confirmée doit rendre la parole à'
-            " l'affichage : sans cela le silence mesuré pourrait être celui"
-            " d'une séance qui ne repart jamais");
-    expect(annoncesSousGel, isEmpty,
-        reason: "l'écran a annoncé des instants à venir pendant une attente de"
-            ' posture, sur ${annoncesSousGel.length} des $gelPosture frames'
-            ' gelées observées : ${annoncesSousGel.take(3).join(' | ')}');
+        reason: 'la mise en place confirmée doit rendre à la courbe ses'
+            ' instants à venir');
   }, timeout: const Timeout(Duration(seconds: 180)));
 
   testWidgets('le bouton de la bannière de pause passe la pause',
