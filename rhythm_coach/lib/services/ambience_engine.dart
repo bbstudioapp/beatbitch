@@ -12,9 +12,6 @@ import 'bundled_assets.dart' as bundled;
 /// [peak] : instant du fichier calé sur le début du final.
 typedef FinishTrack = ({String asset, Duration peak});
 
-/// Lecteur d'ambiance sonore en arrière-plan : un seul AudioPlayer en
-/// `ReleaseMode.loop`, volume volontairement bas pour rester sous les
-/// bips de [BeepEngine] (qui jouent à 1.0).
 class AmbienceEngine {
   /// Volume max autorisé pour l'ambiance — au-delà ça commence à masquer
   /// les bips de guidage selon les samples.
