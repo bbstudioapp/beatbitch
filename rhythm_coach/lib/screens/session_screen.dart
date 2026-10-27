@@ -28,6 +28,7 @@ import '../widgets/debug_score_bar.dart';
 import '../controllers/session_controller.dart';
 import '../models/session.dart';
 import '../services/ambience_engine.dart';
+import '../services/backgrounds_service.dart';
 import '../services/badge_service.dart';
 import '../services/beep_engine.dart';
 import '../services/capability_axis.dart';
@@ -119,6 +120,8 @@ class SessionScreen extends StatefulWidget {
 
   final double seedHumiliationSession;
 
+  final bool keepsBackgroundTier;
+
   final bool closeAppOnEnd;
 
   final AnatomyProfile? anatomy;
@@ -162,6 +165,7 @@ class SessionScreen extends StatefulWidget {
     this.miniPunishmentRate = 0.0,
     this.coachTag,
     this.seedHumiliationSession = 0.0,
+    this.keepsBackgroundTier = false,
     this.closeAppOnEnd = false,
     this.anatomy,
     this.hideTimerOverride = false,
@@ -201,6 +205,7 @@ class _SessionScreenState extends State<SessionScreen>
       miniPunishmentRate: widget.miniPunishmentRate,
       coachTag: widget.coachTag,
       seedHumiliationSession: widget.seedHumiliationSession,
+      keepsBackgroundTier: widget.keepsBackgroundTier,
       trackCapabilities: widget.isCareer,
       careerLevel: widget.careerLevel ?? 0,
       capabilityOverloadAxis: widget.capabilityOverloadAxis,
@@ -283,6 +288,7 @@ class _SessionScreenState extends State<SessionScreen>
     if (identical(_immersiveOwner, this)) {
       _immersiveOwner = null;
       unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
+      BackgroundsService.instance.clear();
     }
     super.dispose();
   }

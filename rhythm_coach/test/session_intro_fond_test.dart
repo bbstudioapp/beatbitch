@@ -14,7 +14,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// L'intro et le décompte de la séance jouent le fond `intro` de la coach.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -148,6 +147,70 @@ void main() {
     ));
     await tester.pump();
     expect(BackgroundsService.instance.current.value?.id, 'lina-pack-intro-1');
+  });
+
+  testWidgets(
+      "l'intro sans coach n'affiche rien du fond de la séance précédente",
+      (tester) async {
+    BackgroundsService.instance.setBundle(bundle(const [
+      'lina-pack-intro-1_lina',
+      'lina-pack-breath-1_lina_breath',
+    ]));
+    SessionScreen screen(String? coachTag) => SessionScreen(
+          session: const Session(
+            id: 'tenue',
+            name: 'tenue',
+            description: '',
+            durationSeconds: 30,
+            defaultMode: SessionMode.hold,
+            steps: [
+              SessionStep(
+                  time: 0,
+                  mode: SessionMode.hold,
+                  to: Position.throat,
+                  duration: 30),
+            ],
+          ),
+          tts: TtsService(),
+          beep: _SilentBeepEngine(),
+          ambience: _SilentAmbienceEngine(),
+          punishmentBundle:
+              const PunishmentBundle(failPhrases: [], punishments: []),
+          randomComments: const RandomCommentsBundle(
+            comments: [],
+            minIntervalSeconds: 999,
+            maxIntervalSeconds: 999,
+            scriptedCooldownSeconds: 4,
+          ),
+          introText: 'Bonjour',
+          coachTag: coachTag,
+        );
+    final nav = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(MaterialApp(
+      navigatorKey: nav,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: const SizedBox(),
+    ));
+    final linaIntro = find.byKey(const ValueKey('lina-pack-intro-1'));
+
+    nav.currentState!.push(MaterialPageRoute(builder: (_) => screen('lina')));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(linaIntro, findsOneWidget);
+
+    nav.currentState!.pop();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.byType(SessionScreen), findsNothing);
+
+    nav.currentState!.push(MaterialPageRoute(builder: (_) => screen(null)));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('lina-pack-intro-1'), skipOffstage: false),
+        findsNothing,
+        reason: 'première image, hors scène');
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(linaIntro, findsNothing, reason: 'fondu de sortie');
   });
 }
 

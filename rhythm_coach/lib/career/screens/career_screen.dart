@@ -529,9 +529,6 @@ class _CareerScreenState extends State<CareerScreen> {
           isQuickie: quickie,
           careerLevel: clamped,
           staminaProfile: result.staminaProfile,
-          // 2ᵉ enveloppe de difficulté : axe surchargé de la séance + snapshot
-          // du profil — consommés par le coach (Phase 4 : phrases attempt/
-          // record/tapout) côté SessionController.
           capabilityOverloadAxis: result.overloadAxis,
           capabilityProfile: bundle.capabilityProfile,
           // Punitions carrière générées par le `SessionController`
@@ -587,11 +584,7 @@ class _CareerScreenState extends State<CareerScreen> {
     );
 
     if (verifier != null) camService.stopSessionDetection();
-    widget.tts.setNameResolver(null);
-    await widget.tts.takeVoiceLead(widget.tts.restoreDefaultVoicePreset);
-    // Reset des unlocks provisoires : la session est terminée. Si la
-    // milestone a été acquittée, son unlock est déjà persisté dans
-    // `_completed` via `markCompleted` ; sinon, on retire l'illusion.
+    await _restoreTtsIfBackHere();
     milestoneService.setSessionUnlocks(const {});
 
     // Pose le flag tutorial_seen après le 1ᵉʳ défi joué
@@ -1032,11 +1025,12 @@ class _CareerScreenState extends State<CareerScreen> {
     await ctrl.requestPostChallengeRegen(upcomingSession: newGen.session);
   }
 
-  /// Action « J'en veux encore » depuis l'écran finished. Régénère une
-  /// session au même niveau et même durée, avec un finish plus dense :
-  /// `encoreChainIndex * 2` boosts en plus, BPM cap relevé, final allongé.
-  /// Comptabilise l'encore (badge JamaisRassasiee). Push remplace l'écran
-  /// courant — le SessionController précédent est disposed.
+  Future<void> _restoreTtsIfBackHere() async {
+    if (mounted && !(ModalRoute.of(context)?.isCurrent ?? true)) return;
+    widget.tts.setNameResolver(null);
+    await widget.tts.takeVoiceLead(widget.tts.restoreDefaultVoicePreset);
+  }
+
   Future<void> _handleEncore({
     required BuildContext context,
     required _CareerBundle bundle,
@@ -1048,11 +1042,7 @@ class _CareerScreenState extends State<CareerScreen> {
     required bool hideTimer,
   }) async {
     final t = AppLocalizations.of(context);
-    // Capture la chauffe (`sessionScore` d'humiliation) ET les plafonds de
-    // capacité figés sur les fails de la séance, AVANT de détacher /
-    // disposer le previousController : sinon les valeurs sont perdues et la
-    // session-encore démarre froide. C'est exactement le levier qui fait
-    // qu'on « repart d'où on était » au lieu de tout réinitialiser.
+    // Lu avant que `previousController` soit détaché puis disposé.
     final previousSessionHumiliation =
         previousController.humiliation.sessionScore;
     final previousSessionCeilings =
@@ -1094,9 +1084,6 @@ class _CareerScreenState extends State<CareerScreen> {
       humiliationScore: humiliationCareer,
       obedienceScore: obedienceScore,
     );
-    // Snapshot des unlocks au démarrage de l'encore — partagé entre le
-    // générateur de session et le `SessionController` (qui les repasse au
-    // générateur de punition carrière en cas de fail, Phase 5).
     final encoreUnlockedKeys = milestoneService.acquiredUnlockKeys();
     final result = CareerSessionGenerator().generate(
       level: level,
@@ -1152,13 +1139,8 @@ class _CareerScreenState extends State<CareerScreen> {
           staminaProfile: result.staminaProfile,
           capabilityOverloadAxis: result.overloadAxis,
           capabilityProfile: bundle.capabilityProfile,
-          // Punitions carrière côté SessionController utilisent
-          // les mêmes unlocks et le même toggle hand que le générateur
-          // principal.
           unlockedKeys: encoreUnlockedKeys,
           includeHand: includeHand,
-          // Pas d'introText : on saute le panel d'intro et le décompte.
-          // L'opening phrase est déjà jointe au step #0 de la session.
           phraseBank: coachBank,
           autoStart: true,
           holdVerifier: verifier,
@@ -1167,9 +1149,8 @@ class _CareerScreenState extends State<CareerScreen> {
           specialization: bundle.specialization,
           miniPunishmentRate: activeCoach.miniPunishmentRate,
           coachTag: activeCoach.slug,
-          // Conserve la chauffe accumulée par la session précédente : on
-          // « repart d'où on était » côté humiliation intra-session.
           seedHumiliationSession: previousSessionHumiliation,
+          keepsBackgroundTier: true,
           onRequestUpgrade: (ctrl) => _handleUpgrade(ctrl, bundle, level),
           onUseMeEnded: (ctrl) => _handleUseMeEnded(ctrl, bundle, level),
           onRequestEncore: !canChainEncore
@@ -1200,13 +1181,9 @@ class _CareerScreenState extends State<CareerScreen> {
     );
 
     if (verifier != null) camService.stopSessionDetection();
-    widget.tts.setNameResolver(null);
-    await widget.tts.takeVoiceLead(widget.tts.restoreDefaultVoicePreset);
+    await _restoreTtsIfBackHere();
 
-    // Reload du bundle après le retour de la séance encore : le `_start`
-    // initial avait déjà reloadé au moment du pushReplacement, mais à ce
-    // moment la session encore venait juste de démarrer (max non encore
-    // bumpé). Ici on est de retour pour de bon → on relit prefs à jour.
+    // Le reload de `_start` précède les prefs écrites par la séance de plus.
     if (!mounted) return;
     setState(() {
       _bundleFuture = _loadBundle();
@@ -1457,13 +1434,6 @@ class _CareerScreenState extends State<CareerScreen> {
                   await _challengeService.setEnabled(v);
                 },
               ),
-              // Switch « stimulation à la main » (Phase 19.12 : plus de
-              // gate par niveau, toujours visible). Si une milestone
-              // pending impose les mains, on force ON + désactive le
-              // toggle pour que le label « Verrouillé pour cette séance »
-              // soit cohérent avec le comportement (sinon l'utilisatrice
-              // pouvait désactiver malgré le message — confus côté UX,
-              // retour playtest 0.6).
               () {
                 final pendingMilestone = milestoneService.pendingFor(
                   humiliationScore: bundle.humiliationScore,
@@ -2135,14 +2105,8 @@ class _CareerBundle {
   /// filtre milestone (`humilTolerance = 1 + obedience/50`).
   final double obedienceScore;
 
-  /// Profil de capacités persisté (2ᵉ enveloppe de difficulté, carrière
-  /// uniquement). Passé tel quel aux `generate(...)` pour borner les steps
-  /// au `comfort` (= `best` naïf en Phase 2) de chaque axe pilotant. Vide
-  /// (mais non null) pour une joueuse neuve → aucun gating capacité.
   final CapabilityProfile capabilityProfile;
 
-  /// Toggle Phase 1 défis (`challenges.enabled`). Quand `true`, un défi
-  /// intra-séance est généré et inséré vers 60 % de la durée.
   final bool challengesEnabled;
 
   /// Flag posé après le 1ᵉʳ défi terminé. Quand `false`, le défi suivant

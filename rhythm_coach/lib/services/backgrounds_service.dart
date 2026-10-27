@@ -425,9 +425,11 @@ class BackgroundsService {
     current.value = candidates[pick];
   }
 
-  void clear() {
+  void clear({bool keepTier = false}) {
     current.value = null;
+    final rank = _tierRank;
     _resetTiers();
+    if (keepTier) _tierRank = rank;
   }
 
   @visibleForTesting

@@ -444,6 +444,7 @@ class SessionController extends ChangeNotifier {
     SpecializationService? specializationService,
     double miniPunishmentRate = 0.0,
     double seedHumiliationSession = 0.0,
+    bool keepsBackgroundTier = false,
     int careerLevel = 0,
     CapabilityAxis? capabilityOverloadAxis,
     CapabilityProfile? capabilityProfile,
@@ -470,6 +471,7 @@ class SessionController extends ChangeNotifier {
         _specializationService = specializationService,
         _miniPunishmentRate = miniPunishmentRate,
         _seedHumiliationSession = seedHumiliationSession,
+        _keepsBackgroundTier = keepsBackgroundTier,
         _careerLevel = careerLevel,
         _capabilityOverloadAxis = capabilityOverloadAxis,
         _capabilityProfile = capabilityProfile,
@@ -483,6 +485,8 @@ class SessionController extends ChangeNotifier {
   /// Valeur initiale du `sessionScore` d'humiliation ; un encore enchaîné
   /// reprend celui de la session précédente.
   final double _seedHumiliationSession;
+
+  final bool _keepsBackgroundTier;
 
   /// Si la voix est occupée, l'annonce est perdue et le palier reste marqué.
   void _handleProgressMarker(int threshold) {
@@ -948,7 +952,7 @@ class SessionController extends ChangeNotifier {
         return;
       }
 
-      BackgroundsService.instance.clear();
+      BackgroundsService.instance.clear(keepTier: _keepsBackgroundTier);
       _lastBackgroundContext = null;
       _failMoment = null;
       _failBackgroundShown = false;
