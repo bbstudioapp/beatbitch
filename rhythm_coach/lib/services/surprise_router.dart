@@ -223,6 +223,9 @@ class SurpriseRouter {
     }
 
     if (verifier != null) camService.stopSessionDetection();
+    if (context.mounted && !(ModalRoute.of(context)?.isCurrent ?? true)) {
+      return;
+    }
     tts.setNameResolver(null);
     await tts.takeVoiceLead(tts.restoreDefaultVoicePreset);
   }

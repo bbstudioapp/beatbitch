@@ -587,8 +587,7 @@ class _CareerScreenState extends State<CareerScreen> {
     );
 
     if (verifier != null) camService.stopSessionDetection();
-    widget.tts.setNameResolver(null);
-    await widget.tts.takeVoiceLead(widget.tts.restoreDefaultVoicePreset);
+    await _restoreTtsIfBackHere();
     // Reset des unlocks provisoires : la session est terminée. Si la
     // milestone a été acquittée, son unlock est déjà persisté dans
     // `_completed` via `markCompleted` ; sinon, on retire l'illusion.
@@ -1037,6 +1036,12 @@ class _CareerScreenState extends State<CareerScreen> {
   /// `encoreChainIndex * 2` boosts en plus, BPM cap relevé, final allongé.
   /// Comptabilise l'encore (badge JamaisRassasiee). Push remplace l'écran
   /// courant — le SessionController précédent est disposed.
+  Future<void> _restoreTtsIfBackHere() async {
+    if (mounted && !(ModalRoute.of(context)?.isCurrent ?? true)) return;
+    widget.tts.setNameResolver(null);
+    await widget.tts.takeVoiceLead(widget.tts.restoreDefaultVoicePreset);
+  }
+
   Future<void> _handleEncore({
     required BuildContext context,
     required _CareerBundle bundle,
@@ -1201,8 +1206,7 @@ class _CareerScreenState extends State<CareerScreen> {
     );
 
     if (verifier != null) camService.stopSessionDetection();
-    widget.tts.setNameResolver(null);
-    await widget.tts.takeVoiceLead(widget.tts.restoreDefaultVoicePreset);
+    await _restoreTtsIfBackHere();
 
     // Reload du bundle après le retour de la séance encore : le `_start`
     // initial avait déjà reloadé au moment du pushReplacement, mais à ce
