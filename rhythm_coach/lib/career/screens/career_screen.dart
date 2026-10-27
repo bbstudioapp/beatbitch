@@ -1031,17 +1031,17 @@ class _CareerScreenState extends State<CareerScreen> {
     await ctrl.requestPostChallengeRegen(upcomingSession: newGen.session);
   }
 
-  /// Action « J'en veux encore » depuis l'écran finished. Régénère une
-  /// session au même niveau et même durée, avec un finish plus dense :
-  /// `encoreChainIndex * 2` boosts en plus, BPM cap relevé, final allongé.
-  /// Comptabilise l'encore (badge JamaisRassasiee). Push remplace l'écran
-  /// courant — le SessionController précédent est disposed.
   Future<void> _restoreTtsIfBackHere() async {
     if (mounted && !(ModalRoute.of(context)?.isCurrent ?? true)) return;
     widget.tts.setNameResolver(null);
     await widget.tts.takeVoiceLead(widget.tts.restoreDefaultVoicePreset);
   }
 
+  /// Action « J'en veux encore » depuis l'écran finished. Régénère une
+  /// session au même niveau et même durée, avec un finish plus dense :
+  /// `encoreChainIndex * 2` boosts en plus, BPM cap relevé, final allongé.
+  /// Comptabilise l'encore (badge JamaisRassasiee). Push remplace l'écran
+  /// courant — le SessionController précédent est disposed.
   Future<void> _handleEncore({
     required BuildContext context,
     required _CareerBundle bundle,
