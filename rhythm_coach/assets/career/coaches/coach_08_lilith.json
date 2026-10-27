@@ -11,7 +11,7 @@
   "tts": {
     "voice": "fr-fr-x-vlf-local",
     "voiceLocale": "fr-FR",
-    "rate": 0.52,
+    "rate": 0.56,
     "pitch": 0.95
   }
 }

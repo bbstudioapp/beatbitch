@@ -101,6 +101,7 @@ void main() {
       expect(lilith.phrases.intros, isNotEmpty);
       expect(lilith.phrases.byMode, isNotEmpty);
       expect(lilith.voicePreset.voiceName, 'fr-fr-x-vlf-local');
+      expect(lilith.voicePreset.rate, 0.56);
     });
   }
 }
