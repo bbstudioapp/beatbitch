@@ -166,12 +166,9 @@ extension BreakSequencer on SessionController {
     _resumeTicks = _awaitingResumePhrase ? ticks + 1 : null;
   }
 
-  /// Met à jour `_currentPose` quand la fenêtre d'une **milestone posture**
-  /// est active : la séquence enseigne la pose (« mets-toi à
-  /// genoux… ») et l'`unlock` la débloque, mais rien ne posait la pose sur
-  /// l'écran de jeu. On la fixe dès l'entrée dans la fenêtre — et on la
-  /// **garde** ensuite (le script dit « reste à genoux »), comme un break qui
-  /// impose une pose durable. Appelée dans `_onTick` après `_updateBreakPhase`
+  /// Pose enseignée par une **milestone posture**, fixée dès l'entrée dans sa
+  /// fenêtre et **gardée** ensuite (le script dit « reste à genoux »), comme
+  /// un break qui impose une pose durable. Appelée dans `_onTick` après `_updateBreakPhase`
   /// (fenêtres disjointes) et avant `_checkSteps`.
   void _updateMilestonePose() {
     final id = currentMilestoneIdInWindow;

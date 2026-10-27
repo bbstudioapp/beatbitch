@@ -19,33 +19,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Non-régression du gel de séance signalé en 0.6.0 : « la première consigne
-/// reste affichée pour toujours, la seconde n'arrive jamais ».
-///
-/// La phrase d'un step attend que `TtsService.isSpeaking` repasse à faux. Le
-/// flag n'est remis à `false` que par un callback du moteur TTS
-/// (`speak.onComplete` / `onCancel` / `onError`). Si le moteur ne rappelle
-/// jamais — service TTS Android déconnecté, `onend` avalé par Safari/PWA — le
-/// flag reste collé à `true`.
-///
-/// Trois gardes couvrent ce cas :
-///  - l'attente d'une phrase est bornée à `_maxTtsDeferTicks` (5 s), après
-///    quoi elle part quoi qu'il arrive (au pire une phrase est coupée) ;
-///  - tous les chemins qui coupent le TTS avant de basculer d'état passent par
-///    `_stopTtsBounded()` — `pause()`, `stop()`, `triggerFail()`,
-///    `_runMiniPunishmentFlow()` et `requestUpgrade()` — pour que la séance
-///    reste pilotable canal muet. (`start()` ne fait pas partie de ces
-///    chemins : elle ne coupe rien, elle borne `_tts.init()`, un mécanisme
-///    distinct.) ;
-///  - les deux `speak` **attendus avant** une bascule d'état (phrase de fail,
-///    phrase finale) passent par `_speakBounded()` — `SessionController
-///    .ttsSpeakTimeout`, 20 s. C'est le Future de `speak()` lui-même qui ne se
-///    résout jamais sur un moteur en panne : le watchdog de `TtsService` repose
-///    `isSpeaking` mais ne le débloque pas.
-///
-/// Le dernier test couvre le même mode de panne sur l'autre canal attendu
-/// avant une bascule d'état : le moteur d'ambiance.
-///
 /// Le premier test est calibré sur la valeur de `_maxTtsDeferTicks` : le faire
 /// évoluer demande de recalculer les instants commentés dans son corps.
 void main() {
@@ -124,7 +97,7 @@ void main() {
 
   /// Même plugin en panne, côté `speak` cette fois : l'appel part, l'énoncé
   /// est annoncé (`speak.onStart`) et la réponse ne vient jamais. Avec
-  /// `awaitSpeakCompletion(true)` (actif sur Android/iOS), c'est ce Future-là
+  /// `awaitSpeakCompletion(true)` (actif hors Windows), c'est ce Future-là
   /// que les deux sites de bascule attendent — le watchdog de `TtsService` ne
   /// le débloque pas, il ne repose que le flag `isSpeaking`. `stop` répond
   /// normalement : c'est bien `speak` qu'on veut exercer ici, pas les gardes
@@ -504,15 +477,9 @@ void main() {
   }, timeout: const Timeout(Duration(seconds: 30)));
 
   // ─── Les autres chemins qui coupent le TTS avant de basculer d'état ────
-  //
-  // Même schéma que l'ancien `pause()` : chronomètre et ticker arrêtés,
-  // `await _tts.stop()`, puis seulement `_state = ...`. Tous passent
-  // désormais par `_stopTtsBounded()`.
 
   test('un canal TTS muet n\'empêche pas le déclenchement du FAIL', () async {
     installMuteStopTtsEngine();
-    // C'est le seul contrôle de séance visible en production : play/pause/stop
-    // vivent derrière le toggle debug `showSessionControls`, off par défaut.
     final ctrl = _buildController(punishments: _punishmentBundle);
     await ctrl.start();
     await Future<void>.delayed(const Duration(seconds: 1));
@@ -532,9 +499,6 @@ void main() {
   test('un canal TTS muet n\'empêche pas une mini-punition de basculer',
       () async {
     installMuteStopTtsEngine();
-    // Déclenchée automatiquement (~1 fois par minute en carrière), sans
-    // aucune action de l'utilisatrice : une séance qui progresse bien peut
-    // se figer spontanément au premier tirage.
     final ctrl = _buildController(punishments: _punishmentBundle);
     await ctrl.start();
     await Future<void>.delayed(const Duration(seconds: 1));
@@ -583,14 +547,6 @@ void main() {
   }, timeout: const Timeout(Duration(seconds: 30)));
 
   // ─── Même mode de panne, canal d'ambiance ─────────────────────────────
-  //
-  // `_syncAmbienceToCurrentMode()` (→ `playForMode` → `play`) est attendue à
-  // trois endroits du flow FAIL, tous en amont de `_state = running` : la
-  // phase breath de `triggerFail`, et `_restorePreviousLoop` (appelée depuis
-  // `triggerFail` et depuis le flow mini-punition). Un backend audio engorgé
-  // y laissait la séance en `failing` pour toujours — ticker mort,
-  // chronomètre mort, aucun recours : le symptôme d'origine sur un autre
-  // canal.
 
   test(
       "un moteur d'ambiance qui ne répond plus n'empêche pas le flow FAIL de "
@@ -600,9 +556,8 @@ void main() {
     final ctrl = _buildController(
       punishments: _shortPunishmentBundle,
       ambience: ambience,
-      // Stamina pleine → le flow fail prend la branche courte de sa phase
-      // breath (3-5 s au lieu de 8-15 s). Ne change rien au chemin testé,
-      // raccourcit juste le test.
+      // Stamina pleine → branche courte de la phase breath du flow fail : ne
+      // change rien au chemin testé, raccourcit juste le test.
       staminaProfile: List<double>.filled(600, 100),
     );
 
@@ -624,8 +579,6 @@ void main() {
 
   // ─── Même mode de panne, sur `speak` cette fois ───────────────────────
   //
-  // Deux `speak` sont attendus AVANT une bascule d'état — les seuls du
-  // contrôleur dans ce cas, les autres sont fire-and-forget ou post-bascule.
   // Le canal n'a pas besoin d'être muet sur `stop` pour ça : il suffit que
   // l'énoncé démarre et ne se termine jamais.
 
@@ -676,11 +629,9 @@ void main() {
 
   // ─── Garde-fou de la valeur de la borne ───────────────────────────────
   //
-  // `ttsSpeakTimeout` est serrée volontairement (20 s, pas les 60 s du
-  // watchdog) : sur ces deux chemins l'utilisatrice vient d'agir. Ce qui rend
-  // ce choix tenable, c'est que le contenu réellement atteignable par ces deux
-  // sites en reste loin. Ce test échoue le jour où une phrase ajoutée s'en
-  // approche — c'est alors un arbitrage à reprendre, pas une coupure à subir.
+  // Ce test échoue le jour où une phrase ajoutée s'approche de
+  // `ttsSpeakTimeout` : c'est alors un arbitrage à reprendre, pas une coupure
+  // à subir.
 
   test(
       "le contenu prononcé avant une bascule d'état reste loin sous la borne "
@@ -959,8 +910,7 @@ class _SilentAmbienceEngine extends AmbienceEngine {
 ///
 /// Contrairement à [_SilentAmbienceEngine], `play` / `playForMode` ne sont
 /// PAS surchargées — c'est `play` qui porte la borne, donc c'est elle qu'on
-/// doit exercer. Un double qui remplace `play` par un no-op est exactement ce
-/// qui a rendu ce trou invisible aux passes précédentes.
+/// doit exercer.
 class _StuckAmbienceEngine extends AmbienceEngine {
   int startAttempts = 0;
 
