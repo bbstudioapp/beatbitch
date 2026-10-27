@@ -167,6 +167,10 @@ class CapabilityTracker {
     }
   }
 
+  void creditNoswallowSeconds(int seconds) {
+    if (seconds > 0) _noswallow += seconds;
+  }
+
   void onFail() {
     _useMeClosed = true;
     final frozen = <CapabilityAxis, double>{};

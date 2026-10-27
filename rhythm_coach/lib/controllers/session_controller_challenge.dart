@@ -458,6 +458,13 @@ extension ChallengeOrchestrator on SessionController {
   /// Abandon d'un défi en cours (phase `live`) : tap-out avant le seuil.
   /// Pose un FAIL capability + haptic lourd.
   void _failChallengeLive() {
+    final countdownStart = _challengeCountdownStartedAtSec;
+    if (_activeChallenge?.axis == CapabilityAxis.noswallowStreak &&
+        countdownStart != null) {
+      _capabilityTracker?.creditNoswallowSeconds(
+        _realSec.toInt() - countdownStart - _challengeCountdownDurationSec,
+      );
+    }
     _capabilityTracker?.onFail();
     _completeChallenge(ChallengeOutcome.fail);
     _emitChallengeHaptic(_ChallengeHapticKind.heavy);
