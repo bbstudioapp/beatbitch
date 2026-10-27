@@ -31,9 +31,37 @@ class AmbienceEngine {
       (asset: 'audio/music/finish_music.mp3', peak: Duration(seconds: 92));
 
   static const Map<String, FinishTrack> coachFinishTracks = {
+    'lina': (
+      asset: 'audio/music/finish_coach_01_lina.mp3',
+      peak: Duration(milliseconds: 101400)
+    ),
+    'helene': (
+      asset: 'audio/music/finish_coach_02_helene.mp3',
+      peak: Duration(milliseconds: 113200)
+    ),
     'jade': (
       asset: 'audio/music/finish_coach_03_jade.mp3',
       peak: Duration(milliseconds: 91600)
+    ),
+    'morgan': (
+      asset: 'audio/music/finish_coach_04_morgan.mp3',
+      peak: Duration(milliseconds: 90200)
+    ),
+    'victoria': (
+      asset: 'audio/music/finish_coach_05_victoria.mp3',
+      peak: Duration(milliseconds: 77300)
+    ),
+    'nyx': (
+      asset: 'audio/music/finish_coach_06_nyx.mp3',
+      peak: Duration(milliseconds: 107000)
+    ),
+    'marc': (
+      asset: 'audio/music/finish_coach_07_marc.mp3',
+      peak: Duration(milliseconds: 106700)
+    ),
+    'lilith': (
+      asset: 'audio/music/finish_coach_08_lilith.mp3',
+      peak: Duration(milliseconds: 97300)
     ),
   };
 

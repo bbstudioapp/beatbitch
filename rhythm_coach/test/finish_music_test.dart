@@ -81,6 +81,21 @@ void main() {
       expect(engine.offsets.single, Duration.zero);
     });
 
+    for (final MapEntry(key: slug, value: track)
+        in AmbienceEngine.coachFinishTracks.entries) {
+      test(
+          '$slug : montée plus courte que le sommet, départ décalé dans le '
+          'fichier ; plus longue, départ au début', () async {
+        final engine = _OffsetRecordingEngine();
+        await engine.startFinishMusic(const Duration(seconds: 4), track);
+        await engine.startFinishMusic(
+            track.peak + const Duration(seconds: 30), track);
+        expect(engine.offsets,
+            [track.peak - const Duration(seconds: 4), Duration.zero]);
+        expect(engine.isFinishMusicPlaying, isTrue);
+      });
+    }
+
     test('un fondu demandé pendant le démarrage empêche la musique de jouer',
         () async {
       final engine = _SlowStartEngine();

@@ -16,6 +16,10 @@ void main() {
     expect(readmeFiles, hasLength(CoachCatalog.defaults.length));
   });
 
+  test('chaque coach du catalogue a son morceau de fin', () {
+    expect(AmbienceEngine.coachFinishTracks.keys.toSet(), slugs);
+  });
+
   for (final MapEntry(key: slug, value: track)
       in AmbienceEngine.coachFinishTracks.entries) {
     test('$slug : coach réelle et fichier du tableau du README', () {
