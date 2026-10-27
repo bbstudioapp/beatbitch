@@ -44,16 +44,9 @@ enum ChallengeHapticKind {
 // `part of` y réfèrent sans avoir à exposer publiquement).
 typedef _ChallengeHapticKind = ChallengeHapticKind;
 
-/// Valeur créditée au profil de capacités à la clôture d'un défi réussi.
-///
-/// Fonction pure, extraite de `_completeChallenge` pour être testable
-/// isolément — c'est ici que se joue la différence entre ce qui a été
-/// **demandé** et ce qui était **produisible**.
-///
-/// Les axes BPM sont bornés à la plage du [BeepEngine] : la cible affichée
-/// (`bpmEnd`) n'est jamais vérifiée contre ce que le moteur a joué, et la
-/// créditer telle quelle referme une boucle divergente (cf.
-/// `docs/analysis/2026-08-07-challenge-bpm-target-runaway.md`).
+/// BPM borné à la plage du [BeepEngine] : `bpmEnd` n'est jamais vérifié
+/// contre ce que le moteur a joué, le créditer brut referme une boucle
+/// divergente.
 @visibleForTesting
 double challengeReachedValue(Challenge ch, {required int extensionsCount}) {
   switch (ch.kind) {
@@ -455,8 +448,6 @@ extension ChallengeOrchestrator on SessionController {
     }
   }
 
-  /// Abandon d'un défi en cours (phase `live`) : tap-out avant le seuil.
-  /// Pose un FAIL capability + haptic lourd.
   void _failChallengeLive() {
     final countdownStart = _challengeCountdownStartedAtSec;
     if (_activeChallenge?.axis == CapabilityAxis.noswallowStreak &&
