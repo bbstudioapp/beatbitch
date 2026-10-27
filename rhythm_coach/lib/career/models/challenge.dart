@@ -1,13 +1,7 @@
-/// Modèles du système de défis intra-séance (Phase 1).
+/// Modèles du système de défis intra-séance.
 ///
-/// Un défi est une surcharge opt-in (`challenges.enabled`) insérée à ~60 %
-/// de la séance, pilotée sur un axe de capacité unique surcoté à
-/// `comfort × 1.50`. Trois voies de sortie :
-/// - tap-out avant le seuil → fail défi (soft-cap × 0.92, successRate × 0.85)
-/// - seuil atteint puis `JE M'ARRÊTE` ou timeout → succès net (+2/+2)
-/// - seuil atteint + `JE TIENS ENCORE` × N → succès étendu (+ N × +1/+1)
-///
-/// Spec complète : doc local `~/beatbitch_challenges.md`.
+/// Un défi est une surcharge opt-in (`challenges.enabled`) pilotée sur un
+/// axe de capacité unique surcoté à `comfort × 1.50`.
 library;
 
 import '../../models/session.dart';
@@ -34,12 +28,13 @@ enum ChallengeOutcome {
   /// `× 0.85`. Pas de malus humil/obed.
   fail,
 
-  /// Seuil atteint puis `JE M'ARRÊTE` ou timeout 8 s. Bumps de base
+  /// Seuil atteint puis `JE M'ARRÊTE` sans extension. Bumps de base
   /// (+2 humil, +2 obed, ratchet comfort, successRate += 0.15).
   netSuccess,
 
-  /// Seuil atteint + 1 ou plusieurs `JE TIENS ENCORE`. Bumps de base
-  /// + N × (+1 humil, +1 obed), `best` étendu au-delà du seuil cible.
+  /// Seuil atteint puis `JE M'ARRÊTE` après N tranches `extensionSeconds`.
+  /// Bumps de base + N × (+1 humil, +1 obed), `best` étendu au-delà du
+  /// seuil cible.
   extendedSuccess,
 
   /// `PASSE` pressé pendant le breath de countdown. Malus obédiance -3,
@@ -139,12 +134,12 @@ class Challenge {
   /// tooltips et textes coach pédagogiques (flag `challenges.tutorial_seen`).
   final bool isTutorial;
 
-  /// Vrai pour un défi **exploratoire** (Phase 2) — axe vierge sans
+  /// Vrai pour un défi **exploratoire** — axe vierge sans
   /// `bestOf` connu, donc impossible de poser un seuil cible × 1.50.
   /// Conséquences sur la machine d'états (cf. `SessionController`) :
   /// - Pas d'annonce coach « tu peux rester là si tu veux » à l'entrée
   ///   `atSeuil` (le seuil est estimé, pas prouvé — pas de cérémonie).
-  /// - Pas de bumps de base humil/obed +2 sur succès (cf. spec § 5.2) —
+  /// - Pas de bumps de base humil/obed +2 sur succès —
   ///   seules les extensions (durée tenue / `extensionSeconds`) comptent.
   ///
   /// Le `targetThreshold` représente ici le **seuil initial estimé** par
@@ -170,7 +165,7 @@ class Challenge {
 
   /// Seuil initial estimé par axe pour un défi exploratoire — sert à
   /// déclencher le premier prompt « tu as tenu X, pousse encore ou
-  /// arrête » (cf. spec § 3.2).
+  /// arrête ».
   ///
   /// Axes durée : 5 s pour hold/apnée/gorge engagement (palier débutante),
   /// 8 s pour biffleStreak, 30 s pour rhythmMotionStreak, 15 s par défaut.
@@ -280,7 +275,7 @@ class Challenge {
 /// `ChallengeInputs.none` = aucun défi inséré (comportement carrière
 /// standard).
 ///
-/// Une séance peut désormais (Phase 19.5) porter plusieurs défis
+/// Une séance peut porter plusieurs défis
 /// intercalés — typiquement 1 pour les paliers courts, 2 pour la
 /// longue. Le générateur les insère séquentiellement à des trigger
 /// times distribués entre les milestones.
@@ -291,8 +286,6 @@ class ChallengeInputs {
 
   const ChallengeInputs({this.challenges = const []});
 
-  /// Sucre syntaxique pour un défi unique (cas le plus fréquent) —
-  /// préserve la lisibilité des call sites historiques.
   factory ChallengeInputs.single(Challenge? challenge) => challenge == null
       ? ChallengeInputs.none
       : ChallengeInputs(challenges: [challenge]);
@@ -301,7 +294,5 @@ class ChallengeInputs {
 
   bool get hasChallenge => challenges.isNotEmpty;
 
-  /// Compatibilité : le premier défi de la liste (ou null si vide).
-  /// Utilisé par les call sites qui n'ont besoin que du défi principal.
   Challenge? get challenge => challenges.isEmpty ? null : challenges.first;
 }

@@ -107,8 +107,7 @@ double challengeHumiliationFloor(Challenge ch, {required int extensionsCount}) {
 }
 
 /// Snapshot d'un défi complété — sert à appliquer les bumps humil/obed
-/// au `_finish` quand plusieurs défis ont tourné dans la même séance
-/// (Phase 19.5.b multi-défi).
+/// au `_finish` quand plusieurs défis ont tourné dans la même séance.
 class _CompletedChallengeRecord {
   final Challenge challenge;
   final ChallengeOutcome outcome;
@@ -200,11 +199,7 @@ extension ChallengeOrchestrator on SessionController {
   /// l'annonce pendant le breath).
   ///
   /// Dispatch par **axe** (pas par `kind` seul) : chaque axe pilotant a
-  /// son banner dédié pour décrire spécifiquement ce qu'on teste — sans
-  /// ce mapping, des axes très différents (endurance rythme vs apnée
-  /// gorge vs profondeur max) tombaient tous sur « Pousse ta limite » et
-  /// la joueuse n'avait aucune indication de ce qu'on lui demandait.
-  /// Cf. retour stefsub v0.5.0 sur la clarté des défis.
+  /// son banner dédié pour décrire spécifiquement ce qu'on teste.
   String? challengeObjectiveText() {
     final ch = _activeChallenge;
     final l10n = _appLocalizations;
@@ -275,14 +270,14 @@ extension ChallengeOrchestrator on SessionController {
   /// qui rendait la transition `breath → live` peu fiable. Appelée dans
   /// `_onTick` à chaque tick (200 ms).
   ///
-  /// Phase B (streaming) : le step défi n'est plus pré-posé dans la
-  /// timeline — l'entrée en `live` instancie un `ChallengeSegmentBuilder`
+  /// Le step défi n'est pas posé dans la timeline : l'entrée en `live`
+  /// instancie un `ChallengeSegmentBuilder`
   /// et émet ses segments en runtime (cf. `_startChallengeStreaming` +
   /// `_advanceChallengeSegment`).
   void _updateChallengePhase() {
     if (_session.challenges.isEmpty) return;
     final phase = _challengePhase;
-    // Phase 19.5.b — Reset post-breath du défi précédent : quand le breath
+    // Reset post-breath du défi précédent : quand le breath
     // post-défi est fini, on rebascule en `none` pour permettre l'armement
     // du défi suivant (s'il en reste un dans `_session.challenges`).
     if (phase == ChallengePhase.ended && !_inPostChallengeBreath) {
@@ -384,7 +379,7 @@ extension ChallengeOrchestrator on SessionController {
     // prolongation) et on met à jour le compteur live — `_completeChallenge`
     // lira la dernière valeur connue au tap.
     //
-    // Phase B (streaming) : pour les builders qui continuent d'émettre
+    // Pour les builders qui continuent d'émettre
     // des segments pendant les extensions (endurance, modèle gorge), on
     // avance aussi le segment courant ici quand sa durée est consommée.
     // Les builders monolithiques retournent null à `next()` une fois
@@ -649,7 +644,7 @@ extension ChallengeOrchestrator on SessionController {
   }
 
   /// Étape asynchrone post-défi : acquitte les milestones dont la capacité
-  /// est satisfaite (cascade transitive — cf. spec § 5.4), consomme la
+  /// est satisfaite (cascade transitive), consomme la
   /// tête de la file showcase si la branche du défi matche, et met à jour
   /// le set d'unlocks runtime du contrôleur pour que les filtres restants
   /// de la session (random comments, génération de punition carrière) en
@@ -710,7 +705,7 @@ extension ChallengeOrchestrator on SessionController {
     }
   }
 
-  /// Démarre le streaming de segments du défi (Phase B). Appelé à l'entrée
+  /// Démarre le streaming de segments du défi. Appelé à l'entrée
   /// en phase `live` (= après les 3 s du countdown). Instancie le builder
   /// dédié à l'axe via `builderForAxis`, le configure avec le profil de
   /// capacités et les unlocks runtime, puis émet le premier segment via
@@ -800,8 +795,7 @@ extension ChallengeOrchestrator on SessionController {
   /// l'ancienne timeline : la séance reprend là où elle en était avant le
   /// défi, sans saut visible du timer.
   ///
-  /// Phase B (streaming) : le step défi n'est plus pré-positionné dans la
-  /// timeline — le générateur ne pose que le step trigger et réserve une
+  /// Le step défi n'est pas posé dans la timeline : le générateur ne pose que le step trigger et réserve une
   /// enveloppe `kChallengeBreathDurationSeconds + nominalDurationSeconds`
   /// pour ne pas chevaucher les blocs en aval. Le shift d'excision reprend
   /// la même formule pour rester symétrique : `breath + estimate`. Seul le
@@ -925,17 +919,15 @@ extension ChallengeOrchestrator on SessionController {
   /// - `netSuccess` : humil/obed +2 (l'incrément capability passe par le
   ///   tracker qui voit le step défi comme un step normal).
   /// - `extendedSuccess` : netSuccess + N × (+1 humil, +1 obed).
-  /// - `fail` : pas de malus humil/obed (cf. spec § 5.3). Le soft-cap
-  ///   capability × 0.92 n'est pas distinct du standard pour Phase 1
+  /// - `fail` : pas de malus humil/obed. Le soft-cap
+  ///   capability × 0.92 n'est pas distinct du standard
   ///   (TODO : extension `CapabilityRegulator`) ; le tracker pose déjà un
   ///   ceiling via les FAILs séance, qui plafonnera l'axe naturellement.
   /// - `skipped` : malus obédiance -3, pas de signal capability.
   ///
-  /// TODO Phase 1.5 : consume la tête de file showcase si la branche du
-  /// défi matche (dépend de la branche `feat/specialization-showcase-queue`).
-  /// Phase 3 défis — scanne le catalogue de milestones pour acquitter
+  /// Scanne le catalogue de milestones pour acquitter
   /// silencieusement celles dont `requiresCapability` matche l'axe du défi
-  /// à un seuil ≤ valeur atteinte (cf. spec § 5.4).
+  /// à un seuil ≤ valeur atteinte.
   ///
   /// Calcul de la valeur atteinte :
   /// - axe durée : `targetThreshold + extensions × extensionSeconds` (borne
@@ -996,7 +988,7 @@ extension ChallengeOrchestrator on SessionController {
     }
   }
 
-  /// Phase finale défis — consume la tête de la file showcase si la
+  /// Consomme la tête de la file showcase si la
   /// branche du défi de la séance matche. No-op hors carrière (pas de
   /// service) ou si le défi n'a pas tourné (`_activeChallenge == null`
   /// ou `_challengeOutcome == null`).
@@ -1013,7 +1005,7 @@ extension ChallengeOrchestrator on SessionController {
   }
 
   void _applyChallengeOutcome() {
-    // Phase 19.5.b — itère sur tous les défis complétés cette séance pour
+    // Itère sur tous les défis complétés cette séance pour
     // appliquer les bumps humil/obed multi-défi. Si aucun défi n'a tourné,
     // l'historique est vide → no-op. Le défi en cours non encore acquitté
     // est aussi traité (rare : la séance peut atteindre `_finish` pendant
@@ -1032,9 +1024,9 @@ extension ChallengeOrchestrator on SessionController {
       }
     }
     for (final record in _completedChallenges) {
-      // Phase 2 défi exploratoire : pas de bump de base humil/obed +2
-      // (pas de seuil cible atteint, donc pas de palier mesuré).
-      // Cf. spec § 5.2 — seules les extensions comptent.
+      // Défi exploratoire : pas de bump de base humil/obed +2
+      // (pas de seuil cible atteint, donc pas de palier mesuré) — seules
+      // les extensions comptent.
       final isExploratory = record.challenge.isExploratory;
       switch (record.outcome) {
         case ChallengeOutcome.netSuccess:
@@ -1056,7 +1048,7 @@ extension ChallengeOrchestrator on SessionController {
           _raiseHumiliationFloorFromRecord(record);
           break;
         case ChallengeOutcome.fail:
-          // Pas de bumps humil/obed (cf. spec § 5.3).
+          // Pas de bumps humil/obed.
           break;
         case ChallengeOutcome.skipped:
           _obedience.onChallengeSkip();
