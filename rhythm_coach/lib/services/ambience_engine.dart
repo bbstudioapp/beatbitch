@@ -33,7 +33,12 @@ class AmbienceEngine {
   static const FinishTrack commonFinishTrack =
       (asset: 'audio/music/finish_music.mp3', peak: Duration(seconds: 92));
 
-  static const Map<String, FinishTrack> coachFinishTracks = {};
+  static const Map<String, FinishTrack> coachFinishTracks = {
+    'jade': (
+      asset: 'audio/music/finish_coach_03_jade.mp3',
+      peak: Duration(milliseconds: 91600)
+    ),
+  };
 
   static const double _finishMusicVolume = 0.35;
 
