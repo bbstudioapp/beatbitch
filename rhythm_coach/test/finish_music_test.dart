@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:beat_bitch/controllers/session_controller.dart';
 import 'package:beat_bitch/models/punishment.dart';
 import 'package:beat_bitch/models/session.dart';
@@ -63,9 +65,10 @@ void main() {
     test('démarre le fichier au point qui place le sommet dans untilPeak',
         () async {
       final engine = _OffsetRecordingEngine();
-      await engine.startFinishMusic(const Duration(seconds: 25));
+      await engine.startFinishMusic(
+          const Duration(seconds: 25), AmbienceEngine.commonFinishTrack);
       expect(engine.offsets.single,
-          AmbienceEngine.finishMusicPeak - const Duration(seconds: 25));
+          AmbienceEngine.commonFinishTrack.peak - const Duration(seconds: 25));
       expect(engine.isFinishMusicPlaying, isTrue);
     });
 
@@ -73,14 +76,16 @@ void main() {
         () async {
       final engine = _OffsetRecordingEngine();
       await engine.startFinishMusic(
-          AmbienceEngine.finishMusicPeak + const Duration(seconds: 30));
+          AmbienceEngine.commonFinishTrack.peak + const Duration(seconds: 30),
+          AmbienceEngine.commonFinishTrack);
       expect(engine.offsets.single, Duration.zero);
     });
 
     test('un fondu demandé pendant le démarrage empêche la musique de jouer',
         () async {
       final engine = _SlowStartEngine();
-      final starting = engine.startFinishMusic(const Duration(seconds: 25));
+      final starting = engine.startFinishMusic(
+          const Duration(seconds: 25), AmbienceEngine.commonFinishTrack);
       await Future<void>.delayed(const Duration(milliseconds: 50));
       expect(engine.inFlight, isTrue,
           reason: 'le fondu doit tomber pendant le démarrage');
@@ -94,10 +99,116 @@ void main() {
     });
   });
 
+  group('musique de fin par coach', () {
+    const linaTrack = (
+      asset: 'audio/music/finish_coach_01_lina.mp3',
+      peak: Duration(seconds: 61)
+    );
+    const tracks = {'lina': linaTrack};
+    Future<bool> bundled(String key) async =>
+        key == 'assets/${linaTrack.asset}';
+    Future<bool> nothingBundled(String key) async => false;
+
+    test('une coach avec morceau joue son fichier calé sur son sommet',
+        () async {
+      final engine = _OffsetRecordingEngine(
+          finishTracksByCoach: tracks, isAssetBundled: bundled);
+      final track = await engine.finishTrackFor('lina');
+      await engine.startFinishMusic(const Duration(seconds: 25), track);
+      expect(engine.assets.single, linaTrack.asset);
+      expect(engine.offsets.single, const Duration(seconds: 36));
+    });
+
+    test('un morceau de coach absent du bundle retombe sur le commun',
+        () async {
+      final engine = _OffsetRecordingEngine(
+          finishTracksByCoach: tracks, isAssetBundled: nothingBundled);
+      final track = await engine.finishTrackFor('lina');
+      await engine.startFinishMusic(const Duration(seconds: 25), track);
+      expect(engine.assets.single, 'audio/music/finish_music.mp3');
+      expect(engine.offsets.single, const Duration(seconds: 67));
+    });
+
+    test('une coach sans morceau et une séance sans coach jouent le commun',
+        () async {
+      final engine = _OffsetRecordingEngine(
+          finishTracksByCoach: tracks, isAssetBundled: bundled);
+      expect(await engine.finishTrackFor('helene'),
+          AmbienceEngine.commonFinishTrack);
+      expect(
+          await engine.finishTrackFor(null), AmbienceEngine.commonFinishTrack);
+      expect(AmbienceEngine.commonFinishTrack, (
+        asset: 'audio/music/finish_music.mp3',
+        peak: const Duration(seconds: 92)
+      ));
+    });
+
+    test(
+        'la séance démarre le morceau de sa coach sur son sommet, et une '
+        'séance de plus avec la même coach rejoue le même', () async {
+      // Sommet de 2 s : départ au final (8 s) au lieu du début de montée
+      // (4 s) que donnerait le sommet commun.
+      const shortPeak = (
+        asset: 'audio/music/finish_coach_01_lina.mp3',
+        peak: Duration(seconds: 2)
+      );
+      final ambience = _FinishRecordingAmbience(
+          finishTracksByCoach: {'lina': shortPeak},
+          isAssetBundled: (key) async => key == 'assets/${shortPeak.asset}');
+      late SessionController ctrl;
+      ambience.onEvent = (e) => ambience.events.add((e, ctrl.elapsedSeconds));
+
+      for (var i = 0; i < 2; i++) {
+        ambience.events.clear();
+        ctrl = _buildController(ambience, coachTag: 'lina');
+        await ctrl.start();
+        await _waitUntil(() => ambience.events.isNotEmpty);
+        await ctrl.stop();
+        ctrl.dispose();
+        expect(ambience.events.single, ('start 0s', 8),
+            reason: 'séance ${i + 1} : départ calé sur le sommet de 2 s');
+      }
+      expect(ambience.tracks, [shortPeak, shortPeak]);
+    }, timeout: const Timeout(Duration(seconds: 60)));
+
+    test('une séance sans coach démarre le commun au début de la montée',
+        () async {
+      final ambience = _FinishRecordingAmbience(
+          finishTracksByCoach: tracks, isAssetBundled: bundled);
+      late SessionController ctrl;
+      ambience.onEvent = (e) => ambience.events.add((e, ctrl.elapsedSeconds));
+      ctrl = _buildController(ambience);
+      await ctrl.start();
+      await _waitUntil(() => ambience.events.isNotEmpty);
+      await ctrl.stop();
+      ctrl.dispose();
+      expect(ambience.events.single, ('start 4s', 4));
+      expect(ambience.tracks.single, AmbienceEngine.commonFinishTrack);
+    }, timeout: const Timeout(Duration(seconds: 60)));
+
+    test(
+        'un manifeste qui ne répond jamais ne bloque pas le départ de la '
+        'séance : la coach joue le commun', () async {
+      final ambience = _FinishRecordingAmbience(
+          finishTracksByCoach: tracks,
+          isAssetBundled: (_) => Completer<bool>().future);
+      late SessionController ctrl;
+      ambience.onEvent = (e) => ambience.events.add((e, ctrl.elapsedSeconds));
+      ctrl = _buildController(ambience, coachTag: 'lina');
+      await ctrl.start().timeout(const Duration(seconds: 5),
+          onTimeout: () => fail('start() attend encore le manifeste'));
+      await _waitUntil(() => ambience.events.isNotEmpty);
+      await ctrl.stop();
+      ctrl.dispose();
+      expect(ambience.tracks.single, AmbienceEngine.commonFinishTrack);
+    }, timeout: const Timeout(Duration(seconds: 60)));
+  });
+
   test('un fondu demandé pendant un autre fondu le laisse aller à son terme',
       () async {
     final engine = _OffsetRecordingEngine();
-    await engine.startFinishMusic(const Duration(seconds: 25));
+    await engine.startFinishMusic(
+        const Duration(seconds: 25), AmbienceEngine.commonFinishTrack);
 
     final clock = Stopwatch()..start();
     final first =
@@ -129,6 +240,132 @@ void main() {
     final fades = ambience.events.where((e) => e.$1 == 'fade');
     expect(fades, isNotEmpty);
     expect(fades.first.$2, 11, reason: 'premier step du post-final');
+  }, timeout: const Timeout(Duration(seconds: 60)));
+
+  test(
+      "une consigne de mouvement pendant la tenue finale n'éteint pas la "
+      'musique : le post-final le fait', () async {
+    final ambience = _FinishRecordingAmbience();
+    late SessionController ctrl;
+    ambience.onEvent = (e) => ambience.events.add((e, ctrl.elapsedSeconds));
+    ctrl = _buildController(ambience,
+        session: const Session(
+          id: 'finish-cue',
+          name: 'finish-cue',
+          description: '',
+          durationSeconds: 13,
+          defaultMode: SessionMode.rhythm,
+          silentFinishStartTime: 4,
+          finalStepTime: 8,
+          steps: [
+            SessionStep(
+                time: 0, mode: SessionMode.rhythm, bpm: 40, duration: 4),
+            SessionStep(
+                time: 4, mode: SessionMode.rhythm, bpm: 90, duration: 4),
+            SessionStep(
+                time: 8,
+                mode: SessionMode.hold,
+                to: Position.full,
+                duration: 3),
+            SessionStep(time: 9, text: 'micro'),
+            SessionStep(time: 11, mode: SessionMode.breath, duration: 2),
+          ],
+        ));
+    await ctrl.start();
+    await _waitUntil(() => ctrl.isFinished);
+    ctrl.dispose();
+
+    expect(ambience.events.where((e) => e.$1.startsWith('start')),
+        [('start 4s', 4)]);
+    final fades = ambience.events.where((e) => e.$1 == 'fade');
+    expect(fades, isNotEmpty);
+    expect(fades.first.$2, 11, reason: 'premier step du post-final');
+    expect(fades, hasLength(1));
+  }, timeout: const Timeout(Duration(seconds: 60)));
+
+  test(
+      "étape franchie : sans post-final, la musique s'éteint à la fin de la "
+      'tenue finale', () async {
+    final ambience = _FinishRecordingAmbience();
+    late SessionController ctrl;
+    ambience.onEvent = (e) => ambience.events.add((e, ctrl.elapsedSeconds));
+    ctrl = _buildController(ambience,
+        session: const Session(
+          id: 'milestone-final',
+          name: 'milestone-final',
+          description: '',
+          durationSeconds: 14,
+          defaultMode: SessionMode.rhythm,
+          silentFinishStartTime: 4,
+          finalStepTime: 8,
+          steps: [
+            SessionStep(
+                time: 0, mode: SessionMode.rhythm, bpm: 40, duration: 4),
+            SessionStep(
+                time: 4, mode: SessionMode.rhythm, bpm: 90, duration: 4),
+            SessionStep(
+                time: 8,
+                mode: SessionMode.hold,
+                to: Position.full,
+                duration: 3),
+            SessionStep(time: 12, text: 'étape franchie'),
+          ],
+        ));
+    await ctrl.start();
+    await _waitUntil(() => ctrl.isFinished);
+    ctrl.dispose();
+
+    expect(ambience.events.where((e) => e.$1.startsWith('start')),
+        [('start 4s', 4)]);
+    expect(ambience.events.where((e) => e.$1 == 'fade'), [('fade', 11)]);
+  }, timeout: const Timeout(Duration(seconds: 60)));
+
+  test(
+      "« Utilise-moi » : la musique s'éteint à la fin de la tenue finale, pas "
+      'sur une consigne de mouvement pendant', () async {
+    final ambience = _FinishRecordingAmbience();
+    late SessionController ctrl;
+    ambience.onEvent = (e) => ambience.events.add((e, ctrl.elapsedSeconds));
+    ctrl = _buildController(ambience,
+        session: const Session(
+          id: 'use-me',
+          name: 'use-me',
+          description: '',
+          durationSeconds: 13,
+          defaultMode: SessionMode.rhythm,
+          silentFinishStartTime: 4,
+          finalStepTime: 8,
+          steps: [
+            SessionStep(
+                time: 0,
+                mode: SessionMode.rhythm,
+                bpm: 40,
+                duration: 4,
+                useMe: true),
+            SessionStep(
+                time: 4,
+                mode: SessionMode.rhythm,
+                bpm: 90,
+                duration: 4,
+                useMe: true),
+            SessionStep(
+                time: 8,
+                mode: SessionMode.hold,
+                to: Position.full,
+                duration: 3,
+                useMe: true),
+            SessionStep(time: 9, text: 'micro', useMe: true),
+          ],
+        ));
+    await ctrl.start();
+    await _waitUntil(() => ctrl.isFinished);
+    ctrl.dispose();
+
+    expect(ambience.events.where((e) => e.$1.startsWith('start')),
+        [('start 4s', 4)]);
+    final fades = ambience.events.where((e) => e.$1 == 'fade');
+    expect(fades, isNotEmpty, reason: 'rien ne coupe la musique');
+    expect(fades.first.$2, 11, reason: 'fin de la tenue finale (8 + 3)');
   }, timeout: const Timeout(Duration(seconds: 60)));
 
   test('un FAIL pendant la montée relance la musique à la reprise', () async {
@@ -235,24 +472,28 @@ Future<void> _waitUntil(
 }
 
 SessionController _buildController(AmbienceEngine ambience,
-    {BeepEngine? beep}) {
+    {BeepEngine? beep, String? coachTag, Session? session}) {
   return SessionController(
-    session: const Session(
-      id: 'finish',
-      name: 'finish',
-      description: '',
-      durationSeconds: 13,
-      defaultMode: SessionMode.rhythm,
-      silentFinishStartTime: 4,
-      finalStepTime: 8,
-      steps: [
-        SessionStep(time: 0, mode: SessionMode.rhythm, bpm: 40, duration: 2),
-        SessionStep(time: 2, mode: SessionMode.rhythm, bpm: 60, duration: 2),
-        SessionStep(time: 4, mode: SessionMode.rhythm, bpm: 90, duration: 4),
-        SessionStep(time: 8, mode: SessionMode.hold, to: Position.full),
-        SessionStep(time: 11, mode: SessionMode.breath, duration: 2),
-      ],
-    ),
+    session: session ??
+        const Session(
+          id: 'finish',
+          name: 'finish',
+          description: '',
+          durationSeconds: 13,
+          defaultMode: SessionMode.rhythm,
+          silentFinishStartTime: 4,
+          finalStepTime: 8,
+          steps: [
+            SessionStep(
+                time: 0, mode: SessionMode.rhythm, bpm: 40, duration: 2),
+            SessionStep(
+                time: 2, mode: SessionMode.rhythm, bpm: 60, duration: 2),
+            SessionStep(
+                time: 4, mode: SessionMode.rhythm, bpm: 90, duration: 4),
+            SessionStep(time: 8, mode: SessionMode.hold, to: Position.full),
+            SessionStep(time: 11, mode: SessionMode.breath, duration: 2),
+          ],
+        ),
     tts: TtsService(),
     beep: beep ?? _SilentBeepEngine(),
     ambience: ambience,
@@ -263,14 +504,22 @@ SessionController _buildController(AmbienceEngine ambience,
       maxIntervalSeconds: 999,
       scriptedCooldownSeconds: 4,
     ),
+    coachTag: coachTag,
   );
 }
 
 class _OffsetRecordingEngine extends AmbienceEngine {
+  _OffsetRecordingEngine({
+    super.finishTracksByCoach,
+    super.isAssetBundled,
+  });
+
   final List<Duration> offsets = [];
+  final List<String> assets = [];
 
   @override
-  Future<void> startFinishPlayback(Duration offset) async {
+  Future<void> startFinishPlayback(String asset, Duration offset) async {
+    assets.add(asset);
     offsets.add(offset);
   }
 }
@@ -281,7 +530,7 @@ class _SlowStartEngine extends AmbienceEngine {
   bool inFlight = false;
 
   @override
-  Future<void> startFinishPlayback(Duration offset) async {
+  Future<void> startFinishPlayback(String asset, Duration offset) async {
     inFlight = true;
     await Future<void>.delayed(const Duration(milliseconds: 300));
     inFlight = false;
@@ -293,7 +542,7 @@ class _MissingFinishAssetAmbience extends AmbienceEngine {
   int attempts = 0;
 
   @override
-  Future<void> startFinishPlayback(Duration offset) async {
+  Future<void> startFinishPlayback(String asset, Duration offset) async {
     attempts++;
     throw PlatformException(code: 'AudioPlayers Exception', message: 'asset');
   }
@@ -334,7 +583,13 @@ class _SilentBeepEngine extends BeepEngine {
 }
 
 class _FinishRecordingAmbience extends AmbienceEngine {
+  _FinishRecordingAmbience({
+    super.finishTracksByCoach,
+    super.isAssetBundled,
+  });
+
   final List<(String, int)> events = [];
+  final List<FinishTrack> tracks = [];
   void Function(String) onEvent = (_) {};
 
   @override
@@ -350,8 +605,11 @@ class _FinishRecordingAmbience extends AmbienceEngine {
   @override
   Future<void> dispose() async {}
   @override
-  Future<void> startFinishMusic(Duration untilPeak) async =>
-      onEvent('start ${untilPeak.inSeconds}s');
+  Future<void> startFinishMusic(Duration untilPeak, FinishTrack track) async {
+    tracks.add(track);
+    onEvent('start ${untilPeak.inSeconds}s');
+  }
+
   @override
   Future<void> fadeOutFinishMusic(
           {Duration duration = const Duration(seconds: 3)}) async =>

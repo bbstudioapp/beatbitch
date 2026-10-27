@@ -184,6 +184,7 @@ class SessionController extends ChangeNotifier {
   bool _finaleChimeStarted = false;
 
   bool _finishMusicStarted = false;
+  FinishTrack _finishTrack = AmbienceEngine.commonFinishTrack;
 
   // ─── État du flow fail ─────────────────────────────────────────────────
 
@@ -393,8 +394,7 @@ class SessionController extends ChangeNotifier {
 
   final double _miniPunishmentRate;
 
-  /// Slug du coach actif (extrait de l'`id` `coach_NN_<slug>` par le caller) ;
-  /// `null` = aucun fond `_<coach>` ne matche.
+  /// `null` : séance sans coach.
   final String? _coachTag;
 
   int _miniPunishmentTickAccumulator = 0;
@@ -919,6 +919,10 @@ class SessionController extends ChangeNotifier {
       } catch (e) {
         debugPrint('start(): _beep.init() a échoué (non bloquant) : $e');
       }
+      if (_released) return;
+      _finishTrack = await _ambience.finishTrackFor(_coachTag).timeout(
+          const Duration(seconds: 2),
+          onTimeout: () => AmbienceEngine.commonFinishTrack);
       if (_released) return;
       final music = _music;
       final track = _session.music;
@@ -1468,28 +1472,43 @@ class SessionController extends ChangeNotifier {
         break;
       }
     }
+    _fadeFinishMusicAtFinalEnd(s);
     if (modeChanged) {
       _syncAmbienceToCurrentMode();
     }
   }
 
-  /// Musique de finish : démarre pendant la montée de façon que son sommet
-  /// tombe sur le final, s'éteint au premier step du post-final.
   void _updateFinishMusic(SessionStep step) {
     final finalT = session.finalStepTime;
     final finishStart = session.silentFinishStartTime;
     if (_music != null || finalT == null || finishStart == null) return;
     if (step.time > finalT) {
-      unawaited(_ambience.fadeOutFinishMusic());
+      if (!step.isTextOnly) {
+        unawaited(_ambience.fadeOutFinishMusic());
+      }
       return;
     }
-    final peak = AmbienceEngine.finishMusicPeak.inSeconds;
+    final peak = _finishTrack.peak.inSeconds;
     if (_finishMusicStarted || step.time < max(finishStart, finalT - peak)) {
       return;
     }
     _finishMusicStarted = true;
-    unawaited(
-        _ambience.startFinishMusic(Duration(seconds: finalT - step.time)));
+    unawaited(_ambience.startFinishMusic(
+        Duration(seconds: finalT - step.time), _finishTrack));
+  }
+
+  void _fadeFinishMusicAtFinalEnd(int elapsedSeconds) {
+    final step = _lastConfigStep;
+    final duration = step?.duration;
+    if (!_finishMusicStarted ||
+        step == null ||
+        duration == null ||
+        step.time != session.finalStepTime ||
+        elapsedSeconds < step.time + duration) {
+      return;
+    }
+    _finishMusicStarted = false;
+    unawaited(_ambience.fadeOutFinishMusic());
   }
 
   /// Prononce la plus ancienne phrase en attente dès que la voix se libère.

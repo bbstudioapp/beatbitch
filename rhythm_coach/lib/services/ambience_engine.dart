@@ -7,6 +7,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/ambience_pack.dart';
 import '../models/session.dart';
 import '../models/session_step.dart';
+import 'bundled_assets.dart' as bundled;
+
+/// [peak] : instant du fichier calé sur le début du final.
+typedef FinishTrack = ({String asset, Duration peak});
 
 /// Lecteur d'ambiance sonore en arrière-plan : un seul AudioPlayer en
 /// `ReleaseMode.loop`, volume volontairement bas pour rester sous les
@@ -26,17 +30,24 @@ class AmbienceEngine {
   /// couperait l'ambiance sur un appareil lent.
   static const Duration _startTimeout = Duration(seconds: 3);
 
-  static const String finishMusicAsset = 'audio/music/finish_music.mp3';
+  static const FinishTrack commonFinishTrack =
+      (asset: 'audio/music/finish_music.mp3', peak: Duration(seconds: 92));
 
-  /// Instant du fichier où la musique de finish atteint son sommet, calé sur
-  /// le début du final.
-  static const Duration finishMusicPeak = Duration(seconds: 70);
+  static const Map<String, FinishTrack> coachFinishTracks = {};
 
   static const double _finishMusicVolume = 0.35;
 
-  AmbienceEngine({Random? random}) : _random = random ?? Random();
+  AmbienceEngine({
+    Random? random,
+    Map<String, FinishTrack> finishTracksByCoach = coachFinishTracks,
+    Future<bool> Function(String assetKey)? isAssetBundled,
+  })  : _random = random ?? Random(),
+        _finishTracksByCoach = finishTracksByCoach,
+        _isAssetBundled = isAssetBundled ?? bundled.isAssetBundled;
 
   final Random _random;
+  final Map<String, FinishTrack> _finishTracksByCoach;
+  final Future<bool> Function(String assetKey) _isAssetBundled;
   final AudioPlayer _player = AudioPlayer(playerId: 'ambience_loop')
     ..positionUpdater = null;
   AudioPlayer? _finishPlayer;
@@ -242,12 +253,21 @@ class AmbienceEngine {
     }
   }
 
-  Future<void> startFinishMusic(Duration untilPeak) async {
-    final offset = finishMusicPeak - untilPeak;
+  Future<FinishTrack> finishTrackFor(String? coachTag) async {
+    final track = _finishTracksByCoach[coachTag];
+    if (track == null || !await _isAssetBundled('assets/${track.asset}')) {
+      return commonFinishTrack;
+    }
+    return track;
+  }
+
+  Future<void> startFinishMusic(Duration untilPeak, FinishTrack track) async {
+    final offset = track.peak - untilPeak;
     final gen = ++_finishGen;
     _finishStartGen = gen;
     try {
-      await startFinishPlayback(offset.isNegative ? Duration.zero : offset)
+      await startFinishPlayback(
+              track.asset, offset.isNegative ? Duration.zero : offset)
           .timeout(_startTimeout);
       if (gen != _finishGen) {
         await _finishPlayer?.stop().timeout(_callTimeout);
@@ -263,7 +283,7 @@ class AmbienceEngine {
   /// Ne pas appeler directement en production : surchargée par les tests,
   /// comme [startPlayback].
   @visibleForTesting
-  Future<void> startFinishPlayback(Duration offset) async {
+  Future<void> startFinishPlayback(String asset, Duration offset) async {
     final player = _finishPlayer ??= AudioPlayer(playerId: 'finish_music')
       ..positionUpdater = null;
     if (!_finishInitialized) {
@@ -271,7 +291,7 @@ class AmbienceEngine {
       await player.setReleaseMode(ReleaseMode.stop);
       _finishInitialized = true;
     }
-    await player.setSource(AssetSource(finishMusicAsset));
+    await player.setSource(AssetSource(asset));
     await player.setVolume(_finishMusicVolume);
     await player.seek(offset);
     await player.resume();

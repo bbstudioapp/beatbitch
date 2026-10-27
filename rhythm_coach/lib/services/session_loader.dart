@@ -2,32 +2,17 @@ import 'dart:convert';
 import 'dart:ui' show Locale;
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart' show AssetManifest, rootBundle;
+import 'package:flutter/services.dart' show rootBundle;
 
 import '../models/session.dart';
+import 'bundled_assets.dart' as bundled;
 import 'locale_service.dart';
 
 class SessionLoader {
-  /// [isAssetBundled] reçoit la clé complète de l'asset (`assets/...`). Le
-  /// défaut interroge l'`AssetManifest` : lire le fichier lui-même chargerait
-  /// le morceau entier en mémoire pour un simple test de présence.
   SessionLoader({Future<bool> Function(String assetKey)? isAssetBundled})
-      : _isAssetBundled = isAssetBundled ?? _manifestContains;
+      : _isAssetBundled = isAssetBundled ?? bundled.isAssetBundled;
 
   final Future<bool> Function(String assetKey) _isAssetBundled;
-
-  static Set<String>? _manifestKeys;
-
-  static Future<bool> _manifestContains(String assetKey) async {
-    try {
-      _manifestKeys ??= (await AssetManifest.loadFromAssetBundle(rootBundle))
-          .listAssets()
-          .toSet();
-      return _manifestKeys!.contains(assetKey);
-    } catch (_) {
-      return false;
-    }
-  }
 
   static const List<String> _assetPaths = [
     'assets/sessions/session_tutorial.json',

@@ -1079,7 +1079,7 @@ class _SilentAmbienceEngine extends AmbienceEngine {
   final List<Duration> finishStarts = [];
 
   @override
-  Future<void> startFinishMusic(Duration untilPeak) async =>
+  Future<void> startFinishMusic(Duration untilPeak, FinishTrack track) async =>
       finishStarts.add(untilPeak);
 
   @override
