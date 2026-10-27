@@ -243,6 +243,46 @@ void main() {
   }, timeout: const Timeout(Duration(seconds: 60)));
 
   test(
+      "une consigne de mouvement pendant la tenue finale n'éteint pas la "
+      'musique : le post-final le fait', () async {
+    final ambience = _FinishRecordingAmbience();
+    late SessionController ctrl;
+    ambience.onEvent = (e) => ambience.events.add((e, ctrl.elapsedSeconds));
+    ctrl = _buildController(ambience,
+        session: const Session(
+          id: 'finish-cue',
+          name: 'finish-cue',
+          description: '',
+          durationSeconds: 13,
+          defaultMode: SessionMode.rhythm,
+          silentFinishStartTime: 4,
+          finalStepTime: 8,
+          steps: [
+            SessionStep(
+                time: 0, mode: SessionMode.rhythm, bpm: 40, duration: 4),
+            SessionStep(
+                time: 4, mode: SessionMode.rhythm, bpm: 90, duration: 4),
+            SessionStep(
+                time: 8,
+                mode: SessionMode.hold,
+                to: Position.full,
+                duration: 3),
+            SessionStep(time: 9, text: 'micro'),
+            SessionStep(time: 11, mode: SessionMode.breath, duration: 2),
+          ],
+        ));
+    await ctrl.start();
+    await _waitUntil(() => ctrl.isFinished);
+    ctrl.dispose();
+
+    expect(ambience.events.where((e) => e.$1.startsWith('start')),
+        [('start 4s', 4)]);
+    final fades = ambience.events.where((e) => e.$1 == 'fade');
+    expect(fades, isNotEmpty);
+    expect(fades.first.$2, 11, reason: 'premier step du post-final');
+  }, timeout: const Timeout(Duration(seconds: 60)));
+
+  test(
       "« Utilise-moi » : la musique s'éteint à la fin de la tenue finale, pas "
       'sur une consigne de mouvement pendant', () async {
     final ambience = _FinishRecordingAmbience();

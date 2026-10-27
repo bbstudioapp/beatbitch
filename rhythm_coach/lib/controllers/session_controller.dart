@@ -1479,7 +1479,7 @@ class SessionController extends ChangeNotifier {
     final finishStart = session.silentFinishStartTime;
     if (_music != null || finalT == null || finishStart == null) return;
     if (step.time > finalT) {
-      if (!step.useMe || !step.isTextOnly) {
+      if (!step.isTextOnly) {
         unawaited(_ambience.fadeOutFinishMusic());
       }
       return;
