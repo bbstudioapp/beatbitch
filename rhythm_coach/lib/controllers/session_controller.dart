@@ -1468,6 +1468,7 @@ class SessionController extends ChangeNotifier {
         break;
       }
     }
+    _fadeFinishMusicAtUseMeFinalEnd(s);
     if (modeChanged) {
       _syncAmbienceToCurrentMode();
     }
@@ -1478,7 +1479,9 @@ class SessionController extends ChangeNotifier {
     final finishStart = session.silentFinishStartTime;
     if (_music != null || finalT == null || finishStart == null) return;
     if (step.time > finalT) {
-      unawaited(_ambience.fadeOutFinishMusic());
+      if (!step.useMe || !step.isTextOnly) {
+        unawaited(_ambience.fadeOutFinishMusic());
+      }
       return;
     }
     final peak = _finishTrack.peak.inSeconds;
@@ -1488,6 +1491,23 @@ class SessionController extends ChangeNotifier {
     _finishMusicStarted = true;
     unawaited(_ambience.startFinishMusic(
         Duration(seconds: finalT - step.time), _finishTrack));
+  }
+
+  /// « Utilise-moi » n'a pas de post-final : la fin de la tenue finale coupe
+  /// la musique à sa place.
+  void _fadeFinishMusicAtUseMeFinalEnd(int elapsedSeconds) {
+    final step = _lastConfigStep;
+    final duration = step?.duration;
+    if (!_finishMusicStarted ||
+        step == null ||
+        duration == null ||
+        !step.useMe ||
+        step.time != session.finalStepTime ||
+        elapsedSeconds < step.time + duration) {
+      return;
+    }
+    _finishMusicStarted = false;
+    unawaited(_ambience.fadeOutFinishMusic());
   }
 
   /// Prononce la plus ancienne phrase en attente dès que la voix se libère.

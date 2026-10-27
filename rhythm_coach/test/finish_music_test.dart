@@ -223,6 +223,54 @@ void main() {
     expect(fades.first.$2, 11, reason: 'premier step du post-final');
   }, timeout: const Timeout(Duration(seconds: 60)));
 
+  test(
+      "« Utilise-moi » : la musique s'éteint à la fin de la tenue finale, pas "
+      'sur une consigne de mouvement pendant', () async {
+    final ambience = _FinishRecordingAmbience();
+    late SessionController ctrl;
+    ambience.onEvent = (e) => ambience.events.add((e, ctrl.elapsedSeconds));
+    ctrl = _buildController(ambience,
+        session: const Session(
+          id: 'use-me',
+          name: 'use-me',
+          description: '',
+          durationSeconds: 13,
+          defaultMode: SessionMode.rhythm,
+          silentFinishStartTime: 4,
+          finalStepTime: 8,
+          steps: [
+            SessionStep(
+                time: 0,
+                mode: SessionMode.rhythm,
+                bpm: 40,
+                duration: 4,
+                useMe: true),
+            SessionStep(
+                time: 4,
+                mode: SessionMode.rhythm,
+                bpm: 90,
+                duration: 4,
+                useMe: true),
+            SessionStep(
+                time: 8,
+                mode: SessionMode.hold,
+                to: Position.full,
+                duration: 3,
+                useMe: true),
+            SessionStep(time: 9, text: 'micro', useMe: true),
+          ],
+        ));
+    await ctrl.start();
+    await _waitUntil(() => ctrl.isFinished);
+    ctrl.dispose();
+
+    expect(ambience.events.where((e) => e.$1.startsWith('start')),
+        [('start 4s', 4)]);
+    final fades = ambience.events.where((e) => e.$1 == 'fade');
+    expect(fades, isNotEmpty, reason: 'rien ne coupe la musique');
+    expect(fades.first.$2, 11, reason: 'fin de la tenue finale (8 + 3)');
+  }, timeout: const Timeout(Duration(seconds: 60)));
+
   test('un FAIL pendant la montée relance la musique à la reprise', () async {
     final starts = await _startsAroundPunishment((ctrl) => ctrl.triggerFail());
     expect(starts, ['start 16s', 'start 12s'],
@@ -327,24 +375,28 @@ Future<void> _waitUntil(
 }
 
 SessionController _buildController(AmbienceEngine ambience,
-    {BeepEngine? beep, String? coachTag}) {
+    {BeepEngine? beep, String? coachTag, Session? session}) {
   return SessionController(
-    session: const Session(
-      id: 'finish',
-      name: 'finish',
-      description: '',
-      durationSeconds: 13,
-      defaultMode: SessionMode.rhythm,
-      silentFinishStartTime: 4,
-      finalStepTime: 8,
-      steps: [
-        SessionStep(time: 0, mode: SessionMode.rhythm, bpm: 40, duration: 2),
-        SessionStep(time: 2, mode: SessionMode.rhythm, bpm: 60, duration: 2),
-        SessionStep(time: 4, mode: SessionMode.rhythm, bpm: 90, duration: 4),
-        SessionStep(time: 8, mode: SessionMode.hold, to: Position.full),
-        SessionStep(time: 11, mode: SessionMode.breath, duration: 2),
-      ],
-    ),
+    session: session ??
+        const Session(
+          id: 'finish',
+          name: 'finish',
+          description: '',
+          durationSeconds: 13,
+          defaultMode: SessionMode.rhythm,
+          silentFinishStartTime: 4,
+          finalStepTime: 8,
+          steps: [
+            SessionStep(
+                time: 0, mode: SessionMode.rhythm, bpm: 40, duration: 2),
+            SessionStep(
+                time: 2, mode: SessionMode.rhythm, bpm: 60, duration: 2),
+            SessionStep(
+                time: 4, mode: SessionMode.rhythm, bpm: 90, duration: 4),
+            SessionStep(time: 8, mode: SessionMode.hold, to: Position.full),
+            SessionStep(time: 11, mode: SessionMode.breath, duration: 2),
+          ],
+        ),
     tts: TtsService(),
     beep: beep ?? _SilentBeepEngine(),
     ambience: ambience,
