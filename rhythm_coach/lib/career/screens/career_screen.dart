@@ -1170,6 +1170,7 @@ class _CareerScreenState extends State<CareerScreen> {
           // Conserve la chauffe accumulée par la session précédente : on
           // « repart d'où on était » côté humiliation intra-session.
           seedHumiliationSession: previousSessionHumiliation,
+          keepsBackgroundTier: true,
           onRequestUpgrade: (ctrl) => _handleUpgrade(ctrl, bundle, level),
           onUseMeEnded: (ctrl) => _handleUseMeEnded(ctrl, bundle, level),
           onRequestEncore: !canChainEncore

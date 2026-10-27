@@ -120,6 +120,8 @@ class SessionScreen extends StatefulWidget {
 
   final double seedHumiliationSession;
 
+  final bool keepsBackgroundTier;
+
   final bool closeAppOnEnd;
 
   final AnatomyProfile? anatomy;
@@ -163,6 +165,7 @@ class SessionScreen extends StatefulWidget {
     this.miniPunishmentRate = 0.0,
     this.coachTag,
     this.seedHumiliationSession = 0.0,
+    this.keepsBackgroundTier = false,
     this.closeAppOnEnd = false,
     this.anatomy,
     this.hideTimerOverride = false,
@@ -202,6 +205,7 @@ class _SessionScreenState extends State<SessionScreen>
       miniPunishmentRate: widget.miniPunishmentRate,
       coachTag: widget.coachTag,
       seedHumiliationSession: widget.seedHumiliationSession,
+      keepsBackgroundTier: widget.keepsBackgroundTier,
       trackCapabilities: widget.isCareer,
       careerLevel: widget.careerLevel ?? 0,
       capabilityOverloadAxis: widget.capabilityOverloadAxis,

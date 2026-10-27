@@ -198,6 +198,7 @@ class SurpriseRouter {
         coachAdvancesTier: false,
         specialization: bundle.specialization,
         seedHumiliationSession: humiliationSession,
+        keepsBackgroundTier: replace,
         // « Merci » de fin = quitter directement l'app (au lieu de
         // revenir à l'écran précédent). La joueuse a été happée par une
         // notif, on la laisse retomber sur son téléphone.
