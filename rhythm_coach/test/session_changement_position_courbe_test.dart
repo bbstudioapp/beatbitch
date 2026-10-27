@@ -98,6 +98,7 @@ void main() {
     var avantGel = 0;
     var imagesGel = 0;
     var apres = 0;
+    var courbeSousGel = 0;
     final curseurSousGel = <(int, double)>[];
     await run.play((ctrl, sinceGel) {
       gel = ctrl.awaitingPostureReady;
@@ -112,6 +113,7 @@ void main() {
       }
       expect(ctrl.breakActive, isFalse);
       imagesGel++;
+      if (courbe) courbeSousGel++;
       final c = _curve(tester);
       if (courbe && c.isNotEmpty) {
         curseurSousGel.add((sinceGel.inMilliseconds, c.first.$2));
@@ -133,9 +135,9 @@ void main() {
             ' position');
     expect(apres, greaterThanOrEqualTo(10),
         reason: 'la courbe doit revenir une fois la joueuse en place');
-    expect(curseurSousGel.length, 0,
-        reason: 'courbe dessinée sur ${curseurSousGel.length} des $imagesGel'
-            ' images de changement de position, sur $bipsSousGel bip : '
+    expect(courbeSousGel, 0,
+        reason: 'courbe montée sur $courbeSousGel des $imagesGel images de'
+            ' changement de position, sur $bipsSousGel bip : '
             '${_describeCursor(curseurSousGel)}');
   }, timeout: const Timeout(Duration(seconds: 90)));
 
