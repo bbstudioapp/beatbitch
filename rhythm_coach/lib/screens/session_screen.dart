@@ -28,6 +28,7 @@ import '../widgets/debug_score_bar.dart';
 import '../controllers/session_controller.dart';
 import '../models/session.dart';
 import '../services/ambience_engine.dart';
+import '../services/backgrounds_service.dart';
 import '../services/badge_service.dart';
 import '../services/beep_engine.dart';
 import '../services/capability_axis.dart';
@@ -283,6 +284,7 @@ class _SessionScreenState extends State<SessionScreen>
     if (identical(_immersiveOwner, this)) {
       _immersiveOwner = null;
       unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
+      BackgroundsService.instance.clear();
     }
     super.dispose();
   }
