@@ -403,6 +403,50 @@ void main() {
     await ctrl.stop();
   }, timeout: const Timeout(Duration(seconds: 30)));
 
+  test(
+      'une mini-punition pendant la phrase de reprise ne laisse pas la '
+      "phrase suivante retenir l'effort au retour", () async {
+    final clock = Stopwatch();
+    installFakeTtsEngine(
+      completesUtterances: true,
+      utterance: const Duration(seconds: 3),
+    );
+    final beep = _RecordingBeepEngine(clock);
+    final ctrl = _buildController(
+      beep: beep,
+      phraseBank: _resumePhraseBank,
+      breaks: const [ScriptedBreak(time: 1, durationSeconds: 2)],
+      steps: const [
+        SessionStep(time: 0, mode: SessionMode.hold, to: Position.throat),
+        SessionStep(time: 3, mode: SessionMode.rhythm),
+      ],
+    );
+
+    clock.start();
+    await ctrl.start();
+    await Future<void>.delayed(const Duration(milliseconds: 4000));
+    await ctrl.debugRunMiniPunishment(const Punishment(
+      id: 'parle',
+      name: 'parle',
+      durationSeconds: 1,
+      steps: [
+        SessionStep(
+            time: 0, text: 'punition', mode: SessionMode.breath, duration: 1),
+      ],
+    ));
+    final backAt = clock.elapsedMilliseconds;
+    await Future<void>.delayed(const Duration(milliseconds: 1500));
+
+    final rhythm = beep.applied.where((a) => a.$2 == SessionMode.rhythm);
+    expect(rhythm, isNotEmpty);
+    expect(rhythm.first.$1, lessThan(backAt + 500),
+        reason: "la phrase de reprise jetée ne retient plus l'effort");
+
+    await ctrl.stop();
+    // Le faux moteur n'annule pas le `onComplete` de « punition » sur `stop`.
+    await Future<void>.delayed(const Duration(seconds: 1));
+  }, timeout: const Timeout(Duration(seconds: 30)));
+
   test('une phrase restée en attente est jetée quand le step final part',
       () async {
     final clock = Stopwatch();
