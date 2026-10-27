@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:beat_bitch/career/models/unlock_key.dart';
 import 'package:beat_bitch/controllers/session_controller.dart';
 import 'package:beat_bitch/l10n/app_localizations.dart';
