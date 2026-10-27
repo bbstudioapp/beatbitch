@@ -429,11 +429,6 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
 
   static const int _finishNowMinRemainingSeconds = 75;
 
-  final Set<int> _challengeActivePointers = <int>{};
-  static const int _challengeKeyboardPointerId = -1;
-  late final FocusNode _challengeFocus =
-      FocusNode(debugLabel: 'challenge-hold');
-
   bool _introPending = false;
 
   /// Résolu une seule fois : le resolver retire un surnom à chaque appel,
@@ -530,49 +525,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
     _prepTimer?.cancel();
     _lifecycleCtrl.removeListener(_onAppLifecycleChanged);
     _autoChainCtrl?.removeListener(_maybeAutoChain);
-    _challengeFocus.dispose();
     super.dispose();
-  }
-
-  void _handleChallengePointerDown(PointerDownEvent e) {
-    final ctrl = context.read<SessionController>();
-    if (!ctrl.isChallengeActive) return;
-    if (!ctrl.challengeUsesHoldInput) return;
-    _challengeActivePointers.add(e.pointer);
-    if (ctrl.challengePhase != ChallengePhase.breath) {
-      ctrl.onChallengeHoldStart();
-    }
-  }
-
-  void _handleChallengePointerUp(PointerEvent e) {
-    if (!_challengeActivePointers.remove(e.pointer)) return;
-    if (_challengeActivePointers.isEmpty) {
-      context.read<SessionController>().onChallengeHoldEnd();
-    }
-  }
-
-  KeyEventResult _handleChallengeKeyEvent(FocusNode node, KeyEvent e) {
-    if (e.logicalKey != LogicalKeyboardKey.space) {
-      return KeyEventResult.ignored;
-    }
-    final ctrl = context.read<SessionController>();
-    if (!ctrl.isChallengeActive) return KeyEventResult.ignored;
-    if (!ctrl.challengeUsesHoldInput) return KeyEventResult.ignored;
-    if (e is KeyDownEvent) {
-      if (_challengeActivePointers.add(_challengeKeyboardPointerId)) {
-        // Au clavier, espace arme aussi en `breath`.
-        ctrl.onChallengeHoldStart();
-      }
-      return KeyEventResult.handled;
-    }
-    if (e is KeyUpEvent) {
-      if (_challengeActivePointers.remove(_challengeKeyboardPointerId) &&
-          _challengeActivePointers.isEmpty) {
-        ctrl.onChallengeHoldEnd();
-      }
-      return KeyEventResult.handled;
-    }
-    return KeyEventResult.ignored;
   }
 
   void _maybeAutoChain() {
@@ -757,98 +710,84 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
         appBar: showRunning || inPrep
             ? null
             : AppBar(title: Text(ctrl.session.name)),
-        body: Focus(
-          focusNode: _challengeFocus,
-          autofocus: true,
-          onKeyEvent: _handleChallengeKeyEvent,
-          child: Listener(
-            behavior: HitTestBehavior.translucent,
-            onPointerDown: _handleChallengePointerDown,
-            onPointerUp: _handleChallengePointerUp,
-            onPointerCancel: _handleChallengePointerUp,
-            child: Stack(
-              children: [
-                Positioned.fill(
-                    child: SessionBackground(
-                  mediaEnabled: _showBackgroundMedia,
-                  bottomVeilOnly: showRunning,
-                )),
-                SafeArea(
-                  child: _introPending
-                      ? _IntroPanel(
-                          text: _resolvedIntroText!,
-                          pose: ctrl.initialPose,
-                          onReady: _onIntroReady,
-                          onReplay: _speakIntro,
-                        )
-                      : (inPrep
-                          ? _PrepCountdownPanel(seconds: _prepCountdown!)
-                          : (ctrl.isFinished
-                              ? (ctrl.hasPendingBadges
-                                  ? Stack(
-                                      children: [
-                                        Positioned.fill(
-                                          child: _buildRunningView(ctrl),
-                                        ),
-                                        Positioned.fill(
-                                          child: _FinishedOverlay(
-                                            endButtonLabel:
-                                                widget.endButtonLabel ??
-                                                    t.sessionFinishedDefaultEnd,
-                                            onThanks: ctrl.revealBadgeUnlocks,
-                                            onEncore: (widget.onRequestEncore ==
-                                                        null ||
-                                                    _finishNowDone)
-                                                ? null
-                                                : () => widget
-                                                    .onRequestEncore!(ctrl),
-                                            onSave: widget.canSave
-                                                ? () => _handleSave(ctrl)
-                                                : null,
-                                          ),
-                                        ),
-                                      ],
-                                    )
-                                  : _FinishedPanel(
-                                      badgeUnlocks: ctrl.sessionBadgeUnlocks,
-                                      milestoneUnlocks:
-                                          ctrl.sessionMilestoneUnlocks,
-                                      hasPendingBadges: false,
-                                      onRevealBadges: ctrl.revealBadgeUnlocks,
-                                      endButtonLabel: widget.endButtonLabel ??
-                                          t.sessionFinishedDefaultEnd,
-                                      onEnd: widget.closeAppOnEnd
-                                          ? SystemNavigator.pop
-                                          : () => Navigator.of(context).pop(),
-                                      onEncore: (widget.onRequestEncore ==
-                                                  null ||
-                                              _finishNowDone)
-                                          ? null
-                                          : () => widget.onRequestEncore!(ctrl),
-                                      onSave: widget.canSave
-                                          ? () => _handleSave(ctrl)
-                                          : null,
-                                      elapsedSeconds: ctrl.playedSeconds,
-                                    ))
-                              : SizedBox.expand(
-                                  child: _buildRunningView(ctrl)))),
-                ),
-                if (showRunning && ctrl.isPaused)
-                  Positioned.fill(
-                    child: _PausedOverlay(onResume: ctrl.resume),
-                  ),
-                // Ses résidus blancs masqueraient le texte blanc de
-                // `_FinishedPanel`.
-                if (!ctrl.isFinished || ctrl.hasPendingBadges)
-                  Positioned.fill(
-                    key: const ValueKey('session-finale'),
-                    child: SessionFinaleOverlay(
-                      active: ctrl.isRunning && ctrl.finaleChimeStarted,
-                    ),
-                  ),
-              ],
+        body: Stack(
+          children: [
+            Positioned.fill(
+                child: SessionBackground(
+              mediaEnabled: _showBackgroundMedia,
+              bottomVeilOnly: showRunning,
+            )),
+            SafeArea(
+              child: _introPending
+                  ? _IntroPanel(
+                      text: _resolvedIntroText!,
+                      pose: ctrl.initialPose,
+                      onReady: _onIntroReady,
+                      onReplay: _speakIntro,
+                    )
+                  : (inPrep
+                      ? _PrepCountdownPanel(seconds: _prepCountdown!)
+                      : (ctrl.isFinished
+                          ? (ctrl.hasPendingBadges
+                              ? Stack(
+                                  children: [
+                                    Positioned.fill(
+                                      child: _buildRunningView(ctrl),
+                                    ),
+                                    Positioned.fill(
+                                      child: _FinishedOverlay(
+                                        endButtonLabel: widget.endButtonLabel ??
+                                            t.sessionFinishedDefaultEnd,
+                                        onThanks: ctrl.revealBadgeUnlocks,
+                                        onEncore: (widget.onRequestEncore ==
+                                                    null ||
+                                                _finishNowDone)
+                                            ? null
+                                            : () =>
+                                                widget.onRequestEncore!(ctrl),
+                                        onSave: widget.canSave
+                                            ? () => _handleSave(ctrl)
+                                            : null,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : _FinishedPanel(
+                                  badgeUnlocks: ctrl.sessionBadgeUnlocks,
+                                  milestoneUnlocks:
+                                      ctrl.sessionMilestoneUnlocks,
+                                  hasPendingBadges: false,
+                                  onRevealBadges: ctrl.revealBadgeUnlocks,
+                                  endButtonLabel: widget.endButtonLabel ??
+                                      t.sessionFinishedDefaultEnd,
+                                  onEnd: widget.closeAppOnEnd
+                                      ? SystemNavigator.pop
+                                      : () => Navigator.of(context).pop(),
+                                  onEncore: (widget.onRequestEncore == null ||
+                                          _finishNowDone)
+                                      ? null
+                                      : () => widget.onRequestEncore!(ctrl),
+                                  onSave: widget.canSave
+                                      ? () => _handleSave(ctrl)
+                                      : null,
+                                  elapsedSeconds: ctrl.playedSeconds,
+                                ))
+                          : SizedBox.expand(child: _buildRunningView(ctrl)))),
             ),
-          ),
+            if (showRunning && ctrl.isPaused)
+              Positioned.fill(
+                child: _PausedOverlay(onResume: ctrl.resume),
+              ),
+            // Ses résidus blancs masqueraient le texte blanc de
+            // `_FinishedPanel`.
+            if (!ctrl.isFinished || ctrl.hasPendingBadges)
+              Positioned.fill(
+                key: const ValueKey('session-finale'),
+                child: SessionFinaleOverlay(
+                  active: ctrl.isRunning && ctrl.finaleChimeStarted,
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -1496,7 +1435,7 @@ class _ChallengeButtons extends StatelessWidget {
   static const Color _passColor = Color(0xFF757575);
   static const Color _goColor = Color(0xFFFFB300);
   static const Color _atSeuilColor = Color(0xFF4CAF50);
-  static const Color _toleranceColor = Color(0xFFEF5350);
+  static const Color _stopColor = Color(0xFFEF5350);
 
   final SessionController controller;
   const _ChallengeButtons({required this.controller});
@@ -1505,10 +1444,7 @@ class _ChallengeButtons extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final phase = controller.challengePhase;
-    final isTap =
-        controller.activeChallenge?.inputMode == ChallengeInputMode.tapToggle;
     if (phase == ChallengePhase.breath) {
-      // En mode tap, `onChallengeHoldEnd` n'est jamais recâblé derrière.
       return Row(
         children: [
           Expanded(
@@ -1521,75 +1457,38 @@ class _ChallengeButtons extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             flex: 2,
-            child: isTap
-                ? _tapButton(
-                    color: _goColor,
-                    label: t.challengeTapGoButton,
-                    onTap: controller.onChallengeHoldStart,
-                  )
-                : _holdButton(
-                    color: _goColor,
-                    label: t.challengeGoButton,
-                    onHoldStart: controller.onChallengeHoldStart,
-                    onHoldEnd: controller.onChallengeHoldEnd,
-                  ),
+            child: _tapButton(
+              color: _goColor,
+              label: t.challengeTapGoButton,
+              onTap: controller.onChallengeTapGo,
+            ),
           ),
         ],
       );
     }
-    // Ne pas taper = continuer : les extensions s'accumulent comme en tenant.
-    if (isTap) {
-      if (phase == ChallengePhase.countdown) {
-        return _tapButton(
-          color: _passColor,
-          label: t.challengeTapCountdownHint,
-          onTap: null,
-        );
-      }
-      if (phase == ChallengePhase.live) {
-        return _tapButton(
-          color: _toleranceColor,
-          label: t.challengeTapStopLive,
-          onTap: controller.onChallengeTapStop,
-        );
-      }
-      if (phase == ChallengePhase.atSeuil) {
-        return AnimatedBuilder(
-          animation: controller,
-          builder: (context, _) => _tapButton(
-            color: _atSeuilColor,
-            label: t.challengeTapStopAtSeuil,
-            onTap: controller.onChallengeTapStop,
-          ),
-        );
-      }
-      return const SizedBox.shrink();
+    // Ne pas taper = continuer : les extensions s'accumulent.
+    if (phase == ChallengePhase.countdown) {
+      return _tapButton(
+        color: _passColor,
+        label: t.challengeTapCountdownHint,
+        onTap: null,
+      );
     }
-    if (phase == ChallengePhase.countdown || phase == ChallengePhase.live) {
-      return AnimatedBuilder(
-        animation: controller,
-        builder: (context, _) {
-          final progress = controller.challengeReleaseToleranceProgress;
-          final color = progress <= 0
-              ? _goColor
-              : Color.lerp(_goColor, _toleranceColor, progress) ?? _goColor;
-          final label = progress <= 0
-              ? t.challengeHoldHintLive
-              : t.challengeHoldHintTolerance;
-          return _tapButton(color: color, label: label, onTap: null);
-        },
+    if (phase == ChallengePhase.live) {
+      return _tapButton(
+        color: _stopColor,
+        label: t.challengeTapStopLive,
+        onTap: controller.onChallengeTapStop,
       );
     }
     if (phase == ChallengePhase.atSeuil) {
       return AnimatedBuilder(
         animation: controller,
-        builder: (context, _) {
-          return _tapButton(
-            color: _atSeuilColor,
-            label: t.challengeHoldHintAtSeuil,
-            onTap: null,
-          );
-        },
+        builder: (context, _) => _tapButton(
+          color: _atSeuilColor,
+          label: t.challengeTapStopAtSeuil,
+          onTap: controller.onChallengeTapStop,
+        ),
       );
     }
     return const SizedBox.shrink();
@@ -1608,29 +1507,6 @@ class _ChallengeButtons extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: onTap,
-          child: _buttonContent(label),
-        ),
-      ),
-    );
-  }
-
-  /// `Listener` plutôt que `GestureDetector` : aucun délai de reconnaissance.
-  Widget _holdButton({
-    required Color color,
-    required String label,
-    required VoidCallback onHoldStart,
-    required VoidCallback onHoldEnd,
-  }) {
-    return SizedBox(
-      width: double.infinity,
-      child: Listener(
-        behavior: HitTestBehavior.opaque,
-        onPointerDown: (_) => onHoldStart(),
-        onPointerUp: (_) => onHoldEnd(),
-        onPointerCancel: (_) => onHoldEnd(),
-        child: Material(
-          color: color,
-          borderRadius: BorderRadius.circular(16),
           child: _buttonContent(label),
         ),
       ),

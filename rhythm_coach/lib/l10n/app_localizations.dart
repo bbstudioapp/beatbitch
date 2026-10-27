@@ -1224,30 +1224,6 @@ abstract class AppLocalizations {
   /// **'PASSE'**
   String get challengePassButton;
 
-  /// No description provided for @challengeGoButton.
-  ///
-  /// In fr, this message translates to:
-  /// **'MAINTIENS'**
-  String get challengeGoButton;
-
-  /// No description provided for @challengeHoldHintLive.
-  ///
-  /// In fr, this message translates to:
-  /// **'Garde le doigt sur l\'écran'**
-  String get challengeHoldHintLive;
-
-  /// No description provided for @challengeHoldHintAtSeuil.
-  ///
-  /// In fr, this message translates to:
-  /// **'Relâche pour arrêter, ou continue'**
-  String get challengeHoldHintAtSeuil;
-
-  /// No description provided for @challengeHoldHintTolerance.
-  ///
-  /// In fr, this message translates to:
-  /// **'Repose ton doigt'**
-  String get challengeHoldHintTolerance;
-
   /// No description provided for @challengeTapGoButton.
   ///
   /// In fr, this message translates to:
@@ -1272,12 +1248,6 @@ abstract class AppLocalizations {
   /// **'Prépare-toi…'**
   String get challengeTapCountdownHint;
 
-  /// No description provided for @challengeCountdownReleaseRetry.
-  ///
-  /// In fr, this message translates to:
-  /// **'Maintiens bien ton doigt cette fois.'**
-  String get challengeCountdownReleaseRetry;
-
   /// No description provided for @challengeBannerCountdown.
   ///
   /// In fr, this message translates to:
@@ -1287,32 +1257,20 @@ abstract class AppLocalizations {
   /// No description provided for @challengeAttemptDefault.
   ///
   /// In fr, this message translates to:
-  /// **'Défi : on va pousser ta limite. Maintiens MAINTIENS quand tu es prête, je compterai trois deux un avant de démarrer. Garde le doigt sur l\'écran tant que tu tiens.'**
+  /// **'Défi : on va pousser ta limite. Tape DÉMARRE quand tu es prête, je compte trois deux un. Tape J\'ABANDONNE si tu craques. Au seuil, tape JE M\'ARRÊTE pour valider, ou continue pour aller plus loin.'**
   String get challengeAttemptDefault;
 
   /// No description provided for @challengeAttemptTutorialHoldThroat.
   ///
   /// In fr, this message translates to:
-  /// **'Premier défi : tu vas tenir en gorge cinq secondes. Maintiens MAINTIENS, garde le doigt sur l\'écran. Si tu lâches avant le seuil, c\'est raté. Au seuil, le bouton devient vert : relâche pour arrêter, ou continue à tenir pour aller plus loin.'**
+  /// **'Premier défi : tu vas tenir en gorge cinq secondes. Tape DÉMARRE, je compte trois deux un, puis tiens sans toucher l\'écran. Si tu craques avant le seuil, tape J\'ABANDONNE. Au seuil, le bouton devient vert : tape JE M\'ARRÊTE pour valider, ou continue à tenir pour aller plus loin.'**
   String get challengeAttemptTutorialHoldThroat;
 
   /// No description provided for @challengeExtensionDefault.
   ///
   /// In fr, this message translates to:
-  /// **'Tu peux rester encore si tu veux, ou relâcher.'**
-  String get challengeExtensionDefault;
-
-  /// No description provided for @challengeAttemptTapDefault.
-  ///
-  /// In fr, this message translates to:
-  /// **'Défi : on va pousser ta limite. Tape DÉMARRE quand tu es prête, je compte trois deux un. Ensuite suis le rythme — tape J\'ABANDONNE si tu craques. Au seuil, tape JE M\'ARRÊTE pour valider, ou continue pour aller plus loin.'**
-  String get challengeAttemptTapDefault;
-
-  /// No description provided for @challengeExtensionTapDefault.
-  ///
-  /// In fr, this message translates to:
   /// **'Tu peux continuer si tu veux, ou tape JE M\'ARRÊTE.'**
-  String get challengeExtensionTapDefault;
+  String get challengeExtensionDefault;
 
   /// No description provided for @challengeSuccessDefault.
   ///

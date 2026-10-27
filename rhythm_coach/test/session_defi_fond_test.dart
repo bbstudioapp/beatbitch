@@ -82,7 +82,7 @@ void main() {
     await _waitUntil(() => ctrl.challengePhase == ChallengePhase.breath);
     expect(_fond(), 'fond-respire', reason: 'le déclencheur est un breath');
 
-    ctrl.onChallengeHoldStart();
+    ctrl.onChallengeTapGo();
     await _waitUntil(() => ctrl.challengePhase == ChallengePhase.live);
     expect(_fond(), 'fond-tenue',
         reason: 'le défi tient : fond du hold de la coach, pas le breath');
@@ -108,7 +108,7 @@ void main() {
     await _waitUntil(() => ctrl.challengePhase == ChallengePhase.breath);
     expect(_fond(), 'fond-respire');
 
-    ctrl.onChallengeHoldStart();
+    ctrl.onChallengeTapGo();
     await _waitUntil(() => ctrl.challengePhase == ChallengePhase.live);
     expect(_fond(), 'fond-defi');
 

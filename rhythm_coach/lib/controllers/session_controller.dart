@@ -219,16 +219,6 @@ class SessionController extends ChangeNotifier {
   /// En secondes `_realSec` (wallclock).
   int? _challengeAtSeuilStartedAtSec;
 
-  bool _challengeHoldActive = false;
-  bool get challengeHoldActive => _challengeHoldActive;
-
-  /// Seconde `_realSec` du décrochage du doigt ; `null` si le doigt est présent
-  /// ou hors phase dépendant du hold.
-  int? _challengeReleaseAtRealSec;
-
-  /// Le 1er release du countdown ramène en `breath`, le 2e vaut `skipped`.
-  int _challengeCountdownReleaseCount = 0;
-
   int _challengeExtensionsCount = 0;
 
   int _challengeCrossingsCount = 0;
@@ -1106,9 +1096,6 @@ class SessionController extends ChangeNotifier {
     _challengePhase = ChallengePhase.none;
     _challengeStepStartedAtSec = null;
     _challengeAtSeuilStartedAtSec = null;
-    _challengeHoldActive = false;
-    _challengeReleaseAtRealSec = null;
-    _challengeCountdownReleaseCount = 0;
     _challengeExtensionsCount = 0;
     _challengeOutcome = null;
     _challengeCurrentText = null;

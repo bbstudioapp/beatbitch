@@ -627,19 +627,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get challengePassButton => 'PASAR';
 
   @override
-  String get challengeGoButton => 'AGUANTAR';
-
-  @override
-  String get challengeHoldHintLive => 'Mantén el dedo en la pantalla';
-
-  @override
-  String get challengeHoldHintAtSeuil =>
-      'Suelta para parar, o sigue aguantando';
-
-  @override
-  String get challengeHoldHintTolerance => 'Vuelve a poner el dedo';
-
-  @override
   String get challengeTapGoButton => 'EMPIEZA';
 
   @override
@@ -652,31 +639,20 @@ class AppLocalizationsEs extends AppLocalizations {
   String get challengeTapCountdownHint => 'Prepárate…';
 
   @override
-  String get challengeCountdownReleaseRetry => 'Mantén el dedo esta vez.';
-
-  @override
   String challengeBannerCountdown(int digit) {
     return '$digit';
   }
 
   @override
   String get challengeAttemptDefault =>
-      'Reto: vamos a empujar tu límite. Mantén pulsado AGUANTAR cuando estés lista, contaré tres dos uno antes de empezar. Mantén el dedo en la pantalla mientras aguantes.';
+      'Reto: vamos a empujar tu límite. Pulsa EMPIEZA cuando estés lista, contaré tres dos uno. Pulsa ME RINDO si no puedes más. En el umbral, pulsa LO DEJO para validarlo, o sigue para llegar más lejos.';
 
   @override
   String get challengeAttemptTutorialHoldThroat =>
-      'Primer reto: aguantarás en profundo durante cinco segundos. Mantén pulsado AGUANTAR, no quites el dedo de la pantalla. Si sueltas antes del umbral, fallaste. En el umbral el botón se pone verde: suelta para parar, o sigue aguantando para empujar más allá.';
+      'Primer reto: aguantarás en profundo durante cinco segundos. Pulsa EMPIEZA, contaré tres dos uno, y luego aguanta sin tocar la pantalla. Si no puedes más antes del umbral, pulsa ME RINDO. En el umbral el botón se pone verde: pulsa LO DEJO para validarlo, o sigue aguantando para llegar más lejos.';
 
   @override
   String get challengeExtensionDefault =>
-      'Puedes quedarte más tiempo si quieres, o soltar.';
-
-  @override
-  String get challengeAttemptTapDefault =>
-      'Reto: vamos a empujar tu límite. Pulsa EMPIEZA cuando estés lista, contaré tres dos uno. Luego sigue el ritmo — pulsa ME RINDO si no puedes más. En el umbral, pulsa LO DEJO para validarlo, o sigue para llegar más lejos.';
-
-  @override
-  String get challengeExtensionTapDefault =>
       'Puedes seguir si quieres, o pulsa LO DEJO.';
 
   @override

@@ -118,7 +118,7 @@ void main() {
       expect(ctrl.isTimelineFrozen, isTrue,
           reason: "l'horloge de séance est gelée dès l'armement");
 
-      ctrl.onChallengeHoldStart();
+      ctrl.onChallengeTapGo();
       await _waitUntil(() => ctrl.challengePhase == ChallengePhase.live);
       expect(ctrl.challengePhase, ChallengePhase.live);
       expect(ctrl.isTimelineFrozen, isTrue,
@@ -160,7 +160,7 @@ void main() {
       await _waitUntil(() => ctrl.challengePhase == ChallengePhase.atSeuil,
           timeout: const Duration(seconds: 30));
       expect(ctrl.challengePhase, ChallengePhase.atSeuil);
-      ctrl.onChallengeHoldEnd();
+      ctrl.onChallengeTapStop();
 
       // Excision de la fenêtre défi : la trajectoire annoncée doit suivre la
       // mutation de `session.steps` sans attendre le dégel.

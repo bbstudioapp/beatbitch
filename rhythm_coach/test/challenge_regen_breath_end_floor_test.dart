@@ -139,10 +139,10 @@ Future<void> _playToEnd(SessionController ctrl) async {
   await ctrl.start();
   await _waitUntil(() => ctrl.challengePhase == ChallengePhase.breath);
   expect(ctrl.challengePhase, ChallengePhase.breath);
-  ctrl.onChallengeHoldStart();
+  ctrl.onChallengeTapGo();
   await _waitUntil(() => ctrl.challengePhase == ChallengePhase.atSeuil);
   expect(ctrl.challengePhase, ChallengePhase.atSeuil);
-  ctrl.onChallengeHoldEnd();
+  ctrl.onChallengeTapStop();
   await _waitUntil(() => ctrl.state == SessionState.finished,
       timeout: const Duration(seconds: 60));
   expect(ctrl.state, SessionState.finished);

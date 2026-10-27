@@ -626,18 +626,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get challengePassButton => 'PASSE';
 
   @override
-  String get challengeGoButton => 'MAINTIENS';
-
-  @override
-  String get challengeHoldHintLive => 'Garde le doigt sur l\'écran';
-
-  @override
-  String get challengeHoldHintAtSeuil => 'Relâche pour arrêter, ou continue';
-
-  @override
-  String get challengeHoldHintTolerance => 'Repose ton doigt';
-
-  @override
   String get challengeTapGoButton => 'DÉMARRE';
 
   @override
@@ -650,32 +638,20 @@ class AppLocalizationsFr extends AppLocalizations {
   String get challengeTapCountdownHint => 'Prépare-toi…';
 
   @override
-  String get challengeCountdownReleaseRetry =>
-      'Maintiens bien ton doigt cette fois.';
-
-  @override
   String challengeBannerCountdown(int digit) {
     return '$digit';
   }
 
   @override
   String get challengeAttemptDefault =>
-      'Défi : on va pousser ta limite. Maintiens MAINTIENS quand tu es prête, je compterai trois deux un avant de démarrer. Garde le doigt sur l\'écran tant que tu tiens.';
+      'Défi : on va pousser ta limite. Tape DÉMARRE quand tu es prête, je compte trois deux un. Tape J\'ABANDONNE si tu craques. Au seuil, tape JE M\'ARRÊTE pour valider, ou continue pour aller plus loin.';
 
   @override
   String get challengeAttemptTutorialHoldThroat =>
-      'Premier défi : tu vas tenir en gorge cinq secondes. Maintiens MAINTIENS, garde le doigt sur l\'écran. Si tu lâches avant le seuil, c\'est raté. Au seuil, le bouton devient vert : relâche pour arrêter, ou continue à tenir pour aller plus loin.';
+      'Premier défi : tu vas tenir en gorge cinq secondes. Tape DÉMARRE, je compte trois deux un, puis tiens sans toucher l\'écran. Si tu craques avant le seuil, tape J\'ABANDONNE. Au seuil, le bouton devient vert : tape JE M\'ARRÊTE pour valider, ou continue à tenir pour aller plus loin.';
 
   @override
   String get challengeExtensionDefault =>
-      'Tu peux rester encore si tu veux, ou relâcher.';
-
-  @override
-  String get challengeAttemptTapDefault =>
-      'Défi : on va pousser ta limite. Tape DÉMARRE quand tu es prête, je compte trois deux un. Ensuite suis le rythme — tape J\'ABANDONNE si tu craques. Au seuil, tape JE M\'ARRÊTE pour valider, ou continue pour aller plus loin.';
-
-  @override
-  String get challengeExtensionTapDefault =>
       'Tu peux continuer si tu veux, ou tape JE M\'ARRÊTE.';
 
   @override

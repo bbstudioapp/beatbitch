@@ -625,19 +625,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get challengePassButton => 'ÜBERSPR.';
 
   @override
-  String get challengeGoButton => 'HALTEN';
-
-  @override
-  String get challengeHoldHintLive => 'Lass deinen Finger auf dem Bildschirm';
-
-  @override
-  String get challengeHoldHintAtSeuil =>
-      'Loslassen zum Beenden, oder weiterhalten';
-
-  @override
-  String get challengeHoldHintTolerance => 'Leg deinen Finger zurück';
-
-  @override
   String get challengeTapGoButton => 'START';
 
   @override
@@ -650,31 +637,20 @@ class AppLocalizationsDe extends AppLocalizations {
   String get challengeTapCountdownHint => 'Mach dich bereit…';
 
   @override
-  String get challengeCountdownReleaseRetry => 'Halte deinen Finger diesmal.';
-
-  @override
   String challengeBannerCountdown(int digit) {
     return '$digit';
   }
 
   @override
   String get challengeAttemptDefault =>
-      'Herausforderung: Wir gehen an deine Grenze. Drücke und halte HALTEN wenn du bereit bist, ich zähle drei zwei eins vor dem Start. Lass deinen Finger auf dem Bildschirm, solange du hältst.';
+      'Herausforderung: Wir gehen an deine Grenze. Tippe START, wenn du bereit bist, ich zähle drei zwei eins. Tippe AUFGEBEN, wenn du schlappmachst. Am Schwellenwert tippe FERTIG zum Bestätigen, oder mach weiter, um weiter zu pushen.';
 
   @override
   String get challengeAttemptTutorialHoldThroat =>
-      'Erste Herausforderung: Du hältst tief fünf Sekunden. Drücke und halte HALTEN, lass deinen Finger auf dem Bildschirm. Wenn du vor dem Schwellenwert loslässt, ist es gescheitert. Am Schwellenwert wird die Taste grün: loslassen zum Beenden, oder weiterhalten um weiter zu pushen.';
+      'Erste Herausforderung: Du hältst tief fünf Sekunden. Tippe START, ich zähle drei zwei eins, dann hältst du, ohne den Bildschirm zu berühren. Wenn du vor dem Schwellenwert schlappmachst, tippe AUFGEBEN. Am Schwellenwert wird die Taste grün: tippe FERTIG zum Bestätigen, oder halte weiter, um weiter zu pushen.';
 
   @override
   String get challengeExtensionDefault =>
-      'Du kannst länger bleiben, wenn du willst, oder loslassen.';
-
-  @override
-  String get challengeAttemptTapDefault =>
-      'Herausforderung: Wir gehen an deine Grenze. Tippe START wenn du bereit bist, ich zähle drei zwei eins. Dann folge dem Rhythmus — tippe AUFGEBEN, wenn du schlappmachst. Am Schwellenwert tippe FERTIG zum Bestätigen, oder mach weiter um weiter zu pushen.';
-
-  @override
-  String get challengeExtensionTapDefault =>
       'Du kannst weitermachen, wenn du willst, oder tippe FERTIG.';
 
   @override

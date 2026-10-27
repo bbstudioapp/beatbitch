@@ -625,18 +625,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get challengePassButton => 'SKIP';
 
   @override
-  String get challengeGoButton => 'HOLD';
-
-  @override
-  String get challengeHoldHintLive => 'Keep your finger on the screen';
-
-  @override
-  String get challengeHoldHintAtSeuil => 'Release to stop, or keep holding';
-
-  @override
-  String get challengeHoldHintTolerance => 'Put your finger back';
-
-  @override
   String get challengeTapGoButton => 'START';
 
   @override
@@ -649,31 +637,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get challengeTapCountdownHint => 'Get ready…';
 
   @override
-  String get challengeCountdownReleaseRetry => 'Keep your finger this time.';
-
-  @override
   String challengeBannerCountdown(int digit) {
     return '$digit';
   }
 
   @override
   String get challengeAttemptDefault =>
-      'Challenge: we\'re pushing your limit. Press and hold HOLD when ready, I\'ll count three two one before we start. Keep your finger on the screen as long as you hold.';
+      'Challenge: we\'re pushing your limit. Tap START when you\'re ready, I\'ll count three two one. Tap GIVE UP if you crack. At the threshold, tap I\'M DONE to lock it in, or keep going to push further.';
 
   @override
   String get challengeAttemptTutorialHoldThroat =>
-      'First challenge: you\'ll hold deep for five seconds. Press and hold HOLD, keep your finger on the screen. If you let go before the threshold, it\'s failed. At the threshold the button turns green: release to stop, or keep holding to push further.';
+      'First challenge: you\'ll hold deep for five seconds. Tap START, I\'ll count three two one, then hold without touching the screen. If you crack before the threshold, tap GIVE UP. At the threshold the button turns green: tap I\'M DONE to lock it in, or keep holding to push further.';
 
   @override
   String get challengeExtensionDefault =>
-      'You can stay longer if you want, or let go.';
-
-  @override
-  String get challengeAttemptTapDefault =>
-      'Challenge: we\'re pushing your limit. Tap START when you\'re ready, I\'ll count three two one. Then follow the rhythm — tap GIVE UP if you crack. At the threshold, tap I\'M DONE to lock it in, or keep going to push further.';
-
-  @override
-  String get challengeExtensionTapDefault =>
       'You can keep going if you want, or tap I\'M DONE.';
 
   @override

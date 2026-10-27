@@ -49,58 +49,27 @@ enum ChallengeOutcome {
 
 /// Phase courante d'un défi en cours dans le `SessionController`. Pilote
 /// l'affichage des boutons et les annonces coach.
-///
-/// Gameplay hold-to-keep : le démarrage et la fin du défi sont pilotés
-/// par la présence du doigt (touch) ou de la touche espace (desktop) —
-/// cf. `SessionController.onChallengeHoldStart/End`.
 enum ChallengePhase {
   /// Pas de défi actif (état par défaut).
   none,
 
-  /// Breath du défi — annonce coach + boutons `PASSE` (tap) et `GO`
-  /// (hold-to-start) visibles. La joueuse maintient `GO` pour démarrer
-  /// le countdown 3-2-1, ou tape `PASSE` pour skipper.
+  /// Breath du défi — annonce coach + boutons `PASSE` et `DÉMARRE`.
   breath,
 
-  /// Compte à rebours 3-2-1 (TTS + gros chiffre dans le banner). Le
-  /// doigt doit rester présent ; un release déclenche la tolérance puis
-  /// retour `breath` (1ère fois) ou skip (2e fois). À la fin, transition
-  /// automatique vers `live`.
+  /// Compte à rebours 3-2-1 (TTS + gros chiffre dans le banner), puis
+  /// transition automatique vers `live`.
   countdown,
 
-  /// Défi en cours, doigt présent. La perte du doigt arme la tolérance
-  /// de release ; si la tolérance expire = fail.
+  /// Défi en cours ; `J'ABANDONNE` = fail.
   live,
 
-  /// Seuil atteint — le bouton change de couleur, le coach annonce que
-  /// la joueuse peut relâcher ou continuer. Maintenir au-delà = +1
-  /// extension par tranche `extensionSeconds`. Release = succès net ou
-  /// étendu selon le nombre d'extensions accumulées.
+  /// Seuil atteint — le bouton change de couleur. Laisser tourner = +1
+  /// extension par tranche `extensionSeconds` ; `JE M'ARRÊTE` = succès net
+  /// ou étendu selon le nombre d'extensions accumulées.
   atSeuil,
 
   /// Défi terminé, outcome déjà appliqué.
   ended,
-}
-
-/// Mode d'input live d'un défi — détermine le geste qui pilote la machine
-/// d'états pendant `countdown`/`live`/`atSeuil`.
-///
-/// Dérivé du mode du step défi (cf. `Challenge.inputMode`), pas stocké : la
-/// ligne de partage « statique → hold, dynamique → tap » coïncide exactement
-/// avec « mode hold vs autre mode ».
-enum ChallengeInputMode {
-  /// Le doigt reste présent sur l'écran toute la durée — geste congruent aux
-  /// holds statiques (la joueuse est déjà immobile). Le relâchement EST le
-  /// signal d'abandon (fail en `live`) ou de validation (succès en `atSeuil`).
-  /// C'est le mode historique.
-  hold,
-
-  /// Tap `GO` pour démarrer (après le countdown le défi tourne sur sa propre
-  /// horloge, sans présence du doigt), tap `STOP` plein largeur pour abandonner
-  /// en `live` ou valider en `atSeuil`. Pour les défis dynamiques/longs
-  /// (rythme, franchissement, biffle, endurance) où pinner le doigt entre en
-  /// compétition avec l'acte physique.
-  tapToggle,
 }
 
 /// Défi intra-séance immuable, généré par `ChallengeService` à partir du
@@ -238,14 +207,6 @@ class Challenge {
   /// Clé d'axe utilisée pour lookup dans `challengePhrases` côté coach
   /// (cf. `Coach.pickChallengePhrase`).
   String get axisStorageKey => axis.storageKey;
-
-  /// Mode d'input live (cf. [ChallengeInputMode]). Dérivé du [mode] : les
-  /// holds statiques gardent la tenue du doigt ; tout le reste (rythme,
-  /// biffle, franchissement, endurance) passe en tap `GO`/`STOP`, où la tenue
-  /// continue serait ergonomiquement coûteuse pendant un acte rapide.
-  ChallengeInputMode get inputMode => mode == SessionMode.hold
-      ? ChallengeInputMode.hold
-      : ChallengeInputMode.tapToggle;
 
   /// Durée d'une prolongation « tient encore » en mode ouvert.
   /// Plancher 10 s, sinon `comfort × 0.30`. En exploratoire (`comfort`
