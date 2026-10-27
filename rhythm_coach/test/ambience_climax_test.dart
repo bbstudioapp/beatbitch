@@ -146,7 +146,7 @@ class _ClimaxCounter extends AmbienceEngine {
   @override
   Future<void> dispose() async {}
   @override
-  Future<void> startFinishMusic(Duration untilPeak) async {}
+  Future<void> startFinishMusic(Duration untilPeak, FinishTrack track) async {}
   @override
   Future<void> fadeOutFinishMusic(
       {Duration duration = const Duration(seconds: 3)}) async {}

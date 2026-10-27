@@ -184,6 +184,7 @@ class SessionController extends ChangeNotifier {
   bool _finaleChimeStarted = false;
 
   bool _finishMusicStarted = false;
+  FinishTrack _finishTrack = AmbienceEngine.commonFinishTrack;
 
   // ─── État du flow fail ─────────────────────────────────────────────────
 
@@ -916,6 +917,10 @@ class SessionController extends ChangeNotifier {
         debugPrint('start(): _beep.init() a échoué (non bloquant) : $e');
       }
       if (_released) return;
+      _finishTrack = await _ambience.finishTrackFor(_coachTag).timeout(
+          const Duration(seconds: 2),
+          onTimeout: () => AmbienceEngine.commonFinishTrack);
+      if (_released) return;
       final music = _music;
       final track = _session.music;
       if (music != null && track != null) {
@@ -1479,13 +1484,13 @@ class SessionController extends ChangeNotifier {
       unawaited(_ambience.fadeOutFinishMusic());
       return;
     }
-    final peak = AmbienceEngine.finishMusicPeak.inSeconds;
+    final peak = _finishTrack.peak.inSeconds;
     if (_finishMusicStarted || step.time < max(finishStart, finalT - peak)) {
       return;
     }
     _finishMusicStarted = true;
-    unawaited(
-        _ambience.startFinishMusic(Duration(seconds: finalT - step.time)));
+    unawaited(_ambience.startFinishMusic(
+        Duration(seconds: finalT - step.time), _finishTrack));
   }
 
   /// Prononce la plus ancienne phrase en attente dès que la voix se libère.
