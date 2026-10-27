@@ -923,7 +923,9 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                           TimerDisplay(
                               elapsed: ctrl.elapsed,
                               total: ctrl.session.duration)
-                        else if (ctrl.hasConfig && !ctrl.breakActive)
+                        else if (ctrl.hasConfig &&
+                            !ctrl.breakActive &&
+                            !ctrl.awaitingPostureReady)
                           MovementAnimation(
                             mode: ctrl.currentMode,
                             from: ctrl.currentFrom,
@@ -999,7 +1001,8 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                                   _ChallengeBanner(controller: ctrl),
                                   SizedBox(height: showBar ? 6 : 10),
                                   _ChallengeButtons(controller: ctrl),
-                                ] else
+                                ] else if (ctrl.breakActive ||
+                                    !ctrl.awaitingPostureReady)
                                   _buildActionRow(ctrl, compact: compact),
                                 if (_showSkipSessionButton &&
                                     (ctrl.isRunning || ctrl.isPaused)) ...[

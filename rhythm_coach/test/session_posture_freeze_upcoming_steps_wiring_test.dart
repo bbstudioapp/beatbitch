@@ -138,6 +138,9 @@ void main() {
     var framesDefiActif = 0;
     var miseEnPlaceConfirmee = false;
     final annoncesSousGel = <String>[];
+    final ctrl = Provider.of<SessionController>(
+        tester.element(find.byType(MovementAnimation)),
+        listen: false);
 
     final fin = DateTime.now().add(const Duration(seconds: 30));
     while (DateTime.now().isBefore(fin)) {
@@ -146,21 +149,20 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       final anims = find.byType(MovementAnimation, skipOffstage: false);
-      if (anims.evaluate().isEmpty) continue;
-      final anim = tester.widget<MovementAnimation>(anims.first);
-      final ctrl = Provider.of<SessionController>(tester.element(anims.first),
-          listen: false);
+      final anim = anims.evaluate().isEmpty
+          ? null
+          : tester.widget<MovementAnimation>(anims.first);
 
       if (ctrl.isChallengeActive) framesDefiActif++;
 
       if (ctrl.awaitingPostureReady) {
         gelPosture++;
-        if (anim.upcomingSteps.isNotEmpty) {
+        if (anim != null && anim.upcomingSteps.isNotEmpty) {
           annoncesSousGel.add('horloge à ${anim.elapsed.inMilliseconds} ms : '
               '${anim.upcomingSteps.length} instants annoncés, le premier à '
               '${anim.upcomingSteps.first.startSecond} s');
         }
-      } else if (anim.upcomingSteps.isNotEmpty) {
+      } else if (anim != null && anim.upcomingSteps.isNotEmpty) {
         horsGelAnnonce++;
         if (miseEnPlaceConfirmee) horsGelApresMiseEnPlace++;
       }
