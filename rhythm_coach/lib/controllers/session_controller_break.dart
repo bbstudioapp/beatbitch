@@ -24,6 +24,7 @@ extension BreakSequencer on SessionController {
   /// prochain break, énoncé des ordres espacés en cours, sortie à
   /// `break.endTime`. No-op si la session n'a pas de break.
   void _updateBreakPhase() {
+    _waitForResumePhrase();
     final breaks = _session.breaks;
     if (breaks.isEmpty) return;
     final now = elapsedSeconds;
@@ -138,24 +139,36 @@ extension BreakSequencer on SessionController {
           1);
 
   /// Sortie d'un break : énonce la phrase de reprise et relâche
-  /// `_breakActive`. Le beep n'est PAS restauré ici : `_checkSteps` (appelé
-  /// juste après dans `_onTick`) applique le step d'effort que le générateur
-  /// a posé à `break.endTime`, ce qui reconfigure et relance le loop à
-  /// l'heure ; sa propre phrase attend la fin de la phrase de reprise.
+  /// `_breakActive`. Le beep n'est PAS restauré ici : `_checkSteps` applique
+  /// le step d'effort que le générateur a posé à `break.endTime` une fois la
+  /// phrase de reprise dite, l'horloge de séance gelée d'ici là.
   void _exitBreak() {
     _breakActive = false;
     _activeBreak = null;
     final resume = _phraseBank?.pickBreakResume(_random);
-    if (resume != null) _speakScripted(resume);
+    if (resume != null) {
+      final speech = _speakScripted(resume);
+      _resumeSpeech = speech;
+      _resumeTicks = 0;
+      speech.whenComplete(() {
+        if (identical(_resumeSpeech, speech)) _resumeSpeech = null;
+      });
+    }
     _notify();
   }
 
-  /// Met à jour `_currentPose` quand la fenêtre d'une **milestone posture**
-  /// est active : la séquence enseigne la pose (« mets-toi à
-  /// genoux… ») et l'`unlock` la débloque, mais rien ne posait la pose sur
-  /// l'écran de jeu. On la fixe dès l'entrée dans la fenêtre — et on la
-  /// **garde** ensuite (le script dit « reste à genoux »), comme un break qui
-  /// impose une pose durable. Appelée dans `_onTick` après `_updateBreakPhase`
+  void _waitForResumePhrase() {
+    final ticks = _resumeTicks;
+    if (ticks == null) return;
+    // flutter_tts (Android) ne répond jamais au `speak` d'un énoncé
+    // interrompu : passé son début, seul `isSpeaking` fait foi.
+    if (_tts.isSpeaking) _resumeSpeech = null;
+    _resumeTicks = _awaitingResumePhrase ? ticks + 1 : null;
+  }
+
+  /// Pose enseignée par une **milestone posture**, fixée dès l'entrée dans sa
+  /// fenêtre et **gardée** ensuite (le script dit « reste à genoux »), comme
+  /// un break qui impose une pose durable. Appelée dans `_onTick` après `_updateBreakPhase`
   /// (fenêtres disjointes) et avant `_checkSteps`.
   void _updateMilestonePose() {
     final id = currentMilestoneIdInWindow;
