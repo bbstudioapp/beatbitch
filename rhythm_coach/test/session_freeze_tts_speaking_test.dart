@@ -487,6 +487,52 @@ void main() {
     await ctrl.stop();
   }, timeout: const Timeout(Duration(seconds: 30)));
 
+  test(
+      'un gel de consigne coupé par Stop ne revit pas quand la même séance '
+      'repart', () async {
+    final clock = Stopwatch();
+    installFakeTtsEngine(
+      completesUtterances: true,
+      utterance: const Duration(seconds: 3),
+    );
+    final beep = _RecordingBeepEngine(clock);
+    final ctrl = _buildController(
+      beep: beep,
+      steps: const [
+        SessionStep(time: 0, text: 'un', mode: SessionMode.rhythm),
+        SessionStep(
+            time: 1,
+            text: 'à genoux',
+            mode: SessionMode.hold,
+            to: Position.throat,
+            awaitReady: true),
+        SessionStep(time: 1, text: 'trois', mode: SessionMode.rhythm),
+      ],
+    );
+
+    clock.start();
+    await ctrl.start();
+    await Future<void>.delayed(const Duration(milliseconds: 1600));
+    expect(ctrl.isTimelineFrozen, isTrue);
+    await ctrl.stop();
+
+    installFakeTtsEngine(completesUtterances: true);
+    await ctrl.start();
+    await Future<void>.delayed(const Duration(milliseconds: 1600));
+    expect(ctrl.awaitingPostureReady, isTrue);
+    ctrl.confirmPostureReady();
+    final confirmedAt = clock.elapsedMilliseconds;
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+
+    expect(
+        beep.applied
+            .where((a) => a.$1 >= confirmedAt && a.$2 == SessionMode.rhythm),
+        isNotEmpty,
+        reason: "l'effort repart après la mise en place");
+
+    await ctrl.stop();
+  }, timeout: const Timeout(Duration(seconds: 30)));
+
   test('un canal TTS qui ne répond plus n\'empêche plus la bascule en pause',
       () async {
     installMuteStopTtsEngine();
