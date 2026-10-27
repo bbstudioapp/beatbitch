@@ -394,8 +394,7 @@ class SessionController extends ChangeNotifier {
 
   final double _miniPunishmentRate;
 
-  /// Slug du coach actif (extrait de l'`id` `coach_NN_<slug>` par le caller) ;
-  /// `null` = aucun fond `_<coach>` ne matche.
+  /// `null` : séance sans coach.
   final String? _coachTag;
 
   int _miniPunishmentTickAccumulator = 0;
@@ -1474,8 +1473,6 @@ class SessionController extends ChangeNotifier {
     }
   }
 
-  /// Musique de finish : démarre pendant la montée de façon que son sommet
-  /// tombe sur le final, s'éteint au premier step du post-final.
   void _updateFinishMusic(SessionStep step) {
     final finalT = session.finalStepTime;
     final finishStart = session.silentFinishStartTime;

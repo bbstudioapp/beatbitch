@@ -33,8 +33,6 @@ class AmbienceEngine {
   static const FinishTrack commonFinishTrack =
       (asset: 'audio/music/finish_music.mp3', peak: Duration(seconds: 92));
 
-  /// Clé : slug de la coach. Noms de fichier attendus : `README.md` de
-  /// `assets/audio/music/`.
   static const Map<String, FinishTrack> coachFinishTracks = {};
 
   static const double _finishMusicVolume = 0.35;
@@ -255,7 +253,6 @@ class AmbienceEngine {
     }
   }
 
-  /// Le morceau de la coach s'il est dans le bundle, sinon le commun.
   Future<FinishTrack> finishTrackFor(String? coachTag) async {
     final track = _finishTracksByCoach[coachTag];
     if (track == null || !await _isAssetBundled('assets/${track.asset}')) {
