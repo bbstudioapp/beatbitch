@@ -30,7 +30,7 @@ class AmbienceEngine {
 
   /// Instant du fichier où la musique de finish atteint son sommet, calé sur
   /// le début du final.
-  static const Duration finishMusicPeak = Duration(seconds: 70);
+  static const Duration finishMusicPeak = Duration(seconds: 92);
 
   static const double _finishMusicVolume = 0.35;
 
