@@ -14,7 +14,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// L'intro et le décompte de la séance jouent le fond `intro` de la coach.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 

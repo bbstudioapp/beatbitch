@@ -42,15 +42,6 @@ class _SurpriseBundle {
   });
 }
 
-/// Lance une session courte « surprise » sur tap d'une notification.
-/// Replique condensée du flow `_CareerScreenState._start` : charge les
-/// persistances carrière, génère via `CareerSessionGenerator(quickie: true,
-/// durationSeconds: random 60-240)`, push `SessionScreen` avec
-/// démarrage auto.
-///
-/// La session est traitée comme une « bâclée » côté stats (alimente le
-/// badge VideCouilles), mais avec `coachAdvancesTier: false` pour ne pas
-/// faire progresser le coach via cette voie ponctuelle.
 class SurpriseRouter {
   SurpriseRouter._();
 
@@ -96,12 +87,7 @@ class SurpriseRouter {
 
     await coachService.syncFromTotalSeconds(totalSeconds);
 
-    // Phase 19.12 : plus de gate hand par niveau — respecte le choix
-    // persisté de la joueuse.
     final includeHand = persistedIncludeHand;
-    // SynthLevel proxy pour le générateur (Custom path : pas de
-    // `lengthChoice` ni `sessionsCompleted` passé, on retombe sur
-    // `resolve(level)` legacy).
     final synthLevel = CareerDifficultyResolver.synthLevelFor(sessions);
 
     final bundle = _SurpriseBundle(
@@ -153,8 +139,6 @@ class SurpriseRouter {
       level: bundle.synthLevel,
       bank: coachBank,
       includeHand: bundle.includeHand,
-      // quickie=true : intensityFloor 0.65, intro raccourcie, pas de
-      // pré-finition. Cohérent avec le ton « réveil rapide ».
       quickie: true,
       specialization: bundle.specialization,
       humiliationCareer: humiliationCareer,
@@ -194,14 +178,10 @@ class SurpriseRouter {
         autoStart: true,
         holdVerifier: verifier,
         canSave: false,
-        // Pas de progression de coach via une session surprise.
         coachAdvancesTier: false,
         specialization: bundle.specialization,
         seedHumiliationSession: humiliationSession,
         keepsBackgroundTier: replace,
-        // « Merci » de fin = quitter directement l'app (au lieu de
-        // revenir à l'écran précédent). La joueuse a été happée par une
-        // notif, on la laisse retomber sur son téléphone.
         closeAppOnEnd: true,
         onRequestEncore: !canEncore
             ? null
@@ -287,9 +267,6 @@ class SurpriseRouter {
     );
   }
 
-  /// Liste des bodies localisés à passer à `SurpriseAlertService.arm()`.
-  /// Centralisé ici pour pouvoir étendre facilement (ajouter une 4e
-  /// variante : ajouter une clé ARB et l'inclure ici).
   static List<String> resolveBodyVariants(AppLocalizations t) {
     return [
       t.surpriseNotifBody1,
