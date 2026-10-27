@@ -367,6 +367,42 @@ void main() {
     await ctrl.stop();
   }, timeout: const Timeout(Duration(seconds: 30)));
 
+  test(
+      'une mise en pause pendant la phrase de reprise ne relance pas la '
+      "config d'avant la pause scénarisée au retour", () async {
+    final clock = Stopwatch();
+    installFakeTtsEngine(
+      completesUtterances: true,
+      utterance: const Duration(seconds: 3),
+      repliesAtCompletion: true,
+    );
+    final beep = _RecordingBeepEngine(clock);
+    final ctrl = _buildController(
+      beep: beep,
+      phraseBank: _resumePhraseBank,
+      breaks: const [ScriptedBreak(time: 1, durationSeconds: 2)],
+      steps: const [
+        SessionStep(time: 0, mode: SessionMode.hold, to: Position.throat),
+        SessionStep(time: 3, mode: SessionMode.rhythm),
+      ],
+    );
+
+    clock.start();
+    await ctrl.start();
+    await Future<void>.delayed(const Duration(milliseconds: 4000));
+    await ctrl.pause();
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    await ctrl.resume();
+    await Future<void>.delayed(const Duration(milliseconds: 1500));
+
+    expect(beep.applied.where((a) => a.$2 == SessionMode.rhythm), isNotEmpty);
+    expect(beep.resumed, isEmpty,
+        reason: "l'effort n'est pas encore posé : la tenue d'avant la pause "
+            'scénarisée ne repart pas');
+
+    await ctrl.stop();
+  }, timeout: const Timeout(Duration(seconds: 30)));
+
   test('une phrase restée en attente est jetée quand le step final part',
       () async {
     final clock = Stopwatch();
@@ -877,10 +913,16 @@ class _RecordingBeepEngine extends _SilentBeepEngine {
 
   final Stopwatch clock;
   final applied = <(int, SessionMode)>[];
+  final resumed = <int>[];
 
   @override
   Future<void> applyStep(SessionStep step, SessionMode sessionMode) async {
     applied.add((clock.elapsedMilliseconds, step.mode ?? sessionMode));
+  }
+
+  @override
+  Future<void> resume() async {
+    resumed.add(clock.elapsedMilliseconds);
   }
 }
 
