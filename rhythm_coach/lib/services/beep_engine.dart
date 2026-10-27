@@ -58,7 +58,7 @@ class BeepEngine {
   ];
 
   static const double _rhythmVolume = 1.0;
-  static const double _lickVolume = 1.0;
+  static const double _lickVolume = 0.5;
   static const double _handVolume = 0.85;
   static const double _holdLayerVolume = 0.9;
   static const double _breathVolume = 0.9;
@@ -778,11 +778,10 @@ class BeepEngine {
               DateTime.now().millisecondsSinceEpoch);
       _loopTimer = Timer(Duration(milliseconds: delayMs), () {
         if (myGen != _loopGen) return;
-        _trigger(
-            frames[i].tongue
-                ? _lickAssetForPosition(frames[i].beep!)
-                : _assetForPosition(frames[i].beep!),
-            _rhythmVolume * frames[i].volume);
+        final (asset, volume) = frames[i].tongue
+            ? (_lickAssetForPosition(frames[i].beep!), _lickVolume)
+            : (_assetForPosition(frames[i].beep!), _rhythmVolume);
+        _trigger(asset, volume * frames[i].volume);
         scheduleFrom(i + 1);
       });
     }

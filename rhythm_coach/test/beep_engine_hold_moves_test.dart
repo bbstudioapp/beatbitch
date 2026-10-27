@@ -141,6 +141,6 @@ void main() {
     for (var i = 0; i < licks.length; i++) {
       expect(licks[i].$3, closeTo(expected[i], 40));
     }
-    expect(licks.map((l) => l.$2).toSet(), hasLength(1));
+    expect(licks.map((l) => l.$2).toSet(), {0.5});
   });
 }

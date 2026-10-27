@@ -229,7 +229,7 @@ void main() {
         expect(volumes, isNotEmpty);
         expect(volumes.every((v) => v <= _music.beepGain + 1e-9), isTrue,
             reason: 'aucun bip plus fort que le gain de la séance');
-        expect(volumes.last, closeTo(1.0 * _music.beepGain, 1e-9));
+        expect(volumes.last, closeTo(0.5 * _music.beepGain, 1e-9));
       });
     });
 
