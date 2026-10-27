@@ -1001,7 +1001,7 @@ class _SessionScreenContentState extends State<_SessionScreenContent> {
                                   _ChallengeBanner(controller: ctrl),
                                   SizedBox(height: showBar ? 6 : 10),
                                   _ChallengeButtons(controller: ctrl),
-                                ] else if (ctrl.breakActive ||
+                                ] else if (!ctrl.breakActive &&
                                     !ctrl.awaitingPostureReady)
                                   _buildActionRow(ctrl, compact: compact),
                                 if (_showSkipSessionButton &&
