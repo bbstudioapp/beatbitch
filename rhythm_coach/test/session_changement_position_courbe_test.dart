@@ -191,36 +191,65 @@ void main() {
             '${visiblesSousGel.take(4).join(', ')}');
   }, timeout: const Timeout(Duration(seconds: 90)));
 
-  testWidgets(
-      'pause qui change la position : les deux boutons restent affichés '
-      'pendant la mise en place', (tester) async {
-    final run = await _mount(tester, _breakSession, _StateBeepEngine());
-    run.ctrl.debugAddPlayed(SessionController.useMeUnlockAfter);
+  for (final (titre, session) in [
+    ('pause qui change la position', _breakSession),
+    ('pause sans changement de position', _plainBreakSession),
+  ]) {
+    testWidgets(
+        '$titre : ni « UTILISE-MOI » ni « JE PEUX PAS » pendant la pause, ils '
+        'reviennent ensuite', (tester) async {
+      final run = await _mount(tester, session, _StateBeepEngine());
+      run.ctrl.debugAddPlayed(SessionController.useMeUnlockAfter);
 
-    var imagesPause = 0;
-    final absents = <String>[];
-    await run.play((ctrl, sinceGel) {
-      if (sinceGel == null) return false;
-      if (!ctrl.breakActive || !ctrl.awaitingPostureReady) return true;
-      imagesPause++;
-      for (final (nom, f) in [
-        ('JE PEUX PAS', failButton),
-        ('UTILISE-MOI', useMeButton),
-      ]) {
-        if (f.evaluate().isEmpty) {
-          absents.add('$nom à ${sinceGel.inMilliseconds} ms');
+      var avant = 0;
+      var imagesPause = 0;
+      var apres = 0;
+      var pauseVue = false;
+      final visiblesEnPause = <String>[];
+      await run.play((ctrl, _) {
+        final boutons = failButton.evaluate().isNotEmpty &&
+            useMeButton.evaluate().isNotEmpty;
+        if (ctrl.breakActive) {
+          pauseVue = true;
+          imagesPause++;
+          for (final (nom, f) in [
+            ('JE PEUX PAS', failButton),
+            ('UTILISE-MOI', useMeButton),
+          ]) {
+            if (f.evaluate().isNotEmpty) {
+              visiblesEnPause.add('$nom image n° $imagesPause');
+            }
+          }
+          if (ctrl.awaitingPostureReady && imagesPause >= 20) {
+            ctrl.confirmPostureReady();
+          }
+          return false;
         }
-      }
-      return imagesPause >= 15;
-    });
+        if (!pauseVue) {
+          if (boutons) avant++;
+          return false;
+        }
+        if (ctrl.awaitingPostureReady) {
+          ctrl.confirmPostureReady();
+          return false;
+        }
+        if (boutons) apres++;
+        return apres >= 5;
+      });
 
-    expect(imagesPause, greaterThanOrEqualTo(15),
-        reason: "le scénario n'est jamais entré dans une pause qui attend la"
-            ' mise en place');
-    expect(absents, isEmpty,
-        reason: '${absents.length} boutons absents sur $imagesPause images de'
-            ' pause : ${absents.take(4).join(', ')}');
-  }, timeout: const Timeout(Duration(seconds: 90)));
+      expect(avant, greaterThanOrEqualTo(3),
+          reason: 'les deux boutons doivent être affichés avant la pause :'
+              ' sans eux, leur absence en pause ne prouverait rien');
+      expect(imagesPause, greaterThanOrEqualTo(15),
+          reason: "le scénario n'est jamais entré en pause");
+      expect(apres, greaterThanOrEqualTo(5),
+          reason: 'les deux boutons doivent revenir après la pause');
+      expect(visiblesEnPause, isEmpty,
+          reason: '${visiblesEnPause.length} boutons affichés sur'
+              ' $imagesPause images de pause : '
+              '${visiblesEnPause.take(4).join(', ')}');
+    }, timeout: const Timeout(Duration(seconds: 90)));
+  }
 }
 
 String _describeCursor(List<(int, double)> samples) {
@@ -368,6 +397,26 @@ const _breakSession = Session(
       from: Position.head,
       to: Position.throat,
       duration: 48,
+    ),
+  ],
+);
+
+const _plainBreakSession = Session(
+  id: 'pause-sans-position',
+  name: 'pause-sans-position',
+  description: '',
+  durationSeconds: 60,
+  defaultMode: SessionMode.rhythm,
+  breaks: [ScriptedBreak(time: 2, durationSeconds: 4)],
+  steps: [
+    _rhythm,
+    SessionStep(
+      time: 6,
+      mode: SessionMode.rhythm,
+      bpm: 60,
+      from: Position.head,
+      to: Position.throat,
+      duration: 54,
     ),
   ],
 );
