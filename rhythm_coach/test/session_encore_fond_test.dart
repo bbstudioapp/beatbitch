@@ -74,36 +74,49 @@ void main() {
     }
   });
 
-  SessionScreen screen({bool encore = false}) => SessionScreen(
-        session: const Session(
-          id: 'tenue',
-          name: 'tenue',
-          description: '',
-          durationSeconds: 30,
-          defaultMode: SessionMode.hold,
-          steps: [
-            SessionStep(
-                time: 0,
-                mode: SessionMode.hold,
-                to: Position.throat,
-                duration: 30),
-          ],
-        ),
-        tts: TtsService(),
-        beep: _SilentBeepEngine(),
-        ambience: _SilentAmbienceEngine(),
-        punishmentBundle:
-            const PunishmentBundle(failPhrases: [], punishments: []),
-        randomComments: const RandomCommentsBundle(
-          comments: [],
-          minIntervalSeconds: 999,
-          maxIntervalSeconds: 999,
-          scriptedCooldownSeconds: 4,
-        ),
-        autoStart: true,
-        coachTag: 'lina',
-        keepsBackgroundTier: encore,
-      );
+  const tenue = Session(
+    id: 'tenue',
+    name: 'tenue',
+    description: '',
+    durationSeconds: 30,
+    defaultMode: SessionMode.hold,
+    steps: [
+      SessionStep(
+          time: 0, mode: SessionMode.hold, to: Position.throat, duration: 30),
+    ],
+  );
+  const punitions = PunishmentBundle(failPhrases: [], punishments: []);
+  const commentaires = RandomCommentsBundle(
+    comments: [],
+    minIntervalSeconds: 999,
+    maxIntervalSeconds: 999,
+    scriptedCooldownSeconds: 4,
+  );
+
+  /// Sans séance de plus, le drapeau n'est pas passé : c'est son défaut qui
+  /// joue.
+  SessionScreen screen({bool encore = false}) => encore
+      ? SessionScreen(
+          session: tenue,
+          tts: TtsService(),
+          beep: _SilentBeepEngine(),
+          ambience: _SilentAmbienceEngine(),
+          punishmentBundle: punitions,
+          randomComments: commentaires,
+          autoStart: true,
+          coachTag: 'lina',
+          keepsBackgroundTier: true,
+        )
+      : SessionScreen(
+          session: tenue,
+          tts: TtsService(),
+          beep: _SilentBeepEngine(),
+          ambience: _SilentAmbienceEngine(),
+          punishmentBundle: punitions,
+          randomComments: commentaires,
+          autoStart: true,
+          coachTag: 'lina',
+        );
 
   testWidgets("à la séance de plus, la coach garde le palier qu'elle a atteint",
       (tester) async {
@@ -143,6 +156,49 @@ void main() {
           svc.current.value != null;
     });
     expect(svc.current.value?.id, 'lina-v3-a3-play-01');
+  });
+
+  testWidgets(
+      'séance remplacée sans séance de plus (cycle Custom) : la coach '
+      'repart habillée', (tester) async {
+    final svc = BackgroundsService.instance
+      ..setBundle(BackgroundsBundle(entries: [
+        for (final n in const [
+          'lina-v3-a1-play-01_play_lina',
+          'lina-v3-a3-play-01_play_lina_nu2',
+        ])
+          BackgroundsLoader.parseEntry('assets/backgrounds/$n.webp')!,
+      ]));
+    final nav = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(MaterialApp(
+      navigatorKey: nav,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: const SizedBox(),
+    ));
+
+    nav.currentState!.push(MaterialPageRoute(builder: (_) => screen()));
+    await _until(tester, () => svc.current.value != null);
+    expect(svc.current.value?.id, 'lina-v3-a1-play-01');
+    final first = _controllers(tester).single;
+
+    svc.pickForContext(const BackgroundContext(
+        mode: 'hold', position: 'throat', coach: 'lina', tier: 'nu2'));
+    expect(svc.current.value?.id, 'lina-v3-a3-play-01',
+        reason: 'témoin : la séance finit nue');
+
+    nav.currentState!
+        .pushReplacement(MaterialPageRoute(builder: (_) => screen()));
+    await _until(tester, () {
+      final ctrls = _controllers(tester);
+      return ctrls.length == 1 &&
+          !identical(ctrls.single, first) &&
+          ctrls.single.isRunning &&
+          svc.current.value != null;
+    });
+    svc.pickForContext(const BackgroundContext(
+        mode: 'hold', position: 'throat', coach: 'lina'));
+    expect(svc.current.value?.id, 'lina-v3-a1-play-01');
   });
 }
 

@@ -46,7 +46,7 @@ void main() {
   final audioEventChannels = [
     const EventChannel('xyz.luan/audioplayers.global/events'),
     const EventChannel('xyz.luan/audioplayers/events/ambience_loop'),
-    for (final pos in ['head', 'mid', 'tip'])
+    for (final pos in ['head', 'mid', 'tip', 'throat', 'balls', 'full'])
       for (var i = 0; i < 4; i++)
         EventChannel('xyz.luan/audioplayers/events/beep_${pos}_beep_$i'),
   ];
@@ -108,7 +108,7 @@ void main() {
 
   testWidgets(
       "surprise : à la séance de plus, la voix de la coach n'est pas rétablie "
-      'par défaut', (tester) async {
+      "par défaut, elle l'est en quittant la chaîne", (tester) async {
     await tester.runAsync(() async {
       await CoachPhrasesService.instance.ensureLoaded();
       await coachService.load();
@@ -156,6 +156,14 @@ void main() {
     final coachId =
         coachService.coaches.where((c) => c.slug == first.coachTag).single.id;
     expect(tts.ops, [coachId, coachId]);
+
+    Navigator.of(tester.element(screens)).pop();
+    await _until(tester, () => screens.evaluate().isEmpty);
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pump(const Duration(seconds: 1));
+    expect(tts.ops, [coachId, coachId, 'défaut'],
+        reason: 'quitter la chaîne rétablit la voix par défaut');
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 5));
