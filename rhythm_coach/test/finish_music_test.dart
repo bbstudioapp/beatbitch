@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:beat_bitch/controllers/session_controller.dart';
 import 'package:beat_bitch/models/punishment.dart';
 import 'package:beat_bitch/models/session.dart';
@@ -181,6 +183,23 @@ void main() {
       await ctrl.stop();
       ctrl.dispose();
       expect(ambience.events.single, ('start 4s', 4));
+      expect(ambience.tracks.single, AmbienceEngine.commonFinishTrack);
+    }, timeout: const Timeout(Duration(seconds: 60)));
+
+    test(
+        'un manifeste qui ne répond jamais ne bloque pas le départ de la '
+        'séance : la coach joue le commun', () async {
+      final ambience = _FinishRecordingAmbience(
+          finishTracksByCoach: tracks,
+          isAssetBundled: (_) => Completer<bool>().future);
+      late SessionController ctrl;
+      ambience.onEvent = (e) => ambience.events.add((e, ctrl.elapsedSeconds));
+      ctrl = _buildController(ambience, coachTag: 'lina');
+      await ctrl.start().timeout(const Duration(seconds: 5),
+          onTimeout: () => fail('start() attend encore le manifeste'));
+      await _waitUntil(() => ambience.events.isNotEmpty);
+      await ctrl.stop();
+      ctrl.dispose();
       expect(ambience.tracks.single, AmbienceEngine.commonFinishTrack);
     }, timeout: const Timeout(Duration(seconds: 60)));
   });
