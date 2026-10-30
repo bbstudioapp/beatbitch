@@ -16,12 +16,39 @@ List<String> _v3(String c) => [
     ];
 
 const _marc = [
-  'marc-v1-play-lent-51_play_marc.webp',
-  'marc-v1-play-rapide-51_play_marc.webp',
-  'marc-v1-play-rapide-52_play_marc.webp',
-  'marc-v1-play-fella-51_play_marc.webp',
-  'marc-v1-final-53_final_marc.webp',
-  'marc-v1-final-54_final_marc.webp',
+  'marc-v2-a1-play-debout-38201-s81_play_marc.webp',
+  'marc-v2-a1-play-debout-38201-s82_play_marc.webp',
+  'marc-v2-a1-play-debout-38201-s83_play_marc.webp',
+  'marc-v2-a1-play-debout-38201-s85_play_marc.webp',
+  'marc-v2-a1-play-fauteuil-38202-s81_play_marc.webp',
+  'marc-v2-a1-play-fauteuil-38202-s82_play_marc.webp',
+  'marc-v2-a1-play-fauteuil-38202-s83_play_marc.webp',
+  'marc-v2-a1-play-fauteuil-38202-s84_play_marc.webp',
+  'marc-v2-a1-play-fauteuil-38202-s85_play_marc.webp',
+  'marc-v2-a2-play-debout-38201-s81_play_marc_nu1.webp',
+  'marc-v2-a2-play-debout-38201-s82_play_marc_nu1.webp',
+  'marc-v2-a2-play-debout-38201-s83_play_marc_nu1.webp',
+  'marc-v2-a2-play-debout-38201-s84_play_marc_nu1.webp',
+  'marc-v2-a2-play-debout-38201-s85_play_marc_nu1.webp',
+  'marc-v2-a2-play-fauteuil-38201-s81_play_marc_nu1.webp',
+  'marc-v2-a2-play-fauteuil-38201-s82_play_marc_nu1.webp',
+  'marc-v2-a2-play-fauteuil-38201-s83_play_marc_nu1.webp',
+  'marc-v2-a2-play-fauteuil-38201-s84_play_marc_nu1.webp',
+  'marc-v2-a2-play-fauteuil-38201-s85_play_marc_nu1.webp',
+  'marc-v2-a3-play-fauteuil-38301-s81_play_marc_nu2.webp',
+  'marc-v2-a3-play-fauteuil-38301-s82_play_marc_nu2.webp',
+  'marc-v2-a3-play-fauteuil-38302-s81_play_marc_nu2.webp',
+  'marc-v2-a3-play-fauteuil-38302-s82_play_marc_nu2.webp',
+  'marc-v2-a3-play-fauteuil-38302-s83_play_marc_nu2.webp',
+  'marc-v2-a3-play-fauteuil-38302-s84_play_marc_nu2.webp',
+  'marc-v2-a3-play-fauteuil-38302-s85_play_marc_nu2.webp',
+  'marc-v2-a3-play-sexe-fella-51_play_marc_nu2.webp',
+  'marc-v2-a3-play-sexe-lent-51_play_marc_nu2.webp',
+  'marc-v2-a3-play-sexe-rapide-51_play_marc_nu2.webp',
+  'marc-v2-a3-play-sexe-rapide-52_play_marc_nu2.webp',
+  'marc-v2-final-53_final_marc_nu2.webp',
+  'marc-v2-final-54_final_marc_nu2.webp',
+  'marc-v2-strip1_marc_nu1.webp',
 ];
 
 void main() {
@@ -51,13 +78,13 @@ void main() {
         BackgroundTagCategory.coach);
   });
 
-  test('séance avec Marc : ses fonds de bout en bout, jouissance au final', () {
+  test('séance avec Marc : habillé, torse nu puis nu, jouissance au final', () {
     final all = <BackgroundEntry?>[];
     void record() => all.add(svc.current.value);
     svc.current.addListener(record);
 
     expect(svc.pickIntro('marc'), isTrue);
-    expect(coachOf(svc.current.value), {'marc'});
+    expect(svc.current.value?.id, 'marc-v2-a1-play-debout-38201-s81');
 
     final gestures = <BackgroundEntry?>[];
     for (var i = 0; i < 60; i++) {
@@ -71,6 +98,11 @@ void main() {
         ),
         playerScene: true,
       );
+      for (var guard = 0; guard < 5; guard++) {
+        final e = svc.current.value;
+        if (e == null || !(e.isTierTransition || e.isPov)) break;
+        svc.transitionFinished(e);
+      }
       gestures.add(svc.current.value);
     }
     svc
@@ -80,12 +112,18 @@ void main() {
     svc.current.removeListener(record);
 
     expect(gestures, everyElement(isNotNull));
-    expect(gestures[58]!.id, startsWith('marc-v1-final-'));
-    expect(gestures[59]!.id, startsWith('marc-v1-play-'));
+    expect(gestures.take(20).map((e) => e!.id),
+        everyElement(startsWith('marc-v2-a1-')));
+    expect(gestures.skip(41).take(17).map((e) => e!.id),
+        everyElement(startsWith('marc-v2-a3-')));
+    expect(gestures[58]!.id, startsWith('marc-v2-final-'));
+    expect(gestures[59]!.id, startsWith('marc-v2-a3-play-'));
     expect(
       gestures.take(58).map((e) => e!.id),
-      everyElement(isNot(startsWith('marc-v1-final-'))),
+      everyElement(isNot(startsWith('marc-v2-final-'))),
     );
+    expect(all.whereType<BackgroundEntry>().map((e) => e.id),
+        contains('marc-v2-strip1'));
     final shown = all.whereType<BackgroundEntry>().where((e) => !e.isPov);
     expect(shown, isNotEmpty);
     expect(shown.map(coachOf), everyElement({'marc'}));

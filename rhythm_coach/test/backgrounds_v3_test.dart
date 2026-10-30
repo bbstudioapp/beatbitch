@@ -45,12 +45,39 @@ List<String> _holdsAB(String c, String seed) => [
     ];
 
 const _marc = [
-  'marc-v1-play-lent-51_play_marc.webp',
-  'marc-v1-play-rapide-51_play_marc.webp',
-  'marc-v1-play-rapide-52_play_marc.webp',
-  'marc-v1-play-fella-51_play_marc.webp',
-  'marc-v1-final-53_final_marc.webp',
-  'marc-v1-final-54_final_marc.webp',
+  'marc-v2-a1-play-debout-38201-s81_play_marc.webp',
+  'marc-v2-a1-play-debout-38201-s82_play_marc.webp',
+  'marc-v2-a1-play-debout-38201-s83_play_marc.webp',
+  'marc-v2-a1-play-debout-38201-s85_play_marc.webp',
+  'marc-v2-a1-play-fauteuil-38202-s81_play_marc.webp',
+  'marc-v2-a1-play-fauteuil-38202-s82_play_marc.webp',
+  'marc-v2-a1-play-fauteuil-38202-s83_play_marc.webp',
+  'marc-v2-a1-play-fauteuil-38202-s84_play_marc.webp',
+  'marc-v2-a1-play-fauteuil-38202-s85_play_marc.webp',
+  'marc-v2-a2-play-debout-38201-s81_play_marc_nu1.webp',
+  'marc-v2-a2-play-debout-38201-s82_play_marc_nu1.webp',
+  'marc-v2-a2-play-debout-38201-s83_play_marc_nu1.webp',
+  'marc-v2-a2-play-debout-38201-s84_play_marc_nu1.webp',
+  'marc-v2-a2-play-debout-38201-s85_play_marc_nu1.webp',
+  'marc-v2-a2-play-fauteuil-38201-s81_play_marc_nu1.webp',
+  'marc-v2-a2-play-fauteuil-38201-s82_play_marc_nu1.webp',
+  'marc-v2-a2-play-fauteuil-38201-s83_play_marc_nu1.webp',
+  'marc-v2-a2-play-fauteuil-38201-s84_play_marc_nu1.webp',
+  'marc-v2-a2-play-fauteuil-38201-s85_play_marc_nu1.webp',
+  'marc-v2-a3-play-fauteuil-38301-s81_play_marc_nu2.webp',
+  'marc-v2-a3-play-fauteuil-38301-s82_play_marc_nu2.webp',
+  'marc-v2-a3-play-fauteuil-38302-s81_play_marc_nu2.webp',
+  'marc-v2-a3-play-fauteuil-38302-s82_play_marc_nu2.webp',
+  'marc-v2-a3-play-fauteuil-38302-s83_play_marc_nu2.webp',
+  'marc-v2-a3-play-fauteuil-38302-s84_play_marc_nu2.webp',
+  'marc-v2-a3-play-fauteuil-38302-s85_play_marc_nu2.webp',
+  'marc-v2-a3-play-sexe-fella-51_play_marc_nu2.webp',
+  'marc-v2-a3-play-sexe-lent-51_play_marc_nu2.webp',
+  'marc-v2-a3-play-sexe-rapide-51_play_marc_nu2.webp',
+  'marc-v2-a3-play-sexe-rapide-52_play_marc_nu2.webp',
+  'marc-v2-final-53_final_marc_nu2.webp',
+  'marc-v2-final-54_final_marc_nu2.webp',
+  'marc-v2-strip1_marc_nu1.webp',
 ];
 
 const _povs = [
@@ -159,7 +186,7 @@ void main() {
     expect(_e('nyx-v3-final_final_nyx_nu2.webp').tagsByCategory,
         containsPair(BackgroundTagCategory.phase, {'final'}));
     expect(_all.map(_e).where((e) => e.isTierTransition),
-        hasLength(_packCoaches.length * 2));
+        hasLength(_packCoaches.length * 2 + 1));
   });
 
   for (final coach in [..._packCoaches, 'marc']) {
@@ -243,8 +270,11 @@ void main() {
         }
         load();
         expect(svc.pickIntro(coach, tier: tier), isTrue);
-        expect(svc.current.value?.id,
-            hasPack ? '$coach-v3-a1-play-01' : startsWith('$coach-v1-play-'),
+        expect(
+            svc.current.value?.id,
+            hasPack
+                ? '$coach-v3-a1-play-01'
+                : '$coach-v2-a1-play-debout-38201-s81',
             reason: '$tier : intro');
       }
       expect(picks, 3 * 4 * _modes.length * (Position.values.length + 1));
