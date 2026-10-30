@@ -11,7 +11,7 @@ La séance prend vie : des fonds animés qui suivent ce que tu fais, une musique
 ### Ajouté
 - **Lilith, coach de passage** — une coach éphémère, disponible du 27 octobre au 8 novembre, avec ses phrases dans les quatre langues et son badge « Sabbat » pour les séances terminées avec elle. Sa fenêtre passée, elle se retire d'elle-même.
 - **Des fonds animés qui suivent la séance** — chaque coach a ses propres scènes, et ne montre que les siennes : son intro pendant le décompte, son jeu selon la position et la profondeur, sa punition quand tu es punie, sa fin de séance. Chaque coach se dévêt palier par palier au fil de la séance.
-- **Les scènes de la joueuse** — une fois sur trois, entre deux gestes de la coach, c'est toi qu'on voit, avec 21 nouvelles scènes de gorge profonde.
+- **Les scènes de la joueuse** — une fois sur trois, entre deux gestes de la coach, c'est toi qu'on voit, avec 32 nouvelles scènes de gorge profonde.
 - **Marc a ses fonds animés** — dans son loft, habillé, puis torse nu, puis nu, avec une chemise qui se déboutonne entre les deux ; ses scènes de sexe et sa jouissance n'arrivent qu'une fois nu.
 - **Une musique de fin par coach** — la montée finale est portée par un morceau propre à chaque coach, dont le sommet tombe sur le final.
 - **Des tenues qui bougent** — à partir du niveau 5, une tenue n'est plus forcément immobile : petits allers-retours, rafales de micro-mouvements annoncées à la voix, et coups de langue sur les boules pendant une tenue au fond, dessinés à l'écran par une seconde courbe bleue.
