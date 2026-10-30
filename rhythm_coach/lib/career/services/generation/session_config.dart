@@ -16,6 +16,7 @@
 
 import '../../../models/anatomy_profile.dart';
 import '../../../models/session.dart';
+import '../../../models/session_step.dart' show BeatAnchor;
 import '../../../services/capability_axis.dart';
 import '../../../services/capability_service.dart';
 import '../../../services/humiliation_engine.dart';
@@ -44,6 +45,7 @@ class SessionConfig {
     required this.coachModeWeights,
     required this.bpmRange,
     required this.holdDurationRange,
+    this.customAnchor,
     required this.humiliationCareer,
     required this.humiliationSession,
     required this.obedience,
@@ -77,6 +79,10 @@ class SessionConfig {
   // Bornes utilisateur Custom (null hors Custom = pas de bornage)
   final (int, int)? bpmRange;
   final (int, int)? holdDurationRange;
+
+  /// Aimant imposé par la config Custom (`(point, ratio)`), `null` hors
+  /// Custom et quand la joueuse l'a laissé éteint. Cf. `CustomOverrides.anchor`.
+  final (BeatAnchor, int)? customAnchor;
 
   // Scores au moment t=0
   final double humiliationCareer;

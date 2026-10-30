@@ -8,12 +8,6 @@ import 'package:beat_bitch/services/capability_axis.dart';
 import 'package:beat_bitch/services/capability_leaderboard.dart';
 import 'package:beat_bitch/services/capability_service.dart';
 
-/// Tests de la **Phase 6** :
-/// - quickie : `best` enregistré normalement, `comfort` / `successRate` NON
-///   recalibrés ; le decay des axes non sollicités reste actif ;
-/// - garde Custom : un `generate(...)` sans `capabilityProfile` n'est pas gaté ;
-/// - forme du payload classement (`CapabilityLeaderboardPayload`).
-
 CapabilityAxisState _st({
   double? best,
   double? comfort,
@@ -42,7 +36,6 @@ CapabilityAxisState _reg(
       quickie: quickie,
     );
 
-// ── Helpers pour la garde Custom (générateur sans profil) ────────────────
 List<PhraseEntry> _p(List<String> texts) =>
     texts.map((t) => PhraseEntry(text: t)).toList();
 
@@ -69,10 +62,7 @@ void main() {
           reached: 33, sessionIndex: 5);
       final quick = _reg(CapabilityAxis.holdFullStreak, prev,
           reached: 33, sessionIndex: 5, quickie: true);
-      // Hors quickie : le comfort ratchet vers le haut.
       expect(normal.comfort, greaterThan(30.0));
-      // Quickie : best enregistré, comfort/successRate inchangés, mais l'axe a
-      // été sollicité → lastSeenSession avance (pas de decay).
       expect(quick.best, 33.0);
       expect(quick.comfort, 30.0);
       expect(quick.successRate, 0.9);
@@ -88,40 +78,35 @@ void main() {
           hardNegative: true,
           sessionIndex: 5,
           quickie: true);
-      // Hors quickie : tap-out imputé → comfort raboté.
       expect(normal.comfort, lessThan(30.0));
-      // Quickie : aucun carry-over lifetime (le verrou est porté par les
-      // sessionCeilings du tracker, pas par le comfort persisté).
       expect(quick.comfort, 30.0);
       expect(quick.best, 30.0);
       expect(quick.successRate, 0.5);
     });
 
-    test('soft-cap subi neutralisé en quickie', () {
+    test('signal non imputé neutralisé en quickie', () {
       final prev = _st(best: 30, comfort: 30);
       final normal = _reg(CapabilityAxis.holdFullStreak, prev,
           sessionCeiling: 22, sessionIndex: 5);
       final quick = _reg(CapabilityAxis.holdFullStreak, prev,
           sessionCeiling: 22, sessionIndex: 5, quickie: true);
-      expect(normal.comfort, 22.0); // soft-cap appliqué
-      expect(quick.comfort, 30.0); // figé
+      expect(normal.comfort, 30.0);
+      expect(normal.successRate, prev.successRate);
+      expect(quick.comfort, 30.0);
+      expect(quick.successRate, prev.successRate);
     });
 
     test('le decay des axes non sollicités est indépendant du quickie', () {
-      // Axe pas sollicité cette séance (reached null, ceiling null), inactif
-      // depuis ≥ kDecayAfterSessions → decay vers 0.70×best.
       final prev = _st(best: 30, comfort: 25, seen: 0);
       final normal =
           _reg(CapabilityAxis.holdFullStreak, prev, sessionIndex: 10);
       final quick = _reg(CapabilityAxis.holdFullStreak, prev,
           sessionIndex: 10, quickie: true);
-      expect(normal.comfort, isNot(25.0)); // decay appliqué
-      expect(quick.comfort, normal.comfort); // même résultat en quickie
+      expect(normal.comfort, isNot(25.0));
+      expect(quick.comfort, normal.comfort);
     });
 
     test('1ʳᵉ donnée en quickie → comfort quand même seedé à best', () {
-      // Le seed initial n'est pas un ratchet : sans ça le générateur n'aurait
-      // rien à gater. On le garde même en quickie.
       final next = _reg(CapabilityAxis.gorgeApneeStreak, _st(),
           reached: 18, sessionIndex: 1, quickie: true);
       expect(next.best, 18.0);
@@ -130,8 +115,6 @@ void main() {
     });
 
     test('axe accumulate (lifetime) inchangé en quickie', () {
-      // gorgeCrossingsLifetime accumule toujours — c'est un compteur lifetime
-      // « enregistré seulement », pas un bouton de difficulté.
       final next = _reg(
           CapabilityAxis.gorgeCrossingsLifetime, _st(best: 100, comfort: 100),
           reached: 30, sessionIndex: 5, quickie: true);
@@ -146,14 +129,12 @@ void main() {
     test('commit(quickie: true) enregistre best mais ne ratchet pas comfort',
         () async {
       final svc = CapabilityService();
-      // Session 1 : pose best=comfort=18 sur l'apnée (non quickie).
       await svc.commit(
         const SessionCapabilityReport(
             reached: {CapabilityAxis.gorgeApneeStreak: 18},
             sessionCeilings: {}),
         sessionIndex: 1,
       );
-      // Session 2 quickie : record 22 → best monte à 22, comfort reste 18.
       await svc.commit(
         const SessionCapabilityReport(
             reached: {CapabilityAxis.gorgeApneeStreak: 22},
@@ -188,9 +169,6 @@ void main() {
 
   group('garde Custom — generate sans capabilityProfile n\'est pas gaté', () {
     test('session identique avec capabilityProfile null vs absent', () {
-      // Le mode Custom appelle `generate(...)` sans passer `capabilityProfile`
-      // (cf. custom_mode_screen._generate, + noStats: true). On vérifie que
-      // ne rien passer ≡ passer null ≡ aucun clamp capacité.
       List<SessionStep> steps({bool passProfile = false}) =>
           CareerSessionGenerator(seed: 7)
               .generate(
@@ -226,7 +204,6 @@ void main() {
             CapabilityAxisState(best: 41, comfort: 38),
         CapabilityAxis.biffleBpmMax:
             CapabilityAxisState(best: 168, comfort: 150),
-        // Axe sans données → exclu.
         CapabilityAxis.holdFullStreak: CapabilityAxisState(),
       });
       final now = DateTime.utc(2026, 5, 12, 10, 0, 0);
@@ -249,7 +226,6 @@ void main() {
       expect(apnee.unit, CapabilityUnit.seconds);
       expect(apnee.pilotant, isTrue);
 
-      // Le toJson() d'une entrée n'expose jamais le comfort.
       final json = payload.toJson();
       final axesJson = json['axes'] as List<dynamic>;
       for (final e in axesJson) {
@@ -289,7 +265,6 @@ void main() {
           CapabilityUnit.depthCran);
       expect(byKey[CapabilityAxis.gorgeCrossingsLifetime.storageKey]!.kind,
           CapabilityRecordKind.accumulate);
-      // Vérif sérialisation string.
       final json =
           byKey[CapabilityAxis.rhythmBpmFloorThroat.storageKey]!.toJson();
       expect(json['kind'], 'minimize');

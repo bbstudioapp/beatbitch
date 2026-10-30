@@ -5,9 +5,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
 import '../models/session.dart';
+import 'bundled_assets.dart' as bundled;
 import 'locale_service.dart';
 
 class SessionLoader {
+  SessionLoader({Future<bool> Function(String assetKey)? isAssetBundled})
+      : _isAssetBundled = isAssetBundled ?? bundled.isAssetBundled;
+
+  final Future<bool> Function(String assetKey) _isAssetBundled;
+
   static const List<String> _assetPaths = [
     'assets/sessions/session_tutorial.json',
     'assets/sessions/session_initiation.json',
@@ -36,7 +42,13 @@ class SessionLoader {
     for (final path in _assetPaths) {
       final raw = await rootBundle.loadString(path);
       final data = json.decode(raw) as Map<String, dynamic>;
-      all.add(Session.fromJson(data));
+      final session = Session.fromJson(data);
+      // Le morceau est hors dépôt : sans lui la séance ne se joue pas.
+      final music = session.music;
+      if (music != null && !await _isAssetBundled('assets/${music.asset}')) {
+        continue;
+      }
+      all.add(session);
     }
     final matching = all.where((s) => s.lang == lang).toList();
     if (matching.isNotEmpty) return matching;

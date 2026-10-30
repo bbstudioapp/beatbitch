@@ -26,6 +26,9 @@ enum BadgeFamily {
 
   /// Post-final mode `beg` — supplique imposée après l'orgasme.
   suppliante,
+
+  /// Séances complétées avec Lilith, coach éphémère.
+  sabbat,
 }
 
 /// Paliers d'un badge. Order = niveau croissant. `none` = pas encore
@@ -165,6 +168,12 @@ class BadgeDefinition {
       displayName: 'Suppliante',
       unitLabel: 'suppliques post-orgasme',
       thresholds: [3, 15, 50, 150],
+    ),
+    BadgeDefinition(
+      family: BadgeFamily.sabbat,
+      displayName: 'Sabbat',
+      unitLabel: 'séances avec Lilith',
+      thresholds: [1, 3, 6, 10],
     ),
   ];
 

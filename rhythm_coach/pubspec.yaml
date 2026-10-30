@@ -40,6 +40,9 @@ dev_dependencies:
   # que les tests puissent substituer le store persisté (simulation d'un
   # canal de plateforme figé, cf. `profile_reconciliation_test.dart`).
   shared_preferences_platform_interface: ^2.4.2
+  # Déjà tirée transitivement par `flutter_test` ; déclarée ici pour que les
+  # tests du moteur de musique pilotent l'horloge et les timers ensemble.
+  fake_async: ^1.3.1
 
 flutter_launcher_icons:
   android: true
@@ -57,13 +60,16 @@ flutter:
     - assets/sessions/
     - assets/audio/
     - assets/audio/ambience/
+    - assets/audio/music/
     - assets/audio/finale/
     - assets/audio/finale_chimes.json
+    - assets/badges/
     - assets/career/
     - assets/career/coaches/
     - assets/career/coaches/portraits/
     - assets/career/milestones/
     - assets/coach/
+    - assets/courbe/
     - assets/debug/profiles/
     - assets/punishments.json
     - assets/punishments_en.json

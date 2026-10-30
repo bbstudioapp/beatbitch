@@ -46,6 +46,7 @@
   "sessionStopConfirm": "Arrêter",
   "sessionVoiceLabel": "Voix",
   "sessionAmbienceLabel": "Ambiance",
+  "sessionSettingsTooltip": "Réglages",
   "sessionUseMeLabel": "UTILISE-MOI",
   "sessionUseMeUsedLabel": "UTILISÉE",
   "careerUseMeBegPhrase": "Supplie-moi de t'utiliser comme le jouet que tu es.",
@@ -55,6 +56,7 @@
   "sessionStateFinished": "TERMINÉ",
   "sessionStateFailing": "FAIL",
   "sessionBreakBanner": "PAUSE",
+  "sessionBreakSkipButton": "PASSER LA PAUSE",
   "sessionFailPhasePhrase": "Phrase de fail",
   "sessionFailPhaseBreath": "Respiration",
   "sessionFailPhasePunishment": "Punition",
@@ -149,6 +151,7 @@
   "profileStatThroatfucks": "Throatfucks",
   "profileStatBiffles": "Biffles",
   "profileStatHoldFullMax": "Hold full max",
+  "profileStatUseMeMax": "Plus longue tenue en Utilise-moi",
   "profileStatHoldThroatTotal": "Hold throat (cumul)",
   "profileStatHoldFullTotal": "Hold full (cumul)",
   "profileStatEncores": "Encores demandés",
@@ -185,6 +188,7 @@
   "profileCapLickDepth": "Profondeur langue",
   "profileCapLickStreak": "Langue continue",
   "profileCapHandStreak": "Main continue",
+  "profileCapUseMeHeld": "Tenue en Utilise-moi",
   "profileDiagnosticSection": "DIAGNOSTIC",
   "profileDiagnosticDescription": "Exporte un fichier JSON avec ton état de progression — utile si tu veux signaler un bug. Rien n'est envoyé automatiquement, c'est toi qui choisis ce que tu en fais.",
   "profileDiagnosticExportButton": "Exporter mes données",
@@ -232,6 +236,14 @@
   "@careerDurationPlusChallenges": {
     "placeholders": { "duration": { "type": "String" } }
   },
+  "careerDurationPlusChallengesAndPauses": "{duration} + le temps des défis et des pauses",
+  "@careerDurationPlusChallengesAndPauses": {
+    "placeholders": { "duration": { "type": "String" } }
+  },
+  "careerDurationPlusPauses": "{duration} + le temps des pauses",
+  "@careerDurationPlusPauses": {
+    "placeholders": { "duration": { "type": "String" } }
+  },
   "careerDurationSection": "Durée",
   "careerQuickieToggle": "Session bâclée",
   "careerQuickieSubtitle": "6 min — intense",
@@ -254,24 +266,17 @@
   "careerChallengesToggle": "Défis intra-séance",
   "careerChallengesDescription": "De un à quatre défis opt-in répartis dans la séance, selon le format choisi. Calibrent vite, peuvent faire monter le niveau plus rapidement. Leur temps s'ajoute à la durée annoncée.",
   "challengePassButton": "PASSE",
-  "challengeGoButton": "MAINTIENS",
-  "challengeHoldHintLive": "Garde le doigt sur l'écran",
-  "challengeHoldHintAtSeuil": "Relâche pour arrêter, ou continue",
-  "challengeHoldHintTolerance": "Repose ton doigt",
   "challengeTapGoButton": "DÉMARRE",
   "challengeTapStopLive": "J'ABANDONNE",
   "challengeTapStopAtSeuil": "JE M'ARRÊTE",
   "challengeTapCountdownHint": "Prépare-toi…",
-  "challengeCountdownReleaseRetry": "Maintiens bien ton doigt cette fois.",
   "challengeBannerCountdown": "{digit}",
   "@challengeBannerCountdown": {
     "placeholders": { "digit": { "type": "int" } }
   },
-  "challengeAttemptDefault": "Défi : on va pousser ta limite. Maintiens MAINTIENS quand tu es prête, je compterai trois deux un avant de démarrer. Garde le doigt sur l'écran tant que tu tiens.",
-  "challengeAttemptTutorialHoldThroat": "Premier défi : tu vas tenir en gorge cinq secondes. Maintiens MAINTIENS, garde le doigt sur l'écran. Si tu lâches avant le seuil, c'est raté. Au seuil, le bouton devient vert : relâche pour arrêter, ou continue à tenir pour aller plus loin.",
-  "challengeExtensionDefault": "Tu peux rester encore si tu veux, ou relâcher.",
-  "challengeAttemptTapDefault": "Défi : on va pousser ta limite. Tape DÉMARRE quand tu es prête, je compte trois deux un. Ensuite suis le rythme — tape J'ABANDONNE si tu craques. Au seuil, tape JE M'ARRÊTE pour valider, ou continue pour aller plus loin.",
-  "challengeExtensionTapDefault": "Tu peux continuer si tu veux, ou tape JE M'ARRÊTE.",
+  "challengeAttemptDefault": "Défi : on va pousser ta limite. Tape DÉMARRE quand tu es prête, je compte trois deux un. Tape J'ABANDONNE si tu craques. Au seuil, tape JE M'ARRÊTE pour valider, ou continue pour aller plus loin.",
+  "challengeAttemptTutorialHoldThroat": "Premier défi : tu vas tenir en gorge cinq secondes. Tape DÉMARRE, je compte trois deux un, puis tiens sans toucher l'écran. Si tu craques avant le seuil, tape J'ABANDONNE. Au seuil, le bouton devient vert : tape JE M'ARRÊTE pour valider, ou continue à tenir pour aller plus loin.",
+  "challengeExtensionDefault": "Tu peux continuer si tu veux, ou tape JE M'ARRÊTE.",
   "challengeSuccessDefault": "Tu as tenu jusqu'au bout. Bonne fille.",
   "challengeStopDefault": "Tu as tenu jusqu'au seuil. Bien.",
   "challengeFailDefault": "Tu as craqué avant le seuil. Pas grave, tu y arriveras la prochaine.",
@@ -661,6 +666,9 @@
   "soundsShowBackgroundMedia": "Fonds média en séance",
   "soundsShowBackgroundMediaSubtitle": "Affiche les images/GIF présents dans assets/backgrounds/ en arrière-plan, avec rotation à chaque step. Désactive pour ne voir que le dégradé d'ambiance.",
   "sessionDebugFinishButton": "DEBUG : terminer en succès",
+  "sessionDebugMusicBeepAdvanceLabel": "DEBUG : avance des bips",
+  "sessionDebugMusicBeepAdvanceDecrease": "Diminuer l'avance des bips",
+  "sessionDebugMusicBeepAdvanceIncrease": "Augmenter l'avance des bips",
 
   "soundsDebugScenarioButton": "Debug — scénario carrière",
   "soundsDebugScenarioSubtitle": "Visualise une session générée sans la jouer : niveau, humil, obéi, milestones, unlocks, et simulation Supplier / fail.",
@@ -756,6 +764,7 @@
   "badgeNameGobeuse": "Gobeuse",
   "badgeNameNettoyeuse": "Nettoyeuse",
   "badgeNameSuppliante": "Suppliante",
+  "badgeNameSabbat": "Sabbat",
 
   "badgeUnitMarathonien": "minutes cumulées",
   "badgeUnitThroatQueen": "throatfucks cumulés",
@@ -770,6 +779,7 @@
   "badgeUnitGobeuse": "finals sur la langue",
   "badgeUnitNettoyeuse": "post-finals à lécher",
   "badgeUnitSuppliante": "suppliques post-orgasme",
+  "badgeUnitSabbat": "séances avec Lilith",
 
   "careerLevelTitleDebutante": "Débutante",
   "careerLevelTitleApprentieSuceuse": "Apprentie Suceuse",
@@ -816,6 +826,21 @@
   "@coachSummaryFree": {
     "placeholders": { "title": { "type": "String" } }
   },
+
+  "coachBadgeLimitedTime": "ÉPHÉMÈRE",
+  "coachLimitedTimeUntil": "Jusqu'au {date}",
+  "@coachLimitedTimeUntil": {
+    "placeholders": { "date": { "type": "DateTime", "format": "MMMMd" } }
+  },
+  "coachSummaryLimitedTime": "{title} · jusqu'au {date}",
+  "@coachSummaryLimitedTime": {
+    "placeholders": { "title": { "type": "String" }, "date": { "type": "DateTime", "format": "MMMMd" } }
+  },
+  "coachLimitedTimeBanner": "{name} est là jusqu'au {date}.",
+  "@coachLimitedTimeBanner": {
+    "placeholders": { "name": { "type": "String" }, "date": { "type": "DateTime", "format": "MMMMd" } }
+  },
+  "coachLimitedTimeBannerAction": "ESSAYER",
 
   "coachFreeTrainingDialogTitle": "Entraînement libre",
   "coachFreeTrainingDialogBody": "Tu vas t'entraîner avec {coachName}. Tu progresseras sur tes compétences, mais ta jauge de palier n'avancera pas.",
@@ -1076,6 +1101,15 @@
     }
   },
   "customHoldDurationRangeHint": "Borne la durée des holds et des supplications tenues.",
+  "customAnchorLabel": "Aimant",
+  "customAnchorHint": "Le battement retient une position et repart vite vers l'autre. Éteint, le métronome reste régulier.",
+  "customAnchorStrengthLabel": "Force",
+  "customAnchorStrengthLight": "Léger",
+  "customAnchorStrengthMedium": "Moyen",
+  "customAnchorStrengthHard": "Dur",
+  "customAnchorPointLabel": "Position retenue",
+  "customAnchorPointFrom": "Départ",
+  "customAnchorPointTo": "Arrivée",
   "customSaveAndLaunch": "Enregistrer et lancer",
   "customSaveOnly": "Enregistrer",
   "customHostLoadError": "Impossible de charger la session custom : {error}",
@@ -1113,6 +1147,9 @@
   "profileSessionFlowSection": "Déroulé de séance",
   "profileScriptedBreaks": "Postures imposées et pauses",
   "profileScriptedBreaksSubtitle": "La coach impose une posture (à genoux, à quatre pattes…) et insère des pauses actives sur les séances longues. Les postures se débloquent au fil des paliers de carrière.",
+  "profileMusicBeepAdvanceSection": "Bips sur la musique",
+  "profileMusicBeepAdvanceTitle": "Avance des bips",
+  "profileMusicBeepAdvanceSubtitle": "Séances avec musique. Si les bips arrivent après la musique, augmente l'avance.",
   "sessionRemainingTimeLabel": "Restant : {time}",
   "@sessionRemainingTimeLabel": {
     "placeholders": {

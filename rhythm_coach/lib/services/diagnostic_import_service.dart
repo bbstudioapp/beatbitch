@@ -6,6 +6,7 @@ import '../career/models/coach_catalog.dart';
 import '../career/models/specialization.dart';
 import '../models/badge.dart';
 import 'capability_axis.dart';
+import 'capability_history.dart';
 import 'locale_service.dart';
 import 'profile_reconciliation.dart';
 import 'tts_service.dart';
@@ -46,6 +47,7 @@ class DiagnosticImportService {
         'stats.humiliation_level', _map(payload['humiliation'])['careerScore']);
     _double('stats.obedience_level', _map(payload['obedience'])['level']);
     _capabilities(_map(payload['capabilities']));
+    _capabilityHistory(payload['capabilityHistory']);
     _milestones(_map(payload['milestones']));
     _badges(_map(payload['badges']));
     _coach(_map(payload['coach']));
@@ -93,10 +95,12 @@ class DiagnosticImportService {
     _int('stats.sessions_no_fail_streak', j['sessionsNoFailStreak']);
     _int('stats.modes_used_mask', j['modesUsedMask']);
     _int('stats.max_hold_full_atomic', j['maxHoldFullAtomic']);
+    _int('stats.max_use_me_sec', j['maxUseMeSec']);
     _int('stats.last_session_day', j['lastSessionDay']);
     _int('stats.daily_streak', j['dailyStreak']);
     _int('stats.encores_asked', j['encoresAsked']);
     _int('stats.quickies_completed', j['quickiesCompleted']);
+    _int('stats.sabbat_sessions', j['sabbatSessions']);
     _int('stats.finals_bouche_pleine', j['finalsBouchePleine']);
     _int('stats.finals_repeinte', j['finalsRepeinte']);
     _int('stats.finals_gobeuse', j['finalsGobeuse']);
@@ -115,6 +119,14 @@ class DiagnosticImportService {
       _int('$base.seen', a['lastSeenSession']);
     }
     _bool('cap.legacy_migrated', j['legacyMigrated']);
+    _bool('cap.use_me_held_migrated', j['useMeHeldMigrated']);
+  }
+
+  void _capabilityHistory(Object? j) {
+    final entries = CapabilityHistory.fromExportJson(j);
+    if (entries.isEmpty) return;
+    _string(CapabilityHistory.prefsKey,
+        jsonEncode(CapabilityHistory.toJson(entries)));
   }
 
   void _milestones(Map<String, dynamic> j) {
@@ -236,6 +248,7 @@ class DiagnosticImportService {
       'stats.sessions_no_fail_streak',
       'stats.modes_used_mask',
       'stats.max_hold_full_atomic',
+      'stats.max_use_me_sec',
       'stats.last_session_day',
       'stats.daily_streak',
       'stats.encores_asked',
@@ -245,9 +258,12 @@ class DiagnosticImportService {
       'stats.finals_gobeuse',
       'stats.post_finals_nettoyeuse',
       'stats.post_finals_suppliante',
+      'stats.sabbat_sessions',
       'stats.humiliation_level',
       'stats.obedience_level',
       'cap.legacy_migrated',
+      'cap.use_me_held_migrated',
+      CapabilityHistory.prefsKey,
       for (final axis in CapabilityAxis.values) ...[
         'cap.${axis.storageKey}.best',
         'cap.${axis.storageKey}.comfort',
@@ -309,11 +325,11 @@ class DiagnosticImportService {
   /// (cf. [apply]) — à la différence des autres sections, effacées sans
   /// condition.
   ///
-  /// Pourquoi cette exception : tout export produit depuis la Phase 3 porte
+  /// Pourquoi cette exception : tout export porte
   /// une section `voice`, donc charger l'export d'une utilisatrice repose
   /// bien son état vocal exact — sans quoi on diagnostiquerait un problème
   /// de voix en entendant ses propres réglages. Un payload qui n'en parle
-  /// pas (preset debug d'`assets/debug/profiles/`, export d'avant la Phase 3)
+  /// pas (preset debug d'`assets/debug/profiles/`, export ancien)
   /// ne gère pas les voix : les effacer changerait silencieusement la voix
   /// de la machine, et le repli est justement muet en séance.
   ///

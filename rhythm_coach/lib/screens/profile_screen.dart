@@ -20,10 +20,12 @@ import '../services/stats_service.dart';
 import '../services/tts_service.dart';
 import '../services/user_profile_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/badge_emblem.dart';
 import '../widgets/coach_voice_section.dart';
 import '../widgets/diagnostic_export_section.dart';
 import '../widgets/identity_section.dart';
 import '../widgets/language_picker_row.dart';
+import '../widgets/music_beep_advance_section.dart';
 import '../widgets/voice_settings_section.dart';
 
 /// Écran Profil : affiche le score de réputation, les stats cumulées,
@@ -187,7 +189,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 24),
               _SectionLabel(t.profileBadgesSection),
               const SizedBox(height: 8),
-              _BadgesGrid(states: bundle.badges),
+              BadgesGrid(states: bundle.badges),
               if (bundle.capabilities.hasAnyData) ...[
                 const SizedBox(height: 24),
                 _SectionLabel(t.profileCapabilitiesSection),
@@ -217,6 +219,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ],
               ],
+              const SizedBox(height: 24),
+              _SectionLabel(t.profileMusicBeepAdvanceSection),
+              const SizedBox(height: 8),
+              const MusicBeepAdvanceSection(),
               const SizedBox(height: 24),
               _SectionLabel(t.profileSessionDisplaySection),
               const SizedBox(height: 8),
@@ -663,6 +669,9 @@ class _StatsBlock extends StatelessWidget {
           gateBy: stats.biffles),
       _StatEntry(t.profileStatHoldFullMax, '${stats.maxHoldFullAtomic} s',
           gateBy: stats.maxHoldFullAtomic),
+      _StatEntry(t.profileStatUseMeMax,
+          formatDurationDetailed(context, stats.maxUseMeSec),
+          gateBy: stats.maxUseMeSec),
       _StatEntry(t.profileStatHoldThroatTotal,
           formatDurationDetailed(context, stats.holdThroatSeconds),
           gateBy: stats.holdThroatSeconds),
@@ -813,10 +822,11 @@ class _CapabilitiesBlock extends StatelessWidget {
   }
 }
 
-class _BadgesGrid extends StatelessWidget {
+@visibleForTesting
+class BadgesGrid extends StatelessWidget {
   final List<BadgeState> states;
 
-  const _BadgesGrid({required this.states});
+  const BadgesGrid({super.key, required this.states});
 
   @override
   Widget build(BuildContext context) {
@@ -846,37 +856,23 @@ class _BadgesGrid extends StatelessWidget {
       crossAxisSpacing: 10,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 1.6,
+      mainAxisExtent: 128,
       children: [
-        for (final s in unlocked) _BadgeCard(state: s),
+        for (final s in unlocked) BadgeCard(state: s),
       ],
     );
   }
 }
 
-class _BadgeCard extends StatelessWidget {
+@visibleForTesting
+class BadgeCard extends StatelessWidget {
   final BadgeState state;
 
-  const _BadgeCard({required this.state});
-
-  Color _tierColor() {
-    switch (state.tier) {
-      case BadgeTier.none:
-        return AppTheme.textMuted;
-      case BadgeTier.bronze:
-        return const Color(0xFFB87333);
-      case BadgeTier.silver:
-        return const Color(0xFFC0C0C0);
-      case BadgeTier.gold:
-        return const Color(0xFFFFD700);
-      case BadgeTier.platinium:
-        return const Color(0xFFE5E4E2);
-    }
-  }
+  const BadgeCard({super.key, required this.state});
 
   @override
   Widget build(BuildContext context) {
-    final color = _tierColor();
+    final color = badgeTierColor(state.tier);
     final unlocked = state.tier != BadgeTier.none;
     final next = state.nextThreshold;
     return Container(
@@ -895,12 +891,12 @@ class _BadgeCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(
-                unlocked ? Icons.emoji_events : Icons.emoji_events_outlined,
-                color: color,
-                size: 18,
+              BadgeEmblem(
+                family: state.definition.family,
+                tier: state.tier,
+                size: 40,
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   state.tier.localizedLabel(context),
@@ -917,6 +913,8 @@ class _BadgeCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             state.definition.family.localizedDisplayName(context),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,

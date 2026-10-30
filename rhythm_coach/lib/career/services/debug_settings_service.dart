@@ -17,6 +17,7 @@ class DebugSettingsService {
       'pref.show_session_remaining_time';
   static const String _kScriptedBreaks = 'pref.scripted_breaks';
   static const String _kShowTrajectoryDots = 'debug.show_trajectory_dots';
+  static const String _kMusicBeepAdvanceMs = 'debug.music_beep_advance_ms';
 
   Future<bool> getShowStaminaBar() async {
     final prefs = await SharedPreferences.getInstance();
@@ -193,5 +194,17 @@ class DebugSettingsService {
   Future<void> setShowTrajectoryDots(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kShowTrajectoryDots, value);
+  }
+
+  static const int defaultMusicBeepAdvanceMs = 150;
+
+  Future<int> getMusicBeepAdvanceMs() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_kMusicBeepAdvanceMs) ?? defaultMusicBeepAdvanceMs;
+  }
+
+  Future<void> setMusicBeepAdvanceMs(int value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_kMusicBeepAdvanceMs, value);
   }
 }

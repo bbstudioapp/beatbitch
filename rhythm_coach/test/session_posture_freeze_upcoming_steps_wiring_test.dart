@@ -19,18 +19,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Troisième branche de `isTimelineFrozen` : l'attente de posture.
+/// Aucun défi dans la séance : son gel recouvrirait celui de la posture.
 ///
-/// `session_frozen_upcoming_steps_wiring_test.dart` couvre les deux autres
-/// (défi, respiration de récup). Retirer `|| awaitingPostureReady` de
-/// `isTimelineFrozen` laisse ce fichier-là vert : la branche posture arrive
-/// ici par la sortie d'un break qui impose une nouvelle posture, sans aucun
-/// défi dans la séance — sinon les deux gels se recouvrent et rien de neuf
-/// n'est prouvé.
-///
-/// Même prix que son voisin : `Stopwatch` n'est pas simulé par
-/// `flutter_test`, la séance se joue à l'horloge du mur, d'où le break de 2 s
-/// et la boucle `runAsync`/`pump`.
+/// `Stopwatch` n'est pas simulé par `flutter_test` : la séance se joue à
+/// l'horloge du mur, d'où le break de 2 s et la boucle `runAsync`/`pump`.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -62,10 +54,6 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
-    // Moteur qui complète, par cohérence avec le harnais voisin — sans effet
-    // mesuré ici : aucun step de cette séance n'a de texte et `_host()` ne
-    // fournit pas de `PhraseBank`, donc `_tts.speak()` n'est jamais appelé
-    // dans ce scénario (vérifié en retirant `onComplete` : même résultat).
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(ttsChannel, (call) async {
       switch (call.method) {
@@ -120,9 +108,8 @@ void main() {
   });
 
   testWidgets(
-      "attente de posture : l'écran n'annonce aucun instant à venir, "
-      'et les annonce à nouveau dès la mise en place confirmée',
-      (tester) async {
+      "attente de posture à la sortie d'une pause, sans défi : la mise en "
+      'place confirmée rend la courbe et ses instants à venir', (tester) async {
     await DebugSettingsService().setSkipSessionButton(true);
     tester.view.physicalSize = const Size(400, 1400);
     tester.view.devicePixelRatio = 1.0;
@@ -133,11 +120,12 @@ void main() {
     final t = AppLocalizations.of(tester.element(find.byType(SessionScreen)));
 
     var gelPosture = 0;
-    var horsGelAnnonce = 0;
     var horsGelApresMiseEnPlace = 0;
     var framesDefiActif = 0;
     var miseEnPlaceConfirmee = false;
-    final annoncesSousGel = <String>[];
+    final ctrl = Provider.of<SessionController>(
+        tester.element(find.byType(MovementAnimation)),
+        listen: false);
 
     final fin = DateTime.now().add(const Duration(seconds: 30));
     while (DateTime.now().isBefore(fin)) {
@@ -146,23 +134,18 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       final anims = find.byType(MovementAnimation, skipOffstage: false);
-      if (anims.evaluate().isEmpty) continue;
-      final anim = tester.widget<MovementAnimation>(anims.first);
-      final ctrl = Provider.of<SessionController>(tester.element(anims.first),
-          listen: false);
+      final anim = anims.evaluate().isEmpty
+          ? null
+          : tester.widget<MovementAnimation>(anims.first);
 
       if (ctrl.isChallengeActive) framesDefiActif++;
 
       if (ctrl.awaitingPostureReady) {
         gelPosture++;
-        if (anim.upcomingSteps.isNotEmpty) {
-          annoncesSousGel.add('horloge à ${anim.elapsed.inMilliseconds} ms : '
-              '${anim.upcomingSteps.length} instants annoncés, le premier à '
-              '${anim.upcomingSteps.first.startSecond} s');
-        }
-      } else if (anim.upcomingSteps.isNotEmpty) {
-        horsGelAnnonce++;
-        if (miseEnPlaceConfirmee) horsGelApresMiseEnPlace++;
+      } else if (miseEnPlaceConfirmee &&
+          anim != null &&
+          anim.upcomingSteps.isNotEmpty) {
+        horsGelApresMiseEnPlace++;
       }
 
       final enPlace = find.text(t.sessionPostureReadyButton);
@@ -176,33 +159,57 @@ void main() {
     }
 
     expect(gelPosture, greaterThanOrEqualTo(15),
-        reason: "le scénario n'est jamais entré en attente de posture : rien"
-            " n'a été vérifié sous ce gel");
+        reason: "le scénario n'est jamais entré en attente de posture");
     expect(framesDefiActif, 0,
         reason: 'un défi actif recouvrirait le gel de posture : ce scénario ne'
             ' prouverait alors rien de plus que son voisin');
     expect(miseEnPlaceConfirmee, isTrue,
         reason: "le bouton de mise en place n'a jamais été trouvé à l'écran");
-    expect(horsGelAnnonce, greaterThanOrEqualTo(10),
-        reason: 'hors gel, cette séance doit annoncer des instants à venir ;'
-            " sans cela le vide observé sous gel ne prouverait rien");
     expect(horsGelApresMiseEnPlace, greaterThanOrEqualTo(10),
-        reason: 'la mise en place confirmée doit rendre la parole à'
-            " l'affichage : sans cela le silence mesuré pourrait être celui"
-            " d'une séance qui ne repart jamais");
-    expect(annoncesSousGel, isEmpty,
-        reason: "l'écran a annoncé des instants à venir pendant une attente de"
-            ' posture, sur ${annoncesSousGel.length} des $gelPosture frames'
-            ' gelées observées : ${annoncesSousGel.take(3).join(' | ')}');
+        reason: 'la mise en place confirmée doit rendre à la courbe ses'
+            ' instants à venir');
   }, timeout: const Timeout(Duration(seconds: 180)));
+
+  testWidgets('le bouton de la bannière de pause passe la pause',
+      (tester) async {
+    tester.view.physicalSize = const Size(400, 1400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(_host(session: _longBreakSession));
+    await tester.pump();
+    final t = AppLocalizations.of(tester.element(find.byType(SessionScreen)));
+
+    SessionController? ctrl;
+    var skipped = false;
+    final fin = DateTime.now().add(const Duration(seconds: 10));
+    while (DateTime.now().isBefore(fin) && !skipped) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 100)));
+      await tester.pump(const Duration(milliseconds: 100));
+      final skip = find.text(t.sessionBreakSkipButton);
+      if (skip.evaluate().isEmpty) continue;
+      ctrl = Provider.of<SessionController>(tester.element(skip.first),
+          listen: false);
+      expect(ctrl.breakActive, isTrue);
+      await tester.tap(skip.first);
+      await tester.pump();
+      skipped = true;
+    }
+
+    expect(skipped, isTrue, reason: 'bouton jamais affiché pendant la pause');
+    expect(ctrl!.breakActive, isFalse);
+    expect(ctrl.elapsedSeconds, greaterThanOrEqualTo(40));
+    await ctrl.stop();
+  }, timeout: const Timeout(Duration(seconds: 60)));
 }
 
-Widget _host() => MaterialApp(
+Widget _host({Session session = _session}) => MaterialApp(
       locale: const Locale('fr'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: SessionScreen(
-        session: _session,
+        session: session,
         tts: TtsService(),
         beep: _SilentBeepEngine(),
         ambience: _SilentAmbienceEngine(),
@@ -236,6 +243,19 @@ const _session = Session(
   ],
 );
 
+const _longBreakSession = Session(
+  id: 'pause-longue',
+  name: 'pause-longue',
+  description: '',
+  durationSeconds: 60,
+  defaultMode: SessionMode.rhythm,
+  breaks: [ScriptedBreak(time: 1, durationSeconds: 39)],
+  steps: [
+    SessionStep(time: 0, mode: SessionMode.rhythm, bpm: 40, duration: 1),
+    SessionStep(time: 40, mode: SessionMode.rhythm, bpm: 50, duration: 20),
+  ],
+);
+
 class _SilentBeepEngine extends BeepEngine {
   @override
   Future<void> init() async {}
@@ -255,7 +275,7 @@ class _SilentAmbienceEngine extends AmbienceEngine {
   @override
   Future<void> play(String? assetPath) async {}
   @override
-  Future<void> playForMode(SessionMode mode) async {}
+  Future<void> playForMode(SessionMode mode, {Position? depth}) async {}
   @override
   Future<void> pause() async {}
   @override

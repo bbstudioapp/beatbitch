@@ -15,10 +15,12 @@ class StatsService {
   static const String _kSessionsNoFail = 'stats.sessions_no_fail_streak';
   static const String _kModesUsedMask = 'stats.modes_used_mask';
   static const String _kMaxHoldFullSecAtomic = 'stats.max_hold_full_atomic';
+  static const String _kMaxUseMeSec = 'stats.max_use_me_sec';
   static const String _kLastSessionDay = 'stats.last_session_day';
   static const String _kDailyStreak = 'stats.daily_streak';
   static const String _kEncoresAsked = 'stats.encores_asked';
   static const String _kQuickiesCompleted = 'stats.quickies_completed';
+  static const String _kSabbatSessions = 'stats.sabbat_sessions';
   static const String _kHumiliationLevel = 'stats.humiliation_level';
   static const String _kObedienceLevel = 'stats.obedience_level';
 
@@ -42,9 +44,11 @@ class StatsService {
       sessionsNoFailStreak: prefs.getInt(_kSessionsNoFail) ?? 0,
       modesUsedMask: prefs.getInt(_kModesUsedMask) ?? 0,
       maxHoldFullAtomic: prefs.getInt(_kMaxHoldFullSecAtomic) ?? 0,
+      maxUseMeSec: prefs.getInt(_kMaxUseMeSec) ?? 0,
       dailyStreak: prefs.getInt(_kDailyStreak) ?? 0,
       encoresAsked: prefs.getInt(_kEncoresAsked) ?? 0,
       quickiesCompleted: prefs.getInt(_kQuickiesCompleted) ?? 0,
+      sabbatSessions: prefs.getInt(_kSabbatSessions) ?? 0,
       humiliationLevel: prefs.getDouble(_kHumiliationLevel) ?? 0.0,
       obedienceLevel: prefs.getDouble(_kObedienceLevel) ?? 0.0,
       finalsBouchePleine: prefs.getInt(_kFinalsBouchePleine) ?? 0,
@@ -63,7 +67,7 @@ class StatsService {
   }
 
   /// Lecture rapide du temps total cumulé persisté, en secondes. Sert au
-  /// déblocage des coachs par investissement (Phase 19.10) — plus simple
+  /// déblocage des coachs par investissement — plus simple
   /// que de charger un `snapshot()` complet quand seul ce compteur
   /// importe.
   Future<int> getTotalSeconds() async {
@@ -101,10 +105,7 @@ class StatsService {
   }
 
   /// Comptabilise un appui sur le bouton « J'en veux encore ». Cumul
-  /// global, alimente le badge JamaisRassasiee. Le bump d'humiliation
-  /// transit désormais via la conservation du `sessionScore` au start
-  /// de la session-encore enchaînée et le delta career intégré au
-  /// `_finish` (cf. `HumiliationEngine.applyEndOfSessionDelta`).
+  /// global, alimente le badge JamaisRassasiee.
   Future<void> recordEncoreAsked() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(
@@ -152,6 +153,15 @@ class StatsService {
     await prefs.setInt(
       _kQuickiesCompleted,
       (prefs.getInt(_kQuickiesCompleted) ?? 0) + 1,
+    );
+  }
+
+  /// Séance complétée avec Lilith : alimente le badge Sabbat.
+  Future<void> recordSabbatSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(
+      _kSabbatSessions,
+      (prefs.getInt(_kSabbatSessions) ?? 0) + 1,
     );
   }
 
@@ -218,6 +228,15 @@ class StatsService {
     }
   }
 
+  /// Plus longue tenue en « Utilise-moi » (jusqu'au FAIL ou à la fin de séance).
+  Future<void> recordUseMeHeld(int seconds) async {
+    if (seconds <= 0) return;
+    final prefs = await SharedPreferences.getInstance();
+    if (seconds > (prefs.getInt(_kMaxUseMeSec) ?? 0)) {
+      await prefs.setInt(_kMaxUseMeSec, seconds);
+    }
+  }
+
   /// Marque un mode comme utilisé (badge ToutTerrain).
   Future<void> markModeUsed(SessionMode mode) async {
     final prefs = await SharedPreferences.getInstance();
@@ -278,10 +297,12 @@ class StatsService {
       _kSessionsNoFail,
       _kModesUsedMask,
       _kMaxHoldFullSecAtomic,
+      _kMaxUseMeSec,
       _kLastSessionDay,
       _kDailyStreak,
       _kEncoresAsked,
       _kQuickiesCompleted,
+      _kSabbatSessions,
       _kHumiliationLevel,
       _kObedienceLevel,
       _kFinalsBouchePleine,
@@ -303,6 +324,7 @@ class StatsSnapshot {
   final int biffles;
   final int holdThroatSeconds;
   final int holdFullSeconds;
+  final int maxUseMeSec;
   final int sessionsCompleted;
   final int sessionsNoFailStreak;
   final int modesUsedMask;
@@ -310,6 +332,7 @@ class StatsSnapshot {
   final int dailyStreak;
   final int encoresAsked;
   final int quickiesCompleted;
+  final int sabbatSessions;
   final double humiliationLevel;
   final double obedienceLevel;
   final int finalsBouchePleine;
@@ -324,6 +347,7 @@ class StatsSnapshot {
     required this.biffles,
     required this.holdThroatSeconds,
     required this.holdFullSeconds,
+    this.maxUseMeSec = 0,
     required this.sessionsCompleted,
     required this.sessionsNoFailStreak,
     required this.modesUsedMask,
@@ -331,6 +355,7 @@ class StatsSnapshot {
     required this.dailyStreak,
     required this.encoresAsked,
     required this.quickiesCompleted,
+    this.sabbatSessions = 0,
     required this.humiliationLevel,
     required this.obedienceLevel,
     this.finalsBouchePleine = 0,

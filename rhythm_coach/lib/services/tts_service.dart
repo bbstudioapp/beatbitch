@@ -35,6 +35,7 @@ class TtsService {
   /// d'un moteur anglais n'existe pas en allemand — alors qu'un débit est un
   /// confort d'écoute, et le même nombre y a le même sens partout.
   static const String _userRatePrefsKey = 'tts.rate';
+  static const String _volumePrefsKey = 'tts.volume';
   static const String _userPitchPrefsKey = 'tts.pitch';
 
   /// Préfixes des clés qui mémorisent le débit et la hauteur réglés **pour
@@ -53,6 +54,7 @@ class TtsService {
   static const double _defaultPitch = 1.13;
   static const double _defaultRate = 0.56;
   static const double _defaultVolume = 1.0;
+  double _volume = _defaultVolume;
 
   // Windows : Microsoft Julie (SAPI) est la seule voix FR locale fiable
   // sur la plupart des postes. On la force comme voix par defaut ET
@@ -264,7 +266,10 @@ class TtsService {
 
     await _tts.setLanguage(_ttsLanguageTag(_locale));
     await _applyStoredUserRateAndPitch();
-    await _tts.setVolume(_defaultVolume);
+    _volume =
+        (await SharedPreferences.getInstance()).getDouble(_volumePrefsKey) ??
+            _defaultVolume;
+    await _tts.setVolume(_volume);
     // `awaitSpeakCompletion(true)` est défaillant sur Windows (SAPI) :
     // SAPI n'émet pas toujours l'event de complétion attendu, ce qui
     // fait freeze/crash le `speak()` suivant. On le garde activé sur les
@@ -752,9 +757,14 @@ class TtsService {
   static String get userRateKey => _userRatePrefsKey;
   static String get userPitchKey => _userPitchPrefsKey;
 
-  Future<void> setVolume(double volume) {
-    if (_isLinux) return Future.value(); // spd-say n'a pas d'option volume
-    return _tts.setVolume(volume.clamp(0.0, 1.0));
+  double get volume => _volume;
+
+  Future<void> setVolume(double volume) async {
+    _volume = volume.clamp(0.0, 1.0);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_volumePrefsKey, _volume);
+    if (_isLinux) return; // spd-say n'a pas d'option volume
+    await _tts.setVolume(_volume);
   }
 
   /// Liste les voix disponibles pour la locale donnée (filtrage sur

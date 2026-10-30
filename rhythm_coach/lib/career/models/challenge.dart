@@ -1,13 +1,7 @@
-/// Modèles du système de défis intra-séance (Phase 1).
+/// Modèles du système de défis intra-séance.
 ///
-/// Un défi est une surcharge opt-in (`challenges.enabled`) insérée à ~60 %
-/// de la séance, pilotée sur un axe de capacité unique surcoté à
-/// `comfort × 1.50`. Trois voies de sortie :
-/// - tap-out avant le seuil → fail défi (soft-cap × 0.92, successRate × 0.85)
-/// - seuil atteint puis `JE M'ARRÊTE` ou timeout → succès net (+2/+2)
-/// - seuil atteint + `JE TIENS ENCORE` × N → succès étendu (+ N × +1/+1)
-///
-/// Spec complète : doc local `~/beatbitch_challenges.md`.
+/// Un défi est une surcharge opt-in (`challenges.enabled`) pilotée sur un
+/// axe de capacité unique surcoté à `comfort × 1.50`.
 library;
 
 import '../../models/session.dart';
@@ -34,12 +28,13 @@ enum ChallengeOutcome {
   /// `× 0.85`. Pas de malus humil/obed.
   fail,
 
-  /// Seuil atteint puis `JE M'ARRÊTE` ou timeout 8 s. Bumps de base
+  /// Seuil atteint puis `JE M'ARRÊTE` sans extension. Bumps de base
   /// (+2 humil, +2 obed, ratchet comfort, successRate += 0.15).
   netSuccess,
 
-  /// Seuil atteint + 1 ou plusieurs `JE TIENS ENCORE`. Bumps de base
-  /// + N × (+1 humil, +1 obed), `best` étendu au-delà du seuil cible.
+  /// Seuil atteint puis `JE M'ARRÊTE` après N tranches `extensionSeconds`.
+  /// Bumps de base + N × (+1 humil, +1 obed), `best` étendu au-delà du
+  /// seuil cible.
   extendedSuccess,
 
   /// `PASSE` pressé pendant le breath de countdown. Malus obédiance -3,
@@ -49,58 +44,27 @@ enum ChallengeOutcome {
 
 /// Phase courante d'un défi en cours dans le `SessionController`. Pilote
 /// l'affichage des boutons et les annonces coach.
-///
-/// Gameplay hold-to-keep : le démarrage et la fin du défi sont pilotés
-/// par la présence du doigt (touch) ou de la touche espace (desktop) —
-/// cf. `SessionController.onChallengeHoldStart/End`.
 enum ChallengePhase {
   /// Pas de défi actif (état par défaut).
   none,
 
-  /// Breath du défi — annonce coach + boutons `PASSE` (tap) et `GO`
-  /// (hold-to-start) visibles. La joueuse maintient `GO` pour démarrer
-  /// le countdown 3-2-1, ou tape `PASSE` pour skipper.
+  /// Breath du défi — annonce coach + boutons `PASSE` et `DÉMARRE`.
   breath,
 
-  /// Compte à rebours 3-2-1 (TTS + gros chiffre dans le banner). Le
-  /// doigt doit rester présent ; un release déclenche la tolérance puis
-  /// retour `breath` (1ère fois) ou skip (2e fois). À la fin, transition
-  /// automatique vers `live`.
+  /// Compte à rebours 3-2-1 (TTS + gros chiffre dans le banner), puis
+  /// transition automatique vers `live`.
   countdown,
 
-  /// Défi en cours, doigt présent. La perte du doigt arme la tolérance
-  /// de release ; si la tolérance expire = fail.
+  /// Défi en cours ; `J'ABANDONNE` = fail.
   live,
 
-  /// Seuil atteint — le bouton change de couleur, le coach annonce que
-  /// la joueuse peut relâcher ou continuer. Maintenir au-delà = +1
-  /// extension par tranche `extensionSeconds`. Release = succès net ou
-  /// étendu selon le nombre d'extensions accumulées.
+  /// Seuil atteint — le bouton change de couleur. Laisser tourner = +1
+  /// extension par tranche `extensionSeconds` ; `JE M'ARRÊTE` = succès net
+  /// ou étendu selon le nombre d'extensions accumulées.
   atSeuil,
 
   /// Défi terminé, outcome déjà appliqué.
   ended,
-}
-
-/// Mode d'input live d'un défi — détermine le geste qui pilote la machine
-/// d'états pendant `countdown`/`live`/`atSeuil`.
-///
-/// Dérivé du mode du step défi (cf. `Challenge.inputMode`), pas stocké : la
-/// ligne de partage « statique → hold, dynamique → tap » coïncide exactement
-/// avec « mode hold vs autre mode ».
-enum ChallengeInputMode {
-  /// Le doigt reste présent sur l'écran toute la durée — geste congruent aux
-  /// holds statiques (la joueuse est déjà immobile). Le relâchement EST le
-  /// signal d'abandon (fail en `live`) ou de validation (succès en `atSeuil`).
-  /// C'est le mode historique.
-  hold,
-
-  /// Tap `GO` pour démarrer (après le countdown le défi tourne sur sa propre
-  /// horloge, sans présence du doigt), tap `STOP` plein largeur pour abandonner
-  /// en `live` ou valider en `atSeuil`. Pour les défis dynamiques/longs
-  /// (rythme, franchissement, biffle, endurance) où pinner le doigt entre en
-  /// compétition avec l'acte physique.
-  tapToggle,
 }
 
 /// Défi intra-séance immuable, généré par `ChallengeService` à partir du
@@ -170,12 +134,12 @@ class Challenge {
   /// tooltips et textes coach pédagogiques (flag `challenges.tutorial_seen`).
   final bool isTutorial;
 
-  /// Vrai pour un défi **exploratoire** (Phase 2) — axe vierge sans
+  /// Vrai pour un défi **exploratoire** — axe vierge sans
   /// `bestOf` connu, donc impossible de poser un seuil cible × 1.50.
   /// Conséquences sur la machine d'états (cf. `SessionController`) :
   /// - Pas d'annonce coach « tu peux rester là si tu veux » à l'entrée
   ///   `atSeuil` (le seuil est estimé, pas prouvé — pas de cérémonie).
-  /// - Pas de bumps de base humil/obed +2 sur succès (cf. spec § 5.2) —
+  /// - Pas de bumps de base humil/obed +2 sur succès —
   ///   seules les extensions (durée tenue / `extensionSeconds`) comptent.
   ///
   /// Le `targetThreshold` représente ici le **seuil initial estimé** par
@@ -201,7 +165,7 @@ class Challenge {
 
   /// Seuil initial estimé par axe pour un défi exploratoire — sert à
   /// déclencher le premier prompt « tu as tenu X, pousse encore ou
-  /// arrête » (cf. spec § 3.2).
+  /// arrête ».
   ///
   /// Axes durée : 5 s pour hold/apnée/gorge engagement (palier débutante),
   /// 8 s pour biffleStreak, 30 s pour rhythmMotionStreak, 15 s par défaut.
@@ -238,14 +202,6 @@ class Challenge {
   /// Clé d'axe utilisée pour lookup dans `challengePhrases` côté coach
   /// (cf. `Coach.pickChallengePhrase`).
   String get axisStorageKey => axis.storageKey;
-
-  /// Mode d'input live (cf. [ChallengeInputMode]). Dérivé du [mode] : les
-  /// holds statiques gardent la tenue du doigt ; tout le reste (rythme,
-  /// biffle, franchissement, endurance) passe en tap `GO`/`STOP`, où la tenue
-  /// continue serait ergonomiquement coûteuse pendant un acte rapide.
-  ChallengeInputMode get inputMode => mode == SessionMode.hold
-      ? ChallengeInputMode.hold
-      : ChallengeInputMode.tapToggle;
 
   /// Durée d'une prolongation « tient encore » en mode ouvert.
   /// Plancher 10 s, sinon `comfort × 0.30`. En exploratoire (`comfort`
@@ -319,7 +275,7 @@ class Challenge {
 /// `ChallengeInputs.none` = aucun défi inséré (comportement carrière
 /// standard).
 ///
-/// Une séance peut désormais (Phase 19.5) porter plusieurs défis
+/// Une séance peut porter plusieurs défis
 /// intercalés — typiquement 1 pour les paliers courts, 2 pour la
 /// longue. Le générateur les insère séquentiellement à des trigger
 /// times distribués entre les milestones.
@@ -330,8 +286,6 @@ class ChallengeInputs {
 
   const ChallengeInputs({this.challenges = const []});
 
-  /// Sucre syntaxique pour un défi unique (cas le plus fréquent) —
-  /// préserve la lisibilité des call sites historiques.
   factory ChallengeInputs.single(Challenge? challenge) => challenge == null
       ? ChallengeInputs.none
       : ChallengeInputs(challenges: [challenge]);
@@ -340,7 +294,5 @@ class ChallengeInputs {
 
   bool get hasChallenge => challenges.isNotEmpty;
 
-  /// Compatibilité : le premier défi de la liste (ou null si vide).
-  /// Utilisé par les call sites qui n'ont besoin que du défi principal.
   Challenge? get challenge => challenges.isEmpty ? null : challenges.first;
 }

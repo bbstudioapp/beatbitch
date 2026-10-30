@@ -1,4 +1,5 @@
 import '../services/saliva_engine.dart';
+import 'hold_move.dart';
 import 'session.dart';
 
 /// Position cible d'une étape. Détermine la tonalité du bip joué.
@@ -29,6 +30,23 @@ enum Position {
       _ => null,
     };
   }
+
+  String get serialized => name;
+}
+
+/// Point d'ancrage du geste rythmé : quelle position retient le battement
+/// suivant plus longtemps. `none` = intervalles réguliers (cf.
+/// `BeepEngine._intervalAfter`).
+enum BeatAnchor {
+  none,
+  from,
+  to;
+
+  static BeatAnchor fromString(String? raw) => switch (raw) {
+        'from' => BeatAnchor.from,
+        'to' => BeatAnchor.to,
+        _ => BeatAnchor.none,
+      };
 
   String get serialized => name;
 }
@@ -96,8 +114,26 @@ class SessionStep {
   /// séance (`awaitingPostureReady`) jusqu'à ce que la joueuse confirme qu'elle
   /// est en position (bouton « JE SUIS EN PLACE »). Posé sur le 1er step des
   /// milestones posture (`intro_posture_*`), et déclenché aussi en runtime à la
-  /// sortie d'un break qui change de posture (issue #77).
+  /// sortie d'un break qui change de posture.
   final bool awaitReady;
+
+  /// Ancrage du loop rythmé (rhythm/lick/hand) — cf. `BeepEngine._intervalAfter`.
+  /// Défaut `none` = intervalles réguliers, le geste d'avant le chantier
+  /// aimant. Un JSON antérieur au chantier ne porte pas cette clé et retombe
+  /// donc sur ce défaut : il rejoue à l'identique.
+  final BeatAnchor anchor;
+
+  /// Force de l'ancrage — cf. `BeepEngine._intervalAfter`. Défaut `1` =
+  /// régulier quel que soit [anchor], pour la même raison de compatibilité.
+  final int ratio;
+
+  /// Mouvements ponctuels pendant une tenue (cf. [HoldMove]). Vide hors hold.
+  final List<HoldMove> moves;
+
+  /// Step issu de l'escalade « Utilise-moi » : hors enveloppe de capacités,
+  /// jamais compté comme un step normal quel que soit l'état du mode quand il
+  /// s'applique.
+  final bool useMe;
 
   const SessionStep({
     required this.time,
@@ -112,6 +148,10 @@ class SessionStep {
     this.swallowMode,
     this.background,
     this.awaitReady = false,
+    this.anchor = BeatAnchor.none,
+    this.ratio = 1,
+    this.moves = const [],
+    this.useMe = false,
   });
 
   /// Le même step, replacé à [time]. Les rebases de timeline (supplication
@@ -119,7 +159,7 @@ class SessionStep {
   /// que de relister les champs : une liste recopiée à la main perd le champ
   /// qu'on vient d'ajouter, et `awaitReady` — la gate de posture — l'a été
   /// trois fois.
-  SessionStep rebased(int time) => SessionStep(
+  SessionStep rebased(int time, {bool? useMe}) => SessionStep(
         time: time,
         text: text,
         from: from,
@@ -132,6 +172,10 @@ class SessionStep {
         swallowMode: swallowMode,
         background: background,
         awaitReady: awaitReady,
+        anchor: anchor,
+        ratio: ratio,
+        moves: moves,
+        useMe: useMe ?? this.useMe,
       );
 
   /// True quand l'étape ne fait QUE déclencher une phrase TTS et n'apporte
@@ -177,6 +221,14 @@ class SessionStep {
       swallowMode: _swallowModeFromString(_asString(json['swallow_mode'])),
       background: _asString(json['background']),
       awaitReady: json['awaitReady'] == true || json['await_ready'] == true,
+      anchor: BeatAnchor.fromString(_asString(json['anchor'])),
+      ratio: _asInt(json['ratio']) ?? 1,
+      moves: [
+        if (json['moves'] is List)
+          for (final m in json['moves'] as List)
+            if (HoldMove.tryParse(m) case final move?) move,
+      ],
+      useMe: json['useMe'] == true,
     );
   }
 
@@ -217,6 +269,10 @@ class SessionStep {
         if (swallowMode != null) 'swallow_mode': swallowMode!.name,
         if (background != null) 'background': background,
         if (awaitReady) 'awaitReady': true,
+        if (anchor != BeatAnchor.none) 'anchor': anchor.serialized,
+        if (ratio != 1) 'ratio': ratio,
+        if (moves.isNotEmpty) 'moves': [for (final m in moves) m.toJson()],
+        if (useMe) 'useMe': true,
       };
 
   /// Sérialisation `chainAction` : on omet `time` (recalculé par le
@@ -230,5 +286,8 @@ class SessionStep {
         if (bpmEnd != null) 'bpmEnd': bpmEnd,
         if (duration != null) 'duration': duration,
         if (mode != null) 'mode': mode!.serialized,
+        if (anchor != BeatAnchor.none) 'anchor': anchor.serialized,
+        if (ratio != 1) 'ratio': ratio,
+        if (moves.isNotEmpty) 'moves': [for (final m in moves) m.toJson()],
       };
 }

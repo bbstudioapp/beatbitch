@@ -102,6 +102,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get sessionAmbienceLabel => 'Ambiente';
 
   @override
+  String get sessionSettingsTooltip => 'Ajustes';
+
+  @override
   String get sessionUseMeLabel => 'ÚSAME';
 
   @override
@@ -128,6 +131,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get sessionBreakBanner => 'PAUSA';
+
+  @override
+  String get sessionBreakSkipButton => 'SALTAR LA PAUSA';
 
   @override
   String get sessionFailPhasePhrase => 'Frase de fallo';
@@ -323,6 +329,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get profileStatHoldFullMax => 'Hold profundo más largo';
 
   @override
+  String get profileStatUseMeMax => 'Más tiempo seguido en «Úsame»';
+
+  @override
   String get profileStatHoldThroatTotal => 'Hold garganta (total)';
 
   @override
@@ -417,6 +426,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get profileCapHandStreak => 'Mano sin pausa';
+
+  @override
+  String get profileCapUseMeHeld => 'Aguante en «Úsame»';
 
   @override
   String get profileDiagnosticSection => 'DIAGNÓSTICO';
@@ -532,6 +544,16 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String careerDurationPlusChallengesAndPauses(String duration) {
+    return '$duration + tiempo de retos y pausas';
+  }
+
+  @override
+  String careerDurationPlusPauses(String duration) {
+    return '$duration + tiempo de pausas';
+  }
+
+  @override
   String get careerDurationSection => 'Duración';
 
   @override
@@ -605,19 +627,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get challengePassButton => 'PASAR';
 
   @override
-  String get challengeGoButton => 'AGUANTAR';
-
-  @override
-  String get challengeHoldHintLive => 'Mantén el dedo en la pantalla';
-
-  @override
-  String get challengeHoldHintAtSeuil =>
-      'Suelta para parar, o sigue aguantando';
-
-  @override
-  String get challengeHoldHintTolerance => 'Vuelve a poner el dedo';
-
-  @override
   String get challengeTapGoButton => 'EMPIEZA';
 
   @override
@@ -630,31 +639,20 @@ class AppLocalizationsEs extends AppLocalizations {
   String get challengeTapCountdownHint => 'Prepárate…';
 
   @override
-  String get challengeCountdownReleaseRetry => 'Mantén el dedo esta vez.';
-
-  @override
   String challengeBannerCountdown(int digit) {
     return '$digit';
   }
 
   @override
   String get challengeAttemptDefault =>
-      'Reto: vamos a empujar tu límite. Mantén pulsado AGUANTAR cuando estés lista, contaré tres dos uno antes de empezar. Mantén el dedo en la pantalla mientras aguantes.';
+      'Reto: vamos a empujar tu límite. Pulsa EMPIEZA cuando estés lista, contaré tres dos uno. Pulsa ME RINDO si no puedes más. En el umbral, pulsa LO DEJO para validarlo, o sigue para llegar más lejos.';
 
   @override
   String get challengeAttemptTutorialHoldThroat =>
-      'Primer reto: aguantarás en profundo durante cinco segundos. Mantén pulsado AGUANTAR, no quites el dedo de la pantalla. Si sueltas antes del umbral, fallaste. En el umbral el botón se pone verde: suelta para parar, o sigue aguantando para empujar más allá.';
+      'Primer reto: aguantarás en profundo durante cinco segundos. Pulsa EMPIEZA, contaré tres dos uno, y luego aguanta sin tocar la pantalla. Si no puedes más antes del umbral, pulsa ME RINDO. En el umbral el botón se pone verde: pulsa LO DEJO para validarlo, o sigue aguantando para llegar más lejos.';
 
   @override
   String get challengeExtensionDefault =>
-      'Puedes quedarte más tiempo si quieres, o soltar.';
-
-  @override
-  String get challengeAttemptTapDefault =>
-      'Reto: vamos a empujar tu límite. Pulsa EMPIEZA cuando estés lista, contaré tres dos uno. Luego sigue el ritmo — pulsa ME RINDO si no puedes más. En el umbral, pulsa LO DEJO para validarlo, o sigue para llegar más lejos.';
-
-  @override
-  String get challengeExtensionTapDefault =>
       'Puedes seguir si quieres, o pulsa LO DEJO.';
 
   @override
@@ -1364,6 +1362,18 @@ class AppLocalizationsEs extends AppLocalizations {
   String get sessionDebugFinishButton => 'DEBUG: terminar como éxito';
 
   @override
+  String get sessionDebugMusicBeepAdvanceLabel =>
+      'DEBUG: adelanto de los pitidos';
+
+  @override
+  String get sessionDebugMusicBeepAdvanceDecrease =>
+      'Reducir el adelanto de los pitidos';
+
+  @override
+  String get sessionDebugMusicBeepAdvanceIncrease =>
+      'Aumentar el adelanto de los pitidos';
+
+  @override
   String get soundsDebugScenarioButton => 'Debug — escenario de carrera';
 
   @override
@@ -1611,6 +1621,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get badgeNameSuppliante => 'Suplicante';
 
   @override
+  String get badgeNameSabbat => 'Aquelarre';
+
+  @override
   String get badgeUnitMarathonien => 'minutos totales';
 
   @override
@@ -1648,6 +1661,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get badgeUnitSuppliante => 'súplicas post-orgasmo';
+
+  @override
+  String get badgeUnitSabbat => 'sesiones con Lilith';
 
   @override
   String get careerLevelTitleDebutante => 'Principiante';
@@ -1753,6 +1769,36 @@ class AppLocalizationsEs extends AppLocalizations {
   String coachSummaryFree(String title) {
     return '$title · entrenamiento libre';
   }
+
+  @override
+  String get coachBadgeLimitedTime => 'EFÍMERA';
+
+  @override
+  String coachLimitedTimeUntil(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.MMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return 'Hasta el $dateString';
+  }
+
+  @override
+  String coachSummaryLimitedTime(String title, DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.MMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$title · hasta el $dateString';
+  }
+
+  @override
+  String coachLimitedTimeBanner(String name, DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.MMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$name está aquí hasta el $dateString.';
+  }
+
+  @override
+  String get coachLimitedTimeBannerAction => 'PROBAR';
 
   @override
   String get coachFreeTrainingDialogTitle => 'Entrenamiento libre';
@@ -2213,6 +2259,34 @@ class AppLocalizationsEs extends AppLocalizations {
       'Acota la duración de holds y súplicas mantenidas.';
 
   @override
+  String get customAnchorLabel => 'Imán';
+
+  @override
+  String get customAnchorHint =>
+      'El pulso se detiene en una posición y vuelve rápido a la otra. Apagado, el metrónomo sigue regular.';
+
+  @override
+  String get customAnchorStrengthLabel => 'Fuerza';
+
+  @override
+  String get customAnchorStrengthLight => 'Ligera';
+
+  @override
+  String get customAnchorStrengthMedium => 'Media';
+
+  @override
+  String get customAnchorStrengthHard => 'Dura';
+
+  @override
+  String get customAnchorPointLabel => 'Posición retenida';
+
+  @override
+  String get customAnchorPointFrom => 'Inicio';
+
+  @override
+  String get customAnchorPointTo => 'Final';
+
+  @override
   String get customSaveAndLaunch => 'Guardar y lanzar';
 
   @override
@@ -2282,6 +2356,16 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get profileScriptedBreaksSubtitle =>
       'La coach impone una postura (de rodillas, a cuatro patas…) e inserta pausas activas en las sesiones largas. Las posturas se desbloquean a medida que avanzas por los hitos de carrera.';
+
+  @override
+  String get profileMusicBeepAdvanceSection => 'Pitidos con la música';
+
+  @override
+  String get profileMusicBeepAdvanceTitle => 'Adelanto de los pitidos';
+
+  @override
+  String get profileMusicBeepAdvanceSubtitle =>
+      'Sesiones con música. Si los pitidos llegan después de la música, aumenta el adelanto.';
 
   @override
   String sessionRemainingTimeLabel(String time) {

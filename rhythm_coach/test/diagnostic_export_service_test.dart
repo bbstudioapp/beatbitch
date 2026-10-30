@@ -276,6 +276,20 @@ void main() {
       expect((payload['obedience'] as Map)['level'], 42.0);
     });
 
+    test('l\'amorçage de useMe.held_streak est exporté, drapeau et stats',
+        () async {
+      final svc = await _build(seed: const <String, Object>{
+        'cap.use_me_held_migrated': true,
+        'stats.max_use_me_sec': 240,
+      });
+      final payload = svc.buildPayload(const DiagnosticExportOptions());
+      expect(
+          (payload['capabilities']
+              as Map<String, dynamic>)['useMeHeldMigrated'],
+          true);
+      expect((payload['stats'] as Map<String, dynamic>)['maxUseMeSec'], 240);
+    });
+
     test('capabilities expose seulement les axes ayant au moins une clé',
         () async {
       final svc = await _build(seed: const <String, Object>{

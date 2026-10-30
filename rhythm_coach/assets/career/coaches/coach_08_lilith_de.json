@@ -1,0 +1,220 @@
+{
+  "lang": "de",
+  "id": "coach_08_lilith",
+  "title": "Halloween-Coach",
+  "publicBio": "Eine Hexe auf der Durchreise, solange der Schleier dünn ist. Sie verzaubert mehr, als sie bestraft: Jede Session ist ein Ritual.",
+  "phrases": {
+    "rhythm": {
+      "soft": [
+        "Folge meinem Takt {name}. Langsam, wie eine Beschwörung.",
+        "Sanft {name}. Ein Zauber wird nicht überstürzt.",
+        "Lass dich vom Rhythmus wiegen {name}.",
+        "Jede Bewegung ist eine Silbe des Zaubers {name}. Sprich sie gut aus.",
+        "Die Kerzen flackern in deinem Rhythmus {name}. Bleib gleichmäßig.",
+        "So ist es gut {name}. Du betrittst den Kreis."
+      ],
+      "medium": [
+        {"text": "Ein bisschen tiefer {name}. Der Zauber will mehr von dir.", "min_depth": "mid"},
+        "Brich den Takt nicht {name}, sonst fangen wir den Zauber von vorne an.",
+        {"text": "Tiefer runter {name}. Der Mond sieht zu.", "min_depth": "mid"},
+        "Schneller {name}. Der Kessel brodelt.",
+        "Das ist hübsch {name}. Bleib in diesem Tempo.",
+        {"text": "Tiefer {name}. So wirkt der Zauber besser.", "min_depth": "mid"}
+      ],
+      "hard": [
+        {"text": "Tiefer {name}. Der Zauber wirkt nur ganz unten.", "min_depth": "throat"},
+        "Schneller {name}, die Nacht ist kurz.",
+        {"text": "Ganz nach unten {name}. Gib mir alles.", "min_depth": "throat"},
+        "Steck es weg {name}. Das ist das Herz des Rituals.",
+        {"text": "Kehle auf {name}, wie eine Tür in der Walpurgisnacht.", "min_depth": "throat"},
+        "Werd nicht langsamer {name}. Der Zauber ist fast vollendet."
+      ]
+    },
+    "lick": {
+      "soft": [
+        "Leck ihn wie warmes Kerzenwachs {name}. Ganz ohne Eile.",
+        "Mit der Zungenspitze {name}. Zeichne mir ein Pentagramm.",
+        "Sanft {name}. Schmeck die Magie."
+      ],
+      "medium": [
+        "Die ganze Länge {name}. Langsam, wie man ein Zauberbuch liest.",
+        "Mehr Trank {name}. Lass ihn glänzen.",
+        "Leck ihn überall {name}. Keine Seite darf vergessen werden."
+      ],
+      "hard": [
+        "Nasser {name}. Ein Trank wird großzügig gebraut.",
+        "Bedeck ihn mit Spucke {name}. Ich will, dass er im Mondlicht glänzt."
+      ]
+    },
+    "biffle": {
+      "soft": [
+        "Lass ihn auf deine Wange klatschen {name}. Dreimal, zur Abwehr.",
+        "Schlag dir damit ins Gesicht {name}. Jeder Schlag weckt einen Geist.",
+        "Lass den Zauber auf deiner Wange erklingen {name}."
+      ],
+      "medium": [
+        "Fester {name}. Geister hören schlecht.",
+        "Jetzt die andere Wange {name}. Ein Zauber muss symmetrisch sein."
+      ]
+    },
+    "hold": {
+      "soft": [
+        "Halt ihn da {name}. Der Mond sieht dich an.",
+        {"text": "Behalte ihn im Mund, ganz still {name}.", "max_depth": "mid"},
+        "Still {name}. Atme durch die Nase, wie in einer Meditation.",
+        {"text": "Halte die Position {name}. Der Zauber setzt sich.", "max_depth": "throat"}
+      ],
+      "medium": [
+        {"text": "Bleib ganz unten {name}. Der Zauber braucht Zeit.", "min_depth": "mid"},
+        {"text": "Tiefer, und halten {name}.", "min_depth": "mid"},
+        {"text": "Komm nicht vor meinem Zeichen hoch {name}.", "min_depth": "mid", "max_depth": "throat"},
+        "Halten {name}. Zähl die Kerzen im Kopf."
+      ],
+      "hard": [
+        {"text": "Ganz unten, still {name}. Ich versiegle den Zauber.", "min_depth": "throat"},
+        {"text": "Halten {name}. Genau hier wirkt die Magie.", "min_depth": "throat"},
+        "Halten bis zu meinem Zeichen {name}. Nicht vorher."
+      ],
+      "finale": [
+        {"text": "Letzte Beschwörung. Halt ihn tief {name}.", "min_depth": "mid"},
+        {"text": "Wir versiegeln das Ritual ganz unten {name}. Nicht loslassen.", "min_depth": "throat"},
+        "Halten bis zum Zeichen {name}. Der Zauber schließt sich.",
+        "Das ist das letzte Wort des Zaubers {name}. Halt es gut."
+      ]
+    },
+    "breath": {
+      "soft": [
+        "Atme {name}. Lass dich vom Rauch des Kessels erfüllen.",
+        "Tief einatmen {name}. Die Kerzen warten.",
+        "Komm zu Atem {name}. Die Nacht ist noch lang.",
+        "Entspann dich {name}. Der Kreis beschützt dich."
+      ]
+    },
+    "beg": {
+      "soft": [
+        "Fleh mich an {name}. Eine Hexe erfüllt nur gut gesprochene Wünsche.",
+        "Sag es: „verzaubere mich noch einmal, {coach}“.",
+        "Sprich deinen Wunsch aus {name}, laut.",
+        "Bitte mich weiterzumachen {name}. Lieb."
+      ],
+      "medium": [
+        "Wiederhole: „heute Nacht gehöre ich dir, {coach}“.",
+        "Fleh „mehr, bitte, {coach}“, und vielleicht erfülle ich es dir.",
+        "Lauter {name}. Der Mond hat dich nicht gehört.",
+        "Nenn mich {coach}. Hexen lieben es, beim Namen genannt zu werden."
+      ]
+    },
+    "freestyle": {
+      "soft": [
+        "Diese Nacht gehört dir {name}. Sprich deinen eigenen Zauber.",
+        "Zeig mir deine eigene Magie {name}.",
+        "Frei {name}. Überrasch mich."
+      ]
+    },
+    "hand": {
+      "soft": [
+        "Jetzt deine Hand {name}. Lass ihn im Kerzenlicht glänzen.",
+        "Streichel ihn mit der Hand {name}, wie einen kostbaren Zauberstab.",
+        "Sanft auf und ab mit der Hand {name}. Gönn deinem Mund eine Pause."
+      ],
+      "medium": [
+        "Etwas fester mit der Hand {name}. Schön.",
+        "Halt den Takt mit deiner Hand {name}. Das machst du wunderbar."
+      ]
+    }
+  },
+  "randomComments": [
+    "Die Kerzen schmelzen für dich {name}.",
+    "Heute Nacht ist Vollmond {name}. Ein gutes Zeichen.",
+    "Der Kessel raucht stärker, wenn du dir Mühe gibst {name}.",
+    "Ich bleibe nur ein paar Nächte {name}. Genieß es.",
+    "Du bist eine hübsche Opfergabe {name}.",
+    "Der Schleier ist dünn heute Nacht {name}. Ich sehe dich ganz deutlich.",
+    "Keines meiner Zauberbücher hat etwas so Hübsches vorhergesehen {name}.",
+    "Pst {name}. Hör die Kerzen knistern."
+  ],
+  "intros": [
+    "Ich bin Lilith. Der Schleier ist dünn in diesen Nächten {name}… also bin ich gekommen, um dich zu holen.",
+    "Ich bleibe nur ein paar Nächte. Genieß jede einzelne {name}.",
+    "Tritt in meinen Kreis {name}. Heute Nacht spreche ich den Zauber.",
+    "Die Kerzen brennen {name}. Das Ritual kann beginnen."
+  ],
+  "congrats": [
+    "Das Ritual ist vollbracht {name}. Komm wieder, bevor der Mond abnimmt.",
+    "Schöner Hexensabbat {name}. Der Zauber hat gewirkt.",
+    "Du warst heute Nacht eine perfekte Opfergabe {name}.",
+    "Der Kessel ist ruhig {name}. Du hast ihn gut genährt."
+  ],
+  "encore": [
+    "Noch eine Nacht im Kreis {name}? Ich sage nie nein.",
+    "Schon zurück {name}? Der Zauber hat dir gefallen."
+  ],
+  "progress": {
+    "25": [
+      "Das erste Viertel des Zaubers ist gesprochen {name}.",
+      "Die ersten Kerzen sind geschmolzen {name}. Weiter."
+    ],
+    "50": [
+      "Die Hälfte des Rituals {name}. Der Mond steht im Zenit.",
+      "Halbzeit {name}. Der Zauber beginnt zu wirken."
+    ],
+    "75": [
+      "Drei Viertel des Zaubers {name}. Brich den Kreis jetzt nicht.",
+      "Der Kessel kocht {name}. Nicht mehr lange."
+    ],
+    "90": [
+      "Die letzten Worte des Zaubers {name}. Gib alles.",
+      "Fast Mitternacht {name}. Das Ritual geht zu Ende."
+    ]
+  },
+  "branchPhrases": {
+    "endurance": {
+      "soft": ["Ein Ritual verdient man sich mit Ausdauer {name}.", "Du hast Atem {name}. Lange Nächte sind wie für dich gemacht."],
+      "medium": ["Du bist immer noch da {name}. Der Kreis mag dich.", "Du machst lange durch {name}. Genau das habe ich erwartet."],
+      "hard": ["Die Nacht ist lang und du wirst nicht schwach {name}.", "Sogar der Kessel wird vor dir müde {name}."]
+    },
+    "profondeur": {
+      "soft": ["Deine Kehle ist eine hübsche Tür {name}.", "Ich spüre, dass du tiefer kannst {name}."],
+      "medium": ["Du gehst schön tief {name}. Der Zauber liebt die Tiefe.", "Deine Kehle öffnet sich wie ein Zauberbuch {name}."],
+      "hard": ["So tief es geht {name}. Dort wohnen die Zauber.", "Du schluckst die ganze Nacht {name}."]
+    },
+    "rythmeBiffle": {
+      "soft": ["Dein Rhythmus ist eine Beschwörung {name}.", "Jeder Schlag weckt den Kreis {name}."],
+      "medium": ["Du hast den Takt einer Hexe {name}.", "Der Hexensabbat tanzt in deinem Rhythmus {name}."],
+      "hard": ["Schneller als die Trommeln des Sabbats {name}.", "Dein Rhythmus lässt die Kerzen zittern {name}."]
+    },
+    "obeissance": {
+      "soft": ["Du tust, was ich sage {name}. Verzaubert.", "Du hörst gut auf mich {name}. Der Zauber wirkt."],
+      "medium": ["Du gehorchst ohne nachzudenken {name}. Mein Zauber ist stark.", "Du stehst unter meinem Bann {name}. Das steht dir."],
+      "hard": ["Du gehörst mir bis zum Morgengrauen {name}.", "Kein eigener Wille mehr {name}. Nur meiner."]
+    },
+    "sloppy": {
+      "soft": ["Deine Spucke ist mein Lieblingstrank {name}.", "Lass es fließen {name}. Ein Trank muss frei fließen."],
+      "medium": ["Mehr Trank {name}. Der Kessel verlangt danach.", "Du tropfst wie eine schmelzende Kerze {name}."],
+      "hard": ["Ertränk ihn in deinem Trank {name}.", "Alles tropft {name}. Ein gelungenes Ritual."]
+    }
+  },
+  "progressPhrases": {
+    "gorge.engagement_streak": {
+      "attempt": ["Heute Nacht bleibt deine Kehle etwas länger im Kreis {name}.", "Der Zauber von heute braucht deine Kehle etwas länger {name}."],
+      "record": ["Deine Kehle war noch nie so lange im Kreis {name}. Der Zauber ist stark.", "Eine neue Schwelle für deine Kehle {name}. Der Mond ist stolz auf dich."],
+      "tapout": ["Deine Kehle hat Stopp gesagt {name}. Das respektieren wir, der Zauber kann warten.", "Das ist heute Nacht deine echte Grenze {name}. Wir schieben sie in einer anderen Nacht weiter."]
+    },
+    "noswallow.streak": {
+      "attempt": ["Heute Nacht behältst du deinen Trank länger, ohne zu schlucken {name}.", "Kein einziger Tropfen geschluckt {name}, etwas länger als sonst."],
+      "record": ["So lange hast du deinen Trank noch nie im Mund gehabt {name}. Herrlich.", "Rekord für den Trank im Mund {name}. Der Kessel läuft über."],
+      "tapout": ["Du musstest schlucken {name}, das ist normal. Wir versuchen es in einer anderen Nacht.", "Heute Nacht liegt deine Grenze hier {name}. Wir respektieren sie."]
+    },
+    "rhythm.motion_streak": {
+      "attempt": ["Heute Nacht dauert die Beschwörung länger ohne Pause {name}.", "Der Zauber von heute hört nicht auf {name}. Etwas länger als sonst."],
+      "record": ["Du hast dich noch nie so lange ohne Pause bewegt {name}. Schöner Zauber.", "Dein längstes Ritual ohne Pause {name}. Der Kreis ist beeindruckt."],
+      "tapout": ["Du brauchtest eine Pause {name}, das ist deine echte Grenze. Wir schieben sie weiter.", "Dir ist die Luft ausgegangen {name}. Macht nichts, der Zauber wartet."]
+    }
+  },
+  "nicknames": {
+    "pool": ["kleine Hexe", "meine Opfergabe", "mein Geschöpf", "kleine Seele", "meine Wachspuppe"],
+    "use_user_prenom": true,
+    "use_user_nicknames": false
+  },
+  "coachNicknames": ["Lilith", "Herrin", "meine Hexe"]
+}

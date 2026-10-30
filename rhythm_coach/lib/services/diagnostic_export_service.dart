@@ -8,6 +8,7 @@ import '../career/models/coach_catalog.dart';
 import '../career/models/specialization.dart';
 import '../models/badge.dart';
 import 'capability_axis.dart';
+import 'capability_history.dart';
 import 'diagnostic_export_integrity.dart';
 import 'locale_service.dart';
 import 'profile_reconciliation.dart';
@@ -121,6 +122,9 @@ class DiagnosticExportService {
       'humiliation': _humiliation(),
       'obedience': _obedience(),
       'capabilities': _capabilities(),
+      'capabilityHistory': CapabilityHistory.toJson(
+          CapabilityHistory.read(_prefs),
+          dayOnly: true),
       'milestones': _milestones(),
       'badges': _badges(),
       'coach': _coach(),
@@ -250,10 +254,12 @@ class DiagnosticExportService {
             _prefs.getInt('stats.sessions_no_fail_streak') ?? 0,
         'modesUsedMask': _prefs.getInt('stats.modes_used_mask') ?? 0,
         'maxHoldFullAtomic': _prefs.getInt('stats.max_hold_full_atomic') ?? 0,
+        'maxUseMeSec': _prefs.getInt('stats.max_use_me_sec') ?? 0,
         'lastSessionDay': _prefs.getInt('stats.last_session_day'),
         'dailyStreak': _prefs.getInt('stats.daily_streak') ?? 0,
         'encoresAsked': _prefs.getInt('stats.encores_asked') ?? 0,
         'quickiesCompleted': _prefs.getInt('stats.quickies_completed') ?? 0,
+        'sabbatSessions': _prefs.getInt('stats.sabbat_sessions') ?? 0,
         'finalsBouchePleine': _prefs.getInt('stats.finals_bouche_pleine') ?? 0,
         'finalsRepeinte': _prefs.getInt('stats.finals_repeinte') ?? 0,
         'finalsGobeuse': _prefs.getInt('stats.finals_gobeuse') ?? 0,
@@ -292,6 +298,7 @@ class DiagnosticExportService {
     return <String, dynamic>{
       'axes': axes,
       'legacyMigrated': _prefs.getBool('cap.legacy_migrated') ?? false,
+      'useMeHeldMigrated': _prefs.getBool('cap.use_me_held_migrated') ?? false,
     };
   }
 

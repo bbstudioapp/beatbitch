@@ -127,6 +127,60 @@ void main() {
     }
   });
 
+  test(
+      "useMe — l'explosion finit avec la tenue du final : aucun step de "
+      'configuration après, seulement des consignes de mouvement pendant', () {
+    final cueBank = PhraseBank(
+      byMode: {
+        for (final m in SessionMode.values)
+          m: {
+            'soft': _p(['s']),
+            'medium': _p(['m']),
+            'hard': _p(['h']),
+            'boost': _p(['b']),
+            'finale': _p(['f']),
+            if (m == SessionMode.hold) ...{
+              'micro': _p(['micro']),
+              'lick_balls': _p(['lick balls']),
+            },
+          },
+      },
+      congrats: _p(['bravo']),
+      intros: _p(['intro']),
+    );
+    var cuesDuringFinal = 0;
+    for (var seed = 0; seed < 40; seed++) {
+      final session = CareerSessionGenerator(seed: seed)
+          .generate(
+            level: 7,
+            bank: cueBank,
+            durationSeconds: 20 * 60,
+            intense: true,
+            useMe: true,
+            humiliationCareer: 300.0,
+            obedience: 100.0,
+            unlockedKeys: _allUnlocks,
+          )
+          .session;
+      final finalT = session.finalStepTime!;
+      final finisher =
+          session.steps.firstWhere((s) => !s.isTextOnly && s.time == finalT);
+      final explosionEnd = finalT + finisher.duration!;
+      final after = session.steps.where((s) => s.time > finalT).toList();
+      expect(after.where((s) => !s.isTextOnly), isEmpty,
+          reason: 'seed=$seed : step de configuration après le final');
+      for (final s in after) {
+        expect(s.time, lessThan(explosionEnd),
+            reason: 'seed=$seed : consigne après la fin de la tenue finale');
+      }
+      cuesDuringFinal += after.length;
+      expect(session.durationSeconds, explosionEnd + 2,
+          reason: 'seed=$seed : la séance finit 2 s après la tenue finale');
+    }
+    expect(cuesDuringFinal, greaterThan(0),
+        reason: 'aucune consigne pendant le final : le banc ne voit rien');
+  });
+
   test('useMe (PR2) — throat/full garanti même à humiliation 0 (bypass)', () {
     // Sans bypass, `_enforceHumiliationRequired` dégraderait le `to`
     // throat/full vers mid/head pour une joueuse à humil nulle. Le bypass

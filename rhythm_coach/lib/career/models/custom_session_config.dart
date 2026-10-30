@@ -1,7 +1,7 @@
 import 'dart:math' show min;
 
 import '../../models/session.dart' show SessionMode;
-import '../../models/session_step.dart' show Position;
+import '../../models/session_step.dart' show BeatAnchor, Position;
 import '../../services/locale_service.dart';
 import 'specialization.dart';
 
@@ -10,6 +10,11 @@ import 'specialization.dart';
 /// `regenEndMultiplier`) ainsi qu'un plancher d'intensité (`intensityFloor`)
 /// appliqué dès le début de séance.
 enum CustomDifficulty { facile, normal, difficile, extreme }
+
+/// Cran de force de l'aimant rythmé exposé dans l'éditeur Custom. La
+/// joueuse choisit un cran nommé, jamais un ratio brut — cf.
+/// `CustomSessionConfig.resolveAnchor` pour la traduction en ratio moteur.
+enum AnchorStrength { light, medium, hard }
 
 /// Dosage de la quantité d'un mode dans la session générée. Mappé sur le
 /// multiplicateur de poids du générateur (`coachModeWeights`). `none`
@@ -100,6 +105,16 @@ class CustomSessionConfig {
     SessionMode.suckle,
   ];
 
+  /// Ratio moteur (`SessionStep.ratio`) derrière chaque cran. `medium`
+  /// reprend `CareerLevelGates.rhythmAnchorDefaultRatio` (3, le schéma 3:1
+  /// de Manu) ; `hard` reste en deçà du 9 réservé au final « très dur ».
+  /// Aucun des trois n'a été validé à l'oreille par Manu.
+  static const Map<AnchorStrength, int> _anchorRatio = {
+    AnchorStrength.light: 2,
+    AnchorStrength.medium: 3,
+    AnchorStrength.hard: 5,
+  };
+
   final String id;
   final String name;
 
@@ -143,6 +158,19 @@ class CustomSessionConfig {
   final int holdDurationMin;
   final int holdDurationMax;
 
+  /// Aimant du geste rythmé. `false` = métronome régulier, le standard :
+  /// la séance garde exactement l'ancrage que le générateur décide seul
+  /// depuis le niveau virtuel. `true` = la config prend la main sur les
+  /// steps `rhythm` et `hold` du corps de séance.
+  final bool anchorEnabled;
+
+  /// Force de l'aimant quand [anchorEnabled]. Ignoré sinon.
+  final AnchorStrength anchorStrength;
+
+  /// Position que l'aimant retient : `from` (départ) ou `to` (arrivée).
+  /// Jamais `none` — l'extinction passe par [anchorEnabled].
+  final BeatAnchor anchorPoint;
+
   /// Code langue au moment de la sauvegarde (utilisé pour le nom de session
   /// et un éventuel filtrage futur).
   final String lang;
@@ -164,6 +192,9 @@ class CustomSessionConfig {
     required this.holdDurationMin,
     required this.holdDurationMax,
     required this.lang,
+    this.anchorEnabled = false,
+    this.anchorStrength = AnchorStrength.medium,
+    this.anchorPoint = BeatAnchor.from,
   });
 
   factory CustomSessionConfig.defaults({String? id}) {
@@ -184,6 +215,9 @@ class CustomSessionConfig {
       holdDurationMin: defaultHoldDurationMin,
       holdDurationMax: defaultHoldDurationMax,
       lang: LocaleService.instance.languageCode,
+      anchorEnabled: false,
+      anchorStrength: AnchorStrength.medium,
+      anchorPoint: BeatAnchor.from,
     );
   }
 
@@ -207,6 +241,9 @@ class CustomSessionConfig {
     int? holdDurationMin,
     int? holdDurationMax,
     String? lang,
+    bool? anchorEnabled,
+    AnchorStrength? anchorStrength,
+    BeatAnchor? anchorPoint,
   }) {
     return CustomSessionConfig(
       id: id ?? this.id,
@@ -226,6 +263,9 @@ class CustomSessionConfig {
       holdDurationMin: holdDurationMin ?? this.holdDurationMin,
       holdDurationMax: holdDurationMax ?? this.holdDurationMax,
       lang: lang ?? this.lang,
+      anchorEnabled: anchorEnabled ?? this.anchorEnabled,
+      anchorStrength: anchorStrength ?? this.anchorStrength,
+      anchorPoint: anchorPoint ?? this.anchorPoint,
     );
   }
 
@@ -238,6 +278,12 @@ class CustomSessionConfig {
         entry.key: _doseWeight[entry.value] ?? 1.0,
     };
   }
+
+  /// Aimant passé à `generate(custom:)` — `(point, ratio)`, ou `null` quand
+  /// l'aimant est éteint : le générateur garde alors sa décision d'ancrage
+  /// dérivée du niveau virtuel, inchangée.
+  (BeatAnchor, int)? resolveAnchor() =>
+      anchorEnabled ? (anchorPoint, _anchorRatio[anchorStrength] ?? 3) : null;
 
   /// Allocation de spécialisation passée à `generate(specialization:)`.
   /// Vide en Custom : la spécialisation est une dimension de progression
@@ -296,6 +342,9 @@ class CustomSessionConfig {
         'bpm_max': bpmMax,
         'hold_duration_min': holdDurationMin,
         'hold_duration_max': holdDurationMax,
+        'anchor_enabled': anchorEnabled,
+        'anchor_strength': anchorStrength.name,
+        'anchor_point': anchorPoint.serialized,
         'doses': {
           for (final entry in doses.entries)
             entry.key.serialized: entry.value.name,
@@ -308,6 +357,14 @@ class CustomSessionConfig {
       return ModeDose.values.firstWhere(
         (d) => d.name == s,
         orElse: () => ModeDose.normal,
+      );
+    }
+
+    AnchorStrength parseAnchorStrength(Object? raw) {
+      final s = raw is String ? raw : '';
+      return AnchorStrength.values.firstWhere(
+        (a) => a.name == s,
+        orElse: () => AnchorStrength.medium,
       );
     }
 
@@ -388,6 +445,16 @@ class CustomSessionConfig {
       holdDurationMin: holdLo,
       holdDurationMax: holdHi,
       lang: json['lang'] as String? ?? LocaleService.instance.languageCode,
+      // Clé absente d'une config antérieure au chantier aimant : l'aimant
+      // reste éteint, la séance rejoue à l'identique. Le défaut est répété
+      // ici parce que `fromJson` construit tous les champs explicitement —
+      // il n'hérite pas de celui du constructeur.
+      anchorEnabled: json['anchor_enabled'] as bool? ?? false,
+      anchorStrength: parseAnchorStrength(json['anchor_strength']),
+      // `BeatAnchor.fromString` retombe sur `none`, qui ne vaut rien ici
+      // (l'extinction passe par `anchorEnabled`) : on garde `from`.
+      anchorPoint:
+          json['anchor_point'] == 'to' ? BeatAnchor.to : BeatAnchor.from,
     );
   }
 }

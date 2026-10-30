@@ -1,0 +1,220 @@
+{
+  "lang": "en",
+  "id": "coach_08_lilith",
+  "title": "Halloween coach",
+  "publicBio": "A witch passing through while the veil is thin. She bewitches more than she punishes: every session is a ritual.",
+  "phrases": {
+    "rhythm": {
+      "soft": [
+        "Follow my rhythm {name}. Slowly, like an incantation.",
+        "Gently {name}. A spell is never rushed.",
+        "Let the rhythm rock you {name}.",
+        "Every stroke is a syllable of the spell {name}. Say them well.",
+        "The candles flicker to your rhythm {name}. Keep it steady.",
+        "There you go {name}. You're stepping into the circle."
+      ],
+      "medium": [
+        {"text": "A little deeper {name}. The spell wants more of you.", "min_depth": "mid"},
+        "Don't break the rhythm {name}, or we start the spell over.",
+        {"text": "Go lower {name}. The moon is watching.", "min_depth": "mid"},
+        "Faster {name}. The cauldron is bubbling.",
+        "That's pretty {name}. Keep that tempo.",
+        {"text": "Deeper {name}. The charm takes better that way.", "min_depth": "mid"}
+      ],
+      "hard": [
+        {"text": "Deeper {name}. The spell only works at the bottom.", "min_depth": "throat"},
+        "Faster {name}, the night is short.",
+        {"text": "All the way down {name}. Give me everything.", "min_depth": "throat"},
+        "Take it {name}. This is the heart of the ritual.",
+        {"text": "Open throat {name}, like a door on sabbat night.", "min_depth": "throat"},
+        "Don't slow down {name}. The spell is almost complete."
+      ]
+    },
+    "lick": {
+      "soft": [
+        "Lick it like warm candle wax {name}. No rush.",
+        "With the tip of your tongue {name}. Draw me a pentacle.",
+        "Gently {name}. Taste the magic."
+      ],
+      "medium": [
+        "The whole length {name}. Slowly, like reading a grimoire.",
+        "More potion {name}. Make it shine.",
+        "Lick it everywhere {name}. Don't skip a single page."
+      ],
+      "hard": [
+        "Wetter {name}. A potion is brewed generously.",
+        "Cover it in spit {name}. I want it gleaming under the moon."
+      ]
+    },
+    "biffle": {
+      "soft": [
+        "Slap it on your cheek {name}. Three times, to ward off evil.",
+        "Tap your face with it {name}. Every slap wakes a spirit.",
+        "Let the spell ring out on your cheek {name}."
+      ],
+      "medium": [
+        "Harder {name}. Spirits are hard of hearing.",
+        "The other cheek now {name}. A charm must be symmetrical."
+      ]
+    },
+    "hold": {
+      "soft": [
+        "Hold it there {name}. The moon is watching you.",
+        {"text": "Keep it in your mouth, perfectly still {name}.", "max_depth": "mid"},
+        "Still {name}. Breathe through your nose, like a meditation.",
+        {"text": "Hold the position {name}. The spell is setting.", "max_depth": "throat"}
+      ],
+      "medium": [
+        {"text": "Stay at the bottom {name}. The charm needs time.", "min_depth": "mid"},
+        {"text": "Lower, and hold {name}.", "min_depth": "mid"},
+        {"text": "Don't come up before my signal {name}.", "min_depth": "mid", "max_depth": "throat"},
+        "Hold {name}. Count the candles in your head."
+      ],
+      "hard": [
+        {"text": "At the bottom, still {name}. I'm sealing the spell.", "min_depth": "throat"},
+        {"text": "Hold {name}. This is where the magic happens.", "min_depth": "throat"},
+        "Hold until my signal {name}. Not before."
+      ],
+      "finale": [
+        {"text": "Last incantation. Hold it deep {name}.", "min_depth": "mid"},
+        {"text": "We seal the ritual at the bottom {name}. Don't let go.", "min_depth": "throat"},
+        "Hold until the signal {name}. The spell is closing.",
+        "This is the last word of the spell {name}. Hold it well."
+      ]
+    },
+    "breath": {
+      "soft": [
+        "Breathe {name}. Let the cauldron's smoke fill you.",
+        "Breathe in deeply {name}. The candles are waiting.",
+        "Catch your breath {name}. The night is still long.",
+        "Relax {name}. The circle protects you."
+      ]
+    },
+    "beg": {
+      "soft": [
+        "Beg me {name}. A witch only grants wishes spoken well.",
+        "Say it: \"bewitch me again, {coach}\".",
+        "Make your wish {name}, out loud.",
+        "Ask me to keep going {name}. Sweetly."
+      ],
+      "medium": [
+        "Repeat: \"I'm yours tonight, {coach}\".",
+        "Beg \"more, please, {coach}\", and maybe I'll grant it.",
+        "Louder {name}. The moon didn't hear you.",
+        "Call me {coach}. Witches love to be named."
+      ]
+    },
+    "freestyle": {
+      "soft": [
+        "Tonight is yours {name}. Cast your own spell.",
+        "Show me your own magic {name}.",
+        "Free {name}. Surprise me."
+      ]
+    },
+    "hand": {
+      "soft": [
+        "Your hand now {name}. Make it shine in the candlelight.",
+        "Stroke it with your hand {name}, like a precious wand.",
+        "Soft strokes with your hand {name}. Rest your mouth."
+      ],
+      "medium": [
+        "A little firmer with your hand {name}. Lovely.",
+        "Keep the rhythm with your hand {name}. You're doing beautifully."
+      ]
+    }
+  },
+  "randomComments": [
+    "The candles are melting for you {name}.",
+    "The moon is full tonight {name}. A good omen.",
+    "The cauldron smokes harder when you try {name}.",
+    "I'm only here for a few nights {name}. Make the most of it.",
+    "You make a pretty offering {name}.",
+    "The veil is thin tonight {name}. I can see you so clearly.",
+    "None of my grimoires foresaw anything this pretty {name}.",
+    "Shh {name}. Listen to the candles crackle."
+  ],
+  "intros": [
+    "I'm Lilith. The veil is thin these nights {name}… so I came to get you.",
+    "I'm only staying a few nights. Enjoy every one of them {name}.",
+    "Step into my circle {name}. Tonight, I cast the spell.",
+    "The candles are lit {name}. The ritual can begin."
+  ],
+  "congrats": [
+    "The ritual is complete {name}. Come back before the moon wanes.",
+    "Lovely sabbat {name}. The spell took.",
+    "You were a perfect offering tonight {name}.",
+    "The cauldron is calm {name}. You fed it well."
+  ],
+  "encore": [
+    "Another night in the circle {name}? I never say no.",
+    "Back already {name}? The spell pleased you."
+  ],
+  "progress": {
+    "25": [
+      "The first quarter of the spell is spoken {name}.",
+      "The first candles have melted {name}. Keep going."
+    ],
+    "50": [
+      "Halfway through the ritual {name}. The moon is at its peak.",
+      "Halfway {name}. The charm is starting to take."
+    ],
+    "75": [
+      "Three quarters of the spell {name}. Don't break the circle now.",
+      "The cauldron is boiling {name}. Not much longer."
+    ],
+    "90": [
+      "The last words of the spell {name}. Give it everything.",
+      "Almost midnight {name}. The ritual is ending."
+    ]
+  },
+  "branchPhrases": {
+    "endurance": {
+      "soft": ["A ritual is earned over time {name}.", "You've got stamina {name}. Long nights are made for you."],
+      "medium": ["Still here {name}. The circle likes you.", "You last {name}. That's what I expected of you."],
+      "hard": ["The night is long and you don't weaken {name}.", "Even the cauldron tires before you do {name}."]
+    },
+    "profondeur": {
+      "soft": ["Your throat is a pretty door {name}.", "I can feel you can go further down {name}."],
+      "medium": ["You go down well {name}. The spell loves depth.", "Your throat opens like a grimoire {name}."],
+      "hard": ["As deep as it goes {name}. That's where spells live.", "You swallow the whole night {name}."]
+    },
+    "rythmeBiffle": {
+      "soft": ["Your rhythm is an incantation {name}.", "Every beat wakes the circle {name}."],
+      "medium": ["You've got a witch's rhythm {name}.", "The sabbat dances to your rhythm {name}."],
+      "hard": ["Faster than the sabbat drums {name}.", "Your rhythm makes the candles tremble {name}."]
+    },
+    "obeissance": {
+      "soft": ["You do as I say {name}. Bewitched.", "You listen to me well {name}. The charm is working."],
+      "medium": ["You obey without thinking {name}. My spell is strong.", "You're under my spell {name}. It suits you."],
+      "hard": ["You belong to me until dawn {name}.", "No will left {name}. Only mine."]
+    },
+    "sloppy": {
+      "soft": ["Your spit is my favorite potion {name}.", "Let it flow {name}. A potion must flow freely."],
+      "medium": ["More potion {name}. The cauldron is asking for it.", "You're dripping like a melting candle {name}."],
+      "hard": ["Drown it in your potion {name}.", "Everything is dripping {name}. A successful ritual."]
+    }
+  },
+  "progressPhrases": {
+    "gorge.engagement_streak": {
+      "attempt": ["Tonight your throat stays in the circle a little longer {name}.", "Today's spell needs your throat a little longer {name}."],
+      "record": ["Your throat has never stayed in the circle this long {name}. The spell is strong.", "A new threshold for your throat {name}. The moon is proud of you."],
+      "tapout": ["Your throat said stop {name}. We respect that, the spell can wait.", "That's your real limit tonight {name}. We'll push it another night."]
+    },
+    "noswallow.streak": {
+      "attempt": ["Tonight you keep your potion longer without swallowing {name}.", "Not a single drop swallowed {name}, a little longer than usual."],
+      "record": ["You've never kept your potion this long {name}. Magnificent.", "A record for potion kept {name}. The cauldron is overflowing."],
+      "tapout": ["You had to swallow {name}, that's normal. We'll try again another night.", "Your limit is here tonight {name}. We respect it."]
+    },
+    "rhythm.motion_streak": {
+      "attempt": ["Tonight the incantation runs longer without a pause {name}.", "Today's spell doesn't stop {name}. A little longer than usual."],
+      "record": ["You've never moved this long without stopping {name}. Lovely spell.", "Your longest ritual without a pause {name}. The circle is impressed."],
+      "tapout": ["You needed a pause {name}, that's your real limit. We'll push it.", "You ran out of breath {name}. No matter, the spell will wait."]
+    }
+  },
+  "nicknames": {
+    "pool": ["little witch", "my offering", "my creature", "little soul", "my wax doll"],
+    "use_user_prenom": true,
+    "use_user_nicknames": false
+  },
+  "coachNicknames": ["Lilith", "mistress", "my witch"]
+}

@@ -3,9 +3,6 @@ import 'package:beat_bitch/services/backgrounds_loader.dart';
 import 'package:beat_bitch/services/backgrounds_service.dart';
 
 BackgroundEntry _e(String basename) {
-  // Reconstruit une entry comme le loader le ferait (parse les tags
-  // depuis le basename). On passe par parseEntry pour garder la même
-  // sémantique de séparation id/tags.
   final entry = BackgroundsLoader.parseEntry(
     'assets/backgrounds/$basename',
   );
@@ -40,8 +37,8 @@ void main() {
     });
 
     test('higher-score entry wins over lower-score', () {
-      final twoMatch = _e('a_rhythm_throat.png'); // score 2
-      final oneMatch = _e('b_rhythm.png'); // score 1
+      final twoMatch = _e('a_rhythm_throat.png');
+      final oneMatch = _e('b_rhythm.png');
       BackgroundsService.instance.setBundle(
         BackgroundsBundle(entries: [twoMatch, oneMatch]),
       );
@@ -52,8 +49,6 @@ void main() {
     });
 
     test('disqualifies entries whose tag category mismatches context', () {
-      // Contexte rhythm + throat. Entry tagué `lick` → mismatch sur la
-      // catégorie mode → disqualifiée. L'entrée plain est piochée.
       final wrongMode = _e('a_lick_throat.png');
       final plain = _e('b.png');
       BackgroundsService.instance.setBundle(
@@ -66,9 +61,6 @@ void main() {
     });
 
     test('disqualifies entries tagged in a category absent from context', () {
-      // Tag `final` sur l'entrée, mais le contexte n'a pas de phase →
-      // disqualifiée. C'est ce qui empêche un fond « final » d'apparaître
-      // en plein milieu de séance.
       final finalTagged = _e('a_final.png');
       final plain = _e('b.png');
       BackgroundsService.instance.setBundle(
@@ -97,7 +89,6 @@ void main() {
     });
 
     test('coach mismatch disqualifies the entry', () {
-      // Entry taguée Victoria mais contexte coach=lina → disqualifiée.
       final victoria = _e('clip_victoria_throat.png');
       final plain = _e('other.png');
       BackgroundsService.instance.setBundle(
@@ -125,9 +116,7 @@ void main() {
       expect(BackgroundsService.instance.current.value, finalTag);
     });
 
-    test('all-tagged catalog with no match → falls back to random', () {
-      // Aucun fond non-tagué et aucun ne match → fallback `pickRandom`
-      // global (non-null garanti tant que le bundle n'est pas vide).
+    test('no coach and no match → neutral background', () {
       final wrong = _e('a_lick_full.png');
       final wrong2 = _e('b_biffle_head.png');
       BackgroundsService.instance.setBundle(
@@ -136,10 +125,10 @@ void main() {
       BackgroundsService.instance.pickForContext(
         const BackgroundContext(mode: 'rhythm', position: 'throat'),
       );
-      expect(BackgroundsService.instance.current.value, isNotNull);
+      expect(BackgroundsService.instance.current.value, isNull);
     });
 
-    test('empty context behaves like pickRandom', () {
+    test('empty context falls back to an untagged entry', () {
       final a = _e('a.png');
       final b = _e('b.png');
       BackgroundsService.instance.setBundle(
@@ -150,8 +139,6 @@ void main() {
     });
 
     test('untagged fallback when no tagged entry qualifies', () {
-      // Context = rhythm + throat. Tagged candidates : lick (mismatch) →
-      // none qualifies. Pool sans tag = [plain1, plain2] → un des deux.
       final wrongMode = _e('w_lick_throat.png');
       final plain1 = _e('p1.png');
       final plain2 = _e('p2.png');
@@ -167,8 +154,6 @@ void main() {
     });
 
     test('anti-doublon : same call twice changes the entry when possible', () {
-      // Deux entrées matchent score 1 (rhythm) ; au 2e appel, on doit
-      // basculer sur l'autre.
       final a = _e('a_rhythm.png');
       final b = _e('b_rhythm.png');
       BackgroundsService.instance.setBundle(

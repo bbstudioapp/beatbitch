@@ -15,6 +15,10 @@ class CoachCatalog {
   /// `portrait` de son `coach_<id>.json`.
   static const String _portraitDir = 'assets/career/coaches/portraits';
 
+  static const String lilithId = 'coach_08_lilith';
+
+  static Coach get lilith => defaults.firstWhere((c) => c.id == lilithId);
+
   static const List<Coach> defaults = [
     Coach(
       id: 'coach_01_lina',
@@ -46,7 +50,6 @@ class CoachCatalog {
       ],
       tier: 2,
       isPrincipal: true,
-      // Phase 19.10 : 1h cumulée — ~2-3 séances.
       requirements: CoachRequirement(minPlayerSeconds: 3600),
       portraitAsset: '$_portraitDir/coach_02_helene.png',
     ),
@@ -69,16 +72,14 @@ class CoachCatalog {
       ],
       tier: 3,
       isPrincipal: true,
-      // 1h30 cumulées — pile entre Hélène (1h) et Jade (3h).
       requirements: CoachRequirement(minPlayerSeconds: 5400),
       portraitAsset: '$_portraitDir/coach_07_marc.png',
       // Seul coach masculin : la table de voix préférées de la langue est
       // calibrée féminine, il n'y a rien à y prendre pour lui — d'où le saut
       // vers la première voix de la locale. Aucun blocage n'y est attaché :
       // `CoachService.evaluate` ne teste que le déblocage et le temps de jeu,
-      // et un gating sur la disponibilité d'une voix a été livré puis retiré
-      // (décision de Manu, ne pas y revenir). Une voix masculine se choisit à
-      // la main, dans la section VOIX DES COACHS du Profil : aucun des canaux
+      // et la disponibilité d'une voix ne conditionne rien. Une voix
+      // masculine se choisit à la main, dans la section VOIX DES COACHS du Profil : aucun des canaux
       // que la sélection automatique atteint (Android, web) ne déclare le
       // genre d'une voix (cf. `TtsService._fallbackPick`).
       voicePreset: CoachVoicePreset(skipPreferredVoices: true),
@@ -97,9 +98,6 @@ class CoachCatalog {
       ],
       tier: 4,
       isPrincipal: true,
-      // Phase 19.10 : 3h cumulées. (Refonte 0.5.0 : `requiresHands` retiré
-      // du coach — le hand obligatoire est désormais piloté par la milestone
-      // planifiée, pas par le coach choisi.)
       requirements: CoachRequirement(minPlayerSeconds: 10800),
       portraitAsset: '$_portraitDir/coach_03_jade.png',
     ),
@@ -116,7 +114,6 @@ class CoachCatalog {
       ],
       tier: 5,
       isPrincipal: true,
-      // Phase 19.10 : 7h cumulées.
       requirements: CoachRequirement(minPlayerSeconds: 25200),
       portraitAsset: '$_portraitDir/coach_04_morgan.png',
     ),
@@ -133,7 +130,6 @@ class CoachCatalog {
       ],
       tier: 6,
       isPrincipal: true,
-      // Phase 19.10 : 15h cumulées.
       requirements: CoachRequirement(minPlayerSeconds: 54000),
       portraitAsset: '$_portraitDir/coach_05_victoria.png',
     ),
@@ -147,9 +143,30 @@ class CoachCatalog {
       specialties: SpecializationBranch.values,
       tier: 7,
       isPrincipal: true,
-      // Phase 19.10 : 25h cumulées — palier terminal.
       requirements: CoachRequirement(minPlayerSeconds: 90000),
       portraitAsset: '$_portraitDir/coach_06_nyx.png',
+    ),
+    // En dernier : les replis sur `coaches.first` doivent rester sur Lina.
+    Coach(
+      id: lilithId,
+      name: 'Lilith',
+      title: 'Coach d’Halloween',
+      archetype: CoachArchetype.taquinSadique,
+      publicBio: 'Sorcière de passage, le temps où le voile est mince. '
+          'Elle envoûte plus qu’elle ne punit : chaque séance est un rituel.',
+      specialties: [
+        SpecializationBranch.sloppy,
+        SpecializationBranch.obeissance,
+      ],
+      tier: 1,
+      isPrincipal: false,
+      portraitAsset: '$_portraitDir/coach_08_lilith.png',
+      availability: CoachAvailability(
+        fromMonth: 10,
+        fromDay: 27,
+        untilMonth: 11,
+        untilDay: 8,
+      ),
     ),
   ];
 }
@@ -157,13 +174,15 @@ class CoachCatalog {
 /// Validation de cohérence du catalogue de coachs. Appelée au boot par
 /// `CoachService.attachPhrases` (ou à la main pour les tests).
 ///
-/// Vérifie deux règles structurelles :
+/// Vérifie trois règles structurelles :
 /// 1. Pour chaque palier observé (de 1 à max), il existe **exactement un
 ///    Principal**. Pas de trou (palier 2 absent), pas de doublon (deux
 ///    Principals pour le palier 3).
 /// 2. Les `requirements.minPlayerSeconds` des Principals sont **strictement
 ///    croissants** dans l'ordre des paliers (le Principal du palier N+1
 ///    se débloque plus tard que celui du palier N).
+/// 3. Aucun coach éphémère n'est Principal : son palier disparaîtrait à la
+///    fin de sa fenêtre.
 ///
 /// Renvoie une liste de messages d'erreur lisibles. Vide = catalogue OK.
 class CoachCatalogValidator {
@@ -183,6 +202,12 @@ class CoachCatalogValidator {
     }
 
     final maxTier = principalsByTier.keys.reduce((a, b) => a > b ? a : b);
+
+    for (final c in coaches) {
+      if (c.isPrincipal && c.availability != null) {
+        issues.add('${c.id} : un coach éphémère ne peut pas être Principal.');
+      }
+    }
 
     for (var t = 1; t <= maxTier; t++) {
       final list = principalsByTier[t];
