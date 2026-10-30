@@ -42,29 +42,32 @@ class ModeBadgeRow extends StatelessWidget {
 
     final color = _modeColor(mode);
 
-    return Wrap(
-      alignment: WrapAlignment.center,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        _Badge(
-          label: mode.shortLabel(context),
-          color: color,
-          filled: true,
-          icon: _modeIcon(mode),
-        ),
-        if (showBpm)
+    return Opacity(
+      opacity: 0.8,
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 8,
+        runSpacing: 8,
+        children: [
           _Badge(
-            label: '$bpm BPM',
+            label: mode.shortLabel(context),
             color: color,
+            filled: true,
+            icon: _modeIcon(mode),
           ),
-        if (showPosition)
-          _Badge(
-            label: _positionLabel(context, from, to, mode),
-            color: color,
-          ),
-      ],
+          if (showBpm)
+            _Badge(
+              label: '$bpm BPM',
+              color: color,
+            ),
+          if (showPosition)
+            _Badge(
+              label: _positionLabel(context, from, to, mode),
+              color: color,
+            ),
+        ],
+      ),
     );
   }
 
@@ -127,7 +130,7 @@ class _Badge extends StatelessWidget {
     final fg = filled ? Colors.black : color;
     final bg = filled ? color : color.withValues(alpha: 0.12);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(16),
@@ -140,13 +143,13 @@ class _Badge extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 14, color: fg),
-            const SizedBox(width: 6),
+            Icon(icon, size: 12, color: fg),
+            const SizedBox(width: 4),
           ],
           Text(
             label,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 10,
               fontWeight: FontWeight.w700,
               letterSpacing: 1,
               color: fg,

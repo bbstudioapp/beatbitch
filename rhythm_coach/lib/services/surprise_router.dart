@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../career/models/coach.dart';
@@ -21,6 +23,7 @@ import '../services/surprise_alert_service.dart';
 import '../services/tts_service.dart';
 
 class _SurpriseBundle {
+  final Coach coach;
   final PhraseBank bank;
   final PunishmentBundle punishments;
   final RandomCommentsBundle comments;
@@ -29,6 +32,7 @@ class _SurpriseBundle {
   final bool includeHand;
 
   _SurpriseBundle({
+    required this.coach,
     required this.bank,
     required this.punishments,
     required this.comments,
@@ -38,17 +42,13 @@ class _SurpriseBundle {
   });
 }
 
-/// Lance une session courte « surprise » sur tap d'une notification.
-/// Replique condensée du flow `_CareerScreenState._start` : charge les
-/// persistances carrière, génère via `CareerSessionGenerator(quickie: true,
-/// durationSeconds: random 60-240)`, push `SessionScreen` avec
-/// démarrage auto.
-///
-/// La session est traitée comme une « bâclée » côté stats (alimente le
-/// badge VideCouilles), mais avec `coachAdvancesTier: false` pour ne pas
-/// faire progresser le coach via cette voie ponctuelle.
 class SurpriseRouter {
   SurpriseRouter._();
+
+  static Random _rng = Random();
+
+  @visibleForTesting
+  static set debugRandom(Random rng) => _rng = rng;
 
   static Future<void> launchSession({
     required BuildContext context,
@@ -87,15 +87,11 @@ class SurpriseRouter {
 
     await coachService.syncFromTotalSeconds(totalSeconds);
 
-    // Phase 19.12 : plus de gate hand par niveau — respecte le choix
-    // persisté de la joueuse.
     final includeHand = persistedIncludeHand;
-    // SynthLevel proxy pour le générateur (Custom path : pas de
-    // `lengthChoice` ni `sessionsCompleted` passé, on retombe sur
-    // `resolve(level)` legacy).
     final synthLevel = CareerDifficultyResolver.synthLevelFor(sessions);
 
     final bundle = _SurpriseBundle(
+      coach: _drawCoach(),
       bank: bank,
       punishments: punishments,
       comments: comments,
@@ -131,7 +127,8 @@ class SurpriseRouter {
     required double obedienceScore,
     required bool replace,
   }) async {
-    final activeCoach = _resolveCoach();
+    final activeCoach = bundle.coach;
+    await _applyCoachVoicePreset(tts, activeCoach);
     final coachBank = activeCoach.toPhraseBank(
       fallback: bundle.bank,
       specialization: bundle.specialization,
@@ -142,8 +139,6 @@ class SurpriseRouter {
       level: bundle.synthLevel,
       bank: coachBank,
       includeHand: bundle.includeHand,
-      // quickie=true : intensityFloor 0.65, intro raccourcie, pas de
-      // pré-finition. Cohérent avec le ton « réveil rapide ».
       quickie: true,
       specialization: bundle.specialization,
       humiliationCareer: humiliationCareer,
@@ -174,6 +169,7 @@ class SurpriseRouter {
         ambience: ambience,
         punishmentBundle: bundle.punishments,
         randomComments: activeCoach.composeRandomComments(bundle.comments),
+        coachTag: activeCoach.slug,
         isCareer: true,
         isQuickie: true,
         careerLevel: bundle.synthLevel,
@@ -182,13 +178,10 @@ class SurpriseRouter {
         autoStart: true,
         holdVerifier: verifier,
         canSave: false,
-        // Pas de progression de coach via une session surprise.
         coachAdvancesTier: false,
         specialization: bundle.specialization,
         seedHumiliationSession: humiliationSession,
-        // « Merci » de fin = quitter directement l'app (au lieu de
-        // revenir à l'écran précédent). La joueuse a été happée par une
-        // notif, on la laisse retomber sur son téléphone.
+        keepsBackgroundTier: replace,
         closeAppOnEnd: true,
         onRequestEncore: !canEncore
             ? null
@@ -210,6 +203,9 @@ class SurpriseRouter {
     }
 
     if (verifier != null) camService.stopSessionDetection();
+    if (context.mounted && !(ModalRoute.of(context)?.isCurrent ?? true)) {
+      return;
+    }
     tts.setNameResolver(null);
     await tts.takeVoiceLead(tts.restoreDefaultVoicePreset);
   }
@@ -248,15 +244,29 @@ class SurpriseRouter {
     );
   }
 
-  static Coach _resolveCoach() {
-    final selected = coachService.selectedCoach;
-    if (selected != null) return selected;
-    return coachService.coaches.first;
+  static Coach _drawCoach() {
+    final unlocked =
+        coachService.coaches.where(coachService.isUnlocked).toList();
+    return unlocked[_rng.nextInt(unlocked.length)];
   }
 
-  /// Liste des bodies localisés à passer à `SurpriseAlertService.arm()`.
-  /// Centralisé ici pour pouvoir étendre facilement (ajouter une 4e
-  /// variante : ajouter une clé ARB et l'inclure ici).
+  static Future<void> _applyCoachVoicePreset(TtsService tts, Coach coach) {
+    final preset = coach.voicePreset;
+    if (preset.isEmpty) {
+      return tts.takeVoiceLead(tts.restoreDefaultVoicePreset);
+    }
+    return tts.takeVoiceLead(
+      () => tts.applyCoachVoicePreset(
+        coachId: coach.id,
+        voiceName: preset.voiceName,
+        voiceLocale: preset.voiceLocale,
+        rate: preset.rate,
+        pitch: preset.pitch,
+        skipPreferredVoices: preset.skipPreferredVoices,
+      ),
+    );
+  }
+
   static List<String> resolveBodyVariants(AppLocalizations t) {
     return [
       t.surpriseNotifBody1,

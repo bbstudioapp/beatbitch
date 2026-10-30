@@ -36,6 +36,112 @@
         "hold": null,
         "breath": null
       }
+    },
+    {
+      "id": "voix_homme",
+      "name": "Voix — lui",
+      "description": "Bruits de succion plus ou moins humides sur le rythme, étouffements en tenue, reprises de souffle — et il jouit au final.",
+      "tracks": {
+        "rhythm": {
+          "shallow": [
+            "audio/ambience/rythme_leger_1.mp3",
+            "audio/ambience/rythme_leger_2.mp3"
+          ],
+          "deep": [
+            "audio/ambience/rythme_profond_1.mp3",
+            "audio/ambience/rythme_profond_2.mp3"
+          ]
+        },
+        "lick": [
+          "audio/ambience/lick_1.mp3",
+          "audio/ambience/lick_2.mp3"
+        ],
+        "biffle": null,
+        "hold": {
+          "shallow": [
+            "audio/ambience/tenue_legere_1.mp3",
+            "audio/ambience/tenue_legere_2.mp3"
+          ],
+          "deep": [
+            "audio/ambience/tenue_profonde_1.mp3",
+            "audio/ambience/tenue_profonde_2.mp3"
+          ]
+        },
+        "breath": "audio/ambience/elle_souffle.mp3",
+        "hand": null,
+        "suckle": [
+          "audio/ambience/lick_1.mp3",
+          "audio/ambience/lick_2.mp3"
+        ],
+        "freestyle": {
+          "shallow": [
+            "audio/ambience/rythme_leger_1.mp3",
+            "audio/ambience/rythme_leger_2.mp3"
+          ],
+          "deep": [
+            "audio/ambience/rythme_profond_1.mp3",
+            "audio/ambience/rythme_profond_2.mp3"
+          ]
+        }
+      },
+      "climax": [
+        "audio/ambience/homme_climax_1.mp3",
+        "audio/ambience/homme_climax_2.mp3",
+        "audio/ambience/homme_climax_3.mp3"
+      ]
+    },
+    {
+      "id": "voix_femme",
+      "name": "Voix — elle",
+      "description": "Bruits de succion plus ou moins humides sur le rythme, étouffements en tenue, reprises de souffle — et elle jouit au final.",
+      "tracks": {
+        "rhythm": {
+          "shallow": [
+            "audio/ambience/rythme_leger_1.mp3",
+            "audio/ambience/rythme_leger_2.mp3"
+          ],
+          "deep": [
+            "audio/ambience/rythme_profond_1.mp3",
+            "audio/ambience/rythme_profond_2.mp3"
+          ]
+        },
+        "lick": [
+          "audio/ambience/lick_1.mp3",
+          "audio/ambience/lick_2.mp3"
+        ],
+        "biffle": null,
+        "hold": {
+          "shallow": [
+            "audio/ambience/tenue_legere_1.mp3",
+            "audio/ambience/tenue_legere_2.mp3"
+          ],
+          "deep": [
+            "audio/ambience/tenue_profonde_1.mp3",
+            "audio/ambience/tenue_profonde_2.mp3"
+          ]
+        },
+        "breath": "audio/ambience/elle_souffle.mp3",
+        "hand": null,
+        "suckle": [
+          "audio/ambience/lick_1.mp3",
+          "audio/ambience/lick_2.mp3"
+        ],
+        "freestyle": {
+          "shallow": [
+            "audio/ambience/rythme_leger_1.mp3",
+            "audio/ambience/rythme_leger_2.mp3"
+          ],
+          "deep": [
+            "audio/ambience/rythme_profond_1.mp3",
+            "audio/ambience/rythme_profond_2.mp3"
+          ]
+        }
+      },
+      "climax": [
+        "audio/ambience/femme_climax_1.mp3",
+        "audio/ambience/femme_climax_2.mp3",
+        "audio/ambience/femme_climax_3.mp3"
+      ]
     }
   ]
 }

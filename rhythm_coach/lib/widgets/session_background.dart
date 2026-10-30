@@ -3,56 +3,38 @@ import 'package:flutter/material.dart';
 import '../services/backgrounds_loader.dart';
 import '../services/backgrounds_service.dart';
 import '../theme/app_theme.dart';
+import 'play_once_image.dart';
 
-/// Arrière-plan de `SessionScreen`. Affiche soit un média (image / GIF)
-/// fourni par `BackgroundsService.instance.current`, soit le placeholder
-/// animé (dégradé radial qui pulse) si aucun fond n'est posé.
-///
-/// **Source des médias** : `BackgroundsLoader` scanne l'`AssetManifest`
-/// Flutter au démarrage (dossier `assets/backgrounds/`) et injecte le
-/// résultat dans le service. Un step peut imposer un fond précis via
-/// `step.background = "<id>"` (où l'`id` est le nom de fichier sans
-/// extension) ; sinon le service rotate aléatoirement à chaque
-/// changement de mode.
-///
-/// **Vidéo** : pas livré en V1 (cf. CLAUDE.md backlog). Pour ajouter,
-/// installer `video_player ^2.x` et étendre `BackgroundMediaType` avec
-/// un cas `video` + un sous-widget dédié dans le switch ci-dessous.
-///
-/// **Opacité** : plafonnée à 0.55 pour que les badges, jauges et
-/// l'animation principale restent lisibles par-dessus. À ajuster si les
-/// médias livrés sont déjà sombres / désaturés.
 class SessionBackground extends StatelessWidget {
-  /// Quand false, ignore complètement `BackgroundsService.current` et
-  /// rend uniquement le dégradé animé. Permet à l'utilisatrice de
-  /// désactiver les médias visuels (toggle dans la page SONS) sans
-  /// retirer les fichiers du dossier ni perdre la rotation côté service
-  /// (qui continue son cycle, juste pas affichée).
   final bool mediaEnabled;
 
-  const SessionBackground({super.key, this.mediaEnabled = true});
+  final bool bottomVeilOnly;
+
+  const SessionBackground({
+    super.key,
+    this.mediaEnabled = true,
+    this.bottomVeilOnly = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return IgnorePointer(
-      // Pas d'interaction : le fond ne doit jamais bouffer un tap qui
-      // appartient à l'UI au-dessus.
       child: !mediaEnabled
           ? const _AmbientGradient()
           : ValueListenableBuilder<BackgroundEntry?>(
               valueListenable: BackgroundsService.instance.current,
               builder: (context, entry, _) {
-                // AnimatedSwitcher avec une key par id → fade-cross entre
-                // 2 médias. La key fallback `__placeholder__` est partagée
-                // par tout le monde quand entry == null, donc on évite un
-                // re-fadein si le service repasse à null entre 2 médias.
+                // Clé de repli partagée : pas de re-fade quand le service repasse à null entre deux médias.
                 return AnimatedSwitcher(
                   duration: const Duration(milliseconds: 600),
                   switchInCurve: Curves.easeOut,
                   switchOutCurve: Curves.easeIn,
                   child: entry == null
                       ? const _AmbientGradient(key: ValueKey('__placeholder__'))
-                      : _MediaBackground(entry: entry, key: ValueKey(entry.id)),
+                      : _MediaBackground(
+                          entry: entry,
+                          bottomVeilOnly: bottomVeilOnly,
+                          key: ValueKey(entry.id)),
                 );
               },
             ),
@@ -60,19 +42,12 @@ class SessionBackground extends StatelessWidget {
   }
 }
 
-/// Rendu d'une entrée du catalogue. Le `path` est un asset local
-/// (`assets/backgrounds/foo.gif`) → `Image.asset`. Le support
-/// `Image.network` a été retiré pour distribuer l'app sans permission
-/// INTERNET ; tous les médias sont bundlés dans l'APK.
-///
-/// Switch sur `type` parce que l'API d'`Image.*` couvre déjà jpg/png/gif
-/// (Flutter joue les GIF nativement) — `gif` et `image` partagent donc
-/// le même rendu en V1. Garder le switch ouvert facilite l'ajout d'un
-/// cas `video` plus tard.
 class _MediaBackground extends StatelessWidget {
   final BackgroundEntry entry;
+  final bool bottomVeilOnly;
 
-  const _MediaBackground({required this.entry, super.key});
+  const _MediaBackground(
+      {required this.entry, required this.bottomVeilOnly, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -80,21 +55,36 @@ class _MediaBackground extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         switch (entry.type) {
+          _ when entry.isTierTransition || entry.isPov || entry.isMilestone =>
+            PlayOnceImage(
+              path: entry.path,
+              onDone: () =>
+                  BackgroundsService.instance.transitionFinished(entry),
+            ),
           BackgroundMediaType.image || BackgroundMediaType.gif => Image.asset(
               entry.path,
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => const _AmbientGradient(),
             ),
         },
-        // Voile sombre pour garder l'UI lisible quel que soit le média
-        // fourni. Préférable au paramètre `opacity` d'Image.* qui baisse
-        // uniformément (les pixels clairs deviennent transparents tout
-        // autant que les sombres).
-        const DecoratedBox(
-          decoration: BoxDecoration(
-            color: Color(0x73000000), // ~0.45 alpha
-          ),
-          child: SizedBox.expand(),
+        // Voile plutôt que `opacity` d'Image : l'opacité rend transparents les pixels clairs autant que les sombres.
+        DecoratedBox(
+          decoration: bottomVeilOnly
+              ? const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: [0.0, 0.5, 0.78, 1.0],
+                    colors: [
+                      Color(0x00000000),
+                      Color(0x00000000),
+                      Color(0x99000000),
+                      Color(0xD9000000),
+                    ],
+                  ),
+                )
+              : const BoxDecoration(color: Color(0x73000000)),
+          child: const SizedBox.expand(),
         ),
       ],
     );
@@ -133,13 +123,8 @@ class _AmbientGradientState extends State<_AmbientGradient>
       animation: _ctrl,
       builder: (context, _) {
         final t = Curves.easeInOut.transform(_ctrl.value);
-        // Centre du dégradé qui flotte légèrement pour éviter l'effet
-        // « fond figé ». Amplitude faible (±0.12) pour rester subtil.
         final centerX = -0.12 + 0.24 * t;
         final centerY = -0.18 + 0.36 * t;
-        // Couleurs : on glisse de l'ambre du theme (chaud) vers un
-        // violet sombre (froid) — palette cohérente avec les modes du
-        // badge sans copier une couleur de mode en particulier.
         final warm = Color.lerp(
           AppTheme.accent.withValues(alpha: 0.18),
           const Color(0xFF7E57C2).withValues(alpha: 0.16),

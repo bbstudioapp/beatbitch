@@ -1,0 +1,220 @@
+{
+  "lang": "fr",
+  "id": "coach_08_lilith",
+  "title": "Coach d’Halloween",
+  "publicBio": "Sorcière de passage, le temps où le voile est mince. Elle envoûte plus qu’elle ne punit : chaque séance est un rituel.",
+  "phrases": {
+    "rhythm": {
+      "soft": [
+        "Suis ma cadence {name}. Lentement, comme une incantation.",
+        "Doucement {name}. Un sortilège ne se presse pas.",
+        "Laisse-toi bercer par le rythme {name}.",
+        "Chaque mouvement est une syllabe du sort {name}. Prononce-les bien.",
+        "Les bougies vacillent à ton rythme {name}. Garde-le régulier.",
+        "Voilà {name}. Tu commences à entrer dans le cercle."
+      ],
+      "medium": [
+        {"text": "Un peu plus bas {name}. Le sort veut plus de toi.", "min_depth": "mid"},
+        "Ne brise pas la cadence {name}, ou il faudra tout recommencer.",
+        {"text": "Descends encore {name}. La lune regarde.", "min_depth": "mid"},
+        "Plus vite {name}. Le chaudron bouillonne.",
+        "C’est joli {name}. Continue sur ce tempo.",
+        {"text": "Plus profond {name}. Le charme prend mieux comme ça.", "min_depth": "mid"}
+      ],
+      "hard": [
+        {"text": "Plus profond {name}. Le sortilège ne prend qu’au fond.", "min_depth": "throat"},
+        "Plus vite {name}, la nuit est courte.",
+        {"text": "Jusqu’en bas {name}. Offre-moi tout.", "min_depth": "throat"},
+        "Encaisse {name}. C’est le cœur du rituel.",
+        {"text": "Gorge ouverte {name}, comme une porte un soir de sabbat.", "min_depth": "throat"},
+        "Ne ralentis pas {name}. Le sort est presque complet."
+      ]
+    },
+    "lick": {
+      "soft": [
+        "Lèche-le comme la cire chaude d’une bougie {name}. Sans te presser.",
+        "Du bout de la langue {name}. Trace-moi un pentacle.",
+        "Doucement {name}. Goûte la magie."
+      ],
+      "medium": [
+        "Toute la longueur {name}. Lentement, comme on lit un grimoire.",
+        "Plus de potion {name}. Fais-le briller.",
+        "Lèche-le partout {name}. Aucune page ne doit être oubliée."
+      ],
+      "hard": [
+        "Plus mouillé {name}. Une potion se prépare généreusement.",
+        "Couvre-le de salive {name}. Je veux qu’il luise sous la lune."
+      ]
+    },
+    "biffle": {
+      "soft": [
+        "Fais-le claquer sur ta joue {name}. Trois fois, pour conjurer.",
+        "Tape-toi le visage avec {name}. Chaque coup réveille un esprit.",
+        "Fais résonner le sort sur ta joue {name}."
+      ],
+      "medium": [
+        "Plus fort {name}. Les esprits sont durs d’oreille.",
+        "Sur l’autre joue maintenant {name}. Le charme doit être symétrique."
+      ]
+    },
+    "hold": {
+      "soft": [
+        "Tiens-le là {name}. La lune te regarde.",
+        {"text": "Garde-le en bouche, immobile {name}.", "max_depth": "mid"},
+        "Immobile {name}. Respire par le nez, comme une méditation.",
+        {"text": "Tiens la position {name}. Le sort se fixe.", "max_depth": "throat"}
+      ],
+      "medium": [
+        {"text": "Reste au fond {name}. Le charme a besoin de temps.", "min_depth": "mid"},
+        {"text": "Plus bas, et tu tiens {name}.", "min_depth": "mid"},
+        {"text": "Ne remonte pas avant mon signal {name}.", "min_depth": "mid", "max_depth": "throat"},
+        "Tiens {name}. Compte les bougies dans ta tête."
+      ],
+      "hard": [
+        {"text": "Au fond, immobile {name}. Je scelle le sort.", "min_depth": "throat"},
+        {"text": "Tiens {name}. C’est là que la magie opère.", "min_depth": "throat"},
+        "Tiens jusqu’à mon signal {name}. Pas avant."
+      ],
+      "finale": [
+        {"text": "Dernière incantation. Tiens au fond {name}.", "min_depth": "mid"},
+        {"text": "On scelle le rituel au fond {name}. Ne lâche pas.", "min_depth": "throat"},
+        "Tiens jusqu’au signal {name}. Le sort se referme.",
+        "C’est le dernier mot du sortilège {name}. Tiens-le bien."
+      ]
+    },
+    "breath": {
+      "soft": [
+        "Respire {name}. Laisse la fumée du chaudron te remplir.",
+        "Inspire profondément {name}. Les bougies attendent.",
+        "Reprends ton souffle {name}. La nuit est encore longue.",
+        "Détends-toi {name}. Le cercle te protège."
+      ]
+    },
+    "beg": {
+      "soft": [
+        "Supplie-moi {name}. Une sorcière n’exauce que les vœux bien dits.",
+        "Dis-le : « ensorcelle-moi encore, {coach} ».",
+        "Formule ton vœu {name}, à voix haute.",
+        "Demande-moi de continuer {name}. Gentiment."
+      ],
+      "medium": [
+        "Répète : « je suis à toi cette nuit, {coach} ».",
+        "Supplie « encore, s’il te plaît, {coach} », et je t’exaucerai peut-être.",
+        "Plus fort {name}. La lune n’a pas entendu.",
+        "Appelle-moi {coach}. Les sorcières aiment qu’on les nomme."
+      ]
+    },
+    "freestyle": {
+      "soft": [
+        "Cette nuit t’appartient {name}. Jette ton propre sort.",
+        "Montre-moi ta magie à toi {name}.",
+        "Libre {name}. Surprends-moi."
+      ]
+    },
+    "hand": {
+      "soft": [
+        "Ta main maintenant {name}. Fais-le briller à la lueur des bougies.",
+        "Caresse-le de la main {name}, comme une baguette précieuse.",
+        "Va-et-vient doux de la main {name}. Repose ta bouche."
+      ],
+      "medium": [
+        "Un peu plus ferme de la main {name}. Joli geste.",
+        "Garde la cadence avec ta main {name}. Tu t’en sors très bien."
+      ]
+    }
+  },
+  "randomComments": [
+    "Les bougies fondent pour toi {name}.",
+    "La lune est pleine ce soir {name}. C’est bon signe.",
+    "Le chaudron fume plus fort quand tu t’appliques {name}.",
+    "Je ne reste que quelques nuits {name}. Profites-en.",
+    "Tu es une jolie offrande {name}.",
+    "Le voile est mince ce soir {name}. Je te vois très bien.",
+    "Mes grimoires n’avaient rien prévu d’aussi joli {name}.",
+    "Chut {name}. Écoute les bougies crépiter."
+  ],
+  "intros": [
+    "Je suis Lilith. Le voile est mince ces nuits-ci {name}… alors je suis venue te chercher.",
+    "Je ne reste que quelques nuits. Profite de chacune {name}.",
+    "Entre dans mon cercle {name}. Ce soir, c’est moi qui jette le sort.",
+    "Les bougies sont allumées {name}. Le rituel peut commencer."
+  ],
+  "congrats": [
+    "Le rituel est accompli {name}. Reviens avant que la lune ne décroisse.",
+    "Joli sabbat {name}. Le sort a bien pris.",
+    "Tu as été une offrande parfaite cette nuit {name}.",
+    "Le chaudron est calme {name}. Tu l’as bien nourri."
+  ],
+  "encore": [
+    "Encore une nuit dans le cercle {name} ? Je ne dis jamais non.",
+    "Tu reviens déjà {name} ? Le sort t’a plu."
+  ],
+  "progress": {
+    "25": [
+      "Le premier quart du sort est prononcé {name}.",
+      "Les premières bougies ont fondu {name}. Continue."
+    ],
+    "50": [
+      "La moitié du rituel {name}. La lune est à son zénith.",
+      "Mi-chemin {name}. Le charme commence à prendre."
+    ],
+    "75": [
+      "Trois quarts du sortilège {name}. Ne romps pas le cercle maintenant.",
+      "Le chaudron bouillonne {name}. Plus beaucoup."
+    ],
+    "90": [
+      "Les derniers mots du sort {name}. Donne tout.",
+      "Presque minuit {name}. Le rituel s’achève."
+    ]
+  },
+  "branchPhrases": {
+    "endurance": {
+      "soft": ["Un rituel se mérite sur la durée {name}.", "Tu as du souffle {name}. Les longues nuits sont pour toi."],
+      "medium": ["Tu es encore là {name}. Le cercle t’aime bien.", "Tu dures {name}. C’est ce que j’attendais de toi."],
+      "hard": ["La nuit est longue et tu ne faiblis pas {name}.", "Même le chaudron se fatigue avant toi {name}."]
+    },
+    "profondeur": {
+      "soft": ["Ta gorge est une jolie porte {name}.", "Je sens que tu peux descendre plus loin {name}."],
+      "medium": ["Tu descends bien {name}. Le sort aime la profondeur.", "Ta gorge s’ouvre comme un grimoire {name}."],
+      "hard": ["Au plus profond {name}. C’est là que vivent les sorts.", "Tu avales la nuit entière {name}."]
+    },
+    "rythmeBiffle": {
+      "soft": ["Ton rythme est une incantation {name}.", "Chaque battement réveille le cercle {name}."],
+      "medium": ["Tu as la cadence d’une sorcière {name}.", "Le sabbat danse à ton rythme {name}."],
+      "hard": ["Plus vite que les tambours du sabbat {name}.", "Ton rythme fait trembler les bougies {name}."]
+    },
+    "obeissance": {
+      "soft": ["Tu fais ce que je dis {name}. Envoûtée.", "Tu m’écoutes bien {name}. Le charme opère."],
+      "medium": ["Tu obéis sans réfléchir {name}. Mon sort est puissant.", "Tu es sous mon charme {name}. Ça te va bien."],
+      "hard": ["Tu m’appartiens jusqu’à l’aube {name}.", "Plus aucune volonté {name}. Juste la mienne."]
+    },
+    "sloppy": {
+      "soft": ["Ta salive est ma potion préférée {name}.", "Laisse couler {name}. Une potion ne se retient pas."],
+      "medium": ["Plus de potion {name}. Le chaudron en réclame.", "Tu ruisselles comme une bougie qui fond {name}."],
+      "hard": ["Noie-le dans ta potion {name}.", "Tout ruisselle {name}. C’est un rituel réussi."]
+    }
+  },
+  "progressPhrases": {
+    "gorge.engagement_streak": {
+      "attempt": ["Ce soir ta gorge reste dans le cercle un peu plus longtemps {name}.", "Le sort d’aujourd’hui demande ta gorge un peu plus longtemps {name}."],
+      "record": ["Ta gorge n’est jamais restée aussi longtemps dans le cercle {name}. Le sort est puissant.", "Nouveau seuil pour ta gorge {name}. La lune est fière de toi."],
+      "tapout": ["Ta gorge a dit stop {name}. On respecte, le sort attendra.", "C’est ta vraie limite ce soir {name}. On la repoussera une autre nuit."]
+    },
+    "noswallow.streak": {
+      "attempt": ["Ce soir tu gardes ta potion plus longtemps sans avaler {name}.", "Pas une goutte avalée {name}, un peu plus longtemps que d’habitude."],
+      "record": ["Jamais tu n’avais gardé ta potion aussi longtemps {name}. Magnifique.", "Record de potion gardée {name}. Le chaudron déborde."],
+      "tapout": ["Tu as dû avaler {name}, c’est normal. On réessaiera une autre nuit.", "Ta limite est là ce soir {name}. On la respecte."]
+    },
+    "rhythm.motion_streak": {
+      "attempt": ["Ce soir l’incantation dure plus longtemps sans pause {name}.", "Le sort d’aujourd’hui ne s’interrompt pas {name}. Un peu plus long que d’habitude."],
+      "record": ["Jamais tu n’avais bougé aussi longtemps sans t’arrêter {name}. Joli sortilège.", "Ton plus long rituel sans pause {name}. Le cercle est impressionné."],
+      "tapout": ["Il te fallait une pause {name}, c’est ta vraie limite. On la repoussera.", "Le souffle a manqué {name}. Pas grave, le sort attendra."]
+    }
+  },
+  "nicknames": {
+    "pool": ["petite sorcière", "mon offrande", "ma créature", "petite âme", "ma poupée de cire"],
+    "use_user_prenom": true,
+    "use_user_nicknames": false
+  },
+  "coachNicknames": ["Lilith", "maîtresse", "ma sorcière"]
+}

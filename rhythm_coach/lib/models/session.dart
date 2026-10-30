@@ -1,6 +1,7 @@
 import '../career/models/challenge.dart';
 import 'final_category.dart';
 import 'posture.dart';
+import 'session_music.dart';
 import 'session_step.dart';
 
 /// Mode global de la session. Peut être surchargé par étape.
@@ -40,8 +41,8 @@ enum SessionMode {
   /// Aspiration / téter : geste actif-statique. La bouche reste en place
   /// sur la position visée (head ou balls), mais aspire au lieu de
   /// bouger. Audio = un sample wet pulsé toutes ~1.2s pendant `duration`,
-  /// pas de loop BPM, pas d'amplitude. Visuel = `_StaticPosition` orb
-  /// pulsé (comme hold/beg). Positions valides : `head` (sloppy modéré)
+  /// pas de loop BPM, pas d'amplitude. Visuel = orb pulsé sur le ladder
+  /// (comme hold/beg). Positions valides : `head` (sloppy modéré)
   /// et `balls` (sloppy soumis, gated anatomy). Interdit sur
   /// tip/mid/throat/full.
   suckle;
@@ -141,8 +142,7 @@ class Session {
   /// laisser aucune trace dans le profil. Default false.
   final bool noStats;
 
-  /// Défis intra-séance attachés à cette session (Phase 1 + 19.5.b
-  /// multi-défi). Liste ordonnée par ordre d'insertion temporelle ; vide
+  /// Défis intra-séance attachés à cette session. Liste ordonnée par ordre d'insertion temporelle ; vide
   /// = aucun défi (toggle off, hors carrière, JSON scriptés). Transient :
   /// non sérialisé en JSON (les défis sont générés dynamiquement, pas
   /// écrits dans un fichier source).
@@ -155,11 +155,8 @@ class Session {
   /// d'annonce ; à son terme, le `SessionController` arme la machine
   /// d'états défi en phase `breath`. Vide si aucun défi.
   ///
-  /// Phase B (streaming) : ce champ remplace l'ancien
-  /// `challengeBreathStartTimes`. Le step défi lui-même n'est plus
-  /// pré-positionné dans la timeline — le `ChallengeSegmentBuilder` émet
-  /// ses segments à la volée en runtime (cf. doc local
-  /// `specs/challenges_streaming_refonte.md`).
+  /// Le step défi n'est pas pré-positionné dans la timeline : le
+  /// `ChallengeSegmentBuilder` émet ses segments à la volée en runtime.
   final List<int> challengeTriggerTimes;
 
   /// Compat : premier défi de la liste (ou null si vide). Conserve la
@@ -172,14 +169,19 @@ class Session {
 
   /// Posture imposée au démarrage de la session (annoncée à l'intro). Défaut
   /// [Posture.free] (« confort, au choix ») = aucune contrainte. Transient :
-  /// non sérialisé (généré par le générateur de carrière). Cf. spec locale
-  /// `specs/scripted_breaks.md`.
+  /// non sérialisé (généré par le générateur de carrière).
   final Posture initialPose;
 
-  /// Breaks scénarisés (pauses actives) insérés sur les sessions longues.
-  /// Liste ordonnée par temps d'entrée ; vide = aucun break (cas par défaut,
-  /// sessions courtes / hors carrière). Transient comme [challenges].
+  /// Breaks scénarisés (pauses actives), ordonnés par temps d'entrée.
+  /// Transient comme [challenges].
   final List<ScriptedBreak> breaks;
+
+  /// Changements de position hors pause, ordonnés par temps.
+  final List<PostureChange> postureChanges;
+
+  /// Morceau en fond : quand il est posé, sa position de lecture est l'horloge
+  /// de la séance (cf. `SessionController.elapsed`). `null` = séance ordinaire.
+  final SessionMusic? music;
 
   const Session({
     required this.id,
@@ -207,6 +209,8 @@ class Session {
     this.challengeTriggerTimes = const [],
     this.initialPose = Posture.free,
     this.breaks = const [],
+    this.postureChanges = const [],
+    this.music,
   });
 
   Duration get duration => Duration(seconds: durationSeconds);
@@ -231,6 +235,7 @@ class Session {
         intro: (json['intro'] as String?) ?? '',
         lang: (json['lang'] as String?) ?? 'fr',
         noStats: (json['no_stats'] as bool?) ?? false,
+        music: SessionMusic.tryParse(json['music']),
       );
 
   Map<String, dynamic> toJson() => {
@@ -242,6 +247,7 @@ class Session {
         'mode': defaultMode.serialized,
         if (intro.isNotEmpty) 'intro': intro,
         if (noStats) 'no_stats': true,
+        if (music != null) 'music': music!.toJson(),
         'steps': steps.map((s) => s.toJson()).toList(),
       };
 }

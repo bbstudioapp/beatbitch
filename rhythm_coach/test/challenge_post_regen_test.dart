@@ -340,5 +340,92 @@ void main() {
       expect(s.swallowMode, SwallowMode.forbidden);
       expect(s.background, 'bg_porn_42');
     });
+
+    group('jalons de previous', () {
+      const previous = Session(
+        id: 'prev',
+        name: 'prev',
+        description: 'd',
+        durationSeconds: 600,
+        defaultMode: SessionMode.rhythm,
+        steps: [],
+        milestoneId: 'm1',
+        milestoneStartTime: 0,
+        milestoneDurationSeconds: 10,
+        secondMilestoneId: 'm2',
+        secondMilestoneStartTime: 20,
+        secondMilestoneDurationSeconds: 10,
+        finalMilestoneId: 'mf',
+        finalMilestoneStartTime: 500,
+        finalMilestoneDurationSeconds: 30,
+      );
+      const bare = Session(
+        id: 'gen',
+        name: 'gen',
+        description: 'd',
+        durationSeconds: 240,
+        defaultMode: SessionMode.rhythm,
+        steps: [],
+      );
+      const upcoming = Session(
+        id: 'gen',
+        name: 'gen',
+        description: 'd',
+        durationSeconds: 240,
+        defaultMode: SessionMode.rhythm,
+        steps: [],
+        milestoneId: 'mu',
+        milestoneStartTime: 5,
+        milestoneDurationSeconds: 10,
+        finalMilestoneId: 'mfu',
+        finalMilestoneStartTime: 200,
+        finalMilestoneDurationSeconds: 30,
+      );
+
+      Session regen(int breathEnd, {Session upcoming = bare}) =>
+          SessionController.buildPostChallengeRegenSession(
+            previous: previous,
+            upcoming: upcoming,
+            breathEnd: breathEnd,
+          );
+
+      test('seule la fenêtre terminée à breathEnd est reportée', () {
+        final r = regen(25);
+        expect(r.milestoneId, 'm1');
+        expect(r.milestoneStartTime, 0);
+        expect(r.milestoneDurationSeconds, 10);
+        expect(r.secondMilestoneId, isNull);
+      });
+
+      test('les deux jalons de corps terminés sont reportés dans l\'ordre', () {
+        final r = regen(30);
+        expect(r.milestoneId, 'm1');
+        expect(r.secondMilestoneId, 'm2');
+        expect(r.secondMilestoneStartTime, 20);
+        expect(r.secondMilestoneDurationSeconds, 10);
+      });
+
+      test('aucun jalon terminé : aucun report', () {
+        final r = regen(5);
+        expect(r.milestoneId, isNull);
+        expect(r.secondMilestoneId, isNull);
+      });
+
+      test('les jalons d\'upcoming sont reportés, rebasés sur breathEnd', () {
+        final r = regen(25, upcoming: upcoming);
+        expect(r.milestoneId, 'm1');
+        expect(r.milestoneStartTime, 0);
+        expect(r.secondMilestoneId, 'mu');
+        expect(r.secondMilestoneStartTime, 30);
+        expect(r.secondMilestoneDurationSeconds, 10);
+        expect(r.finalMilestoneId, 'mfu');
+        expect(r.finalMilestoneStartTime, 225);
+        expect(r.finalMilestoneDurationSeconds, 30);
+      });
+
+      test('le jalon final de previous n\'est pas reporté', () {
+        expect(regen(25).finalMilestoneId, isNull);
+      });
+    });
   });
 }

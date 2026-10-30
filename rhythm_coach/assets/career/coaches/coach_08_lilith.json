@@ -1,0 +1,17 @@
+{
+  "id": "coach_08_lilith",
+  "name": "Lilith",
+  "archetype": "taquinSadique",
+  "specialties": [
+    "sloppy",
+    "obeissance"
+  ],
+  "tier": 1,
+  "isPrincipal": false,
+  "tts": {
+    "voice": "fr-fr-x-vlf-local",
+    "voiceLocale": "fr-FR",
+    "rate": 0.56,
+    "pitch": 0.95
+  }
+}

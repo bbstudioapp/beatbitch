@@ -129,7 +129,10 @@ class _CustomCoachPickerScreenState extends State<CustomCoachPickerScreen> {
           for (final c in coaches) ...[
             _PickerCard(
               title: c.name,
-              subtitle: '${c.title} · ${t.coachPickerTierLabel(c.tier)}',
+              subtitle: widget.service.offeredUntil(c) == null
+                  ? '${c.title} · ${t.coachPickerTierLabel(c.tier)}'
+                  : t.coachSummaryLimitedTime(
+                      c.title, widget.service.offeredUntil(c)!),
               icon: Icons.school_outlined,
               leading: CoachPortrait(
                 coach: c,

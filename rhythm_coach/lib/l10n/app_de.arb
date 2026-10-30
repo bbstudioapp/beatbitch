@@ -46,6 +46,7 @@
   "sessionStopConfirm": "Beenden",
   "sessionVoiceLabel": "Stimme",
   "sessionAmbienceLabel": "Ambiente",
+  "sessionSettingsTooltip": "Einstellungen",
   "sessionUseMeLabel": "BENUTZ MICH",
   "sessionUseMeUsedLabel": "BENUTZT",
   "careerUseMeBegPhrase": "Bettle darum, dass ich dich benutze wie das Spielzeug, das du bist.",
@@ -55,6 +56,7 @@
   "sessionStateFinished": "FERTIG",
   "sessionStateFailing": "FAIL",
   "sessionBreakBanner": "PAUSE",
+  "sessionBreakSkipButton": "PAUSE ÜBERSPRINGEN",
   "sessionFailPhasePhrase": "Fail-Satz",
   "sessionFailPhaseBreath": "Atmen",
   "sessionFailPhasePunishment": "Strafe",
@@ -149,6 +151,7 @@
   "profileStatThroatfucks": "Throatfucks",
   "profileStatBiffles": "Schwanzschläge",
   "profileStatHoldFullMax": "Längster Tief-Hold",
+  "profileStatUseMeMax": "Längste Zeit in „Benutz mich“",
   "profileStatHoldThroatTotal": "Kehlen-Hold (gesamt)",
   "profileStatHoldFullTotal": "Tief-Hold (gesamt)",
   "profileStatEncores": "Geforderte Zugaben",
@@ -185,6 +188,7 @@
   "profileCapLickDepth": "Zungentiefe",
   "profileCapLickStreak": "Ununterbrochene Zunge",
   "profileCapHandStreak": "Ununterbrochene Hand",
+  "profileCapUseMeHeld": "Durchhalten in „Benutz mich“",
   "profileDiagnosticSection": "DIAGNOSE",
   "profileDiagnosticDescription": "Exportiere eine JSON-Datei mit deinen Fortschrittsdaten — nützlich, wenn du einen Bug melden willst. Es wird nichts automatisch verschickt, du entscheidest, was du damit machst.",
   "profileDiagnosticExportButton": "Meine Daten exportieren",
@@ -232,6 +236,14 @@
   "@careerDurationPlusChallenges": {
     "placeholders": { "duration": { "type": "String" } }
   },
+  "careerDurationPlusChallengesAndPauses": "{duration} + Challenge- und Pausenzeit",
+  "@careerDurationPlusChallengesAndPauses": {
+    "placeholders": { "duration": { "type": "String" } }
+  },
+  "careerDurationPlusPauses": "{duration} + Pausenzeit",
+  "@careerDurationPlusPauses": {
+    "placeholders": { "duration": { "type": "String" } }
+  },
   "careerDurationSection": "Dauer",
   "careerQuickieToggle": "Quickie",
   "careerQuickieSubtitle": "6 Min. — intensiv",
@@ -254,24 +266,17 @@
   "careerChallengesToggle": "Herausforderungen in der Sitzung",
   "careerChallengesDescription": "Ein bis vier optionale Herausforderungen, über die Sitzung verteilt, je nach gewähltem Format. Kalibrieren schnell, können das Level-Up beschleunigen. Ihre Zeit kommt zur angezeigten Dauer hinzu.",
   "challengePassButton": "ÜBERSPR.",
-  "challengeGoButton": "HALTEN",
-  "challengeHoldHintLive": "Lass deinen Finger auf dem Bildschirm",
-  "challengeHoldHintAtSeuil": "Loslassen zum Beenden, oder weiterhalten",
-  "challengeHoldHintTolerance": "Leg deinen Finger zurück",
   "challengeTapGoButton": "START",
   "challengeTapStopLive": "AUFGEBEN",
   "challengeTapStopAtSeuil": "FERTIG",
   "challengeTapCountdownHint": "Mach dich bereit…",
-  "challengeCountdownReleaseRetry": "Halte deinen Finger diesmal.",
   "challengeBannerCountdown": "{digit}",
   "@challengeBannerCountdown": {
     "placeholders": { "digit": { "type": "int" } }
   },
-  "challengeAttemptDefault": "Herausforderung: Wir gehen an deine Grenze. Drücke und halte HALTEN wenn du bereit bist, ich zähle drei zwei eins vor dem Start. Lass deinen Finger auf dem Bildschirm, solange du hältst.",
-  "challengeAttemptTutorialHoldThroat": "Erste Herausforderung: Du hältst tief fünf Sekunden. Drücke und halte HALTEN, lass deinen Finger auf dem Bildschirm. Wenn du vor dem Schwellenwert loslässt, ist es gescheitert. Am Schwellenwert wird die Taste grün: loslassen zum Beenden, oder weiterhalten um weiter zu pushen.",
-  "challengeExtensionDefault": "Du kannst länger bleiben, wenn du willst, oder loslassen.",
-  "challengeAttemptTapDefault": "Herausforderung: Wir gehen an deine Grenze. Tippe START wenn du bereit bist, ich zähle drei zwei eins. Dann folge dem Rhythmus — tippe AUFGEBEN, wenn du schlappmachst. Am Schwellenwert tippe FERTIG zum Bestätigen, oder mach weiter um weiter zu pushen.",
-  "challengeExtensionTapDefault": "Du kannst weitermachen, wenn du willst, oder tippe FERTIG.",
+  "challengeAttemptDefault": "Herausforderung: Wir gehen an deine Grenze. Tippe START, wenn du bereit bist, ich zähle drei zwei eins. Tippe AUFGEBEN, wenn du schlappmachst. Am Schwellenwert tippe FERTIG zum Bestätigen, oder mach weiter, um weiter zu pushen.",
+  "challengeAttemptTutorialHoldThroat": "Erste Herausforderung: Du hältst tief fünf Sekunden. Tippe START, ich zähle drei zwei eins, dann hältst du, ohne den Bildschirm zu berühren. Wenn du vor dem Schwellenwert schlappmachst, tippe AUFGEBEN. Am Schwellenwert wird die Taste grün: tippe FERTIG zum Bestätigen, oder halte weiter, um weiter zu pushen.",
+  "challengeExtensionDefault": "Du kannst weitermachen, wenn du willst, oder tippe FERTIG.",
   "challengeSuccessDefault": "Du hast bis zum Ende gehalten. Braves Mädchen.",
   "challengeStopDefault": "Du hast bis zum Schwellenwert gehalten. Gut gemacht.",
   "challengeFailDefault": "Du hast vor dem Schwellenwert nachgegeben. Kein Problem, beim nächsten Mal schaffst du es.",
@@ -646,6 +651,8 @@
   "soundsDebugShowSessionControlsSubtitle": "Nur Debug: im Produktivbetrieb läuft die Session ohne Interaktion (Handy weggelegt), nur der FAIL-Knopf bleibt nützlich.",
   "soundsDebugShowModeBadge": "Modus / BPM / Position anzeigen",
   "soundsDebugShowModeBadgeSubtitle": "Nur Debug: im Produktivbetrieb reicht die Animation, um anzuzeigen, was passiert.",
+  "soundsDebugShowTrajectoryDots": "Trajektorienpunkte anzeigen",
+  "soundsDebugShowTrajectoryDotsSubtitle": "Nur Debug: In der Sitzung bleiben nur die Kurve und der Cursor sichtbar.",
   "debugBarLabelHumiliation": "ERNIEDR.",
   "debugBarLabelObedience": "GEHORS.",
   "debugBarLabelSaliva": "SPEICHEL",
@@ -656,6 +663,9 @@
   "soundsShowBackgroundMedia": "Hintergrundmedien in der Session",
   "soundsShowBackgroundMediaSubtitle": "Zeigt die Bilder/GIFs aus assets/backgrounds/ im Hintergrund, mit Wechsel bei jedem Step. Deaktivieren, um nur den Ambiente-Verlauf zu sehen.",
   "sessionDebugFinishButton": "DEBUG: als Erfolg beenden",
+  "sessionDebugMusicBeepAdvanceLabel": "DEBUG: Beep-Vorlauf",
+  "sessionDebugMusicBeepAdvanceDecrease": "Beep-Vorlauf verringern",
+  "sessionDebugMusicBeepAdvanceIncrease": "Beep-Vorlauf erhöhen",
 
   "soundsDebugScenarioButton": "Debug — Karriere-Szenario",
   "soundsDebugScenarioSubtitle": "Visualisiere eine generierte Session, ohne sie zu spielen: Stufe, Erniedr., Gehors., Meilensteine, Unlocks und Bettel-/Fail-Simulation.",
@@ -751,6 +761,7 @@
   "badgeNameGobeuse": "Schluckerin",
   "badgeNameNettoyeuse": "Saubermacherin",
   "badgeNameSuppliante": "Bettlerin",
+  "badgeNameSabbat": "Hexensabbat",
 
   "badgeUnitMarathonien": "Minuten gesamt",
   "badgeUnitThroatQueen": "Throatfucks gesamt",
@@ -765,6 +776,7 @@
   "badgeUnitGobeuse": "Abspritzer auf die Zunge",
   "badgeUnitNettoyeuse": "sauber geleckte Reste danach",
   "badgeUnitSuppliante": "Betteleien nach dem Orgasmus",
+  "badgeUnitSabbat": "Sessions mit Lilith",
 
   "careerLevelTitleDebutante": "Anfängerin",
   "careerLevelTitleApprentieSuceuse": "Lutsch-Lehrling",
@@ -811,6 +823,12 @@
   "@coachSummaryFree": {
     "placeholders": { "title": { "type": "String" } }
   },
+
+  "coachBadgeLimitedTime": "BEFRISTET",
+  "coachLimitedTimeUntil": "Bis {date}",
+  "coachSummaryLimitedTime": "{title} · bis {date}",
+  "coachLimitedTimeBanner": "{name} ist bis {date} da.",
+  "coachLimitedTimeBannerAction": "AUSPROBIEREN",
 
   "coachFreeTrainingDialogTitle": "Freies Training",
   "coachFreeTrainingDialogBody": "Du trainierst mit {coachName}. Du machst Fortschritte bei deinen Fähigkeiten, aber deine Stufenanzeige bewegt sich nicht.",
@@ -1071,6 +1089,15 @@
     }
   },
   "customHoldDurationRangeHint": "Begrenzt die Dauer von Holds und gehaltenen Bitten.",
+  "customAnchorLabel": "Magnet",
+  "customAnchorHint": "Der Schlag verweilt auf einer Position und schnellt zur anderen zurück. Aus bleibt das Metronom gleichmäßig.",
+  "customAnchorStrengthLabel": "Stärke",
+  "customAnchorStrengthLight": "Leicht",
+  "customAnchorStrengthMedium": "Mittel",
+  "customAnchorStrengthHard": "Hart",
+  "customAnchorPointLabel": "Gehaltene Position",
+  "customAnchorPointFrom": "Anfang",
+  "customAnchorPointTo": "Ende",
   "customSaveAndLaunch": "Speichern und starten",
   "customSaveOnly": "Speichern",
   "customHostLoadError": "Die Custom-Session konnte nicht geladen werden: {error}",
@@ -1108,6 +1135,9 @@
   "profileSessionFlowSection": "Sitzungsablauf",
   "profileScriptedBreaks": "Vorgegebene Posen und Pausen",
   "profileScriptedBreaksSubtitle": "Die Domina gibt eine Pose vor (kniend, auf allen vieren …) und baut in langen Sitzungen aktive Pausen ein. Die Posen werden nach und nach über die Karriere-Meilensteine freigeschaltet.",
+  "profileMusicBeepAdvanceSection": "Beeps zur Musik",
+  "profileMusicBeepAdvanceTitle": "Beep-Vorlauf",
+  "profileMusicBeepAdvanceSubtitle": "Sitzungen mit Musik. Kommen die Beeps nach der Musik, erhöhe den Vorlauf.",
   "sessionRemainingTimeLabel": "Rest: {time}",
   "@sessionRemainingTimeLabel": {
     "placeholders": {

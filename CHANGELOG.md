@@ -4,6 +4,41 @@
 
 ## [Non publié]
 
+## [0.7.0] — 2026-10-30
+
+La séance prend vie : des fonds animés qui suivent ce que tu fais, une musique de fin propre à chaque coach, des tenues qui bougent, de nouveaux sons, un écran de séance redessiné et des pauses vraiment mises en scène. Et pour Halloween, une coach de passage : Lilith.
+
+### Ajouté
+- **Lilith, coach de passage** — une coach éphémère, disponible du 27 octobre au 8 novembre, avec ses phrases dans les quatre langues et son badge « Sabbat » pour les séances terminées avec elle. Sa fenêtre passée, elle se retire d'elle-même.
+- **Des fonds animés qui suivent la séance** — chaque coach a ses propres scènes, et ne montre que les siennes : son intro pendant le décompte, son jeu selon la position et la profondeur, sa punition quand tu es punie, sa fin de séance. Chaque coach se dévêt palier par palier au fil de la séance.
+- **Les scènes de la joueuse** — une fois sur trois, entre deux gestes de la coach, c'est toi qu'on voit, avec 32 nouvelles scènes de gorge profonde.
+- **Marc a ses fonds animés** — dans son loft, habillé, puis torse nu, puis nu, avec une chemise qui se déboutonne entre les deux ; ses scènes de sexe et sa jouissance n'arrivent qu'une fois nu.
+- **Une musique de fin par coach** — la montée finale est portée par un morceau propre à chaque coach, dont le sommet tombe sur le final.
+- **Des tenues qui bougent** — à partir du niveau 5, une tenue n'est plus forcément immobile : petits allers-retours, rafales de micro-mouvements annoncées à la voix, et coups de langue sur les boules pendant une tenue au fond, dessinés à l'écran par une seconde courbe bleue.
+- **Un battement inégal** — le geste rythmé peut s'attarder sur une position au lieu de partager le temps à parts égales. La carrière s'en sert sur certains passages et au final ; l'éditeur de séance personnalisée permet de le régler.
+- **Des sons repensés** — des bips plus sourds et cohérents d'une position à l'autre, un son de léchage par position, une tenue qui résonne plus longtemps, une bouffée d'air libératrice à la reprise du souffle.
+- **Ambiances voix homme et voix femme** — l'ambiance se concentre sur les bruitages, avec des variantes tirées au hasard selon la profondeur ; les gémissements sont gardés pour le climax. Le pack choisi et les volumes sont retenus d'un lancement à l'autre.
+- **Des badges illustrés** — chaque famille de badges a son médaillon, dans le Profil et sur l'écran de fin de séance.
+- **Passer une pause scénarisée** — un bouton pour reprendre tout de suite.
+- **Ta plus longue tenue en « Utilise-moi »** — une nouvelle ligne dans le Profil.
+
+### Modifié
+- **Un écran de séance redessiné** — plein écran, boutons sur une seule ligne, réglages repliés dans un panneau qui ne bloque pas la séance, une courbe qui se dessine sur une piste en forme de verge, aux profondeurs plus lisibles. « JE PEUX PAS » reste entier et facile à toucher, même sur un écran bas.
+- **Des pauses et des changements de position mieux dosés** — un premier changement de position entre 4 et 7 minutes, puis une pause toutes les 7 à 12 minutes selon ton endurance. Le changement est annoncé dès le début de la pause, le temps de pause ne compte plus comme temps d'effort, et la durée annoncée l'inclut. Pendant une pause, les boutons d'action s'effacent ; pendant un changement de position, la courbe aussi.
+- **« Utilise-moi » se mérite** — en séance, il ne s'offre qu'après 2 minutes de jeu sans craquer, et un « JE PEUX PAS » y met fin : la séance normale reprend pour le temps restant.
+- **Tous les défis se jouent au tap** — plus aucun bouton à maintenir.
+- **Une progression plus juste** — un « JE PEUX PAS » ne fait baisser que ce qui a vraiment lâché, et jamais de plus de 15 %. « Utilise-moi » fait progresser ton rythme à proportion du temps tenu, sans gonfler le reste du profil. Abandonner un défi « sans avaler » baisse ton niveau « sans avaler ».
+- **L'écran reste en portrait sur téléphone.**
+
+### Corrigé
+- **La courbe ne saute plus** — au retour dans l'appli, après une pause ou pendant une punition, elle se fige et reprend exactement où elle en était.
+- **La séance ne part plus sans toi** — passer l'app en arrière-plan pendant le décompte ou à la sortie d'un « JE PEUX PAS » met la séance en attente jusqu'à ton retour.
+- **L'ambiance ne s'arrête plus au premier bip** — elle ne dispute plus la sortie audio aux bips.
+- **Après un défi, la séance garde son fil** — la suite reprend les paliers pas encore joués, garde les pauses et changements de position prévus, et n'interrompt plus une escalade « Utilise-moi » en cours.
+- **Les séances enchaînées** — à la séance de plus, la coach garde sa voix et ce qu'elle porte, et la séance suivante ne reprend plus le fond de la précédente.
+- **Le mode Surprise** — une coach tirée au hasard arrive bien avec sa voix, ses phrases et ses fonds.
+- **La voix et les bips** — les bips attendent la fin de la phrase de reprise, et les consignes en retard ne débordent plus sur le final.
+
 ## [0.6.2] — 2026-08-20
 
 Version de correction née d'un retour d'utilisation de la 0.6.1 : des séances beaucoup plus longues qu'annoncé, des défis qui disparaissaient ou figeaient la séance, et une fonctionnalité annoncée en 0.6.0 que personne n'a jamais vue. Plus deux nouveautés : régler la voix de chaque coach, et une profondeur qui remonte enfin toute seule.
@@ -253,7 +288,8 @@ Grosse mise à jour du mode carrière : nouvelle enveloppe de difficulté, nouve
 ## [0.1.0] — 2026-05-08
 - Premier release public : coach vocal rythmique hors-ligne pour Android, adult gate 18+, onboarding, mode carrière + scénarios, badges, profil/réputation.
 
-[Non publié]: https://github.com/bbstudioapp/beatbitch/compare/v0.6.2...develop
+[Non publié]: https://github.com/bbstudioapp/beatbitch/compare/v0.7.0...develop
+[0.7.0]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.7.0
 [0.6.2]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.6.2
 [0.6.1]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.6.1
 [0.6.0]: https://github.com/bbstudioapp/beatbitch/releases/tag/v0.6.0

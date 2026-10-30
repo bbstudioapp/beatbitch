@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Flags de debug visibles dans l'écran SONS. Persiste entre lancements.
@@ -15,6 +16,8 @@ class DebugSettingsService {
   static const String _kShowSessionRemainingTime =
       'pref.show_session_remaining_time';
   static const String _kScriptedBreaks = 'pref.scripted_breaks';
+  static const String _kShowTrajectoryDots = 'debug.show_trajectory_dots';
+  static const String _kMusicBeepAdvanceMs = 'debug.music_beep_advance_ms';
 
   Future<bool> getShowStaminaBar() async {
     final prefs = await SharedPreferences.getInstance();
@@ -177,5 +180,31 @@ class DebugSettingsService {
   Future<void> setScriptedBreaks(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kScriptedBreaks, value);
+  }
+
+  /// Quand true, la courbe de trajectoire pose une pastille sur chaque beat
+  /// à venir. Réservé au debug : en séance seule la courbe lissée et le
+  /// curseur restent visibles. Par défaut aligné sur [kDebugMode], le toggle
+  /// permettant de comparer les deux rendus sur une même build de debug.
+  Future<bool> getShowTrajectoryDots() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_kShowTrajectoryDots) ?? kDebugMode;
+  }
+
+  Future<void> setShowTrajectoryDots(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kShowTrajectoryDots, value);
+  }
+
+  static const int defaultMusicBeepAdvanceMs = 150;
+
+  Future<int> getMusicBeepAdvanceMs() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_kMusicBeepAdvanceMs) ?? defaultMusicBeepAdvanceMs;
+  }
+
+  Future<void> setMusicBeepAdvanceMs(int value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_kMusicBeepAdvanceMs, value);
   }
 }

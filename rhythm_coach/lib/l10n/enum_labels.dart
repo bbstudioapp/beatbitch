@@ -89,6 +89,7 @@ extension BadgeFamilyL10n on BadgeFamily {
       BadgeFamily.gobeuse => t.badgeNameGobeuse,
       BadgeFamily.nettoyeuse => t.badgeNameNettoyeuse,
       BadgeFamily.suppliante => t.badgeNameSuppliante,
+      BadgeFamily.sabbat => t.badgeNameSabbat,
     };
   }
 
@@ -108,6 +109,7 @@ extension BadgeFamilyL10n on BadgeFamily {
       BadgeFamily.gobeuse => t.badgeUnitGobeuse,
       BadgeFamily.nettoyeuse => t.badgeUnitNettoyeuse,
       BadgeFamily.suppliante => t.badgeUnitSuppliante,
+      BadgeFamily.sabbat => t.badgeUnitSabbat,
     };
   }
 }
@@ -187,6 +189,17 @@ extension CustomDifficultyL10n on CustomDifficulty {
   }
 }
 
+extension AnchorStrengthL10n on AnchorStrength {
+  String localizedLabel(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return switch (this) {
+      AnchorStrength.light => t.customAnchorStrengthLight,
+      AnchorStrength.medium => t.customAnchorStrengthMedium,
+      AnchorStrength.hard => t.customAnchorStrengthHard,
+    };
+  }
+}
+
 extension ModeDoseL10n on ModeDose {
   String localizedLabel(BuildContext context) {
     final t = AppLocalizations.of(context);
@@ -226,6 +239,7 @@ extension CapabilityAxisL10n on CapabilityAxis {
       CapabilityAxis.lickDepthMax => t.profileCapLickDepth,
       CapabilityAxis.lickStreak => t.profileCapLickStreak,
       CapabilityAxis.handStreak => t.profileCapHandStreak,
+      CapabilityAxis.useMeHeldStreak => t.profileCapUseMeHeld,
     };
   }
 

@@ -102,7 +102,7 @@ jobs:
         run: |
           if [ -z "$R2_ACCESS_KEY_ID" ] || [ -z "$R2_SECRET_ACCESS_KEY" ] || [ -z "$R2_ENDPOINT" ] || [ -z "$R2_BUCKET" ]; then
             echo "R2 secrets not configured — skipping external assets fetch."
-            echo "Build will proceed with empty backgrounds / ambience / coach-portraits folders (graceful fallback in app)."
+            echo "Build will proceed with empty backgrounds / ambience / music / coach-portraits folders (graceful fallback in app)."
             exit 0
           fi
 
@@ -110,10 +110,10 @@ jobs:
           export AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY"
           export AWS_DEFAULT_REGION="auto"
 
-          mkdir -p assets/backgrounds assets/audio/ambience assets/career/coaches/portraits
+          mkdir -p assets/backgrounds assets/audio/ambience assets/audio/music assets/career/coaches/portraits assets/courbe
 
-          echo "Fetching backgrounds from s3://$R2_BUCKET/backgrounds/v1/ ..."
-          aws s3 sync "s3://$R2_BUCKET/backgrounds/v1/" assets/backgrounds/ \
+          echo "Fetching backgrounds from s3://$R2_BUCKET/backgrounds/v3/ ..."
+          aws s3 sync "s3://$R2_BUCKET/backgrounds/v3/" assets/backgrounds/ \
             --endpoint-url "$R2_ENDPOINT" \
             --no-progress
 
@@ -122,16 +122,28 @@ jobs:
             --endpoint-url "$R2_ENDPOINT" \
             --no-progress || echo "(ambience prefix empty or missing, continuing)"
 
-          echo "Fetching coach portraits from s3://$R2_BUCKET/coach-portraits/v1/ ..."
-          aws s3 sync "s3://$R2_BUCKET/coach-portraits/v1/" assets/career/coaches/portraits/ \
+          echo "Fetching music from s3://$R2_BUCKET/music/v1/ ..."
+          aws s3 sync "s3://$R2_BUCKET/music/v1/" assets/audio/music/ \
+            --endpoint-url "$R2_ENDPOINT" \
+            --no-progress || echo "(music prefix empty or missing, continuing)"
+
+          echo "Fetching coach portraits from s3://$R2_BUCKET/coach-portraits/v3/ ..."
+          aws s3 sync "s3://$R2_BUCKET/coach-portraits/v3/" assets/career/coaches/portraits/ \
             --endpoint-url "$R2_ENDPOINT" \
             --no-progress || echo "(coach-portraits prefix empty or missing, continuing)"
+
+          echo "Fetching curve shaft image from s3://$R2_BUCKET/courbe/v1/ ..."
+          aws s3 sync "s3://$R2_BUCKET/courbe/v1/" assets/courbe/ \
+            --endpoint-url "$R2_ENDPOINT" \
+            --no-progress || echo "(courbe prefix empty or missing, continuing)"
 
           echo "--- Fetched assets ---"
           echo "Backgrounds:"
           ls -lh assets/backgrounds/ 2>/dev/null || echo "  (empty)"
           echo "Ambience:"
           ls -lh assets/audio/ambience/ 2>/dev/null || echo "  (empty)"
+          echo "Music:"
+          ls -lh assets/audio/music/ 2>/dev/null || echo "  (empty)"
           echo "Coach portraits:"
           ls -lh assets/career/coaches/portraits/ 2>/dev/null || echo "  (empty)"
 
@@ -254,7 +266,7 @@ jobs:
         run: |
           if [ -z "$R2_ACCESS_KEY_ID" ] || [ -z "$R2_SECRET_ACCESS_KEY" ] || [ -z "$R2_ENDPOINT" ] || [ -z "$R2_BUCKET" ]; then
             echo "R2 secrets not configured — skipping external assets fetch."
-            echo "Build will proceed with empty backgrounds / ambience / coach-portraits folders (graceful fallback in app)."
+            echo "Build will proceed with empty backgrounds / ambience / music / coach-portraits folders (graceful fallback in app)."
             exit 0
           fi
 
@@ -262,10 +274,10 @@ jobs:
           export AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY"
           export AWS_DEFAULT_REGION="auto"
 
-          mkdir -p assets/backgrounds assets/audio/ambience assets/career/coaches/portraits
+          mkdir -p assets/backgrounds assets/audio/ambience assets/audio/music assets/career/coaches/portraits assets/courbe
 
-          echo "Fetching backgrounds from s3://$R2_BUCKET/backgrounds/v1/ ..."
-          aws s3 sync "s3://$R2_BUCKET/backgrounds/v1/" assets/backgrounds/ \
+          echo "Fetching backgrounds from s3://$R2_BUCKET/backgrounds/v3/ ..."
+          aws s3 sync "s3://$R2_BUCKET/backgrounds/v3/" assets/backgrounds/ \
             --endpoint-url "$R2_ENDPOINT" \
             --no-progress
 
@@ -274,10 +286,20 @@ jobs:
             --endpoint-url "$R2_ENDPOINT" \
             --no-progress || echo "(ambience prefix empty or missing, continuing)"
 
-          echo "Fetching coach portraits from s3://$R2_BUCKET/coach-portraits/v1/ ..."
-          aws s3 sync "s3://$R2_BUCKET/coach-portraits/v1/" assets/career/coaches/portraits/ \
+          echo "Fetching music from s3://$R2_BUCKET/music/v1/ ..."
+          aws s3 sync "s3://$R2_BUCKET/music/v1/" assets/audio/music/ \
+            --endpoint-url "$R2_ENDPOINT" \
+            --no-progress || echo "(music prefix empty or missing, continuing)"
+
+          echo "Fetching coach portraits from s3://$R2_BUCKET/coach-portraits/v3/ ..."
+          aws s3 sync "s3://$R2_BUCKET/coach-portraits/v3/" assets/career/coaches/portraits/ \
             --endpoint-url "$R2_ENDPOINT" \
             --no-progress || echo "(coach-portraits prefix empty or missing, continuing)"
+
+          echo "Fetching curve shaft image from s3://$R2_BUCKET/courbe/v1/ ..."
+          aws s3 sync "s3://$R2_BUCKET/courbe/v1/" assets/courbe/ \
+            --endpoint-url "$R2_ENDPOINT" \
+            --no-progress || echo "(courbe prefix empty or missing, continuing)"
 
       - name: Enable Windows desktop
         run: flutter config --enable-windows-desktop
@@ -358,7 +380,7 @@ jobs:
         run: |
           if [ -z "$R2_ACCESS_KEY_ID" ] || [ -z "$R2_SECRET_ACCESS_KEY" ] || [ -z "$R2_ENDPOINT" ] || [ -z "$R2_BUCKET" ]; then
             echo "R2 secrets not configured — skipping external assets fetch."
-            echo "Build will proceed with empty backgrounds / ambience / coach-portraits folders (graceful fallback in app)."
+            echo "Build will proceed with empty backgrounds / ambience / music / coach-portraits folders (graceful fallback in app)."
             exit 0
           fi
 
@@ -366,10 +388,10 @@ jobs:
           export AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY"
           export AWS_DEFAULT_REGION="auto"
 
-          mkdir -p assets/backgrounds assets/audio/ambience assets/career/coaches/portraits
+          mkdir -p assets/backgrounds assets/audio/ambience assets/audio/music assets/career/coaches/portraits assets/courbe
 
-          echo "Fetching backgrounds from s3://$R2_BUCKET/backgrounds/v1/ ..."
-          aws s3 sync "s3://$R2_BUCKET/backgrounds/v1/" assets/backgrounds/ \
+          echo "Fetching backgrounds from s3://$R2_BUCKET/backgrounds/v3/ ..."
+          aws s3 sync "s3://$R2_BUCKET/backgrounds/v3/" assets/backgrounds/ \
             --endpoint-url "$R2_ENDPOINT" \
             --no-progress
 
@@ -378,10 +400,20 @@ jobs:
             --endpoint-url "$R2_ENDPOINT" \
             --no-progress || echo "(ambience prefix empty or missing, continuing)"
 
-          echo "Fetching coach portraits from s3://$R2_BUCKET/coach-portraits/v1/ ..."
-          aws s3 sync "s3://$R2_BUCKET/coach-portraits/v1/" assets/career/coaches/portraits/ \
+          echo "Fetching music from s3://$R2_BUCKET/music/v1/ ..."
+          aws s3 sync "s3://$R2_BUCKET/music/v1/" assets/audio/music/ \
+            --endpoint-url "$R2_ENDPOINT" \
+            --no-progress || echo "(music prefix empty or missing, continuing)"
+
+          echo "Fetching coach portraits from s3://$R2_BUCKET/coach-portraits/v3/ ..."
+          aws s3 sync "s3://$R2_BUCKET/coach-portraits/v3/" assets/career/coaches/portraits/ \
             --endpoint-url "$R2_ENDPOINT" \
             --no-progress || echo "(coach-portraits prefix empty or missing, continuing)"
+
+          echo "Fetching curve shaft image from s3://$R2_BUCKET/courbe/v1/ ..."
+          aws s3 sync "s3://$R2_BUCKET/courbe/v1/" assets/courbe/ \
+            --endpoint-url "$R2_ENDPOINT" \
+            --no-progress || echo "(courbe prefix empty or missing, continuing)"
 
       - name: Enable Linux desktop
         run: flutter config --enable-linux-desktop

@@ -276,6 +276,12 @@ abstract class AppLocalizations {
   /// **'Ambiance'**
   String get sessionAmbienceLabel;
 
+  /// No description provided for @sessionSettingsTooltip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réglages'**
+  String get sessionSettingsTooltip;
+
   /// No description provided for @sessionUseMeLabel.
   ///
   /// In fr, this message translates to:
@@ -329,6 +335,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'PAUSE'**
   String get sessionBreakBanner;
+
+  /// No description provided for @sessionBreakSkipButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'PASSER LA PAUSE'**
+  String get sessionBreakSkipButton;
 
   /// No description provided for @sessionFailPhasePhrase.
   ///
@@ -678,6 +690,12 @@ abstract class AppLocalizations {
   /// **'Hold full max'**
   String get profileStatHoldFullMax;
 
+  /// No description provided for @profileStatUseMeMax.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plus longue tenue en Utilise-moi'**
+  String get profileStatUseMeMax;
+
   /// No description provided for @profileStatHoldThroatTotal.
   ///
   /// In fr, this message translates to:
@@ -863,6 +881,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Main continue'**
   String get profileCapHandStreak;
+
+  /// No description provided for @profileCapUseMeHeld.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tenue en Utilise-moi'**
+  String get profileCapUseMeHeld;
 
   /// No description provided for @profileDiagnosticSection.
   ///
@@ -1056,6 +1080,18 @@ abstract class AppLocalizations {
   /// **'{duration} + le temps des défis'**
   String careerDurationPlusChallenges(String duration);
 
+  /// No description provided for @careerDurationPlusChallengesAndPauses.
+  ///
+  /// In fr, this message translates to:
+  /// **'{duration} + le temps des défis et des pauses'**
+  String careerDurationPlusChallengesAndPauses(String duration);
+
+  /// No description provided for @careerDurationPlusPauses.
+  ///
+  /// In fr, this message translates to:
+  /// **'{duration} + le temps des pauses'**
+  String careerDurationPlusPauses(String duration);
+
   /// No description provided for @careerDurationSection.
   ///
   /// In fr, this message translates to:
@@ -1188,30 +1224,6 @@ abstract class AppLocalizations {
   /// **'PASSE'**
   String get challengePassButton;
 
-  /// No description provided for @challengeGoButton.
-  ///
-  /// In fr, this message translates to:
-  /// **'MAINTIENS'**
-  String get challengeGoButton;
-
-  /// No description provided for @challengeHoldHintLive.
-  ///
-  /// In fr, this message translates to:
-  /// **'Garde le doigt sur l\'écran'**
-  String get challengeHoldHintLive;
-
-  /// No description provided for @challengeHoldHintAtSeuil.
-  ///
-  /// In fr, this message translates to:
-  /// **'Relâche pour arrêter, ou continue'**
-  String get challengeHoldHintAtSeuil;
-
-  /// No description provided for @challengeHoldHintTolerance.
-  ///
-  /// In fr, this message translates to:
-  /// **'Repose ton doigt'**
-  String get challengeHoldHintTolerance;
-
   /// No description provided for @challengeTapGoButton.
   ///
   /// In fr, this message translates to:
@@ -1236,12 +1248,6 @@ abstract class AppLocalizations {
   /// **'Prépare-toi…'**
   String get challengeTapCountdownHint;
 
-  /// No description provided for @challengeCountdownReleaseRetry.
-  ///
-  /// In fr, this message translates to:
-  /// **'Maintiens bien ton doigt cette fois.'**
-  String get challengeCountdownReleaseRetry;
-
   /// No description provided for @challengeBannerCountdown.
   ///
   /// In fr, this message translates to:
@@ -1251,32 +1257,20 @@ abstract class AppLocalizations {
   /// No description provided for @challengeAttemptDefault.
   ///
   /// In fr, this message translates to:
-  /// **'Défi : on va pousser ta limite. Maintiens MAINTIENS quand tu es prête, je compterai trois deux un avant de démarrer. Garde le doigt sur l\'écran tant que tu tiens.'**
+  /// **'Défi : on va pousser ta limite. Tape DÉMARRE quand tu es prête, je compte trois deux un. Tape J\'ABANDONNE si tu craques. Au seuil, tape JE M\'ARRÊTE pour valider, ou continue pour aller plus loin.'**
   String get challengeAttemptDefault;
 
   /// No description provided for @challengeAttemptTutorialHoldThroat.
   ///
   /// In fr, this message translates to:
-  /// **'Premier défi : tu vas tenir en gorge cinq secondes. Maintiens MAINTIENS, garde le doigt sur l\'écran. Si tu lâches avant le seuil, c\'est raté. Au seuil, le bouton devient vert : relâche pour arrêter, ou continue à tenir pour aller plus loin.'**
+  /// **'Premier défi : tu vas tenir en gorge cinq secondes. Tape DÉMARRE, je compte trois deux un, puis tiens sans toucher l\'écran. Si tu craques avant le seuil, tape J\'ABANDONNE. Au seuil, le bouton devient vert : tape JE M\'ARRÊTE pour valider, ou continue à tenir pour aller plus loin.'**
   String get challengeAttemptTutorialHoldThroat;
 
   /// No description provided for @challengeExtensionDefault.
   ///
   /// In fr, this message translates to:
-  /// **'Tu peux rester encore si tu veux, ou relâcher.'**
-  String get challengeExtensionDefault;
-
-  /// No description provided for @challengeAttemptTapDefault.
-  ///
-  /// In fr, this message translates to:
-  /// **'Défi : on va pousser ta limite. Tape DÉMARRE quand tu es prête, je compte trois deux un. Ensuite suis le rythme — tape J\'ABANDONNE si tu craques. Au seuil, tape JE M\'ARRÊTE pour valider, ou continue pour aller plus loin.'**
-  String get challengeAttemptTapDefault;
-
-  /// No description provided for @challengeExtensionTapDefault.
-  ///
-  /// In fr, this message translates to:
   /// **'Tu peux continuer si tu veux, ou tape JE M\'ARRÊTE.'**
-  String get challengeExtensionTapDefault;
+  String get challengeExtensionDefault;
 
   /// No description provided for @challengeSuccessDefault.
   ///
@@ -2334,6 +2328,18 @@ abstract class AppLocalizations {
   /// **'Réservé au debug : en prod l\'animation suffit à indiquer ce qui se passe.'**
   String get soundsDebugShowModeBadgeSubtitle;
 
+  /// No description provided for @soundsDebugShowTrajectoryDots.
+  ///
+  /// In fr, this message translates to:
+  /// **'Afficher les mini-points de trajectoire'**
+  String get soundsDebugShowTrajectoryDots;
+
+  /// No description provided for @soundsDebugShowTrajectoryDotsSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réservé au debug : en séance, seules la courbe et le curseur restent visibles.'**
+  String get soundsDebugShowTrajectoryDotsSubtitle;
+
   /// No description provided for @debugBarLabelHumiliation.
   ///
   /// In fr, this message translates to:
@@ -2393,6 +2399,24 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'DEBUG : terminer en succès'**
   String get sessionDebugFinishButton;
+
+  /// No description provided for @sessionDebugMusicBeepAdvanceLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'DEBUG : avance des bips'**
+  String get sessionDebugMusicBeepAdvanceLabel;
+
+  /// No description provided for @sessionDebugMusicBeepAdvanceDecrease.
+  ///
+  /// In fr, this message translates to:
+  /// **'Diminuer l\'avance des bips'**
+  String get sessionDebugMusicBeepAdvanceDecrease;
+
+  /// No description provided for @sessionDebugMusicBeepAdvanceIncrease.
+  ///
+  /// In fr, this message translates to:
+  /// **'Augmenter l\'avance des bips'**
+  String get sessionDebugMusicBeepAdvanceIncrease;
 
   /// No description provided for @soundsDebugScenarioButton.
   ///
@@ -2880,6 +2904,12 @@ abstract class AppLocalizations {
   /// **'Suppliante'**
   String get badgeNameSuppliante;
 
+  /// No description provided for @badgeNameSabbat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sabbat'**
+  String get badgeNameSabbat;
+
   /// No description provided for @badgeUnitMarathonien.
   ///
   /// In fr, this message translates to:
@@ -2957,6 +2987,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'suppliques post-orgasme'**
   String get badgeUnitSuppliante;
+
+  /// No description provided for @badgeUnitSabbat.
+  ///
+  /// In fr, this message translates to:
+  /// **'séances avec Lilith'**
+  String get badgeUnitSabbat;
 
   /// No description provided for @careerLevelTitleDebutante.
   ///
@@ -3143,6 +3179,36 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'{title} · entraînement libre'**
   String coachSummaryFree(String title);
+
+  /// No description provided for @coachBadgeLimitedTime.
+  ///
+  /// In fr, this message translates to:
+  /// **'ÉPHÉMÈRE'**
+  String get coachBadgeLimitedTime;
+
+  /// No description provided for @coachLimitedTimeUntil.
+  ///
+  /// In fr, this message translates to:
+  /// **'Jusqu\'au {date}'**
+  String coachLimitedTimeUntil(DateTime date);
+
+  /// No description provided for @coachSummaryLimitedTime.
+  ///
+  /// In fr, this message translates to:
+  /// **'{title} · jusqu\'au {date}'**
+  String coachSummaryLimitedTime(String title, DateTime date);
+
+  /// No description provided for @coachLimitedTimeBanner.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} est là jusqu\'au {date}.'**
+  String coachLimitedTimeBanner(String name, DateTime date);
+
+  /// No description provided for @coachLimitedTimeBannerAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'ESSAYER'**
+  String get coachLimitedTimeBannerAction;
 
   /// No description provided for @coachFreeTrainingDialogTitle.
   ///
@@ -3888,6 +3954,60 @@ abstract class AppLocalizations {
   /// **'Borne la durée des holds et des supplications tenues.'**
   String get customHoldDurationRangeHint;
 
+  /// No description provided for @customAnchorLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aimant'**
+  String get customAnchorLabel;
+
+  /// No description provided for @customAnchorHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le battement retient une position et repart vite vers l\'autre. Éteint, le métronome reste régulier.'**
+  String get customAnchorHint;
+
+  /// No description provided for @customAnchorStrengthLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Force'**
+  String get customAnchorStrengthLabel;
+
+  /// No description provided for @customAnchorStrengthLight.
+  ///
+  /// In fr, this message translates to:
+  /// **'Léger'**
+  String get customAnchorStrengthLight;
+
+  /// No description provided for @customAnchorStrengthMedium.
+  ///
+  /// In fr, this message translates to:
+  /// **'Moyen'**
+  String get customAnchorStrengthMedium;
+
+  /// No description provided for @customAnchorStrengthHard.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dur'**
+  String get customAnchorStrengthHard;
+
+  /// No description provided for @customAnchorPointLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Position retenue'**
+  String get customAnchorPointLabel;
+
+  /// No description provided for @customAnchorPointFrom.
+  ///
+  /// In fr, this message translates to:
+  /// **'Départ'**
+  String get customAnchorPointFrom;
+
+  /// No description provided for @customAnchorPointTo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arrivée'**
+  String get customAnchorPointTo;
+
   /// No description provided for @customSaveAndLaunch.
   ///
   /// In fr, this message translates to:
@@ -4013,6 +4133,24 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'La coach impose une posture (à genoux, à quatre pattes…) et insère des pauses actives sur les séances longues. Les postures se débloquent au fil des paliers de carrière.'**
   String get profileScriptedBreaksSubtitle;
+
+  /// No description provided for @profileMusicBeepAdvanceSection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bips sur la musique'**
+  String get profileMusicBeepAdvanceSection;
+
+  /// No description provided for @profileMusicBeepAdvanceTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Avance des bips'**
+  String get profileMusicBeepAdvanceTitle;
+
+  /// No description provided for @profileMusicBeepAdvanceSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Séances avec musique. Si les bips arrivent après la musique, augmente l\'avance.'**
+  String get profileMusicBeepAdvanceSubtitle;
 
   /// No description provided for @sessionRemainingTimeLabel.
   ///

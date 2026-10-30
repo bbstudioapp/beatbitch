@@ -46,7 +46,7 @@ class PostureGate {
   final int nextStepIndex;
 
   /// Décalage d'horloge au moment de l'ordre. Un gel ne fait que le
-  /// **décrémenter** (un tick par battement, comme le report TTS) : toute
+  /// **décrémenter** (un tick par battement) : toute
   /// valeur supérieure signe un saut en avant dans la timeline.
   final Duration timelineOffset;
 

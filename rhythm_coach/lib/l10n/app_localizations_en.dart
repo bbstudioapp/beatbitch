@@ -102,6 +102,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionAmbienceLabel => 'Ambience';
 
   @override
+  String get sessionSettingsTooltip => 'Settings';
+
+  @override
   String get sessionUseMeLabel => 'USE ME';
 
   @override
@@ -127,6 +130,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sessionBreakBanner => 'BREAK';
+
+  @override
+  String get sessionBreakSkipButton => 'SKIP THE BREAK';
 
   @override
   String get sessionFailPhasePhrase => 'Fail phrase';
@@ -323,6 +329,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileStatHoldFullMax => 'Longest deep hold';
 
   @override
+  String get profileStatUseMeMax => 'Longest stretch in Use Me';
+
+  @override
   String get profileStatHoldThroatTotal => 'Throat hold (total)';
 
   @override
@@ -417,6 +426,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileCapHandStreak => 'Unbroken hand';
+
+  @override
+  String get profileCapUseMeHeld => 'Hold in Use Me';
 
   @override
   String get profileDiagnosticSection => 'DIAGNOSTIC';
@@ -530,6 +542,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String careerDurationPlusChallengesAndPauses(String duration) {
+    return '$duration + challenge and break time';
+  }
+
+  @override
+  String careerDurationPlusPauses(String duration) {
+    return '$duration + break time';
+  }
+
+  @override
   String get careerDurationSection => 'Duration';
 
   @override
@@ -603,18 +625,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get challengePassButton => 'SKIP';
 
   @override
-  String get challengeGoButton => 'HOLD';
-
-  @override
-  String get challengeHoldHintLive => 'Keep your finger on the screen';
-
-  @override
-  String get challengeHoldHintAtSeuil => 'Release to stop, or keep holding';
-
-  @override
-  String get challengeHoldHintTolerance => 'Put your finger back';
-
-  @override
   String get challengeTapGoButton => 'START';
 
   @override
@@ -627,31 +637,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get challengeTapCountdownHint => 'Get ready…';
 
   @override
-  String get challengeCountdownReleaseRetry => 'Keep your finger this time.';
-
-  @override
   String challengeBannerCountdown(int digit) {
     return '$digit';
   }
 
   @override
   String get challengeAttemptDefault =>
-      'Challenge: we\'re pushing your limit. Press and hold HOLD when ready, I\'ll count three two one before we start. Keep your finger on the screen as long as you hold.';
+      'Challenge: we\'re pushing your limit. Tap START when you\'re ready, I\'ll count three two one. Tap GIVE UP if you crack. At the threshold, tap I\'M DONE to lock it in, or keep going to push further.';
 
   @override
   String get challengeAttemptTutorialHoldThroat =>
-      'First challenge: you\'ll hold deep for five seconds. Press and hold HOLD, keep your finger on the screen. If you let go before the threshold, it\'s failed. At the threshold the button turns green: release to stop, or keep holding to push further.';
+      'First challenge: you\'ll hold deep for five seconds. Tap START, I\'ll count three two one, then hold without touching the screen. If you crack before the threshold, tap GIVE UP. At the threshold the button turns green: tap I\'M DONE to lock it in, or keep holding to push further.';
 
   @override
   String get challengeExtensionDefault =>
-      'You can stay longer if you want, or let go.';
-
-  @override
-  String get challengeAttemptTapDefault =>
-      'Challenge: we\'re pushing your limit. Tap START when you\'re ready, I\'ll count three two one. Then follow the rhythm — tap GIVE UP if you crack. At the threshold, tap I\'M DONE to lock it in, or keep going to push further.';
-
-  @override
-  String get challengeExtensionTapDefault =>
       'You can keep going if you want, or tap I\'M DONE.';
 
   @override
@@ -1317,6 +1316,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Debug only: in prod the animation is enough to indicate what\'s happening.';
 
   @override
+  String get soundsDebugShowTrajectoryDots => 'Show trajectory dots';
+
+  @override
+  String get soundsDebugShowTrajectoryDotsSubtitle =>
+      'Debug only: during a session, only the curve and the cursor stay visible.';
+
+  @override
   String get debugBarLabelHumiliation => 'HUMIL.';
 
   @override
@@ -1348,6 +1354,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sessionDebugFinishButton => 'DEBUG: finish as success';
+
+  @override
+  String get sessionDebugMusicBeepAdvanceLabel => 'DEBUG: beep lead';
+
+  @override
+  String get sessionDebugMusicBeepAdvanceDecrease => 'Decrease beep lead';
+
+  @override
+  String get sessionDebugMusicBeepAdvanceIncrease => 'Increase beep lead';
 
   @override
   String get soundsDebugScenarioButton => 'Debug — career scenario';
@@ -1597,6 +1612,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get badgeNameSuppliante => 'Beggar';
 
   @override
+  String get badgeNameSabbat => 'Sabbat';
+
+  @override
   String get badgeUnitMarathonien => 'minutes total';
 
   @override
@@ -1635,6 +1653,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get badgeUnitSuppliante => 'post-orgasm begs';
+
+  @override
+  String get badgeUnitSabbat => 'sessions with Lilith';
 
   @override
   String get careerLevelTitleDebutante => 'Beginner';
@@ -1737,6 +1758,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String coachSummaryFree(String title) {
     return '$title · free training';
   }
+
+  @override
+  String get coachBadgeLimitedTime => 'LIMITED TIME';
+
+  @override
+  String coachLimitedTimeUntil(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.MMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return 'Until $dateString';
+  }
+
+  @override
+  String coachSummaryLimitedTime(String title, DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.MMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$title · until $dateString';
+  }
+
+  @override
+  String coachLimitedTimeBanner(String name, DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.MMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$name is here until $dateString.';
+  }
+
+  @override
+  String get coachLimitedTimeBannerAction => 'TRY HER';
 
   @override
   String get coachFreeTrainingDialogTitle => 'Free training';
@@ -2196,6 +2247,34 @@ class AppLocalizationsEn extends AppLocalizations {
       'Bounds the duration of holds and held begs.';
 
   @override
+  String get customAnchorLabel => 'Magnet';
+
+  @override
+  String get customAnchorHint =>
+      'The beat lingers on one position and snaps back to the other. Off, the metronome stays even.';
+
+  @override
+  String get customAnchorStrengthLabel => 'Strength';
+
+  @override
+  String get customAnchorStrengthLight => 'Light';
+
+  @override
+  String get customAnchorStrengthMedium => 'Medium';
+
+  @override
+  String get customAnchorStrengthHard => 'Hard';
+
+  @override
+  String get customAnchorPointLabel => 'Held position';
+
+  @override
+  String get customAnchorPointFrom => 'Start';
+
+  @override
+  String get customAnchorPointTo => 'End';
+
+  @override
   String get customSaveAndLaunch => 'Save and launch';
 
   @override
@@ -2265,6 +2344,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get profileScriptedBreaksSubtitle =>
       'The coach enforces a posture (kneeling, on all fours…) and inserts active breaks on long sessions. Postures unlock as you progress through career milestones.';
+
+  @override
+  String get profileMusicBeepAdvanceSection => 'Beeps on music';
+
+  @override
+  String get profileMusicBeepAdvanceTitle => 'Beep lead';
+
+  @override
+  String get profileMusicBeepAdvanceSubtitle =>
+      'Music sessions. If the beeps land after the music, increase the lead.';
 
   @override
   String sessionRemainingTimeLabel(String time) {

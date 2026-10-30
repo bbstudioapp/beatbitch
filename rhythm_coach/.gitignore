@@ -55,10 +55,18 @@ assets/backgrounds/*.jpg
 assets/backgrounds/*.jpeg
 assets/backgrounds/*.webp
 assets/audio/ambience/*.mp3
+assets/audio/music/*.mp3
 assets/career/coaches/portraits/*.png
 assets/career/coaches/portraits/*.jpg
 assets/career/coaches/portraits/*.jpeg
 assets/career/coaches/portraits/*.webp
+assets/courbe/**/*.png
 
 # Captures marketing — pèsent et changent souvent, hors historique code.
 screenshots/
+
+# Originaux des fonds animés avant recompression (tools/compress_backgrounds.py).
+/assets-originaux/
+
+# Reste d'une recompression interrompue (tools/compress_backgrounds.py).
+assets/backgrounds/.*.tmp

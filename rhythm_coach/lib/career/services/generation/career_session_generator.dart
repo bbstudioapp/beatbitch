@@ -13,6 +13,8 @@ import '../../models/career_generation_inputs.dart';
 import '../../models/challenge.dart';
 import '../../../models/posture.dart';
 import '../../models/level_milestone.dart';
+import '../../../models/hold_move.dart';
+import '../../../services/beep_engine.dart';
 import '../../models/phrase_bank.dart';
 import '../../models/posture_unlock.dart';
 import '../../models/session_length_choice.dart';
@@ -211,23 +213,26 @@ class CareerSessionGenerator {
     });
   }
 
-  /// Bornes de durée d'un break scénarisé (issue #77). Tirées uniformément
-  /// par `_pickBreakDuration`. Le break consomme cette durée comme *trou
-  /// d'effort* dans l'enveloppe (cf. réservation dans `generate`).
+  /// Bornes de durée d'un break scénarisé. Tirées uniformément
+  /// par `_pickBreakDuration`. Le break est un *trou d'effort* qui s'ajoute à
+  /// la durée choisie (cf. réservation dans `generate`).
   static const int _breakMinDurationSeconds = 60;
   static const int _breakMaxDurationSeconds = 120;
 
-  /// Seuils de durée totale (s) d'apparition des breaks : 1 break dès
-  /// ~28 min, 2 breaks dès ~45 min (cf. spec `specs/scripted_breaks.md`).
-  static const int _oneBreakThresholdSeconds = 28 * 60;
-  static const int _twoBreakThresholdSeconds = 45 * 60;
+  /// Intervalle entre deux pauses : de 7 min à endurance nulle à 12 min dès
+  /// [_enduranceFullPoints] points d'endurance, interpolé entre les deux.
+  static const int _breakIntervalLowEnduranceSeconds = 7 * 60;
+  static const int _breakIntervalHighEnduranceSeconds = 12 * 60;
+  static const int _enduranceFullPoints = 5;
 
-  /// Nombre de breaks scénarisés à insérer selon la durée totale.
-  static int _computeBreakCount(int effectiveDuration) {
-    if (effectiveDuration >= _twoBreakThresholdSeconds) return 2;
-    if (effectiveDuration >= _oneBreakThresholdSeconds) return 1;
-    return 0;
-  }
+  static const int _postureFirstChangeMinSeconds = 4 * 60;
+  static const int _postureFirstChangeMaxSeconds = 7 * 60;
+  static const int _postureChangeMinIntervalSeconds = 6 * 60;
+  static const int _postureChangeMaxIntervalSeconds = 10 * 60;
+
+  /// Un changement de position dû à moins de cette marge d'une pause se fait
+  /// pendant la pause.
+  static const int _postureMergeWindowSeconds = 2 * 60;
 
   /// Marge (s) laissée entre une pause scénarisée et le créneau d'un défi.
   /// Absorbe l'écart entre l'horaire *planifié* d'un bloc et son émission
@@ -235,45 +240,28 @@ class CareerSessionGenerator {
   /// suit son trigger, jamais pile dessus.
   static const int _breakChallengeGapSeconds = 60;
 
-  /// Plancher de décalage d'une pause, en fraction de `genUntil`. Les
-  /// fractions nominales (0.34 / 0.5) garantissaient seules « jamais dans les
-  /// 5 premières minutes » ; dès qu'on décale, il faut le dire.
-  static const double _breakEarliestFraction = 0.25;
-
-  /// `triggerTime` d'insertion des breaks dans la fenêtre de génération
-  /// `genUntil` (≈ durée hors phase finish). 1 break → vers la moitié ;
-  /// 2 breaks → vers le tiers et les deux tiers. Le placement aux frontières
-  /// de blocs (insertion dans la boucle main) et `genUntil < effectiveDuration`
-  /// garantissent structurellement « jamais dans les 5 premières min ni dans
-  /// la phase finish » pour les durées éligibles (≥ 28 min).
+  /// `triggerTime` de la pause qui suit celle dont l'horaire visé + la durée
+  /// valent [previousEnd] (0 avant la première) : [intervalSeconds] d'effort
+  /// après. [pauseSeconds], le temps des pauses déjà posées, ramène cet horaire
+  /// à une position d'effort. `null` quand elle dépasse [effortEnd], la fin de
+  /// la boucle main hors fenêtres réservées.
   ///
-  /// [challengeWindows] : créneaux `(début, fin)` déjà réservés par les défis
-  /// planifiés. Sans eux, les deux plannings visent le même milieu de séance —
-  /// une pause et un défi médian tombent alors au même endroit, le trou
-  /// d'effort de la pause avale le trigger du défi et la boucle main le
-  /// réémet à `break.endTime` : la joueuse reçoit l'ordre de se mettre à
-  /// quatre pattes et l'annonce du défi au même instant. Les horaires de défi
-  /// ne bougent pas (ils portent la dramaturgie du défi et se coordonnent
-  /// avec la durée de séance) — c'est la pause qui cède le passage.
-  static List<int> _computeBreakTriggerTimes({
-    required int count,
+  /// [challengeWindows] : créneaux `(début, fin)` déjà réservés par les défis.
+  /// Sans eux, le trou d'effort d'une pause peut avaler le trigger d'un défi,
+  /// que la boucle main réémet à `break.endTime`. Les horaires de défi ne
+  /// bougent pas : c'est la pause qui cède le passage.
+  static int? _breakTriggerTime({
+    required int previousEnd,
+    required int intervalSeconds,
+    required int effortEnd,
+    required int pauseSeconds,
     required int genUntil,
     List<(int, int)> challengeWindows = const [],
   }) {
-    if (count == 0) return const [];
-    final ideals = count == 1
-        ? [(genUntil * 0.5).round()]
-        : [(genUntil * 0.34).round(), (genUntil * 0.67).round()];
-    // Une pause déjà placée devient elle-même un créneau occupé : deux pauses
-    // décalées vers le même trou libre se recouvriraient.
-    final busy = [...challengeWindows];
-    final times = <int>[];
-    for (final ideal in ideals) {
-      final t = _breakSlotClearOf(ideal, genUntil: genUntil, busy: busy);
-      times.add(t);
-      busy.add((t, t + _breakMaxDurationSeconds));
-    }
-    return times;
+    if (intervalSeconds <= 0) return null;
+    final ideal = previousEnd + intervalSeconds;
+    if (ideal - pauseSeconds >= effortEnd) return null;
+    return _breakSlotClearOf(ideal, genUntil: genUntil, busy: challengeWindows);
   }
 
   /// Renvoie l'horaire de pause le plus proche de [ideal] dont la fenêtre
@@ -290,7 +278,7 @@ class CareerSessionGenerator {
     bool collides(int t) => busy
         .any((w) => t < w.$2 + _breakChallengeGapSeconds && t + span > w.$1);
     if (!collides(ideal)) return ideal;
-    final lowest = (genUntil * _breakEarliestFraction).round();
+    const lowest = _breakIntervalLowEnduranceSeconds;
     final highest = genUntil - span;
     int? best;
     for (final w in busy) {
@@ -326,6 +314,12 @@ class CareerSessionGenerator {
   // ─── RNG ─────────────────────────────────────────────────────────────────
 
   final Random _rng;
+
+  /// Tirages des mouvements de tenue, à part de [_rng] : les ajouter ne
+  /// décale pas le reste de la séance générée.
+  final Random _movesRng;
+  PhraseBank? _bank;
+  bool _holdMovesAnnounced = false;
 
   // ─── PARAMÈTRES DE SESSION (figés par [generate]) ────────────────────────
   // 16 inputs immuables regroupés dans `SessionConfig`, re-posé en début
@@ -406,6 +400,7 @@ class CareerSessionGenerator {
     int? seed,
     Map<SessionMode, ModeRules>? rules,
   })  : _rng = seed != null ? Random(seed) : Random(),
+        _movesRng = seed != null ? Random(seed ^ 0x7e9e) : Random(),
         _rules = rules ?? defaultModeRulesRegistry;
 
   // ─── Rôles sémantiques (cf. phase B du plan de refacto) ──────────────────
@@ -604,6 +599,9 @@ class CareerSessionGenerator {
     /// surprise / Supplier / encore).
     MilestonePlan milestones = MilestonePlan.none,
 
+    /// `durationSeconds` s'arrête au début de la phase de fin, qui s'y ajoute.
+    bool durationExcludesFinish = false,
+
     /// 2ᵉ enveloppe de difficulté (profil de capacités + plafonds figés
     /// par fail). `CapabilityInputs.none` = aucun gating capacité.
     /// `overloadAxis` est ignoré ici (`generate()` pioche son axe via
@@ -621,11 +619,18 @@ class CareerSessionGenerator {
     /// sont insérés vers 60 % du temps planifié (cf. spec § 4.3).
     ChallengeInputs challenge = ChallengeInputs.none,
 
-    /// Active les postures imposées + breaks scénarisés (issue #77, préférence
-    /// utilisateur `pref.scripted_breaks`). `false` = posture `free`, aucun
-    /// break. Cf. spec `specs/scripted_breaks.md`.
+    /// Active les postures imposées, changements de position et breaks
+    /// scénarisés (préférence utilisateur `pref.scripted_breaks`). `false` =
+    /// posture `free`, aucun changement ni break.
     bool scriptedBreaks = false,
+
+    /// Pauses et changements de position d'une séance en cours que cette suite
+    /// régénérée rejoue, en temps relatif à son début. Non vide, il remplace
+    /// le planificateur de [scriptedBreaks] : mêmes durées, mêmes poses.
+    PostureScript carry = PostureScript.none,
   }) {
+    _bank = bank;
+    _holdMovesAnnounced = false;
     // Invariants `milestones` : on ne peut pas les déplacer dans le
     // constructeur de `MilestonePlan` car `.placement` n'est pas
     // const-eval-friendly (ce qui casserait `static const MilestonePlan.none`,
@@ -677,6 +682,7 @@ class CareerSessionGenerator {
       coachModeWeights: coachModeWeights,
       bpmRange: custom.normalizedBpmRange,
       holdDurationRange: custom.normalizedHoldDurationRange,
+      customAnchor: custom.anchor,
       humiliationCareer: humiliationCareer,
       humiliationSession: humiliationSession,
       obedience: obedience,
@@ -737,18 +743,20 @@ class CareerSessionGenerator {
         : _finisherBudgetSeconds;
     // Base de la fenêtre de génération : `ctx.genUntil` y ajoute ensuite les
     // fenêtres de défi réservées, qui ne sont pas du contenu de séance.
-    final genUntilBase = effectiveDuration -
-        finalBudget -
-        (isLowLevel && !useFinalMilestone ? _preFinisherBudgetSeconds : 0);
+    final genUntilBase = durationExcludesFinish
+        ? effectiveDuration
+        : effectiveDuration -
+            finalBudget -
+            (isLowLevel && !useFinalMilestone ? _preFinisherBudgetSeconds : 0);
 
     // `_state.salivaSim` et `_state.salivaSimSecond` sont posés par
     // `SessionRuntimeState.fresh()` plus haut.
     final steps = <SessionStep>[];
     // Le profil est indexé sur la timeline générée, qui inclut les fenêtres
-    // de défi réservées (cf. `GenerationContext.challengeReserveSeconds`) :
+    // réservées, défis et pauses (cf. `GenerationContext.reservedWindowSeconds`) :
     // dimensionner sur `effectiveDuration` seul le laisserait tronqué sur
-    // toute la fin d'une séance à défis, et le contrôleur y lirait une
-    // endurance figée.
+    // toute la fin d'une séance à défis ou à pauses, et le contrôleur y
+    // lirait une endurance figée.
     final maxChallengeReserve = challenge.challenges.fold<int>(
       0,
       (sum, ch) =>
@@ -756,8 +764,16 @@ class CareerSessionGenerator {
           kChallengeBreathDurationSeconds +
           _estimatedChallengeDuration(ch),
     );
+    final carrying = !carry.isEmpty;
+    final maxPauseReserve = carrying
+        ? carry.pauseSeconds
+        : _config.scriptedBreaks
+            ? (genUntilBase ~/ _breakIntervalLowEnduranceSeconds + 1) *
+                _breakMaxDurationSeconds
+            : 0;
     final profile = List<double>.filled(
-        effectiveDuration + maxChallengeReserve + 60, StaminaModel.cap);
+        effectiveDuration + maxChallengeReserve + maxPauseReserve + 60,
+        StaminaModel.cap);
 
     // Ctx partagé par tous les helpers de phase : DTO des paramètres
     // figés + curseur courant (`time`, `stamina`, `progress` getter)
@@ -880,30 +896,48 @@ class CareerSessionGenerator {
     final insertedChallenges = <Challenge>[];
     var nextChallengeIndex = 0;
 
-    // Breaks scénarisés (issue #77) — pauses actives de récup sur sessions
-    // longues. Comme les défis : trigger times planifiés, insertion aux
-    // frontières de blocs dans la boucle main, réservation de l'enveloppe
-    // (trou d'effort = `durationSeconds`, le runtime gèle le moteur — cf.
-    // PR4). Gaté par `_config.scriptedBreaks` ; 0 break si off.
-    // `currentPose` suit la posture en cours (départ = posture initiale) pour
-    // que le 1ᵉʳ break impose une pose *différente* ; le 2ᵉ tend vers récup
-    // pure (`newPose == null`, continuité de pose).
-    final plannedBreakTimes = _computeBreakTriggerTimes(
-      count: _config.scriptedBreaks ? _computeBreakCount(effectiveDuration) : 0,
-      genUntil: ctx.genUntil,
-      challengeWindows: [
-        for (var i = 0; i < plannedTriggerTimes.length; i++)
-          (
-            plannedTriggerTimes[i],
-            plannedTriggerTimes[i] +
-                kChallengeBreathDurationSeconds +
-                _estimatedChallengeDuration(challengeQueue[i]),
-          ),
-      ],
-    );
+    // `currentPose` suit la posture que la joueuse tient réellement, milestone
+    // posture comprise : un changement n'impose jamais la pose en cours.
+    final breakInterval = _config.scriptedBreaks ? _breakIntervalSeconds() : 0;
+    final breakBusyWindows = <(int, int)>[
+      for (var i = 0; i < plannedTriggerTimes.length; i++)
+        (
+          plannedTriggerTimes[i],
+          plannedTriggerTimes[i] +
+              kChallengeBreathDurationSeconds +
+              _estimatedChallengeDuration(challengeQueue[i]),
+        ),
+    ];
+    var pauseSecondsPlaced = 0;
+    var previousBreakEnd = 0;
+    int? breakTriggerTime(int index) {
+      if (carrying) {
+        return index < carry.breaks.length ? carry.breaks[index].time : null;
+      }
+      return _breakTriggerTime(
+        previousEnd: previousBreakEnd,
+        intervalSeconds: breakInterval,
+        effortEnd: genUntilBase,
+        pauseSeconds: pauseSecondsPlaced,
+        genUntil: ctx.genUntil,
+        challengeWindows: breakBusyWindows,
+      );
+    }
+
     final sessionBreaks = <ScriptedBreak>[];
+    final postureChanges = <PostureChange>[];
     var nextBreakIndex = 0;
-    var currentPose = _initialPose;
+    var nextBreakAt = breakTriggerTime(0);
+    var currentPose =
+        postureTaughtByMilestone(milestoneScheduler.lastInserted?.id) ??
+            _initialPose;
+    var nextCarriedChange = 0;
+    int? nextPostureChangeAt = _config.scriptedBreaks && !carrying
+        ? _postureFirstChangeMinSeconds +
+            _rng.nextInt(_postureFirstChangeMaxSeconds -
+                _postureFirstChangeMinSeconds +
+                1)
+        : null;
 
     while (ctx.time < ctx.genUntil) {
       // Phase 1 — Insertion milestone : on traite les pending dans
@@ -912,38 +946,91 @@ class CareerSessionGenerator {
       // ne pas la louper). Le cas time < target continue à empiler des
       // steps de chauffe normalement.
       if (milestoneScheduler.tryInsertAt(ctx)) {
+        final taught =
+            postureTaughtByMilestone(milestoneScheduler.lastInserted?.id);
+        if (taught != null && _config.scriptedBreaks) {
+          currentPose = taught;
+          nextPostureChangeAt = ctx.time + _pickPostureChangeInterval();
+        }
         if (ctx.time >= ctx.genUntil) break;
         continue;
       }
-      // Phase 1.5 — Break scénarisé (issue #77) : pause active de récup,
-      // frontière de bloc majeure (priorité juste après la milestone). Inséré
-      // dès que `time` atteint le trigger planifié : on pose le `ScriptedBreak`
-      // et on réserve l'enveloppe (`time += durationSeconds`) sans émettre de
-      // step d'effort — le trou laissé est honoré en runtime par le gel du
-      // moteur (PR4). Le profil stamina y reste à `cap` (récup = plein), ce
-      // qui est sémantiquement correct.
-      if (nextBreakIndex < plannedBreakTimes.length &&
-          ctx.time >= plannedBreakTimes[nextBreakIndex]) {
-        final dur = _pickBreakDuration();
+      // Phase 1.5 — Pause scénarisée : trou d'effort de `durationSeconds`,
+      // aucun step émis, le runtime gèle le moteur sur la fenêtre.
+      if (nextBreakAt != null && ctx.time >= nextBreakAt) {
+        final carried = carrying ? carry.breaks[nextBreakIndex] : null;
+        final dur = carried?.durationSeconds ?? _pickBreakDuration();
+        final nextTrigger =
+            carried == null && nextChallengeIndex < challengeQueue.length
+                ? plannedTriggerTimes[nextChallengeIndex]
+                : null;
+        if (nextTrigger != null &&
+            nextTrigger > ctx.time &&
+            nextTrigger < ctx.time + dur + kChallengeBreathDurationSeconds) {
+          nextBreakAt = breakBusyWindows[nextChallengeIndex].$2 +
+              _breakChallengeGapSeconds;
+          continue;
+        }
         if (ctx.genUntil - ctx.time >= dur) {
-          final newPose = _pickBreakPose(
-            unlockedKeys,
-            currentPose,
-            pureRecovery: nextBreakIndex >= 1,
-          );
+          ctx.reservedWindowSeconds += dur;
+          final end = ctx.time + dur;
+          final changeDue = carried == null &&
+              nextPostureChangeAt != null &&
+              nextPostureChangeAt <= end + _postureMergeWindowSeconds;
+          final newPose = carried != null
+              ? carried.newPose
+              : (changeDue ? _pickNextPose(unlockedKeys, currentPose) : null);
+          if (carried != null && newPose != null) currentPose = newPose;
           sessionBreaks.add(ScriptedBreak(
             time: ctx.time,
             durationSeconds: dur,
             newPose: newPose,
+            orders: carried?.orders ?? const [],
           ));
-          if (newPose != null) currentPose = newPose;
-          ctx.time += dur;
-          nextBreakIndex++;
+          if (changeDue) {
+            if (newPose != null) currentPose = newPose;
+            nextPostureChangeAt =
+                newPose == null ? null : end + _pickPostureChangeInterval();
+          }
+          ctx.time = end;
+          pauseSecondsPlaced += dur;
+          previousBreakEnd = nextBreakAt + dur;
+          breakBusyWindows
+              .add((end - dur, end - dur + _breakMaxDurationSeconds));
+          nextBreakAt = breakTriggerTime(++nextBreakIndex);
           continue;
         }
         // Pas la place avant la phase finish → on saute ce break (sinon le
         // test resterait vrai à chaque itération et bloquerait la boucle).
-        nextBreakIndex++;
+        previousBreakEnd = nextBreakAt;
+        nextBreakAt = breakTriggerTime(++nextBreakIndex);
+      }
+      // Phase 1.6 — Changement de position seul, sans avancer le temps : le
+      // bloc émis ensuite démarre à `ctx.time` et relance le bip après la
+      // validation. Cède le pas à une pause proche et à un défi dû.
+      final postureDue = carrying
+          ? (nextCarriedChange < carry.changes.length
+              ? carry.changes[nextCarriedChange].time
+              : null)
+          : nextPostureChangeAt;
+      if (postureDue != null &&
+          ctx.time >= postureDue &&
+          !(nextBreakAt != null &&
+              nextBreakAt - ctx.time <= _postureMergeWindowSeconds) &&
+          !(nextChallengeIndex < challengeQueue.length &&
+              ctx.time >= plannedTriggerTimes[nextChallengeIndex])) {
+        final pose = carrying
+            ? carry.changes[nextCarriedChange++].pose
+            : _pickNextPose(unlockedKeys, currentPose);
+        if (pose != null) {
+          postureChanges.add(PostureChange(time: ctx.time, pose: pose));
+          currentPose = pose;
+          if (!carrying) {
+            nextPostureChangeAt = ctx.time + _pickPostureChangeInterval();
+          }
+        } else {
+          nextPostureChangeAt = null;
+        }
       }
       // Phase 2 — Mini-vague (+ breath long post-vague) : 2-3 steps à
       // BPM montant qui cassent la diagonale d'intensité, suivis d'un
@@ -968,7 +1055,7 @@ class CareerSessionGenerator {
       // À l'exécution, `_excisChallengeFromSession` retire la fenêtre
       // effective (`breathDur + estimate`) et shift les steps suivants.
       //
-      // Cette enveloppe est reportée sur `ctx.challengeReserveSeconds` :
+      // Cette enveloppe est reportée sur `ctx.reservedWindowSeconds` :
       // elle décale d'autant la fin de la boucle main, donc elle n'est pas
       // prise sur le contenu de la séance. Sans ce report, la joueuse payait
       // deux fois — l'enveloppe rognait le contenu généré, puis l'excision
@@ -999,7 +1086,7 @@ class CareerSessionGenerator {
         // Pas de step défi matérialisé ici — on réserve juste l'enveloppe
         // pour la planification aval.
         ctx.time += reservedStepDur;
-        ctx.challengeReserveSeconds += breathDur + reservedStepDur;
+        ctx.reservedWindowSeconds += breathDur + reservedStepDur;
         nextChallengeIndex++;
         continue;
       }
@@ -1078,6 +1165,7 @@ class CareerSessionGenerator {
         challenges: insertedChallenges,
         challengeTriggerTimes: challengeTriggerTimes,
         breaks: sessionBreaks,
+        postureChanges: postureChanges,
       );
     }
 
@@ -1109,7 +1197,7 @@ class CareerSessionGenerator {
     // archétypal mais respecte le ban. L'éditeur Custom garantit qu'au
     // moins un mode bouche reste actif, donc lick est presque toujours dispo.
     //
-    // Dose Custom rare/normal/frequent (cf. issue #68) : quand les poids
+    // Dose Custom rare/normal/frequent : quand les poids
     // hand/rhythm sont **strictement asymétriques** (cas Custom où la
     // joueuse a explicitement biaisé une dose), on bascule sur le ratio
     // brut des poids comme proba. Le pivot dramaturgique 25/75 vs 70/30
@@ -1165,6 +1253,7 @@ class CareerSessionGenerator {
       challenges: insertedChallenges,
       challengeTriggerTimes: challengeTriggerTimes,
       breaks: sessionBreaks,
+      postureChanges: postureChanges,
     );
   }
 
@@ -1200,6 +1289,7 @@ class CareerSessionGenerator {
   ///     BPM du **prochain action step** doit comparer contre celui-ci
   ///     (mini-vague, boost). Inutile pour les transit/parts qui préservent
   ///     le `lastBpm` de l'outer step.
+  ///   * [intense] : cf. doc `_draftToStep`. Répercuté tel quel.
   void _emitStep(
     GenerationContext ctx, {
     required StepDraft draft,
@@ -1207,8 +1297,10 @@ class CareerSessionGenerator {
     required double progress,
     required bool asTransit,
     bool updateLastBpm = false,
+    bool intense = false,
   }) {
-    ctx.steps.add(_draftToStep(draft, time: ctx.time, text: text));
+    ctx.steps
+        .add(_draftToStep(draft, time: ctx.time, text: text, intense: intense));
     final staminaBefore = ctx.stamina;
     final newStamina = StaminaModel.apply(
       ctx.stamina,
@@ -1271,6 +1363,7 @@ class CareerSessionGenerator {
         progress: progressForWave,
         asTransit: false,
         updateLastBpm: true,
+        intense: true,
       );
     }
     // Pause longue post-vague : breath dédié dimensionné pour viser
@@ -1385,7 +1478,7 @@ class CareerSessionGenerator {
     // l'endurance par contrat.
     // « Utilise-moi » désactive toute récup (comme la dernière minute) :
     // « respirer est inutile », la seule pause possible est un fail.
-    final inLastMinute = (ctx.effectiveDuration - ctx.time) <= 60;
+    final inLastMinute = (ctx.effectiveDuration - ctx.effortTime) <= 60;
     final noRecovery = inLastMinute || _config.useMe;
     // Bonus obédiance sur le seuil de recovery : capé +25 pour pas
     // qu'une obédiance lifetime extrême (200+) pousse le seuil à 80
@@ -1660,6 +1753,8 @@ class CareerSessionGenerator {
         duration: mStep.duration,
         swallowMode: mStep.swallowMode,
         awaitReady: mStep.awaitReady,
+        anchor: mStep.anchor,
+        ratio: mStep.ratio,
       ));
       // Simulation stamina/salive pour chaque step de config de la
       // séquence, pour que la projection reste cohérente. Les steps
@@ -1669,8 +1764,7 @@ class CareerSessionGenerator {
       final staminaBefore = s;
       if (mStep.mode != null) {
         final mDraft = _stepToDraft(mStep);
-        s = StaminaModel.apply(s, mDraft, t / ctx.effectiveDuration, ctx.cfg,
-            rules: _rules);
+        s = StaminaModel.apply(s, mDraft, ctx.progress, ctx.cfg, rules: _rules);
         _advanceSalivaSim(mDraft);
       }
       StaminaModel.fillProfile(
@@ -1697,7 +1791,7 @@ class CareerSessionGenerator {
   /// `_assembleResult`. `free` tant que `_config.scriptedBreaks` est off.
   Posture _initialPose = Posture.free;
 
-  /// Tire la posture imposée au démarrage (issue #77). [Posture.free] tant
+  /// Tire la posture imposée au démarrage. [Posture.free] tant
   /// que `_config.scriptedBreaks` est off ; sinon tirage uniforme
   /// parmi les postures débloquées (`free` incluse dans le pool). Bas niveau
   /// / rien de débloqué ⇒ `free` de toute façon. Déterministe sous seed via
@@ -1715,17 +1809,9 @@ class CareerSessionGenerator {
       _breakMinDurationSeconds +
       _rng.nextInt(_breakMaxDurationSeconds - _breakMinDurationSeconds + 1);
 
-  /// Posture appliquée à la reprise d'un break (issue #77), ou `null` pour une
-  /// récup pure (aucun changement de posture). `null` si [pureRecovery] (2ᵉ
-  /// break d'une session très longue, par continuité de pose) ou si aucune
-  /// posture débloquée n'est différente de [current] (tirage hors `free` et
-  /// hors posture courante). Déterministe sous seed via `_rng`.
-  Posture? _pickBreakPose(
-    Set<UnlockKey> unlockedKeys,
-    Posture current, {
-    required bool pureRecovery,
-  }) {
-    if (pureRecovery) return null;
+  /// Nouvelle posture parmi les débloquées, hors `free` et hors [current] ;
+  /// `null` si aucune ne convient.
+  Posture? _pickNextPose(Set<UnlockKey> unlockedKeys, Posture current) {
     final candidates = [
       for (final p in availablePostures(unlockedKeys))
         if (p != Posture.free && p != current) p,
@@ -1733,6 +1819,18 @@ class CareerSessionGenerator {
     if (candidates.isEmpty) return null;
     return candidates[_rng.nextInt(candidates.length)];
   }
+
+  int _pickPostureChangeInterval() =>
+      _postureChangeMinIntervalSeconds +
+      _rng.nextInt(_postureChangeMaxIntervalSeconds -
+          _postureChangeMinIntervalSeconds +
+          1);
+
+  int _breakIntervalSeconds() => StaminaModel.lerp(
+        _breakIntervalLowEnduranceSeconds.toDouble(),
+        _breakIntervalHighEnduranceSeconds.toDouble(),
+        _config.pts(SpecializationBranch.endurance) / _enduranceFullPoints,
+      ).round();
 
   /// Construit le [CareerGenerationResult] final à partir des accumulateurs
   /// `ctx.steps` / `ctx.profile` et du curseur `time`. Tronque le profil à la
@@ -1756,6 +1854,7 @@ class CareerSessionGenerator {
     List<Challenge> challenges = const [],
     List<int> challengeTriggerTimes = const [],
     List<ScriptedBreak> breaks = const [],
+    List<PostureChange> postureChanges = const [],
   }) {
     final finalDuration = ctx.time + 2;
     final trimmedProfile = List<double>.generate(
@@ -1778,7 +1877,7 @@ class CareerSessionGenerator {
         // la première clé du registry (= rhythm historiquement) ;
         // n'importe quelle clé donnerait le même résultat. Cf. C.PR6.
         defaultMode: _rules.keys.first,
-        steps: ctx.steps,
+        steps: _withHoldMoveCues(ctx.steps),
         milestoneId:
             ctx.insertedBodies.isNotEmpty ? ctx.insertedBodies[0].id : null,
         milestoneStartTime: milestoneStartTime,
@@ -1798,6 +1897,7 @@ class CareerSessionGenerator {
         challengeTriggerTimes: challengeTriggerTimes,
         initialPose: _initialPose,
         breaks: breaks,
+        postureChanges: postureChanges,
       ),
       staminaProfile: trimmedProfile,
       overloadAxis: _config.overloadAxis,
@@ -2058,18 +2158,231 @@ class CareerSessionGenerator {
   /// `to`, les autres modes (rhythm/lick/hand/biffle) utilisent from→to
   /// pour l'alternance. Plus de swap, le draft interne et le SessionStep
   /// produit utilisent la même convention.
+  ///
+  /// Ancrage du geste rythmé (chantier aimant) : décidé ici, au point
+  /// unique de matérialisation, plutôt que porté par `StepDraft` — un champ
+  /// `StepDraft.anchor` demanderait de le recopier dans chacun des ~100
+  /// sites qui reconstruisent un draft (degrade, clamps, pickers…) sous
+  /// peine de le perdre en silence. Décider ici depuis `draft.bpm` (déjà
+  /// stabilisé par tout ce qui a précédé) évite ce risque.
+  ///
+  /// [intense] : le métronome (boucle main + recovery) reste le standard,
+  /// jamais ancré — l'ancre est une variation posée uniquement sur les
+  /// passages qui montent (mini-vague, boosts de la phase finish), cf.
+  /// rapport chantier-aimant-étape-3-bis. `false` par défaut : seuls les
+  /// call sites de ces passages le passent à `true`.
+  ///
+  /// Étape 5 : quand la config Custom allume l'aimant
+  /// (`SessionConfig.customAnchor`), son point et sa force priment sur la
+  /// décision ci-dessus pour `rhythm` et `hold`, `intense` ou non, et pour
+  /// eux seuls. Éteint (donc toujours en carrière), rien ne change.
+  ///
+  /// Étape 4 : le final `hold` (`emitFinalStep`) passe aussi `intense` —
+  /// au-dessus du plancher [CareerLevelGates.holdFinalAnchorEligible], il
+  /// reçoit l'ancre « très dur » sur `to`, avec le bpm dédié qui la cadence
+  /// (le draft d'un hold ne porte normalement pas de bpm). Cf. rapport
+  /// chantier-aimant-étape-4.
   SessionStep _draftToStep(StepDraft draft,
-      {required int time, String text = ''}) {
+      {required int time, String text = '', bool intense = false}) {
+    final isRhythm = draft.mode == SessionMode.rhythm;
+    final isHold = draft.mode == SessionMode.hold;
+    BeatAnchor anchor = BeatAnchor.none;
+    int ratio = 1;
+    int? bpm = draft.bpm;
+    final customAnchor = _config.customAnchor;
+    if (customAnchor != null && (isRhythm || isHold)) {
+      final (point, customRatio) = customAnchor;
+      if (isRhythm) {
+        anchor = point;
+        ratio = customRatio;
+      } else if (point == BeatAnchor.to &&
+          draft.to != null &&
+          draft.to!.index > 0) {
+        // Un hold ancré sur `from` n'a pas d'aller-retour à jouer
+        // (`BeepEngine` n'ouvre son swing que sur `to`, et un hold ne porte
+        // que cette position) ; à `tip` il n'existe pas de position plus
+        // aiguë. Dans ces deux cas le hold reste tenu, non ancré.
+        anchor = BeatAnchor.to;
+        ratio = customRatio;
+        bpm ??= CareerLevelGates.holdFinalAnchorBpm;
+      }
+    } else if (isRhythm && intense) {
+      anchor = CareerLevelGates.rhythmAnchorFor(
+          level: _config.level, bpm: draft.bpm);
+      ratio = anchor != BeatAnchor.none
+          ? CareerLevelGates.rhythmAnchorDefaultRatio
+          : 1;
+    } else if (isHold &&
+        intense &&
+        CareerLevelGates.holdFinalAnchorEligible(
+            level: _config.level, to: draft.to)) {
+      anchor = BeatAnchor.to;
+      ratio = CareerLevelGates.holdFinalAnchorRatio;
+      bpm = CareerLevelGates.holdFinalAnchorBpm;
+    }
+    var stepText = text;
+    var moves = const <HoldMove>[];
+    if (isHold && anchor == BeatAnchor.none) {
+      moves = _holdMovesFor(draft);
+      if (moves.any((m) => m.kind == HoldMoveKind.excursion) &&
+          !_holdMovesAnnounced) {
+        final phrase =
+            _bank?.pickFor(SessionMode.hold, 'moves', _movesRng) ?? '';
+        if (phrase.isNotEmpty) {
+          stepText = text.isEmpty ? phrase : '$text $phrase';
+          _holdMovesAnnounced = true;
+        }
+      }
+    }
     return SessionStep(
       time: time,
-      text: text,
+      text: stepText,
       mode: draft.mode,
-      bpm: draft.bpm,
+      bpm: bpm,
       bpmEnd: draft.bpmEnd,
       from: draft.from,
       to: draft.to,
       duration: draft.duration,
+      anchor: anchor,
+      ratio: ratio,
+      moves: moves,
     );
+  }
+
+  /// Consigne vocale au début de chaque rafale de micro-mouvements et de
+  /// chaque lick balls : un step de texte seul à l'instant où le mouvement
+  /// démarre (début du step + gap de transition + `at`), sans toucher à la
+  /// configuration en cours.
+  List<SessionStep> _withHoldMoveCues(List<SessionStep> steps) {
+    final out = <SessionStep>[];
+    SessionMode? previous;
+    for (final step in steps) {
+      out.add(step);
+      if (step.isTextOnly) continue;
+      if (step.mode == SessionMode.hold) {
+        final gap = BeepEngine.transitionGap(
+            incoming: SessionMode.hold,
+            previous: previous,
+            incomingTo: step.to);
+        for (final m in step.moves) {
+          final category = switch (m.kind) {
+            HoldMoveKind.micro => 'micro',
+            HoldMoveKind.lickBalls => 'lick_balls',
+            HoldMoveKind.excursion => null,
+          };
+          if (category == null) continue;
+          final cue =
+              _bank?.pickFor(SessionMode.hold, category, _movesRng) ?? '';
+          if (cue.isEmpty) continue;
+          out.add(SessionStep(
+            time:
+                step.time + ((gap.inMilliseconds + m.at * 1000) / 1000).floor(),
+            text: cue,
+          ));
+        }
+      }
+      previous = step.mode;
+    }
+    out.sort((a, b) => a.time.compareTo(b.time));
+    return out;
+  }
+
+  /// Lick balls sur une tenue `full`, avec le même déblocage que lécher les
+  /// couilles en mode lick.
+  List<HoldMove> _lickBallsFor(Position hold, int dur) {
+    if (hold != Position.full ||
+        !_isUnlocked(const StepDraft(
+            mode: SessionMode.lick,
+            bpm: 60,
+            from: Position.balls,
+            to: Position.balls,
+            duration: 10))) {
+      return const [];
+    }
+    final maxLen = min(CareerLevelGates.holdLickBallsMax, dur - 3);
+    if (maxLen < CareerLevelGates.holdLickBallsMin) return const [];
+    final len = CareerLevelGates.holdLickBallsMin +
+        _movesRng.nextInt(maxLen - CareerLevelGates.holdLickBallsMin + 1);
+    final at = 1.5 + _movesRng.nextDouble() * (dur - len - 2.5);
+    return [
+      HoldMove(
+        kind: HoldMoveKind.lickBalls,
+        at: (at * 10).round() / 10,
+        duration: len.toDouble(),
+      ),
+    ];
+  }
+
+  /// Allers-retours d'une tenue (cf. [CareerLevelGates.holdMovesFloorLevel]).
+  /// Vers le bas, seulement jusqu'à `full` et si la capacité de profondeur
+  /// au rythme l'accepte ; vers le haut, n'importe quelle position.
+  List<HoldMove> _holdMovesFor(StepDraft d) {
+    final hold = d.to ?? d.from;
+    final dur = d.duration;
+    if (hold == null ||
+        dur == null ||
+        dur < CareerLevelGates.holdMovesMinDuration ||
+        _config.level < CareerLevelGates.holdMovesFloorLevel) {
+      return const [];
+    }
+    final roll = _movesRng.nextDouble();
+    if (roll < CareerLevelGates.holdLickBallsProbability) {
+      final lick = _lickBallsFor(hold, dur);
+      if (lick.isNotEmpty) return lick;
+    }
+    if (roll >= CareerLevelGates.holdMovesProbability) {
+      if (roll >=
+          CareerLevelGates.holdMovesProbability +
+              CareerLevelGates.holdMicroProbability) {
+        return const [];
+      }
+      final maxBurst = min(CareerLevelGates.holdMicroMaxBurst, dur - 3);
+      if (maxBurst < CareerLevelGates.holdMicroMinBurst) return const [];
+      final burst = CareerLevelGates.holdMicroMinBurst +
+          _movesRng.nextInt(maxBurst - CareerLevelGates.holdMicroMinBurst + 1);
+      final at = 1.5 + _movesRng.nextDouble() * (dur - burst - 2.5);
+      return [
+        HoldMove(
+          kind: HoldMoveKind.micro,
+          at: (at * 10).round() / 10,
+          duration: burst.toDouble(),
+        ),
+      ];
+    }
+    final canGoDown = hold.index < Position.full.index &&
+        _clampToCapability(StepDraft(
+              mode: SessionMode.rhythm,
+              bpm: 60,
+              from: hold,
+              to: Position.full,
+              duration: dur,
+            )).to ==
+            Position.full;
+    final above = Position.values.where((p) => p.index < hold.index).toList();
+    final maxCount = 1 +
+        (dur - CareerLevelGates.holdMovesMinDuration) ~/
+            CareerLevelGates.holdMovesSecondsPerExtra;
+    final count = 1 + _movesRng.nextInt(maxCount);
+    // Chaque aller-retour dans sa tranche, à distance du début et de la fin.
+    final slot = (dur - 2.5) / count;
+    final out = <HoldMove>[];
+    for (var i = 0; i < count; i++) {
+      final down = canGoDown &&
+          (above.isEmpty ||
+              _movesRng.nextDouble() <
+                  CareerLevelGates.holdMovesDownProbability);
+      if (!down && above.isEmpty) break;
+      final to = down ? Position.full : above[_movesRng.nextInt(above.length)];
+      final room = slot - excursionLeg(hold, to).inMilliseconds * 2 / 1000;
+      if (room <= 0) continue;
+      final at = 1.5 + i * slot + _movesRng.nextDouble() * room;
+      out.add(HoldMove(
+        kind: HoldMoveKind.excursion,
+        at: (at * 10).round() / 10,
+        to: to,
+      ));
+    }
+    return out;
   }
 
   /// Retourne l'`UnlockKey` requise pour jouer [draft], `null` si l'action
