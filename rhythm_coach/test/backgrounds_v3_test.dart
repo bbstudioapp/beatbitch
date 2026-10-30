@@ -44,6 +44,15 @@ List<String> _holdsAB(String c, String seed) => [
           '$c-pack-${prefix}hold-$v-$seed-anim_hold_$c$tier.webp',
     ];
 
+const _marc = [
+  'marc-v1-play-lent-51_play_marc.webp',
+  'marc-v1-play-rapide-51_play_marc.webp',
+  'marc-v1-play-rapide-52_play_marc.webp',
+  'marc-v1-play-fella-51_play_marc.webp',
+  'marc-v1-final-53_final_marc.webp',
+  'marc-v1-final-54_final_marc.webp',
+];
+
 const _povs = [
   'pov-A-gag_pov_hold_full.webp',
   'pov-A-rhythm-full_pov_rhythm_full.webp',
@@ -79,6 +88,7 @@ final _all = [
   ..._holdsAB('lina', '25002'),
   ..._holdsAB('helene', '26002'),
   ..._povs,
+  ..._marc,
 ];
 
 BackgroundEntry _e(String basename) =>
@@ -160,7 +170,8 @@ void main() {
     void expectAllowed(String where) {
       final e = svc.current.value;
       if (!hasPack) {
-        expect(e == null || e.isPov, isTrue, reason: '$where : ${e?.id}');
+        expect(e == null || e.isPov || owned(e), isTrue,
+            reason: '$where : ${e?.id}');
         return;
       }
       expect(e, isNotNull, reason: '$where : la coach n\'a pas de fond');
@@ -231,8 +242,9 @@ void main() {
           }
         }
         load();
-        expect(svc.pickIntro(coach, tier: tier), hasPack);
-        expect(svc.current.value?.id, hasPack ? '$coach-v3-a1-play-01' : null,
+        expect(svc.pickIntro(coach, tier: tier), isTrue);
+        expect(svc.current.value?.id,
+            hasPack ? '$coach-v3-a1-play-01' : startsWith('$coach-v1-play-'),
             reason: '$tier : intro');
       }
       expect(picks, 3 * 4 * _modes.length * (Position.values.length + 1));

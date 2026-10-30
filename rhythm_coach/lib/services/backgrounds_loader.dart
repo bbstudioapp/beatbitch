@@ -49,6 +49,7 @@ class BackgroundTagVocabulary {
     'victoria': BackgroundTagCategory.coach,
     'nyx': BackgroundTagCategory.coach,
     'lilith': BackgroundTagCategory.coach,
+    'marc': BackgroundTagCategory.coach,
     // Phases dramaturgiques. `final` = le step `finale_chime` ;
     // `post-final` = ce qui vient après (giclées résiduelles, MERCI).
     'final': BackgroundTagCategory.phase,
